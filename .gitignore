@@ -37,3 +37,6 @@ blob-report/
 *.log
 apps/web-crm/.e2e-auth.json
 .e2e-portal-auth.json
+
+# Optional generated Python client (make client-py)
+/packages/api-client-py/

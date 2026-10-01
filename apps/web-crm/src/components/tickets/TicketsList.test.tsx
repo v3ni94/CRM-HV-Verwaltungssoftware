@@ -23,7 +23,7 @@ describe("TicketsList bulk bar", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("shows the sticky bar once tickets are selected and applies a bulk status change", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ changed: [{ id: "t1" }, { id: "t2" }], failed: [] }));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ total: 1, succeeded: 1, failed: 0, items: [{ id: "t1", ok: true, code: null, detail: null }] }));
     renderIntl(<TicketsList initialTickets={tickets} canApprove={false} />);
     expect(screen.queryByTestId("bulk-bar")).not.toBeInTheDocument();
 
@@ -40,8 +40,8 @@ describe("TicketsList bulk bar", () => {
     await userEvent.click(screen.getByText("Status anwenden"));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const call = fetchMock.mock.calls[0]!;
-    expect(String(call[0])).toContain("/tickets/bulk-status");
-    expect(JSON.parse(call[1]?.body as string)).toEqual({ ticket_ids: ["t1"], status: "in_progress" });
+    expect(String(call[0])).toMatch(/\/tickets\/bulk$/);
+    expect(JSON.parse(call[1]?.body as string)).toEqual({ ids: ["t1"], status: "in_progress" });
   });
 
   it("warns a standard user above the limit of 10 tickets without blocking an admin", async () => {
@@ -109,15 +109,26 @@ describe("TicketsList traffic light (M19-09)", () => {
   });
 });
 
-describe("TicketsList bulk assignment (M9-04)", () => {
+describe("TicketsList bulk assignment, team and priority (S12-05)", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("assigns the selected tickets through the workspace bulk action and refreshes", async () => {
+  it("sends assignee, team and priority through POST /tickets/bulk and shows the partial report", async () => {
     refresh.mockClear();
     const USER = "0192abcd-0000-7000-8000-0000000000c1";
+    const TEAM = "0192abcd-0000-7000-8000-0000000000d1";
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (String(input).includes("assignable-users")) return jsonResponse([{ user_id: USER, display_name: "Anna Beispiel" }]);
-      return jsonResponse({ action: "tickets.assign", requested: 2, changed: 2 });
+      const url = String(input);
+      if (url.includes("assignable-users")) return jsonResponse([{ user_id: USER, display_name: "Anna Beispiel" }]);
+      if (url.endsWith("/teams")) return jsonResponse([{ id: TEAM, name: "Hausmeister" }]);
+      return jsonResponse({
+        total: 2,
+        succeeded: 1,
+        failed: 1,
+        items: [
+          { id: "t1", ok: true, code: null, detail: null },
+          { id: "t2", ok: false, code: "conflict", detail: "Ticket ist zusammengeführt." },
+        ],
+      });
     });
     renderIntl(<TicketsList initialTickets={tickets} canApprove={false} />);
     const boxes = screen.getAllByLabelText("Ticket auswählen");
@@ -126,10 +137,30 @@ describe("TicketsList bulk assignment (M9-04)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Bearbeiter zuweisen" }));
     await userEvent.selectOptions(await screen.findByLabelText("Bearbeiter"), USER);
+    await userEvent.selectOptions(await screen.findByLabelText("Team"), TEAM);
+    await userEvent.selectOptions(screen.getByLabelText("Priorität"), "urgent");
     await userEvent.click(screen.getByRole("button", { name: "2 Tickets zuweisen" }));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
-    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/workspace/bulk"))!;
-    expect(JSON.parse(call[1]?.body as string)).toEqual({ action: "tickets.assign", ids: ["t1", "t2"], assignee_user_id: USER });
-    expect(screen.getByText(/Geändert: 2/)).toBeInTheDocument();
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/tickets/bulk"))!;
+    expect(JSON.parse(call[1]?.body as string)).toEqual({ ids: ["t1", "t2"], assignee_user_id: USER, team_id: TEAM, priority: "urgent" });
+    expect(screen.getByTestId("bulk-report")).toHaveTextContent("Geändert: 1 von 2");
+    expect(screen.getByTestId("bulk-report-failed")).toHaveTextContent("#2: Ticket ist zusammengeführt.");
+  });
+
+  it("allows priority only and keeps the apply button disabled without any choice", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("assignable-users") || url.endsWith("/teams")) return jsonResponse([]);
+      return jsonResponse({ total: 1, succeeded: 1, failed: 0, items: [{ id: "t1", ok: true, code: null, detail: null }] });
+    });
+    renderIntl(<TicketsList initialTickets={tickets} canApprove={false} />);
+    await userEvent.click(screen.getAllByLabelText("Ticket auswählen")[0]!);
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiter zuweisen" }));
+    const apply = await screen.findByRole("button", { name: "1 Ticket zuweisen" });
+    expect(apply).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText("Priorität"), "high");
+    await userEvent.click(apply);
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/tickets/bulk"))!;
+    expect(JSON.parse(call[1]?.body as string)).toEqual({ ids: ["t1"], priority: "high" });
   });
 });

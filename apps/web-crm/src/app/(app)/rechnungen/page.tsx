@@ -75,7 +75,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         accounts={accounts}
         initialProposalId={initialProposalId ?? null}
       />
-      <InvoiceCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name }))} accounts={accounts} />
+      <InvoiceCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name, legalEntityId: l.legal_entity_id }))} accounts={accounts} />
       <SavedFilters resource="invoices" basePath="/rechnungen" current={currentFilter} />
       <form method="get" className="flex flex-wrap items-end gap-2" aria-label={tw("filters")}>
         <label className="flex flex-col gap-1">

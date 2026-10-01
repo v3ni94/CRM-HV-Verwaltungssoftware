@@ -51,4 +51,18 @@ describe("StatementStatusActions", () => {
     await userEvent.click(screen.getByText("Ausgeben"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
+
+  it("lists the status history and shows an empty state", () => {
+    const log = [
+      { from: "calculated", to: "internally_approved", by: null, at: "2026-09-01T08:00:00Z", note: "geprüft" },
+      { from: "internally_approved", to: "issued", by: null, at: "2026-09-02T08:00:00Z", note: null },
+    ];
+    const { unmount } = renderIntl(<StatementStatusActions url={URL} status="issued" hoa={false} gate="G3" log={log} onChanged={vi.fn()} />);
+    expect(screen.getByText("Statusverlauf")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByText(/geprüft/)).toBeInTheDocument();
+    unmount();
+    renderIntl(<StatementStatusActions url={URL} status="calculated" hoa={false} gate="G3" onChanged={vi.fn()} />);
+    expect(screen.getByText("Noch kein Statuswechsel.")).toBeInTheDocument();
+  });
 });

@@ -110,7 +110,13 @@ class ErrorCodes:
         "MHVP-AUTH-0012",
         503,
         "Passkeys noch nicht verfügbar",
-        "WebAuthn verification library not released yet (M2-03, OPEN_QUESTIONS).",
+        "WebAuthn not enabled or not configured (M2-03, OPEN_QUESTIONS P14-02).",
+    )
+    WEBAUTHN_INVALID = ErrorCode(
+        "MHVP-AUTH-0013",
+        401,
+        "Passkey-Prüfung fehlgeschlagen",
+        "WebAuthn challenge, origin, RP ID, signature or sign counter check failed (S16-01).",
     )
     RESOURCE_NOT_FOUND = ErrorCode(
         "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."

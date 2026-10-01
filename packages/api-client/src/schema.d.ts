@@ -3672,6 +3672,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/login/webauthn/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Anmeldung mit Passkey: Optionen (zweiter Faktor oder ohne Passwort, S16-01) */
+        post: operations["webauthn_login_options_api_v1_auth_login_webauthn_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login/webauthn/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anmeldung mit Passkey: Antwort prüfen, Token ausstellen (S16-01)
+         * @description Second factor (challenge bound to the ``mfa_token`` user) or passwordless sign in
+         *     (only credentials registered with ``passwordless``, user verification required). The
+         *     challenge is consumed before any check; failures count towards the account lockout.
+         */
+        post: operations["webauthn_login_verify_api_v1_auth_login_webauthn_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -3969,8 +4008,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Passkey registrieren: Optionen (vorbereitet, M2-03)
-         * @description Answers MHVP-AUTH-0012 until a WebAuthn verification library is released.
+         * Passkey registrieren: Optionen (S16-01)
+         * @description Creation options for the signed in user (attestation none). ``passwordless`` asks for a
+         *     discoverable credential with user verification.
          */
         post: operations["webauthn_register_options_api_v1_auth_webauthn_register_options_post"];
         delete?: never;
@@ -3988,7 +4028,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Passkey registrieren: Antwort prüfen (vorbereitet, M2-03) */
+        /** Passkey registrieren: Antwort prüfen (S16-01) */
         post: operations["webauthn_register_verify_api_v1_auth_webauthn_register_verify_post"];
         delete?: never;
         options?: never;
@@ -8708,6 +8748,27 @@ export interface paths {
         put?: never;
         /** Geschwärzte Kopie freigeben (Vier Augen) */
         post: operations["release_redaction_api_v1_documents__document_id__redactions__redaction_id__release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{document_id}/retention-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Aufbewahrungs- und Sperrstatus
+         * @description Why the document is kept today (S711-06): manual hold, automatic procedure hold,
+         *     WEG permanent record or period; ``deletion_blocker`` None means deletable.
+         */
+        get: operations["retention_status_api_v1_documents__document_id__retention_status_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19062,6 +19123,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/representations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Eigene Vertretungen mit Ablauf
+         * @description M21-05: the powers of attorney of the signed-in representative with period and state;
+         *     expired or revoked ones are listed as such and carry no access.
+         */
+        get: operations["own_representations_api_v1_portal_representations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/resolutions": {
         parameters: {
             query?: never;
@@ -25787,6 +25869,26 @@ export interface components {
             /** Recommendation */
             recommendation?: string | null;
         };
+        /** AuthWebAuthnAssertionResponse */
+        AuthWebAuthnAssertionResponse: {
+            /** Authenticator Data */
+            authenticator_data: string;
+            /** Client Data Json */
+            client_data_json: string;
+            /** Signature */
+            signature: string;
+            /** User Handle */
+            user_handle?: string | null;
+        };
+        /** AuthWebAuthnAttestationResponse */
+        AuthWebAuthnAttestationResponse: {
+            /** Attestation Object */
+            attestation_object: string;
+            /** Client Data Json */
+            client_data_json: string;
+            /** Transports */
+            transports?: string[];
+        };
         /** AuthWebAuthnCredentialOut */
         AuthWebAuthnCredentialOut: {
             /**
@@ -25803,6 +25905,64 @@ export interface components {
             label: string | null;
             /** Last Used At */
             last_used_at: string | null;
+            /**
+             * Passwordless
+             * @default false
+             */
+            passwordless: boolean;
+        };
+        /** AuthWebAuthnLoginOptionsRequest */
+        AuthWebAuthnLoginOptionsRequest: {
+            /** Mfa Token */
+            mfa_token?: string | null;
+        };
+        /** AuthWebAuthnLoginVerifyRequest */
+        AuthWebAuthnLoginVerifyRequest: {
+            /** Challenge Id */
+            challenge_id: string;
+            /** Credential Id */
+            credential_id: string;
+            /** Mfa Token */
+            mfa_token?: string | null;
+            /**
+             * Remember Device
+             * @default false
+             */
+            remember_device: boolean;
+            response: components["schemas"]["AuthWebAuthnAssertionResponse"];
+            /** Tenant Id */
+            tenant_id?: string | null;
+        };
+        /**
+         * AuthWebAuthnOptionsOut
+         * @description ``challenge_id`` goes back with the verify call; ``public_key`` is handed to
+         *     ``navigator.credentials.create/get`` (binary fields base64url encoded).
+         */
+        AuthWebAuthnOptionsOut: {
+            /** Challenge Id */
+            challenge_id: string;
+            /** Public Key */
+            public_key: {
+                [key: string]: unknown;
+            };
+        };
+        /** AuthWebAuthnRegisterOptionsRequest */
+        AuthWebAuthnRegisterOptionsRequest: {
+            /**
+             * Passwordless
+             * @default false
+             */
+            passwordless: boolean;
+        };
+        /** AuthWebAuthnRegisterVerifyRequest */
+        AuthWebAuthnRegisterVerifyRequest: {
+            /** Challenge Id */
+            challenge_id: string;
+            /** Credential Id */
+            credential_id: string;
+            /** Label */
+            label?: string | null;
+            response: components["schemas"]["AuthWebAuthnAttestationResponse"];
         };
         /**
          * AuthWebAuthnStatus
@@ -31414,6 +31574,31 @@ export interface components {
             visibility: string[];
         };
         /**
+         * DocumentRetentionStatusOut
+         * @description Retention and hold status of one document (S711-06).
+         */
+        DocumentRetentionStatusOut: {
+            /** Deletion Blocker */
+            deletion_blocker: string | null;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Permanent Record */
+            permanent_record: boolean;
+            /** Procedure Hold */
+            procedure_hold: string | null;
+            /** Retention Hold Kind */
+            retention_hold_kind: string | null;
+            /** Retention Hold Reason */
+            retention_hold_reason: string | null;
+            /** Retention Until */
+            retention_until: string | null;
+            /** Ticket Hold */
+            ticket_hold: string | null;
+        };
+        /**
          * DocumentSource
          * @enum {string}
          */
@@ -36141,6 +36326,8 @@ export interface components {
             access_token?: string | null;
             /** Expires In */
             expires_in?: number | null;
+            /** Mfa Methods */
+            mfa_methods?: string[];
             /** Mfa Token */
             mfa_token?: string | null;
             /** Refresh Token */
@@ -39645,13 +39832,19 @@ export interface components {
             document_id: string;
             /** Gross */
             gross: number | string;
+            /** Iban */
+            iban?: string | null;
             /**
              * Invoice Date
              * Format: date
              */
             invoice_date: string;
+            /** Net */
+            net?: number | string | null;
             /** Number */
             number: string;
+            /** Vat Rate */
+            vat_rate?: number | string | null;
         };
         /** PortalMandateIn */
         PortalMandateIn: {
@@ -44931,12 +45124,21 @@ export interface components {
             /** Process Code */
             process_code: string;
         };
-        /** TicketBulkIn */
+        /**
+         * TicketBulkIn
+         * @description Sammelaktion (S12-05): Status, Bearbeiter, Team und Priorität einzeln oder kombiniert;
+         *     mindestens eine Änderung ist Pflicht.
+         */
         TicketBulkIn: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
             /** Ids */
             ids: string[];
+            priority?: components["schemas"]["Priority"] | null;
             resolution?: components["schemas"]["ResolutionIn"] | null;
-            status: components["schemas"]["TicketStatus"];
+            status?: components["schemas"]["TicketStatus"] | null;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** TicketHoldOut */
         TicketHoldOut: {
@@ -54819,6 +55021,93 @@ export interface operations {
             };
         };
     };
+    webauthn_login_options_api_v1_auth_login_webauthn_options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthWebAuthnLoginOptionsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthWebAuthnOptionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description MHVP-AUTH-0012 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webauthn_login_verify_api_v1_auth_login_webauthn_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthWebAuthnLoginVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description MHVP-AUTH-0013 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description MHVP-AUTH-0012 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     logout_api_v1_auth_logout_post: {
         parameters: {
             query?: never;
@@ -55269,7 +55558,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthWebAuthnRegisterOptionsRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -55277,7 +55570,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuthWebAuthnOptionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description MHVP-AUTH-0012 */
@@ -55296,15 +55598,35 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthWebAuthnRegisterVerifyRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuthWebAuthnCredentialOut"];
+                };
+            };
+            /** @description MHVP-AUTH-0013 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description MHVP-AUTH-0012 */
@@ -65259,6 +65581,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentRedactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retention_status_api_v1_documents__document_id__retention_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentRetentionStatusOut"];
                 };
             };
             /** @description Validation Error */
@@ -87002,6 +87355,28 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+        };
+    };
+    own_representations_api_v1_portal_representations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

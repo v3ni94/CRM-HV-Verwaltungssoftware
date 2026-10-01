@@ -104,9 +104,13 @@ def test_property_scope_ignored_for_admin_api_key_and_switch() -> None:
 
 
 def test_webauthn_not_available() -> None:
-    assert webauthn.AVAILABLE is False
+    from tests.conftest import make_settings
+
+    # Off by default (S16-01): only the operator release switches passkeys on.
+    settings = make_settings()
+    assert webauthn.is_available(settings) is False
     with pytest.raises(ProblemError) as exc:
-        webauthn.ensure_available()
+        webauthn.ensure_available(settings)
     assert exc.value.error.code == "MHVP-AUTH-0012"
     assert exc.value.status == 503
 

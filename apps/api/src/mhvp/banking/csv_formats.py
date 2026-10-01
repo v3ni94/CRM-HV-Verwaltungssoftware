@@ -23,6 +23,7 @@ import io
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from mhvp.banking.camt import ParsedFile, RawStatement, RawTransaction
 
@@ -270,6 +271,40 @@ _COMDIRECT = BankCsvFormat(
 # tracked in `docs/OPEN_QUESTIONS.md` (M11-02-csv-header-verification) so a real export can
 # be added once available.
 
+# Immoware24 "Umsatzexport" (Bankingmodul). ASSUMPTION A-M11-09-01: no sample file and no
+# column list is documented in `docs/integrations/` (OPEN_QUESTIONS M11-09-01). Only the
+# columns "Objekt" (known from the Immoware24 banking module list), a booking date, amount
+# and purpose are required for detection; all further columns are optional, are read from
+# the header row via `_IMMOWARE24_ALIASES` (assumed spellings) and are skipped when absent.
+# Always "zu_pruefen"; an operator confirms the preview before importing.
+_IMMOWARE24_REQUIRED = ("objekt", "buchungsdatum", "betrag", "verwendungszweck")
+_IMMOWARE24_ALIASES: dict[str, tuple[str, ...]] = {
+    "value_date": ("valuta", "valutadatum", "wertstellung"),
+    "counterpart_name": ("name", "auftraggeber/empfänger", "zahlungsbeteiligter"),
+    "counterpart_iban": ("iban", "iban gegenkonto", "gegenkonto iban"),
+    "counterpart_bic": ("bic",),
+    "own_iban": ("konto iban", "eigene iban", "iban konto"),
+    "currency": ("währung", "waehrung"),
+    "end_to_end_id": ("end-to-end-referenz", "ende-zu-ende-referenz"),
+    "mandate_reference": ("mandatsreferenz",),
+}
+IMMOWARE24_FORMAT_ID = "immoware24_umsatz_csv"
+
+
+def immoware24_mapping(headers: list[str]) -> ColumnMapping:
+    """Column mapping for the Immoware24 export derived from the actual header row."""
+    present = {_norm(h) for h in headers}
+    found: dict[str, Any] = {}
+    for field_name, aliases in _IMMOWARE24_ALIASES.items():
+        for alias in aliases:
+            if alias in present:
+                found[field_name] = alias
+                break
+    return ColumnMapping(
+        booking_date="buchungsdatum", amount="betrag", purpose="verwendungszweck", **found
+    )
+
+
 KNOWN_FORMATS: tuple[BankCsvFormat, ...] = (
     _SPARKASSE_CAMT,
     _SPARKASSE_MT940_CSV,
@@ -328,6 +363,7 @@ def _find_header_row(lines: list[str], delimiter_hint: str | None) -> tuple[int,
     actual header row; the header row is the first line whose normalised cells match a
     registered signature, else the first non-empty line."""
     known_signatures = {frozenset(f.signature) for f in KNOWN_FORMATS}
+    known_signatures.add(frozenset(_IMMOWARE24_REQUIRED))
     first_nonempty = None
     for idx, line in enumerate(lines[:40]):
         if not line.strip():
@@ -388,6 +424,16 @@ def detect_format(data: bytes) -> tuple[BankCsvFormat | None, str, str, list[str
     for fmt in KNOWN_FORMATS:
         if set(fmt.signature) <= normalised:
             return fmt, encoding, delimiter, headers, header_idx, text
+    if set(_IMMOWARE24_REQUIRED) <= normalised:
+        fmt = BankCsvFormat(
+            format_id=IMMOWARE24_FORMAT_ID,
+            label="Immoware24 (Umsatzexport, Spalten aus Kopfzeile, zu prüfen)",
+            signature=_IMMOWARE24_REQUIRED,
+            mapping=immoware24_mapping(headers),
+            confidence="zu_pruefen",
+            delimiter=delimiter,
+        )
+        return fmt, encoding, delimiter, headers, header_idx, text
     return None, encoding, delimiter, headers, header_idx, text
 
 

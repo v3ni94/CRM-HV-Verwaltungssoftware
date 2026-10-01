@@ -30,7 +30,7 @@ describe("InvoiceCreate", () => {
     await userEvent.click(screen.getByText("Rechnung erfassen"));
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/rechnungen/${ID}`));
     const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
-    expect(body).toMatchObject({ net: "100.05", vat: "19.01", gross: "119.06", lines: [{ account_id: "a1", vat_percent: "19" }] });
+    expect(body).toMatchObject({ work_order_id: null, resolution_id: null, plan_item_id: null, recurring_plan_id: null, net: "100.05", vat: "19.01", gross: "119.06", lines: [{ account_id: "a1", vat_percent: "19" }] });
   });
 });
 

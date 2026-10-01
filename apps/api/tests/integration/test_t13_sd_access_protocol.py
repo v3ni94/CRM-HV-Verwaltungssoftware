@@ -29,7 +29,6 @@ from tests.integration.test_m8_import import BUCKET, _settings
 from tests.integration.test_m21_portal import _contact_of, _doc, _ok, _portal_user
 from tests.integration.test_m21_read_receipts import _db
 from tests.integration.test_q10_portal_w3 import _tenant_setup
-from tests.integration.test_q10_portal_w3 import _world as _q10_world
 
 pytestmark = pytest.mark.integration
 P = "/api/v1/portal"
@@ -37,10 +36,41 @@ PA = "/api/v1/portal-admin"
 H = "/api/v1/hoa"
 
 
+async def _world_t13(settings: Any) -> World:
+    from mhvp.core import crypto
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.platform import services
+    from tests.integration.test_m2_platform import RUN
+
+    crypto.set_master_key(b"k" * 32)
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        a, _ = await services.provision_tenant(factory, slug=f"t13a-{RUN}", name=f"T13 A {RUN}")
+        b, _ = await services.provision_tenant(factory, slug=f"t13b-{RUN}", name=f"T13 B {RUN}")
+        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        for name, tenant in (("t13admin", a), ("t13adminb", b)):
+            uid = await services.create_user(
+                factory, email=world.email(name), display_name=name, password=PASSWORD
+            )
+            world.users[name] = uid
+            await services.add_member(
+                factory,
+                tenant_id=tenant,
+                user_id=uid,
+                role_codes=["tenant_admin"],
+                actor_user_id=None,
+            )
+        return world
+    finally:
+        await engine.dispose()
+
+
 @pytest.fixture(scope="module")
 def world(database: Database, redis_url: str) -> World:
-    # Own tenants through the q10 world builder (slugs carry the run id, no clash).
-    return asyncio.run(_q10_world(_settings(database, redis_url)))
+    # Own tenants and users: the q10 world builder cannot run twice in one process (slugs
+    # and e-mail addresses derive from the constant RUN).
+    return asyncio.run(_world_t13(_settings(database, redis_url)))
 
 
 @pytest.fixture
@@ -54,7 +84,7 @@ def client(database: Database, redis_url: str) -> Iterator[TestClient]:
 def test_sd05_pue12_invitation_scope_search_sort_bundle(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    ha = bearer(login(client, world, "q10admin"))
+    ha = bearer(login(client, world, "t13admin"))
     contract, meta = _tenant_setup(client, ha, world, "931")
     d_zeta = _doc(client, ha, "Zeta Beleg", "contract", contract, ["tenant"])
     d_alpha = _doc(client, ha, "Alpha Beleg", "contract", contract, ["tenant"])
@@ -92,24 +122,34 @@ def test_sd05_pue12_invitation_scope_search_sort_bundle(
         f"{P}/invitations/accept", json={"token": inv["invitation_token"], "password": PASSWORD}
     )
     assert expired.status_code == 422, "an expired invitation must not open access"
-    # Finding T13-01: a second invitation for the same contact is refused (409), there is no
-    # re-issue for an expired invitation; the status of the account stays "invited".
-    again = client.post(
-        f"{PA}/accounts",
-        json={
-            "contact_id": guest_contact,
-            "email": world.email("t13guest"),
-            "display_name": "t13g",
-        },
-        headers=ha,
-    )
-    assert again.status_code == 409
+    # T13-01: an expired, never accepted invitation is issued again (new token, expiry reset);
+    # the old token stays unusable, the account is not duplicated.
+    body = {"contact_id": guest_contact, "email": world.email("t13guest"), "display_name": "t13g"}
+    again = _ok(client.post(f"{PA}/accounts", json=body, headers=ha), 201)
+    assert again["id"] == inv["id"]
+    assert again["invitation_token"] != inv["invitation_token"]
+    rows = _ok(client.get(f"{PA}/accounts", params={"contact_id": guest_contact}, headers=ha))
+    assert len(rows) == 1
+    assert rows[0]["status"] == "invited"
+    renewed = datetime.fromisoformat(rows[0]["invitation_expires_at"])
+    assert timedelta(days=13) < renewed - datetime.now(UTC) <= timedelta(days=14, minutes=5)
     assert (
-        _ok(client.get(f"{PA}/accounts", params={"contact_id": guest_contact}, headers=ha))[0][
-            "status"
-        ]
-        == "invited"
+        client.post(
+            f"{P}/invitations/accept",
+            json={"token": inv["invitation_token"], "password": PASSWORD},
+        ).status_code
+        == 422
     )
+    # A still valid invitation is no reason for a second one (409).
+    assert client.post(f"{PA}/accounts", json=body, headers=ha).status_code == 409
+    accepted = client.post(
+        f"{P}/invitations/accept",
+        json={"token": again["invitation_token"], "password": PASSWORD},
+    )
+    assert accepted.status_code < 300, accepted.text
+    # An active account is never invited again (409), also not after the expiry date.
+    _db(database, redis_url, world, expire)
+    assert client.post(f"{PA}/accounts", json=body, headers=ha).status_code == 409
     portal = _portal_user(client, ha, world, "t13res", contact)
 
     # Read rights and scope: only the tenant release; the owner only document stays hidden.
@@ -229,7 +269,7 @@ def _hoa_with_owner(client: TestClient, h: dict[str, str], number: str) -> tuple
 def test_sd06_w13_board_review_is_no_resolution_and_needs_no_board(
     client: TestClient, world: World
 ) -> None:
-    h = bearer(login(client, world, "q10admin"))
+    h = bearer(login(client, world, "t13admin"))
     hoa, owner_contract, auditor = _hoa_with_owner(client, h, "933")
     base = {"legal_entity_id": hoa, "scheduled_at": "2026-06-20T10:00:00+02:00"}
     meeting = _ok(client.post(f"{H}/meetings", json=base, headers=h), 201)
@@ -317,7 +357,7 @@ def test_sd07_pue13_protocol_without_legal_fiction(client: TestClient, world: Wo
     """Full course on the existing functions; complements the P08 case SD-07."""
     from tests.integration.test_p08_hoa_audit_inspection import INS, _released_request
 
-    h = bearer(login(client, world, "q10admin"))
+    h = bearer(login(client, world, "t13admin"))
     _, rid, d1, _ = _released_request(client, h, "934")
     _ok(
         client.post(

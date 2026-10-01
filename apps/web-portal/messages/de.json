@@ -14,6 +14,9 @@
     "intro": "Zugang für Mieter, Eigentümer und Beteiligte der Hausverwaltung. Die Zugangsdaten erhalten Sie von Ihrer Verwaltung."
   },
   "Auth": {
+    "passkeyUse": "Passkey verwenden",
+    "passkeyUnsupported": "Dieser Browser unterstützt keine Passkeys.",
+    "passkeyAborted": "Die Passkey-Anmeldung wurde abgebrochen.",
     "loginTitle": "Anmelden",
     "email": "E-Mail",
     "password": "Passwort",
@@ -69,6 +72,7 @@
       "meetings": "Versammlungen",
       "contacts": "Ansprechpartner",
       "hoaAccount": "Hausgeldkonto",
+      "representation": "Vertretung",
       "ownerOverview": "Eigentum",
       "consumption": "Verbrauch",
       "notices": "Aushänge",
@@ -120,6 +124,7 @@
       "owner": "Eigentümer",
       "board_member": "Beirat",
       "service_provider": "Dienstleister",
+      "representative": "Vertreter",
       "all": "Alle Rollen"
     }
   },
@@ -302,6 +307,10 @@
     "invoiceNumber": "Rechnungsnummer",
     "invoiceDate": "Rechnungsdatum",
     "invoiceGross": "Rechnungsbetrag brutto (EUR)",
+    "invoiceNet": "Nettobetrag (EUR, optional)",
+    "invoiceVatRate": "USt-Satz in Prozent (optional)",
+    "invoiceIban": "IBAN laut Rechnung (optional)",
+    "invoiceBreakdownHelp": "Die Angaben erleichtern der Verwaltung die Prüfung. Die IBAN wird mit den hinterlegten Stammdaten abgeglichen, eine Zahlung wird dadurch nicht ausgelöst.",
     "invoiceDocument": "Rechnung als Datei anhängen",
     "invoiceDocumentRequired": "Bitte die Rechnung als Datei anhängen.",
     "invoiceSubmit": "Rechnung einreichen",
@@ -898,6 +907,15 @@
     "toLogin": "Zur Anmeldung"
   },
   "Security": {
+    "passkeysTitle": "Passkeys (zweiter Faktor)",
+    "passkeysHint": "Ein Passkey ersetzt bei der Anmeldung den Code der Authenticator-App. Das Passwort bleibt erforderlich.",
+    "passkeysUnavailable": "Passkeys sind nicht freigeschaltet.",
+    "noPasskeys": "Keine Passkeys registriert.",
+    "passkeyLabel": "Bezeichnung",
+    "passkeyAdd": "Passkey hinzufügen",
+    "passkeyAdded": "Passkey registriert.",
+    "passkeyFailed": "Der Passkey konnte nicht registriert werden.",
+    "passkeyRevoke": "Entfernen",
     "title": "Sicherheit",
     "intro": "Zweiter Faktor und gemerkte Geräte für Ihren Zugang.",
     "totpTitle": "Zweiter Faktor (Authenticator-App)",
@@ -944,6 +962,22 @@
     "enforcementTitle": "Schlichtungsverfahren",
     "enforcement": "Bei nicht zufriedenstellender Antwort besteht die Möglichkeit, sich an die zuständige Überwachungsstelle zu wenden. [zu ergänzen: zuständige Schlichtungs- und Überwachungsstelle]",
     "backToStart": "Zur Übersicht"
+  },
+  "Representation": {
+    "title": "Vertretung",
+    "intro": "Vollmachten dieses Zugangs. Der Zugriff besteht nur im Zeitraum der Vollmacht und nur lesend; nach Ablauf oder Widerruf endet er.",
+    "empty": "Keine Vertretungen hinterlegt.",
+    "unknownPrincipal": "Vertretene Person",
+    "period": "Gültig vom {from} bis {to}",
+    "periodOpen": "Gültig ab {from}, ohne Enddatum",
+    "expiresIn": "{days, plural, =0 {Läuft heute ab} one {Läuft in einem Tag ab} other {Läuft in # Tagen ab}}",
+    "noAccess": "Kein Zugriff mehr.",
+    "state": {
+      "active": "Gültig",
+      "pending": "Noch nicht gültig",
+      "expired": "Abgelaufen",
+      "revoked": "Widerrufen"
+    }
   },
   "OwnerOverview": {
     "title": "Eigentum",

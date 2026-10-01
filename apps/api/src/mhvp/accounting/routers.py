@@ -1622,10 +1622,21 @@ async def _invoice(session: AsyncSession, invoice_id: uuid.UUID) -> Invoice:
 async def _ensure_invoice_property_allowed(session: AsyncSession, inv: Invoice) -> None:
     """M2-02/S16-02: an invoice belongs to the property of its ledger; with a property
     assignment, invoices of other ledgers (or of ledgers without property) answer 404."""
-    if session_allowed_property_ids(session) is None:
+    from mhvp.core.auth.scope import (
+        ensure_session_legal_entity_allowed,
+        session_allowed_legal_entity_ids,
+    )
+
+    # U15: the legal entity scope (tax advisor, A37) applies to invoices as well.
+    if session_allowed_property_ids(session) is None and (
+        session_allowed_legal_entity_ids(session) is None
+    ):
         return
     ledger = await session.get(Ledger, inv.ledger_id)
-    ensure_session_property_allowed(session, ledger.property_id if ledger else None)
+    if ledger is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    ensure_session_property_allowed(session, ledger.property_id)
+    ensure_session_legal_entity_allowed(session, ledger.legal_entity_id)
 
 
 async def _check_factual_links(session: AsyncSession, body: InvoiceIn) -> None:

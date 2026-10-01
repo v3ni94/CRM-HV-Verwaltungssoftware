@@ -349,6 +349,10 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
         return "Mitglied einer Vertragspartei"
     if entity_type in HISTORY_ENTITY_TYPES:
         return await _history_referenced(session, entity_type, entity_id)
+    from mhvp.imports import w3_reports
+
+    if entity_type in w3_reports.RECORDED_ENTITY_TYPES:
+        return await w3_reports.referenced(session, entity_type, entity_id)
     from mhvp.imports import w5_reports
 
     if entity_type in w5_reports.UNDOABLE_ENTITY_TYPES:
@@ -483,6 +487,11 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
         return
     if entity_type in HISTORY_ENTITY_TYPES:
         await _remove_history(session, entity_type, entity_id)
+        return
+    from mhvp.imports import w3_reports
+
+    if entity_type in w3_reports.RECORDED_ENTITY_TYPES:
+        await w3_reports.remove(session, entity_type, entity_id)
         return
     from mhvp.imports import w5_reports
 

@@ -316,3 +316,7 @@ Im Mahnlauf öffnet der Aufklapper "Prüfhinweise, Zins, Zustellnachweise und Sp
 ## Jahresübernahme und Honorarlauf
 
 Auf der Seite eines Buchungskreises zeigt "Jahresübernahme" nach Eingabe des Geschäftsjahres die Schlussbestände. "Als Entwurf übernehmen" legt Schlussbestand und Anfangsbestand als Buchungsentwürfe an; diese werden wie jede Buchung geprüft und von einer zweiten Person freigegeben. Unter "Verwalterhonorar" stellt der "Honorarlauf" alle fälligen Honorare eines Zeitraums gesammelt aus: zuerst "Vorschau", dann "Rechnung(en) ausstellen" nach Bestätigung (die Rechnungsnummern werden fest vergeben). Zu jeder Honorarrechnung erzeugt "PDF erzeugen" das Rechnungsdokument auf dem Briefbogen und bietet es danach zum Herunterladen an. Nichts wird versendet.
+
+## Art der Abrechnung und Verteilung je Konto
+
+Im Kontenplan zeigt die Spalte "Art der Abrechnung" je Konto Hausgeld, Rücklage, Betriebskosten, Sonderumlage, Heizkosten oder keine. Bei Kostenkonten blendet "Verteilung" die hinterlegte Mehrschlüsselverteilung mit Anteilen und Summe ein. Die Pflege der Verteilung erfolgt weiterhin über die API.

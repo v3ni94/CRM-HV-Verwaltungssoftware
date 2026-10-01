@@ -282,6 +282,78 @@ async def ticket_hold(session: AsyncSession, document_id: uuid.UUID) -> str | No
     return f"Vorgang TNR#{ticket.number}: {ticket.retention_hold_reason}"
 
 
+# S711-06: automatic hold from an open procedure ------------------------------------------
+
+# Dunning block reasons that stand for an open procedure (Prozess, Insolvenz). While such a
+# block is active (``released_at`` NULL) on an open item of a contract the document is linked
+# to, the document is kept. The block
+# is owned by accounting (M16-03); lifting it there lifts this hold. Produktschutz (0.2).
+PROCEDURE_BLOCK_REASONS = frozenset({"litigation", "insolvency"})
+_PROCEDURE_LABEL = {"litigation": "Rechtsstreit (Prozess)", "insolvency": "Insolvenzverfahren"}
+
+
+async def procedure_hold(session: AsyncSession, document_id: uuid.UUID) -> str | None:
+    """Reason of an automatic hold from an active litigation or insolvency block, or None."""
+    from mhvp.accounting.models import DunningItemBlock, OpenItem  # local: import order
+
+    contract_ids = (
+        await session.scalars(
+            select(DocumentLink.entity_id).where(
+                DocumentLink.document_id == document_id, DocumentLink.entity_type == "contract"
+            )
+        )
+    ).all()
+    if not contract_ids:
+        return None
+    reason = await session.scalar(
+        select(DunningItemBlock.reason_code)
+        .join(OpenItem, OpenItem.id == DunningItemBlock.open_item_id)
+        .where(
+            OpenItem.contract_id.in_(contract_ids),
+            DunningItemBlock.released_at.is_(None),
+            DunningItemBlock.reason_code.in_(sorted(PROCEDURE_BLOCK_REASONS)),
+        )
+        .order_by(DunningItemBlock.created_at)
+        .limit(1)
+    )
+    if reason is None:
+        return None
+    return _PROCEDURE_LABEL.get(reason, reason)
+
+
+# S711-06: four eyes when a hold is lifted -------------------------------------------------
+
+
+async def hold_set_by(
+    session: AsyncSession, *, event_type: str, entity_id: uuid.UUID
+) -> uuid.UUID | None:
+    """Actor of the latest ``*.hold_set`` event of the entity (the person who set the hold)."""
+    from mhvp.core.events import DomainEvent  # local: keep the module import light
+
+    return await session.scalar(
+        select(DomainEvent.actor_user_id)
+        .where(DomainEvent.type == event_type, DomainEvent.entity_id == entity_id)
+        .order_by(DomainEvent.occurred_at.desc(), DomainEvent.id.desc())
+        .limit(1)
+    )
+
+
+async def require_second_person(
+    session: AsyncSession,
+    *,
+    event_type: str,
+    entity_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+) -> None:
+    """A hold is lifted only by a person other than the one who set it (7.11 S05)."""
+    setter = await hold_set_by(session, event_type=event_type, entity_id=entity_id)
+    if user_id is None or (setter is not None and setter == user_id):
+        raise ProblemError(
+            ErrorCodes.GATE_FOUR_EYES,
+            detail="Die Löschungssperre hebt eine zweite Person auf, nicht die setzende.",
+        )
+
+
 # Deletion (shared by DELETE /documents/{id} and the proposal execution) -------------------
 
 

@@ -4646,6 +4646,77 @@
         "title": "AuditReportIn",
         "type": "object"
       },
+      "AuthWebAuthnAssertionResponse": {
+        "properties": {
+          "authenticator_data": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Authenticator Data",
+            "type": "string"
+          },
+          "client_data_json": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Client Data Json",
+            "type": "string"
+          },
+          "signature": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Signature",
+            "type": "string"
+          },
+          "user_handle": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Handle"
+          }
+        },
+        "required": [
+          "client_data_json",
+          "authenticator_data",
+          "signature"
+        ],
+        "title": "AuthWebAuthnAssertionResponse",
+        "type": "object"
+      },
+      "AuthWebAuthnAttestationResponse": {
+        "properties": {
+          "attestation_object": {
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Attestation Object",
+            "type": "string"
+          },
+          "client_data_json": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Client Data Json",
+            "type": "string"
+          },
+          "transports": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Transports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "client_data_json",
+          "attestation_object"
+        ],
+        "title": "AuthWebAuthnAttestationResponse",
+        "type": "object"
+      },
       "AuthWebAuthnCredentialOut": {
         "properties": {
           "created_at": {
@@ -4680,6 +4751,11 @@
               }
             ],
             "title": "Last Used At"
+          },
+          "passwordless": {
+            "default": false,
+            "title": "Passwordless",
+            "type": "boolean"
           }
         },
         "required": [
@@ -4689,6 +4765,148 @@
           "last_used_at"
         ],
         "title": "AuthWebAuthnCredentialOut",
+        "type": "object"
+      },
+      "AuthWebAuthnLoginOptionsRequest": {
+        "properties": {
+          "mfa_token": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfa Token"
+          }
+        },
+        "title": "AuthWebAuthnLoginOptionsRequest",
+        "type": "object"
+      },
+      "AuthWebAuthnLoginVerifyRequest": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 100,
+            "minLength": 10,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "credential_id": {
+            "maxLength": 1400,
+            "minLength": 1,
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "mfa_token": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfa Token"
+          },
+          "remember_device": {
+            "default": false,
+            "title": "Remember Device",
+            "type": "boolean"
+          },
+          "response": {
+            "$ref": "#/components/schemas/AuthWebAuthnAssertionResponse"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "credential_id",
+          "response"
+        ],
+        "title": "AuthWebAuthnLoginVerifyRequest",
+        "type": "object"
+      },
+      "AuthWebAuthnOptionsOut": {
+        "description": "``challenge_id`` goes back with the verify call; ``public_key`` is handed to\n``navigator.credentials.create/get`` (binary fields base64url encoded).",
+        "properties": {
+          "challenge_id": {
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "public_key": {
+            "additionalProperties": true,
+            "title": "Public Key",
+            "type": "object"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "public_key"
+        ],
+        "title": "AuthWebAuthnOptionsOut",
+        "type": "object"
+      },
+      "AuthWebAuthnRegisterOptionsRequest": {
+        "properties": {
+          "passwordless": {
+            "default": false,
+            "title": "Passwordless",
+            "type": "boolean"
+          }
+        },
+        "title": "AuthWebAuthnRegisterOptionsRequest",
+        "type": "object"
+      },
+      "AuthWebAuthnRegisterVerifyRequest": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 100,
+            "minLength": 10,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "credential_id": {
+            "maxLength": 1400,
+            "minLength": 1,
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "response": {
+            "$ref": "#/components/schemas/AuthWebAuthnAttestationResponse"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "credential_id",
+          "response"
+        ],
+        "title": "AuthWebAuthnRegisterVerifyRequest",
         "type": "object"
       },
       "AuthWebAuthnStatus": {
@@ -22210,6 +22428,99 @@
         "title": "DocumentRedactionReleaseIn",
         "type": "object"
       },
+      "DocumentRetentionStatusOut": {
+        "description": "Retention and hold status of one document (S711-06).",
+        "properties": {
+          "deletion_blocker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletion Blocker"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "permanent_record": {
+            "title": "Permanent Record",
+            "type": "boolean"
+          },
+          "procedure_hold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Hold"
+          },
+          "retention_hold_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Hold Kind"
+          },
+          "retention_hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Hold Reason"
+          },
+          "retention_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Until"
+          },
+          "ticket_hold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Hold"
+          }
+        },
+        "required": [
+          "document_id",
+          "retention_until",
+          "retention_hold_reason",
+          "retention_hold_kind",
+          "procedure_hold",
+          "ticket_hold",
+          "permanent_record",
+          "deletion_blocker"
+        ],
+        "title": "DocumentRetentionStatusOut",
+        "type": "object"
+      },
       "DocumentSource": {
         "enum": [
           "upload",
@@ -37520,6 +37831,13 @@
             ],
             "title": "Expires In"
           },
+          "mfa_methods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mfa Methods",
+            "type": "array"
+          },
           "mfa_token": {
             "anyOf": [
               {
@@ -47493,22 +47811,67 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
             "title": "Gross"
+          },
+          "iban": {
+            "anyOf": [
+              {
+                "maxLength": 42,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iban"
           },
           "invoice_date": {
             "format": "date",
             "title": "Invoice Date",
             "type": "string"
           },
+          "net": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net"
+          },
           "number": {
             "maxLength": 100,
             "minLength": 1,
             "title": "Number",
             "type": "string"
+          },
+          "vat_rate": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,6}0*$)\\d{0,3}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Rate"
           }
         },
         "required": [
@@ -63935,7 +64298,20 @@
       },
       "TicketBulkIn": {
         "additionalProperties": false,
+        "description": "Sammelaktion (S12-05): Status, Bearbeiter, Team und Priorität einzeln oder kombiniert;\nmindestens eine Änderung ist Pflicht.",
         "properties": {
+          "assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee User Id"
+          },
           "ids": {
             "items": {
               "format": "uuid",
@@ -63945,6 +64321,16 @@
             "minItems": 1,
             "title": "Ids",
             "type": "array"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "resolution": {
             "anyOf": [
@@ -63957,12 +64343,30 @@
             ]
           },
           "status": {
-            "$ref": "#/components/schemas/TicketStatus"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
           }
         },
         "required": [
-          "ids",
-          "status"
+          "ids"
         ],
         "title": "TicketBulkIn",
         "type": "object"
@@ -82874,6 +83278,98 @@
         ]
       }
     },
+    "/api/v1/auth/login/webauthn/options": {
+      "post": {
+        "operationId": "webauthn_login_options_api_v1_auth_login_webauthn_options_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthWebAuthnLoginOptionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebAuthnOptionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "MHVP-AUTH-0012"
+          }
+        },
+        "summary": "Anmeldung mit Passkey: Optionen (zweiter Faktor oder ohne Passwort, S16-01)",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/login/webauthn/verify": {
+      "post": {
+        "description": "Second factor (challenge bound to the ``mfa_token`` user) or passwordless sign in\n(only credentials registered with ``passwordless``, user verification required). The\nchallenge is consumed before any check; failures count towards the account lockout.",
+        "operationId": "webauthn_login_verify_api_v1_auth_login_webauthn_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthWebAuthnLoginVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "MHVP-AUTH-0013"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "MHVP-AUTH-0012"
+          }
+        },
+        "summary": "Anmeldung mit Passkey: Antwort prüfen, Token ausstellen (S16-01)",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "logout_api_v1_auth_logout_post",
@@ -83405,22 +83901,51 @@
     },
     "/api/v1/auth/webauthn/register/options": {
       "post": {
-        "description": "Answers MHVP-AUTH-0012 until a WebAuthn verification library is released.",
+        "description": "Creation options for the signed in user (attestation none). ``passwordless`` asks for a\ndiscoverable credential with user verification.",
         "operationId": "webauthn_register_options_api_v1_auth_webauthn_register_options_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AuthWebAuthnRegisterOptionsRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebAuthnOptionsOut"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "description": "MHVP-AUTH-0012"
           }
         },
-        "summary": "Passkey registrieren: Optionen (vorbereitet, M2-03)",
+        "summary": "Passkey registrieren: Optionen (S16-01)",
         "tags": [
           "Anmeldung"
         ]
@@ -83429,20 +83954,45 @@
     "/api/v1/auth/webauthn/register/verify": {
       "post": {
         "operationId": "webauthn_register_verify_api_v1_auth_webauthn_register_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthWebAuthnRegisterVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebAuthnCredentialOut"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "401": {
+            "description": "MHVP-AUTH-0013"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "description": "MHVP-AUTH-0012"
           }
         },
-        "summary": "Passkey registrieren: Antwort prüfen (vorbereitet, M2-03)",
+        "summary": "Passkey registrieren: Antwort prüfen (S16-01)",
         "tags": [
           "Anmeldung"
         ]
@@ -98828,6 +99378,50 @@
         "summary": "Geschwärzte Kopie freigeben (Vier Augen)",
         "tags": [
           "Dokumente",
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/retention-status": {
+      "get": {
+        "description": "Why the document is kept today (S711-06): manual hold, automatic procedure hold,\nWEG permanent record or period; ``deletion_blocker`` None means deletable.",
+        "operationId": "retention_status_api_v1_documents__document_id__retention_status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentRetentionStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aufbewahrungs- und Sperrstatus",
+        "tags": [
           "Dokumente"
         ]
       }
@@ -131608,6 +132202,30 @@
           }
         },
         "summary": "Ansprechpartner des Objekts (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/representations": {
+      "get": {
+        "description": "M21-05: the powers of attorney of the signed-in representative with period and state;\nexpired or revoked ones are listed as such and carry no access.",
+        "operationId": "own_representations_api_v1_portal_representations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Own Representations Api V1 Portal Representations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Vertretungen mit Ablauf",
         "tags": [
           "Portal"
         ]

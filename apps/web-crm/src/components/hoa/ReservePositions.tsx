@@ -8,6 +8,9 @@ import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ReserveAccountFields } from "./ReserveAccountFields";
+import { ReserveYearsTable, type AccountOption, type ReserveYearRow } from "./ReserveYears";
+
 export type ReserveRow = {
   id: string;
   name: string;
@@ -15,32 +18,35 @@ export type ReserveRow = {
   active?: boolean;
   opening_balance?: string;
   opening_year?: number | null;
+  bank_account_id?: string | null;
+  account_id?: string | null;
 };
 
-type YearRow = {
-  year: number;
-  opening: string;
-  contributions: string;
-  contribution_basis: "paid" | "planned";
-  withdrawals: string;
-  taxes: string;
-  fees: string;
-  interest: string;
-  closing: string;
-  source: "statement" | "plan" | "none";
-};
+type YearRow = ReserveYearRow;
 
 type Movement = { id: string; reserve_id: string; kind: string; amount: string; purpose: string; receipt_linked: boolean };
 
 /** One earmarked reserve (M24-01): master data change and development per year (opening,
  *  contribution, withdrawal, taxes, fees, interest, closing). Nothing here posts. */
-export function ReservePosition({ reserve, year }: { reserve: ReserveRow; year: number }) {
+export function ReservePosition({
+  reserve,
+  year,
+  bankAccounts = [],
+  accounts = [],
+}: {
+  reserve: ReserveRow;
+  year: number;
+  bankAccounts?: AccountOption[];
+  accounts?: AccountOption[];
+}) {
   const t = useTranslations("HoaReserves");
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(reserve.name);
   const [opening, setOpening] = useState(reserve.opening_balance ?? "0.00");
   const [openingYear, setOpeningYear] = useState(reserve.opening_year ? String(reserve.opening_year) : "");
+  const [bankId, setBankId] = useState(reserve.bank_account_id ?? "");
+  const [accountId, setAccountId] = useState(reserve.account_id ?? "");
   const [rows, setRows] = useState<YearRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +59,8 @@ export function ReservePosition({ reserve, year }: { reserve: ReserveRow; year: 
         name: name.trim(),
         opening_balance: opening.replace(",", "."),
         opening_year: openingYear ? Number(openingYear) : null,
+        bank_account_id: bankId || null,
+        account_id: accountId || null,
       }),
     });
     if (!res.ok) {
@@ -84,6 +92,16 @@ export function ReservePosition({ reserve, year }: { reserve: ReserveRow; year: 
             · {t("openingBalance")} {formatEur(reserve.opening_balance ?? "0")} ({reserve.opening_year})
           </span>
         ) : null}
+        {reserve.bank_account_id ? (
+          <span className="text-muted">
+            · {t("bankAccount")}: {bankAccounts.find((a) => a.id === reserve.bank_account_id)?.label ?? reserve.bank_account_id}
+          </span>
+        ) : null}
+        {reserve.account_id ? (
+          <span className="text-muted">
+            · {t("ledgerAccount")}: {accounts.find((a) => a.id === reserve.account_id)?.label ?? reserve.account_id}
+          </span>
+        ) : null}
         {reserve.active === false ? <span className="text-muted">· {t("inactive")}</span> : null}
         <button type="button" className={ui.buttonSm} onClick={() => setEditing((v) => !v)}>
           {editing ? t("cancel") : t("edit")}
@@ -106,46 +124,15 @@ export function ReservePosition({ reserve, year }: { reserve: ReserveRow; year: 
             <span className={ui.label}>{t("openingYear")}</span>
             <input className={ui.input} inputMode="numeric" value={openingYear} onChange={(e) => setOpeningYear(e.target.value)} />
           </label>
+          <ReserveAccountFields bankAccounts={bankAccounts} accounts={accounts} bankAccountId={bankId} accountId={accountId} onBank={setBankId} onAccount={setAccountId} />
           <button type="submit" className={ui.button} disabled={name.trim().length < 2}>
             {t("save")}
           </button>
         </form>
       ) : null}
       {rows ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" aria-label={t("yearTitle")}>
-            <thead>
-              <tr className="text-left">
-                <th>{t("year")}</th>
-                <th>{t("opening")}</th>
-                <th>{t("contribution")}</th>
-                <th>{t("withdrawals")}</th>
-                <th>{t("taxes")}</th>
-                <th>{t("fees")}</th>
-                <th>{t("interest")}</th>
-                <th>{t("closing")}</th>
-                <th>{t("basis")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.year}>
-                  <td>{r.year}</td>
-                  <td>{formatEur(r.opening)}</td>
-                  <td>{formatEur(r.contributions)}</td>
-                  <td>{formatEur(r.withdrawals)}</td>
-                  <td>{formatEur(r.taxes)}</td>
-                  <td>{formatEur(r.fees)}</td>
-                  <td>{formatEur(r.interest)}</td>
-                  <td className="font-medium">{formatEur(r.closing)}</td>
-                  <td>
-                    {r.source === "statement" ? t("sourceStatement") : r.source === "plan" ? t("sourcePlan") : t("sourceNone")}
-                    {r.source !== "none" ? ` (${r.contribution_basis === "paid" ? t("basisPaid") : t("basisPlanned")})` : ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          <ReserveYearsTable rows={rows} />
           <p className={ui.help}>{t("developmentHint")}</p>
         </div>
       ) : null}

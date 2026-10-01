@@ -153,7 +153,11 @@ class PortalCompleteIn(_In):
 class PortalInvoiceSubmitIn(_In):
     number: str = Field(min_length=1, max_length=100)
     invoice_date: date
-    gross: Decimal = Field(gt=0)
+    gross: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
+    # M22-02: optional breakdown as printed on the invoice; transferred into the receipt draft.
+    net: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    vat_rate: Decimal | None = Field(default=None, ge=0, le=100, max_digits=5, decimal_places=2)
+    iban: str | None = Field(default=None, max_length=42)
     document_id: uuid.UUID
 
 
@@ -189,9 +193,40 @@ async def provision_account(
     async with tenant_tx(request, principal) as session:
         if await session.get(Contact, contact_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        if await session.scalar(
-            select(PortalAccount.id).where(PortalAccount.contact_id == contact_id)
-        ):
+        existing = await session.scalar(
+            select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+        )
+        if existing is not None:
+            # T13-01: only a lapsed, never accepted invitation is issued again (new token,
+            # new expiry); an active, locked or still valid invitation stays a conflict.
+            now = datetime.now(UTC)
+            if (
+                existing.status == "invited"
+                and existing.invitation_expires_at is not None
+                and existing.invitation_expires_at <= now
+            ):
+                secret = secrets.token_urlsafe(32)
+                existing.invitation_hash = _hash(secret)
+                existing.invitation_expires_at = now + timedelta(days=INVITE_DAYS)
+                grants = await access.sync_grants(session, existing)
+                await emit(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    type="portal_account.invitation_reissued",
+                    entity_type="portal_account",
+                    entity_id=existing.id,
+                    actor_user_id=principal.user_id,
+                    payload={"grants": grants},
+                )
+                token = f"{principal.tenant_id.hex}.{secret}"
+                return {
+                    "id": existing.id,
+                    "user_id": existing.user_id,
+                    "grants": grants,
+                    "invitation_token": token,
+                    "invitation_url": invitation_url(request, token),
+                    "reissued": True,
+                }
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Für den Kontakt besteht bereits ein Portalzugang."
             )
@@ -504,6 +539,12 @@ async def change_requests(
         rows = (
             await session.execute(query.order_by(ChangeRequest.created_at.desc()).limit(500))
         ).all()
+        # U15 (M2-02): with a property assignment only requests of visible contacts.
+        visible: dict[uuid.UUID, bool] = {}
+        for _r, cid in rows:
+            if cid not in visible:
+                visible[cid] = await contact_visible(session, cid)
+        rows = [row for row in rows if visible[row[1]]]
         # Accepted invoice submissions point to their receipt draft (M22-02, Q11).
         from mhvp.receipts.models import ReceiptDraft
 
@@ -561,9 +602,11 @@ async def decide(
         row = await session.get(ChangeRequest, request_id, with_for_update=True)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        account = await session.get(PortalAccount, row.account_id)
+        if account is not None:
+            await ensure_contact_visible(session, account.contact_id)  # U15, M2-02
         if row.status != "proposed":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Bereits entschieden.")
-        account = await session.get(PortalAccount, row.account_id)
         payload = json.loads(row.payload)
         receipt_draft_id: uuid.UUID | None = None
         if body.accept and account is not None:
@@ -627,6 +670,42 @@ async def decide(
         return result
 
 
+def _invoice_breakdown(body: PortalInvoiceSubmitIn) -> dict[str, Any]:
+    """M22-02: validates the optional net, VAT rate and IBAN of a submission and returns the
+    normalised values (``net``, ``vat``, ``vat_rate``, ``iban``). Net plus VAT must equal the
+    gross amount (cent tolerance of one for a rate given); the rate is the provider's entry,
+    no tax classification is derived here."""
+    from mhvp.contacts.validation import InvalidValueError, normalise_iban
+
+    cent = Decimal("0.01")
+    out: dict[str, Any] = {}
+    net = body.net
+    if net is None and body.vat_rate is not None:
+        net = (body.gross / (1 + body.vat_rate / 100)).quantize(cent)
+    if net is not None:
+        if net > body.gross:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Netto darf nicht über dem Brutto liegen."
+            )
+        vat = body.gross - net
+        if body.vat_rate is not None and body.net is not None:
+            expected = (net * body.vat_rate / 100).quantize(cent)
+            if abs(expected - vat) > cent:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Netto, USt-Satz und Brutto passen nicht zusammen.",
+                )
+        out.update(net=str(net), vat=str(vat))
+        if body.vat_rate is not None:
+            out["vat_rate"] = str(body.vat_rate)
+    if body.iban:
+        try:
+            out["iban"] = normalise_iban(body.iban)
+        except InvalidValueError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
+    return out
+
+
 async def _apply_invoice_submission(
     session: AsyncSession, principal: TenantPrincipal, row: ChangeRequest, payload: dict[str, Any]
 ) -> uuid.UUID:
@@ -674,11 +753,26 @@ async def _apply_invoice_submission(
             "currency": _entered("EUR", note),
             "property_ref": _entered(prop.number if prop else None, "Objekt des Auftrags"),
         }
+        warnings = [
+            "Die Angaben stammen vom Dienstleister aus dem Portal und sind mit dem Beleg "
+            "abzugleichen."
+        ]
+        if payload.get("net") is not None:
+            rate = payload.get("vat_rate")
+            fields["net"] = _entered(str(payload["net"]), note)
+            fields["vat"] = _entered(
+                str(payload["vat"]), note + (f", USt-Satz {rate} %" if rate else "")
+            )
+        findings, iban_candidates = await _invoice_findings(
+            session, order, provider, payload, document_id
+        )
         draft = ReceiptDraft(
             tenant_id=row.tenant_id,
             created_by=principal.user_id,
             document_id=document_id,
             source="portal",
+            findings=findings,
+            iban_candidates=json.dumps(iban_candidates) if iban_candidates else None,
             status=ReceiptDraftStatus.PROPOSED.value,
             fields=fields,
             property_suggestions=(
@@ -694,10 +788,7 @@ async def _apply_invoice_submission(
                 if prop
                 else []
             ),
-            warnings=[
-                "Die Angaben stammen vom Dienstleister aus dem Portal und sind mit dem Beleg "
-                "abzugleichen."
-            ],
+            warnings=warnings,
         )
         session.add(draft)
         await session.flush()
@@ -715,6 +806,74 @@ async def _apply_invoice_submission(
         )
         order.status = OrderStatus.INVOICED
     return draft_id
+
+
+async def _invoice_findings(
+    session: AsyncSession,
+    order: Any,
+    provider: Any,
+    payload: dict[str, Any],
+    document_id: uuid.UUID,
+) -> tuple[list[str], list[str]]:
+    """M22-02: findings for the receipt draft of a portal submission. They only mark, nothing
+    is blocked: (1) the IBAN entered is compared with the current accounts of the creditor
+    master data (fingerprint, no decryption), (2) the Rechnungsbuch is searched for the same
+    issuer with the same number or the same date and gross amount. Returns the findings and
+    the IBAN candidates for the draft (stored encrypted, exposed masked)."""
+    from mhvp.accounting.models import Invoice
+    from mhvp.contacts.models import ContactBankAccount
+    from mhvp.core import crypto
+
+    findings: list[str] = []
+    candidates: list[str] = []
+    iban = payload.get("iban")
+    if iban:
+        candidates.append(iban)
+        accounts = (
+            await session.scalars(
+                select(ContactBankAccount).where(
+                    ContactBankAccount.contact_id == order.provider_contact_id,
+                    (ContactBankAccount.valid_to.is_(None))
+                    | (ContactBankAccount.valid_to >= local_today()),
+                )
+            )
+        ).all()
+        if not accounts:
+            findings.append(
+                "IBAN-Abgleich: Im Kreditorenstamm ist keine gültige Bankverbindung des "
+                f"Dienstleisters hinterlegt (Rechnung: ... {iban[-4:]}); Prüfung vor Zahlung nötig."
+            )
+        elif crypto.fingerprint(iban) in {a.iban_fingerprint for a in accounts}:
+            findings.append(
+                "IBAN-Abgleich: Die IBAN der Rechnung stimmt mit dem Kreditorenstamm überein."
+            )
+        else:
+            known = ", ".join(f"... {a.iban_suffix}" for a in accounts)
+            findings.append(
+                f"IBAN-Abweichung: Die IBAN der Rechnung (... {iban[-4:]}) weicht vom "
+                f"Kreditorenstamm ab ({known}); Rückfrage beim Dienstleister vor Zahlung, "
+                "Änderung nur über den Vier-Augen-Weg."
+            )
+    number = str(payload["number"]).strip().lower()
+    gross = Decimal(str(payload["gross"]))
+    booked = (
+        await session.execute(
+            select(Invoice.number, Invoice.invoice_date, Invoice.gross).where(
+                Invoice.provider_contact_id == order.provider_contact_id,
+                (func.lower(Invoice.number) == number)
+                | (
+                    (Invoice.gross == gross)
+                    & (Invoice.invoice_date == date.fromisoformat(str(payload["invoice_date"])))
+                ),
+            )
+        )
+    ).all()
+    for b_number, b_date, b_gross in booked:
+        findings.append(
+            f"Mögliches Duplikat: Das Rechnungsbuch enthält vom selben Aussteller Rechnung "
+            f"{b_number} vom {b_date.strftime('%d.%m.%Y')} über {b_gross} EUR."
+        )
+    return findings, candidates
 
 
 async def _apply_address(
@@ -963,6 +1122,13 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             is not None
         )
         contract_ids = [g.scope_id for g in active if g.scope_type == "contract"]
+        # M21-05: contracts reached only through a power of attorney do not make the account an
+        # owner; the representative gets the own role "representative" instead.
+        represented_contract_ids = {
+            g.scope_id
+            for g in active
+            if g.scope_type == "contract" and g.legal_basis == access.REPRESENTATION_BASIS
+        }
         contracts = (
             (await session.scalars(select(Contract).where(Contract.id.in_(contract_ids)))).all()
             if contract_ids
@@ -973,7 +1139,11 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             active_rental_contracts=sum(
                 1 for c in contracts if c.kind is not ContractKind.OWNERSHIP
             ),
-            active_ownerships=sum(1 for c in contracts if c.kind is ContractKind.OWNERSHIP)
+            active_ownerships=sum(
+                1
+                for c in contracts
+                if c.kind is ContractKind.OWNERSHIP and c.id not in represented_contract_ids
+            )
             + (1 if any(g.legal_basis in ("hoa_member_right",) for g in active) else 0),
             board_seats=1 if any(g.role == "board" for g in active) else 0,
             service_provider_relations=1 if is_provider else 0,
@@ -989,7 +1159,8 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             "representations": representations,
             "contact_id": account.contact_id,
             # S16-10 (3.4): named portal roles derived from the relations, not assigned.
-            "portal_roles": [r.value for r in derive_portal_roles(relations)],
+            "portal_roles": [r.value for r in derive_portal_roles(relations)]
+            + (["representative"] if representations else []),
             "roles": sorted({g.role for g in active} | ({"provider"} if is_provider else set())),
             "contracts": [
                 {
@@ -2287,6 +2458,7 @@ async def submit_invoice(
         from mhvp.accounting.models import Invoice
 
         number = body.number.strip()
+        extra = _invoice_breakdown(body)
         booked = await session.scalar(
             select(Invoice.id).where(
                 Invoice.provider_contact_id == order.provider_contact_id,
@@ -2309,5 +2481,5 @@ async def submit_invoice(
             principal,
             account,
             "invoice_submission",
-            {**body.model_dump(mode="json"), "work_order_id": str(order.id)},
+            {**body.model_dump(mode="json"), **extra, "work_order_id": str(order.id)},
         )

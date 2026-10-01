@@ -22,11 +22,16 @@ export default async function SecurityPage() {
   const consent = consentResponse.ok
     ? ((await consentResponse.json()) as { active: boolean; expires_at: string | null; available: boolean })
     : null;
+  // S16-01: the passkey card appears only while passkeys are switched on (operator release).
+  const passkeysResponse = await serverFetch("/api/v1/auth/webauthn/status");
+  const passkeysAvailable = passkeysResponse.ok
+    ? ((await passkeysResponse.json()) as { available: boolean }).available === true
+    : false;
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("intro")}</p>
-      <SecuritySettings totpEnabled={me.data?.totp_enabled ?? false} initialDevices={devices.data ?? []} />
+      <SecuritySettings totpEnabled={me.data?.totp_enabled ?? false} initialDevices={devices.data ?? []} passkeysAvailable={passkeysAvailable} />
       {consent?.available ? <SupportConsent initial={consent} /> : null}
     </div>
   );

@@ -37,6 +37,10 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [invoiceGross, setInvoiceGross] = useState("");
+  // M22-02: optional breakdown and payment account as printed on the invoice.
+  const [invoiceNet, setInvoiceNet] = useState("");
+  const [invoiceVatRate, setInvoiceVatRate] = useState("");
+  const [invoiceIban, setInvoiceIban] = useState("");
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   // M22-01: document id of an uploaded XML e-invoice (read into the fields below).
   const [einvoiceDocId, setEinvoiceDocId] = useState<string | null>(null);
@@ -204,6 +208,9 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           number: invoiceNumber.trim(),
           invoice_date: invoiceDate,
           gross: invoiceGross.trim().replace(",", "."),
+          ...(invoiceNet.trim() ? { net: invoiceNet.trim().replace(",", ".") } : {}),
+          ...(invoiceVatRate.trim() ? { vat_rate: invoiceVatRate.trim().replace(",", ".") } : {}),
+          ...(invoiceIban.trim() ? { iban: invoiceIban.trim() } : {}),
           document_id: documentId,
         }),
       });
@@ -402,6 +409,25 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
             value={invoiceGross}
             onChange={(e) => setInvoiceGross(e.target.value)}
           />
+        </div>
+        <div>
+          <label htmlFor="invoice-net" className={ui.label}>
+            {t("invoiceNet")}
+          </label>
+          <input id="invoice-net" inputMode="decimal" className={ui.input} value={invoiceNet} onChange={(e) => setInvoiceNet(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="invoice-vat-rate" className={ui.label}>
+            {t("invoiceVatRate")}
+          </label>
+          <input id="invoice-vat-rate" inputMode="decimal" className={ui.input} value={invoiceVatRate} onChange={(e) => setInvoiceVatRate(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="invoice-iban" className={ui.label}>
+            {t("invoiceIban")}
+          </label>
+          <input id="invoice-iban" autoComplete="off" className={ui.input} value={invoiceIban} onChange={(e) => setInvoiceIban(e.target.value)} />
+          <p className={ui.help}>{t("invoiceBreakdownHelp")}</p>
         </div>
         <div>
           <label htmlFor="invoice-file" className={ui.label}>

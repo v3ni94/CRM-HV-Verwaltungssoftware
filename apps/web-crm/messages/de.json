@@ -32,7 +32,11 @@
     "tenantTitle": "Mandant auswählen",
     "tenantHint": "Ihr Zugang ist für mehrere Mandanten freigeschaltet. Bitte den Mandanten für diese Sitzung wählen.",
     "noTenants": "Für Ihren Zugang ist kein Mandant freigeschaltet.",
-    "rememberDevice": "Dieses Gerät 90 Tage merken"
+    "rememberDevice": "Dieses Gerät 90 Tage merken",
+    "passkeyLogin": "Mit Passkey anmelden",
+    "passkeyUse": "Passkey verwenden",
+    "passkeyUnsupported": "Dieser Browser unterstützt keine Passkeys.",
+    "passkeyAborted": "Die Passkey-Anmeldung wurde abgebrochen."
   },
   "Shell": {
     "workOrders": "Aufträge",
@@ -2638,6 +2642,70 @@
     "objectLabel": "Objekt",
     "receivedOn": "Zugang der Mahnung (falls bekannt)"
   },
+  "HeatingImport": {
+    "title": "Heizkostenimport des Messdiensts",
+    "description": "Heizkostenabrechnung des Messdiensts erfassen, prüfen und nach der Prüfung in eine Betriebskostenabrechnung im Entwurf übernehmen. Alle Werte bleiben Entwurf, die Ausgabe der Abrechnung ist weiterhin gesperrt.",
+    "property": "Objekt",
+    "allProperties": "Alle Objekte",
+    "empty": "Keine Importe vorhanden.",
+    "provider": "Messdienst",
+    "period": "Zeitraum",
+    "periodFrom": "Zeitraum von",
+    "periodTo": "Zeitraum bis",
+    "documentTotal": "Belegsumme (EUR)",
+    "statusLabel": "Status",
+    "open": "Öffnen",
+    "status": {
+      "draft": "Entwurf",
+      "checked": "Geprüft",
+      "applied": "Übernommen"
+    },
+    "createTitle": "Import anlegen",
+    "originalDocument": "Originaldokument des Messdiensts",
+    "documentTitle": "Heizkostenabrechnung",
+    "create": "Import anlegen",
+    "created": "Import als Entwurf angelegt.",
+    "documentLinked": "Originaldokument verknüpft",
+    "documentMissing": "Originaldokument fehlt",
+    "rowCount": "{count} Kostenzeilen",
+    "lockedApplied": "Der Import ist übernommen und gesperrt.",
+    "csvTitle": "CSV mit Spaltenzuordnung",
+    "csvHint": "Ordnen Sie jede Spalte selbst zu. Das System rät keine Spalten und nimmt kein Format an. Das Dezimalkomma gilt nur, wenn Sie es ankreuzen.",
+    "csvFile": "CSV-Datei",
+    "delimiter": "Trennzeichen",
+    "semicolon": "Semikolon",
+    "comma": "Komma",
+    "tab": "Tabulator",
+    "decimalComma": "Dezimalkomma",
+    "chooseColumn": "Spalte wählen",
+    "csvUpload": "CSV übernehmen",
+    "csvDone": "{count} Zeilen aus der CSV gelesen. Der Import steht wieder auf Entwurf.",
+    "field": {
+      "user_number": "Nutzernummer",
+      "heating_base": "Heizung Grundkosten",
+      "heating_consumption": "Heizung Verbrauchskosten",
+      "hot_water_base": "Warmwasser Grundkosten",
+      "hot_water_consumption": "Warmwasser Verbrauchskosten",
+      "co2_landlord": "CO2 Anteil Vermieter",
+      "co2_tenant": "CO2 Anteil Mieter"
+    },
+    "mappingTitle": "Nutzernummern zuordnen",
+    "sum": "Summe (EUR)",
+    "unit": "Einheit",
+    "contract": "Mietvertrag",
+    "chooseUnit": "Einheit wählen",
+    "vacancy": "Leerstand der Einheit",
+    "saveMapping": "Zuordnung speichern",
+    "mappingSaved": "Zuordnung gespeichert. Der Import steht wieder auf Entwurf.",
+    "checkTitle": "Prüfung",
+    "duplicateReason": "Begründung zur möglichen Doppelerfassung (mindestens 10 Zeichen)",
+    "check": "Prüfen",
+    "checkClean": "Keine Befunde. Summe aller Kosten: {total}. Der Import ist geprüft.",
+    "targetStatement": "Abrechnung im Entwurf",
+    "chooseStatement": "Abrechnung wählen",
+    "apply": "In Abrechnung übernehmen",
+    "applied": "Import in die Abrechnung übernommen und gesperrt."
+  },
   "Billing": {
     "letters": {
       "interim": "Unterjährige Abrechnung (Sonderzeitraum)",
@@ -3502,6 +3570,7 @@
     "bulkLimitHint": "Ohne Freigaberecht sind höchstens 10 Tickets je Aufruf möglich.",
     "bulkFailed": "Fehlgeschlagen",
     "bulkChanged": "Geändert",
+    "bulkOfTotal": "von {total}",
     "saveField": "Speichern",
     "selectRow": "Ticket auswählen",
     "linkedTitle": "Tickets",
@@ -5809,6 +5878,14 @@
       "title": "Buchhaltung, Steuern",
       "description": "Vorsteuer, Bauabzugsteuer, Paragraf 35a und Freigabegrenzen je Rolle als Entwurf, Schalter je Mandant."
     },
+    "adminFeePosting": {
+      "title": "Buchhaltung, Honorarbuchung",
+      "description": "Kontenzuordnung für die Buchung des Verwalterhonorars, nur Entwürfe, Buchung bleibt hinter G1."
+    },
+    "invoiceCheck": {
+      "title": "Buchhaltung, Rechnungsprüfung",
+      "description": "Toleranzen für Preis und Menge der sachlichen Prüfung eingehender Rechnungen."
+    },
     "portalForms": {
       "title": "Portalformulare",
       "description": "Formularvorlagen für Mieter und Eigentümer im Portal."
@@ -6328,6 +6405,17 @@
     }
   },
   "Profile": {
+    "passkeysTitle": "Passkeys",
+    "passkeysHint": "Passkeys dienen als zweiter Faktor. Optional kann ein Passkey auch die Anmeldung ohne Passwort erlauben.",
+    "passkeysUnavailable": "Passkeys sind nicht freigeschaltet.",
+    "noPasskeys": "Keine Passkeys registriert.",
+    "passkeyLabel": "Bezeichnung",
+    "passkeyPasswordless": "Anmeldung ohne Passwort erlauben",
+    "passkeyAdd": "Passkey hinzufügen",
+    "passkeyAdded": "Passkey registriert.",
+    "passkeyFailed": "Der Passkey konnte nicht registriert werden.",
+    "passkeyRevoke": "Entfernen",
+    "passkeyPasswordlessBadge": "ohne Passwort",
     "appearanceTitle": "Darstellung",
     "appearanceHelp": "Tag ist die helle, ruhige Ansicht, Abend die dunkle, präzise Ansicht. Automatisch wechselt von 19 bis 7 Uhr in die Abendansicht. Die Auswahl gilt für Ihr Benutzerkonto.",
     "title": "Meine Daten",
@@ -13089,6 +13177,20 @@
       "done": "Festgeschrieben bis {date}. Entwürfe im festgeschriebenen Zeitraum: {drafts}. Ungeklärte Bankumsätze: {unclarified}."
     },
     "accounts": {
+      "statementKind": "Art der Abrechnung",
+      "statementKinds": {
+        "hoa_fee": "Hausgeld",
+        "reserve": "Rücklage",
+        "operating_costs": "Betriebskosten",
+        "special_levy": "Sonderumlage",
+        "heating": "Heizkosten",
+        "none": "keine"
+      },
+      "allocationShow": "Verteilung",
+      "allocationHide": "Verteilung ausblenden",
+      "allocationLoading": "Lädt …",
+      "allocationNone": "Keine Verteilung auf Umlageschlüssel hinterlegt.",
+      "allocationTotal": "Summe {total} %",
       "link": "Kontenplan",
       "title": "Kontenplan",
       "description": "Konten ergänzen, ändern und deaktivieren. Konten mit Buchungen werden nur deaktiviert.",
@@ -13699,7 +13801,11 @@
     "choose": "Bearbeiter wählen",
     "loading": "Benutzer werden geladen.",
     "apply": "{count, plural, one {# Ticket zuweisen} other {# Tickets zuweisen}}",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "team": "Team",
+    "chooseTeam": "Team wählen",
+    "priority": "Priorität",
+    "choosePriority": "Priorität wählen"
   },
   "PrivacyAdmin": {
     "breadcrumb": "Einstellungen",
@@ -13935,6 +14041,10 @@
     "openingBalance": "Anfangsbestand (erfasst)",
     "openingYear": "Ab Jahr",
     "bankAccount": "Bankkonto der Rücklage",
+    "ledgerAccount": "Buchungskonto der Rücklage",
+    "noneSelected": "Kein Konto gewählt",
+    "accountsHint": "Bankkonten der Gemeinschaft (Rechtsträger des Buchungskreises) und Konten des Buchungskreises. Die Auswahl ändert keine Buchung.",
+    "yearsOfStatement": "Entwicklung je Rücklage und Jahr",
     "edit": "Ändern",
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -14084,6 +14194,8 @@
     "readOnly": "Der Export erfordert die Rolle Mandantenadministrator."
   },
   "StatementStatus": {
+    "logTitle": "Statusverlauf",
+    "logEmpty": "Noch kein Statuswechsel.",
     "note": "Notiz zum Statuswechsel",
     "resolutionId": "Beschluss (ID)",
     "entryIds": "Gebuchte Buchungen (IDs, durch Komma getrennt)",
@@ -14128,5 +14240,60 @@
       "closing": "Endbestand",
       "bank_balance": "Bankbestand der Rücklagenkonten"
     }
+  },
+  "AdminFeePostingConfig": {
+    "pageTitle": "Honorarbuchung",
+    "pageDescription": "Kontenzuordnung für die Buchung des Verwalterhonorars je Mandant.",
+    "title": "Kontenzuordnung der Honorarbuchung",
+    "description": "Legt fest, auf welche Konten der Entwurf der Honorarbuchung gebucht wird: Forderung und Erlös im Buchungskreis des Verwalters, Aufwand und Verbindlichkeit im Buchungskreis des Zahlers. Ohne Zuordnung entsteht kein Buchungsentwurf, einen Standard gibt es nicht.",
+    "gateHint": "Die Buchung selbst bleibt bis zur Freigabestufe G1 gesperrt. Die Zuordnung erzeugt nur Entwürfe.",
+    "notConfigured": "Noch keine Kontenzuordnung hinterlegt. Bis dahin entstehen keine Buchungsentwürfe zum Honorar.",
+    "ledger": "Buchungskreis des Verwalters",
+    "ledgerHint": "Es kann nur ein Buchungskreis eines Verwalter-Rechtsträgers gewählt werden, die Prüfung erfolgt durch die API.",
+    "managerSide": "Seite des Verwalters (Konten aus dem Kontenrahmen)",
+    "receivable": "Forderungskonto",
+    "revenue": "Erlöskonto",
+    "vat": "Umsatzsteuerkonto (optional)",
+    "choose": "Bitte wählen",
+    "none": "Kein Konto",
+    "optional": "optional",
+    "managerDistinct": "Die Konten der Verwalterseite müssen verschieden sein.",
+    "payerSide": "Seite des Zahlers (Kontonummern)",
+    "payerHint": "Sechsstellige Kontonummern, die im Buchungskreis des jeweiligen Schuldners aufgelöst werden.",
+    "expenseNo": "Aufwandskonto (Nummer)",
+    "payableNo": "Verbindlichkeitskonto (Nummer)",
+    "vatNo": "Vorsteuerkonto (Nummer, optional)",
+    "numbersInvalid": "Kontonummern bestehen aus genau sechs Ziffern.",
+    "payerDistinct": "Die Kontonummern der Zahlerseite müssen verschieden sein.",
+    "taxHint": "Die steuerliche Behandlung (Umsatzsteuer auf Verwalterhonorar, Vorsteuerabzug beim Zahler) ist offen und durch die Steuerberatung zu klären, siehe offene Frage T04-01.",
+    "readOnly": "Änderungen sind nur mit der Berechtigung zur Freigabe in der Buchhaltung möglich.",
+    "save": "Zuordnung speichern",
+    "saved": "Kontenzuordnung gespeichert."
+  },
+  "InvoiceCheckSettings": {
+    "pageTitle": "Rechnungsprüfung",
+    "pageDescription": "Toleranzen der sachlichen Prüfung eingehender Rechnungen.",
+    "title": "Toleranzen der sachlichen Prüfung",
+    "description": "Preis und Menge einer Rechnung werden gegen den verknüpften Auftrag verglichen. Abweichungen innerhalb der Toleranz erzeugen keinen Hinweis. Die Toleranzen steuern nur Hinweise, sie geben nichts frei und buchen nichts.",
+    "price": "Preistoleranz in Prozent",
+    "quantity": "Mengentoleranz in Prozent",
+    "unit": "Werte von 0 bis 100 Prozent, höchstens vier Nachkommastellen.",
+    "invalid": "Bitte Werte von 0 bis 100 mit höchstens vier Nachkommastellen eingeben.",
+    "readOnly": "Änderungen sind nur mit der Berechtigung zur Änderung der Mandanteneinstellungen möglich.",
+    "save": "Toleranzen speichern",
+    "saved": "Toleranzen gespeichert."
+  },
+  "InvoiceFactualLinks": {
+    "title": "Verknüpfungen für die sachliche Prüfung",
+    "hint": "Optional. Auftrag, Beschluss, Wirtschaftsplanposition und Rechnungsplan dienen der sachlichen Prüfung als Bezug. Es entstehen nur Hinweise, die Freigabe bleibt manuell.",
+    "none": "Keine Verknüpfung",
+    "workOrder": "Auftrag",
+    "resolution": "Beschluss",
+    "plan": "Wirtschaftsplan",
+    "planItem": "Wirtschaftsplanposition",
+    "recurringPlan": "Rechnungsplan",
+    "noEntity": "Für diesen Buchungskreis ist kein Rechtsträger bekannt, Beschlüsse können nicht geladen werden.",
+    "planFirst": "Zuerst einen Wirtschaftsplan wählen.",
+    "loadFailed": "Liste konnte nicht geladen werden: {reason}"
   }
 }

@@ -329,7 +329,9 @@ async def run_tenant_export_job(settings: Settings, job_id: uuid.UUID, tenant_id
             row = await session.get(TenantExportJob, job_id)
             if row is not None:
                 row.status = JOB_FAILED
-                row.error = f"{type(exc).__name__}: {exc}"[:2000]
+                # U15: only the error class; the message may carry object keys or connection
+                # details and ``error`` is returned by the API.
+                row.error = type(exc).__name__[:2000]
                 row.finished_at = datetime.now(UTC)
         raise
     finally:

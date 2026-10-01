@@ -28,6 +28,19 @@ describe("Reserve forms", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("creates a reserve with the selected bank account and ledger account", async () => {
+    const BANK = "0192abcd-0000-7000-8000-000000000511";
+    const ACC = "0192abcd-0000-7000-8000-000000000512";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ id: DACH }, 201));
+    renderIntl(<ReserveCreateForm ledgerId={LEDGER} bankAccounts={[{ id: BANK, label: "Sparkasse" }]} accounts={[{ id: ACC, label: "1360 Dach" }]} />);
+    await userEvent.type(screen.getByLabelText("Bezeichnung"), "Dach");
+    await userEvent.selectOptions(screen.getByLabelText("Bankkonto der Rücklage"), BANK);
+    await userEvent.selectOptions(screen.getByLabelText("Buchungskonto der Rücklage"), ACC);
+    await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ ledger_id: LEDGER, name: "Dach", purpose: null, bank_account_id: BANK, account_id: ACC });
+  });
+
   it("records a use of funds with a decimal comma as dot amount", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ id: "m1" }, 201));
     renderIntl(<ReserveMovementForm statementId={STATEMENT} reserves={[{ id: DACH, name: "Dach" }]} />);

@@ -241,12 +241,20 @@ async def add_opening_closing(
 
 
 async def _reserve_with_ledger(session: AsyncSession, reserve_id: uuid.UUID) -> tuple[Any, Any]:
+    from mhvp.core.auth.scope import (
+        ensure_session_legal_entity_allowed,
+        ensure_session_property_allowed,
+    )
     from mhvp.hoa.routers import _hoa_ledger
 
     reserve = await session.get(HoaReserve, reserve_id)
     if reserve is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-    return reserve, await _hoa_ledger(session, reserve.ledger_id)
+    ledger = await _hoa_ledger(session, reserve.ledger_id)
+    # U15: ``reserve_id`` is not covered by HOA_GUARD; property and legal entity scope here.
+    ensure_session_property_allowed(session, ledger.property_id)
+    ensure_session_legal_entity_allowed(session, ledger.legal_entity_id)
+    return reserve, ledger
 
 
 @router.get("/reserves/{reserve_id}", summary="Zweckgebundene Rücklage mit Rechtsträger")

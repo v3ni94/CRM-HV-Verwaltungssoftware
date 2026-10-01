@@ -2,11 +2,12 @@
 
 import type { components } from "@mhvp/api-client";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { createPasskey, passkeysSupported, type WebAuthnOptions } from "@/lib/webauthn";
 import { ThemeSwitch } from "@/components/workspace/ThemeToggle";
 
 import { SignatureProfile, type SignaturePreviewData, type SignatureProfileData } from "./SignatureProfile";
@@ -270,6 +271,121 @@ function TrustedDevices({ initial }: { initial: TrustedDeviceRow[] }) {
   );
 }
 
+type PasskeyRow = { id: string; label: string | null; created_at: string; last_used_at: string | null; passwordless?: boolean };
+
+/** S16-01: own passkeys (second factor, optionally passwordless sign in). */
+export function Passkeys() {
+  const t = useTranslations("Profile");
+  const [available, setAvailable] = useState<boolean | null>(null);
+  const [rows, setRows] = useState<PasskeyRow[]>([]);
+  const [label, setLabel] = useState("");
+  const [passwordless, setPasswordless] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function load() {
+    const status = await bff<{ available: boolean }>("/api/bff/auth/webauthn/status");
+    setAvailable(status.ok ? status.data?.available === true : false);
+    const list = await bff<PasskeyRow[]>("/api/bff/auth/webauthn/credentials");
+    if (list.ok && Array.isArray(list.data)) setRows(list.data);
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function add(event: React.FormEvent) {
+    event.preventDefault();
+    setMessage(null);
+    if (!passkeysSupported()) {
+      setMessage({ ok: false, text: t("passkeyFailed") });
+      return;
+    }
+    setBusy(true);
+    const options = await bff<WebAuthnOptions>("/api/bff/auth/webauthn/register/options", {
+      method: "POST",
+      body: JSON.stringify({ passwordless }),
+    });
+    if (!options.ok) {
+      setBusy(false);
+      setMessage({ ok: false, text: options.message });
+      return;
+    }
+    let created: Awaited<ReturnType<typeof createPasskey>>;
+    try {
+      created = await createPasskey(options.data.public_key);
+    } catch {
+      setBusy(false);
+      setMessage({ ok: false, text: t("passkeyFailed") });
+      return;
+    }
+    const done = await bff<PasskeyRow>("/api/bff/auth/webauthn/register/verify", {
+      method: "POST",
+      body: JSON.stringify({ challenge_id: options.data.challenge_id, label: label.trim() || null, ...created }),
+    });
+    setBusy(false);
+    if (!done.ok) {
+      setMessage({ ok: false, text: done.message });
+      return;
+    }
+    setRows((prev) => [...prev, done.data]);
+    setLabel("");
+    setMessage({ ok: true, text: t("passkeyAdded") });
+  }
+
+  async function revoke(id: string) {
+    const res = await bff<null>(`/api/bff/auth/webauthn/credentials/${id}`, { method: "DELETE" });
+    if (res.ok) setRows((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  return (
+    <section className={ui.card} aria-labelledby="passkeys-title">
+      <h2 id="passkeys-title" className="text-sm font-semibold">
+        {t("passkeysTitle")}
+      </h2>
+      <p className="mt-1 text-xs text-muted">{t("passkeysHint")}</p>
+      {message ? (
+        <p role={message.ok ? "status" : "alert"} className={message.ok ? "mt-2 text-sm" : ui.alert}>
+          {message.text}
+        </p>
+      ) : null}
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-muted">{t("noPasskeys")}</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-2 text-sm">
+          {rows.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-2 border-b border-border pb-2 last:border-0">
+              <span className="text-muted">
+                {r.label ?? t("unknownDevice")} · {formatDateTime(r.created_at)}
+                {r.passwordless ? ` · ${t("passkeyPasswordlessBadge")}` : ""}
+              </span>
+              <button type="button" className={ui.buttonSm} onClick={() => void revoke(r.id)}>
+                {t("passkeyRevoke")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {available === false ? (
+        <p className="mt-2 text-sm text-muted">{t("passkeysUnavailable")}</p>
+      ) : available ? (
+        <form onSubmit={add} className="mt-3 flex flex-col gap-2">
+          <label htmlFor="passkey-label" className={ui.label}>
+            {t("passkeyLabel")}
+          </label>
+          <input id="passkey-label" className={ui.input} maxLength={200} value={label} onChange={(e) => setLabel(e.target.value)} />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={passwordless} onChange={(e) => setPasswordless(e.target.checked)} />
+            {t("passkeyPasswordless")}
+          </label>
+          <button type="submit" className={`${ui.button} self-start`} disabled={busy}>
+            {t("passkeyAdd")}
+          </button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
 export function ProfileSettings({
   displayName,
   email,
@@ -324,6 +440,7 @@ export function ProfileSettings({
       <SignatureProfile initialProfile={signatureProfile} initialPreview={signaturePreview} />
       <PasswordForm />
       <SecondFactor initialEnabled={totpEnabled} />
+      <Passkeys />
       <Sessions initial={initialSessions} />
       <TrustedDevices initial={initialDevices} />
     </div>

@@ -257,6 +257,9 @@ async def deletion_blocker(session: AsyncSession, document: Document, today: dat
     ticket_hold = await retention.ticket_hold(session, document.id)
     if ticket_hold:
         return f"Löschungssperre am Vorgang: {ticket_hold}"
+    procedure = await retention.procedure_hold(session, document.id)
+    if procedure:
+        return f"Automatische Löschungssperre: offenes Verfahren ({procedure})."
     related = await retention.related_hold(session, document.id)
     if related:
         return f"Löschungssperre am verbundenen Dokument: {related}"

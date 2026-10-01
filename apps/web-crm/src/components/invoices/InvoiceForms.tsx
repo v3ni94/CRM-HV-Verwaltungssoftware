@@ -5,21 +5,25 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { EMPTY_FACTUAL_LINKS, InvoiceFactualLinks, type FactualLinks } from "@/components/invoices/InvoiceFactualLinks";
 import { formatEur } from "@/lib/format";
 import { useRefreshAfterPost } from "@/lib/useRefreshAfterPost";
 import { ui } from "@/lib/ui";
 
 type Option = { id: string; label: string };
+type LedgerOption = Option & { legalEntityId?: string | null };
 const MONEY = /^\d+([.,]\d{1,2})?$/;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const cents = (v: string) => Math.round(Number(v.replace(",", ".")) * 100);
 const fmt = (c: number) => (c / 100).toFixed(2);
 
 /** Incoming invoice with one line (M14). Findings are hints; the review status stays open. */
-export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accounts: Record<string, Option[]> }) {
+export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; accounts: Record<string, Option[]> }) {
   const t = useTranslations("Invoices");
   const router = useRouter();
   const [ledger, setLedger] = useState(ledgers[0]?.id ?? "");
+  // M14-02: Verknüpfungen für die sachliche Prüfung (Auftrag, Beschluss, Planposition, Rechnungsplan).
+  const [links, setLinks] = useState<FactualLinks>(EMPTY_FACTUAL_LINKS);
   const [q, setQ] = useState("");
   const [providers, setProviders] = useState<Option[]>([]);
   const [provider, setProvider] = useState("");
@@ -59,6 +63,10 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
       recipient_name: f.recipient_name.trim() || null,
       service_to: x.service_to || null,
       attachment_document_ids: attachmentIds,
+      work_order_id: links.work_order_id || null,
+      resolution_id: links.resolution_id || null,
+      plan_item_id: links.plan_item_id || null,
+      recurring_plan_id: links.recurring_plan_id || null,
       service_place: x.service_place.trim() || null,
       issuer_vat_id: x.issuer_vat_id.trim() || null,
       issuer_tax_number: x.issuer_tax_number.trim() || null,
@@ -170,6 +178,13 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
           <span className={ui.help}>{attachmentsValid ? t("extra.attachment_hint", { count: attachmentIds.length }) : t("extra.attachment_invalid")}</span>
         </label>
       </details>
+      <InvoiceFactualLinks
+        ledgerId={ledger}
+        legalEntityId={ledgers.find((l) => l.id === ledger)?.legalEntityId ?? null}
+        providerId={provider}
+        value={links}
+        onChange={setLinks}
+      />
       <p className="text-sm text-muted" data-testid="gross">
         {Number.isFinite(net) ? t("gross", { gross: formatEur(fmt(net + vat)), vat: formatEur(fmt(vat)) }) : ""}
       </p>

@@ -153,6 +153,11 @@ Beim Erfassen einer Rechnung können unter "Weitere Angaben zur Prüfung am Bele
   nur bei geöffneter Freigabestufe G1 und nach Hinterlegung der Kontenzuordnung
   (Schnittstelle `/accounting/admin-fee-posting-config`). Ohne Kontenzuordnung entsteht kein
   Entwurf. Gebucht wird erst im Journal.
+- Die Kontenzuordnung pflegen Sie unter Einstellungen, Buchhaltung, Honorarbuchung: Buchungskreis
+  des Verwalters wählen, Forderungs, Erlös und optional Umsatzsteuerkonto aus dem Kontenrahmen
+  auswählen, für die Zahlerseite die sechsstelligen Kontonummern eintragen. Lesen mit Buchhaltung
+  lesen, Speichern mit Freigaberecht der Buchhaltung. Die steuerliche Behandlung ist offen
+  (T04-01) und mit der Steuerberatung zu klären.
 
 ## Sachliche Prüfung als Befunde (01.10.2026)
 
@@ -167,4 +172,9 @@ Beim Erfassen einer Rechnung können unter "Weitere Angaben zur Prüfung am Bele
   verknüpft (`work_order_id`, `resolution_id`, `plan_item_id`, `recurring_plan_id`); der
   Freitext Auftragsbezug bleibt möglich.
 - Die Toleranzen (Preis, Menge in Prozent) setzt die Verwaltung je Mandant über
-  `/accounting/invoice-check-settings`; Standard ist 0, also exakter Abgleich.
+  `/accounting/invoice-check-settings`; Standard ist 0, also exakter Abgleich. Die Maske dazu
+  steht unter Einstellungen, Buchhaltung, Rechnungsprüfung (Speichern mit dem Recht zur Änderung
+  der Mandanteneinstellungen, Werte von 0 bis 100 mit höchstens vier Nachkommastellen).
+- In der Rechnungserfassung wählen Sie Auftrag, Beschluss, Wirtschaftsplanposition und
+  Rechnungsplan im aufklappbaren Bereich "Verknüpfungen für die sachliche Prüfung" aus. Die
+  Listen laden erst beim Öffnen und gelten je Buchungskreis; alle Angaben sind optional.

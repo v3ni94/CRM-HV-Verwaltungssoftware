@@ -139,3 +139,40 @@ def test_date_parsing_variants() -> None:
 def test_garbage_encoding_raises_csv_import_error() -> None:
     with pytest.raises(csv_formats.CsvImportError):
         csv_formats.decode(b"\xff\xfe\x00\x81\x82")
+
+
+IMMOWARE24_SAMPLE = (
+    "Objekt;Buchungsdatum;Valuta;Name;IBAN;Verwendungszweck;Betrag;Konto IBAN\n"
+    "Musterstr. 1;05.01.2026;05.01.2026;Maria Mustermann;DE75512108001245126199;"
+    "Hausgeld Januar WE 01;400,00;DE02120300000000202051\n"
+    "Musterstr. 1;06.01.2026;06.01.2026;Strom AG;DE89370400440532013000;"
+    "Abschlag Allgemeinstrom;-123,45;DE02120300000000202051\n"
+)
+
+
+def test_immoware24_export_detected_via_header_row() -> None:
+    result = csv_formats.preview(IMMOWARE24_SAMPLE.encode())
+    assert result.format_id == csv_formats.IMMOWARE24_FORMAT_ID
+    assert result.confidence == "zu_pruefen"
+    assert result.row_count == 2
+    assert not result.errors
+    assert result.parsed is not None
+    stmt = result.parsed.statements[0]
+    assert stmt.iban == "DE02120300000000202051"
+    assert [t.amount for t in stmt.transactions] == [Decimal("400.00"), Decimal("-123.45")]
+    assert stmt.transactions[0].counterpart_iban == "DE75512108001245126199"
+    assert stmt.transactions[0].value_date == date(2026, 1, 5)
+
+
+def test_immoware24_without_optional_columns_needs_account() -> None:
+    data = "Objekt;Buchungsdatum;Verwendungszweck;Betrag\nX;05.01.2026;Test;1,00\n"
+    result = csv_formats.preview(data.encode())
+    assert result.format_id == csv_formats.IMMOWARE24_FORMAT_ID
+    assert result.row_count == 1
+    assert result.parsed is None  # no own IBAN: never imported blind
+
+
+def test_immoware24_bad_amount_is_row_error() -> None:
+    data = IMMOWARE24_SAMPLE.replace("400,00", "abc")
+    result = csv_formats.preview(data.encode())
+    assert len(result.errors) == 1

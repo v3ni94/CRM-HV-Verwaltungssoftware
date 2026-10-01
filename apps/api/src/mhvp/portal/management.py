@@ -29,7 +29,11 @@ from mhvp.portal.models import (
     PortalSupportAccess,
     PortalSupportConsent,
 )
-from mhvp.portal.property_scope import portal_admin_guard
+from mhvp.portal.property_scope import (
+    contact_visible,
+    ensure_contact_visible,
+    portal_admin_guard,
+)
 from mhvp.portal.routers import Portal, portal_user
 from mhvp.workspace.services import local_today
 
@@ -210,8 +214,17 @@ async def list_representations(
             ).all()
         }
         out = []
+        visible: dict[uuid.UUID, bool] = {}
         for r in reps:
             contact_id, email = accounts.get(r.account_id, (None, None))
+            # U15 (M2-02): with a property assignment only representations whose represented
+            # contact lies inside it.
+            if r.principal_contact_id not in visible:
+                visible[r.principal_contact_id] = await contact_visible(
+                    session, r.principal_contact_id
+                )
+            if not visible[r.principal_contact_id]:
+                continue
             out.append(
                 _rep_out(r)
                 | {"representative_contact_id": contact_id, "representative_email": email}
@@ -240,6 +253,7 @@ async def create_representation(
             )
         if await session.get(Contact, body.principal_contact_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kontakt nicht gefunden.")
+        await ensure_contact_visible(session, body.principal_contact_id)  # U15, M2-02
         if await session.get(Document, body.document_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vollmacht nicht gefunden.")
         row = PortalRepresentation(
@@ -275,6 +289,7 @@ async def revoke_representation(
         row = await session.get(PortalRepresentation, rep_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await ensure_contact_visible(session, row.principal_contact_id)  # U15, M2-02
         if row.status == "revoked":
             return _rep_out(row)
         row.status = "revoked"
@@ -294,6 +309,17 @@ async def revoke_representation(
             payload={"account_id": str(row.account_id)},
         )
         return _rep_out(row)
+
+
+@router.get("/representations", summary="Eigene Vertretungen mit Ablauf")
+async def own_representations(
+    request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """M21-05: the powers of attorney of the signed-in representative with period and state;
+    expired or revoked ones are listed as such and carry no access."""
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        return {"items": await features.own_representations(session, account)}
 
 
 # Support view -----------------------------------------------------------------------------

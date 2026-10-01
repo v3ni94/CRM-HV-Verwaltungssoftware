@@ -416,3 +416,7 @@ Im Ticket erscheint zur letzten eingegangenen Mail dieselbe Kompaktansicht wie i
 * **Teams**: Einstellungen, Teams. Anlegen, Umbenennen, Mitglieder ändern und Löschen (Recht Tickets freigeben). Ein Team mit zugeordneten Tickets oder Vorlagen lässt sich nicht löschen.
 * **Sammelaktion Status mit Bericht** (API `POST /tickets/bulk`): Status und gemeinsame Erledigungsnotiz für mehrere Tickets. Jedes Ticket wird einzeln verarbeitet, der Bericht nennt je Ticket Erfolg oder den Fehlercode; ein Fehler bricht die übrigen nicht ab. Es gelten dieselben Regeln und Grenzen wie bei der Statusänderung in der Liste.
 * **Auftragstermin**: Sobald im Auftrag der Schritt Termin gesetzt wird (auch durch den Dienstleister im Portal), erscheint der Termin sofort im internen Kalender. Es wird keine Einladung versendet.
+
+## Sammelaktionen in der Ticketliste (Priorität, Team, Bearbeiter)
+
+Tickets in der Liste markieren, in der unteren Leiste Status anwenden oder "Bearbeiter zuweisen" öffnen, dort Bearbeiter, Team und Priorität wählen (einzeln oder kombiniert) und anwenden. Danach erscheint ein Bericht "Geändert: x von y" mit den nicht geänderten Tickets und dem Grund. Ohne Freigaberecht sind höchstens 10 Tickets je Aufruf möglich.

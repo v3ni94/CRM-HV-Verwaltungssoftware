@@ -17,6 +17,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^auth\/totp\/(confirm|disable)$/ },
   { method: "GET", pattern: /^auth\/trusted-devices$/ },
   { method: "DELETE", pattern: new RegExp(`^auth/trusted-devices/${ID}$`) },
+  // S16-01: Passkeys nur als zweiter Faktor; die Optionen laufen über
+  // /api/session/webauthn/register-options (erzwingt passwordless false).
+  { method: "GET", pattern: /^auth\/webauthn\/(status|credentials)$/ },
+  { method: "POST", pattern: /^auth\/webauthn\/register\/verify$/ },
+  { method: "DELETE", pattern: new RegExp(`^auth/webauthn/credentials/${ID}$`) },
   // Benachrichtigungen mit Sprung zum Betreff (operator 26.09.2026).
   { method: "GET", pattern: /^portal\/notifications$/ },
   { method: "POST", pattern: /^portal\/notifications\/read$/ },

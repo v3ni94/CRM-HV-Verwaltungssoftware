@@ -135,4 +135,20 @@ describe("WorkOrderDetail", () => {
     expect(String(second?.[0])).toBe("/api/bff/portal/work-orders/o1/invoice");
     expect(JSON.parse(String(second?.[1]?.body)).document_id).toBe("d9");
   });
+
+  it("sends net, VAT rate and IBAN of the invoice only when entered (M22-02)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ document_id: "d9", number: "RE-8", invoice_date: "2026-10-03", gross: "119,00", findings: [] }, 201));
+    renderIntl(<WorkOrderDetail order={{ ...order, status: "done" }} />);
+    await user.upload(screen.getByLabelText("E-Rechnung als XML einlesen (optional)"), new File(["<Invoice/>"], "re.xml", { type: "application/xml" }));
+    await waitFor(() => expect(screen.getByLabelText("Rechnungsnummer")).toHaveValue("RE-8"));
+    await user.type(screen.getByLabelText("Nettobetrag (EUR, optional)"), "100,00");
+    await user.type(screen.getByLabelText("USt-Satz in Prozent (optional)"), "19");
+    await user.type(screen.getByLabelText("IBAN laut Rechnung (optional)"), "DE89 3704 0044 0532 0130 00");
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ id: "s1" }, 201));
+    await user.click(screen.getByRole("button", { name: "Rechnung einreichen" }));
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls).toHaveLength(2));
+    const body = JSON.parse(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body));
+    expect(body).toMatchObject({ net: "100.00", vat_rate: "19", iban: "DE89 3704 0044 0532 0130 00" });
+  });
 });

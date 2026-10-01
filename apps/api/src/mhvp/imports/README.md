@@ -190,3 +190,13 @@ Hauptentität in den Recorder ein. Rücknahme: `w5_reports.referenced` und `w5_r
 ## Objektzuordnung (T14, R08-01)
 
 `migration_routers` prüft per `property_column_guard` Objekt, Buchungskreis, Eröffnungssalden, Wechselanträge, Abgleichberichte und Abnahmeprotokolle (fremd 404); Status und Wechselanträge sind gefiltert. `w3_routers` prüft `property_id`/`ledger_id` und filtert historische Tickets und Einzelposten. Datei- und Vollimporte ohne Zielobjekt bleiben mandantenweit.
+
+## Welle 6 (U13, M8-07 Rest)
+
+- `open_item_balance_check` compares deposit and loan items with the opening balance lines of
+  the matching accounts (loan: category `loan`; deposit: ledger account linked to a segregated
+  property bank account); sign by account type (A-U13-01). Without such accounts the kind
+  stays in `not_comparable` with a reason.
+- Undo of `sepa_overview` and `document_index` runs: `payment_schedule` (main entity),
+  `sepa_mandate` and each new `document_link` (extras via `ctx["extra_created"]`) are recorded;
+  `w3_reports.referenced` and `w3_reports.remove` are dispatched by `mhvp.ai.imports`.

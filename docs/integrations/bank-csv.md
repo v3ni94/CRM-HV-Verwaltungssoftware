@@ -36,6 +36,7 @@ Betreiber ausschließlich über das generische Mapping.
 | `ing_csv` | ING | zu prüfen |
 | `n26_csv` | N26 | zu prüfen |
 | `comdirect_csv` | comdirect | zu prüfen |
+| `immoware24_umsatz_csv` | Immoware24 Umsatzexport (Spalten aus der Kopfzeile: Pflicht Objekt, Buchungsdatum, Betrag, Verwendungszweck; übrige optional) | zu prüfen |
 | `generic` | beliebig, Spaltenzuordnung durch den Nutzer | – |
 
 ## Robustheit
@@ -80,3 +81,13 @@ wiederverwendet, damit es nicht bei jedem Import neu eingegeben werden muss (Tab
 - Online-Kontoabruf (FinTS/HBCI: `mhvp.banking.fints`, finAPI: `mhvp.banking.finapi`) bleibt
   unverändert; dieses Modul betrifft ausschließlich hochgeladene CSV-Dateien.
 - Keine Zahlungsauslösung (G2 bleibt geschlossen).
+
+## Immoware24 Umsatzexport (M11-09)
+
+Erkannt wird die Datei an der Kopfzeile (Pflichtspalten Objekt, Buchungsdatum, Betrag,
+Verwendungszweck); weitere Spalten werden nur gelesen, wenn ihr Name zu einer hinterlegten
+Schreibweise passt. Mangels Beispieldatei ist das eine Annahme (A-M11-09-01), das Format
+bleibt "zu prüfen" und die Vorschau ist vor dem Import zu bestätigen. Fehlt eine IBAN des
+eigenen Kontos in der Datei, wird das Bankkonto im Import gewählt. Doppelte Umsätze
+verhindert die bestehende Hash-Prüfung. Eine Rücknahme eines Bankdatei-Imports über die
+Import-Rücknahme besteht nicht (siehe OPEN_QUESTIONS M11-09-01).

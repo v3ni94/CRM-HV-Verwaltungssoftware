@@ -21,7 +21,8 @@ describe("TicketBulkAssign", () => {
     const onDone = vi.fn();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       if (String(input).includes("assignable-users")) return jsonResponse([{ user_id: USER, display_name: "Anna Beispiel" }]);
-      return jsonResponse({ action: "tickets.assign", requested: 2, changed: 2 });
+      if (String(input).endsWith("/teams")) return jsonResponse([]);
+      return jsonResponse({ total: 2, succeeded: 2, failed: 0, items: [] });
     });
     renderIntl(<TicketBulkAssign ids={IDS} disabled={false} onDone={onDone} />);
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiter zuweisen" }));
@@ -30,10 +31,10 @@ describe("TicketBulkAssign", () => {
     expect(apply).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Bearbeiter"), { target: { value: USER } });
     fireEvent.click(apply);
-    await waitFor(() => expect(onDone).toHaveBeenCalledWith(2));
-    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/workspace/bulk")) as [string, RequestInit];
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith({ total: 2, succeeded: 2, failed: 0, items: [] }));
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/tickets/bulk")) as [string, RequestInit];
     expect(call[1].method).toBe("POST");
-    expect(JSON.parse(String(call[1].body))).toEqual({ action: "tickets.assign", ids: IDS, assignee_user_id: USER });
+    expect(JSON.parse(String(call[1].body))).toEqual({ ids: IDS, assignee_user_id: USER });
   });
 
   it("shows the refusal of the API and keeps the selection", async () => {

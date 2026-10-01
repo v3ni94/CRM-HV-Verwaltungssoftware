@@ -315,10 +315,21 @@ def test_representative_sees_owner_view_only_within_period(client: TestClient, w
     assert len(after["contracts"]) == 2
     me = _ok(c.get(f"{P}/me", headers=w.rep))
     assert [r["principal_contact_id"] for r in me["representations"]] == [w.owner1_contact]
+    # U05 (M21-05): own role "representative", principal name and period in the portal.
+    assert "representative" in me["portal_roles"]
+    assert me["representations"][0]["principal_name"]
+    own = _ok(c.get(f"{P}/representations", headers=w.rep))["items"]
+    assert [(r["state"], r["valid_to"]) for r in own] == [("active", "2026-12-31")]
+    assert c.get(f"{P}/representations", headers=w.owner1).json()["items"] == []
     # Revoking ends the access at once.
     revoked = _ok(c.post(f"{PA}/representations/{rep['id']}/revoke", headers=w.admin))
     assert revoked["status"] == "revoked"
     assert len(_ok(c.get(f"{P}/hoa-account", headers=w.rep))["contracts"]) == 1
+    me_after = _ok(c.get(f"{P}/me", headers=w.rep))
+    assert "representative" not in me_after["portal_roles"]
+    assert [r["state"] for r in _ok(c.get(f"{P}/representations", headers=w.rep))["items"]] == [
+        "revoked"
+    ]
     listing = _ok(
         c.get(f"{PA}/representations", params={"account_id": w.rep_account}, headers=w.admin)
     )
@@ -327,6 +338,28 @@ def test_representative_sees_owner_view_only_within_period(client: TestClient, w
     assert listing[0]["representative_contact_id"] is not None
     assert "@" in listing[0]["representative_email"]
     assert _ok(c.get(f"{PA}/representations", headers=w.admin_b)) == []
+
+
+def test_expired_representation_loses_access(client: TestClient, w: W) -> None:
+    c = client
+    doc = _upload(c, w.owner1, "vollmacht-alt.pdf")
+    body = {
+        "account_id": w.rep_account,
+        "principal_contact_id": w.owner1_contact,
+        "document_id": doc,
+        "valid_from": "2025-01-01",
+        "valid_to": "2025-06-30",
+    }
+    _ok(c.post(f"{PA}/representations", json=body, headers=w.admin), 201)
+    assert len(_ok(c.get(f"{P}/hoa-account", headers=w.rep))["contracts"]) == 1
+    me = _ok(c.get(f"{P}/me", headers=w.rep))
+    assert me["representations"] == []
+    assert "representative" not in me["portal_roles"]
+    own = _ok(c.get(f"{P}/representations", headers=w.rep))["items"]
+    expired = [r for r in own if r["valid_to"] == "2025-06-30"]
+    assert [r["state"] for r in expired] == ["expired"]
+    assert expired[0]["expires_in_days"] is None
+    assert all(r["state"] != "active" for r in own)
 
 
 # Owner views ------------------------------------------------------------------------------

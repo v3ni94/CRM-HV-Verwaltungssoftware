@@ -38,6 +38,8 @@ class LoginStep(BaseModel):
     refresh_token: str | None = None
     tenant_id: uuid.UUID | None = None
     tenants: list["TenantOut"] = Field(default_factory=list)
+    # Second factors the user can answer with when status == "mfa_required" (S16-01).
+    mfa_methods: list[str] = Field(default_factory=list)
 
 
 class MfaSetup(BaseModel):
@@ -98,6 +100,53 @@ class AuthWebAuthnCredentialOut(BaseModel):
     label: str | None
     created_at: datetime
     last_used_at: datetime | None
+    passwordless: bool = False
+
+
+class AuthWebAuthnRegisterOptionsRequest(BaseModel):
+    passwordless: bool = False
+
+
+class AuthWebAuthnOptionsOut(BaseModel):
+    """``challenge_id`` goes back with the verify call; ``public_key`` is handed to
+    ``navigator.credentials.create/get`` (binary fields base64url encoded)."""
+
+    challenge_id: str
+    public_key: dict[str, Any]
+
+
+class AuthWebAuthnAttestationResponse(BaseModel):
+    client_data_json: str = Field(min_length=1, max_length=4096)
+    attestation_object: str = Field(min_length=1, max_length=16384)
+    transports: list[str] = Field(default_factory=list, max_length=8)
+
+
+class AuthWebAuthnRegisterVerifyRequest(BaseModel):
+    challenge_id: str = Field(min_length=10, max_length=100)
+    credential_id: str = Field(min_length=1, max_length=1400)
+    response: AuthWebAuthnAttestationResponse
+    label: str | None = Field(default=None, max_length=200)
+
+
+class AuthWebAuthnLoginOptionsRequest(BaseModel):
+    # With mfa_token: second factor after the password. Without: passwordless sign in.
+    mfa_token: str | None = Field(default=None, max_length=4096)
+
+
+class AuthWebAuthnAssertionResponse(BaseModel):
+    client_data_json: str = Field(min_length=1, max_length=4096)
+    authenticator_data: str = Field(min_length=1, max_length=4096)
+    signature: str = Field(min_length=1, max_length=2048)
+    user_handle: str | None = Field(default=None, max_length=200)
+
+
+class AuthWebAuthnLoginVerifyRequest(BaseModel):
+    challenge_id: str = Field(min_length=10, max_length=100)
+    credential_id: str = Field(min_length=1, max_length=1400)
+    response: AuthWebAuthnAssertionResponse
+    mfa_token: str | None = Field(default=None, max_length=4096)
+    tenant_id: uuid.UUID | None = None
+    remember_device: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -211,14 +260,18 @@ async def login(body: LoginRequest, request: Request) -> LoginStep:
     user_id, totp_enabled = await service.check_password(
         sessions(request), body.email, body.password
     )
+    methods = ["totp"] if totp_enabled else []
+    if webauthn.is_available(settings) and await _has_passkey(request, user_id):
+        methods.append("webauthn")
+    second_factor = bool(methods)
     trusted = (
-        totp_enabled
+        second_factor
         and body.device_token is not None
         and await service.check_trusted_device(
             sessions(request), user_id=user_id, raw_token=body.device_token
         )
     )
-    if not totp_enabled or trusted:
+    if not second_factor or trusted:
         issued = await service.issue_session(
             sessions(request),
             settings,
@@ -230,7 +283,11 @@ async def login(body: LoginRequest, request: Request) -> LoginStep:
         # the login (last_login_at feeds the portal account list, A86).
         await service.record_login(sessions(request), user_id)
         return _ok_step(issued)
-    return LoginStep(status="mfa_required", mfa_token=tokens.issue_mfa_token(settings, user_id))
+    return LoginStep(
+        status="mfa_required",
+        mfa_token=tokens.issue_mfa_token(settings, user_id),
+        mfa_methods=methods,
+    )
 
 
 @router.post("/totp/setup", summary="Zweiten Faktor (TOTP) einrichten: Schlüssel erzeugen")
@@ -476,9 +533,10 @@ async def webauthn_status(
     if principal.user_id is not None:
         async with platform_transaction(sessions(request)) as session:
             count = len((await session.scalars(_webauthn_active(principal.user_id))).all())
+    available = webauthn.is_available(request.app.state.settings)
     return AuthWebAuthnStatus(
-        available=webauthn.AVAILABLE,
-        reason=None if webauthn.AVAILABLE else webauthn.UNAVAILABLE_REASON,
+        available=available,
+        reason=None if available else webauthn.UNAVAILABLE_REASON,
         credential_count=count,
     )
 
@@ -497,7 +555,11 @@ async def list_webauthn_credentials(
         ).all()
         return [
             AuthWebAuthnCredentialOut(
-                id=r.id, label=r.label, created_at=r.created_at, last_used_at=r.last_used_at
+                id=r.id,
+                label=r.label,
+                created_at=r.created_at,
+                last_used_at=r.last_used_at,
+                passwordless=r.passwordless,
             )
             for r in rows
         ]
@@ -521,29 +583,249 @@ async def revoke_webauthn_credential(
     return Response(status_code=204)
 
 
+async def _has_passkey(request: Request, user_id: uuid.UUID) -> bool:
+    async with platform_transaction(sessions(request)) as session:
+        return (await session.scalar(_webauthn_active(user_id).limit(1))) is not None
+
+
+def _redis(request: Request) -> Any:
+    return request.app.state.resources.redis
+
+
 @router.post(
     "/webauthn/register/options",
-    summary="Passkey registrieren: Optionen (vorbereitet, M2-03)",
+    summary="Passkey registrieren: Optionen (S16-01)",
     responses={503: {"description": "MHVP-AUTH-0012"}},
 )
-async def webauthn_register_options(principal: Principal = Depends(get_principal)) -> Response:
-    """Answers MHVP-AUTH-0012 until a WebAuthn verification library is released."""
+async def webauthn_register_options(
+    request: Request,
+    body: AuthWebAuthnRegisterOptionsRequest | None = None,
+    principal: Principal = Depends(get_principal),
+) -> AuthWebAuthnOptionsOut:
+    """Creation options for the signed in user (attestation none). ``passwordless`` asks for a
+    discoverable credential with user verification."""
     if principal.user_id is None:
         raise ProblemError(ErrorCodes.FORBIDDEN)
-    webauthn.ensure_available()
-    raise ProblemError(ErrorCodes.WEBAUTHN_UNAVAILABLE)  # pragma: no cover - AVAILABLE False
+    settings = request.app.state.settings
+    webauthn.ensure_available(settings)
+    passwordless = bool(body and body.passwordless)
+    async with platform_transaction(sessions(request)) as session:
+        user = await session.get(User, principal.user_id)
+        if user is None or not user.active:
+            raise ProblemError(ErrorCodes.FORBIDDEN)
+        existing = (await session.scalars(_webauthn_active(user.id))).all()
+        email, display = user.email, user.display_name or user.email
+    challenge_id, challenge = await webauthn.issue_challenge(
+        _redis(request),
+        purpose="register",
+        user_id=str(principal.user_id),
+        passwordless=passwordless,
+    )
+    options = {
+        "rp": {"id": settings.webauthn_rp_id, "name": settings.webauthn_rp_name},
+        "user": {
+            "id": webauthn.b64url_encode(principal.user_id.bytes),
+            "name": email,
+            "displayName": display,
+        },
+        "challenge": webauthn.b64url_encode(challenge),
+        "pubKeyCredParams": [
+            {"type": "public-key", "alg": alg} for alg in webauthn.SUPPORTED_ALGORITHMS
+        ],
+        "timeout": webauthn.TIMEOUT_MS,
+        "attestation": "none",
+        "excludeCredentials": [
+            {"type": "public-key", "id": c.credential_id, "transports": c.transports}
+            for c in existing
+        ],
+        "authenticatorSelection": {
+            "residentKey": "required" if passwordless else "discouraged",
+            "requireResidentKey": passwordless,
+            "userVerification": "required" if passwordless else "preferred",
+        },
+    }
+    return AuthWebAuthnOptionsOut(challenge_id=challenge_id, public_key=options)
 
 
 @router.post(
     "/webauthn/register/verify",
-    summary="Passkey registrieren: Antwort prüfen (vorbereitet, M2-03)",
-    responses={503: {"description": "MHVP-AUTH-0012"}},
+    status_code=201,
+    summary="Passkey registrieren: Antwort prüfen (S16-01)",
+    responses={503: {"description": "MHVP-AUTH-0012"}, 401: {"description": "MHVP-AUTH-0013"}},
 )
-async def webauthn_register_verify(principal: Principal = Depends(get_principal)) -> Response:
+async def webauthn_register_verify(
+    body: AuthWebAuthnRegisterVerifyRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> AuthWebAuthnCredentialOut:
     if principal.user_id is None:
         raise ProblemError(ErrorCodes.FORBIDDEN)
-    webauthn.ensure_available()
-    raise ProblemError(ErrorCodes.WEBAUTHN_UNAVAILABLE)  # pragma: no cover - AVAILABLE False
+    settings = request.app.state.settings
+    webauthn.ensure_available(settings)
+    challenge = await webauthn.consume_challenge(
+        _redis(request), body.challenge_id, purpose="register"
+    )
+    if challenge.get("user_id") != str(principal.user_id):
+        raise webauthn.invalid("Challenge issued to another user.")
+    passwordless = bool(challenge.get("passwordless"))
+    registered = webauthn.verify_registration(
+        settings,
+        challenge=challenge["challenge_bytes"],
+        credential_id=body.credential_id,
+        client_data_json=body.response.client_data_json,
+        attestation_object=body.response.attestation_object,
+        require_user_verification=passwordless,
+    )
+    async with platform_transaction(sessions(request)) as session:
+        taken = await session.scalar(
+            select(WebAuthnCredential.id).where(
+                WebAuthnCredential.credential_id == registered.credential_id
+            )
+        )
+        if taken is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Dieser Passkey ist bereits registriert."
+            )
+        row = WebAuthnCredential(
+            user_id=principal.user_id,
+            credential_id=registered.credential_id,
+            public_key=registered.public_key,
+            sign_count=registered.sign_count,
+            transports=[t[:20] for t in body.response.transports],
+            aaguid=registered.aaguid,
+            label=(body.label or "").strip() or None,
+            passwordless=passwordless,
+        )
+        session.add(row)
+        await session.flush()
+        await session.refresh(row)
+        return AuthWebAuthnCredentialOut(
+            id=row.id,
+            label=row.label,
+            created_at=row.created_at,
+            last_used_at=row.last_used_at,
+            passwordless=row.passwordless,
+        )
+
+
+@router.post(
+    "/login/webauthn/options",
+    summary="Anmeldung mit Passkey: Optionen (zweiter Faktor oder ohne Passwort, S16-01)",
+    responses={503: {"description": "MHVP-AUTH-0012"}},
+)
+async def webauthn_login_options(
+    body: AuthWebAuthnLoginOptionsRequest, request: Request
+) -> AuthWebAuthnOptionsOut:
+    settings = _settings(request)
+    webauthn.ensure_available(settings)
+    allow: list[dict[str, Any]] = []
+    user_id: uuid.UUID | None = None
+    if body.mfa_token is not None:
+        user_id = _mfa_user(settings, body.mfa_token)
+        async with platform_transaction(sessions(request)) as session:
+            rows = (await session.scalars(_webauthn_active(user_id))).all()
+        allow = [
+            {"type": "public-key", "id": r.credential_id, "transports": r.transports} for r in rows
+        ]
+        if not allow:
+            raise webauthn.invalid("No passkey registered for this user.")
+    challenge_id, challenge = await webauthn.issue_challenge(
+        _redis(request),
+        purpose="login",
+        user_id=str(user_id) if user_id else None,
+    )
+    options = {
+        "challenge": webauthn.b64url_encode(challenge),
+        "rpId": settings.webauthn_rp_id,
+        "timeout": webauthn.TIMEOUT_MS,
+        "allowCredentials": allow,
+        "userVerification": "preferred" if user_id else "required",
+    }
+    return AuthWebAuthnOptionsOut(challenge_id=challenge_id, public_key=options)
+
+
+@router.post(
+    "/login/webauthn/verify",
+    summary="Anmeldung mit Passkey: Antwort prüfen, Token ausstellen (S16-01)",
+    responses={503: {"description": "MHVP-AUTH-0012"}, 401: {"description": "MHVP-AUTH-0013"}},
+)
+async def webauthn_login_verify(
+    body: AuthWebAuthnLoginVerifyRequest, request: Request
+) -> TokenResponse:
+    """Second factor (challenge bound to the ``mfa_token`` user) or passwordless sign in
+    (only credentials registered with ``passwordless``, user verification required). The
+    challenge is consumed before any check; failures count towards the account lockout."""
+    settings = _settings(request)
+    webauthn.ensure_available(settings)
+    challenge = await webauthn.consume_challenge(
+        _redis(request), body.challenge_id, purpose="login"
+    )
+    bound_user = challenge.get("user_id")
+    if bound_user is not None:
+        if body.mfa_token is None or str(_mfa_user(settings, body.mfa_token)) != bound_user:
+            raise webauthn.invalid("Challenge bound to another login.")
+    elif body.mfa_token is not None or body.remember_device:
+        raise webauthn.invalid("Passwordless challenge used as second factor.")
+    now = datetime.now(UTC)
+    failure: ProblemError | None = None
+    async with platform_transaction(sessions(request)) as session:
+        row = await session.scalar(
+            select(WebAuthnCredential)
+            .where(
+                WebAuthnCredential.credential_id == body.credential_id.rstrip("="),
+                WebAuthnCredential.revoked_at.is_(None),
+            )
+            .with_for_update()
+        )
+        if row is None or (bound_user is not None and str(row.user_id) != bound_user):
+            raise webauthn.invalid("Credential unknown, revoked or of another user.")
+        if bound_user is None and not row.passwordless:
+            raise webauthn.invalid("Credential not released for passwordless sign in.")
+        user = await session.get(User, row.user_id)
+        if user is None or not user.active:
+            raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+        if user.locked_until is not None and user.locked_until > now:
+            raise ProblemError(ErrorCodes.ACCOUNT_LOCKED)
+        try:
+            new_count = webauthn.verify_assertion(
+                settings,
+                challenge=challenge["challenge_bytes"],
+                public_key=row.public_key,
+                stored_sign_count=row.sign_count,
+                client_data_json=body.response.client_data_json,
+                authenticator_data=body.response.authenticator_data,
+                signature=body.response.signature,
+                require_user_verification=bound_user is None,
+            )
+        except ProblemError as exc:
+            await service.register_failed_attempt(session, user, now)
+            failure = exc
+        else:
+            row.sign_count = new_count
+            row.last_used_at = now
+            user.failed_logins = 0
+            user.last_login_at = now
+        user_id = user.id
+    if failure is not None:
+        raise failure
+    issued = await service.issue_session(
+        sessions(request),
+        settings,
+        user_id=user_id,
+        tenant_id=body.tenant_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    device_token = None
+    if body.remember_device:
+        device_token = tokens.new_opaque_secret()
+        await service.store_trusted_device(
+            sessions(request),
+            user_id=user_id,
+            tenant_id=body.tenant_id,
+            raw_token=device_token,
+            user_agent=request.headers.get("user-agent"),
+        )
+    return _out(issued, device_token=device_token)
 
 
 @router.get("/me", summary="Aktueller Benutzer und Berechtigungen")

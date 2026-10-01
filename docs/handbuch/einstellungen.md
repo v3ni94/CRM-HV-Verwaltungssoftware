@@ -77,8 +77,13 @@ Abgleich, damit kein falscher Konflikt entsteht.
 
 ## Passkeys
 
-Passkeys (WebAuthn) als zusätzlicher zweiter Faktor sind vorbereitet, aber noch nicht
-freigeschaltet (Regel M2-03). Bis dahin dient TOTP als zweiter Faktor.
+Unter Meine Daten, Abschnitt Passkeys, registriert jeder Benutzer eigene Passkeys
+(Regel S16-01). Ein Passkey dient bei der Anmeldung als zweiter Faktor anstelle des Codes der
+Authenticator-App. Mit dem Haken "Anmeldung ohne Passwort erlauben" kann ein Passkey im CRM
+zusätzlich die Anmeldung ohne Passwort ermöglichen (Schaltfläche "Mit Passkey anmelden" auf
+der Anmeldeseite); das Gerät verlangt dann PIN oder Biometrie. Im Portal gibt es Passkeys nur
+als zweiten Faktor. Passkeys lassen sich jederzeit entfernen. Die Funktion erscheint erst,
+wenn der Betreiber sie freigeschaltet hat; bis dahin dient TOTP als zweiter Faktor.
 
 ## Erledigungsarten beim Ticketabschluss
 

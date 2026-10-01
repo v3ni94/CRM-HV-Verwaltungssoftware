@@ -146,3 +146,5 @@ table `reserve_statement`, migration 0295) with the shared status model; created
 reserve block of the calculated Hausgeldabrechnung and the reserve master data (migration
 0294); issued, due and posted behind G4. Rule: `docs/rules/S69-01-statement-status-model.md`.
 
+
+CRM (U03, 01.10.2026): Das Rücklagenformular bietet Bankkonto (nur Rechtsträger der Gemeinschaft) und Buchungskonto als Auswahl; die Hausgeldabrechnungsansicht zeigt die Entwicklung je Rücklage und Jahr (`GET /hoa/reserves/{id}/development`). Keine API-Änderung.

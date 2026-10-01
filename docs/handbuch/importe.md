@@ -107,3 +107,7 @@ Konflikt). Kautionen entstehen ohne Bewegung und ohne Buchung, Portalnutzer werd
 Portalkonto verglichen, es geht keine Einladung hinaus. Die Rücknahme eines Laufs entfernt
 übernommene Datensätze, sofern sie nach dem Import nicht verwendet oder bearbeitet wurden.
 Regel: `docs/rules/M8-01-w5-importberichte.md`.
+
+## Kautionen, Darlehen und Rücknahme (Welle 6)
+
+Der Prüfbericht der Einzelposten vergleicht jetzt auch Kautionen und Darlehen mit der Eröffnungsbilanz, sofern im Kontenrahmen ein Darlehenskonto oder ein mit dem Kautionskonto verknüpftes Bankkonto einen Eröffnungssaldo hat. Fehlt ein solches Konto, steht die Art mit Grund unter „nicht vergleichbar“. Die Rücknahme eines Imports der SEPA-Übersicht entfernt Zahlungsplan und Mandat, sofern beides noch nicht verwendet wurde; beim Dokumentindex werden nur die Verknüpfungen entfernt, das Dokument bleibt erhalten.

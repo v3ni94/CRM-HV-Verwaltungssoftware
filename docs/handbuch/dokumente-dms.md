@@ -178,3 +178,9 @@ Voraussetzung: Recht Dokumente lesen, für die Freigabe Dokumente freigeben, fü
 * Geschwärzte Kopie: Im Dokument (Seite Dokumente, Detailansicht des Originals) steht der Abschnitt Geschwärzte Kopien. Datei (bereits geschwärzt), Grund, Umfang und Bearbeitungsschritte (ein Schritt je Zeile) angeben und Kopie anlegen. Die Schwärzung selbst erfolgt außerhalb des Systems, das Original bleibt unverändert. Die Kopie ist zunächst intern. Eine zweite Person mit dem Recht Freigeben wählt die Portal-Sichtbarkeit und gibt frei; der Ersteller sieht den Hinweis auf die Freigabe durch eine zweite Person statt der Schaltfläche. Über Kopie öffnen gelangt man zum Dokument der Kopie.
 * Eingangsadresse: Einstellungen, DMS, Eingangsadresse für Weiterleitungen. Sammelpostfach und erlaubte Absender (Adresse oder @domain, eine je Zeile) eintragen; die Adresse hat die Form belege+token@domain. Neues Token erzeugen macht die alte Adresse unwirksam. Ruft ein Mandant das gemeinsame Postfach für mehrere Mandanten ab, schaltet er die Verteilung ein: Nachrichten mit dem Token eines anderen Mandanten desselben Postfachs werden diesem übergeben, sofern der Absender dort erlaubt ist.
 * Direkter Upload: Einstellungen, DMS, Schalter Direkter Upload im Browser (Standard aus). Voraussetzungen und CORS stehen im Runbook Objektspeicher, Abschnitt 9.
+
+## Automatische Sperre bei Verfahren und Aufhebung von Sperren (U11)
+
+* Hat die Buchhaltung auf einem offenen Posten eines Vertrags eine Mahnsperre mit Grund Prozess oder Insolvenz gesetzt, sind alle mit diesem Vertrag verknüpften Dokumente automatisch gegen Löschung gesperrt. Die Sperre endet, sobald die Mahnsperre aufgehoben ist.
+* Eine Löschungssperre am Dokument oder am Vorgang hebt nur eine zweite Person auf, nicht die Person, die sie gesetzt hat.
+* Den aktuellen Stand zeigt die API `GET /documents/{id}/retention-status` (Sperren, WEG-Dauerunterlage, Grund, warum nicht gelöscht wird).

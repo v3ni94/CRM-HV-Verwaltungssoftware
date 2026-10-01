@@ -75,8 +75,14 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   (minimum 12, rule `docs/rules/M2-05-passwortregeln.md`).
 - `auth/scope.py`: property assignment (`allowed_property_ids`, `ensure_property_allowed`,
   session variants) from `Membership.property_ids` (rule M2-02).
-- `auth/webauthn.py`: passkeys prepared, `AVAILABLE = False`, endpoints under
-  `/auth/webauthn/*` (rule M2-03).
+- `auth/webauthn.py`: passkeys (rule S16-01, replaces the prepared state of M2-03). Narrow
+  WebAuthn Level 2 profile on top of `cryptography`: attestation `none`, ES256, EdDSA, RS256,
+  single use Redis challenges (`webauthn:challenge:*`, 300 s, `GETDEL`), origin allow list,
+  RP ID hash, user presence, user verification for passwordless, strictly increasing sign
+  counter. Off unless `MHVP_WEBAUTHN_ENABLED`, `MHVP_WEBAUTHN_RP_ID` and
+  `MHVP_WEBAUTHN_ORIGINS` are set. Endpoints `/auth/webauthn/register/{options,verify}`,
+  `/auth/login/webauthn/{options,verify}` (second factor with `mfa_token`, passwordless
+  without), list and revoke; errors `MHVP-AUTH-0012` (off) and `MHVP-AUTH-0013` (check failed).
 - `auth/portal_roles.py`: named portal roles and the derivation rule of 3.4 (S16-10).
 - CSRF and field encryption evidence: `docs/security/S16-csrf-and-field-encryption.md`.
 

@@ -177,6 +177,16 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
             postgresql_using="gin",
             postgresql_ops={"title": "gin_trgm_ops"},
         ),
+        Index(
+            "ix_document_lower_title_trgm",
+            sa_text("lower(title) gin_trgm_ops"),
+            postgresql_using="gin",
+        ),
+        Index(
+            "ix_document_lower_filename_trgm",
+            sa_text("lower(filename) gin_trgm_ops"),
+            postgresql_using="gin",
+        ),
         Index("ix_document_tenant_sha256", "tenant_id", "sha256"),
         Index("ix_document_tenant_created_at", "tenant_id", "created_at"),
         Index(

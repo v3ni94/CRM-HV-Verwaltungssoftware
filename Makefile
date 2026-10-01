@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy staging-smoke backup backup-verify check-s3
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy staging-smoke backup backup-verify check-s3
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -58,6 +58,9 @@ typecheck: ## mypy strict and tsc --noEmit
 openapi: openapi-check ## Export apps/api/openapi.json and regenerate packages/api-client
 	cd apps/api && uv run python -m mhvp.openapi > openapi.json.tmp && mv openapi.json.tmp openapi.json
 	pnpm api-client:generate
+
+client-py: ## Generate the optional Python client into packages/api-client-py (not checked in, S12-07)
+	sh scripts/gen_python_client.sh
 
 openapi-check: ## Fail when a path or field is removed without a passed deprecation (ADR 0009)
 	cd apps/api && uv run python -m mhvp.openapi --check openapi.json

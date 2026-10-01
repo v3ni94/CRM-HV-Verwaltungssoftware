@@ -76,7 +76,7 @@ describe("Erledigungsnotiz beim Abschluss", () => {
   });
 
   it("sends a shared resolution with a closing bulk action, also with an own kind", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ changed: [{ id: "t1" }], failed: [] }));
+    const fetchMock = mockFetch(() => jsonResponse({ total: 1, succeeded: 1, failed: 0, items: [{ id: "t1", ok: true, code: null, detail: null }] }));
     renderIntl(
       <TicketsList
         initialTickets={[{ id: "t1", number: 1, title: "Heizung", priority: "normal", status: "new", sla_due_at: null, sla_breached: false, attention: "new", last_activity_at: null, last_inbound_at: null }]}
@@ -90,10 +90,10 @@ describe("Erledigungsnotiz beim Abschluss", () => {
     await waitFor(() => expect(select).not.toBeDisabled());
     await userEvent.selectOptions(select, "schluessel_uebergeben");
     await userEvent.click(screen.getByText("Abschließen"));
-    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/tickets/bulk-status"))).toBe(true));
-    const call = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/tickets/bulk-status"))!;
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/tickets/bulk"))).toBe(true));
+    const call = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/tickets/bulk"))!;
     expect(JSON.parse(String(call[1]?.body))).toEqual({
-      ticket_ids: ["t1"],
+      ids: ["t1"],
       status: "rejected",
       resolution: { kind: "schluessel_uebergeben", note: null },
     });

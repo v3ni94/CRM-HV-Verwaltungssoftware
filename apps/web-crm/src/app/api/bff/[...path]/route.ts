@@ -300,6 +300,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // M2-03: Passkeys (WebAuthn) vorbereitet; Registrierung antwortet bis zur Freigabe 503.
   { method: "GET", pattern: /^auth\/webauthn\/(status|credentials)$/ },
   { method: "DELETE", pattern: new RegExp(`^auth/webauthn/credentials/${ID}$`) },
+  // S16-01: Passkey registrieren (Optionen und Prüfung); die Anmeldung läuft über /api/session/webauthn.
+  { method: "POST", pattern: /^auth\/webauthn\/register\/(options|verify)$/ },
   // Own UI preferences (theme, expanded navigation groups): PATCH /auth/me/preferences.
   { method: "PATCH", pattern: /^auth\/me\/preferences$/ },
   // Optional second factor (operator 26.09.2026, M2-01): confirm and disable; the setup with
@@ -615,6 +617,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     pattern: new RegExp(`^accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung$`),
   },
   // Operating cost statements (M17): drafting and status steps; issuing needs G3 (API).
+  { method: "GET", pattern: /^statements$/ },
   { method: "POST", pattern: /^statements$/ },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(cost-items|calculate|transition|new-version)$`) },
   // M17-01 to M17-08: draft editing, results with access per tenant, letters (drafts), diff,
@@ -667,6 +670,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Umlaufbeschluss mit abgesenkter Mehrheit (M25-02): recording and the per tenant switch.
   { method: "POST", pattern: /^hoa\/circular-resolutions$/ },
   { method: "GET", pattern: /^hoa\/circular-lower-majority$/ },
+  // M14-02 (U01): Auswahl für Beschluss und Wirtschaftsplanposition in der Rechnungserfassung.
+  { method: "GET", pattern: /^hoa\/(plans|resolutions)$/ },
+  { method: "GET", pattern: new RegExp(`^hoa/plans/${ID}$`) },
   { method: "PUT", pattern: /^hoa\/circular-lower-majority$/ },
   // Darlehen, Versicherungsfälle, Maßnahmen (W10, A59) und erklärte Differenzen der
   // Überleitungsrechnung (W04, A60): Erfassung und Nachweis, keine Buchung.

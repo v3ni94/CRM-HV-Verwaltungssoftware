@@ -382,7 +382,7 @@ def test_hold_kind_propagates_and_permanent_record_per_legal_entity(
             "DELETE",
             f"/api/v1/documents/{original['id']}/hold",
             json={"reason": "Verfahren beendet"},
-            headers=h,
+            headers=_h(client, world, "q3second"),
         ),
         200,
     )

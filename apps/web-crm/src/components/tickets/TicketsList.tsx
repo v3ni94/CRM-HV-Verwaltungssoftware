@@ -10,7 +10,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
 import { ATTENTION_BORDER, type Attention } from "@/components/tickets/attention";
 import { AttentionBadge, AttentionLegend } from "@/components/tickets/TicketAttention";
-import { TicketBulkAssign } from "@/components/tickets/TicketBulkAssign";
+import { TicketBulkAssign, type BulkReport } from "@/components/tickets/TicketBulkAssign";
 import { TicketProcessBadge } from "@/components/tickets/TicketProcessBadge";
 import { STATUSES } from "@/components/tickets/TicketForms";
 import { bff } from "@/lib/bff";
@@ -49,7 +49,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
   const [busy, setBusy] = useState(false);
   const [askResolution, setAskResolution] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ changed: number; failed: { id: string; reason: string }[] } | null>(null);
+  const [result, setResult] = useState<BulkReport | null>(null);
 
   useEffect(() => {
     setTickets(initialTickets);
@@ -81,13 +81,13 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
     setBusy(true);
     setError(null);
     setResult(null);
-    const res = await bff<{ changed: { id: string }[]; failed: { id: string; reason: string }[] }>("/api/bff/tickets/bulk-status", {
+    const res = await bff<BulkReport>("/api/bff/tickets/bulk", {
       method: "POST",
-      body: JSON.stringify({ ticket_ids: selectedIds, status: bulkStatus, ...(resolution ? { resolution } : {}) }),
+      body: JSON.stringify({ ids: selectedIds, status: bulkStatus, ...(resolution ? { resolution } : {}) }),
     });
     setBusy(false);
     if (res.ok) {
-      setResult({ changed: res.data.changed.length, failed: res.data.failed });
+      setResult(res.data);
       setSelected(new Set());
       router.refresh();
     } else {
@@ -215,8 +215,8 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
           <TicketBulkAssign
             ids={selectedIds}
             disabled={busy || overLimit}
-            onDone={(changed) => {
-              setResult({ changed, failed: [] });
+            onDone={(report) => {
+              setResult(report);
               setSelected(new Set());
               router.refresh();
             }}
@@ -246,15 +246,31 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
         </p>
       ) : null}
       {result ? (
-        <p className="text-sm text-muted">
-          {t("bulkChanged")}: {result.changed}
-          {result.failed.length > 0 ? (
-            <>
-              {" "}
-              · {t("bulkFailed")}: {result.failed.map((f) => f.reason).join("; ")}
-            </>
+        <div className="text-sm text-muted" data-testid="bulk-report">
+          <p>
+            {t("bulkChanged")}: {result.succeeded} {t("bulkOfTotal", { total: result.total })}
+            {result.failed > 0 ? (
+              <>
+                {" "}
+                · {t("bulkFailed")}: {result.failed}
+              </>
+            ) : null}
+          </p>
+          {result.failed > 0 ? (
+            <ul className="list-disc pl-5" data-testid="bulk-report-failed">
+              {result.items
+                .filter((i) => !i.ok)
+                .map((i) => {
+                  const tk = tickets.find((x) => x.id === i.id);
+                  return (
+                    <li key={i.id}>
+                      {tk ? `#${tk.number}` : i.id}: {i.detail ?? i.code}
+                    </li>
+                  );
+                })}
+            </ul>
           ) : null}
-        </p>
+        </div>
       ) : null}
     </div>
   );

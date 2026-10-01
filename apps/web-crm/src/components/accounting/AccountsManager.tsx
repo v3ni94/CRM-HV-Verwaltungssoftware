@@ -13,6 +13,7 @@ export type ManagedAccount = {
   number: string;
   name: string;
   category: string;
+  statement_kind?: string;
   type: string;
   vat_option: string;
   relevant_for_cash_report: boolean;
@@ -25,6 +26,59 @@ export type ManagedAccount = {
 const CATEGORIES = ["bank", "cash", "reserve", "loan", "technical", "revenue", "cost", "transit", "tax"] as const;
 const TYPES = ["asset", "liability", "income", "expense"] as const;
 const VAT = ["none", "full", "reduced"] as const;
+
+type AllocationOut = { items: { allocation_key_id: string; code: string; name: string; share_percent: string }[]; total_percent: string };
+
+/** SA-08: Art der Abrechnung je Konto und Mehrschlüsselverteilung (nur Anzeige, Pflege über die API). */
+function AllocationCell({ ledgerId, account }: { ledgerId: string; account: ManagedAccount }) {
+  const t = useTranslations("Bookkeeping");
+  const [data, setData] = useState<AllocationOut | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toggle = async () => {
+    if (open) return setOpen(false);
+    setOpen(true);
+    if (data) return;
+    setLoading(true);
+    const res = await bff<AllocationOut>(`/api/bff/accounting/ledgers/${ledgerId}/accounts/${account.id}/allocations`);
+    setLoading(false);
+    if (res.ok) setData(res.data);
+    else setError(res.message);
+  };
+  const kind = account.statement_kind ?? "none";
+  return (
+    <div className="flex flex-col gap-1">
+      <span>{t(`accounts.statementKinds.${kind}`)}</span>
+      {account.category === "cost" ? (
+        <button type="button" className={ui.buttonSm} onClick={() => void toggle()}>
+          {open ? t("accounts.allocationHide") : t("accounts.allocationShow")}
+        </button>
+      ) : null}
+      {open ? (
+        <div className="text-sm">
+          {loading ? <span>{t("accounts.allocationLoading")}</span> : null}
+          {error ? (
+            <p role="alert" className={ui.error}>
+              {error}
+            </p>
+          ) : null}
+          {data && data.items.length === 0 ? <span>{t("accounts.allocationNone")}</span> : null}
+          {data && data.items.length > 0 ? (
+            <ul>
+              {data.items.map((i) => (
+                <li key={i.allocation_key_id}>
+                  {i.code} {i.name}: {i.share_percent} %
+                </li>
+              ))}
+              <li>{t("accounts.allocationTotal", { total: data.total_percent })}</li>
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function EditRow({ ledgerId, account, canUpdate }: { ledgerId: string; account: ManagedAccount; canUpdate: boolean }) {
   const t = useTranslations("Bookkeeping");
@@ -111,6 +165,9 @@ function EditRow({ ledgerId, account, canUpdate }: { ledgerId: string; account: 
         ) : null}
       </td>
       <td>{t(`accounts.categories.${account.category}`)}</td>
+      <td>
+        <AllocationCell ledgerId={ledgerId} account={account} />
+      </td>
       <td>{account.active ? t("accounts.active") : t("accounts.inactive")}</td>
       <td>
         {canUpdate && !editing ? (
@@ -262,6 +319,7 @@ export function AccountsManager({
               <th>{t("accounts.number")}</th>
               <th>{t("accounts.name")}</th>
               <th>{t("accounts.category")}</th>
+              <th>{t("accounts.statementKind")}</th>
               <th>{t("accounts.state")}</th>
               <th>{t("accounts.actions")}</th>
             </tr>

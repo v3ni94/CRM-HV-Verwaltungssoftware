@@ -59,7 +59,7 @@ export default async function PortalLayout({ children }: { children: React.React
         // (same rule as the start tile, showsHandover), so the protocol stays one tap away.
         ...(me && showsHandover(me) ? [{ href: "/uebergabe", label: t("nav.handover") }] : []),
         // A51: owner pages (read only), shown only with the owner role.
-        ...(me?.roles.includes("owner") && (!view || view === "owner" || view === "board_member")
+        ...(me?.roles.includes("owner") && (!view || view === "owner" || view === "board_member" || view === "representative")
           ? [
               { href: "/beschluesse", label: t("nav.resolutions") },
               { href: "/versammlungen", label: t("nav.meetings") },
@@ -69,6 +69,8 @@ export default async function PortalLayout({ children }: { children: React.React
               { href: "/eigentum", label: t("nav.ownerOverview") },
             ]
           : []),
+        // M21-05: representatives see their powers of attorney with the period.
+        ...(portalRoles.includes("representative") ? [{ href: "/vertretung", label: t("nav.representation") }] : []),
         ...(board ? [{ href: "/pruefung", label: t("nav.audit") }] : []),
         // M19-02: submissions to the board (owner with the board contact category, or board role).
         ...(me?.roles.includes("owner") || board ? [{ href: "/vorlagen", label: t("nav.submissions") }] : []),

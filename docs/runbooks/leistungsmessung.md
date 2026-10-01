@@ -58,3 +58,27 @@ PERF bank_retrieval accounts=100 transactions=2000 seconds=18.3
 ```
 
 Die Abrechnungsmessung umfasst nur die Berechnung des Entwurfs (ohne Sollstellungen und Zahlungen je Einheit) und ersetzt keine Messung mit produktionsnahen Daten. Der Sollstellungslauf mit 1.000 Verträgen ist weiterhin nicht gesondert gemessen.
+
+## Welle 6, Paket U08: Sollstellungslauf mit 1.000 Verträgen und Abrechnungsausgabe
+
+Neue Messtests in `apps/api/tests/integration/test_u08_perf.py` (nur mit `MHVP_PERF=1`):
+
+| Vorgabe | Test | Stand |
+| --- | --- | --- |
+| Sollstellungslauf mit genau 1.000 Verträgen (10 Objekte, 2 Komponenten je Vertrag, 2.000 Positionen), Vorschau und Buchung unter 2 Minuten | `test_receivable_run_with_1000_contracts_below_two_minutes` | gemessen, siehe unten |
+| Abrechnung über `calculate` hinaus: interne Freigabe, Gesamtabrechnung als PDF auf dem Briefbogen und 100 Einzelabrechnungen als PDF, zusammen unter 1 Minute (Betreiberannahme) | `test_statement_output_of_100_units_below_one_minute` | gemessen, siehe unten |
+
+Aufruf: `MHVP_PERF=1 uv run pytest tests/integration/test_u08_perf.py -s --no-cov`. Der Bestand wird mit
+dem Seed aus `test_m13_receivables.py::_load_world` aufgebaut (Konstanten per Patch auf 1.000 und 10).
+
+Messwerte 01.10.2026 (unter Last: 4 Kerne, gleichzeitig durch etwa 16 Agenten belegt, nicht repräsentativ):
+
+```
+PERF receivable_seed contracts=1000 seconds=7.4
+PERF receivable_run contracts=1000 items=2000 preview=4.9s post=43.3s total=48.3s
+PERF statement_output units=100 total_pdf=0.1s unit_pdfs=1.5s unit_pages=100 all=1.7s
+```
+
+Beide Vorgaben sind eingehalten (Lauf 48,3 s gegen 120 s, Ausgabe 1,7 s gegen 60 s). Es wurde kein Engpass
+über 2 Minuten festgestellt, daher keine Index- oder Abfrageänderung. Die Buchung (43,3 s) ist der
+größere Anteil und der erste Kandidat, falls die Staging-Messung höhere Werte zeigt.

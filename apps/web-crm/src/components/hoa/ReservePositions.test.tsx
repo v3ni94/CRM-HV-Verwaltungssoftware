@@ -39,8 +39,28 @@ describe("Reserve positions", () => {
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PATCH");
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ name: "Dach", opening_balance: "9000.50", opening_year: 2024 });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ name: "Dach", opening_balance: "9000.50", opening_year: 2024, bank_account_id: null, account_id: null });
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("sends bank account and ledger account chosen in the edit form", async () => {
+    const BANK = "0192abcd-0000-7000-8000-000000000611";
+    const ACC = "0192abcd-0000-7000-8000-000000000612";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ id: DACH }));
+    renderIntl(
+      <ReservePosition
+        reserve={reserve}
+        year={2025}
+        bankAccounts={[{ id: BANK, label: "Sparkasse DE12 ****" }]}
+        accounts={[{ id: ACC, label: "1360 Rücklage Dach" }]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Ändern" }));
+    await userEvent.selectOptions(screen.getByLabelText("Bankkonto der Rücklage"), BANK);
+    await userEvent.selectOptions(screen.getByLabelText("Buchungskonto der Rücklage"), ACC);
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({ bank_account_id: BANK, account_id: ACC });
   });
 
   it("lists movements and removes one in the draft", async () => {

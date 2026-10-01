@@ -189,7 +189,10 @@ def test_d47_replay_deletion_journal_after_restore(
     assert refused.status_code == 409
     _ok(
         client.request(
-            "DELETE", f"{D}/{held['id']}/hold", json={"reason": "Verfahren beendet"}, headers=h
+            "DELETE",
+            f"{D}/{held['id']}/hold",
+            json={"reason": "Verfahren beendet"},
+            headers=bearer(login(client, world, "m9rrsecond")),
         ),
         200,
     )

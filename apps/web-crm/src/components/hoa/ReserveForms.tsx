@@ -7,14 +7,27 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { ReserveAccountFields } from "./ReserveAccountFields";
+import type { AccountOption } from "./ReserveYears";
+
 export type ReserveOption = { id: string; name: string };
 
 /** Earmarked reserve of the community (W08, M24-01): name, purpose, optional account. */
-export function ReserveCreateForm({ ledgerId }: { ledgerId: string }) {
+export function ReserveCreateForm({
+  ledgerId,
+  bankAccounts = [],
+  accounts = [],
+}: {
+  ledgerId: string;
+  bankAccounts?: AccountOption[];
+  accounts?: AccountOption[];
+}) {
   const t = useTranslations("HoaReserves");
   const router = useRouter();
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [bankId, setBankId] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +37,10 @@ export function ReserveCreateForm({ ledgerId }: { ledgerId: string }) {
     setError(null);
     const res = await bff("/api/bff/hoa/reserves", {
       method: "POST",
-      body: JSON.stringify({ ledger_id: ledgerId, name: name.trim(), purpose: purpose.trim() || null }),
+      body: JSON.stringify({ ledger_id: ledgerId, name: name.trim(), purpose: purpose.trim() || null,
+        ...(bankId ? { bank_account_id: bankId } : {}),
+        ...(accountId ? { account_id: accountId } : {}),
+      }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -33,6 +49,8 @@ export function ReserveCreateForm({ ledgerId }: { ledgerId: string }) {
     }
     setName("");
     setPurpose("");
+    setBankId("");
+    setAccountId("");
     router.refresh();
   }
 
@@ -48,6 +66,7 @@ export function ReserveCreateForm({ ledgerId }: { ledgerId: string }) {
           <span className={ui.label}>{t("purpose")}</span>
           <input className={ui.input} value={purpose} onChange={(e) => setPurpose(e.target.value)} />
         </label>
+        <ReserveAccountFields bankAccounts={bankAccounts} accounts={accounts} bankAccountId={bankId} accountId={accountId} onBank={setBankId} onAccount={setAccountId} />
         <button type="submit" className={ui.button} disabled={busy || name.trim().length < 2}>
           {t("createSubmit")}
         </button>

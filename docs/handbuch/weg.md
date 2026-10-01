@@ -388,3 +388,7 @@ Die Angaben sind Information für Abrechnung und Vermögensbericht. Es wird nich
 ## Rücklagenabrechnung
 
 Auf der Seite WEG, Rücklagen legt der Bearbeiter je Jahr eine Rücklagenabrechnung aus der jüngsten Hausgeldabrechnung an und erzeugt sie aus deren Rücklagendaten (Anfangsbestand, Zuführung, Entnahmen, Zinsen, Endbestand, Bankbestand und die Stammdaten je Rücklage). Die Statusschritte entsprechen der Hausgeldabrechnung: interne Freigabe durch eine zweite Person, Beiratsprüfung, Beschluss, ausgeben, fällig, gebucht, gesperrt. Ausgeben ist erst nach dem Beschluss möglich; ausgeben, fällig und gebucht setzen die Freigabestufe G4 voraus. Wird die Hausgeldabrechnung neu berechnet, ist die Rücklagenabrechnung neu zu erzeugen, bevor sie freigegeben wird.
+
+## Rücklagen: Kontoauswahl und Entwicklung in der Abrechnung
+
+Beim Anlegen und Ändern einer Rücklage (WEG, Rücklagen) wählt der Bearbeiter das Bankkonto und das Buchungskonto aus Auswahllisten. Angeboten werden nur Bankkonten des Rechtsträgers der Gemeinschaft und die aktiven Konten des Buchungskreises; die API prüft beides erneut. Die Auswahl bucht nichts. In der Hausgeldabrechnung (WEG, Abrechnung) zeigt der Abschnitt "Entwicklung je Rücklage und Jahr" Anfang, Zuführung, Entnahmen, Steuern, Gebühren, Zinsen und Ende bis zum Abrechnungsjahr. Die Eigentümer- und die Rücklagenabrechnung zeigen den Statusverlauf als Liste, ohne Eintrag mit dem Hinweis "Noch kein Statuswechsel."

@@ -1107,13 +1107,13 @@ def test_d46_import_undo_never_removes_a_recorded_original(
     assert undo_event["payload"]["kept"] == "1"
     assert "document: Aufbewahrung" in undo_event["payload"]["kept_reasons"]
     # Even without the hold the undo never deletes an original (only the document endpoint,
-    # with the full retention check, does).
+    # with the full retention check, does). A hold is lifted by a second person (U11).
     _ok(
         client.request(
             "DELETE",
             f"/api/v1/documents/{doc}/hold",
             json={"reason": "Verfahren beendet"},
-            headers=admin,
+            headers=bearer(login(client, world, "m7second")),
         ),
         200,
     )

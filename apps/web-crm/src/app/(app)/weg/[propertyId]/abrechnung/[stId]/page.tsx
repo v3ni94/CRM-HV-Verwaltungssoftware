@@ -4,6 +4,7 @@ import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { LoanAllocationForm, type LoanAllocationRow } from "@/components/hoa/AssetReportForms";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { ReserveYearsTable, type ReserveYearRow } from "@/components/hoa/ReserveYears";
 import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -29,7 +30,7 @@ type Recon = {
 
 export default async function HoaStatementPage({ params }: { params: Promise<{ propertyId: string; stId: string }> }) {
   const { propertyId, stId } = await params;
-  const [t, tf] = await Promise.all([getTranslations("HoaWork"), getTranslations("HoaFinance")]);
+  const [t, tf, tr] = await Promise.all([getTranslations("HoaWork"), getTranslations("HoaFinance"), getTranslations("HoaReserves")]);
   const ctx = await hoaContext(propertyId);
   const [{ data, error, response }, pkg] = await Promise.all([
     ctx.api.GET("/api/v1/hoa/statements/{statement_id}", { params: { path: { statement_id: stId } } }),
@@ -60,6 +61,14 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const loanOptions = ((loansResponse?.data ?? []) as { id: string; lender: string; reference?: string | null }[]).map((l) => ({ id: String(l.id), label: `${String(l.lender)}${l.reference ? ` ${String(l.reference)}` : ""}` }));
   const loanAllocation = ((data as { loan_allocation?: LoanAllocationRow[] }).loan_allocation ?? []) as LoanAllocationRow[];
   const showLoanShares = Boolean(snap?.loans?.loans.length);
+  // M24-01: development per reserve and year up to the statement year (information, no posting).
+  const reserveList = ((await ctx.api.GET("/api/v1/hoa/reserves", { params: { query: { ledger_id: String(data.ledger_id) } } })).data ?? []) as unknown as { id: string; name: string }[];
+  const reserveYears = await Promise.all(
+    reserveList.map(async (r) => ({
+      name: r.name,
+      rows: (((await ctx.api.GET("/api/v1/hoa/reserves/{reserve_id}/development", { params: { path: { reserve_id: r.id }, query: { year: Number(data.year) } } })).data as unknown as { years?: ReserveYearRow[] } | undefined)?.years ?? []),
+    })),
+  );
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -218,6 +227,19 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
             open: formatEur(snap.reserve.contributions_open),
           })}
         </p>
+      ) : null}
+      {reserveYears.some((r) => r.rows.length) ? (
+        <section className="flex flex-col gap-2" data-testid="statement-reserve-years">
+          <h2 className={ui.h2}>{tr("yearsOfStatement")}</h2>
+          {reserveYears
+            .filter((r) => r.rows.length)
+            .map((r) => (
+              <div key={r.name}>
+                <h3 className="font-medium">{r.name}</h3>
+                <ReserveYearsTable rows={r.rows} caption={`${tr("yearTitle")}: ${r.name}`} />
+              </div>
+            ))}
+        </section>
       ) : null}
     </div>
   );

@@ -25,7 +25,9 @@ ADMIN_ROLES = {"tenant_admin"}
 
 
 def _require_tenant_admin(principal: TenantPrincipal) -> None:
-    if not (ADMIN_ROLES & set(principal.roles)) and not principal.is_platform_admin:
+    # U15: a platform administrator only after a recorded tenant switch (access reason).
+    platform = principal.is_platform_admin and bool(principal.platform_access_reason)
+    if not (ADMIN_ROLES & set(principal.roles)) and not platform:
         raise ProblemError(
             ErrorCodes.FORBIDDEN, developer_message="Only the tenant administrator may export."
         )

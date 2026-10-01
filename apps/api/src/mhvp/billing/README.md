@@ -96,7 +96,7 @@ assignment (`property_column_guard`); both statement lists are filtered.
 * `heating_import.py` (pure CSV parsing with an explicit column map, sum check, CO2 check via
   `heating_calc.co2_split`, mapping check, duplicate check against `accounting.Invoice` and other
   imports, apply) and `heating_import_routers.py` (`/billing/heating-cost-imports`, included
-  into `heating_routers.router`). Model `HeatingCostImport`, migration 0292.
+  into `heating_routers.router`). Model `HeatingCostImport`, migration 0292. CRM: `apps/web-crm/src/components/billing/HeatingImportPanel.tsx` on `/abrechnung` (list per property, create with original document, CSV column map, user mapping, findings, apply).
 * Status `draft` -> `checked` -> `applied`; every edit resets to `draft`; applied imports are
   locked. Apply feeds one external heating item (`external_amounts` per occupancy key, landlord
   CO2 share not allocated, assumption A-M17-09-01). Issuing stays behind G3.

@@ -41,3 +41,11 @@
 * Regel: Der Prüfbericht vergleicht je Gruppe (Debitoren, Kreditoren, Rücklagen) Offene-Posten-Summe und Salden der Eröffnungsbilanz und korrigiert nie. Die Kandidatenliste nennt Journalbuchungen im Buchungskreis der Bankverbindung mit gleichem Betrag und Datum innerhalb der Toleranz (Standard 3 Tage) und ordnet nie automatisch zu. Die Rücknahme entfernt importierte Konten (nur Prüfstatus entwurf und unverwendet), historische Bankumsätze (nur Status ignoriert), Tickets und Einzelposten; andere bleiben mit Grund.
 * Abnahmefall: tests/integration/test_q08_import_history.py (test_r04_balance_check_candidates_undo).
 * Änderungsgrund: Lückenliste 30.09.2026, M8-04 und M8-07.
+
+## Ergänzung Welle 6 (U13, 01.10.2026)
+
+* Geltungsbereich: Prüfbericht Einzelposten gegen Eröffnungsbilanz (M8-07) für Kautionen und Darlehen; Rücknahme der Berichtsarten SEPA-Übersicht und Dokumentindex.
+* Quellenstatus Anhang C: Produktschutz, keine Rechtsnorm. Zuordnung über vorhandene Kontoattribute, Vorzeichen als Annahme A-U13-01.
+* Regel: Darlehensposten werden gegen die Salden der Konten mit Kategorie `loan` verglichen, Kautionsposten gegen die Salden der Konten, die mit einem getrennt geführten Objektbankkonto (`segregated`) verknüpft sind (gleiches Merkmal wie im Liquiditätsbericht). Das Vorzeichen folgt der Kontoart (Verbindlichkeit negativ, Vermögen positiv). Ohne solches Konto mit Eröffnungssaldo bleibt die Art nicht vergleichbar und wird mit Grund aufgelistet. Die Rücknahme entfernt importierte Zahlungspläne (nicht bei Sollstellungen aus dem Plan oder späterem Plan; ein vom Import beendeter Vorgängerplan wird wieder geöffnet), SEPA-Mandate (nicht nach Nutzung, Widerruf oder Statusänderung; der Vertrag verliert Mandatsbezug und Lastschriftkennzeichen) und Dokumentverknüpfungen; das Dokument selbst bleibt immer.
+* Abnahmefall: apps/api/tests/integration/test_u13_import_history.py.
+* Änderungsgrund: Lückenliste 30.09.2026, M8-07 (Rest).

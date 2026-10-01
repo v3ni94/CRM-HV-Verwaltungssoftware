@@ -1,9 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { HeatingImportPanel } from "@/components/billing/HeatingImportPanel";
 import { StatementCreate } from "@/components/billing/StatementCreate";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -14,9 +16,10 @@ export const dynamic = "force-dynamic";
 export default async function StatementsPage() {
   const t = await getTranslations("Billing");
   const api = serverApi();
-  const [list, ledgers] = await Promise.all([
+  const [list, ledgers, me] = await Promise.all([
     api.GET("/api/v1/statements"),
     api.GET("/api/v1/accounting/ledgers"),
+    getMe(),
   ]);
   redirectIfUnauthenticated(list.response);
   return (
@@ -49,6 +52,7 @@ export default async function StatementsPage() {
           ))}
         </ul>
       )}
+      <HeatingImportPanel permissions={me.data?.permissions ?? []} />
     </div>
   );
 }

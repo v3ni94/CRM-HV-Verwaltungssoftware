@@ -32,7 +32,11 @@
     "tenantTitle": "Select tenant",
     "tenantHint": "Your access is enabled for several tenants. Please choose the tenant for this session.",
     "noTenants": "No tenant is enabled for your access.",
-    "rememberDevice": "Remember this device for 90 days"
+    "rememberDevice": "Remember this device for 90 days",
+    "passkeyLogin": "Sign in with a passkey",
+    "passkeyUse": "Use a passkey",
+    "passkeyUnsupported": "This browser does not support passkeys.",
+    "passkeyAborted": "The passkey sign in was cancelled."
   },
   "Shell": {
     "workOrders": "Work orders",
@@ -2638,6 +2642,70 @@
     "objectLabel": "Property",
     "receivedOn": "Receipt of the reminder (if known)"
   },
+  "HeatingImport": {
+    "title": "Metering service heating cost import",
+    "description": "Capture the metering service's heating cost statement, check it and, once checked, feed it into a draft operating cost statement. All values stay drafts, issuing the statement remains locked.",
+    "property": "Property",
+    "allProperties": "All properties",
+    "empty": "No imports yet.",
+    "provider": "Metering service",
+    "period": "Period",
+    "periodFrom": "Period from",
+    "periodTo": "Period to",
+    "documentTotal": "Document total (EUR)",
+    "statusLabel": "Status",
+    "open": "Open",
+    "status": {
+      "draft": "Draft",
+      "checked": "Checked",
+      "applied": "Applied"
+    },
+    "createTitle": "Create import",
+    "originalDocument": "Original document of the metering service",
+    "documentTitle": "Heating cost statement",
+    "create": "Create import",
+    "created": "Import created as draft.",
+    "documentLinked": "Original document linked",
+    "documentMissing": "Original document missing",
+    "rowCount": "{count} cost rows",
+    "lockedApplied": "The import is applied and locked.",
+    "csvTitle": "CSV with column mapping",
+    "csvHint": "Map every column yourself. The system guesses no columns and assumes no format. The decimal comma applies only if you tick it.",
+    "csvFile": "CSV file",
+    "delimiter": "Delimiter",
+    "semicolon": "Semicolon",
+    "comma": "Comma",
+    "tab": "Tab",
+    "decimalComma": "Decimal comma",
+    "chooseColumn": "Choose column",
+    "csvUpload": "Import CSV",
+    "csvDone": "{count} rows read from the CSV. The import is back to draft.",
+    "field": {
+      "user_number": "User number",
+      "heating_base": "Heating base costs",
+      "heating_consumption": "Heating consumption costs",
+      "hot_water_base": "Hot water base costs",
+      "hot_water_consumption": "Hot water consumption costs",
+      "co2_landlord": "CO2 landlord share",
+      "co2_tenant": "CO2 tenant share"
+    },
+    "mappingTitle": "Assign user numbers",
+    "sum": "Sum (EUR)",
+    "unit": "Unit",
+    "contract": "Lease",
+    "chooseUnit": "Choose unit",
+    "vacancy": "Vacancy of the unit",
+    "saveMapping": "Save assignment",
+    "mappingSaved": "Assignment saved. The import is back to draft.",
+    "checkTitle": "Check",
+    "duplicateReason": "Reason for the possible double entry (at least 10 characters)",
+    "check": "Check",
+    "checkClean": "No findings. Total of all costs: {total}. The import is checked.",
+    "targetStatement": "Draft statement",
+    "chooseStatement": "Choose statement",
+    "apply": "Feed into statement",
+    "applied": "Import fed into the statement and locked."
+  },
   "Billing": {
     "letters": {
       "interim": "Interim statement (special period)",
@@ -3502,6 +3570,7 @@
     "bulkLimitHint": "Without approval rights at most 10 tickets per call are possible.",
     "bulkFailed": "Failed",
     "bulkChanged": "Changed",
+    "bulkOfTotal": "of {total}",
     "saveField": "Save",
     "selectRow": "Select ticket",
     "linkedTitle": "Tickets",
@@ -5809,6 +5878,14 @@
       "title": "Accounting, taxes",
       "description": "Input tax, construction withholding tax, section 35a and approval limits per role as drafts, switches per tenant."
     },
+    "adminFeePosting": {
+      "title": "Accounting, fee posting",
+      "description": "Account assignment for posting the management fee, drafts only, posting stays behind G1."
+    },
+    "invoiceCheck": {
+      "title": "Accounting, invoice check",
+      "description": "Tolerances for price and quantity of the factual check of incoming invoices."
+    },
     "portalForms": {
       "title": "Portal forms",
       "description": "Form templates for tenants and owners in the portal."
@@ -6328,6 +6405,17 @@
     }
   },
   "Profile": {
+    "passkeysTitle": "Passkeys",
+    "passkeysHint": "Passkeys serve as a second factor. Optionally a passkey may also allow sign in without a password.",
+    "passkeysUnavailable": "Passkeys are not enabled.",
+    "noPasskeys": "No passkeys registered.",
+    "passkeyLabel": "Label",
+    "passkeyPasswordless": "Allow sign in without password",
+    "passkeyAdd": "Add passkey",
+    "passkeyAdded": "Passkey registered.",
+    "passkeyFailed": "The passkey could not be registered.",
+    "passkeyRevoke": "Remove",
+    "passkeyPasswordlessBadge": "passwordless",
     "appearanceTitle": "Appearance",
     "appearanceHelp": "Day is the calm light view, evening the precise dark view. Automatic switches to the evening view from 7 pm to 7 am. The choice applies to your user account.",
     "title": "My data",
@@ -13089,6 +13177,20 @@
       "done": "Locked until {date}. Drafts in the locked period: {drafts}. Unclarified bank movements: {unclarified}."
     },
     "accounts": {
+      "statementKind": "Statement type",
+      "statementKinds": {
+        "hoa_fee": "HOA fee",
+        "reserve": "Reserve",
+        "operating_costs": "Operating costs",
+        "special_levy": "Special levy",
+        "heating": "Heating costs",
+        "none": "none"
+      },
+      "allocationShow": "Allocation",
+      "allocationHide": "Hide allocation",
+      "allocationLoading": "Loading …",
+      "allocationNone": "No allocation to allocation keys defined.",
+      "allocationTotal": "Total {total} %",
       "link": "Chart of accounts",
       "title": "Chart of accounts",
       "description": "Add, edit and deactivate accounts. Accounts with postings can only be deactivated.",
@@ -13699,7 +13801,11 @@
     "choose": "Choose assignee",
     "loading": "Loading users.",
     "apply": "{count, plural, one {Assign # ticket} other {Assign # tickets}}",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "team": "Team",
+    "chooseTeam": "Choose team",
+    "priority": "Priority",
+    "choosePriority": "Choose priority"
   },
   "PrivacyAdmin": {
     "breadcrumb": "Settings",
@@ -13935,6 +14041,10 @@
     "openingBalance": "Opening balance (entered)",
     "openingYear": "From year",
     "bankAccount": "Reserve bank account",
+    "ledgerAccount": "Ledger account of the reserve",
+    "noneSelected": "No account selected",
+    "accountsHint": "Bank accounts of the community (legal entity of the ledger) and accounts of the ledger. The selection changes no posting.",
+    "yearsOfStatement": "Development per reserve and year",
     "edit": "Edit",
     "save": "Save",
     "cancel": "Cancel",
@@ -14084,6 +14194,8 @@
     "readOnly": "The export requires the tenant administrator role."
   },
   "StatementStatus": {
+    "logTitle": "Status history",
+    "logEmpty": "No status change yet.",
     "note": "Note on the status change",
     "resolutionId": "Resolution (ID)",
     "entryIds": "Posted entries (IDs, comma separated)",
@@ -14128,5 +14240,60 @@
       "closing": "Closing balance",
       "bank_balance": "Bank balance of the reserve accounts"
     }
+  },
+  "AdminFeePostingConfig": {
+    "pageTitle": "Fee posting",
+    "pageDescription": "Account assignment for posting the management fee per tenant.",
+    "title": "Account assignment of the fee posting",
+    "description": "Defines the accounts for the draft of the fee posting: receivable and revenue in the manager ledger, expense and payable in the payer ledger. Without an assignment no posting draft is created, there is no default.",
+    "gateHint": "The posting itself stays locked until release gate G1. The assignment only creates drafts.",
+    "notConfigured": "No account assignment stored yet. Until then no posting drafts are created for the fee.",
+    "ledger": "Manager ledger",
+    "ledgerHint": "Only a ledger of a manager legal entity can be chosen, the API checks this.",
+    "managerSide": "Manager side (accounts from the chart of accounts)",
+    "receivable": "Receivable account",
+    "revenue": "Revenue account",
+    "vat": "VAT account (optional)",
+    "choose": "Please choose",
+    "none": "No account",
+    "optional": "optional",
+    "managerDistinct": "The manager side accounts must be different.",
+    "payerSide": "Payer side (account numbers)",
+    "payerHint": "Six digit account numbers resolved in the ledger of each debtor.",
+    "expenseNo": "Expense account (number)",
+    "payableNo": "Payable account (number)",
+    "vatNo": "Input tax account (number, optional)",
+    "numbersInvalid": "Account numbers consist of exactly six digits.",
+    "payerDistinct": "The payer side account numbers must be different.",
+    "taxHint": "The tax treatment (VAT on the management fee, input tax deduction at the payer) is open and to be clarified by the tax advisor, see open question T04-01.",
+    "readOnly": "Changes need the accounting approval permission.",
+    "save": "Save assignment",
+    "saved": "Account assignment saved."
+  },
+  "InvoiceCheckSettings": {
+    "pageTitle": "Invoice check",
+    "pageDescription": "Tolerances of the factual check of incoming invoices.",
+    "title": "Tolerances of the factual check",
+    "description": "Price and quantity of an invoice are compared with the linked work order. Deviations within the tolerance raise no finding. The tolerances only control hints, they release and post nothing.",
+    "price": "Price tolerance in percent",
+    "quantity": "Quantity tolerance in percent",
+    "unit": "Values from 0 to 100 percent, at most four decimals.",
+    "invalid": "Please enter values from 0 to 100 with at most four decimals.",
+    "readOnly": "Changes need the permission to update tenant settings.",
+    "save": "Save tolerances",
+    "saved": "Tolerances saved."
+  },
+  "InvoiceFactualLinks": {
+    "title": "Links for the factual check",
+    "hint": "Optional. Work order, resolution, plan item and recurring plan serve as reference for the factual check. Only hints are created, release stays manual.",
+    "none": "No link",
+    "workOrder": "Work order",
+    "resolution": "Resolution",
+    "plan": "Economic plan",
+    "planItem": "Plan item",
+    "recurringPlan": "Recurring plan",
+    "noEntity": "No legal entity is known for this ledger, resolutions cannot be loaded.",
+    "planFirst": "Choose an economic plan first.",
+    "loadFailed": "List could not be loaded: {reason}"
   }
 }

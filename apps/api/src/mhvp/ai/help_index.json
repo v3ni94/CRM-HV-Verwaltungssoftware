@@ -1569,6 +1569,40 @@
  },
  {
   "kind": "page",
+  "title": "Buchhaltung, Honorarbuchung",
+  "source": "Einstellungen",
+  "href": "/einstellungen/buchhaltung/honorarbuchung",
+  "keywords": [
+   "honorar konten",
+   "verwalterhonorar buchung",
+   "erlöskonto honorar",
+   "kontenzuordnung honorar",
+   "forderungskonto honorar"
+  ],
+  "permission": [
+   "accounting:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Buchhaltung, Rechnungsprüfung",
+  "source": "Einstellungen",
+  "href": "/einstellungen/buchhaltung/rechnungspruefung",
+  "keywords": [
+   "toleranz",
+   "preistoleranz",
+   "mengentoleranz",
+   "sachliche prüfung",
+   "rechnungsprüfung"
+  ],
+  "permission": [
+   "accounting:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Buchhaltung, Steuern",
   "source": "Einstellungen",
   "href": "/einstellungen/buchhaltung/steuern",
@@ -1875,7 +1909,7 @@
   "href": "/abrechnung",
   "keywords": [],
   "permission": null,
-  "excerpt": "Die Heizkostenabrechnung eines Messdiensts wird als eigener Import erfasst und erst nach erfolgreicher Prüfung in die Betriebskostenabrechnung übernommen. Die Bedienung erfolgt derzeit über die API (/api/v1/billing/heating-cost-imports); eine Maske im CRM folgt. 1. Import anlegen",
+  "excerpt": "Die Heizkostenabrechnung eines Messdiensts wird als eigener Import erfasst und erst nach erfolgreicher Prüfung in die Betriebskostenabrechnung übernommen. Die Bedienung erfolgt im CRM unter Abrechnung im Abschnitt \"Heizkostenimport des Messdiensts\" (Lesen mit Recht accounting:rea",
   "file": "docs/handbuch/abrechnung-miete.md"
  },
  {
@@ -3840,6 +3874,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Art der Abrechnung und Verteilung je Konto",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Kontenplan zeigt die Spalte \"Art der Abrechnung\" je Konto Hausgeld, Rücklage, Betriebskosten, Sonderumlage, Heizkosten oder keine. Bei Kostenkonten blendet \"Verteilung\" die hinterlegte Mehrschlüsselverteilung mit Anteilen und Summe ein. Die Pflege der Verteilung erfolgt weiter",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschprofile",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -4150,6 +4194,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Automatische Sperre bei Verfahren und Aufhebung von Sperren (U11)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Hat die Buchhaltung auf einem offenen Posten eines Vertrags eine Mahnsperre mit Grund Prozess oder Insolvenz gesetzt, sind alle mit diesem Vertrag verknüpften Dokumente automatisch gegen Löschung gesperrt. Die Sperre endet, sobald die Mahnsperre aufgehoben ist. Eine Löschungssper",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -4205,7 +4259,7 @@
   "href": "/einstellungen",
   "keywords": [],
   "permission": null,
-  "excerpt": "Passkeys (WebAuthn) als zusätzlicher zweiter Faktor sind vorbereitet, aber noch nicht freigeschaltet (Regel M2-03). Bis dahin dient TOTP als zweiter Faktor.",
+  "excerpt": "Unter Meine Daten, Abschnitt Passkeys, registriert jeder Benutzer eigene Passkeys (Regel S16-01). Ein Passkey dient bei der Anmeldung als zweiter Faktor anstelle des Codes der Authenticator-App. Mit dem Haken \"Anmeldung ohne Passwort erlauben\" kann ein Passkey im CRM zusätzlich d",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -4946,6 +5000,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Importassistenten stehen zusätzlich Kautionen, Umlageschlüssel (mit Einheitenwerten), Zähler, Energieausweise, Dienstleisterverhältnisse und Portalnutzer (nur Status) bereit. Ablauf wie bei den anderen Berichten: Datei hochladen, Spalten zuordnen und als Vorlage speichern, Prü",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kautionen, Darlehen und Rücknahme (Welle 6)",
+  "source": "Handbuch: Importe (Imports)",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Prüfbericht der Einzelposten vergleicht jetzt auch Kautionen und Darlehen mit der Eröffnungsbilanz, sofern im Kontenrahmen ein Darlehenskonto oder ein mit dem Kautionskonto verknüpftes Bankkonto einen Eröffnungssaldo hat. Fehlt ein solches Konto, steht die Art mit Grund unter",
   "file": "docs/handbuch/importe.md"
  },
  {
@@ -6075,7 +6139,7 @@
   "href": null,
   "keywords": [],
   "permission": null,
-  "excerpt": "- Die Verwaltung lädt einen Kontakt ein (Portalzugang einladen); Rechte leiten sich aus den Verträgen des Kontakts ab (Mieter, Eigentümer) und werden bei Änderungen neu abgeleitet. Der Einladungscode wird nur einmal angezeigt und gilt 14 Tage; er ist zusammen mit der Portaladress",
+  "excerpt": "- Erneute Einladung (T13-01): Ist eine Einladung abgelaufen und wurde nie angenommen, lädt Portalzugang einladen am selben Kontakt erneut ein. Es entsteht kein zweites Konto; Code und Ablauf (14 Tage) werden erneuert, der alte Code wird ungültig. Bei aktivem Konto oder noch gülti",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -6306,6 +6370,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, Mandant, Abschnitt \"Portal der Mandanten\" laden Sie das Logo als PNG oder JPEG hoch. Das Logo wird als Dokument abgelegt, seine Kennung wird erst mit \"Speichern\" in das Branding übernommen. \"Logo entfernen\" und Speichern lässt das Portal wieder neutral.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vertretung im Portal",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Konten mit einer Vollmacht sehen im Portal den Menüpunkt \"Vertretung\" und im Ansichtswechsel die Rolle \"Vertreter\". Die Seite zeigt den Vertretenen, den Gültigkeitszeitraum und die Restlaufzeit. Die Vollmacht legt die Verwaltung am Kontakt an, mit Vollmachtsdokument und Zeitraum.",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -6756,6 +6830,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Neues Ticket: Optional Objekt (Suche), Gebäude des Objekts, Beginn und Wiedervorlage. Leere Felder werden nicht gesendet. Ticket bearbeiten: Beginn, Wiedervorlage und Gebäude werden direkt geändert, \"Entfernen\" löscht ein Datum. Das Gebäude kann erst gewählt werden, wenn dem Tick",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sammelaktionen in der Ticketliste (Priorität, Team, Bearbeiter)",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Tickets in der Liste markieren, in der unteren Leiste Status anwenden oder \"Bearbeiter zuweisen\" öffnen, dort Bearbeiter, Team und Priorität wählen (einzeln oder kombiniert) und anwenden. Danach erscheint ein Bericht \"Geändert: x von y\" mit den nicht geänderten Tickets und dem Gr",
   "file": "docs/handbuch/tickets.md"
  },
  {
@@ -7236,6 +7320,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Auf der Seite WEG, Rücklagen legt der Bearbeiter je Jahr eine Rücklagenabrechnung aus der jüngsten Hausgeldabrechnung an und erzeugt sie aus deren Rücklagendaten (Anfangsbestand, Zuführung, Entnahmen, Zinsen, Endbestand, Bankbestand und die Stammdaten je Rücklage). Die Statusschr",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagen: Kontoauswahl und Entwicklung in der Abrechnung",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Anlegen und Ändern einer Rücklage (WEG, Rücklagen) wählt der Bearbeiter das Bankkonto und das Buchungskonto aus Auswahllisten. Angeboten werden nur Bankkonten des Rechtsträgers der Gemeinschaft und die aktiven Konten des Buchungskreises; die API prüft beides erneut. Die Ausw",
   "file": "docs/handbuch/weg.md"
  }
 ]

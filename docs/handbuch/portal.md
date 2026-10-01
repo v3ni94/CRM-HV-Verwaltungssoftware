@@ -14,6 +14,8 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
 
 ## Anmeldung und Einladung
 
+- Erneute Einladung (T13-01): Ist eine Einladung abgelaufen und wurde nie angenommen, lädt Portalzugang einladen am selben Kontakt erneut ein. Es entsteht kein zweites Konto; Code und Ablauf (14 Tage) werden erneuert, der alte Code wird ungültig. Bei aktivem Konto oder noch gültiger Einladung erscheint ein Konflikt.
+
 - Die Verwaltung lädt einen Kontakt ein (Portalzugang einladen); Rechte leiten sich aus den
   Verträgen des Kontakts ab (Mieter, Eigentümer) und werden bei Änderungen neu abgeleitet.
   Der Einladungscode wird nur einmal angezeigt und gilt 14 Tage; er ist zusammen mit der
@@ -192,9 +194,13 @@ Angenommen, Abgelehnt, Storniert) und Aktionen:
    oder Ersetzt.
 3. Ausführung dokumentieren mit Ausführungsbericht und Fotos der Ausführung (JPEG oder
    PNG, ohne Aufnahmedaten).
-4. Rechnung einreichen (Nummer, Datum, Bruttobetrag, Datei). Die Rechnung ist ein Vorschlag
-   und durchläuft den Belegeingang und Rechnungseingang wie jede Eingangsrechnung (Kapitel
-   Belegeingang).
+4. Rechnung einreichen (Nummer, Datum, Bruttobetrag, Datei, optional Nettobetrag, USt-Satz
+   und IBAN laut Rechnung). Die Rechnung ist ein Vorschlag und durchläuft den Belegeingang
+   und Rechnungseingang wie jede Eingangsrechnung (Kapitel Belegeingang). Netto und USt
+   müssen zum Brutto passen (sonst Fehlermeldung). Nach der Annahme steht der Auftrag auf
+   Abgerechnet; der Belegentwurf trägt Netto, USt und IBAN und zeigt als Befund, ob die
+   IBAN zum Kreditorenstamm passt und ob das Rechnungsbuch dieselbe Rechnung schon enthält.
+   Die Befunde kennzeichnen nur, sie sperren nichts und lösen keine Zahlung aus.
 
 ## Übergabeprotokoll am eigenen Handy
 
@@ -319,3 +325,7 @@ Bei jeder Position zeigt Kontext anzeigen Buchung, Rechnung, Auftrag, Zahlung, U
 ## Portal-Logo hochladen (Einstellungen, Mandant)
 
 Unter Einstellungen, Mandant, Abschnitt "Portal der Mandanten" laden Sie das Logo als PNG oder JPEG hoch. Das Logo wird als Dokument abgelegt, seine Kennung wird erst mit "Speichern" in das Branding übernommen. "Logo entfernen" und Speichern lässt das Portal wieder neutral.
+
+## Vertretung im Portal
+
+Konten mit einer Vollmacht sehen im Portal den Menüpunkt "Vertretung" und im Ansichtswechsel die Rolle "Vertreter". Die Seite zeigt den Vertretenen, den Gültigkeitszeitraum und die Restlaufzeit. Die Vollmacht legt die Verwaltung am Kontakt an, mit Vollmachtsdokument und Zeitraum. Der Zugriff ist lesend und endet mit dem Ablauf oder dem Widerruf; abgelaufene Vollmachten bleiben als "Abgelaufen" sichtbar, gewähren aber nichts mehr.

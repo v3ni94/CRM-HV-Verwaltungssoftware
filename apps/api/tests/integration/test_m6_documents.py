@@ -304,7 +304,9 @@ def test_retention_blocks_deletion_until_released_profile_expired(
     assert held.status_code == 409
     assert "Löschungssperre" in held.json()["detail"]
     _ok(
-        client.request("DELETE", f"{url}/hold", json={"reason": "Verfahren beendet"}, headers=h),
+        client.request(
+            "DELETE", f"{url}/hold", json={"reason": "Verfahren beendet"}, headers=second
+        ),
         200,
     )
     assert client.delete(url, headers=h).status_code == 204

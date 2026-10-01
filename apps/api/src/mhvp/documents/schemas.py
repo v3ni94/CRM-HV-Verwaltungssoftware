@@ -183,6 +183,19 @@ class RetentionApplyOut(BaseModel):
     assigned: int
 
 
+class DocumentRetentionStatusOut(BaseModel):
+    """Retention and hold status of one document (S711-06)."""
+
+    document_id: uuid.UUID
+    retention_until: date | None
+    retention_hold_reason: str | None
+    retention_hold_kind: str | None
+    procedure_hold: str | None
+    ticket_hold: str | None
+    permanent_record: bool
+    deletion_blocker: str | None
+
+
 class TicketHoldOut(_Out):
     ticket_id: uuid.UUID
     retention_hold_reason: str | None

@@ -12,7 +12,7 @@ import hashlib
 import uuid
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.ids import uuid7
@@ -99,6 +99,13 @@ async def archive_raw(
     """Stores the unchanged bytes under the bank key and indexes them with the 10 year
     profile. The blob is written first; a failed put leaves no index row (rule 0.1.7)."""
     ext = ext.lower().lstrip(".")
+    raw_object_key(tenant_id, account_id, day, ext)  # validates the extension first
+    # U15: serialise concurrent archives of the same account and day; without the lock two
+    # transactions find the same free key and the second put overwrites the first original.
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+        {"key": f"bank_raw:{tenant_id}:{account_id}:{day.isoformat()}"},
+    )
     key = await _free_key(session, tenant_id, account_id, day, ext)
     sha256 = hashlib.sha256(data).hexdigest()
     mime = ALLOWED_EXTENSIONS[ext]

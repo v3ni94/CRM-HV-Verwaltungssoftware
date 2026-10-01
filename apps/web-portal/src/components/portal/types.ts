@@ -22,6 +22,17 @@ export type Me = {
   representations?: { id: string; principal_contact_id: string; valid_from: string; valid_to: string | null }[];
 };
 
+/** M21-05: eigene Vertretung mit Zustand und Restlaufzeit (GET /api/v1/portal/representations). */
+export type PortalRepresentation = {
+  id: string;
+  principal_contact_id: string;
+  principal_name: string | null;
+  valid_from: string;
+  valid_to: string | null;
+  state: "active" | "pending" | "expired" | "revoked";
+  expires_in_days: number | null;
+};
+
 /** M21-01: Nachricht im Chat zur Meldung. */
 export type ChatMessage = {
   id: string;

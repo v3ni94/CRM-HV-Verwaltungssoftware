@@ -203,7 +203,7 @@ def test_ticket_hold_blocks_deletion_of_linked_documents(client: TestClient, wor
             "DELETE",
             f"/api/v1/tickets/{ticket['id']}/retention-hold",
             json={"reason": "Verfahren beendet"},
-            headers=h,
+            headers=bearer(login(client, world, "r6second")),
         ),
         200,
     )

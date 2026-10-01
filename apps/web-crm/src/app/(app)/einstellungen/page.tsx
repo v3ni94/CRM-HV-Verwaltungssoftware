@@ -93,6 +93,18 @@ export default async function SettingsPage() {
       show: can("accounting:read"),
     },
     {
+      href: "/einstellungen/buchhaltung/honorarbuchung",
+      title: t("adminFeePosting.title"),
+      description: t("adminFeePosting.description"),
+      show: can("accounting:read"),
+    },
+    {
+      href: "/einstellungen/buchhaltung/rechnungspruefung",
+      title: t("invoiceCheck.title"),
+      description: t("invoiceCheck.description"),
+      show: can("accounting:read"),
+    },
+    {
       href: "/einstellungen/buchhaltung/steuern",
       title: t("taxes.title"),
       description: t("taxes.description"),

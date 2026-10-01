@@ -698,6 +698,22 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["accounting:read"],
   },
   {
+    id: "buchhaltung-honorarbuchung",
+    title: "Buchhaltung, Honorarbuchung",
+    breadcrumb: [ROOT, "Buchhaltung", "Honorarbuchung"],
+    href: "/einstellungen/buchhaltung/honorarbuchung",
+    keywords: ["honorar konten", "verwalterhonorar buchung", "erlöskonto honorar", "kontenzuordnung honorar", "forderungskonto honorar"],
+    permission: ["accounting:read"],
+  },
+  {
+    id: "buchhaltung-rechnungspruefung",
+    title: "Buchhaltung, Rechnungsprüfung",
+    breadcrumb: [ROOT, "Buchhaltung", "Rechnungsprüfung"],
+    href: "/einstellungen/buchhaltung/rechnungspruefung",
+    keywords: ["toleranz", "preistoleranz", "mengentoleranz", "sachliche prüfung", "rechnungsprüfung"],
+    permission: ["accounting:read"],
+  },
+  {
     id: "buchhaltung-steuern",
     title: "Buchhaltung, Steuern",
     breadcrumb: [ROOT, "Buchhaltung", "Steuern"],

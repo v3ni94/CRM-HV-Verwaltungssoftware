@@ -10,6 +10,7 @@ import { z } from "zod";
 import { bff } from "@/lib/bff";
 import { safeNext, withNext } from "@/lib/next-path";
 import { ui } from "@/lib/ui";
+import { signInWithPasskey } from "@/lib/webauthn";
 
 type Values = { email: string; password: string };
 
@@ -46,6 +47,18 @@ export function LoginForm({ next }: { next?: string }) {
     }
     router.push(withNext("/anmelden/zweiter-faktor", next));
   });
+
+  // S16-01: passwordless sign in, only with a passkey registered "ohne Passwort".
+  async function onPasskey() {
+    setError(null);
+    const result = await signInWithPasskey("passwordless");
+    if (!result.ok) {
+      setError(result.reason === "unsupported" ? t("passkeyUnsupported") : result.reason === "aborted" ? t("passkeyAborted") : (result.message ?? null));
+      return;
+    }
+    router.push(result.tenant_id ? safeNext(next) : withNext("/mandant", next));
+    router.refresh();
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3" aria-label={t("loginTitle")}>
@@ -85,6 +98,9 @@ export function LoginForm({ next }: { next?: string }) {
       </div>
       <button type="submit" className={ui.primary} disabled={isSubmitting}>
         {isSubmitting ? t("submitting") : t("submit")}
+      </button>
+      <button type="button" className={ui.button} disabled={isSubmitting} onClick={() => void onPasskey()}>
+        {t("passkeyLogin")}
       </button>
     </form>
   );

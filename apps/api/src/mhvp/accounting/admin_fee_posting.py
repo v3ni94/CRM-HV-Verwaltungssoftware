@@ -33,6 +33,10 @@ from mhvp.accounting.models import (
     LedgerAccount,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_legal_entity_allowed,
+    ensure_session_property_allowed,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import (
@@ -235,7 +239,11 @@ async def create_posting_drafts(
         )
         if payer_ledger is None:
             raise _not_configured("Für den Rechtsträger des Zahlers besteht kein Buchungskreis.")
+        # U15: property and legal entity scope of the member on both ledgers (M2-02, A37).
+        ensure_session_property_allowed(session, payer_ledger.property_id)
+        ensure_session_legal_entity_allowed(session, payer_ledger.legal_entity_id)
         manager_ledger = await _manager_ledger(session, config.manager_ledger_id)
+        ensure_session_legal_entity_allowed(session, manager_ledger.legal_entity_id)
         if manager_ledger.id == payer_ledger.id:
             raise ProblemError(
                 ErrorCodes.ACC_WRONG_ENTITY,

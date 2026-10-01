@@ -250,8 +250,8 @@ class TrustedDevice(IdMixin, Base):
 class WebAuthnCredential(IdMixin, Base):
     """Registered WebAuthn/passkey authenticator as optional second factor (3.4, M2-03/S16-01,
     migration 0263). Platform table like ``trusted_device`` (checked before a tenant context
-    exists). Registration and assertion stay disabled until a verification library is released
-    (``mhvp.core.auth.webauthn``); the table and the management endpoints are prepared."""
+    exists). Registration and assertion live in ``mhvp.core.auth.webauthn`` behind
+    ``Settings.webauthn_enabled``."""
 
     __tablename__ = "webauthn_credential"
 
@@ -272,6 +272,11 @@ class WebAuthnCredential(IdMixin, Base):
     )
     aaguid: Mapped[str | None] = mapped_column(String(36))
     label: Mapped[str | None] = mapped_column(String(200))
+    # Optional per credential (S16-01, migration 0298): the passkey may also sign in without a
+    # password (discoverable credential with user verification). Default: second factor only.
+    passwordless: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

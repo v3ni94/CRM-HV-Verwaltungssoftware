@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { signInWithPasskey } from "@/lib/webauthn";
 
 type Verified = { tenant_id: string | null; tenants: { id: string; name: string }[] };
 
@@ -46,6 +47,24 @@ export function MfaForm({ next }: { next?: string }) {
     router.refresh();
   }
 
+  // S16-01: passkey as second factor (the password was already checked in step 1).
+  async function onPasskey() {
+    setError(null);
+    setBusy(true);
+    const result = await signInWithPasskey("mfa", { remember_device: rememberDevice });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.reason === "unsupported" ? t("passkeyUnsupported") : result.reason === "aborted" ? t("passkeyAborted") : (result.message ?? null));
+      return;
+    }
+    if (!result.tenant_id) {
+      setError(t("noTenant"));
+      return;
+    }
+    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/start");
+    router.refresh();
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">{t("mfaHint")}</p>
@@ -82,6 +101,9 @@ export function MfaForm({ next }: { next?: string }) {
           {busy ? t("submitting") : t("verify")}
         </button>
       </form>
+      <button type="button" className={ui.secondary} disabled={busy} onClick={() => void onPasskey()}>
+        {t("passkeyUse")}
+      </button>
       <Link href="/anmelden" className="text-sm text-muted underline">
         {t("backToLogin")}
       </Link>

@@ -10,6 +10,7 @@ collective mail per user, immediately (every run) or daily per ``email_mode``.
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +39,7 @@ CATALOGUE: tuple[str, ...] = (
     "banking.consent_expiring",
 )
 MAIL_BATCH = 100
+MAIL_PAGES = 20
 EMAIL_MODE_IMMEDIATE = "immediate"
 EMAIL_MODE_DAILY = "daily"
 EMAIL_MODES = (EMAIL_MODE_IMMEDIATE, EMAIL_MODE_DAILY)
@@ -96,21 +98,44 @@ async def send_pending_mails(
     pending for the next run; an
     address-less user is closed without a mail so that the job does not retry forever.
     ``sent``, ``failed`` and ``skipped`` count notifications, ``mails`` the mails sent."""
-    from mhvp.platform.models import User
+    from sqlalchemy import and_, tuple_
+
+    from mhvp.platform.models import Membership, MembershipStatus, User
     from mhvp.sla.channels import send_email
 
-    rows = (
-        await session.execute(
-            select(Notification, User.email)
+    # U15: keyset pages so that daily mails held back by an immediate run never starve the
+    # immediate ones behind them (MAIL_PAGES bounds one run). Only an active user with an
+    # active membership of this tenant receives tenant content by mail; otherwise the
+    # notification is closed without a mail (no data leaves after an offboarding).
+    rows: list[Any] = []
+    last: tuple[datetime, uuid.UUID] | None = None
+    for _ in range(MAIL_PAGES):
+        query = (
+            select(Notification, User.email, User.active, Membership.status)
             .join(User, User.id == Notification.user_id)
+            .outerjoin(
+                Membership,
+                and_(
+                    Membership.user_id == Notification.user_id,
+                    Membership.tenant_id == tenant_id,
+                ),
+            )
             .where(Notification.email_pending.is_(True), Notification.email_sent_at.is_(None))
-            .order_by(Notification.created_at)
+            .order_by(Notification.created_at, Notification.id)
             .limit(MAIL_BATCH)
         )
-    ).all()
+        if last is not None:
+            query = query.where(tuple_(Notification.created_at, Notification.id) > last)
+        page = (await session.execute(query)).all()
+        rows.extend(page)
+        if len(page) < MAIL_BATCH:
+            break
+        last = (page[-1][0].created_at, page[-1][0].id)
     counts = {"sent": 0, "failed": 0, "skipped": 0, "mails": 0}
     by_user: dict[uuid.UUID, list[tuple[Notification, str | None]]] = {}
-    for notification, address in rows:
+    for notification, email, user_active, membership_status in rows:
+        allowed = bool(user_active) and membership_status == MembershipStatus.ACTIVE
+        address = email if allowed else None
         by_user.setdefault(notification.user_id, []).append((notification, address))
     now = datetime.now(UTC)
     for user_id, entries in by_user.items():

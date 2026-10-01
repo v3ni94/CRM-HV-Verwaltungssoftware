@@ -128,6 +128,13 @@ class Settings(BaseSettings):
 
     # Rate limits per minute (A49): operator configuration, not a legal rule. Authenticated
     # requests count per tenant and user or API key, unauthenticated ones per client address.
+    # WebAuthn/passkeys (M2-03/S16-01): off until released by the operator (P14-02). RP ID is
+    # the registrable domain shared by CRM and portal; origins are the exact allowed origins.
+    webauthn_enabled: bool = False
+    webauthn_rp_id: str | None = None
+    webauthn_rp_name: str = "MH Verwaltungsplattform"
+    webauthn_origins: list[str] = Field(default_factory=list)
+
     rate_limit_enabled: bool = True
     rate_limit_per_minute_user: int = Field(default=600, ge=1)
     rate_limit_per_minute_anonymous: int = Field(default=120, ge=1)

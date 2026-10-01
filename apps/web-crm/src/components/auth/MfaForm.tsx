@@ -8,6 +8,7 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { safeNext, withNext } from "@/lib/next-path";
 import { ui } from "@/lib/ui";
+import { signInWithPasskey } from "@/lib/webauthn";
 
 type Verified = { tenant_id: string | null; tenants: { id: string; name: string }[] };
 
@@ -38,6 +39,19 @@ export function MfaForm({ next }: { next?: string }) {
       return;
     }
     router.push(result.data.tenant_id ? safeNext(next) : withNext("/mandant", next));
+    router.refresh();
+  }
+
+  async function onPasskey() {
+    setError(null);
+    setBusy(true);
+    const result = await signInWithPasskey("mfa", { remember_device: rememberDevice });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.reason === "unsupported" ? t("passkeyUnsupported") : result.reason === "aborted" ? t("passkeyAborted") : (result.message ?? null));
+      return;
+    }
+    router.push(result.tenant_id ? safeNext(next) : withNext("/mandant", next));
     router.refresh();
   }
 
@@ -77,6 +91,9 @@ export function MfaForm({ next }: { next?: string }) {
           {busy ? t("submitting") : t("verify")}
         </button>
       </form>
+      <button type="button" className={ui.button} disabled={busy} onClick={() => void onPasskey()}>
+        {t("passkeyUse")}
+      </button>
       <Link href="/anmelden" className="text-sm text-muted underline">
         {t("backToLogin")}
       </Link>

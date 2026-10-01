@@ -285,7 +285,7 @@ async def _sepa(
         except ProblemError as exc:
             return RowStatus.INVALID, None, None, [str(exc.detail)]
         status, schedule_id = RowStatus.CREATED, row.id
-    notes += await _sepa_mandate(session, principal, v, contract, party.id)
+    notes += await _sepa_mandate(session, principal, v, contract, party.id, ctx)
     return status, "payment_schedule", schedule_id, notes
 
 
@@ -304,6 +304,7 @@ async def _sepa_mandate(
     v: dict[str, Any],
     contract: Contract,
     party_id: uuid.UUID,
+    ctx: dict[str, Any] | None = None,
 ) -> list[str]:
     """Mandate recording with evidence; every gap is a note, never a guess (13.1, 4.5)."""
     given = [k for k in _MANDATE_KEYS if v.get(k)]
@@ -368,6 +369,8 @@ async def _sepa_mandate(
     )
     session.add(mandate)
     await session.flush()
+    if ctx is not None:  # M8-07: recorded for undo (see ``services.run``)
+        ctx.setdefault("extra_created", []).append(("sepa_mandate", mandate.id))
     if contract.sepa_mandate_id is None:
         contract.sepa_mandate_id = mandate.id
         contract.direct_debit = True
@@ -647,16 +650,18 @@ async def _document_index(
             )
         )
         if known is None:
-            session.add(
-                DocumentLink(
-                    tenant_id=principal.tenant_id,
-                    created_by=principal.user_id,
-                    document_id=document.id,
-                    entity_type=entity_type,
-                    entity_id=entity_id,
-                    role=LinkRole.ATTACHMENT,
-                )
+            link = DocumentLink(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                document_id=document.id,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                role=LinkRole.ATTACHMENT,
             )
+            session.add(link)
+            await session.flush()
+            # M8-07: each new link is recorded for undo; the document itself always stays.
+            ctx.setdefault("extra_created", []).append(("document_link", link.id))
             created += 1
     await session.flush()
     status = RowStatus.CREATED if created else RowStatus.UNCHANGED
@@ -828,8 +833,17 @@ async def _open_item(
 
 # Entity types the history reports create; registered with the import run for undo (Q08).
 UNDOABLE_ENTITY_TYPES = frozenset(
-    {"ledger_account", "bank_transaction", "migrated_ticket", "migrated_open_item"}
+    {
+        "ledger_account",
+        "bank_transaction",
+        "migrated_ticket",
+        "migrated_open_item",
+        "payment_schedule",
+    }
 )
+# M8-07: entities of the SEPA overview and the document index that the undo of a run removes
+# (``referenced`` and ``remove`` below, dispatched by ``mhvp.ai.imports``).
+RECORDED_ENTITY_TYPES = frozenset({"payment_schedule", "sepa_mandate", "document_link"})
 
 HANDLERS: dict[ReportType, Any] = {
     ReportType.SEPA_OVERVIEW: _sepa,
@@ -890,6 +904,47 @@ BALANCE_GROUPS: dict[str, dict[str, Any]] = {
     "reserve": {"balance_kind": "reserve", "sign": -1, "item_kinds": ["reserve"]},
 }
 NOT_COMPARABLE_KINDS = ("deposit", "loan")
+# M8-07: deposit and loan items are compared with the balance lines of the accounts that the
+# chart of accounts marks for them, using existing account attributes only: loan accounts by
+# category ``loan``, deposit accounts by their link to a segregated property bank account
+# (same criterion as the liquidity report). The sign follows the account type (liability
+# negative, asset positive), see assumption A-U13-01. Without such accounts a kind stays not
+# comparable.
+ACCOUNT_GROUPS = ("deposit", "loan")
+
+
+async def _account_group_sums(
+    session: AsyncSession, balance_id: uuid.UUID
+) -> dict[str, tuple[int, Decimal]]:
+    """Per account group (deposit, loan): number of balance lines and the signed sum."""
+    from mhvp.imports.migration_models import MigrationOpeningBalanceLine
+    from mhvp.properties.models import PropertyBankAccount
+
+    rows = await session.execute(
+        select(
+            MigrationOpeningBalanceLine.amount,
+            LedgerAccount.category,
+            LedgerAccount.type,
+            PropertyBankAccount.segregated,
+        )
+        .join(LedgerAccount, LedgerAccount.id == MigrationOpeningBalanceLine.account_id)
+        .outerjoin(
+            PropertyBankAccount, PropertyBankAccount.id == LedgerAccount.property_bank_account_id
+        )
+        .where(MigrationOpeningBalanceLine.opening_balance_id == balance_id)
+    )
+    sums: dict[str, tuple[int, Decimal]] = {}
+    for amount, category, account_type, segregated in rows.all():
+        if category is AccountCategory.LOAN:
+            group = "loan"
+        elif segregated:
+            group = "deposit"
+        else:
+            continue
+        sign = -1 if account_type is AccountType.LIABILITY else 1
+        count, total = sums.get(group, (0, Decimal(0)))
+        sums[group] = (count + 1, total + Decimal(amount) * sign)
+    return sums
 
 
 async def open_item_balance_check(
@@ -952,11 +1007,37 @@ async def open_item_balance_check(
                 "status": "match" if difference == 0 else "deviation",
             }
         )
-    not_comparable = [
-        {"kind": k, "item_count": item_sums[k][0], "items_open_sum": str(item_sums[k][1])}
-        for k in NOT_COMPARABLE_KINDS
-        if k in item_sums
-    ]
+    account_sums = await _account_group_sums(session, balance.id)
+    not_comparable = []
+    for k in ACCOUNT_GROUPS:
+        if k not in account_sums:
+            if k in item_sums:
+                not_comparable.append(
+                    {
+                        "kind": k,
+                        "item_count": item_sums[k][0],
+                        "items_open_sum": str(item_sums[k][1]),
+                        "reason": "Kein Konto dieser Art im Kontenrahmen mit Eröffnungssaldo",
+                    }
+                )
+            continue
+        count, total = item_sums.get(k, (0, Decimal(0)))
+        items = Decimal(total).quantize(CENT)
+        balance_sum = account_sums[k][1].quantize(CENT)
+        difference = (items - balance_sum).quantize(CENT)
+        groups.append(
+            {
+                "group": k,
+                "item_kinds": [k],
+                "item_count": count,
+                "items_open_sum": str(items),
+                "balance_sum": str(balance_sum),
+                "balance_line_count": account_sums[k][0],
+                "account_basis": "loan_category" if k == "loan" else "segregated_bank_account",
+                "difference": str(difference),
+                "status": "match" if difference == 0 else "deviation",
+            }
+        )
     return {
         "ledger_id": str(ledger_id),
         "opening_balance_id": str(balance.id),
@@ -1012,3 +1093,76 @@ async def journal_candidates(
         }
         for e in ordered[:limit]
     ]
+
+
+# M8-07: undo of SEPA overview and document index rows (called by mhvp.ai.imports) -------
+
+
+async def referenced(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> str | None:
+    """Reason why an imported schedule, mandate or document link must stay, or None."""
+    from mhvp.accounting.models import ReceivableItem
+
+    if entity_type == "payment_schedule":
+        schedule = await session.get(PaymentSchedule, entity_id)
+        if schedule is None:
+            return None
+        if await session.scalar(
+            select(ReceivableItem.id)
+            .where(ReceivableItem.payment_schedule_id == entity_id)
+            .limit(1)
+        ):
+            return "Sollstellungen aus dem Zahlungsplan vorhanden"
+        if await session.scalar(
+            select(PaymentSchedule.id)
+            .where(
+                PaymentSchedule.contract_id == schedule.contract_id,
+                PaymentSchedule.valid_from > schedule.valid_from,
+            )
+            .limit(1)
+        ):
+            return "späterer Zahlungsplan vorhanden"
+    elif entity_type == "sepa_mandate":
+        mandate = await session.get(SepaMandate, entity_id)
+        if mandate is None:
+            return None
+        if mandate.last_used_at is not None:
+            return "Mandat wurde bereits verwendet"
+        if mandate.status is not MandateStatus.ACTIVE or mandate.revoked_at is not None:
+            return "Mandat wurde nach dem Import bearbeitet"
+    return None
+
+
+async def remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> None:
+    """Removes the entity; a schedule the import had closed is reopened, a contract that
+    pointed to the removed mandate loses the reference and the direct debit flag."""
+    from datetime import timedelta
+
+    if entity_type == "payment_schedule":
+        schedule = await session.get(PaymentSchedule, entity_id)
+        if schedule is None:
+            return
+        previous = await session.scalar(
+            select(PaymentSchedule).where(
+                PaymentSchedule.contract_id == schedule.contract_id,
+                PaymentSchedule.valid_to == schedule.valid_from - timedelta(days=1),
+            )
+        )
+        await session.delete(schedule)
+        await session.flush()
+        if previous is not None:
+            previous.valid_to = None
+    elif entity_type == "sepa_mandate":
+        contracts = (
+            await session.scalars(select(Contract).where(Contract.sepa_mandate_id == entity_id))
+        ).all()
+        for contract in contracts:
+            contract.sepa_mandate_id, contract.direct_debit = None, False
+        await session.flush()
+        mandate = await session.get(SepaMandate, entity_id)
+        if mandate is not None:
+            await session.delete(mandate)
+    elif entity_type == "document_link":
+        link = await session.get(DocumentLink, entity_id)
+        if link is not None:
+            await session.delete(link)
+    await session.flush()

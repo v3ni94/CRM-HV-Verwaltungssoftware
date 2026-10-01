@@ -14,6 +14,9 @@
     "intro": "Access for tenants, owners and participants of the property management. Credentials are provided by your management."
   },
   "Auth": {
+    "passkeyUse": "Use a passkey",
+    "passkeyUnsupported": "This browser does not support passkeys.",
+    "passkeyAborted": "The passkey sign in was cancelled.",
     "loginTitle": "Sign in",
     "email": "E-mail",
     "password": "Password",
@@ -69,6 +72,7 @@
       "meetings": "Meetings",
       "contacts": "Contacts",
       "hoaAccount": "HOA fee account",
+      "representation": "Representation",
       "ownerOverview": "Ownership",
       "consumption": "Consumption",
       "notices": "Notices",
@@ -120,6 +124,7 @@
       "owner": "Owner",
       "board_member": "Board member",
       "service_provider": "Service provider",
+      "representative": "Representative",
       "all": "All roles"
     }
   },
@@ -302,6 +307,10 @@
     "invoiceNumber": "Invoice number",
     "invoiceDate": "Invoice date",
     "invoiceGross": "Invoice amount gross (EUR)",
+    "invoiceNet": "Net amount (EUR, optional)",
+    "invoiceVatRate": "VAT rate in percent (optional)",
+    "invoiceIban": "IBAN as on the invoice (optional)",
+    "invoiceBreakdownHelp": "These details help the property manager to review the invoice. The IBAN is compared with the master data on file; no payment is triggered.",
     "invoiceDocument": "Attach invoice as file",
     "invoiceDocumentRequired": "Please attach the invoice as a file.",
     "invoiceSubmit": "Submit invoice",
@@ -898,6 +907,15 @@
     "toLogin": "To sign in"
   },
   "Security": {
+    "passkeysTitle": "Passkeys (second factor)",
+    "passkeysHint": "At sign in a passkey replaces the authenticator app code. The password stays required.",
+    "passkeysUnavailable": "Passkeys are not enabled.",
+    "noPasskeys": "No passkeys registered.",
+    "passkeyLabel": "Label",
+    "passkeyAdd": "Add passkey",
+    "passkeyAdded": "Passkey registered.",
+    "passkeyFailed": "The passkey could not be registered.",
+    "passkeyRevoke": "Remove",
     "title": "Security",
     "intro": "Second factor and remembered devices of your access.",
     "totpTitle": "Second factor (authenticator app)",
@@ -944,6 +962,22 @@
     "enforcementTitle": "Enforcement procedure",
     "enforcement": "If the response is unsatisfactory, the responsible monitoring body can be contacted. [to be added: responsible enforcement and monitoring body]",
     "backToStart": "Back to overview"
+  },
+  "Representation": {
+    "title": "Representation",
+    "intro": "Powers of attorney of this account. Access exists only within the period of the power of attorney and read only; it ends on expiry or revocation.",
+    "empty": "No representations on record.",
+    "unknownPrincipal": "Represented person",
+    "period": "Valid from {from} to {to}",
+    "periodOpen": "Valid from {from}, no end date",
+    "expiresIn": "{days, plural, =0 {Expires today} one {Expires in one day} other {Expires in # days}}",
+    "noAccess": "No access any more.",
+    "state": {
+      "active": "Valid",
+      "pending": "Not yet valid",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    }
   },
   "OwnerOverview": {
     "title": "Ownership",

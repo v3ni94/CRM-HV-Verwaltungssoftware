@@ -144,23 +144,31 @@ bestehen.
 ## Heizkostenabrechnung des Messdiensts übernehmen (M17-09)
 
 Die Heizkostenabrechnung eines Messdiensts wird als eigener Import erfasst und erst nach
-erfolgreicher Prüfung in die Betriebskostenabrechnung übernommen. Die Bedienung erfolgt derzeit
-über die API (`/api/v1/billing/heating-cost-imports`); eine Maske im CRM folgt.
+erfolgreicher Prüfung in die Betriebskostenabrechnung übernommen. Die Bedienung erfolgt im CRM
+unter Abrechnung im Abschnitt "Heizkostenimport des Messdiensts" (Lesen mit Recht
+accounting:read, Ändern mit accounting:create). Die API bleibt unter
+`/api/v1/billing/heating-cost-imports` verfügbar.
 
-1. Import anlegen: Objekt, Messdienst, Abrechnungszeitraum, Belegsumme und das hochgeladene
+Oberfläche: Objekt wählen, die Liste zeigt Messdienst, Zeitraum, Belegsumme und Status. "Öffnen"
+zeigt Details, Zuordnung, Prüfbefunde und Übernahme.
+
+1. Import anlegen (Formular unter der Liste, Objekt vorher wählen): Messdienst, Abrechnungszeitraum, Belegsumme und das hochgeladene
    Originaldokument angeben, bei Bedarf CO2-Angaben (Gebäudeart, CO2-Kosten, Emissionen, Fläche).
 2. Kostenzeilen erfassen: manuell oder als CSV. Bei der CSV ordnen Sie jede Spalte selbst zu
    (Nutzernummer, Heizung Grund- und Verbrauchskosten, Warmwasser Grund- und Verbrauchskosten,
    CO2-Anteil Vermieter und Mieter) und legen Trennzeichen und Dezimalkomma fest. Das System
    rät keine Spalten.
 3. Nutzernummern zuordnen: je Nutzernummer Einheit und Mietvertrag; ohne Vertrag gilt der
-   Leerstand der Einheit.
+   Leerstand der Einheit. In der Maske wählen Sie je Nutzernummer Einheit und Mietvertrag und
+   speichern die Zuordnung.
 4. Prüfen: Summen gegen die Belegsumme, CO2-Aufteilung nach der hinterlegten Stufentabelle,
    Zuordnung und mögliche Doppelerfassung im Rechnungsbuch. Eine Doppelerfassung bestätigen Sie
    nur mit Begründung. Jede spätere Änderung setzt den Import wieder auf Entwurf.
 5. Übernehmen: nur ein geprüfter Import, nur in eine Abrechnung im Entwurf mit gleichem Objekt und
    Zeitraum. Je Nutzer wird die Kostensumme abzüglich des CO2-Vermieteranteils übernommen.
-   Danach ist der Import gesperrt.
+   Danach ist der Import gesperrt. In der Maske erscheint die Übernahme erst bei Status
+   "Geprüft"; zur Wahl stehen nur Abrechnungen im Entwurf des Objekts. Prüfbefunde stehen als
+   rote Liste unter "Prüfung"; bei möglicher Doppelerfassung erscheint das Feld für die Begründung.
 
 ## Statuswechsel der Eigentümerabrechnung
 

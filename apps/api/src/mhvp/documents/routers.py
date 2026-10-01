@@ -698,6 +698,13 @@ async def clear_hold(
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
+        if document.retention_hold_reason is not None:
+            await retention.require_second_person(
+                session,
+                event_type="document.hold_set",
+                entity_id=document.id,
+                user_id=principal.user_id,
+            )
         previous = document.retention_hold_reason
         document.retention_hold_reason = None
         document.retention_hold_kind = None
@@ -710,6 +717,27 @@ async def clear_hold(
             previous=previous,
         )
         return await _out(session, document)
+
+
+@router.get("/documents/{document_id}/retention-status", summary="Aufbewahrungs- und Sperrstatus")
+async def retention_status(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> s.DocumentRetentionStatusOut:
+    """Why the document is kept today (S711-06): manual hold, automatic procedure hold,
+    WEG permanent record or period; ``deletion_blocker`` None means deletable."""
+    async with tenant_tx(request, principal) as session:
+        document = await _get(session, Document, document_id)
+        today = datetime.now(UTC).date()
+        return s.DocumentRetentionStatusOut(
+            document_id=document.id,
+            retention_until=document.retention_until,
+            retention_hold_reason=document.retention_hold_reason,
+            retention_hold_kind=document.retention_hold_kind,
+            procedure_hold=await retention.procedure_hold(session, document.id),
+            ticket_hold=await retention.ticket_hold(session, document.id),
+            permanent_record=document.permanent_record,
+            deletion_blocker=await svc.deletion_blocker(session, document, today),
+        )
 
 
 @router.delete("/documents/{document_id}", status_code=204, summary="Dokument löschen")
@@ -1019,6 +1047,13 @@ async def clear_ticket_hold(
 ) -> s.TicketHoldOut:
     async with tenant_tx(request, principal) as session:
         ticket = await _get(session, Ticket, ticket_id)
+        if ticket.retention_hold_reason is not None:
+            await retention.require_second_person(
+                session,
+                event_type="ticket.hold_set",
+                entity_id=ticket.id,
+                user_id=principal.user_id,
+            )
         previous = ticket.retention_hold_reason
         ticket.retention_hold_reason = None
         await _event(

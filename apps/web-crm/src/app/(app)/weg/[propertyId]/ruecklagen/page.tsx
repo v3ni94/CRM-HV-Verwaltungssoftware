@@ -4,6 +4,7 @@ import { ReserveDevelopment, type ReserveBlock } from "@/components/hoa/ReserveD
 import { ReserveCreateForm, ReserveMovementForm } from "@/components/hoa/ReserveForms";
 import { ReserveStatementPanel } from "@/components/hoa/ReserveStatementPanel";
 import { ReserveMovementList, ReservePosition, type ReserveRow } from "@/components/hoa/ReservePositions";
+import type { AccountOption } from "@/components/hoa/ReserveYears";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { hoaContext } from "@/lib/hoa";
@@ -21,10 +22,19 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
   const ctx = await hoaContext(propertyId);
   redirectIfUnauthenticated(ctx.response);
   if (!ctx.ledger) return <p role="alert" className={ui.alert}>{t("noLedger")}</p>;
-  const [reserves, statements] = await Promise.all([
+  const [reserves, statements, banks, ledgerAccounts] = await Promise.all([
     ctx.api.GET("/api/v1/hoa/reserves", { params: { query: { ledger_id: ctx.ledger.id } } }),
     ctx.api.GET("/api/v1/hoa/statements", { params: { query: { ledger_id: ctx.ledger.id } } }),
+    ctx.api.GET("/api/v1/properties/{property_id}/bank-accounts", { params: { path: { property_id: propertyId } } }),
+    ctx.api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: ctx.ledger.id } } }),
   ]);
+  // Only bank accounts of the community's legal entity (E01); the API checks this again.
+  const bankAccounts: AccountOption[] = ((banks.data ?? []) as unknown as { id: string; legal_entity_id: string; iban_masked: string; bank_name: string | null; holder: string; valid_to: string | null }[])
+    .filter((b) => b.legal_entity_id === ctx.entity?.id && !b.valid_to)
+    .map((b) => ({ id: b.id, label: `${b.bank_name ?? b.holder} ${b.iban_masked}` }));
+  const accounts: AccountOption[] = ((ledgerAccounts.data ?? []) as unknown as { id: string; number: string; name: string; active: boolean }[])
+    .filter((a) => a.active)
+    .map((a) => ({ id: a.id, label: `${a.number} ${a.name}` }));
   const list = (reserves.data ?? []) as unknown as ReserveRow[];
   const year = (((statements.data ?? []) as unknown as Statement[])[0]?.year ?? new Date().getFullYear()) as number;
   // The list carries no snapshot: the newest versions are read until one has a reserve block.
@@ -47,10 +57,11 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
         {list.length === 0 ? <p className="text-sm text-muted">{t("none")}</p> : null}
         <ul className="flex flex-col gap-1 text-sm" data-testid="reserve-list">
           {list.map((r) => (
-            <ReservePosition key={r.id} reserve={r} year={year} />
+            <ReservePosition key={r.id} reserve={r} year={year} bankAccounts={bankAccounts} accounts={accounts} />
           ))}
         </ul>
-        <ReserveCreateForm ledgerId={ctx.ledger.id} />
+        <p className={ui.help}>{t("accountsHint")}</p>
+        <ReserveCreateForm ledgerId={ctx.ledger.id} bankAccounts={bankAccounts} accounts={accounts} />
       </section>
       {latest?.snapshot?.reserve ? (
         <>

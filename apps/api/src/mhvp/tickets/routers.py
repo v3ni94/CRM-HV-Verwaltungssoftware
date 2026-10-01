@@ -289,9 +289,26 @@ class BulkStatusIn(_In):
 
 
 class TicketBulkIn(_In):
+    """Sammelaktion (S12-05): Status, Bearbeiter, Team und Priorität einzeln oder kombiniert;
+    mindestens eine Änderung ist Pflicht."""
+
     ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
-    status: TicketStatus
+    status: TicketStatus | None = None
     resolution: ResolutionIn | None = None
+    assignee_user_id: uuid.UUID | None = None
+    team_id: uuid.UUID | None = None
+    priority: Priority | None = None
+
+    @model_validator(mode="after")
+    def _needs_change(self) -> "TicketBulkIn":
+        if (
+            self.status is None
+            and self.assignee_user_id is None
+            and self.team_id is None
+            and self.priority is None
+        ):
+            raise ValueError("Mindestens eine Änderung angeben.")
+        return self
 
 
 class ChecklistTogglePatch(_In):
@@ -2632,6 +2649,20 @@ async def bulk_tickets(
             ErrorCodes.VALIDATION, detail=f"Höchstens {BULK_LIMIT_STANDARD} Tickets gleichzeitig"
         )
     async with tenant_tx(request, principal) as session:
+        if body.assignee_user_id is not None:
+            from mhvp.platform.models import Membership, MembershipStatus
+
+            member = await session.scalar(
+                select(Membership.id).where(
+                    Membership.tenant_id == principal.tenant_id,
+                    Membership.user_id == body.assignee_user_id,
+                    Membership.status == MembershipStatus.ACTIVE,
+                )
+            )
+            if member is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Bearbeiter ist kein Mitglied.")
+        if body.team_id is not None and await session.get(Team, body.team_id) is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Team unbekannt.")
 
         async def act(ticket_id: uuid.UUID) -> None:
             ticket = await session.scalar(
@@ -2640,7 +2671,20 @@ async def bulk_tickets(
             if ticket is None:
                 raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
             _assert_not_merged(ticket)
-            if body.status is ticket.status:
+            if body.priority is not None:
+                ticket.priority = body.priority
+            if body.team_id is not None:
+                ticket.team_id = body.team_id
+            if body.assignee_user_id is not None:
+                await assign_ticket(
+                    session,
+                    ticket,
+                    body.assignee_user_id,
+                    principal.user_id,
+                    reason="sammelaktion",
+                )
+            if body.status is None or body.status is ticket.status:
+                await session.flush()
                 return
             await transition_status(
                 session,

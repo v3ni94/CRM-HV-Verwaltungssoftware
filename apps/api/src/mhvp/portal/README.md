@@ -127,3 +127,15 @@ Rule `docs/rules/P13-portal-w2.md`, migration 0262.
 ## Objektzuordnung der Portalverwaltung (T14, R08-01)
 
 `portal/property_scope.py`: ein Kontakt ist für ein eingeschränktes Mitglied sichtbar, wenn eine seiner Parteien einen Vertrag auf einem zugeordneten Objekt hat. `GET /portal-admin/accounts` liefert sonst eine leere Liste, `POST /portal-admin/accounts` 404, Pfade mit `{account_id}` (Router-Abhängigkeit `portal_admin_guard` an beiden `admin` Routern) 404. Nicht angeschlossen: Änderungsvorschläge, Vollmachten, Mandatsvorschläge.
+
+### Rechnungseinreichung, Übernahme von Netto, USt-Satz und IBAN (U09, M22-02)
+
+`POST /portal/work-orders/{id}/invoice` nimmt optional `net`, `vat_rate` und `iban` an (Plausibilität, 422). Bei Annahme legt `_apply_invoice_submission` den Belegentwurf mit Netto, USt und IBAN-Kandidat an und schreibt Befunde: IBAN-Abgleich mit dem Kreditorenstamm (Abweichung kennzeichnet nur) und Duplikatprüfung gegen das Rechnungsbuch (Aussteller plus Nummer oder Datum plus Brutto). Regel `docs/rules/U09-invoice-submission.md`.
+
+## Vertretung im Portal (U05, M21-05)
+
+`features.own_representations` liefert die Vollmachten eines Kontos mit Zustand (`rep_state`: active, pending, expired, revoked), Namen des Vertretenen und Resttagen; `GET /portal/representations` gibt sie dem Portal. `/portal/me` ergänzt `portal_roles` um `representative`, solange eine Vollmacht gültig ist; Verträge aus Vollmachten zählen nicht als eigenes Eigentum. Der Zugriffsverlust nach Ablauf folgt aus der Datumsprüfung in `access.grants`. Regel: `docs/rules/M21-05-vertretung.md`.
+
+## Erneute Einladung (U12, T13-01)
+
+`POST /portal-admin/accounts` stellt für einen Kontakt mit abgelaufener, nie angenommener Einladung (Status invited, Ablauf erreicht) denselben Zugang erneut aus: neues Token, Ablauf auf INVITE_DAYS zurückgesetzt, Rechte neu abgeleitet, Ereignis `portal_account.invitation_reissued`, Antwort mit `reissued: true`. Aktives, gesperrtes oder noch gültig eingeladenes Konto bleibt 409.

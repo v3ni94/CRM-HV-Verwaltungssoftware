@@ -314,7 +314,11 @@ async def reply_task_for_message(
             settings, message.tenant_id, AiTask.REPLY_DRAFT, prompt_text, context
         )
     except Exception as exc:
-        return {"status": "failed", "reason": str(exc)[:500]}
+        # U15: no exception text in the API answer (may carry provider or connection details).
+        import logging
+
+        logging.getLogger(__name__).warning("reply_draft task failed: %s", type(exc).__name__)
+        return {"status": "failed", "reason": f"KI-Lauf fehlgeschlagen ({type(exc).__name__})."}
     if run.status is RunStatus.SUCCEEDED and run.output:
         payload = reply_task_payload(run.output, style, model=run.model)
         if payload is not None:

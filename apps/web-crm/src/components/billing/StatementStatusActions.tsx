@@ -115,6 +115,8 @@ export function StatementStatusActions<T>({
           {error}
         </p>
       ) : null}
+      <h4 className="text-sm font-medium">{t("logTitle")}</h4>
+      {log.length === 0 ? <p className="text-sm text-muted">{t("logEmpty")}</p> : null}
       {log.length ? (
         <ul className="flex flex-col gap-1 text-sm" aria-label={t("log")}>
           {log.map((e, i) => (
