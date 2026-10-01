@@ -343,3 +343,23 @@ Aufgaben, erste Schritte je Modul, `ui_preferences`) existiert nicht — `Onboar
 - `masking.py`: `mask_personal_data` adds street and postal code masking to the identifier masking (rule AI-MASK-02); names stay (M34-05 open).
 - `journal_history.py`: migrated journal entries as read only few shot examples for `propose_posting` (rule AI-HIST-01).
 - `GET /ai/usage` additionally returns `runs_by_task`, `tokens_in_by_task`, `tokens_out_by_task`.
+
+## Personenabgleich im Objekt-Onboarding (M7-02)
+
+`person_match.py` gleicht Personen aus dem Objekt-Import gegen das Adressbuch ab (IBAN,
+E-Mail, Name, Postleitzahl, Straße). Schwellwerte je Mandant über
+`GET/PUT /onboarding/match-settings` (Standard 0,90 verknüpfen, 0,60 vorschlagen).
+`apply_property` verknüpft Treffer ab dem Verknüpfungsschwellwert mit dem bestehenden
+Kontakt, sonst wird ein unvollständiger Kontakt angelegt (Hinweis bei Vorschlagsbereich).
+`POST /onboarding/person-match` liefert die Vorschau, schreibt nichts.
+
+## Q06 (30.09.2026, rule Q06)
+
+* Chat actions `property_create`, `document_file`, `portal_invite_prepare`, `letter_create` (M7-03, 10.3) in `chat_actions.py`; database checks (template, e-mail, existing portal account) in `chat_actions.enrich` inside the job; writes in `routers._apply_chat_action` through the paths of `POST /properties`, `POST /documents/{id}/links`, `POST /letters` and `POST /portal-admin/accounts`. Prompt `answer_question/v4`.
+* Follow up steps (M7-04): `followups.py`, stored as `summary.next_steps` of the import run and posted as a chat message; offers only.
+* Cascade small to large (M7-08): `gateway.cascade_reason`, `large_route_of`, `stage_record`; operator threshold `models.small.cascade_confidence_below`; stages in `input_ref.cascade` and `RunOut.cascade`, `cost_eur` is the sum of the stages.
+* Budget stop notification (M7-09): `gateway.notify_budget_block` (kind `ai.budget_blocked`, recipients with `tenant_settings:update`). Monthly AI cost per tenant stays in `usage_counter.ai_cost_eur` (platform licensing).
+* Batch (M7-07): `batch.py` (`defer`, nightly job `mhvp.ai.batch_nightly`); the provider batch APIs are not wired, see module docstring.
+* Rent increase AI check (M26-01): task `rent_increase_check` (migration 0275), `rent_increase_check.py`, endpoints `POST`/`GET /letting/rent-increases/{id}/ai-check`; hint proposals are refused by `apply` (409).
+* Portal chat pre-qualification (M21-01): `portal_prequalify.py`, called from `mhvp.portal.chat.prequalify` when switch and gateway gate are open.
+* Historical bank assignments (M8-05): `journal_history.bank_examples` (`migrated_bank_link`) next to the journal examples of `propose_posting`.

@@ -323,6 +323,9 @@ def test_representative_sees_owner_view_only_within_period(client: TestClient, w
         c.get(f"{PA}/representations", params={"account_id": w.rep_account}, headers=w.admin)
     )
     assert [r["status"] for r in listing] == ["revoked"]
+    # Q05 (M21-05): the list names the representative (contact and login address) for the CRM.
+    assert listing[0]["representative_contact_id"] is not None
+    assert "@" in listing[0]["representative_email"]
     assert _ok(c.get(f"{PA}/representations", headers=w.admin_b)) == []
 
 

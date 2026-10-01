@@ -1,4 +1,5 @@
-"""Ticket: Gebäudebezug, Beginn, Wiedervorlage, Sichtbarkeit externer Beiträge, archivierte Kommentare.
+"""Ticket: Gebäudebezug, Beginn, Wiedervorlage, Sichtbarkeit externer Beiträge, archivierte
+Kommentare.
 
 Spec 6.6 (M19-03, M19-04, M19-07). Keine Daten werden verändert; Bestandstickets erhalten die
 Sichtbarkeit "none" (keine externe Kommentierung), das bisherige Verhalten des Portals bleibt.

@@ -45,6 +45,8 @@ DEADLINE_KINDS: tuple[str, ...] = (
     "note_follow_up",
     "meeting",
     "ticket_due",
+    # M19-06: scheduled appointment of a work order (internal entry only, no invitation).
+    "work_order_appointment",
     # Rule WS-01: user created deadlines from the tenant's deadline type catalogue
     # (``mhvp.workspace.deadlines``), mirrored from ``deadline_entry``.
     "custom_deadline",
@@ -74,6 +76,7 @@ DEADLINE_PERMISSIONS: dict[str, tuple[str, str]] = {
     "note_follow_up": ("contacts:read", "contacts:update"),
     "meeting": ("accounting:read", "accounting:update"),
     "ticket_due": ("tickets:read", "tickets:update"),
+    "work_order_appointment": ("tickets:read", "tickets:update"),
     # The responsible person of the entry is notified instead when one is set (WS-01).
     "custom_deadline": ("tickets:read", "tickets:update"),
 }
@@ -150,6 +153,7 @@ CALENDAR_REMINDERS: dict[str, list[str]] = {
     "note_follow_up": ["0"],
     "meeting": ["14d", "1d"],
     "ticket_due": ["1d"],
+    "work_order_appointment": ["1d"],
     "meeting_resolution_deadline": ["7d"],
     "service_contract_notice": ["14d"],
     "bank_consent": ["14d"],
@@ -473,6 +477,39 @@ async def _read_ticket_due(session: AsyncSession, since: date, today: date) -> l
     return out
 
 
+async def _read_work_order_appointments(
+    session: AsyncSession, since: date, today: date
+) -> list[Candidate]:
+    """M19-06: appointment date (``scheduled_at``, local date Europe/Berlin) of work orders
+    that are scheduled or in progress. Internal calendar entry only; nothing is sent to the
+    service provider or any external calendar here (rule M19-06)."""
+    from mhvp.tickets.models import OrderStatus, Ticket, WorkOrder
+    from mhvp.workspace.services import _LOCAL
+
+    rows = (
+        await session.execute(
+            select(WorkOrder, Ticket.number, Ticket.property_id)
+            .outerjoin(Ticket, Ticket.id == WorkOrder.ticket_id)
+            .where(
+                WorkOrder.scheduled_at.is_not(None),
+                WorkOrder.status.in_([OrderStatus.SCHEDULED, OrderStatus.IN_PROGRESS]),
+            )
+        )
+    ).all()
+    out: list[Candidate] = []
+    for order, number, property_id in rows:
+        day = order.scheduled_at.astimezone(_LOCAL).date()
+        if day < since:
+            continue
+        label = f"Auftragstermin {order.scheduled_at.astimezone(_LOCAL):%H:%M} Uhr"
+        if number:
+            label += f" Ticket {number}"
+        cand = _candidate("work_order_appointment", "work_order", order.id, label, day, property_id)
+        if cand is not None:
+            out.append(cand)
+    return out
+
+
 def _has_attr(dotted: str, attr: str) -> bool:
     module_name, _, class_name = dotted.rpartition(".")
     module = importlib.import_module(module_name)
@@ -497,6 +534,7 @@ def calendar_sources() -> list[SourceReader]:
         readers.append(_read_note_follow_ups)
     if _has_attr("mhvp.tickets.models.Ticket", "due_on"):
         readers.append(_read_ticket_due)
+    readers.append(_read_work_order_appointments)
     readers.append(_read_deadline_entries)
     return readers
 

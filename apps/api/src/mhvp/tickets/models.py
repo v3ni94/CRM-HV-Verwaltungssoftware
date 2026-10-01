@@ -245,10 +245,10 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     start_date: Mapped[date | None] = mapped_column(Date)
     follow_up_date: Mapped[date | None] = mapped_column(Date)
     external_comments: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="none", server_default=text("'none'")
+        String(16), nullable=False, default="open", server_default=text("'open'")
     )
     external_attachments: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="none", server_default=text("'none'")
+        String(16), nullable=False, default="open", server_default=text("'open'")
     )
 
 

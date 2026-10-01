@@ -79,3 +79,40 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   `/auth/webauthn/*` (rule M2-03).
 - `auth/portal_roles.py`: named portal roles and the derivation rule of 3.4 (S16-10).
 - CSRF and field encryption evidence: `docs/security/S16-csrf-and-field-encryption.md`.
+
+## Package Q13 (30.09.2026): property assignment, If-Match, key rotation
+
+- `auth/scope.py` `property_path_guard`: router dependency (properties and contracts routers)
+  that answers 404 for a `{property_id}` path outside the membership assignment (M2-02,
+  docs/rules/M2-02-objektzuordnung.md). Domains filter lists with
+  `session_allowed_property_ids` and check single records with
+  `ensure_session_property_allowed`.
+- `etag.py`: `etag_of` (version or `updated_at` in microseconds) and `check_if_match`
+  (optional header, 412 `VERSION_CONFLICT`), ADR 0012 addendum (S12-04).
+- `key_rotation.py`: generic master key rotation for all `EncryptedText` columns with dry run,
+  fingerprint recomputation, idempotent rerun and JSON protocol without plaintext;
+  `crypto.py` gained `ciphertext_scope`, `decrypt_with_master`, `encrypt_with_master`,
+  `fingerprint_with_master` (S16-03, docs/runbooks/schluesselrotation.md).
+
+## Package Q12 (30.09.2026): list parameters, bulk endpoints, job switches, events
+
+- `listparams.py` (S12-03): `list_params` dependency parses `filter[field]=value` (comma means
+  `IN`, `null` means `IS NULL`), `sort=field,-field`, `fields=a,b` and `include=x`.
+  `apply_filters` and `apply_sort` accept only the columns a list declares, `check_include`
+  only its offered relations, `sparse` reduces items to the requested keys plus `id`.
+  Anything not offered answers 422 (`MHVP-CORE-0004`), never silently ignored. Wired into
+  `GET /contacts`, `/properties`, `/contracts`, `/tickets` (include `property`; the legacy
+  `sort=urgency|created_desc` stays), `/documents` and `/invoices`. Tenant, soft delete and
+  property assignment filters stay in force.
+- `bulk.py` (S12-05): `run_bulk` with `BulkResultOut` and `BULK_MAX_ITEMS = 500`, used by
+  `POST /contacts/bulk` (`add_tag`, `remove_tag`), `POST /properties/bulk`
+  (`set_consumption_info`) and `POST /contracts/bulk` (`set_dunning_block`, reason
+  required). Each item runs in its own savepoint; failures are reported per item.
+- S15-03: the standard jobs of banking (`sync_all`, `sync_due`, `weekly_digest`), accounting
+  (dunning and receivable previews), billing (consumption information) and workspace
+  (reminders, digest, deadlines) ask `automation.job_schedule.job_allowed` per tenant.
+- S12-01 events now emitted: `invoice.received`, `invoice.approved` (review closed),
+  `invoice.paid` (bank evidence covers the gross amount), `dunning_case.created`,
+  `dunning_case.sent`, `work_order.created`, `work_order.completed` (next to
+  `work_order.done`), `document.shared` (new portal role in `visibility`),
+  `ai_proposal.decided`.

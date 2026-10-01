@@ -51,7 +51,7 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"pf-{RUN}", name=f"Perf {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("pfadmin", "tenant_admin"), ("pfapprover", "tenant_admin")]:
+        for name, role in [("pqadmin", "tenant_admin"), ("pqapprover", "tenant_admin")]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -124,8 +124,8 @@ def _ok(response: Any, status: int = 201) -> Any:
 
 @pytest.fixture(scope="module")
 def data(client: TestClient, world: World) -> dict[str, Any]:
-    h = bearer(login(client, world, "pfadmin"))
-    approver = bearer(login(client, world, "pfapprover"))
+    h = bearer(login(client, world, "pqadmin"))
+    approver = bearer(login(client, world, "pqapprover"))
     prop = _property(client, h, "901", "rental")
     owner, _ = _party(client, h, "Eigentuemer", "company")
     _ok(

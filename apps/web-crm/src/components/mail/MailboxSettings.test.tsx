@@ -55,6 +55,23 @@ describe("MailboxSettings", () => {
     expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/mailboxes/m1/backfill") && init?.method === "POST")).toBe(true);
   });
 
+  it("saves the style rules of the reply draft on leaving the field (M20-02)", async () => {
+    const bodies: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/bff/mail/mailboxes/m1") && init?.method === "PATCH") {
+        bodies.push(JSON.parse(String(init.body)));
+        return jsonResponse({ ...box, reply_style: { tone: "sachlich", rules: "Immer siezen" } }, 200);
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(<MailboxSettings oauth={oauth} mailboxes={[box]} members={[]} />);
+    const field = screen.getByTestId("reply-rules");
+    await userEvent.type(field, "Immer siezen");
+    await userEvent.tab();
+    await waitFor(() => expect(bodies.length).toBe(1));
+    expect(bodies[0]).toEqual({ reply_style: { rules: "Immer siezen" } });
+  });
+
   it("shows an inactive push and a finished backfill", () => {
     renderIntl(
       <MailboxSettings

@@ -115,3 +115,9 @@ delete only without references, else 409), `PATCH/DELETE /contacts/{id}/notes/{n
 administration `GET /contact-tags`, `PATCH/DELETE /contact-tags/{id}`, `POST /contact-tags/{id}/merge`.
 Every change writes an audit event. Not done: contact merge (P16-01), portal status (P16-02).
 Rule: `docs/rules/P16-stammdaten-pflege.md`.
+
+Paket Q05 (Welle 3): CRM-Oberflächen für Parteien (`PartiesPanel`, Reiter Beziehungen), Tag-Verwaltung (Einstellungen, Kontakt-Tags) und Portalstatus am Kontakt (`PortalStatusBadge`, lesend aus `GET /portal-admin/accounts`). Regel: `docs/rules/Q05-crm-oberflaechen.md`.
+
+## Kontakt-Merge (Q04, M3-03)
+
+`merge.py`, `routers_merge.py`: `GET/POST /contact-merges`, `GET /contact-merges/{id}`, `POST /contact-merges/{id}/reject|execute`. Vorschlag (`contacts:update`), Ausführung und Ablehnung (`contacts:approve`, zweite Person). Verweise werden über ein Registry aus den Fremdschlüsseln auf `contact.id` umgehängt (plus `document_link`), die Quelle bleibt als zusammengeführt erhalten (`merged_into_id`, `merged_at`, `deleted_at`). Regel: `docs/rules/M3-03-kontakt-merge.md`. UI: `/kontakte/zusammenfuehrung`.

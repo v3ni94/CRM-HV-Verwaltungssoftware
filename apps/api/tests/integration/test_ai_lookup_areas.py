@@ -727,6 +727,9 @@ def test_calendar_entry_is_a_proposal_written_once_after_confirmation(
     assert again.status_code == 409
 
 
+# "Az-" prefix: a bare random hex RUN ("ab12cd34") or a prefix glued to digits ("Nr12345678"),
+# followed by words and a date, reads as an IBAN to the bank guard of the chat actions
+# (masking.contains_iban) and silently drops the proposal.
 def test_deadline_entry_is_a_proposal_with_reminders(
     client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
 ) -> None:
@@ -737,14 +740,14 @@ def test_deadline_entry_is_a_proposal_with_reminders(
             {
                 "kind": "deadline_create",
                 "refs": [],
-                "title": f"Frist Widerspruch {RUN}",
+                "title": f"Frist Widerspruch Az-{RUN}",
                 "date": _iso(10),
                 "reason": "Nutzer nennt die Frist",
             },
         )
     )
     run, answer = _ask(
-        client, admin, f"Trag die Frist Widerspruch {RUN} zum {_de(10)} ein", area="deadlines"
+        client, admin, f"Trag die Frist Widerspruch Az-{RUN} zum {_de(10)} ein", area="deadlines"
     )
     assert run["status"] == "succeeded", run
     proposal_id = answer["proposal_id"]
@@ -770,7 +773,7 @@ def test_deadline_entry_is_a_proposal_with_reminders(
         ),
         200,
     )
-    assert [d["reference"] for d in listed] == [f"Frist Widerspruch {RUN}"]
+    assert [d["reference"] for d in listed] == [f"Frist Widerspruch Az-{RUN}"]
     assert listed[0]["lead_days"] == 7
     proposal = _ok(client.get(f"/api/v1/ai/proposals/{proposal_id}", headers=admin), 200)
     assert proposal["decision"] == "modified"

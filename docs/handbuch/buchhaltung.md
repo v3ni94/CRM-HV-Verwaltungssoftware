@@ -286,3 +286,29 @@ Der Kontenplan eines Buchungskreises wird unter Buchhaltung, Buchungskreis, Kont
 - Bestehende Konten lassen sich ändern sowie deaktivieren und wieder aktivieren. Konten mit Buchungen werden nur deaktiviert, nie gelöscht. Deaktivierte Konten stehen für neue Buchungen nicht zur Auswahl.
 - "Kreditorenkonten aus Dienstleistern anlegen" erzeugt fehlende Kreditorenkonten je Dienstleisterverhältnis und meldet, wie viele angelegt und zugeordnet wurden.
 - Je Konto öffnet das Kontenblatt. Es zeigt für einen wählbaren Zeitraum (Von, Bis) den Anfangssaldo, die Buchungen mit Laufsaldo sowie Summen und Endsaldo. Ein Link führt zurück zum Kontenplan.
+
+## Mahnwesen: Hinweise, Zinsen, Zustellnachweise und Sperren
+
+Im Mahnlauf öffnet der Aufklapper "Prüfhinweise, Zins, Zustellnachweise und Sperren" je Fall die Prüfhinweise zu Verjährung und Fristen (nur Hinweise, die Plattform berechnet kein Verjährungsdatum), den Vorschlag für den Zinsaufschlag aus dem Verbraucherkennzeichen (die Einstellung ändert sich nicht), die Zinsberechnung je Basiszinssatzzeitraum und den Knopf "Zinsentwurf anlegen". Der Zinsentwurf ist keine Buchung; Freigabe nur über die Vier-Augen-Buchung bei geöffnetem Gate G1, Zinssatz und Anspruchsgrundlage sind anwaltlich zu prüfen. Zustellnachweise (Einschreiben, Posteinlieferung, E-Mail, Portal) werden mit Datum und Referenz am Fall erfasst. Je Posten lässt sich eine Mahnsperre mit Grund (Ratenplan, bestrittener Posten, Aufrechnung, Prozess, Insolvenz) setzen und aufheben. Auf der Startseite des Mahnwesens steht die Basiszinssatzhistorie; Sätze sind Betreibereingaben mit Quelle, ohne Satz für den Zeitraum wird kein Zins berechnet.
+
+## Honorarlauf, Rechnungsdokument und Jahreswechsel (Q15)
+
+- Honorarlauf: "Fällige Honorare ausstellen" zeigt zuerst die Vorschau aller fälligen Leistungszeiträume. Erst mit Bestätigung wird je Honorar eine Rechnung mit eigener, lückenloser Nummer ausgestellt; ein Fehler bei einem Honorar stoppt die übrigen nicht und verbraucht keine Nummer. Bereits abgerechnete Zeiträume werden übersprungen. Nichts wird versendet oder gebucht.
+- Rechnungsdokument: Zu jeder Honorarrechnung und jeder Gutschrift kann das lesbare Dokument als PDF auf dem Briefbogen des Mandanten abgelegt werden. Ein zweiter Aufruf liefert dasselbe Dokument. Die Gutschrift lässt sich zusätzlich als XRechnung ablegen. Es gelten dieselben Pflichtangaben wie bei der XRechnung.
+- USt-Übersicht je Objekt: Die Auswertung gliedert die Umsatzsteuer und die Vorsteuer vor Abzug nach Objekt (über die Einheit der Buchungszeile) und Kostenstelle. Zeilen ohne Einheit stehen unter "ohne Objekt". Entwurf, keine Voranmeldung.
+- Jahreswechsel: Unter Buchungskreis zeigt "Schlussbestand übernehmen" die Schlussbestände des beendeten Geschäftsjahres. Die Übernahme erzeugt zwei Entwürfe zum Beginn des Folgejahres, die nicht gebucht sind. Der Anfangsbestand braucht die Prüfung durch eine zweite Person. Übernommen werden nur Bank, Kasse, Rücklage, Darlehen und Durchlaufkonten; Personenkonten behalten ihre offenen Posten.
+
+## Freigabeentscheidungen, Personenhinweis und offene Posten zum Stichtag (Q01)
+
+- Jede Freigabe einer Rechnung oder eines Zahlungsauftrags wird mit dem Stand des Vorgangs
+  gespeichert. Wird der Vorgang danach geändert, steht die Freigabe dauerhaft als ungültig im
+  Verlauf (`GET /accounting/approval-decisions`), eine neue Freigabe ist nötig.
+- Geben zwei Benutzerkonten frei, deren getrennte Kontakte auf dieselbe Person hindeuten (gleiche
+  E-Mail-Adresse, gleicher Name mit gleichem oder fehlendem Geburtsdatum), zeigt die Seite
+  Bank, Zahlungen einen Hinweis. Die Freigabe wird nicht gesperrt; bitte die Personen prüfen.
+- Offene Posten zum Stichtag werden nachts als Lesekopie berechnet und lassen sich für einen
+  beliebigen Stichtag neu berechnen (`POST /accounting/ledgers/{id}/open-item-balances/refresh`).
+  Maßgeblich bleibt die Liste der offenen Posten.
+- Beim Anlegen eines Dienstleisterverhältnisses entsteht das Kreditorenkonto automatisch.
+- Einstellungen, Sollstellungsagent: Schalter für die monatliche Vorschau der Sollstellungen
+  (nur Entwürfe, Standard aus).

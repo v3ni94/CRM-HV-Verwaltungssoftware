@@ -16,3 +16,10 @@
 - Kanal post mit `submit_postal` legt den Postauftrag im selben Schritt an. Freigabe des Postdienstes und Recht `communication:approve` bei externem Anbieter gelten unverändert.
 - Zugang (`delivered`) braucht Nachweisart und Referenz. Je Weg sind nur passende Nachweisarten zulässig: Einschreiben nur Einschreiben oder Sonstiges, Bote nur Botenquittung, Übergabe oder Sonstiges, SMS nur SMS Protokoll oder Sonstiges.
 - Serienbrief aus Vorlage: je aufgelöstem Empfänger (Vertreterregel) ein eigenes Dokument mit den Platzhaltern der Vorlage, abgelegt und verknüpft wie ein Einzelbrief, dazu eine Zustellung. Ein Fehler (fehlende Anschrift, Platzhalter) bricht den ganzen Lauf ab, es entsteht kein halber Lauf.
+
+## Nachtrag 30.09.2026 (Q14, M23-05)
+
+- Kanal `post` legt den Postauftrag jetzt automatisch an (`submit_postal` leer oder `true`; `false` unterdrückt).
+  Ohne Freigabe eines externen Postdienstes oder ohne Recht `communication:approve` bleibt die Zustellung
+  vorbereitet und der Auftrag entsteht über `POST /postal/jobs`; die Sperren des Postmoduls gelten unverändert.
+  Mit dem Anbieter manuell entsteht ein manueller Auftrag ohne externen Versand.

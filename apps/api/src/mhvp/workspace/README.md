@@ -177,3 +177,14 @@ mailboxes); no N+1. Tests: `tests/integration/test_workspace_ticket_analytics.py
 * `POST /workspace/bulk`: Aktion `tickets.assign` (Bearbeiter für mehrere Tickets über
   `tickets.status.assign_ticket`, Recht `tickets:update`, alles oder nichts, Bearbeiter muss
   aktives Mitglied sein).
+
+### Gespeicherte Filter für Bank und Rechnungen (M9-03)
+
+`FILTER_RESOURCES` enthält zusätzlich `bank_transactions` und `invoices`. Die Komponente `SavedFilters` hat einen optionalen Rückruf `onApply` für Listen, die Filter im Zustand halten (Bankliste). Die Rechnungsliste nimmt die Filter als Abfrageparameter `q`, `review`, `posting`.
+
+### Welle 3, Paket Q11 (30.09.2026)
+
+- M19-06: `jobs._read_work_order_appointments` (Kategorie `work_order_appointment`, intern, ohne Einladung).
+- M23-04: `notification_prefs.py` (Katalog, `resolve`, `send_pending_mails`), Tabelle `notification_preference`, Spalten `notification.email_pending` und `email_sent_at` (Migration 0280). `services.notify` prüft die Einstellung vor dem Schreiben. `GET/PUT /workspace/notification-preferences`, Beat `workspace-notification-mails` alle 5 Minuten. Pflichtarten siehe `MANDATORY_KINDS`.
+- M9-04: `POST /workspace/bulk` mit `documents.set_category`, `documents.link_property`, `deadline_entries.done`; UI `DocumentBulkBar` (Dokumentliste) und Sammelauswahl im `DeadlineEntriesPanel`.
+- Q04 (M3-05): `GET /workspace/search` findet Verträge zusätzlich über den Namen eines Parteimitglieds, Einheiten über die Objektstraße und Dokumente über Titel und Dateiname; zusammengeführte Kontakte (M3-03) sind ausgeblendet, der alte Name führt zum Ziel.

@@ -476,3 +476,10 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
 * `dispatch.py`: Zustellwege `post`, `email`, `portal`, `sms`, `registered`, `courier`; `submit_postal` legt beim Kanal `post` den Postauftrag an; Nachweisarten je Weg (`CHANNEL_EVIDENCE`); `POST /dispatches/serial-merge` erzeugt je Empfänger ein Dokument aus einer Vorlage und die Zustellung. Regel `docs/rules/M23-DISP-02-zustellwege-serienbrief.md`.
 * `calendar_feed.py`: Kalender-Abo mit persönlichem Token (`/workspace/calendar-feed/token`, Abruf `/workspace/calendar-feed/{token}.ics` ohne Anmeldung), Tabelle `calendar_feed_token`, Regel `M23-CAL-01`. `dispatch.build_ics` liefert den ICS Text für beide Feeds.
 * Migration `0269_letting_w2`. Offen: Benachrichtigungseinstellungen je Benutzer (`docs/OPEN_QUESTIONS.md` P20-03).
+
+## Paket Q14 (30.09.2026, Welle 3)
+
+* M23-05: Kanal `post` erzeugt den Postauftrag automatisch (`DispatchIn.submit_postal` ist `None`, `True` oder `False`),
+  mit den Sperren des Postmoduls (siehe `docs/rules/M23-DISP-02-zustellwege-serienbrief.md`).
+* M20-02: `suggest.MailDraftReply` und `draft_reply_payload`, Ergebnisfeld `draft_reply` im Mailvorschlag; Stilregeln im CRM pflegbar.
+* P12-02: CRM zeigt HTML-Mails im sandboxed iframe mit CSP, externe Bilder erst auf Klick (`MailHtmlFrame`).

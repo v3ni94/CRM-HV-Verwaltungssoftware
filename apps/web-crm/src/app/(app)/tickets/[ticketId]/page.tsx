@@ -158,6 +158,10 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
               status={String(data.status)}
               priority={String(data.priority)}
               dueOn={data.due_on ? String(data.due_on) : null}
+              propertyId={data.property_id ? String(data.property_id) : null}
+              buildingId={data.building_id ? String(data.building_id) : null}
+              startDate={data.start_date ? String(data.start_date) : null}
+              followUpDate={data.follow_up_date ? String(data.follow_up_date) : null}
               canChangeAnyStatus={canChangeAnyStatus}
               internalDescription={data.internal_description ? String(data.internal_description) : ""}
             />

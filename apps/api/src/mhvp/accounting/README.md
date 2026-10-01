@@ -255,3 +255,27 @@ Rule `docs/rules/M13-05.md`, migration 0251.
 - `xrechnung_credit`: UBL CreditNote 381 with BillingReference for a cancelled Verwalterhonorar
   invoice (`GET /accounting/admin-fee-invoices/{id}/xrechnung-credit-note.xml` and `/check`).
 - Migration 0252; rule `docs/rules/M14-PU-W2-rechnungspruefung.md`.
+
+## Fee documents, fee run, VAT by object, year carry over (Q15, 30.09.2026)
+
+- `fee_documents`: PDF invoice document on the tenant letterhead for a fee invoice or credit note
+  (`POST /accounting/admin-fee-invoices/{id}/document`, stored in `pdf_document_id`, migration 0282),
+  credit note XRechnung filed as document, batch issue `POST /accounting/admin-fees-run`
+  (preview without `confirm`, one savepoint and one gapless number per invoice). Rule `docs/rules/Q15-fee-documents-carryover.md`.
+- `report_views.vat_overview_by_property`: VAT by object (via the unit of the line) and cost center.
+- `year_carryover`: closing balances to opening balances as two drafts with four eyes.
+- ZUGFeRD (S13-03) is not implemented: no PDF/A-3 library available offline (OPEN_QUESTIONS Q15-03).
+
+## Approval decisions, person check, open item balances (Q01, 30.09.2026)
+
+- `approval_decisions`: central `approval_decision` (subject `payment_order` or `invoice`, step,
+  `subject_snapshot_hash`, status `valid`/`invalidated`, legacy reference, warnings), written next
+  to `payment_approval`, `invoice.released_hash` and `invoice_second_approval` (S69-02). A changed
+  subject persists `invalidated`. `person_warnings` compares contact e-mails and name plus birth
+  date of the linked contacts and only warns (S69-03). `GET /accounting/approval-decisions`.
+- `open_item_balances`: maintained table `open_item_balance` per cut-off date (RLS, no
+  materialized view), refreshed nightly by `mhvp.accounting.open_item_balance_refresh` (job key
+  `accounting-open-item-balance`) or via `POST /accounting/ledgers/{id}/open-item-balances/refresh`
+  (S69-04). The live computation stays the source of truth.
+- `properties.routers.add_provider` calls `ledger_ops.ensure_creditor_for_relation` (M10-05).
+- Migration 0271. Rule: `docs/rules/Q01-approval-decisions-open-items.md`.

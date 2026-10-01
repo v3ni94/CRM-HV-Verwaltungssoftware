@@ -26,6 +26,7 @@ from mhvp.contracts import services as contract_services
 from mhvp.contracts.models import Contract, ContractKind, ContractPayment, PaymentReason
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.imports import w3_reports
 from mhvp.imports.fields import FIELDS, convert
 from mhvp.imports.models import ImportSourceFile, ReportType, RowStatus, StagingRow
 from mhvp.properties import services as property_services
@@ -458,7 +459,10 @@ async def apply_row(
     report_type: ReportType,
     values: dict[str, Any],
     rec: Recorder | None,
+    ctx: dict[str, Any] | None = None,
 ) -> Result:
+    if w3_reports.handles(report_type):
+        return await w3_reports.apply_row(session, principal, report_type, values, ctx or {})
     if report_type is ReportType.PROPERTIES:
         return await _apply_property(session, principal, values, rec)
     if report_type is ReportType.UNITS:
@@ -524,16 +528,24 @@ async def run(
     counts: Counter[str] = Counter()
     errors: list[dict[str, Any]] = []
     source_sum = created_sum = Decimal(0)
+    # Per run context of the Welle 3 handlers (occurrence counter of equal bank rows, source).
+    ctx: dict[str, Any] = {"source_file_id": source.id, "seen": {}}
+    amount_field = (
+        "gross"
+        if source.report_type is ReportType.PAYMENTS
+        else w3_reports.AMOUNT_FIELD.get(source.report_type)
+    )
     for row in rows:
         assert row.values is not None  # noqa: S101 - validated rows carry values
+        ctx["row_number"] = row.row_number
         status, entity_type, entity_id, messages = await apply_row(
-            session, principal, source.report_type, row.values, rec
+            session, principal, source.report_type, row.values, rec, ctx
         )
         counts[status.value] += 1
-        if source.report_type is ReportType.PAYMENTS:
-            source_sum += Decimal(row.values["gross"])
+        if amount_field is not None:
+            source_sum += Decimal(row.values[amount_field])
             if status is RowStatus.CREATED:
-                created_sum += Decimal(row.values["gross"])
+                created_sum += Decimal(row.values[amount_field])
         if messages:
             errors.append({"row": row.row_number, "status": status.value, "messages": messages})
         if import_run is not None:
@@ -542,6 +554,12 @@ async def run(
     report: dict[str, Any] = {"counts": dict(counts), "problems": errors[:500]}
     if source.report_type is ReportType.PAYMENTS:
         report["sums"] = {"source_gross": str(source_sum), "created_gross": str(created_sum)}
+    elif amount_field is not None:
+        report["sums"] = {
+            "source_amount": str(source_sum),
+            "created_amount": str(created_sum),
+            "field": amount_field,
+        }
     await session.flush()
     return report
 

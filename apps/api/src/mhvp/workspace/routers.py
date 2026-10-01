@@ -32,7 +32,13 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import jobs, links, services
 from mhvp.workspace import ticket_analytics as ticket_analytics_module
-from mhvp.workspace.models import CalendarEntry, CalendarEvent, Notification, SavedFilter
+from mhvp.workspace.models import (
+    CalendarEntry,
+    CalendarEvent,
+    Notification,
+    NotificationPreference,
+    SavedFilter,
+)
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +52,9 @@ FILTER_RESOURCES = (
     "documents",
     "imports",
     "tickets",
+    # M9-03: bank work list and invoice list.
+    "bank_transactions",
+    "invoices",
 )
 MAX_BULK = 500
 MAX_RANGE_DAYS = 400
@@ -241,11 +250,17 @@ class FilterOut(BaseModel):
 
 class WorkspaceBulkIn(_In):
     action: str = Field(
-        pattern="^(contacts.add_tag|contacts.remove_tag|maintenance.done|tickets.assign)$"
+        pattern=(
+            "^(contacts.add_tag|contacts.remove_tag|maintenance.done|tickets.assign"
+            "|documents.set_category|documents.link_property|deadline_entries.done)$"
+        )
     )
     ids: list[uuid.UUID] = Field(min_length=1, max_length=MAX_BULK)
     tag: str | None = Field(default=None, min_length=1, max_length=63)
     assignee_user_id: uuid.UUID | None = None
+    # M9-04: target category (documents.set_category) and property (documents.link_property).
+    category_id: uuid.UUID | None = None
+    property_id: uuid.UUID | None = None
 
 
 def _need(principal: TenantPrincipal, permission: str) -> None:
@@ -472,7 +487,7 @@ async def search(
     buildings and units, contracts, documents, tickets, postings); postings additionally
     respect the legal entity scope of the principal (ADR 0005)."""
     from mhvp.accounting.models import JournalEntry, Ledger
-    from mhvp.contacts.models import Contact
+    from mhvp.contacts.models import Contact, PartyMember
     from mhvp.contacts.services import search_filter
     from mhvp.contracts.models import Contract
     from mhvp.core.auth.scope import allowed_legal_entity_ids
@@ -524,7 +539,13 @@ async def search(
                     Unit.number,
                 )
                 .join(Property, Property.id == Unit.property_id)
-                .where(or_(Unit.number.ilike(like), Unit.label.ilike(like)))
+                .where(
+                    or_(
+                        Unit.number.ilike(like),
+                        Unit.label.ilike(like),
+                        Property.street.ilike(like),
+                    )
+                )
             )
             buildings = (
                 select(
@@ -560,8 +581,17 @@ async def search(
                     )
                 )
         if principal.has("contracts:read"):
+            # M3-05: a contract is also found by the name of a party member (tenant, owner).
+            party_hit = (
+                select(PartyMember.party_id)
+                .join(Contact, Contact.id == PartyMember.contact_id)
+                .where(Contact.search_text.ilike(like.lower()), Contact.deleted_at.is_(None))
+            )
             contracts = await session.scalars(
-                select(Contract).where(Contract.number.ilike(like)).limit(limit)
+                select(Contract)
+                .where(or_(Contract.number.ilike(like), Contract.party_id.in_(party_hit)))
+                .order_by(Contract.number)
+                .limit(limit)
             )
             for k in contracts.all():
                 hits.append(
@@ -575,7 +605,13 @@ async def search(
         if principal.has("documents:read"):
             docs = await session.scalars(
                 select(Document)
-                .where(Document.search_vector.op("@@")(func.plainto_tsquery("german", q)))
+                .where(
+                    or_(
+                        Document.search_vector.op("@@")(func.plainto_tsquery("german", q)),
+                        Document.title.ilike(like),
+                        Document.filename.ilike(like),
+                    )
+                )
                 .limit(limit)
             )
             for d in docs.all():
@@ -940,6 +976,131 @@ async def mark_read(
         if ids:
             query = query.where(Notification.id.in_(ids))
         await session.execute(query.values(read_at=datetime.now(UTC)))
+
+
+# Notification preferences (M23-04) -------------------------------------------------------------
+
+
+class NotificationPreferenceItem(BaseModel):
+    kind: str
+    in_app: bool
+    email: bool
+    muted_until: datetime | None = None
+    # Mandatory kinds (legal or money relevant reminders, SLA escalation) ignore every switch.
+    mandatory: bool = False
+
+
+class NotificationPreferencesOut(BaseModel):
+    items: list[NotificationPreferenceItem]
+
+
+class NotificationPreferenceIn(_In):
+    kind: str = Field(min_length=1, max_length=64)
+    in_app: bool = True
+    email: bool = False
+    muted_until: datetime | None = None
+
+
+class NotificationPreferencesIn(_In):
+    items: list[NotificationPreferenceIn] = Field(min_length=1, max_length=64)
+
+
+def _own_user(principal: TenantPrincipal) -> uuid.UUID:
+    if principal.user_id is None:
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="Notification settings need a user."
+        )
+    return principal.user_id
+
+
+async def _preferences_out(session: AsyncSession, user_id: uuid.UUID) -> NotificationPreferencesOut:
+    from mhvp.workspace import notification_prefs as prefs
+
+    rows = {
+        r.kind: r
+        for r in (
+            await session.scalars(
+                select(NotificationPreference).where(NotificationPreference.user_id == user_id)
+            )
+        ).all()
+    }
+    items: list[NotificationPreferenceItem] = []
+    for kind in (prefs.DEFAULT_KIND, *prefs.CATALOGUE):
+        row = rows.get(kind)
+        mandatory = kind in prefs.MANDATORY_KINDS
+        items.append(
+            NotificationPreferenceItem(
+                kind=kind,
+                in_app=True if mandatory else (row.in_app if row else True),
+                email=False if mandatory else (row.email if row else False),
+                muted_until=None if mandatory or row is None else row.muted_until,
+                mandatory=mandatory,
+            )
+        )
+    return NotificationPreferencesOut(items=items)
+
+
+@router.get(
+    "/notification-preferences",
+    summary="Eigene Benachrichtigungseinstellungen (Kanal je Art, Stummschaltung)",
+)
+async def notification_preferences(
+    request: Request, principal: TenantPrincipal = Depends(member)
+) -> NotificationPreferencesOut:
+    async with tenant_tx(request, principal) as session:
+        return await _preferences_out(session, _own_user(principal))
+
+
+@router.put(
+    "/notification-preferences",
+    summary="Eigene Benachrichtigungseinstellungen speichern",
+)
+async def save_notification_preferences(
+    body: NotificationPreferencesIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(member),
+) -> NotificationPreferencesOut:
+    """Own settings only. ``*`` is the default for kinds without an own row. Mandatory kinds
+    cannot be switched (422); a mute needs a future moment."""
+    from mhvp.workspace import notification_prefs as prefs
+
+    allowed = {prefs.DEFAULT_KIND, *prefs.CATALOGUE}
+    now = datetime.now(UTC)
+    for item in body.items:
+        if item.kind not in allowed:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannte Art {item.kind!r}.")
+        if item.kind in prefs.MANDATORY_KINDS:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Diese Benachrichtigung ist verpflichtend und nicht abschaltbar.",
+            )
+        if item.muted_until is not None and item.muted_until <= now:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Die Stummschaltung braucht einen Zeitpunkt in der Zukunft.",
+            )
+    async with tenant_tx(request, principal) as session:
+        rows = {
+            r.kind: r
+            for r in (
+                await session.scalars(
+                    select(NotificationPreference).where(
+                        NotificationPreference.user_id == _own_user(principal)
+                    )
+                )
+            ).all()
+        }
+        for item in body.items:
+            row = rows.get(item.kind)
+            if row is None:
+                row = NotificationPreference(
+                    tenant_id=principal.tenant_id, user_id=_own_user(principal), kind=item.kind
+                )
+                session.add(row)
+                rows[item.kind] = row
+            row.in_app, row.email, row.muted_until = item.in_app, item.email, item.muted_until
+        await session.flush()
+        return await _preferences_out(session, _own_user(principal))
 
 
 # Calendar ------------------------------------------------------------------------------
@@ -1712,6 +1873,32 @@ async def bulk(
                     session, ticket, body.assignee_user_id, principal.user_id, reason="sammelaktion"
                 ):
                     changed += 1
+        elif body.action.startswith("documents."):
+            # M9-04: several documents at once; same checks and side effects as the single
+            # PATCH and link endpoints (retention profile of the category, mirror refresh).
+            changed = await _bulk_documents(session, principal, body, ids)
+        elif body.action == "deadline_entries.done":
+            # M9-04: tasks (user created deadlines) to done; same effect as the single action.
+            from mhvp.workspace import deadlines
+            from mhvp.workspace.models import DeadlineEntry
+
+            _need(principal, "tickets:update")
+            entries = (
+                await session.scalars(
+                    select(DeadlineEntry).where(DeadlineEntry.id.in_(ids)).with_for_update()
+                )
+            ).all()
+            if len(entries) != len(ids):
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Unbekannte Fristen.")
+            changed = 0
+            for entry in entries:
+                if entry.status != "done":
+                    entry.status = "done"
+                    entry.done_at = datetime.now(UTC)
+                    entry.done_by = principal.user_id
+                    entry.updated_by = principal.user_id
+                    await deadlines.close_mirror(session, entry)
+                    changed += 1
         else:
             _need(principal, "properties:update")
             items = (
@@ -1736,6 +1923,75 @@ async def bulk(
         )
         await session.flush()
         return {"action": body.action, "requested": len(ids), "changed": changed}
+
+
+async def _bulk_documents(
+    session: AsyncSession, principal: TenantPrincipal, body: WorkspaceBulkIn, ids: list[uuid.UUID]
+) -> int:
+    from mhvp.documents import retention
+    from mhvp.documents import services as document_services
+    from mhvp.documents.models import (
+        Document,
+        DocumentCategory,
+        DocumentLink,
+        LinkRole,
+    )
+    from mhvp.properties.models import Property
+
+    _need(principal, "documents:update")
+    documents = (
+        await session.scalars(select(Document).where(Document.id.in_(ids)).with_for_update())
+    ).all()
+    if len(documents) != len(ids):
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Unbekannte Dokumente.")
+    changed = 0
+    if body.action == "documents.set_category":
+        if body.category_id is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Kategorie fehlt.")
+        if await session.get(DocumentCategory, body.category_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Unbekannte Kategorie.")
+        profile = await retention.profile_for_category(session, body.category_id)
+        for document in documents:
+            if document.category_id == body.category_id:
+                continue
+            document.category_id = body.category_id
+            document.updated_by = principal.user_id
+            if profile is not None:
+                await retention.assign_profile(session, document, profile)
+            await document_services.mark_mirrors_dirty(session, document.id)
+            changed += 1
+    elif body.action == "documents.link_property":
+        if body.property_id is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Objekt fehlt.")
+        if await session.get(Property, body.property_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Unbekanntes Objekt.")
+        linked = set(
+            await session.scalars(
+                select(DocumentLink.document_id).where(
+                    DocumentLink.document_id.in_(ids),
+                    DocumentLink.entity_type == "property",
+                    DocumentLink.entity_id == body.property_id,
+                    DocumentLink.role == LinkRole.ATTACHMENT,
+                )
+            )
+        )
+        for document in documents:
+            if document.id in linked:
+                continue
+            session.add(
+                DocumentLink(
+                    tenant_id=principal.tenant_id,
+                    document_id=document.id,
+                    entity_type="property",
+                    entity_id=body.property_id,
+                    role=LinkRole.ATTACHMENT,
+                )
+            )
+            await document_services.mark_mirrors_dirty(session, document.id)
+            changed += 1
+    else:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannte Aktion.")
+    return changed
 
 
 # Ticket analytics (operator 26.09.2026) -----------------------------------------------------

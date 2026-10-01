@@ -79,3 +79,14 @@ describe("InvoiceCreate gross preview", () => {
     expect(screen.getByTestId("gross")).toHaveTextContent("Brutto 1.469,13 EUR (Steuer 234,57 EUR)");
   });
 });
+
+describe("InvoiceCreate extra details (M14)", () => {
+  it("offers the optional review fields inside a collapsed section", async () => {
+    renderIntl(<InvoiceCreate ledgers={[{ id: "l1", label: "WEG" }]} accounts={{ l1: [{ id: "a1", label: "043000 Allgemeinstrom" }] }} />);
+    const extra = screen.getByTestId("invoice-extra");
+    expect(extra).not.toHaveAttribute("open");
+    for (const label of ["Leistungsort", "USt-IdNr. des Aussteller", "Sicherheitseinbehalt", "Anzahlung", "Reverse Charge", "Bauabzugsteuer relevant"]) {
+      expect(extra).toHaveTextContent(label);
+    }
+  });
+});

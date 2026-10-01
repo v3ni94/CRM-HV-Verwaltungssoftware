@@ -19,6 +19,7 @@ def test_masked_tasks_are_exactly_the_ones_that_do_not_need_raw_pii() -> None:
         AiTask.CLASSIFY_DOCUMENT,
         AiTask.DRAFT_REPLY,
         AiTask.CALL_SUMMARY,
+        AiTask.RENT_INCREASE_CHECK,
     }
     assert expected == gateway.MASKED_TASKS
     # Extraction and tasks that need a raw IBAN or the raw sample values stay excluded.

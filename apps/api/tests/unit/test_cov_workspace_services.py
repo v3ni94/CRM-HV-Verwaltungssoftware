@@ -10,6 +10,11 @@ from mhvp.workspace import services
 from mhvp.workspace.models import Notification
 
 
+class _NoPreferences:
+    def all(self) -> list[Any]:
+        return []
+
+
 class _FakeSession:
     def __init__(self, existing: Any = None) -> None:
         self.added: list[Any] = []
@@ -18,6 +23,10 @@ class _FakeSession:
 
     def add(self, obj: Any) -> None:
         self.added.append(obj)
+
+    async def scalars(self, query: Any) -> "_NoPreferences":
+        # Notification preferences (M23-04): none stored, so the default (in app) applies.
+        return _NoPreferences()
 
     async def scalar(self, query: Any) -> Any:
         self.queries += 1

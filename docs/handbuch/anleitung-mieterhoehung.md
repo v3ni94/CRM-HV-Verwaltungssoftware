@@ -178,3 +178,7 @@ Kalender.
 - Keine automatische Prüfung für Modernisierung, Index- und Staffelmiete.
 - Regelwerk wirkt erst nach Freigabe je Regel durch den Betreiber; laut Regeldatei bis dahin
   Entwurf. Den aktuellen Status zeigt System, Plattform, Mietrecht: Regelwerk.
+
+## KI-Plausibilität (Nachtrag 30.09.2026)
+
+Im Mieterhöhungsfall startet die Schaltfläche KI-Prüfung starten eine Prüfung der erfassten Angaben auf Stimmigkeit, zum Beispiel fehlende Quellen oder Widersprüche zur Regelprüfung. Voraussetzung ist ein freigegebener KI-Anbieter. Das Ergebnis sind Hinweise mit Schweregrad. Sie sind keine Freigabe und keine Rechtsprüfung und verändern den Fall nicht; die Entscheidung trifft eine Person.

@@ -24,6 +24,7 @@ export type InspectionRequest = {
   package_document_id: string | null;
   package_sha256: string | null;
   package_created_at: string | null;
+  package_expires_at?: string | null;
   events: InspectionEvent[];
 };
 
@@ -50,6 +51,9 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [validDays, setValidDays] = useState("");
+  const [revokeReason, setRevokeReason] = useState("");
+  const [ownerCheck, setOwnerCheck] = useState<{ ownership_changed: boolean; package_active: boolean; recommendation: string } | null>(null);
   const [packageResult, setPackageResult] = useState<{ sha256: string; entries: { file: string; sha256: string }[] } | null>(null);
   const base = `/api/bff/hoa/inspection-requests/${request.id}`;
   const canPackage = request.status === "released" || request.status === "provided";
@@ -71,7 +75,15 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
   const transition = (status: string) =>
     run("transition", { status, note: note.trim() || null, delivery_kind: status === "provided" ? delivery : null }, () => setNote(""));
   const addNote = () => run("notes", { text: note.trim() }, () => setNote(""));
-  const build = () => run("package", { document_ids: selected }, (data) => setPackageResult(data as { sha256: string; entries: { file: string; sha256: string }[] }));
+  const days = Number(validDays);
+  const expired = request.package_expires_at ? new Date(request.package_expires_at).getTime() <= Date.now() : false;
+  const revoke = () => {
+    if (!window.confirm(t("revokeConfirm"))) return;
+    void run("revoke", { text: revokeReason.trim() }, () => setRevokeReason(""));
+  };
+  const checkOwner = () => run("owner-check", {}, (data) => setOwnerCheck(data as { ownership_changed: boolean; package_active: boolean; recommendation: string }));
+  const build = () =>
+    run("package", { document_ids: selected, ...(Number.isInteger(days) && days > 0 ? { valid_days: days } : {}) }, (data) => setPackageResult(data as { sha256: string; entries: { file: string; sha256: string }[] }));
   const toggle = (id: string) => setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
@@ -134,6 +146,11 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
           ))}
           {documents.length === 0 ? <li className="text-muted">{t("noDocuments")}</li> : null}
         </ul>
+        <label className="mt-2 flex max-w-xs flex-col gap-1">
+          <span className={ui.label}>{t("validDays")}</span>
+          <input className={ui.input} type="number" min={1} max={365} value={validDays} onChange={(e) => setValidDays(e.target.value)} data-testid="valid-days" />
+          <span className={ui.help}>{t("validDaysHelp")}</span>
+        </label>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <button type="button" className={ui.button} onClick={build} disabled={busy || !canPackage || selected.length === 0}>
             {t("buildPackage")}
@@ -144,6 +161,26 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
             </a>
           ) : null}
         </div>
+        {request.package_document_id ? (
+          <p className="mt-2 text-sm" data-testid="package-expiry">
+            {request.package_expires_at
+              ? expired
+                ? t("expired", { date: formatDateTime(request.package_expires_at) })
+                : t("expiresAt", { date: formatDateTime(request.package_expires_at) })
+              : t("noExpiry")}
+          </p>
+        ) : null}
+        {request.package_document_id && !expired ? (
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1">
+              <span className={ui.label}>{t("revokeReason")}</span>
+              <input className={ui.input} value={revokeReason} onChange={(e) => setRevokeReason(e.target.value)} data-testid="revoke-reason" />
+            </label>
+            <button type="button" className={ui.danger} onClick={revoke} disabled={busy || revokeReason.trim().length === 0} data-testid="revoke-package">
+              {t("revoke")}
+            </button>
+          </div>
+        ) : null}
         {request.package_sha256 ? (
           <p className="mt-2 break-all font-mono text-xs text-muted" data-testid="package-sha">
             {t("packageOf", { date: formatDateTime(request.package_created_at) })} SHA-256 {request.package_sha256}
@@ -157,6 +194,20 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
               </li>
             ))}
           </ul>
+        ) : null}
+      </section>
+      <section className={ui.card}>
+        <h2 className={ui.h2}>{t("ownerCheckHeading")}</h2>
+        <p className={ui.help}>{t("ownerCheckHelp")}</p>
+        <div className="mt-2">
+          <button type="button" className={ui.buttonSm} onClick={checkOwner} disabled={busy} data-testid="owner-check">
+            {t("ownerCheck")}
+          </button>
+        </div>
+        {ownerCheck ? (
+          <p className={ownerCheck.ownership_changed ? ui.notice : "mt-2 text-sm"} data-testid="owner-check-result">
+            {ownerCheck.recommendation}
+          </p>
         ) : null}
       </section>
       <section className={ui.card}>

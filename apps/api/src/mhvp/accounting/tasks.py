@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from mhvp.accounting import dunning
-from mhvp.accounting.models import Ledger
+from mhvp.accounting.models import DunningRun, Ledger
+from mhvp.automation.job_schedule import job_allowed
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -24,22 +25,39 @@ async def dunning_previews(settings: Settings) -> dict[str, int]:
     )
     factory = create_session_factory(engine)
     runs = 0
+    failed = 0
     try:
         async with platform_transaction(factory) as session:
             ids: list[uuid.UUID] = list(
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                if await session.scalar(select(Ledger.id).limit(1)) is None:
-                    continue
-                await dunning.preview(
-                    session, tenant_id=tenant_id, user_id=None, run_date=local_today()
-                )
-                runs += 1
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    if not await job_allowed(session, tenant_id, "accounting-dunning-run"):
+                        continue
+                    if await session.scalar(select(Ledger.id).limit(1)) is None:
+                        continue
+                    await dunning.preview(
+                        session, tenant_id=tenant_id, user_id=None, run_date=local_today()
+                    )
+                    runs += 1
+            except Exception as exc:
+                # M9-01: the failed preview rolled back; keep a failed run as visible evidence
+                # (alert metric dunning_runs_failed_24h) and continue with the next tenant.
+                failed += 1
+                async with tenant_transaction(factory, tenant_id) as session:
+                    session.add(
+                        DunningRun(
+                            tenant_id=tenant_id,
+                            run_date=local_today(),
+                            status="failed",
+                            error=f"{type(exc).__name__}: {exc}"[:2000],
+                        )
+                    )
     finally:
         await engine.dispose()
-    return {"runs": runs}
+    return {"runs": runs, "failed": failed}
 
 
 @shared_task(name="mhvp.accounting.dunning_run")
@@ -75,6 +93,8 @@ async def receivable_previews(settings: Settings, today: date | None = None) -> 
                 row = await session.scalar(select(TenantSettings))
                 rules = dict(row.receivable_rules or {}) if row is not None else {}
                 if not rules.get("monthly_preview_enabled"):
+                    continue
+                if not await job_allowed(session, tenant_id, "accounting-receivable-run"):
                     continue
                 totals["tenants"] += 1
                 existing = await session.scalar(
@@ -143,3 +163,45 @@ async def run_audit_export(settings: Settings, run_id: uuid.UUID, tenant_id: uui
 @shared_task(name="mhvp.accounting.audit_export_run")
 def audit_export_run(run_id: str, tenant_id: str) -> str:
     return asyncio.run(run_audit_export(get_settings(), uuid.UUID(run_id), uuid.UUID(tenant_id)))
+
+
+# Open item balances (S69-04, 6.9.13) ---------------------------------------------------------
+
+
+async def open_item_balance_refresh_all(
+    settings: Settings, today: date | None = None
+) -> dict[str, int]:
+    """Nightly refresh of the maintained open item remainders per ledger (read copy only)."""
+    from mhvp.accounting import open_item_balances
+
+    day = today or local_today()
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"ledgers": 0, "items": 0, "failed": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    if not await job_allowed(session, tenant_id, "accounting-open-item-balance"):
+                        continue
+                    for ledger in (await session.scalars(select(Ledger))).all():
+                        totals["items"] += await open_item_balances.refresh(
+                            session, ledger, day, source="job"
+                        )
+                        totals["ledgers"] += 1
+            except Exception:  # next tenant; the copy is no source of truth
+                totals["failed"] += 1
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.accounting.open_item_balance_refresh")
+def open_item_balance_refresh() -> dict[str, int]:
+    return asyncio.run(open_item_balance_refresh_all(get_settings()))

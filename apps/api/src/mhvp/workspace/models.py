@@ -40,6 +40,34 @@ class Notification(IdMixin, TimestampMixin, TenantMixin, Base):
     entity_type: Mapped[str | None] = mapped_column(String(64))
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # M23-04 (migration 0280): the user's preference asked for a mail as well; the job
+    # ``mhvp.workspace.notification_mails`` sends it and sets ``email_sent_at`` (no network
+    # call inside the transaction that creates the notification).
+    email_pending: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class NotificationPreference(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Per user choice of channels per notification kind (M23-04, migration 0280).
+
+    ``kind`` "*" is the default of the user for kinds without an own row. ``in_app`` switches
+    the bell entry, ``email`` adds a system mail; ``muted_until`` silences both channels until
+    that moment. Kinds in ``notification_prefs.MANDATORY_KINDS`` ignore every switch."""
+
+    __tablename__ = "notification_preference"
+    __table_args__ = (UniqueConstraint("tenant_id", "user_id", "kind"),)
+
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    in_app: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    email: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    muted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):

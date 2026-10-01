@@ -92,7 +92,13 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
             </li>
           ))}
         </ul>
-        <HoaCreate kind="plan" ledgerId={ctx.ledger?.id} legalEntityId={ctx.entity.id} basePath={base} />
+        <HoaCreate
+          kind="plan"
+          ledgerId={ctx.ledger?.id}
+          legalEntityId={ctx.entity.id}
+          basePath={base}
+          basisPlans={(plans?.data ?? []).map((p) => ({ id: String(p.id), label: `${String(p.year)} · V${String(p.version)}` }))}
+        />
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{tw("statements")}</h2>
@@ -128,6 +134,12 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
         <h2 className={ui.h2}>{tf("assetReports")}</h2>
         <Link href={`${base}/vermoegensbericht`} className="text-sm hover:underline">
           {tf("assetReports")}
+        </Link>
+      </section>
+      <section className="flex flex-col gap-2" data-testid="hoa-reserves">
+        <h2 className={ui.h2}>{tw("reservesLink")}</h2>
+        <Link href={`${base}/ruecklagen`} className="text-sm hover:underline">
+          {tw("reservesLink")}
         </Link>
       </section>
       <section className="flex flex-col gap-2">

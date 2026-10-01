@@ -62,7 +62,10 @@ describe("TicketMailThread", () => {
     expect(within(first).getByText(/Von: erika@example.com/)).toBeInTheDocument();
     expect(within(first).getByText(/Kopie: hans@example.com/)).toBeInTheDocument();
     // HTML mails render sanitised HTML by default; the text view folds the quote.
-    expect(within(first).getByTestId("ticket-mail-html").innerHTML).toContain("<b>tropft</b>");
+    const frame = within(first).getByTestId("ticket-mail-html") as HTMLIFrameElement;
+    expect(frame.getAttribute("srcdoc")).toContain("<b>tropft</b>");
+    expect(frame.getAttribute("sandbox")).not.toContain("allow-scripts");
+    expect(frame.getAttribute("srcdoc")).toContain("default-src 'none'");
     await userEvent.click(within(first).getByRole("button", { name: "Als Text anzeigen" }));
     expect(within(first).getByTestId("ticket-mail-text")).toHaveTextContent("Im Bad tropft es.");
     expect(within(first).getByTestId("ticket-mail-text")).not.toHaveTextContent("alter Text");

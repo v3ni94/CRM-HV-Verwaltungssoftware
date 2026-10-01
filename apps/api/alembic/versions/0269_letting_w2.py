@@ -94,7 +94,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_rent_index_entry")),
     )
     op.create_index(
-        "ix_rent_index_entry_lookup", "rent_index_entry", ["tenant_id", "municipality", "valid_from"]
+        "ix_rent_index_entry_lookup",
+        "rent_index_entry",
+        ["tenant_id", "municipality", "valid_from"],
     )
 
     op.create_table(
@@ -123,7 +125,9 @@ def upgrade() -> None:
         *_base(),
         sa.Column("user_id", uid, nullable=False),
         sa.Column("token_hash", sa.String(64), nullable=False),
-        sa.Column("include_contracts", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "include_contracts", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column(
             "include_properties", sa.Boolean(), nullable=False, server_default=sa.text("false")
         ),

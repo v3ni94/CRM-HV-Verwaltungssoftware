@@ -130,3 +130,37 @@ versendet).
 - Löschantrag erfassen (API `POST /privacy/erasure-requests`): Das System prüft sofort alle Sperren und zeigt sie am Antrag. Freigeben kann nur eine zweite Person, und nur ohne Sperre. Die Ausführung anonymisiert den Kontakt, Buchungen bleiben unberührt. Vorher muss das Löschprofil für Kontakte angelegt und von einer zweiten Person freigegeben sein.
 - Register der Auftragsverarbeiter und Verarbeitungstätigkeiten pflegen, daraus den Entwurf des Verarbeitungsverzeichnisses erzeugen (`GET /privacy/processing-records`). Der Entwurf ist vor Verwendung durch einen Rechtsanwalt zu prüfen.
 - Die Bedienung im CRM ist noch nicht vorhanden, bis dahin nur über die API.
+
+## Sammelaktion in der Dokumentliste
+
+In der Dokumentliste lassen sich mehrere Dokumente ankreuzen. Über der Liste setzt "Kategorie setzen"
+die gewählte Kategorie für alle Markierten (das zugeordnete Aufbewahrungsprofil wird wie bei der
+Einzeländerung übernommen), "Mit Objekt verknüpfen" legt die Verknüpfung zum gewählten Objekt an.
+Bereits gesetzte Werte werden nicht doppelt angelegt. Die Aktion gilt ganz oder gar nicht und braucht
+das Recht Dokumente bearbeiten.
+
+## Ablegen per Ziehen, ZIP-Archive, Briefe und Kategorien (Stand 30.09.2026)
+
+- **Ablegen**: Dateien auf ein beliebiges Fenster des CRM ziehen oder in der Kopfleiste auf
+  „Ablegen“ klicken. Im Dialog Objekt und Kategorie wählen. Eine ZIP-Datei wird entpackt, jede
+  Datei einzeln geprüft und abgelegt; nicht zulässige Dateien stehen mit Grund in der Meldung.
+- **Briefe und Vorlagen** (Dokumente, Link „Briefe und Vorlagen“): Vorlage wählen, Empfänger
+  suchen, Betreff und Text eintragen, „Vorschau“ zeigt das PDF. Bei mehreren Empfängern entsteht
+  ein Serienbrief. Briefe werden abgelegt, nicht versandt. Vorlagen mit Einstellungsrecht dort
+  pflegen; Speichern legt eine neue Version an.
+- **Dokumentkategorien** (Einstellungen): Baum der Kategorien, je Kategorie Paperless-Dokumenttyp,
+  Paperless-Tag und Drive-Ordner. Neue Kategorien lassen sich unter eine bestehende hängen.
+- **Eingangsadresse, geschwärzte Kopien, Drive-Änderungen**: vorerst nur über die API
+  (siehe `docs/rules/Q03-documents-w3.md`).
+
+## Briefe und Vorlagen (Version 1.49.0)
+
+Seite `/dokumente/briefe`. Zweck: Brief aus einer Vorlage auf dem Briefbogen des Mandanten erzeugen.
+Briefe werden abgelegt und verknüpft, nicht versandt.
+
+* Brief erzeugen: Vorlage wählen, Empfänger über die Suche hinzufügen, Betreff und Text in die
+  Felder eintragen, Vorschau als PDF ansehen, dann erzeugen. Bei mehreren Empfängern entsteht ein
+  Serienbrief mit einem Dokument je Empfänger; Vertretungen werden nach der Zustellregel berücksichtigt.
+* Vorlagen verwalten: Kürzel, Bezeichnung, Betreffvorlage und Textvorlage mit den angezeigten
+  Platzhaltern. Jedes Speichern erzeugt eine neue Version. Voraussetzung ist das Recht zum Ändern der
+  Mandanteneinstellungen.

@@ -122,6 +122,23 @@ async def report_vat_overview(
 
 
 @router.get(
+    "/ledgers/{ledger_id}/reports/vat-overview-by-property",
+    summary="USt-Übersicht je Objekt und Kostenstelle (Entwurf)",
+)
+async def report_vat_overview_by_property(
+    ledger_id: uuid.UUID,
+    start: date,
+    end: date,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    _period(start, end)
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        return await report_views.vat_overview_by_property(session, ledger, start, end)
+
+
+@router.get(
     "/ledgers/{ledger_id}/reports/income-expense",
     summary="Einnahmen und Ausgaben (keine EÜR)",
 )

@@ -164,6 +164,12 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "document"
     __table_args__ = (
         CheckConstraint("size >= 0", name="size_positive"),
+        # S711-06: structured reason of a hold (7.11 S05); free text stays in the reason.
+        CheckConstraint(
+            "retention_hold_kind IS NULL OR retention_hold_kind IN "
+            "('litigation', 'tax_procedure', 'evidence', 'legal_matter', 'other')",
+            name="retention_hold_kind",
+        ),
         Index("ix_document_search_vector", "search_vector", postgresql_using="gin"),
         Index(
             "ix_document_title_trgm",
@@ -215,6 +221,13 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
     # and the document stays locked (M6-04, migration 0175).
     retention_base_on: Mapped[date | None] = mapped_column(Date)
     retention_hold_reason: Mapped[str | None] = mapped_column(Text)
+    # S711-06: kind of the hold (litigation, tax_procedure, evidence, legal_matter, other) and
+    # the WEG permanent record flag (S05): a permanent record never expires by a standard
+    # profile, whatever profile the category maps.
+    retention_hold_kind: Mapped[str | None] = mapped_column(String(32))
+    permanent_record: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_text("false")
+    )
     visibility: Mapped[list[str]] = mapped_column(ARRAY(String(16)), nullable=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     source_system: Mapped[str | None] = mapped_column(String(32))
@@ -414,3 +427,25 @@ class DeletionProposalItem(IdMixin, TimestampMixin, TenantMixin, Base):
     mirror_deletions: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+
+
+class DocumentRedaction(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Redacted copy of a document with its protocol (7.9.2 PUE11, M25-01): reason, scope and
+    the processing steps. The original stays unchanged; the copy is a document of its own,
+    linked to the original with role ``generated``, internal until a second person releases
+    it (four eyes)."""
+
+    __tablename__ = "document_redaction"
+    __table_args__ = (
+        Index("ix_document_redaction_original", "tenant_id", "original_document_id"),
+        UniqueConstraint("copy_document_id", name="uq_document_redaction_copy"),
+    )
+
+    original_document_id: Mapped[uuid.UUID] = _fk("document.id")
+    copy_document_id: Mapped[uuid.UUID] = _fk("document.id", ondelete="CASCADE")
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    scope: Mapped[str] = mapped_column(Text, nullable=False)
+    steps: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    released_visibility: Mapped[list[str] | None] = mapped_column(ARRAY(String(16)))

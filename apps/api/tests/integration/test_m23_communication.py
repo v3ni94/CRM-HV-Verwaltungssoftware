@@ -123,7 +123,10 @@ def test_dispatch_history_and_calendar(client: TestClient, world: World) -> None
         client.post(
             "/api/v1/dispatches/serial",
             json={
-                "items": [{"document_id": doc, "contact_id": c["id"]} for c in (post, mail, portal)]
+                "items": [
+                    {"document_id": doc, "contact_id": c["id"], "submit_postal": False}
+                    for c in (post, mail, portal)
+                ]
             },
             headers=h,
         ),

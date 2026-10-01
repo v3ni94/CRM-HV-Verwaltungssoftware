@@ -23,7 +23,9 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.alter_column("tenant_settings", "gmail_settle_seconds", server_default=sa.text("180"))
-    op.execute("UPDATE tenant_settings SET gmail_settle_seconds = 180 WHERE gmail_settle_seconds = 600")
+    op.execute(
+        "UPDATE tenant_settings SET gmail_settle_seconds = 180 WHERE gmail_settle_seconds = 600"
+    )
 
 
 def downgrade() -> None:

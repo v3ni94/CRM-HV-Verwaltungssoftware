@@ -5,7 +5,8 @@
 * ``/portal/owner/payment-resolutions``: announced resolutions on a economic plan or special
   levy of the own community with validity, due rhythm and the community's default account for
   payments (SEPA information: the payee is the GdWE, never a private account). Information
-  only: no payment is initiated, the own share is not computed here (see open points).
+  only: no payment is initiated; ``own_share`` shows the own amounts taken from the calculated
+  snapshot of the plan or levy (never recomputed here, never other owners' units).
 * ``/portal/owner/consumption-info``: monthly consumption information for own units under the
   owner's own ownership contract (self use). Months of a tenancy are tenants' data and stay
   hidden. Locked by the same tenant switches as the tenant view (rule H03).
@@ -104,6 +105,42 @@ async def _sepa(session: Any, legal_entity_id: uuid.UUID, today: date) -> dict[s
     }
 
 
+async def _own_unit_ids(session: Any, ownership: set[uuid.UUID]) -> list[uuid.UUID]:
+    from mhvp.contracts.models import Contract
+
+    if not ownership:
+        return []
+    rows = await session.scalars(select(Contract.unit_id).where(Contract.id.in_(ownership)))
+    return [u for u in rows if u is not None]
+
+
+def _own_plan_share(snapshot: dict[str, Any] | None, own: set[str]) -> list[dict[str, Any]] | None:
+    """Own annual and monthly amounts from the calculated plan (M21-06, SA-05); None while the
+    plan has no calculation. Other owners' units never appear."""
+    if not snapshot:
+        return None
+    return [
+        {"unit_number": u["unit_number"], "annual": u["annual"], "monthly": u["monthly"]}
+        for u in snapshot.get("units", [])
+        if u["unit_id"] in own
+    ]
+
+
+def _own_levy_share(snapshot: dict[str, Any] | None, own: set[str]) -> list[dict[str, Any]] | None:
+    """Own amount of the special levy from its calculation; None while not calculated."""
+    if not snapshot:
+        return None
+    return [
+        {
+            "unit_number": u["unit_number"],
+            "amount": u["amount"],
+            "instalments": u.get("instalments"),
+        }
+        for u in snapshot.get("units", [])
+        if u["unit_id"] in own
+    ]
+
+
 @router.get("/payment-resolutions", summary="Beschlossene Zahlungen der Gemeinschaft")
 async def payment_resolutions(
     request: Request, ctx: Portal = Depends(portal_user)
@@ -114,7 +151,8 @@ async def payment_resolutions(
     principal, account = ctx
     today = local_today()
     async with tenant_tx(request, principal) as session:
-        hoa_ids, _ = await _owner_scope(session, account, today)
+        hoa_ids, ownership = await _owner_scope(session, account, today)
+        own_units = {str(u) for u in await _own_unit_ids(session, ownership)}
         name_rows = await session.execute(
             select(LegalEntity.id, LegalEntity.name).where(LegalEntity.id.in_(hoa_ids))
         )
@@ -147,6 +185,7 @@ async def payment_resolutions(
                 "instalments": None,
                 "total": None,
                 "purpose": None,
+                "own_share": None,
             }
             if r.subject_type == "economic_plan" and r.subject_id is not None:
                 plan = await session.get(EconomicPlan, r.subject_id)
@@ -156,6 +195,7 @@ async def payment_resolutions(
                         valid_to=None if plan.continues_until_new_plan else date(plan.year, 12, 31),
                         rhythm=plan.payment_rhythm,
                         due_day=plan.due_day,
+                        own_share=_own_plan_share(plan.snapshot, own_units),
                     )
             elif r.subject_type == "special_levy" and r.subject_id is not None:
                 levy = await session.get(SpecialLevy, r.subject_id)
@@ -165,6 +205,7 @@ async def payment_resolutions(
                         instalments=levy.instalments,
                         total=levy.total,
                         purpose=levy.purpose,
+                        own_share=_own_levy_share(levy.snapshot, own_units),
                     )
             entry["sepa"] = await _sepa(session, r.legal_entity_id, today)
             items.append(entry)

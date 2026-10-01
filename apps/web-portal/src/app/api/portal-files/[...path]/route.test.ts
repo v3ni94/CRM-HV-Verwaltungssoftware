@@ -40,6 +40,16 @@ describe("portal files", () => {
     ).toBe(200);
   });
 
+  it("relays the released owner statement pdf and refuses other statement paths (M24-03)", async () => {
+    serverFetch.mockResolvedValue(new Response("pdf", { status: 200, headers: { "content-type": "application/pdf" } }));
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx(`portal/owner/statements/${ID}/units/${ID}/pdf`))).status,
+    ).toBe(200);
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx(`portal/owner/statements/${ID}/pdf`))).status,
+    ).toBe(404);
+  });
+
   it("relays the thumbnail variant of a protocol photo with no-store (M31 WP5)", async () => {
     serverFetch.mockResolvedValue(new Response("jpg", { status: 200, headers: { "content-type": "image/jpeg" } }));
     const res = await GET(new Request("http://portal.localhost/x"), ctx(`portal/handover/${ID}/documents/${ID}/thumbnail`));

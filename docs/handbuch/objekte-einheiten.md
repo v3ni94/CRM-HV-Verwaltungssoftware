@@ -204,3 +204,13 @@ Kundennummer und Kreditorenkonto bleibt ein eigener Abschnitt.
 - Kapitel Verträge: Miet- und Eigentumsverhältnisse je Einheit.
 - Kapitel WEG: laufende Verwaltung der Gemeinschaft.
 - Kapitel Stammdaten direkt bearbeiten: Bedienung, Speicherzustände und Konflikthinweis.
+
+## Objektübernahme (Checkliste)
+
+Am Objekt erscheint der Abschnitt "Objektübernahme". Mit "Checkliste anlegen" entstehen sieben Punkte, deren Status je Punkt auf offen, angefordert, erhalten oder nicht zutreffend gesetzt wird.
+
+## Bildgalerie, Belegungsliste und USt-Historie (Paket Q05, 30.09.2026)
+
+* **Bildgalerie** (Objektseite): Bilder werden als Dokument am Objekt abgelegt (Metadaten werden entfernt) und in der Anzeigereihenfolge geführt. Mit "Nach vorn" und "Nach hinten" wird die Reihenfolge geändert, "Entfernen" nimmt das Bild nur aus der Galerie, das Dokument bleibt erhalten. Wurde das Objekt zwischenzeitlich geändert, erscheint ein Hinweis zum Neuladen.
+* **Belegungsliste** (Objektseite, Recht Verträge lesen): Je Einheit der Mieter und der Eigentümer zum gewählten Stichtag, leere Eingabe heißt heute. Der Filter "Nur Leerstand" blendet belegte Einheiten aus.
+* **Historie der Umsatzsteueroptionen** (Einheitenseite): Zeiträume mit Option und Belegung (Leerstand oder Vertrag). Neue Zeiträume dürfen sich nicht überschneiden. Die Erfassung ist reine Stammdatenpflege, die steuerliche Behandlung folgt einer freigegebenen Regel.

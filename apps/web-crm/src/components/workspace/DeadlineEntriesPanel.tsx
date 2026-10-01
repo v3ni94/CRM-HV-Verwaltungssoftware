@@ -18,6 +18,8 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
   const [rows, setRows] = useState<DeadlineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await bff<DeadlineEntry[]>(`/api/bff/workspace/deadline-entries?status=${showDone ? "all" : "open"}`);
@@ -33,6 +35,33 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
     const res = await bff<DeadlineEntry>(`/api/bff/workspace/deadline-entries/${id}/done`, { method: "POST" });
     if (res.ok) await load();
     else setError(res.message);
+  }
+
+  function toggle(id: string, on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  /** Sammelaktion (M9-04): die markierten offenen Fristen ganz oder gar nicht erledigen. */
+  async function finishSelected() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) {
+      setNotice(t("bulkNone"));
+      return;
+    }
+    const res = await bff<{ changed: number }>("/api/bff/workspace/bulk", {
+      method: "POST",
+      body: JSON.stringify({ action: "deadline_entries.done", ids }),
+    });
+    if (res.ok) {
+      setNotice(t("bulkDone", { changed: res.data.changed }));
+      setSelected(new Set());
+      await load();
+    } else setError(res.message);
   }
 
   return (
@@ -58,6 +87,18 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
           {error}
         </p>
       ) : null}
+      {canUpdate && rows && rows.some((e) => e.status === "open") ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <button type="button" className={ui.buttonSm} onClick={() => void finishSelected()} data-testid="entries-bulk-done">
+            {t("doneSelected")}
+          </button>
+          {notice ? (
+            <span role="status" className="text-muted">
+              {notice}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {rows === null ? null : rows.length === 0 ? (
         <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
@@ -65,6 +106,7 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
           <table className={ui.table} data-testid="deadline-entries-table">
             <thead>
               <tr>
+                {canUpdate ? <th scope="col">{t("column.select")}</th> : null}
                 <th scope="col">{t("column.due")}</th>
                 <th scope="col">{t("column.type")}</th>
                 <th scope="col">{t("column.title")}</th>
@@ -77,6 +119,19 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
             <tbody>
               {rows.map((e) => (
                 <tr key={e.id}>
+                  {canUpdate ? (
+                    <td>
+                      {e.status === "open" ? (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(e.id)}
+                          onChange={(ev) => toggle(e.id, ev.target.checked)}
+                          aria-label={t("select", { title: e.title })}
+                          data-testid={`entry-select-${e.id}`}
+                        />
+                      ) : null}
+                    </td>
+                  ) : null}
                   <td className="tabular-nums">
                     {formatDate(e.due_on)} <span className={ui.badge}>{t("verify")}</span>
                   </td>

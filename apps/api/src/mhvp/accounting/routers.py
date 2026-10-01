@@ -8,10 +8,10 @@ import uuid
 from collections.abc import Sequence
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import (
     chart_release,
+    control_routers,
     creditor_routers,
     dunning,
     dunning_letters,
@@ -88,9 +89,21 @@ from mhvp.accounting.schemas import (
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
+    ensure_session_property_allowed,
     session_allowed_legal_entity_ids,
+    session_allowed_property_ids,
 )
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import (
+    LIST_PARAMS_DOC,
+    ListParams,
+    apply_filters,
+    apply_sort,
+    check_include,
+    list_params,
+    sparse,
+)
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ReleaseGateResolver, ensure_release_gate_open
@@ -1583,7 +1596,17 @@ async def _invoice(session: AsyncSession, invoice_id: uuid.UUID) -> Invoice:
     inv = await session.get(Invoice, invoice_id, with_for_update=True)
     if inv is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    await _ensure_invoice_property_allowed(session, inv)
     return inv
+
+
+async def _ensure_invoice_property_allowed(session: AsyncSession, inv: Invoice) -> None:
+    """M2-02/S16-02: an invoice belongs to the property of its ledger; with a property
+    assignment, invoices of other ledgers (or of ledgers without property) answer 404."""
+    if session_allowed_property_ids(session) is None:
+        return
+    ledger = await session.get(Ledger, inv.ledger_id)
+    ensure_session_property_allowed(session, ledger.property_id if ledger else None)
 
 
 @router.post("/invoices", status_code=201, summary="Eingangsrechnung erfassen")
@@ -1598,6 +1621,16 @@ async def create_invoice(
             **_invoice_payload(body),
         )
         await invoices.write(session, inv, [ln.model_dump() for ln in body.lines], body.payee_iban)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice.received",
+            entity_type="invoice",
+            entity_id=inv.id,
+            actor_user_id=principal.user_id,
+            payload={"ledger_id": str(inv.ledger_id), "number": inv.number},
+        )
         return await _invoice_full(session, inv)
 
 
@@ -1606,10 +1639,13 @@ async def update_invoice(
     invoice_id: uuid.UUID,
     body: InvoiceIn,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         inv = await _invoice(session, invoice_id)
+        check_if_match(if_match, inv.version)  # S12-04, optional
         if inv.posting_status is not PostingStatus.UNPOSTED:
             raise ProblemError(
                 ErrorCodes.ACC_POSTED_IMMUTABLE,
@@ -1624,6 +1660,16 @@ async def update_invoice(
         if inv.payee_iban_fingerprint != before_iban:
             inv.iban_confirmed_by = None
             await invoices.evaluate(session, inv)
+        # S69-02: a changed payment hash persists the fall back of the decisions.
+        from mhvp.accounting import approval_decisions
+
+        await approval_decisions.invalidate(
+            session,
+            "invoice",
+            inv.id,
+            current_hash=invoices.payment_hash(inv),
+            reason="Rechnung geändert",
+        )
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -1637,21 +1683,56 @@ async def update_invoice(
             },
         )
         await session.flush()
+        response.headers["ETag"] = etag_of(inv.version)
         return await _invoice_full(session, inv)
 
 
 @router.get("/invoices/{invoice_id}", summary="Rechnung mit Prüfschritten")
 async def get_invoice(
-    invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    invoice_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         inv = await session.get(Invoice, invoice_id)
         if inv is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await _ensure_invoice_property_allowed(session, inv)
+        response.headers["ETag"] = etag_of(inv.version)
         return await _invoice_full(session, inv)
 
 
-@router.get("/invoices", summary="Rechnungseingang", responses=PAGE_HEADERS)
+_INVOICE_FILTERS = {
+    "ledger_id": Invoice.ledger_id,
+    "provider_contact_id": Invoice.provider_contact_id,
+    "creditor_account_id": Invoice.creditor_account_id,
+    "kind": Invoice.kind,
+    "review_status": Invoice.review_status,
+    "posting_status": Invoice.posting_status,
+    "payment_method": Invoice.payment_method,
+    "e_invoice_format": Invoice.e_invoice_format,
+    "service_contract_id": Invoice.service_contract_id,
+    "invoice_date": Invoice.invoice_date,
+    "due_date": Invoice.due_date,
+}
+_INVOICE_SORT = {
+    "invoice_date": Invoice.invoice_date,
+    "due_date": Invoice.due_date,
+    "number": Invoice.number,
+    "gross": Invoice.gross,
+    "review_status": Invoice.review_status,
+    "created_at": Invoice.created_at,
+}
+
+
+@router.get(
+    "/invoices",
+    summary="Rechnungseingang",
+    responses=PAGE_HEADERS,
+    response_model=list[dict[str, Any]],
+    description=LIST_PARAMS_DOC,
+)
 async def list_invoices(
     request: Request,
     response: Response,
@@ -1665,18 +1746,32 @@ async def list_invoices(
         le=1000,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
+    params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
-) -> list[dict[str, Any]]:
+) -> Any:
     """Rechnungen, neueste zuerst. Paginierung wie ``GET /tickets`` (Kopfzeilen
     ``X-Total-Count``, ``X-Page``, ``X-Page-Size``), Antwort bleibt eine Liste."""
+    check_include(params, ())
     async with tenant_tx(request, principal) as session:
-        query = select(Invoice).order_by(Invoice.invoice_date.desc(), Invoice.id.desc())
+        query = apply_sort(
+            apply_filters(select(Invoice), params, _INVOICE_FILTERS),
+            params,
+            _INVOICE_SORT,
+            (Invoice.invoice_date.desc(), Invoice.id.desc()),
+        )
         if ledger_id:
             query = query.where(Invoice.ledger_id == ledger_id)
         if review_status:
             query = query.where(Invoice.review_status == review_status)
+        allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed is not None:
+            query = query.where(
+                Invoice.ledger_id.in_(
+                    select(Ledger.id).where(Ledger.property_id.in_(list(allowed)))
+                )
+            )
         rows = await paginate(session, query, response, page=page, page_size=page_size, limit=limit)
-        return await _invoices_full(session, rows)
+        return sparse(await _invoices_full(session, rows), params, None, response=response)
 
 
 @router.post(
@@ -1721,8 +1816,21 @@ async def review_invoice(
                 )
             ).all()
         )
+        before_status = inv.review_status
         inv.review_status = invoices.aggregate(reviews, inv.version)
         await session.flush()
+        closed = (ReviewStatus.CLOSED_OK, ReviewStatus.CLOSED_WITH_RESERVATION)
+        if inv.review_status in closed and before_status not in closed:
+            # S12-01: factual review completed; posting and payment release stay separate.
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="invoice.approved",
+                entity_type="invoice",
+                entity_id=inv.id,
+                actor_user_id=principal.user_id,
+                payload={"version": inv.version, "review_status": inv.review_status.value},
+            )
         return await _invoice_full(session, inv)
 
 
@@ -1771,7 +1879,24 @@ async def release_invoice(
             )
         if any("IBAN weicht" in f for f in inv.findings):
             raise ProblemError(ErrorCodes.CONFLICT, detail="Abweichende IBAN ist nicht bestätigt.")
-        inv.released_by, inv.released_hash = principal.user_id, invoices.payment_hash(inv)
+        release_hash = invoices.payment_hash(inv)
+        inv.released_by, inv.released_hash = principal.user_id, release_hash
+        # S69-02: central decision bound to the payment hash; older ones fall back.
+        from mhvp.accounting import approval_decisions
+
+        await approval_decisions.invalidate(
+            session, "invoice", inv.id, current_hash=release_hash, reason="Rechnung geändert"
+        )
+        if principal.user_id is not None:
+            await approval_decisions.record(
+                session,
+                tenant_id=inv.tenant_id,
+                subject_type="invoice",
+                subject_id=inv.id,
+                step="release",
+                user_id=principal.user_id,
+                snapshot_hash=release_hash,
+            )
         # M14-03 (mhvp.accounting.tax): records whether the releaser's role limit is exceeded;
         # the posting then needs a second approval by a third person. Off by default.
         exceeded = await tax.second_approval_required_for_release(session, inv, principal.roles)
@@ -3250,5 +3375,15 @@ async def paperless_intake(
 
 # M14-01, M14-08: creditors and the rest of the plan lifecycle (mhvp.accounting.creditor_routers).
 router.include_router(creditor_routers.router)
+# S69-02, S69-04: approval decisions and open item balances (mhvp.accounting.control_routers).
+router.include_router(control_routers.router)
 # S711-02: credit note XRechnung with reference to the original (mhvp.accounting.xrechnung_credit).
 router.include_router(xrechnung_credit.router)
+# M13-05/M13-06: PDF invoice document and batch issue (mhvp.accounting.fee_documents).
+from mhvp.accounting import fee_documents  # noqa: E402
+
+router.include_router(fee_documents.router)
+# M10-07: year end carry over as drafts (mhvp.accounting.year_carryover).
+from mhvp.accounting import year_carryover  # noqa: E402
+
+router.include_router(year_carryover.router)

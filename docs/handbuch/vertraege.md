@@ -213,3 +213,5 @@ neuem Wert (Recht audit:read).
 ## SEPA Mandate (Seite Verträge, SEPA Mandate)
 
 Die Übersicht zeigt alle SEPA Mandate der Verträge mit Referenz, IBAN, Art und Folge, Unterschriftsdatum, Gültigkeit und letzter Verwendung. Filter: Status (aktiv, widerrufen, abgelaufen), Suche nach Referenz oder IBAN, "Noch nie verwendet" und "Läuft innerhalb von 90 Tagen ab". Die Erfassung ist reine Dokumentation, der Einzug bleibt bis zur Freigabe Zahlungsanstoß (G2) gesperrt.
+
+- Mieterhöhungssperre: Unter dem Feld stehen die Mieterhöhungsfälle des Vertrags. Wird ein offener Fall vor Ablauf der Sperre wirksam, erscheint ein Hinweis; die Freigabe des Falls bleibt gesperrt.

@@ -131,6 +131,92 @@ async def profile_for_category(
     return await session.get(RetentionProfile, category.retention_profile_id)
 
 
+# S711-06: legal entity kind of a document and profile per legal entity ------------------
+
+# Management type of a linked property to the legal entity kind it stands for (labelled
+# assumption A-Q03-01 in docs/ASSUMPTIONS.md): a WEG property belongs to the GdWE, a rental
+# property to the rental owner. A direct legal_entity link always wins.
+_KIND_BY_MANAGEMENT = {"hoa": "hoa", "hoa_with_sev": "hoa", "rental": "rental_owner"}
+# Categories that are WEG permanent records (S05) when the document belongs to a GdWE:
+# declaration of division and minutes (resolutions). Produktschutz, no legal claim (0.2).
+PERMANENT_RECORD_CATEGORIES = frozenset({"declaration_of_division", "minutes"})
+
+
+async def legal_entity_kinds(session: AsyncSession, links: list[tuple[str, uuid.UUID]]) -> set[str]:
+    from mhvp.properties.models import LegalEntity, Property  # local: import order
+
+    kinds: set[str] = set()
+    for entity_type, entity_id in links:
+        if entity_type == "legal_entity":
+            entity = await session.get(LegalEntity, entity_id)
+            if entity is not None:
+                kinds.add(str(entity.kind))
+    if kinds:
+        return kinds
+    for entity_type, entity_id in links:
+        if entity_type == "property":
+            prop = await session.get(Property, entity_id)
+            if prop is not None and str(prop.management_type) in _KIND_BY_MANAGEMENT:
+                kinds.add(_KIND_BY_MANAGEMENT[str(prop.management_type)])
+    return kinds
+
+
+async def profile_for_document(
+    session: AsyncSession, category_id: uuid.UUID | None, kinds: set[str]
+) -> RetentionProfile | None:
+    """Profile per legal entity (7.11 S04, S711-06): the category maps a profile; when a
+    profile of the same ``document_class`` exists for exactly the legal entity kind of the
+    document, that one is used instead. Several kinds or none keep the category profile."""
+    base = await profile_for_category(session, category_id)
+    if base is None or len(kinds) != 1:
+        return base
+    kind = next(iter(kinds))
+    if base.legal_entity_kind == kind:
+        return base
+    specific = await session.scalar(
+        select(RetentionProfile)
+        .where(
+            RetentionProfile.document_class == base.document_class,
+            RetentionProfile.legal_entity_kind == kind,
+        )
+        .order_by(RetentionProfile.released_at.desc().nulls_last(), RetentionProfile.created_at)
+        .limit(1)
+    )
+    return specific or base
+
+
+async def is_permanent_record(
+    session: AsyncSession, category_id: uuid.UUID | None, kinds: set[str]
+) -> bool:
+    if category_id is None or kinds != {"hoa"}:
+        return False
+    category = await session.get(DocumentCategory, category_id)
+    return category is not None and category.code in PERMANENT_RECORD_CATEGORIES
+
+
+async def related_hold(session: AsyncSession, document_id: uuid.UUID) -> str | None:
+    """A hold on an original also keeps its derived documents (redacted copies, released
+    versions) and a hold on a copy keeps its original (S711-06, 7.11 S05)."""
+    originals = select(DocumentLink.entity_id).where(
+        DocumentLink.document_id == document_id, DocumentLink.entity_type == "document"
+    )
+    copies = select(DocumentLink.document_id).where(
+        DocumentLink.entity_type == "document", DocumentLink.entity_id == document_id
+    )
+    held = await session.scalar(
+        select(Document)
+        .where(
+            Document.retention_hold_reason.is_not(None),
+            (Document.id.in_(originals)) | (Document.id.in_(copies)),
+        )
+        .order_by(Document.created_at)
+        .limit(1)
+    )
+    if held is None:
+        return None
+    return f"{held.title}: {held.retention_hold_reason}"
+
+
 async def apply_category_mapping(session: AsyncSession, *, only_unassigned: bool = True) -> int:
     """Assigns the mapped profile of the category to every document of the tenant that has
     none yet (or to all categorised documents with ``only_unassigned=False``)."""

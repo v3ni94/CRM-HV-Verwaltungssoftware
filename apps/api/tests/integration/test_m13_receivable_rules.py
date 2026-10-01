@@ -89,6 +89,7 @@ def _rules(c: TestClient, h: dict[str, str], **rules: Any) -> None:
         "proration_method": "calendar_days",
         "vat_enabled": False,
         "payment_interval": None,
+        "monthly_preview_enabled": False,
         **rules,
     }
     out = _ok(c.patch(T, json={"receivable_rules": body}, headers=h))
@@ -218,6 +219,7 @@ def test_m13_01_proration_per_contract_rule_and_gate(
         "proration_method": "calendar_days",
         "vat_enabled": False,
         "payment_interval": None,
+        "monthly_preview_enabled": False,  # P02-03
     }
     prop, entity = _rental(closed, h, "741")
     start = _tenancy(

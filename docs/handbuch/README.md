@@ -27,6 +27,7 @@ Grundlagen
 - [Auswertung Tickets (Durchsatz, Rückstand, Reaktionszeiten, je Bearbeiter und Postfach)](auswertung-tickets.md)
 - [Objekte und Einheiten](objekte-einheiten.md) (mit Energieausweis und Schwarzem Brett)
 - [Verträge (Miete, WEG, SEV, Kautionen mit Kautionsabrechnung, Dienstleisterverträge mit Kündigungsfristen)](vertraege.md)
+- [Datenschutz im CRM (Löschprofile, Löschanträge, Register, Verzeichnis-Entwurf)](datenschutz.md)
 - [Kontakte (mit IBAN-Freigabe im Vier-Augen-Prinzip, Beziehungen zu Objekten und Einheiten)](kontakte.md)
 - [Erfassungsstandards und Bericht Datenqualität (Objektname, Namensfelder, Fristen)](erfassungsstandards.md)
 - [Kalender](kalender.md)

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { DunningInterestRates } from "@/components/accounting/DunningInterestRates";
 import { DunningPreviewButton } from "@/components/accounting/DunningPreviewButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -29,6 +30,7 @@ export default async function DunningPage() {
       />
       <p className={ui.notice}>{t("notice")}</p>
       <DunningPreviewButton today={today} />
+      <DunningInterestRates />
       <h2 className={ui.h2}>{t("runs")}</h2>
       {!data ? (
         <p role="alert" className={ui.alert}>

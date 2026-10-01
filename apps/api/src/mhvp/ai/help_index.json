@@ -858,6 +858,25 @@
  },
  {
   "kind": "page",
+  "title": "Datenschutz",
+  "source": "Einstellungen",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [
+   "dsgvo",
+   "löschprofil",
+   "löschantrag",
+   "verarbeitungsverzeichnis",
+   "auftragsverarbeiter",
+   "avv",
+   "anonymisierung"
+  ],
+  "permission": [
+   "privacy:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Bank (finAPI)",
   "source": "Einstellungen",
   "href": "/einstellungen/bank",
@@ -1280,6 +1299,62 @@
  },
  {
   "kind": "page",
+  "title": "Teams",
+  "source": "Einstellungen",
+  "href": "/einstellungen/teams",
+  "keywords": [
+   "team",
+   "teams",
+   "ticketteam",
+   "gruppe",
+   "zuständigkeit",
+   "mitglieder"
+  ],
+  "permission": [
+   "tickets:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Dokumentkategorien",
+  "source": "Einstellungen",
+  "href": "/einstellungen/dokumentkategorien",
+  "keywords": [
+   "dokument",
+   "kategorie",
+   "kategorien",
+   "kategoriebaum",
+   "paperless",
+   "drive",
+   "ordner"
+  ],
+  "permission": [
+   "documents:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Kontakt-Tags",
+  "source": "Einstellungen",
+  "href": "/einstellungen/kontakt-tags",
+  "keywords": [
+   "tag",
+   "tags",
+   "schlagwort",
+   "schlagwörter",
+   "kontakte",
+   "umbenennen",
+   "zusammenführen"
+  ],
+  "permission": [
+   "contacts:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Ticketvorlagen",
   "source": "Einstellungen",
   "href": "/einstellungen/ticketvorlagen",
@@ -1598,6 +1673,21 @@
    "meine daten",
    "passwort",
    "sitzung"
+  ],
+  "permission": null,
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Benachrichtigungen",
+  "source": "Einstellungen",
+  "href": "/einstellungen/benachrichtigungen",
+  "keywords": [
+   "benachrichtigung",
+   "glocke",
+   "e-mail",
+   "stummschalten",
+   "kanal"
   ],
   "permission": null,
   "excerpt": ""
@@ -2079,6 +2169,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Versand erfassen bis G3 gesperrt; die Schritte Zustimmung und Übernahme des Falls sind damit im CRM nicht erreichbar. Die neue Miete lässt sich nach Zustimmung des Mieters von Hand auf der Vertragsseite im Abschnitt Sollbeträge als neuer Stand ab Wirksam ab mit Grund Erhöhung e",
+  "file": "docs/handbuch/anleitung-mieterhoehung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "KI-Plausibilität (Nachtrag 30.09.2026)",
+  "source": "Handbuch: Handlungsanweisung: Mieterhöhung",
+  "href": "/vermietung/mieterhoehung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Mieterhöhungsfall startet die Schaltfläche KI-Prüfung starten eine Prüfung der erfassten Angaben auf Stimmigkeit, zum Beispiel fehlende Quellen oder Widersprüche zur Regelprüfung. Voraussetzung ist ein freigegebener KI-Anbieter. Das Ergebnis sind Hinweise mit Schweregrad. Sie ",
   "file": "docs/handbuch/anleitung-mieterhoehung.md"
  },
  {
@@ -2633,6 +2733,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Weitere Aktionen und Folgeschritte (Nachtrag 30.09.2026)",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Assistent bereitet zusätzlich vor, jeweils als Vorschlag mit Bestätigung im Chat: Objekt anlegen: Nennen Sie Objektnummer, Namen, Verwaltungsart (Miete, WEG oder WEG mit SEV) und gegebenenfalls die Anschrift in Ihrer Nachricht. Das Objekt entsteht im Status Übernahme. Dokumen",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Ziel",
   "source": "Handbuch: Aufgabenverteilung Mail und Tickets: Vorschlag",
   "href": null,
@@ -2859,6 +2969,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Dauerhafter Testmodus: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt. - Standardjobs je Mandant: Über die Schnittstelle /automation",
+  "file": "docs/handbuch/automatisierung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Aktionen Feld setzen und Entwurf an Dienstleister",
+  "source": "Handbuch: Automatisierung (Regel-Engine)",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Feld setzen: trägt einen Text in das Notizfeld von Objekt, Kontakt oder Vertrag ein. Bei Ticket Ereignissen sind Ziel das Objekt oder der Kontakt des Tickets. \"Anhängen\" ergänzt eine Zeile mit Datum und Regelname und erhält den bisherigen Text, \"Ersetzen\" überschreibt. Andere F",
   "file": "docs/handbuch/automatisierung.md"
  },
  {
@@ -3129,6 +3249,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Der Zahllauf zeigt die zahlbaren, freigegebenen und gebuchten Rechnungen je Rechtsträger als Vorschau. Je Rechtsträger werden das Auftraggeberkonto und das Tageslimit angezeigt; fehlt ein Auftraggeberkonto, weist die Seite darauf hin. - Jede Rechnung zeigt Empfänger, Fälligkeit, ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Gespeicherte Filter in der Bankliste",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Über der Filterzeile der Bankbewegungen können Konto, Status, Richtung und Zeitraum unter einem Namen gespeichert werden. Ein Klick auf den Namen setzt die Filter wieder. Die Filter gehören der angemeldeten Person. Dasselbe gilt für die Rechnungsliste (Filter nach Nummer, Prüfsta",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Lastschriften: Bankrückmeldung und Abstimmung, Banklimits",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Lastschriftliste zeigt \"Bankrückmeldung und Abstimmung\" je Lastschrift Bankstatus, eingezogenen Betrag, Rest des offenen Postens und Befunde. Mit \"Rückmeldung erfassen\" wird die Antwort der Bank festgehalten (angenommen, abgelehnt, eingezogen mit Betrag, zurückgegeben mit ",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -3443,6 +3583,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Rechnungseinreichung aus dem Dienstleisterportal",
+  "source": "Handbuch: Belegeingang",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Reicht ein Dienstleister im Portal eine Rechnung zu einem erledigten Auftrag ein, erscheint sie als Vorschlag am Kontakt. Mit \"Annehmen\" entsteht ein Belegentwurf im Belegeingang (Quelle Portal) mit Rechnungsnummer, Datum und Brutto des Dienstleisters, und der Auftrag steht auf \"",
+  "file": "docs/handbuch/belegeingang.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck und Freigabestufen",
   "source": "Handbuch: Buchhaltung",
   "href": "/buchhaltung",
@@ -3580,6 +3730,66 @@
   "permission": null,
   "excerpt": "Der Kontenplan eines Buchungskreises wird unter Buchhaltung, Buchungskreis, Konten gepflegt. - \"Konto ergänzen\": Kontonummer, Bezeichnung, Kontoart, Kontotyp, Umsatzsteuer (keine, Regelsatz, ermäßigt), Relevanz für den Kassenbericht und bis zu drei Buchungstexte. - Bestehende Kon",
   "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Mahnwesen: Hinweise, Zinsen, Zustellnachweise und Sperren",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Mahnlauf öffnet der Aufklapper \"Prüfhinweise, Zins, Zustellnachweise und Sperren\" je Fall die Prüfhinweise zu Verjährung und Fristen (nur Hinweise, die Plattform berechnet kein Verjährungsdatum), den Vorschlag für den Zinsaufschlag aus dem Verbraucherkennzeichen (die Einstellu",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Honorarlauf, Rechnungsdokument und Jahreswechsel (Q15)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Honorarlauf: \"Fällige Honorare ausstellen\" zeigt zuerst die Vorschau aller fälligen Leistungszeiträume. Erst mit Bestätigung wird je Honorar eine Rechnung mit eigener, lückenloser Nummer ausgestellt; ein Fehler bei einem Honorar stoppt die übrigen nicht und verbraucht keine Num",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Freigabeentscheidungen, Personenhinweis und offene Posten zum Stichtag (Q01)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Jede Freigabe einer Rechnung oder eines Zahlungsauftrags wird mit dem Stand des Vorgangs gespeichert. Wird der Vorgang danach geändert, steht die Freigabe dauerhaft als ungültig im Verlauf (GET /accounting/approval-decisions), eine neue Freigabe ist nötig. - Geben zwei Benutzer",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Löschprofile",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Je Datenart (Kontakte, Portalzugänge, Kommunikation, Tickets, sonstige Daten) werden Frist in Monaten und Fristbeginn gepflegt. Ein Profil gilt erst nach Freigabe durch eine berechtigte Person. Jede Änderung setzt die Freigabe zurück. Ohne freigegebenes Profil bleibt jede Löschun",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Löschanträge",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Antrag mit Kontakt, Eingangsdatum und Anlass erfassen. Die Sperrprüfung nennt jede Sperre im Klartext (Löschprofil, Aufbewahrungsfrist, Verknüpfungen, Dokumentfristen). Freigabe, Ablehnung und Anonymisierung erfolgen durch eine zweite Person. Die Anonymisierung ist nicht umkehrba",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Register und Verzeichnis",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Register führt Auftragsverarbeiter, Unterauftragsverarbeiter, Verarbeitungstätigkeiten und Verantwortlichkeiten mit AVV-Status. Mit Entwurf erzeugen wird das Verzeichnis von Verarbeitungstätigkeiten aus dem Register gebildet und kann als Markdown-Datei heruntergeladen werden.",
+  "file": "docs/handbuch/datenschutz.md"
  },
  {
   "kind": "handbook",
@@ -3803,6 +4013,36 @@
  },
  {
   "kind": "handbook",
+  "title": "Sammelaktion in der Dokumentliste",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Dokumentliste lassen sich mehrere Dokumente ankreuzen. Über der Liste setzt \"Kategorie setzen\" die gewählte Kategorie für alle Markierten (das zugeordnete Aufbewahrungsprofil wird wie bei der Einzeländerung übernommen), \"Mit Objekt verknüpfen\" legt die Verknüpfung zum gewä",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Ablegen per Ziehen, ZIP-Archive, Briefe und Kategorien (Stand 30.09.2026)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Ablegen: Dateien auf ein beliebiges Fenster des CRM ziehen oder in der Kopfleiste auf „Ablegen“ klicken. Im Dialog Objekt und Kategorie wählen. Eine ZIP-Datei wird entpackt, jede Datei einzeln geprüft und abgelegt; nicht zulässige Dateien stehen mit Grund in der Meldung. - Brie",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Briefe und Vorlagen (Version 1.49.0)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seite /dokumente/briefe. Zweck: Brief aus einer Vorlage auf dem Briefbogen des Mandanten erzeugen. Briefe werden abgelegt und verknüpft, nicht versandt. Brief erzeugen: Vorlage wählen, Empfänger über die Suche hinzufügen, Betreff und Text in die Felder eintragen, Vorschau als PDF",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -3839,6 +4079,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, Benutzer legt die Mandantenadministration je Mitglied fest, welche Objekte es sehen darf (Schaltfläche Objekte). Ohne Auswahl sieht das Mitglied alle Objekte. Mit Auswahl ist es auf die gewählten Objekte beschränkt; Administratorrollen sind nie eingeschränkt.",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Gleichzeitiges Bearbeiten über die Schnittstelle",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Verträge (Bemerkungen und Mahnsperre), Tickets, Dokumente und Eingangsrechnungen liefern beim Lesen einen Änderungsstand (ETag). Sendet ein Programm diesen Stand beim Speichern mit (If-Match) und hat inzwischen jemand anderes gespeichert, wird die Änderung abgelehnt und muss nach",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -4083,6 +4333,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Benachrichtigungen (eigene Einstellungen)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Benachrichtigungen legt jeder Benutzer für sich fest, welche Meldungen in der App und zusätzlich per E-Mail ankommen. Die Zeile \"Alle anderen Arten\" gilt für Arten ohne eigene Zeile. Mit \"Stummschalten für\" (1 Stunde bis 7 Tage) pausieren App und E-Mail für a",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Neue Einstellungsseiten der Version 1.49.0",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Datenschutz (/einstellungen/datenschutz) Voraussetzung: Recht Datenschutz verwalten, für Freigaben das Recht Datenschutz freigeben. Die Seite enthält vier Bereiche. Fristen und Profile sind Entwürfe des Betreibers und vor dem produktiven Einsatz rechtlich zu prüfen. Löschprofile:",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -4189,6 +4459,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Die berechneten Termine sind Orientierung; für Notfristen und rechtlich maßgebliche Fristen ist eine manuelle Prüfung erforderlich. Berechnete Vorfristenanlässe folgen der Konfiguration, nicht einer Gesetzesregel. Im Parallelbetrieb mit Immoware24 werden Fristen nur in der Plattf",
+  "file": "docs/handbuch/fristen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Mehrere Fristaufgaben erledigen",
+  "source": "Handbuch: Fristen (Deadlines)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Liste \"Eigene Fristen\" lassen sich offene Fristen ankreuzen und mit \"Markierte erledigen\" in einem Schritt abschließen (Recht Tickets bearbeiten). Die Aktion gilt ganz oder gar nicht: ist eine Frist unbekannt, wird keine geändert. Die Rückmeldung nennt die Zahl der tatsäch",
   "file": "docs/handbuch/fristen.md"
  },
  {
@@ -4493,6 +4773,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Weitere Importberichte der Migration (30.09.2026, M8-02 bis M8-07)",
+  "source": "Handbuch: Importe (Imports)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter /importe/immoware24 stehen sechs weitere Berichtsarten zur Wahl: Kontenplan je Objekt, SEPA-Übersicht, Bankumsätze (Historie), Offene Posten und Verwandtes, DMS-Dokumente und historische Tickets. Der Ablauf ist wie bei den anderen Berichten: Datei hochladen, Spalten zuordne",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Kalender",
   "href": "/kalender",
@@ -4589,6 +4879,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Kalender kann eine persönliche Abo-Adresse erzeugt werden. Sie wird nur einmal angezeigt und wie ein Passwort behandelt. Eine neue Adresse macht die bisherige ungültig, der Widerruf beendet das Abo. Der Feed enthält eigene und geteilte Termine sowie Fristen, soweit die Pers",
+  "file": "docs/handbuch/kalender.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Auftragstermin im Kalender",
+  "source": "Handbuch: Kalender",
+  "href": "/kalender",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist bei einem Auftrag im Status Terminiert oder In Arbeit ein Termin eingetragen, legt der Tagesjob einen internen Kalendereintrag \"Auftragstermin\" mit Uhrzeit und Ticketnummer an. Der Eintrag ist für alle Mitarbeiter sichtbar, springt auf den Auftrag und erinnert einen Tag vorhe",
   "file": "docs/handbuch/kalender.md"
  },
  {
@@ -4799,6 +5099,46 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Je Empfänger wird aus einer aktiven Dokumentvorlage ein eigenes Dokument erzeugt und abgelegt. Danach wird je Zustellweg eine Zustellung vorbereitet. Versendet wird nichts automatisch.",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Parteien, Portalstatus und Vollmachten (Paket Q05, 30.09.2026)",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Vertragsparteien: Reiter Beziehungen, Abschnitt Vertragsparteien. Eine Partei fasst einen oder mehrere Kontakte zusammen. Mit \"Partei anlegen\" wird der aktuelle Kontakt als erstes Mitglied übernommen, weitere Mitglieder werden über die Suche ergänzt. Je Mitglied gibt es Rolle und",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kontakte zusammenführen",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Kontakte, Schaltfläche Zusammenführen (/kontakte/zusammenfuehrung) werden Dubletten bereinigt. 1. Quelle (wird ausgeblendet) und Ziel (bleibt bestehen) über die Suche wählen, Begründung eintragen, Vorschlag anlegen. 2. Die Prüfung zeigt Sperren (zum Beispiel unterschiedlich",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kontakte zusammenführen (Version 1.49.0)",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seite /kontakte/zusammenfuehrung. Zweck: Dubletten bereinigen. Eine Person schlägt vor, eine zweite Person führt aus. Voraussetzung: Recht zum Ändern von Kontakten für den Vorschlag, Recht zum Freigeben von Kontakten für Ausführen und Ablehnen. Vorschlag anlegen: Quelle (wird aus",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kontakt-Tags (Version 1.49.0)",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seite /einstellungen/kontakt-tags. Tags entstehen als Freitext am Kontakt. Die Seite listet alle Tags des Mandanten mit der Zahl der Kontakte. Je Tag stehen Umbenennen, Zusammenführen und Löschen zur Verfügung. Beim Zusammenführen behalten alle Kontakte den Zieltag, der Quelltag ",
   "file": "docs/handbuch/kontakte.md"
  },
  {
@@ -5423,6 +5763,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Objektübernahme (Checkliste)",
+  "source": "Handbuch: Objekte und Einheiten",
+  "href": "/objekte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Am Objekt erscheint der Abschnitt \"Objektübernahme\". Mit \"Checkliste anlegen\" entstehen sieben Punkte, deren Status je Punkt auf offen, angefordert, erhalten oder nicht zutreffend gesetzt wird.",
+  "file": "docs/handbuch/objekte-einheiten.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bildgalerie, Belegungsliste und USt-Historie (Paket Q05, 30.09.2026)",
+  "source": "Handbuch: Objekte und Einheiten",
+  "href": "/objekte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bildgalerie (Objektseite): Bilder werden als Dokument am Objekt abgelegt (Metadaten werden entfernt) und in der Anzeigereihenfolge geführt. Mit \"Nach vorn\" und \"Nach hinten\" wird die Reihenfolge geändert, \"Entfernen\" nimmt das Bild nur aus der Galerie, das Dokument bleibt erhalte",
+  "file": "docs/handbuch/objekte-einheiten.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck und Voraussetzungen",
   "source": "Handbuch: Plattform",
   "href": null,
@@ -5693,6 +6053,56 @@
  },
  {
   "kind": "handbook",
+  "title": "Belege suchen, sortieren und gesammelt laden (Portal)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Dokumente suchen Sie nach Titel oder Dateiname und sortieren nach Datum oder Titel. Mit der Auswahl und dem Knopf Sammel-Download erhalten Sie die gewählten Belege als ZIP-Datei mit einer Indexdatei (INDEX.csv). Es sind höchstens 100 Belege je Abruf möglich, es gelten diese",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rollenwechsel im Portal",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Konten mit mehreren Rollen (zum Beispiel Mieter und Eigentümer) wählen oben die Ansicht. Die Auswahl begrenzt nur die Navigation und vergibt keine Rechte.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Eigentümer: Einzelabrechnung, Umlageeigenschaften, Mieterträge",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Hausgeldabrechnung steht die Einzelabrechnung Ihrer Einheit als PDF, sobald die Verwaltung sie freigegeben hat (Abgabe an Eigentümer) und die Freigabestufe G4 für Ihre Gemeinschaft offen ist. Unter Eigentum sehen Sie Ihren Anteil an Wirtschaftsplan und Sonderumlage, die Uml",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Dienstleister: E-Rechnung als XML",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei einem ausgeführten Auftrag kann eine XRechnung (XML) eingelesen werden. Rechnungsnummer, Datum und Bruttobetrag werden vorgeschlagen und vor dem Einreichen geprüft. Die Verwaltung prüft die Rechnung wie jede andere.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Beirat: Kontext einer Prüfposition",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei jeder Position zeigt Kontext anzeigen Buchung, Rechnung, Auftrag, Zahlung, Umlageschlüssel und Vorjahr sowie Hinweise auf fehlende Unterlagen. Nur lesend.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Rechnungen (Invoices)",
   "href": null,
@@ -5779,6 +6189,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Rechnungspläne erzeugen wiederkehrende Rechnungsentwürfe. Die Liste je Buchungskreis zeigt Leistung, Bruttobetrag, Rhythmus (alle n Monate), nächste Fälligkeit und Status. - \"Entwurf erzeugen\" legt einen ungeprüften Rechnungsentwurf an. Prüfung, Freigabe und Buchung bleiben getre",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechnungspläne bearbeiten, Kreditorenkonten, Prüfangaben am Beleg",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Rechnungspläne lassen sich unter \"Bearbeiten\" ändern (Leistung, Betrag, Rhythmus, Enddatum, Auftragsbezug, Dienstleistervertrag); geändert werden nur künftige Entwürfe. Bei Plänen mit Stichtag am 29. bis 31. zeigt die Liste den Hinweis auf den letzten Tag kürzerer Monate. Auf der",
   "file": "docs/handbuch/rechnungen.md"
  },
  {
@@ -6093,6 +6513,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Gebäude, Beginn, Wiedervorlage und Sammelzuweisung (Paket Q05, 30.09.2026)",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Neues Ticket: Optional Objekt (Suche), Gebäude des Objekts, Beginn und Wiedervorlage. Leere Felder werden nicht gesendet. Ticket bearbeiten: Beginn, Wiedervorlage und Gebäude werden direkt geändert, \"Entfernen\" löscht ein Datum. Das Gebäude kann erst gewählt werden, wenn dem Tick",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Mängel als Tickets, Ein- und Auszugsdatum",
   "source": "Handbuch: uebergabeprotokoll",
   "href": null,
@@ -6239,6 +6669,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Leerstandsliste: Je Einheit lassen sich Status, Sollmiete, Kosten je Monat, Wiedervorlage und Notiz erfassen (Schaltfläche Maßnahme). Die entgangene Miete und die Leerstandskosten werden anteilig aus den Monatswerten berechnet (Monatswert x 12 / 365 x Leerstandstage). Fehlt die",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Mietspiegel (Version 1.49.0)",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seite /vermietung/mietspiegel. Zweck: Mietspiegelwerte je Gemeinde mit Quellenangabe pflegen. Voraussetzung zum Ändern: Recht zum Ändern von Verträgen. Die Liste zeigt Gemeinde, Mietspiegel, Stand, Kriterien (Baujahr von, bis) und die Spanne je m² und Monat (Untergrenze, Mittelwe",
   "file": "docs/handbuch/vermietung.md"
  },
  {
@@ -6499,6 +6939,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Zweckrücklagen legen Sie je Gemeinschaft an (Name, Zweck, Konto). Rücklagenpositionen im Wirtschaftsplan ordnen Sie einer Rücklage zu; Entnahmen, Steuern, Gebühren und Zinsen erfassen Sie je Abrechnung mit Beleg. Die Abrechnung zeigt die Entwicklung je Rücklage. Kostenpositionen ",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagen, Zahlungsrhythmus, Gesamtabrechnung, Einsicht und Prüfung: Bedienung (Stand 30.09.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Rücklagen: Unter Rücklagen der Gemeinschaft legen Sie zweckgebundene Rücklagen an und erfassen Entnahmen, Steuern, Gebühren und Zinsen je Abrechnung. Die Entwicklung je Rücklage steht als eigener Block unter dem Gesamtblock. Gezahlte Beträge erscheinen je Rücklage nur, wenn der V",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagen (Version 1.49.0)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seite /weg/[id]/ruecklagen je Objekt. Zweck: zweckgebundene Rücklagen der Gemeinschaft führen und ihre Entwicklung ansehen. Voraussetzung ist ein Buchungskreis der Gemeinschaft für das Objekt, sonst zeigt die Seite einen Hinweis. Rücklage anlegen mit Bezeichnung und Zweck. Zahlun",
   "file": "docs/handbuch/weg.md"
  }
 ]

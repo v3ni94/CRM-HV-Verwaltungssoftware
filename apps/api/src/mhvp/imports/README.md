@@ -154,3 +154,19 @@ behind G1 with a second person decision. `migration_routers.py` serves
 * `migration_acceptance` (Migration 0268, RLS): Abnahmeprotokoll je Objekt mit Vier-Augen-Unterzeichnung;
   Endpunkte unter `/imports/migration/properties/{id}/acceptance` und `/imports/migration/acceptance/{id}`.
 * Tests: `tests/integration/test_m8_year_acceptance.py`. Regel `docs/rules/M8-08-uebernahmejahr-abnahme.md`.
+
+## Weitere Berichtsarten (30.09.2026, Q08, M8-02 bis M8-07)
+
+`w3_reports.py` ergänzt die Berichtsarten `sepa_overview`, `chart_of_accounts`, `bank_history`,
+`document_index`, `ticket_history` und `open_items` (Zielfelder in `W3_FIELDS`, Anmeldung bei
+`fields.FIELDS`, Dispatch in `services.apply_row`). Gleiche Pipeline wie die übrigen Berichte:
+Spaltenzuordnung als Vorlage, Pflichtfelder, Testlauf im Savepoint, Übernahme als `import_run`,
+idempotent, nie überschreibend. Schreibziele: `payment_schedule` und bei vollständigem Nachweis
+`sepa_mandate` (Einzug gesperrt bis G2), `ledger_account` (Prüfstatus `entwurf`),
+`bank_transaction` mit Status `ignored` plus `migrated_bank_link` zum `migrated_journal_entry`,
+`document_link` auf vorhandene Dokumente, `migrated_ticket` und `migrated_open_item` (nur lesend,
+Migration 0277). `history_models.py` hält die drei neuen Tabellen, `w3_routers.py` die Leseendpunkte
+unter `/imports/immoware24/history` (tickets, open-items, open-items/summary, bank-links). Die
+Handler registrieren nichts im `Recorder`: die Rücknahme `/imports/{id}/undo` kennt diese
+Entitätsarten nicht. Regel `docs/rules/M8-06-historische-importberichte.md`, Test
+`tests/integration/test_q08_import_history.py`.

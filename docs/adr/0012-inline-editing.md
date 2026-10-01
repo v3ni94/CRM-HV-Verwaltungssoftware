@@ -42,3 +42,18 @@ overwrite concurrent changes of other fields.
   roles, tags) are not patchable; the four eyes rule for IBANs stays untouched.
 - No migration: `version` exists on property, building, unit and contact (AP2 added it to
   building and unit).
+
+## Addendum 30.09.2026 (package Q13, S12-04): optional If-Match on more resources
+
+- Rule: `If-Match` stays optional everywhere. Without the header a write runs unchecked
+  (backwards compatible, existing clients unchanged); with the header a stale token answers
+  412 `MHVP-PLAT-0003`. `*` matches any existing resource, `W/` prefixes are ignored, a comma
+  separated list matches if one token matches (`mhvp.core.etag.check_if_match`).
+- Tokens: resources with an optimistic `version` column use it (`"<version>"`, invoices:
+  `PUT /accounting/invoices/{id}`). Resources whose `version` is a business version or that
+  have none derive the token from `updated_at` in microseconds (`"t<micros>"`): contracts
+  (`GET /contracts/{id}`, `PATCH /contracts/{id}/notes`), tickets (`GET`/`PATCH /tickets/{id}`),
+  documents (`GET`/`PATCH /documents/{id}`). No migration.
+- Reads send `ETag`, writes return the new `ETag`. Authorization (403), property assignment
+  (404) and validation (422) are checked before the lock.
+- Making `If-Match` mandatory is a product decision and stays open.

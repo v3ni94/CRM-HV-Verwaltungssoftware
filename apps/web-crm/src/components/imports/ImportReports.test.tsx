@@ -50,6 +50,20 @@ describe("RunReportView", () => {
     expect(screen.getByTestId("payment-sums")).toHaveTextContent("1.234,50 EUR");
     expect(screen.getByTestId("payment-sums")).toHaveTextContent("1.000,00 EUR");
   });
+
+  it("shows the generic amount sums of the Welle 3 reports (open items, bank history)", () => {
+    renderIntl(
+      <RunReportView
+        report={{
+          counts: { created: 7, invalid: 3 },
+          problems: [],
+          sums: { source_amount: "18180.5", created_amount: "18150.5", field: "original_amount" },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("payment-sums")).toHaveTextContent("18.180,50 EUR");
+    expect(screen.getByTestId("payment-sums")).toHaveTextContent("18.150,50 EUR");
+  });
 });
 
 describe("ReconciliationView", () => {

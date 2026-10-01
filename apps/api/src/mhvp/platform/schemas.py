@@ -87,6 +87,9 @@ class ReceivableRulesConfig(BaseModel):
     # Zahlungsplan keine eigene Angabe erhält (``ScheduleIn.interval is None``). ``None`` heißt
     # weiterhin monatlich (bisheriges Verhalten ohne Mandantenvorgabe).
     payment_interval: Literal["monthly", "quarterly", "semiannual", "annual"] | None = None
+    # P02-03 / S15-01: monthly receivable preview job (``mhvp.accounting.tasks``), drafts
+    # only, default off.
+    monthly_preview_enabled: bool = False
 
 
 class SignatureTemplate(BaseModel):

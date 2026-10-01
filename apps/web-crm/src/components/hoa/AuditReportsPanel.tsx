@@ -27,6 +27,9 @@ export type AuditReport = {
   content: AuditReportContent;
   board_statement: { text: string; recorded_at: string } | null;
   created_at: string;
+  confirmed_by_name?: string | null;
+  confirmed_at?: string | null;
+  confirmation_note?: string | null;
 };
 
 /** Prüfberichte (PÜ09, A72): create a report version from the current positions and record
@@ -37,6 +40,8 @@ export function AuditReportsPanel({ auditId, reports }: { auditId: string; repor
   const router = useRouter();
   const [findings, setFindings] = useState("");
   const [recommendation, setRecommendation] = useState("");
+  const [confirmName, setConfirmName] = useState<Record<string, string>>({});
+  const [confirmNote, setConfirmNote] = useState<Record<string, string>>({});
   const [statements, setStatements] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +70,15 @@ export function AuditReportsPanel({ auditId, reports }: { auditId: string; repor
       setFindings("");
       setRecommendation("");
     }
+  }
+
+  async function confirmReport(report: AuditReport) {
+    const name = (confirmName[report.id] ?? "").trim();
+    if (!name || !window.confirm(t("audit.reports.confirmAsk", { n: report.version }))) return;
+    await post(`audits/${auditId}/reports/${report.version}/confirm`, {
+      confirmed_by_name: name,
+      note: (confirmNote[report.id] ?? "").trim() || null,
+    });
   }
 
   async function saveStatement(reportId: string) {
@@ -131,6 +145,27 @@ export function AuditReportsPanel({ auditId, reports }: { auditId: string; repor
               </button>
             </div>
             <p className={ui.help}>{t("audit.reports.statementHint")}</p>
+            {r.confirmed_at ? (
+              <p className={ui.notice} data-testid="report-confirmed">
+                {t("audit.reports.confirmedBy", { name: r.confirmed_by_name ?? "", date: formatDate(r.confirmed_at) })}
+                {r.confirmation_note ? ` · ${r.confirmation_note}` : ""}
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-end gap-2" data-testid="report-confirm">
+                <label className="flex flex-col gap-1">
+                  <span className={ui.label}>{t("audit.reports.confirmName")}</span>
+                  <input className={ui.input} value={confirmName[r.id] ?? ""} onChange={(e) => setConfirmName((prev) => ({ ...prev, [r.id]: e.target.value }))} />
+                </label>
+                <label className="flex flex-1 flex-col gap-1">
+                  <span className={ui.label}>{t("audit.reports.confirmNote")}</span>
+                  <input className={ui.input} value={confirmNote[r.id] ?? ""} onChange={(e) => setConfirmNote((prev) => ({ ...prev, [r.id]: e.target.value }))} />
+                </label>
+                <button type="button" className={ui.buttonSm} disabled={busy || !(confirmName[r.id] ?? "").trim()} onClick={() => void confirmReport(r)}>
+                  {t("audit.reports.confirmSubmit")}
+                </button>
+              </div>
+            )}
+            <p className={ui.help}>{t("audit.reports.confirmHint")}</p>
           </li>
         ))}
       </ul>

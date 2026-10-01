@@ -45,8 +45,19 @@ Freigabe einer zweiten Person, unabhängig vom Kennzeichen.
 Unter Einstellungen, Benutzer legt die Mandantenadministration je Mitglied fest, welche
 Objekte es sehen darf (Schaltfläche Objekte). Ohne Auswahl sieht das Mitglied alle Objekte.
 Mit Auswahl ist es auf die gewählten Objekte beschränkt; Administratorrollen sind nie
-eingeschränkt. Stand 30.09.2026 wird die Zuordnung gespeichert und protokolliert, die
-Filterung der Objekt-, Vertrags- und Ticketlisten folgt (Regel M2-02).
+eingeschränkt. Die Zuordnung wird protokolliert und wirkt auf Objekte, Einheiten, Verträge,
+Tickets, Dokumente und Eingangsrechnungen: Listen zeigen nur Einträge der zugeordneten
+Objekte, fremde Datensätze erscheinen als nicht gefunden. Tickets und Rechnungen ohne
+Objektbezug sieht ein eingeschränktes Mitglied nicht. Weitere Bereiche wie Banking und
+Berichte folgen (Regel M2-02). Eine Änderung wirkt ab der nächsten Anfrage.
+
+## Gleichzeitiges Bearbeiten über die Schnittstelle
+
+Verträge (Bemerkungen und Mahnsperre), Tickets, Dokumente und Eingangsrechnungen liefern
+beim Lesen einen Änderungsstand (ETag). Sendet ein Programm diesen Stand beim Speichern mit
+(If-Match) und hat inzwischen jemand anderes gespeichert, wird die Änderung abgelehnt und
+muss nach dem Neuladen wiederholt werden. Ohne diesen Stand wird wie bisher gespeichert. Die
+Oberfläche nutzt den Abgleich bei diesen Datensätzen noch nicht.
 
 ## Passkeys
 
@@ -318,3 +329,50 @@ Unter Buchhaltung, DATEV steht zusätzlich die formale Prüfung des Buchungsstap
 Organisationen je Gesellschaft mit API Schlüssel, AVV, Postfach und Schaltern, Zuordnung der
 Rechnungsarten, Kontaktabgleich, Warteschlange und vorbereitete Dauerrechnungen unter
 Schnittstellen, Lexware Office; siehe [Lexware Office](lexware-office.md).
+
+## Benachrichtigungen (eigene Einstellungen)
+
+Unter Einstellungen, Benachrichtigungen legt jeder Benutzer für sich fest, welche Meldungen in der App
+und zusätzlich per E-Mail ankommen. Die Zeile "Alle anderen Arten" gilt für Arten ohne eigene Zeile.
+Mit "Stummschalten für" (1 Stunde bis 7 Tage) pausieren App und E-Mail für alle Arten. Verpflichtende
+Meldungen (SLA-Eskalation, Fristen zur Vorfrist, ablaufende Bankzustimmung) bleiben immer aktiv und sind
+in der Liste gesperrt. Mails zu Benachrichtigungen werden alle paar Minuten gesammelt versendet und
+setzen ein eingerichtetes Standardpostfach voraus. Ohne Einstellung gilt: App an, E-Mail aus.
+
+## Neue Einstellungsseiten der Version 1.49.0
+
+### Datenschutz (`/einstellungen/datenschutz`)
+
+Voraussetzung: Recht Datenschutz verwalten, für Freigaben das Recht Datenschutz freigeben. Die Seite
+enthält vier Bereiche. Fristen und Profile sind Entwürfe des Betreibers und vor dem produktiven
+Einsatz rechtlich zu prüfen.
+
+* Löschprofile: Frist in Monaten und Fristbeginn je Datenart (Kontakte, Portalzugänge, Kommunikation,
+  Tickets, Sonstige). Ein Profil gilt erst nach Freigabe; jede Änderung setzt die Freigabe zurück.
+  Ohne freigegebenes Profil bleibt jede Löschung gesperrt.
+* Löschanträge: Antrag mit Kontakt und Eingangsdatum. Die Sperrprüfung berücksichtigt Löschprofil,
+  Aufbewahrungsfrist, Verknüpfungen und Dokumentfristen. Freigabe und Ausführung erfolgen durch eine
+  zweite Person. Die Anonymisierung ist nicht umkehrbar, gebuchte Inhalte bleiben unberührt.
+* Register: Auftragsverarbeiter, Unterauftragsverarbeiter, Verarbeitungstätigkeiten und
+  Verantwortlichkeiten, bei Auftragsverarbeitern mit AVV Status (kein AVV, angefragt, bestätigt,
+  nicht erforderlich).
+
+### Dokumentkategorien (`/einstellungen/dokumentkategorien`)
+
+Kategoriebaum mit Zuordnung zu Paperless Dokumenttyp, Paperless Tag und Drive Ordner. Neue Kategorie
+mit Kürzel, Bezeichnung und übergeordneter Kategorie anlegen, Zuordnung je Kategorie bearbeiten.
+Geänderte Zuordnungen werden an bestehende Spiegel übertragen.
+
+### Teams (`/einstellungen/teams`)
+
+Teams bündeln Mitarbeiter für die Zuweisung von Tickets und Aufträgen. Anlegen, Bearbeiten (Name,
+Mitglieder) und Löschen. Ein Team, das Tickets oder Vorlagen zugeordnet ist, kann nicht gelöscht
+werden. Ohne das Recht zum Lesen der Benutzer ist die Mitgliederliste nicht verfügbar.
+
+### Benachrichtigungen (`/einstellungen/benachrichtigungen`)
+
+Persönliche Einstellung, gilt nur für das eigene Konto. Je Art der Meldung (zum Beispiel Ticket
+zugewiesen, Wartung fällig, Terminerinnerung, Tagesübersicht) wählen Sie, ob sie in der App und per
+E-Mail eintrifft. Die Zeile Alle anderen Arten gilt für nicht einzeln aufgeführte Arten. Stummschalten
+ist für 1, 8, 24 Stunden oder 7 Tage möglich. Verpflichtende Meldungen zu Fristen, SLA und
+Bankzustimmungen bleiben davon unberührt.

@@ -111,11 +111,11 @@ export function RunReportView({ report, testId }: { report: RunReport; testId?: 
         <dl className="flex flex-wrap gap-4 text-sm" data-testid="payment-sums">
           <div className="flex flex-col">
             <dt className="text-xs text-muted">{t("sumSource")}</dt>
-            <dd className="font-semibold">{formatEur(report.sums.source_gross)}</dd>
+            <dd className="font-semibold">{formatEur(report.sums.source_gross ?? report.sums.source_amount ?? "0")}</dd>
           </div>
           <div className="flex flex-col">
             <dt className="text-xs text-muted">{t("sumCreated")}</dt>
-            <dd className="font-semibold">{formatEur(report.sums.created_gross)}</dd>
+            <dd className="font-semibold">{formatEur(report.sums.created_gross ?? report.sums.created_amount ?? "0")}</dd>
           </div>
         </dl>
       ) : null}

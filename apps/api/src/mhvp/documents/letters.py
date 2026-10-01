@@ -113,6 +113,9 @@ class Letter:
     draft_notice: str | None = None
     # Optional QR code with its payload as text, printed after the body (A86).
     qr: LetterQr | None = None
+    # Optional images (raw bytes of PNG or JPEG) printed after the body, for example the
+    # photos of an advertisement (M26-05). Unreadable images are skipped.
+    images: list[bytes] = field(default_factory=list)
 
 
 def render_text(source: str, context: dict[str, Any]) -> str:
@@ -302,6 +305,24 @@ def _paragraphs(
     return out
 
 
+def _image_blocks(images: list[bytes], width: float) -> list[Any]:
+    out: list[Any] = []
+    max_h = 80 * mm
+    for data in images:
+        try:
+            reader = ImageReader(io.BytesIO(data))
+            w, h = reader.getSize()
+        except Exception:  # noqa: S112 - an unreadable image is skipped, the letter stays valid
+            continue
+        if w <= 0 or h <= 0:
+            continue
+        scale = min(width / w, max_h / h)
+        flow = Image(io.BytesIO(data), width=w * scale, height=h * scale)
+        flow.hAlign = "LEFT"
+        out += [flow, Spacer(1, 3 * mm)]
+    return out
+
+
 def _qr_block(qr: LetterQr, width: float, style: ParagraphStyle) -> Table:
     size = 32 * mm
     image = Image(io.BytesIO(qr_png(qr.payload)), width=size, height=size)
@@ -361,6 +382,8 @@ def render_pdf(head: Letterhead, letter: Letter) -> bytes:
         story += [Paragraph(html.escape(letter.notice), notice), Spacer(1, 3 * mm)]
     story += [Paragraph(letter.subject, subject), Spacer(1, 8 * mm)]
     story += _paragraphs(letter.body, body, letter.tables, width)
+    if letter.images:
+        story += _image_blocks(letter.images, width)
     if letter.qr is not None:
         story += [Spacer(1, 2 * mm), _qr_block(letter.qr, width, body), Spacer(1, 4 * mm)]
     story += [Spacer(1, 4 * mm), Paragraph(html.escape(letter.closing), body), Spacer(1, 14 * mm)]

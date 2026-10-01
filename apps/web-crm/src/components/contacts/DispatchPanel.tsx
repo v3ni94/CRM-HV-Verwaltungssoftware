@@ -41,7 +41,7 @@ export function DispatchPanel({
   const t = useTranslations("Dispatch");
   const [documentId, setDocumentId] = useState(documents[0]?.id ?? "");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]>("post");
-  const [postal, setPostal] = useState(false);
+  const [postal, setPostal] = useState(true);
   const [rows, setRows] = useState<DispatchRow[]>([]);
   const [evidence, setEvidence] = useState<Record<string, { kind: string; ref: string }>>({});
   const [busy, setBusy] = useState(false);
@@ -58,7 +58,7 @@ export function DispatchPanel({
           document_id: documentId,
           contact_id: contactId,
           channel,
-          ...(channel === "post" && postal ? { submit_postal: true } : {}),
+          ...(channel === "post" && !postal ? { submit_postal: false } : {}),
         }),
       },
     );

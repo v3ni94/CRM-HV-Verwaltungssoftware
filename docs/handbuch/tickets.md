@@ -407,3 +407,10 @@ die Statusänderung mehrerer Tickets steht in der Liste bereits zur Verfügung.
 ## Kompaktansicht im Ticket
 
 Im Ticket erscheint zur letzten eingegangenen Mail dieselbe Kompaktansicht wie im Postfach (Zusammenfassung, offene Punkte, CRM Hinweis, Antwortvorschlag, Kurz senden mit Freigabe). Details siehe Kapitel Mail.
+
+## Gebäude, Beginn, Wiedervorlage und Sammelzuweisung (Paket Q05, 30.09.2026)
+
+* **Neues Ticket**: Optional Objekt (Suche), Gebäude des Objekts, Beginn und Wiedervorlage. Leere Felder werden nicht gesendet.
+* **Ticket bearbeiten**: Beginn, Wiedervorlage und Gebäude werden direkt geändert, "Entfernen" löscht ein Datum. Das Gebäude kann erst gewählt werden, wenn dem Ticket ein Objekt zugeordnet ist, ein Gebäude eines anderen Objekts lehnt die Schnittstelle ab.
+* **Sammelzuweisung** (Ticketliste): Tickets markieren, in der unteren Leiste "Bearbeiter zuweisen" öffnen, Bearbeiter wählen und zuweisen. Die Aktion gilt ganz oder gar nicht, Verlauf und Benachrichtigung entstehen wie bei einer Einzelzuweisung. Recht Tickets ändern nötig.
+* **Teams**: Einstellungen, Teams. Anlegen, Umbenennen, Mitglieder ändern und Löschen (Recht Tickets freigeben). Ein Team mit zugeordneten Tickets oder Vorlagen lässt sich nicht löschen.

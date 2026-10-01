@@ -175,3 +175,42 @@ Telefonanlage.
 ## Serienversand (Seite Kontakte, Serienversand)
 
 Je Empfänger wird aus einer aktiven Dokumentvorlage ein eigenes Dokument erzeugt und abgelegt. Danach wird je Zustellweg eine Zustellung vorbereitet. Versendet wird nichts automatisch.
+
+## Parteien, Portalstatus und Vollmachten (Paket Q05, 30.09.2026)
+
+* **Vertragsparteien**: Reiter Beziehungen, Abschnitt Vertragsparteien. Eine Partei fasst einen oder mehrere Kontakte zusammen. Mit "Partei anlegen" wird der aktuelle Kontakt als erstes Mitglied übernommen, weitere Mitglieder werden über die Suche ergänzt. Je Mitglied gibt es Rolle und optional einen Anteil in Prozent, die Summe darf 100 Prozent nicht übersteigen. Bearbeiten ersetzt die Mitgliederliste vollständig. Löschen ist nur möglich, wenn die Partei nirgends verwendet wird (Verträge, Eigentümer, Forderungen), sonst erscheint die Meldung der Schnittstelle.
+* **Portalstatus**: Neben dem Namen zeigt ein Hinweis, ob der Kontakt keinen Portalzugang hat, eingeladen, aktiv oder gesperrt ist. Ein Klick öffnet den Reiter Freigaben mit Einladung.
+* **Vollmachten im Portal**: Reiter Freigaben, Abschnitt Vollmachten im Portal. Die Liste zeigt, wen dieser Kontakt vertritt und von wem er vertreten wird, mit Zeitraum und Status. Anlegen (Recht Mandanteneinstellungen ändern) braucht den vertretenen Kontakt, das unterschriebene Vollmachtsdokument (wird am vertretenen Kontakt abgelegt) und den Beginn. Die Vertretung gilt nur lesend und nur im Zeitraum, ein Widerruf wirkt sofort.
+* **Tags verwalten**: Einstellungen, Kontakt-Tags. Umbenennen, Zusammenführen (alle Kontakte behalten den Zieltag) und Löschen gelten für den ganzen Mandanten.
+
+## Kontakte zusammenführen
+
+Unter Kontakte, Schaltfläche Zusammenführen (`/kontakte/zusammenfuehrung`) werden Dubletten bereinigt.
+
+1. Quelle (wird ausgeblendet) und Ziel (bleibt bestehen) über die Suche wählen, Begründung eintragen, Vorschlag anlegen.
+2. Die Prüfung zeigt Sperren (zum Beispiel unterschiedliche Art, offener Löschantrag, Bankkonto in Freigabe), Hinweise (abweichende Namen oder Geburtsdaten) und die Zahl der Verweise, die umgehängt werden.
+3. Eine zweite Person mit Freigaberecht führt den Vorschlag aus oder lehnt ihn ab. Die Person, die den Vorschlag angelegt hat, kann ihn nicht selbst ausführen.
+4. Verträge, Parteien, Bankkonten, Tickets, Dokumente und weitere Verweise gehen auf das Ziel über. Was beim Ziel schon vorhanden ist (zum Beispiel dasselbe Schlagwort), bleibt an der Quelle und wird im Ergebnis genannt. Die Quelle wird nicht gelöscht. Bankkonten behalten ihren Freigabestatus.
+
+
+## Kontakte zusammenführen (Version 1.49.0)
+
+Seite `/kontakte/zusammenfuehrung`. Zweck: Dubletten bereinigen. Eine Person schlägt vor, eine zweite
+Person führt aus. Voraussetzung: Recht zum Ändern von Kontakten für den Vorschlag, Recht zum Freigeben
+von Kontakten für Ausführen und Ablehnen.
+
+* Vorschlag anlegen: Quelle (wird ausgeblendet) und Ziel (bleibt bestehen) über die Suche wählen, eine
+  Begründung angeben, Vorschlag anlegen. Leere Felder des Ziels werden aus der Quelle ergänzt,
+  vorhandene Werte bleiben.
+* Liste der Vorschläge: Status Vorgeschlagen, Ausgeführt oder Abgelehnt, dazu die Verweise der Quelle
+  und die Einträge, die wegen Doppelung nicht umgehängt wurden. Ausführen fragt vorher nach.
+* Grenzen: Die Quelle bleibt als zusammengeführt erhalten und wird nicht gelöscht. Die Regeln der
+  Zusammenführung sind in OPEN_QUESTIONS P16-01 noch zu bestätigen.
+
+## Kontakt-Tags (Version 1.49.0)
+
+Seite `/einstellungen/kontakt-tags`. Tags entstehen als Freitext am Kontakt. Die Seite listet alle Tags
+des Mandanten mit der Zahl der Kontakte. Je Tag stehen Umbenennen, Zusammenführen und Löschen zur
+Verfügung. Beim Zusammenführen behalten alle Kontakte den Zieltag, der Quelltag entfällt. Löschen
+entfernt den Tag bei allen betroffenen Kontakten und fragt vorher nach. Umbenennen und Zusammenführen
+setzen das Recht zum Ändern von Kontakten voraus, Löschen das Recht zum Löschen von Kontakten.

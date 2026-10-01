@@ -18,6 +18,8 @@ export type ReceivableRules = {
   proration_method: "calendar_days" | "thirty_360" | "full_month";
   vat_enabled: boolean;
   payment_interval: "monthly" | "quarterly" | "semiannual" | "annual" | null;
+  /** P02-03: monthly preview job, drafts only, default off. */
+  monthly_preview_enabled?: boolean;
 };
 
 export function ReceivableRulesSettings({ initial, canUpdate }: { initial: ReceivableRules; canUpdate: boolean }) {
@@ -83,6 +85,15 @@ export function ReceivableRulesSettings({ initial, canUpdate }: { initial: Recei
             onChange={(e) => setRules({ ...rules, vat_enabled: e.target.checked })}
           />
           {t("vatEnabled")}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={rules.monthly_preview_enabled ?? false}
+            disabled={!canUpdate}
+            onChange={(e) => setRules({ ...rules, monthly_preview_enabled: e.target.checked })}
+          />
+          {t("monthlyPreviewEnabled")}
         </label>
         <label className={ui.label}>
           {t("paymentInterval")}

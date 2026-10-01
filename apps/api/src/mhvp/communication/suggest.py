@@ -11,6 +11,7 @@ import re
 import uuid
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -212,6 +213,47 @@ def merge_v3_fields(
         p for p in placeholders if isinstance(p, str) and p in REPLY_PLACEHOLDERS
     ]
     return out
+
+
+class MailDraftReply(BaseModel):
+    """Own schema of the reply draft (M20-02, 9.2 draft_reply): text, tone, placeholders and the
+    style of the mailbox it was written under. A proposal for the clerk, never sent on its own;
+    ``unknown_placeholders`` lists braces in the text that no template fills."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    body: str
+    tone: str | None = None
+    placeholders: list[str] = Field(default_factory=list)
+    unknown_placeholders: list[str] = Field(default_factory=list)
+    style_tone: str = "sachlich"
+    style_rules: str | None = None
+
+
+_BRACES_RE = re.compile(r"\{[^{}\s]{1,40}\}")
+
+
+def draft_reply_payload(
+    output: dict[str, Any], style: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """``MailDraftReply`` from a checked suggestion and the mailbox style; ``None`` without a
+    draft text. Pure and deterministic."""
+    body = output.get("reply_draft")
+    if not isinstance(body, str) or not body.strip():
+        return None
+    style = style or {}
+    rules = " ".join(str(style.get("rules") or "").split())[:2000] or None
+    tone = style.get("tone") if style.get("tone") in REPLY_TONES else "sachlich"
+    used = [p for p in REPLY_PLACEHOLDERS if p in body]
+    unknown = sorted({m for m in _BRACES_RE.findall(body) if m not in REPLY_PLACEHOLDERS})
+    return MailDraftReply(
+        body=body,
+        tone=output.get("reply_tone") if output.get("reply_tone") in REPLY_TONES else None,
+        placeholders=used,
+        unknown_placeholders=unknown,
+        style_tone=str(tone),
+        style_rules=rules,
+    ).model_dump()
 
 
 def reply_style_text(style: dict[str, Any] | None) -> str:
@@ -508,6 +550,7 @@ async def suggest_for_message(
             text=f"{message.subject or ''}\n{message.body or ''}",
         )
         result["model"] = run.model
+        result["draft_reply"] = draft_reply_payload(result, style)
         status = "ready"
     elif run.status is RunStatus.BLOCKED:
         result = {"reason": run.error or "Kein freigegebener KI-Anbieter."}

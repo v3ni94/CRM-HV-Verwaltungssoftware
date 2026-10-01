@@ -4,6 +4,8 @@
 export type Me = {
   contact_id: string;
   roles: string[];
+  /** S16-10 (3.4): named portal roles derived from the relations (role switch). */
+  portal_roles?: string[];
   contracts: {
     id: string;
     kind: string;
@@ -44,6 +46,24 @@ export type PaymentResolution = {
   total: string | null;
   purpose: string | null;
   sepa: { holder: string; iban: string; bic: string | null; bank_name: string | null } | null;
+  /** Own amounts from the calculated snapshot (M21-06, SA-05); null while not calculated. */
+  own_share?:
+    | { unit_number: string; annual?: Record<string, string>; monthly?: Record<string, string>; amount?: string; instalments?: number | null }[]
+    | null;
+};
+
+export type OwnerAllocationUnit = {
+  unit_id: string;
+  unit_number: string;
+  property_name: string;
+  keys: { code: string; name: string; unit_of_measure: string; kind: string; value: string | null }[];
+};
+
+export type OwnerRentalIncome = {
+  property_id: string;
+  property_name: string;
+  total_gross: string;
+  units: { unit_number: string; gross: string; components: { payment_type_code: string; gross: string }[] }[];
 };
 
 export type OwnerTicket = { id: string; number: number; title: string; status: string; created_at: string };

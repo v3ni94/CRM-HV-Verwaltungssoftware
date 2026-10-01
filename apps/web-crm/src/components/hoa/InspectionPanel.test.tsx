@@ -76,4 +76,37 @@ describe("InspectionPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Bereitstellen" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Gespeichert.");
   });
+
+  it("sends the validity period, shows the expiry and revokes with a reason (M25-07)", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({ request_id: ID, document_id: "p1", sha256: "ab".repeat(32), entries: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const withPackage = { ...request, status: "provided", package_document_id: "p1", package_expires_at: "2999-01-01T00:00:00Z" };
+    renderIntl(<InspectionPanel request={withPackage} documents={documents} />);
+    expect(screen.getByTestId("package-expiry")).toHaveTextContent("Abrufbar bis");
+    await userEvent.click(screen.getAllByRole("checkbox")[0]!);
+    await userEvent.type(screen.getByTestId("valid-days"), "14");
+    await userEvent.click(screen.getByRole("button", { name: "Paket erzeugen" }));
+    expect(JSON.parse(String((fetchMock.mock.calls[0]![1] as RequestInit).body))).toEqual({ document_ids: ["d1"], valid_days: 14 });
+    const revoke = screen.getByTestId("revoke-package");
+    expect(revoke).toBeDisabled();
+    await userEvent.type(screen.getByTestId("revoke-reason"), "Eigentümerwechsel");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await userEvent.click(revoke);
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(url).toBe(`/api/bff/hoa/inspection-requests/${ID}/revoke`);
+    expect(JSON.parse(String((init as RequestInit).body))).toEqual({ text: "Eigentümerwechsel" });
+  });
+
+  it("shows an expired provision without a revoke button and runs the owner check", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ ownership_changed: true, package_active: false, recommendation: "Eigentümerstellung hat sich geändert; Bereitstellung ist nicht aktiv." }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<InspectionPanel request={{ ...request, status: "provided", package_document_id: "p1", package_expires_at: "2020-01-01T00:00:00Z" }} documents={documents} />);
+    expect(screen.getByTestId("package-expiry")).toHaveTextContent("Abgelaufen");
+    expect(screen.queryByTestId("revoke-package")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("owner-check"));
+    expect(String(fetchMock.mock.calls[0]![0])).toBe(`/api/bff/hoa/inspection-requests/${ID}/owner-check`);
+    expect(await screen.findByTestId("owner-check-result")).toHaveTextContent("hat sich geändert");
+  });
 });

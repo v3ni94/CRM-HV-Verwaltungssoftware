@@ -226,6 +226,18 @@ def test_dunning_preview_and_locks(
     # Scheduled job creates previews only.
     assert asyncio.run(dunning_previews(_settings(database, redis_url)))["runs"] >= 1
 
+    # M9-01: a raising preview leaves a failed run (alert metric) and does not stop the job.
+    from unittest.mock import patch
+
+    async def boom(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("synthetic failure")
+
+    with patch("mhvp.accounting.tasks.dunning.preview", boom):
+        result = asyncio.run(dunning_previews(_settings(database, redis_url)))
+    assert result["failed"] >= 1
+    statuses = {r["status"] for r in _ok(client.get(f"{A}/dunning-runs", headers=acc_user))}
+    assert "failed" in statuses
+
 
 def _fee_level_case(
     gated: TestClient,

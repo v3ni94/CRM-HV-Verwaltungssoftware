@@ -95,7 +95,7 @@ def _dispatch_targets(c: TestClient, h: dict[str, str], doc: str, contact: str) 
     res = _ok(
         c.post(
             "/api/v1/dispatches/serial",
-            json={"items": [{"document_id": doc, "contact_id": contact}]},
+            json={"items": [{"document_id": doc, "contact_id": contact, "submit_postal": False}]},
             headers=h,
         ),
         201,
@@ -218,7 +218,9 @@ def test_representative_delivery_modes(client: TestClient, world: World) -> None
     ]
     dispatch = _ok(
         client.post(
-            "/api/v1/dispatches", json={"document_id": doc, "contact_id": owner["id"]}, headers=h
+            "/api/v1/dispatches",
+            json={"document_id": doc, "contact_id": owner["id"], "submit_postal": False},
+            headers=h,
         ),
         201,
     )
@@ -236,7 +238,9 @@ def test_representative_delivery_modes(client: TestClient, world: World) -> None
     )
     dispatch = _ok(
         client.post(
-            "/api/v1/dispatches", json={"document_id": doc, "contact_id": owner["id"]}, headers=h
+            "/api/v1/dispatches",
+            json={"document_id": doc, "contact_id": owner["id"], "submit_postal": False},
+            headers=h,
         ),
         201,
     )

@@ -71,3 +71,28 @@ Fehler werden im Protokoll protokolliert und können aus der Detailseite herunte
 - Rechnungen und Buchungen können nicht durch Importe rückgängig gemacht werden (gesperrt nach Gate G1); diese müssen manuell reversiert werden (Kapitel [Buchhaltung](buchhaltung.md)).
 
 Weitere Details zu den verschiedenen Datenübernahmen stehen in den verlinkten Kapiteln [Datenübernahmen](datenuebernahmen.md), [Objekte und Einheiten aus der Immoware24-Objektliste](import-objektdaten.md), [Kontakte aus den Immoware24-Kontaktlisten](import-kontakte.md), [Eigentümer und Mieter den Einheiten zuordnen](import-zuordnung.md), [Abgleichbericht](import-abgleichbericht.md) und [KI-Assistent im Chat](assistent-chat.md).
+
+## Weitere Importberichte der Migration (30.09.2026, M8-02 bis M8-07)
+
+Unter `/importe/immoware24` stehen sechs weitere Berichtsarten zur Wahl: Kontenplan je Objekt,
+SEPA-Übersicht, Bankumsätze (Historie), Offene Posten und Verwandtes, DMS-Dokumente und
+historische Tickets. Der Ablauf ist wie bei den anderen Berichten: Datei hochladen, Spalten
+zuordnen (Vorlage speichern), prüfen, Testlauf mit Prüfbericht, übernehmen. Pflichtfelder sind
+in der Zuordnung markiert; eine Zeile mit Fehler wird nicht übernommen und im Bericht genannt.
+
+- Ein zweiter Lauf mit derselben Datei legt nichts doppelt an. Abweichende Werte bereits
+  vorhandener Datensätze erscheinen als Konflikt und werden nie überschrieben.
+- Bankumsätze kommen als Historie (nicht abgleichbar, nicht buchbar) und nur bis zum Stichtag
+  des Buchungskreises. Die Zuordnung zum Migrationsjournal erfolgt über die Buchungsnummer; ist
+  das Journal noch nicht importiert, wiederholen Sie den Lauf danach.
+- Bei der SEPA-Übersicht entsteht ein Mandat nur, wenn Referenz, Gläubiger-ID, Unterschriftsdatum,
+  IBAN und Nachweisdokument vorliegen; sonst nennt der Bericht, was fehlt. Der Zahlungsplan wird
+  in jedem Fall angelegt. Der Einzug bleibt gesperrt.
+- Offene Posten, Guthaben, Kautionen, Rücklagen, Darlehen und Sonderumlagen werden als
+  Einzelposten mit Ursprungsfälligkeit und Teilzahlung gespeichert und nur gelesen (Summen je
+  Art unter `/api/v1/imports/immoware24/history/open-items/summary`). Es entsteht keine Buchung
+  und keine Mahnung.
+- Historische Tickets sind nur lesend einsehbar (`/api/v1/imports/immoware24/history/tickets`).
+- Eine Rücknahme über den Import ist für diese Berichte nicht vorgesehen, weil sie nur Historie
+  ablegen; Korrekturen erfolgen durch einen neuen Lauf mit geänderter Datei nach Klärung des
+  Konflikts.

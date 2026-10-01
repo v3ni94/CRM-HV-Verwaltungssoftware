@@ -151,6 +151,7 @@
     "ticketAnalytics": "Ticket analytics"
   },
   "Contacts": {
+    "mergeLink": "Merge",
     "call": "Call",
     "mail": "E-mail",
     "masterData": {
@@ -202,7 +203,8 @@
       "relations": "Relations",
       "documents": "Documents",
       "releases": "Portal releases",
-      "log": "Event log"
+      "log": "Event log",
+      "assistant": "Assistant"
     },
     "calls": {
       "title": "Calls"
@@ -1202,7 +1204,13 @@
       "ownerships": "Ownerships",
       "payments": "Payments",
       "journal": "Journal",
-      "bank_transactions": "Bank transactions"
+      "bank_transactions": "Bank transactions",
+      "chart_of_accounts": "Chart of accounts per property",
+      "sepa_overview": "SEPA overview",
+      "bank_history": "Bank transactions (history)",
+      "open_items": "Open items, credits, deposits, reserves, loans, special levies",
+      "document_index": "DMS documents with property and contract reference",
+      "ticket_history": "Historical tickets (read only)"
     },
     "stagedOnlyBadge": "staging only",
     "stagedOnlyHint": "Journal and bank transactions are only staged until accounting is available. No postings are created.",
@@ -1272,6 +1280,9 @@
     "listImportLink": "Open list import (objects, contacts, assignment)"
   },
   "Workspace": {
+    "filters": "Filters",
+    "allValues": "All",
+    "applyFilter": "Apply filter",
     "dashboard": "Home",
     "tiles": "Key figures",
     "tile": {
@@ -1323,6 +1334,12 @@
     "bulkRemove": "Remove",
     "bulkNone": "No rows selected.",
     "bulkDone": "{changed} changed.",
+    "bulkDocuments": "Bulk action for selected documents",
+    "bulkCategory": "Category",
+    "bulkChoose": "Please choose",
+    "bulkSetCategory": "Set category",
+    "bulkProperty": "Property",
+    "bulkLinkProperty": "Link to property",
     "select": "Select",
     "greetingLabel": "Overview",
     "open": "Open",
@@ -1469,6 +1486,7 @@
       "note_follow_up": "Follow up",
       "meeting": "Owners' meeting",
       "ticket_due": "Ticket deadline",
+      "work_order_appointment": "Work order appointment",
       "appointment": "Appointment",
       "custom_deadline": "Custom deadline (type)"
     },
@@ -1686,6 +1704,22 @@
     }
   },
   "Letting": {
+    "aiCheck": {
+      "title": "AI plausibility",
+      "notice": "AI hints on the consistency of the recorded data. No release and no legal review; a person decides.",
+      "start": "Start AI check",
+      "runStatus": "Last run: {status} {error}",
+      "overall": {
+        "unauffaellig": "Overall: no findings",
+        "pruefen": "Overall: review",
+        "kritisch": "Overall: critical"
+      },
+      "severity": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
+    },
     "title": "Letting",
     "rentIncreaseNotice": "Rent increases are checked arithmetically only. Sending stays locked until release gate G3 and a documented legal review.",
     "noVacancies": "No vacancies.",
@@ -2450,6 +2484,7 @@
     "cancel": "Cancel",
     "confirmCancel": "Cancel payment order?",
     "approvals": "{n} of 2 approvals",
+    "identityWarning": "Person check notice (no block): {text}",
     "status_draft": "Draft",
     "status_approved": "Approved",
     "status_exported": "Exported",
@@ -2485,7 +2520,8 @@
     "settings": "Dunning levels and fees",
     "runStatus": {
       "preview": "Preview",
-      "approved": "Approved"
+      "approved": "Approved",
+      "failed": "failed"
     },
     "caseStatus": {
       "proposed": "proposed",
@@ -2883,7 +2919,20 @@
         "statementHint": "Text only. Neither the report nor the statement changes status.",
         "create": "Create new report",
         "confirmCreate": "Create the report with the current state of the positions?",
-        "submit": "Create report"
+        "submit": "Create report",
+        "confirmAsk": "Confirm report version {n}? The confirmation is no resolution and cannot be withdrawn.",
+        "confirmName": "Confirmed by (name)",
+        "confirmNote": "Note",
+        "confirmSubmit": "Confirm report",
+        "confirmedBy": "Confirmed by {name} on {date}",
+        "confirmHint": "The confirmation records who read the report. It does not replace a resolution of the community."
+      },
+      "history": {
+        "title": "Changes",
+        "show": "Show history",
+        "hide": "Hide history",
+        "none": "No changes since creation.",
+        "empty": "empty"
       }
     },
     "noLedger": "No ledger exists for this community yet.",
@@ -3130,7 +3179,26 @@
     "confirmApplyPreview": "Confirm preview and apply",
     "applied": "Applied: {count} standing amounts created.",
     "alreadyApplied": "Already applied on {date}.",
-    "counts": "{create} create, {unchanged} unchanged, {no_contract} without ownership contract"
+    "counts": "{create} create, {unchanged} unchanged, {no_contract} without ownership contract",
+    "reservesLink": "Reserves",
+    "planRhythm": "Payment rhythm",
+    "planDueDay": "due on day {day}",
+    "planDueDayLabel": "Due day",
+    "planContinues": "continues until the new plan",
+    "rhythm": {
+      "monthly": "monthly",
+      "quarterly": "quarterly",
+      "yearly": "yearly"
+    },
+    "comparisonTitle": "Comparison with the previous year",
+    "comparisonAgainstPlan": "Against the previous plan, per component and year.",
+    "comparisonAgainstStatement": "Against the total costs of the previous statement (information, no claim).",
+    "comparisonPlan": "Plan",
+    "comparisonBasis": "Previous year",
+    "comparisonDeviation": "Deviation",
+    "comparisonItems": "Comparison per item",
+    "comparisonBasisPlan": "Compare with plan",
+    "comparisonNoBasis": "no comparison plan"
   },
   "RentIncrease": {
     "title": "Rent increases",
@@ -3586,7 +3654,10 @@
         "ausstehend": "Pending",
         "geloescht": "Deleted in Gmail",
         "unbekannt": "Unknown"
-      }
+      },
+      "imagesBlocked": "External images are blocked (tracking pixel protection).",
+      "loadImages": "Load images",
+      "htmlFrameTitle": "HTML view of the mail"
     },
     "workOrders": {
       "title": "Work orders",
@@ -3790,7 +3861,9 @@
       "mail_draft": "E-mail draft from reply template",
       "letter_draft": "Letter draft from letter template",
       "ai_task": "Start AI task",
-      "assign_record": "Assign (learned rule)"
+      "assign_record": "Assign (learned rule)",
+      "set_field": "Set field (notes of property, contact, contract)",
+      "notify_provider": "Draft to service provider"
     },
     "actionValue": "Action value",
     "ticketField": "Ticket field",
@@ -3850,7 +3923,9 @@
       "mailDraft": "E-mail draft from {template}",
       "letterDraft": "Letter draft from {template}",
       "aiTask": "AI task {task}",
-      "assignRecord": "Assign: {dimension} {value}"
+      "assignRecord": "Assign: {dimension} {value}",
+      "setMasterField": "Set field: {target} {field}",
+      "notifyProvider": "Draft to service provider {subject}"
     },
     "log": "Log",
     "filterRule": "Filter rule",
@@ -3975,6 +4050,29 @@
       "classify_email": "Classify e-mail"
     },
     "aiInstruction": "Instruction (placeholders allowed)",
+    "setFieldTarget": "Target",
+    "setFieldField": "Field",
+    "setFieldMode": "Kind of change",
+    "setFieldValue": "Text",
+    "setFieldHelp": "Note fields only. Append adds a line with date and rule name and keeps the existing text. No payment, bank, amount or tax field can be set.",
+    "setFieldTargets": {
+      "property": "Property",
+      "contact": "Contact",
+      "contract": "Contract"
+    },
+    "setFieldFields": {
+      "notes": "Notes",
+      "renovation_notes": "Renovation notes",
+      "garden_notes": "Garden notes"
+    },
+    "setFieldModes": {
+      "append": "Append",
+      "replace": "Replace"
+    },
+    "providerContractType": "Contract type of the provider at the property (code)",
+    "providerSubject": "Subject",
+    "providerBody": "Text",
+    "providerHelp": "Creates an e-mail draft to the active provider of the contract type at the ticket's property. Approval and sending stay manual.",
     "aiTaskHelp": "Starts an AI run through the gateway. The result is a proposal only; no posting, no approval.",
     "expertView": "Expert view (JSON)",
     "formView": "Form view",
@@ -4441,6 +4539,9 @@
     "onboardingLink": "Third party onboarding and export"
   },
   "Creditors": {
+    "sync": "Create creditor accounts",
+    "syncHint": "Creates missing creditor accounts for all service provider relations of the ledger and links existing ones.",
+    "syncDone": "{created} accounts created, {linked} linked.",
     "title": "Creditors",
     "ledger": "Ledger",
     "empty": "No creditor accounts yet; they are created with the first posted invoice.",
@@ -4462,6 +4563,23 @@
     "runningBalance": "Balance"
   },
   "RecurringPlans": {
+    "edit": "Edit",
+    "editTitle": "Edit invoice plan",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Invoice plan saved.",
+    "contractLinked": "linked to service contract",
+    "anchorDay": "Day {day} of the month, last day in shorter months",
+    "editHint": "Only future drafts change; invoice drafts already generated stay unchanged.",
+    "editFields": {
+      "text": "Service",
+      "gross": "Gross",
+      "vat_percent": "VAT in percent",
+      "interval_months": "Interval in months",
+      "end_date": "End date",
+      "order_reference": "Order reference",
+      "service_contract_id": "Service contract ID"
+    },
     "title": "Recurring invoice plans",
     "notice": "A plan only creates unreviewed invoice drafts; review, release and posting remain separate steps.",
     "ledger": "Ledger",
@@ -4486,6 +4604,24 @@
     "endedDone": "Plan ended."
   },
   "Invoices": {
+    "extra": {
+      "title": "Further details for document review",
+      "hint": "Optional. Used for arithmetic and factual review; the tax assessment (consideration, construction withholding, input tax) is made by staff or a tax adviser.",
+      "service_to": "Service period until",
+      "discount_until": "Discount until",
+      "service_place": "Place of supply",
+      "issuer_vat_id": "Issuer VAT ID",
+      "issuer_tax_number": "Issuer tax number",
+      "prepaid_amount": "Prepayment",
+      "retention_amount": "Retention",
+      "discount_percent": "Discount in percent",
+      "input_tax_deductible": "Input tax deduction",
+      "unknown": "not clarified",
+      "yes": "yes",
+      "no": "no",
+      "reverse_charge": "Reverse charge",
+      "construction_withholding": "Construction withholding relevant"
+    },
     "title": "Incoming invoices",
     "notice": "Automatic checks only give hints. Invoice release, posting and payment release are separate; a second person releases, only for the reviewed version.",
     "empty": "No invoices.",
@@ -4664,6 +4800,7 @@
     }
   },
   "Properties": {
+    "assistant": "Assistant",
     "area": "Portfolio",
     "title": "Properties",
     "search": "Search",
@@ -5126,6 +5263,21 @@
     }
   },
   "AiChat": {
+    "assistantTab": {
+      "title": "Assistant",
+      "introProperty": "The assistant knows this property and prepares actions as proposals.",
+      "introContact": "The assistant knows this contact and prepares actions as proposals.",
+      "actions": {
+        "documentFile": "File and link a document",
+        "letter": "Create a letter draft from a template",
+        "ticket": "Create a ticket",
+        "appointment": "Note an appointment or deadline",
+        "portalInvite": "Prepare a portal invitation",
+        "note": "Add a note"
+      },
+      "proposalNotice": "Every action is a proposal and runs only after your confirmation in the chat. Nothing is sent.",
+      "open": "Open assistant"
+    },
     "title": "AI assistant",
     "open": "Open AI assistant",
     "close": "Close AI assistant",
@@ -5390,8 +5542,25 @@
       "open_items": "Open items"
     },
     "chatAction": {
+      "propertyLine": "Property {number} {name}",
+      "managementType": {
+        "rental": "Rental management",
+        "hoa": "HOA management",
+        "hoa_with_sev": "HOA with unit management"
+      },
+      "onboarding": "The property is created in status onboarding until you activate it.",
+      "fileAt": "File {count} document(s) at: {name}",
+      "inviteEmail": "E-mail address from the contact file: {email}",
+      "noSend": "The access is only prepared. Nothing is sent; you create the invitation letter or mail afterwards.",
+      "template": "Template: {name}",
+      "letterDraft": "The letter is filed as a draft and not sent.",
+      "nextSteps": "Possible next steps",
       "rejectReasonLabel": "Reason for rejecting (optional)",
       "kind": {
+        "property_create": "Proposal: create property",
+        "document_file": "Proposal: file document",
+        "portal_invite_prepare": "Proposal: prepare portal invitation",
+        "letter_create": "Proposal: letter from template",
         "contact_change": "Proposal: change contact details",
         "contact_note": "Proposal: note on the contact",
         "ticket_create": "Proposal: create ticket",
@@ -5487,7 +5656,11 @@
       "conversation": "Conversation",
       "reconciliation": "Bank reconciliation",
       "rules": "Bank rules",
-      "review": "Review queue"
+      "review": "Review queue",
+      "merge": "Merge",
+      "reserves": "Reserves",
+      "rentIndex": "Rent index",
+      "letters": "Letters"
     }
   },
   "Settings": {
@@ -5531,6 +5704,10 @@
     "retention": {
       "title": "Retention",
       "description": "Edit and release retention profiles per record class and map categories."
+    },
+    "privacy": {
+      "title": "Data protection",
+      "description": "Deletion profiles, erasure requests, register of processors and record draft."
     },
     "deletionProposals": {
       "title": "Deletion proposals",
@@ -5770,6 +5947,10 @@
     "deadlineTypes": {
       "title": "Deadline types",
       "description": "Catalogue of deadline types with trigger, duration and responsible role, to be verified."
+    },
+    "documentCategories": {
+      "title": "Document categories",
+      "description": "Maintain the category tree and the mapping to Paperless and Drive."
     }
   },
   "Members": {
@@ -6215,6 +6396,8 @@
     "previewTitle": "Reconcile preview (no effect)",
     "previewClose": "Close",
     "previewSummary": "Would take over: {archive} archived, {trash} in the trash, {delete} deleted, {reopen} back in the inbox, {own} own actions.",
+    "replyRules": "Style rules for AI replies",
+    "replyRulesHint": "Free rules for reply drafts, for example salutation, closing, prohibitions. At most 2000 characters; the AI only proposes drafts.",
     "replyTone": "AI reply tone",
     "replyToneHint": "Style for AI reply drafts; the default mailbox applies to the whole tenant.",
     "replyToneFormell": "formal",
@@ -8228,7 +8411,10 @@
       "status": "Status change",
       "note": "Note",
       "package": "Package built",
-      "retrieval": "Package retrieved"
+      "retrieval": "Package retrieved",
+      "revoked": "Provision revoked",
+      "notified": "Notification recorded",
+      "owner_check": "Owner check"
     },
     "empty": "No inspection requests.",
     "notFound": "Inspection request not found.",
@@ -8236,7 +8422,18 @@
     "saved": "Saved.",
     "chooseApplicant": "Please pick an applicant from the search.",
     "dateRequired": "Please enter the request date.",
-    "scopeRequired": "Please choose at least one scope or describe it as free text."
+    "scopeRequired": "Please choose at least one scope or describe it as free text.",
+    "validDays": "Provision valid for (days)",
+    "validDaysHelp": "Product setting, not a legal period. Empty or 0 means no expiry; the period is to be settled with the lawyer before productive use.",
+    "expiresAt": "Retrievable until {date}",
+    "expired": "Expired or revoked since {date}",
+    "noExpiry": "Retrievable without expiry",
+    "revokeReason": "Reason for revocation",
+    "revoke": "Revoke provision",
+    "revokeConfirm": "The provision ends immediately and retrieval is blocked. Continue?",
+    "ownerCheckHeading": "Check ownership",
+    "ownerCheckHelp": "Compares the applicant's ownership on the request date with today. A change is only shown and logged; the manager decides about revocation.",
+    "ownerCheck": "Check ownership"
   },
   "PortalForms": {
     "title": "Portal forms",
@@ -8517,7 +8714,7 @@
     "channel": "Channel",
     "channelOrPreferred": "Channel",
     "preferred": "Recipient's preferred channel",
-    "submitPostal": "Create postal job at the same time",
+    "submitPostal": "Create postal job automatically",
     "prepare": "Prepare dispatch",
     "hint": "The platform sends nothing by itself. Email becomes a draft, SMS, registered mail and courier are recorded with evidence.",
     "choose": "Please choose",
@@ -8854,6 +9051,8 @@
     }
   },
   "DocumentList": {
+    "select": "Select {title}",
+    "colSelect": "Select",
     "deletionProposalsLink": "Deletion proposals (retention)",
     "area": "Management",
     "title": "Documents",
@@ -8874,7 +9073,8 @@
     "pagination": "Pages",
     "previous": "Previous",
     "next": "Next",
-    "pageOf": "Page {page} of {pages}, {total} documents"
+    "pageOf": "Page {page} of {pages}, {total} documents",
+    "lettersLink": "Letters and templates"
   },
   "DocumentDetail": {
     "area": "Documents",
@@ -10381,7 +10581,8 @@
       "maintenance": "Maintenance",
       "note_follow_up": "Follow up",
       "meeting": "Owners' meeting",
-      "ticket_due": "Ticket deadline"
+      "ticket_due": "Ticket deadline",
+      "work_order_appointment": "Work order appointment"
     },
     "openSource": "Open source",
     "generatedHint": "Generated from the master data, to be verified.",
@@ -11490,6 +11691,7 @@
       "full_month": "full month"
     },
     "vatEnabled": "Apply the VAT option",
+    "monthlyPreviewEnabled": "Create a monthly receivable preview (drafts only)",
     "paymentInterval": "Payment interval",
     "paymentIntervalOptions": {
       "none": "no tenant default",
@@ -12309,12 +12511,61 @@
     },
     "readOnly": "Maintaining the catalogue needs the permission tenant_settings:update."
   },
+  "NotificationSettings": {
+    "title": "Notifications",
+    "intro": "Choose which messages you receive in the app and by e-mail. The settings apply to your account only.",
+    "channels": "Channels per kind",
+    "defaultRow": "All other kinds",
+    "mandatory": "mandatory",
+    "mute": "Mute for",
+    "muteOption": {
+      "0": "Do not mute",
+      "1": "1 hour",
+      "8": "8 hours",
+      "24": "24 hours",
+      "168": "7 days"
+    },
+    "mutedUntil": "Muted until {date}",
+    "muteHelp": "Muting applies to all kinds except the mandatory messages on deadlines, SLA and bank consents.",
+    "column": {
+      "kind": "Kind",
+      "inApp": "In the app",
+      "email": "By e-mail"
+    },
+    "inAppFor": "{kind} in the app",
+    "emailFor": "{kind} by e-mail",
+    "save": "Save",
+    "saved": "Settings saved.",
+    "kind": {
+      "ticket_assigned": "Ticket assigned",
+      "ticket_mail_received": "New mail on a ticket",
+      "ticket_follow_up_created": "Follow up on a ticket",
+      "portal_chat_message": "Portal message",
+      "portal_chat_reply": "Portal reply",
+      "mail_approval_requested": "Mail awaiting approval",
+      "maintenance_due": "Maintenance due",
+      "maintenance_overdue": "Maintenance overdue",
+      "calendar_reminder": "Appointment reminder",
+      "daily_digest": "Daily overview",
+      "automation": "Rule message",
+      "consumption_info": "Consumption information",
+      "automation_webhook_dead": "Webhook failed permanently",
+      "sla_escalation": "SLA escalation",
+      "compliance_deadline": "Deadline reaches its lead time",
+      "banking_consent_expiring": "Bank consent expiring"
+    }
+  },
   "DeadlineEntries": {
+    "select": "Select {title}",
+    "doneSelected": "Mark selected as done",
+    "bulkNone": "No deadlines selected.",
+    "bulkDone": "{changed} deadlines completed.",
     "title": "Deadlines",
     "verify": "to be verified",
     "empty": "No open deadlines.",
     "loadError": "The deadlines could not be loaded.",
     "column": {
+      "select": "Select",
       "due": "Due",
       "type": "Type",
       "title": "Reference",
@@ -12369,6 +12620,19 @@
     "error": "The computation could not be fetched.",
     "missingDate": "Enter the date the termination was received.",
     "missingPeriod": "Enter the notice period from the contract."
+  },
+  "TakeoverChecklist": {
+    "title": "Property takeover",
+    "intro": "Checklist of takeover documents and balances per category. Missing items stay open until received or marked not applicable.",
+    "start": "Create checklist",
+    "none": "No checklist available.",
+    "openCount": "{count} open",
+    "status": {
+      "open": "Open",
+      "requested": "Requested",
+      "received": "Received",
+      "not_applicable": "Not applicable"
+    }
   },
   "ManagerChecklist": {
     "title": "Checklist manager change",
@@ -12848,5 +13112,599 @@
       "revoked": "Revoked",
       "expired": "Expired"
     }
+  },
+  "DunningDetails": {
+    "summary": "Check hints, interest, delivery proofs and blocks",
+    "hintsTitle": "Check hints",
+    "spreadTitle": "Interest spread proposal",
+    "spreadValue": "Proposal for {profile}: {spread} percentage points above the base rate. The setting is not changed.",
+    "spreadNone": "No proposal, the debtor's consumer status is not recorded.",
+    "spreadProfile": {
+      "verbraucher": "consumer",
+      "unternehmer": "business"
+    },
+    "interestTitle": "Default interest",
+    "interestNone": "No interest calculation, a maintained base rate or the start of default is missing.",
+    "periodFrom": "From",
+    "periodTo": "To",
+    "days": "Days",
+    "rate": "Rate",
+    "amount": "Interest",
+    "interestTotal": "Total interest: {amount}",
+    "interestDraft": "Create interest draft",
+    "interestDrafted": "Interest draft created",
+    "interestDraftHint": "The interest draft is not a posting. Release goes through the four eyes posting and only with gate G1 open; rate and legal basis must be reviewed by a lawyer.",
+    "proofsTitle": "Delivery proofs",
+    "proofsEmpty": "No delivery proof recorded yet.",
+    "proofKindLabel": "Kind",
+    "proofDate": "Date",
+    "proofReference": "Reference",
+    "proofNote": "Note",
+    "proofAdd": "Record proof",
+    "proofKind": {
+      "registered_mail": "Registered mail",
+      "postal_receipt": "Postal receipt",
+      "email_receipt": "Email proof",
+      "portal_receipt": "Portal proof",
+      "other": "Other proof"
+    },
+    "blocksTitle": "Dunning blocks per item",
+    "blocksHint": "Blocked items are not dunned in a run. The reason is structured and can be released.",
+    "blockReasonLabel": "Block reason",
+    "blockNote": "Note",
+    "blockSet": "Block",
+    "blockRelease": "Release",
+    "blockReason": {
+      "installment_plan": "Instalment plan",
+      "disputed": "Disputed item",
+      "set_off": "Set off",
+      "litigation": "Litigation",
+      "insolvency": "Insolvency"
+    }
+  },
+  "DunningRates": {
+    "title": "Base interest rates",
+    "notice": "The rates are operator inputs with a source. The platform supplies no rate and assumes none. Without a rate for the period no interest is calculated.",
+    "empty": "No base rate recorded yet.",
+    "validFrom": "Valid from",
+    "validTo": "Valid until",
+    "open": "open",
+    "baseRate": "Base rate",
+    "baseRateInput": "Base rate in percent",
+    "source": "Source",
+    "add": "Record rate",
+    "added": "Base rate recorded."
+  },
+  "DirectDebitFeedback": {
+    "show": "Bank feedback and reconciliation",
+    "summary": "Control sum {sum}, open findings: {findings}",
+    "debtor": "Debtor",
+    "amount": "Amount",
+    "bankStatus": "Bank status",
+    "collected": "Collected",
+    "remaining": "Open item remainder",
+    "finding": "Finding",
+    "noFinding": "no finding",
+    "record": "Record feedback",
+    "reasonCode": "Return code",
+    "reason": "Reason",
+    "collectedAmount": "Collected amount",
+    "save": "Save feedback",
+    "hint": "Only the bank's feedback is recorded, nothing is posted. A return after settlement shows as a finding and is corrected by a reversal.",
+    "status": {
+      "open": "open",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "collected": "collected",
+      "returned": "returned"
+    }
+  },
+  "BankLimits": {
+    "title": "Bank limits and submission lead times",
+    "notice": "Operator inputs per bank agreement, no statutory default. Values are to be verified. Empty fields mean no limit is set.",
+    "account": "Ordering account",
+    "singleLimit": "Limit per order in EUR",
+    "dailyLimit": "Daily limit in EUR",
+    "leadFrst": "Lead time first collection in days",
+    "leadRcur": "Lead time recurring collection in days",
+    "leadPre": "Pre-notification in days",
+    "sourceStatus": "Source status: {status}",
+    "save": "Save limits",
+    "saved": "Limits saved."
+  },
+  "LettingW3": {
+    "expose": {
+      "create": "File exposé as PDF",
+      "images": "{count, plural, =0 {without images} one {with one image} other {with # images}}",
+      "draft": "Draft, open details are marked in the document."
+    },
+    "matches": {
+      "title": "Prospect match",
+      "notice": "Proposal for the clerk, no decision. Ranked by criteria met.",
+      "run": "Match prospects",
+      "none": "No prospects with a matching search profile.",
+      "prospect": "Prospect",
+      "met": "{count, plural, =0 {no criteria met} one {one criterion met} other {# criteria met}}",
+      "unmet": "not met",
+      "unknown": "not checkable"
+    },
+    "rentIndex": {
+      "title": "Rent index",
+      "notice": "Values per municipality maintained manually or by CSV with source. Placing a rent in the range and the local comparative rent remain a decision of the management; check the source before use.",
+      "municipality": "Municipality",
+      "name": "Rent index",
+      "stand": "As of",
+      "criteria": "Criteria",
+      "range": "Range per m² and month",
+      "none": "none",
+      "delete": "Delete",
+      "empty": "No values recorded yet.",
+      "add": "Record value",
+      "min": "Lower bound in EUR",
+      "mid": "Middle in EUR",
+      "max": "Upper bound in EUR",
+      "yearFrom": "Year built from",
+      "yearTo": "Year built to",
+      "source": "Source",
+      "save": "Save",
+      "import": "CSV import",
+      "importHelp": "Semicolon separated, header: {columns}. Decimal comma and date DD.MM.YYYY accepted.",
+      "preview": "Preview",
+      "apply": "Import",
+      "previewResult": "{rows} rows read, {errors} with errors.",
+      "applyResult": "{created} values imported, {skipped} already present.",
+      "line": "Line {line}"
+    },
+    "adopt": {
+      "title": "Take over rent index range",
+      "municipality": "Municipality",
+      "yearBuilt": "Year built",
+      "search": "Find range",
+      "none": "No matching rent index value recorded.",
+      "perSqm": "per m² and month",
+      "min": "Take lower bound",
+      "mid": "Take middle",
+      "max": "Take upper bound"
+    }
+  },
+  "RentIncreaseLinks": {
+    "title": "Rent increase cases of the contract",
+    "case": "Case effective {date}",
+    "conflict": "An open case takes effect before the rent increase lock ({date}) ends. The case check blocks approval."
+  },
+  "ContactParties": {
+    "title": "Contracting parties",
+    "hint": "A party combines one or more contacts that are contracting partners together. Shares are optional and must not exceed 100 percent in total. A party that is used in contracts, by owners or in receivables cannot be deleted.",
+    "new": "Create party",
+    "newTitle": "New party",
+    "editTitle": "Edit party",
+    "name": "Party name",
+    "namePlaceholder": "leave empty for an automatic name",
+    "nameHint": "Without an entry the name is built from the members.",
+    "role": "Role",
+    "roleFor": "Role of {name}",
+    "share": "Share in percent",
+    "shareFor": "Share in percent for {name}",
+    "shareValue": "{value} percent",
+    "shareSum": "Sum of shares: {sum} percent",
+    "removeMember": "Remove {name} from the party",
+    "remove": "Remove",
+    "addMember": "Search another member",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete party {name}? This is only possible if it is not used anywhere.",
+    "loading": "Loading parties.",
+    "empty": "No contracting parties.",
+    "membersRequired": "A party needs at least one member.",
+    "sharesTooHigh": "The shares exceed 100 percent.",
+    "roles": {
+      "primary": "Primary party",
+      "co_party": "Co-party",
+      "guarantor": "Guarantor",
+      "legal_representative": "Legal representative"
+    }
+  },
+  "ContactTagsAdmin": {
+    "breadcrumb": "Settings",
+    "title": "Contact tags",
+    "intro": "Tags are created as free text on the contact. Here they are renamed, merged or deleted for the whole tenant. When merging, all contacts keep the target tag and the source tag is removed.",
+    "loading": "Loading tags.",
+    "empty": "No tags.",
+    "name": "Tag",
+    "contacts": "Contacts",
+    "actions": "Actions",
+    "rename": "Rename",
+    "renameFor": "Rename tag {name}",
+    "newNameFor": "New name for {name}",
+    "merge": "Merge",
+    "mergeFor": "Merge tag {name}",
+    "mergeTargetFor": "Target tag for {name}",
+    "mergeTargetPlaceholder": "Choose target tag",
+    "mergeRun": "Merge",
+    "mergeConfirm": "Merge tag {source} into {target}? The tag {source} is removed afterwards.",
+    "delete": "Delete",
+    "deleteFor": "Delete tag {name}",
+    "deleteConfirm": "Delete tag {name}? It is removed from {count, plural, one {# contact} other {# contacts}}.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "error": "The action could not be carried out."
+  },
+  "TeamsAdmin": {
+    "breadcrumb": "Settings",
+    "title": "Teams",
+    "intro": "Teams group staff for assigning tickets and work orders. A team that is assigned to tickets or templates cannot be deleted.",
+    "new": "Create team",
+    "newTitle": "New team",
+    "editTitle": "Edit team",
+    "name": "Name",
+    "members": "Members",
+    "noMembers": "The member list is not available without the right to read users.",
+    "noMembersAssigned": "No members",
+    "loading": "Loading teams.",
+    "empty": "No teams yet.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "editFor": "Edit team {name}",
+    "delete": "Delete",
+    "deleteFor": "Delete team {name}",
+    "deleteConfirm": "Delete team {name}?",
+    "nameRequired": "Please enter a name."
+  },
+  "SettingsQ05": {
+    "teams": {
+      "title": "Teams",
+      "description": "Create, change and delete teams for ticket assignment."
+    },
+    "contactTags": {
+      "title": "Contact tags",
+      "description": "Rename, merge and delete contact tags."
+    }
+  },
+  "VatOptionHistory": {
+    "title": "VAT option history",
+    "hint": "Periods with option and occupancy (vacancy or contract). Entering a period is master data maintenance only, the tax treatment follows a released rule.",
+    "loading": "Loading history.",
+    "empty": "No VAT options recorded.",
+    "option": "Option",
+    "occupant": "Occupancy",
+    "open": "open",
+    "occupants": {
+      "vacancy": "Vacancy",
+      "contract": "Contract"
+    },
+    "addTitle": "Record period",
+    "add": "Add period",
+    "fromRequired": "Please enter the start of the period.",
+    "orderInvalid": "The end is before the start."
+  },
+  "PropertyGallery": {
+    "title": "Image gallery",
+    "intro": "Images of the property in display order. Uploaded images are stored as a document on the property, metadata is removed. Removing only takes the image out of the gallery, the document is kept.",
+    "upload": "Add image",
+    "onlyImages": "Image files only (JPEG, PNG, TIFF, HEIC).",
+    "saving": "Saving.",
+    "empty": "No images on the property yet.",
+    "position": "Position {position}",
+    "imageAlt": "Property image {position}",
+    "up": "Forward",
+    "down": "Backward",
+    "remove": "Remove",
+    "moveUp": "Move image {position} forward",
+    "moveDown": "Move image {position} backward",
+    "removeImage": "Remove image {position} from the gallery",
+    "confirmRemove": "Remove the image from the gallery? The document stays in the document store.",
+    "stale": "The property was changed in the meantime. Please reload the page and repeat the change."
+  },
+  "OccupancyList": {
+    "title": "Occupancy list",
+    "asOf": "Reference date",
+    "show": "Show",
+    "today": "today",
+    "onlyVacant": "Vacancy only",
+    "loading": "Loading occupancy.",
+    "summary": "Reference date {date}: {units, plural, one {# unit} other {# units}}, {vacant} vacant",
+    "empty": "No units for this selection.",
+    "unit": "Unit",
+    "type": "Type",
+    "tenant": "Tenant",
+    "owner": "Owner",
+    "status": "Status",
+    "none": "none",
+    "vacant": "Vacant",
+    "occupied": "occupied"
+  },
+  "PortalStatusBadge": {
+    "none": "No portal access",
+    "invited": "Portal invited",
+    "active": "Portal active",
+    "locked": "Portal locked",
+    "hint": "To the releases tab with invitation and access status"
+  },
+  "PortalRepresentations": {
+    "title": "Powers of attorney in the portal",
+    "hint": "A portal account of this contact can see the owner view of another contact, read only and only within the validity period. The signed power of attorney document is mandatory. A revocation takes effect at once.",
+    "loading": "Loading powers of attorney.",
+    "empty": "No powers of attorney on file.",
+    "represents": "Represents",
+    "representedBy": "Represented by",
+    "thisContact": "this contact",
+    "to": "to",
+    "open": "unlimited",
+    "status": {
+      "active": "active",
+      "revoked": "revoked"
+    },
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the power of attorney? The representative's portal access ends at once.",
+    "noAccount": "This contact has no portal access. Invite first in the portal access section, then a power of attorney can be created.",
+    "newTitle": "Create power of attorney",
+    "account": "Representative's portal account",
+    "principal": "Represented contact",
+    "principalChosen": "Represented contact: {name}",
+    "document": "Power of attorney document",
+    "documentHint": "PDF or image, stored on the represented contact.",
+    "documentTitle": "Power of attorney for {name}",
+    "validFrom": "Valid from",
+    "validTo": "Valid to",
+    "note": "Note",
+    "create": "Create power of attorney",
+    "incomplete": "Please provide the represented contact, the power of attorney document and the start date.",
+    "orderInvalid": "The end is before the start."
+  },
+  "TicketLocation": {
+    "propertySearch": "Search property",
+    "search": "Search",
+    "property": "Property",
+    "clearProperty": "Remove property",
+    "building": "Building",
+    "noBuilding": "no building",
+    "loading": "Loading buildings.",
+    "startDate": "Start",
+    "followUpDate": "Follow-up",
+    "followUpHint": "Date on which the ticket is to be presented again.",
+    "clear": "Remove",
+    "clearDate": "Remove {field}",
+    "noPropertyHint": "Assign a property to the ticket first to choose a building."
+  },
+  "TicketBulkAssign": {
+    "open": "Assign assignee",
+    "assignee": "Assignee",
+    "choose": "Choose assignee",
+    "loading": "Loading users.",
+    "apply": "{count, plural, one {Assign # ticket} other {Assign # tickets}}",
+    "cancel": "Cancel"
+  },
+  "PrivacyAdmin": {
+    "breadcrumb": "Settings",
+    "title": "Data protection",
+    "intro": "Deletion profiles, erasure requests released by a second person, register of processors and record of processing activities. Periods and profiles are operator drafts and need legal review before productive use.",
+    "loading": "Loading.",
+    "error": "The action failed.",
+    "actions": "Actions",
+    "profileInvalid": "Please enter data type, period in months and start of period.",
+    "erasureInvalid": "Please choose a contact and the date of receipt.",
+    "executeConfirm": "Anonymise the contact now? Booked content stays untouched, the anonymisation cannot be undone.",
+    "dataType": {
+      "contact": "Contacts",
+      "portal_account": "Portal accounts",
+      "communication": "Communication",
+      "ticket": "Tickets",
+      "other": "Other data"
+    },
+    "erasureStatus": {
+      "requested": "Requested",
+      "approved": "Released",
+      "rejected": "Rejected",
+      "executed": "Executed"
+    },
+    "kind": {
+      "processor": "Processor",
+      "sub_processor": "Sub-processor",
+      "processing_activity": "Processing activity",
+      "responsibility": "Responsibility"
+    },
+    "avv": {
+      "none": "No DPA",
+      "requested": "DPA requested",
+      "confirmed": "DPA confirmed",
+      "not_required": "Not required"
+    },
+    "profiles": {
+      "title": "Deletion profiles",
+      "intro": "Period and start of period per data type. A profile applies only after release. Without a released profile every deletion stays locked.",
+      "empty": "No deletion profile yet.",
+      "dataType": "Data type",
+      "months": "Period in months",
+      "startRule": "Start of period",
+      "basis": "Basis, note",
+      "status": "Status",
+      "released": "Released",
+      "draft": "Draft",
+      "release": "Release",
+      "save": "Save profile",
+      "saveHint": "A change resets the release and needs a new release.",
+      "formLabel": "Edit deletion profile"
+    },
+    "erasure": {
+      "title": "Erasure requests",
+      "intro": "The lock check covers deletion profile, retention period, references and document periods. Release and execution are done by a second person.",
+      "empty": "No erasure requests.",
+      "received": "Received",
+      "contact": "Contact",
+      "openContact": "Open contact",
+      "status": "Status",
+      "blockers": "Locks",
+      "noBlockers": "No lock",
+      "approve": "Release",
+      "reject": "Reject",
+      "execute": "Anonymise",
+      "formLabel": "Record erasure request",
+      "contactSearch": "Search contact",
+      "search": "Search",
+      "choose": "Choose contact",
+      "reason": "Reason",
+      "create": "Create request"
+    },
+    "register": {
+      "title": "Register of processors and processing",
+      "intro": "Service providers with DPA status and processing activities. Basis of the record below.",
+      "empty": "No entries yet.",
+      "name": "Name",
+      "kind": "Type",
+      "avv": "DPA status",
+      "purpose": "Purpose",
+      "review": "Legal review",
+      "reviewed": "Reviewed",
+      "reviewOpen": "Open",
+      "formLabel": "Create register entry",
+      "create": "Create entry"
+    },
+    "records": {
+      "title": "Record of processing activities",
+      "intro": "The draft is generated from the register. It is not a reviewed document and needs expert review before use.",
+      "generate": "Generate draft",
+      "download": "Download draft"
+    }
+  },
+  "ContactMerge": {
+    "breadcrumb": "Contacts",
+    "title": "Merge contacts",
+    "intro": "Duplicates are proposed, checked and executed by a second person. All references of the source move to the target. The source stays as merged and is not deleted.",
+    "loading": "Loading.",
+    "error": "The action failed.",
+    "search": "Search",
+    "choose": "Choose contact",
+    "pickTwo": "Please choose two different contacts.",
+    "executeConfirm": "Merge {source} into {target}? The source is hidden, all references move to the target.",
+    "status": {
+      "proposed": "Proposed",
+      "executed": "Executed",
+      "rejected": "Rejected"
+    },
+    "propose": {
+      "title": "Propose merge",
+      "intro": "The source is absorbed by the target. Empty fields of the target are filled from the source, existing values stay.",
+      "source": "Source (will be hidden)",
+      "target": "Target (stays)",
+      "reason": "Reason",
+      "submit": "Create proposal"
+    },
+    "list": {
+      "title": "Proposals",
+      "empty": "No proposals.",
+      "into": "into",
+      "references": "References of the source",
+      "conflicts": "Not moved because of duplicates",
+      "execute": "Execute",
+      "reject": "Reject"
+    }
+  },
+  "GlobalDropZone": {
+    "button": "File",
+    "overlay": "Drop files here",
+    "title": "File documents",
+    "zipHint": "ZIP, every file is filed separately",
+    "property": "Property",
+    "noProperty": "No property",
+    "category": "Category",
+    "noCategory": "No category",
+    "submit": "File",
+    "busy": "Filing …",
+    "cancel": "Cancel",
+    "close": "Close",
+    "filed": "{count, plural, =0 {Nothing filed} one {# document filed automatically} other {# documents filed automatically}}",
+    "skipped": "{name}: not filed ({reason})"
+  },
+  "CategoryTree": {
+    "breadcrumb": "Settings",
+    "title": "Document categories",
+    "intro": "Category tree with the mapping to Paperless document type, Paperless tag and Drive folder. Changed mappings are pushed to existing mirrors.",
+    "tree": "Category tree",
+    "mapping": "Document type {type}, tag {tag}, folder {folder}",
+    "edit": "Edit mapping",
+    "documentType": "Paperless document type",
+    "tag": "Paperless tag",
+    "driveFolder": "Drive folder",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Mapping saved.",
+    "created": "Category created.",
+    "newTitle": "New category",
+    "code": "Code",
+    "name": "Name",
+    "parent": "Parent",
+    "root": "Top level",
+    "create": "Create"
+  },
+  "LetterTemplates": {
+    "breadcrumb": "Documents",
+    "title": "Letters and templates",
+    "intro": "Create a letter from a template on the tenant letterhead, preview it as PDF or create a serial letter for several recipients. Letters are filed and linked, not sent.",
+    "letterTitle": "Create letter",
+    "template": "Template",
+    "recipientSearch": "Search recipients",
+    "recipients": "Recipients ({count})",
+    "remove": "Remove {name}",
+    "subject": "Subject (felder.betreff)",
+    "text": "Text (felder.text)",
+    "serialHint": "Several recipients create a serial letter with one document per recipient; representatives follow the delivery rule.",
+    "preview": "Preview",
+    "previewTitle": "Letter preview",
+    "previewFailed": "The preview could not be created.",
+    "create": "Create letter",
+    "createSerial": "Create serial letter",
+    "created": "{count, plural, one {# letter created and filed} other {# letters created and filed}}",
+    "templatesTitle": "Manage templates",
+    "code": "Code",
+    "name": "Name",
+    "templateSubject": "Subject template",
+    "templateBody": "Body template",
+    "placeholders": "Placeholders: {list}",
+    "saveTemplate": "Save (new version)",
+    "templateSaved": "Template saved, version {version}."
+  },
+  "HoaReserves": {
+    "title": "Reserves",
+    "hint": "Earmarked reserves of the community. Payments are assigned to a reserve when the owners' advance is bound to it; otherwise the paid amount stays a total.",
+    "noLedger": "No community ledger exists for this property.",
+    "list": "Reserves",
+    "none": "No earmarked reserve yet.",
+    "create": "Create reserve",
+    "name": "Name",
+    "purpose": "Purpose",
+    "createSubmit": "Create",
+    "developmentTitle": "Development of the reserves",
+    "basedOn": "Basis: statement {year}, version {version}.",
+    "noStatement": "No calculated statement with a reserve block.",
+    "opening": "Opening balance",
+    "resolved": "Resolved contributions (target)",
+    "paid": "Paid (actual)",
+    "withdrawals": "Withdrawals",
+    "interest": "Interest",
+    "closing": "Closing balance",
+    "bankBalance": "Bank balance of the reserve accounts",
+    "bankDifference": "Difference bank to closing balance",
+    "unassigned": "Of which not assignable to a reserve: {amount}.",
+    "reserve": "Reserve",
+    "planned": "Planned",
+    "taxes": "Taxes",
+    "fees": "Fees",
+    "change": "Change",
+    "notBound": "not assigned",
+    "movementTitle": "Record use of funds",
+    "kind": "Kind",
+    "kinds": {
+      "withdrawal": "Withdrawal",
+      "tax": "Tax",
+      "fee": "Fee",
+      "interest": "Interest"
+    },
+    "amount": "Amount",
+    "movementPurpose": "Purpose",
+    "movementSubmit": "Record",
+    "movementHint": "Recording is information for the statement and posts nothing. Receipts are linked on the statement."
   }
 }

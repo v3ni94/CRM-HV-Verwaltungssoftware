@@ -38,6 +38,9 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   const [invoiceDate, setInvoiceDate] = useState("");
   const [invoiceGross, setInvoiceGross] = useState("");
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  // M22-01: document id of an uploaded XML e-invoice (read into the fields below).
+  const [einvoiceDocId, setEinvoiceDocId] = useState<string | null>(null);
+  const [einvoiceFindings, setEinvoiceFindings] = useState<string[]>([]);
 
   async function uploadOne(file: File): Promise<string | null> {
     const form = new FormData();
@@ -156,10 +159,36 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
     });
   }
 
+  async function readEinvoice(file: File | null) {
+    setEinvoiceDocId(null);
+    setEinvoiceFindings([]);
+    if (!file) return;
+    await run(async () => {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const result = await bff<{
+        document_id: string;
+        number: string | null;
+        invoice_date: string | null;
+        gross: string | null;
+        findings: string[];
+      }>(`/api/bff/portal/work-orders/${order.id}/einvoice`, { method: "POST", body: form });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setEinvoiceDocId(result.data.document_id);
+      setEinvoiceFindings(result.data.findings);
+      if (result.data.number) setInvoiceNumber(result.data.number);
+      if (result.data.invoice_date) setInvoiceDate(result.data.invoice_date);
+      if (result.data.gross) setInvoiceGross(result.data.gross);
+    });
+  }
+
   async function submitInvoice(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
-      if (!invoiceFile) {
+      if (!invoiceFile && !einvoiceDocId) {
         setError(t("invoiceDocumentRequired"));
         return;
       }
@@ -167,7 +196,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
         setError(t("invoiceFieldsRequired"));
         return;
       }
-      const documentId = await uploadOne(invoiceFile);
+      const documentId = einvoiceDocId ?? (invoiceFile ? await uploadOne(invoiceFile) : null);
       if (documentId === null) return;
       const result = await bff(`/api/bff/portal/work-orders/${order.id}/invoice`, {
         method: "POST",
@@ -335,6 +364,20 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
       <form onSubmit={submitInvoice} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
         <h2 className={ui.h2}>{t("invoiceSubmit")}</h2>
         <p className={ui.help}>{tPortal("proposalNotice")}</p>
+        <div>
+          <label htmlFor="einvoice-xml" className={ui.label}>
+            {t("einvoiceXml")}
+          </label>
+          <input id="einvoice-xml" type="file" accept=".xml,application/xml,text/xml" className={ui.input} onChange={(e) => void readEinvoice(e.target.files?.[0] ?? null)} />
+          <p className={ui.help}>{t("einvoiceHelp")}</p>
+          {einvoiceFindings.length > 0 ? (
+            <ul className="text-sm text-danger" data-testid="einvoice-findings">
+              {einvoiceFindings.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
         <div>
           <label htmlFor="invoice-number" className={ui.label}>
             {t("invoiceNumber")}

@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from mhvp.automation.models import (
     ACTION_TYPES,
+    SET_FIELD_MAX_LENGTH,
+    SETTABLE_FIELDS,
     SETTABLE_TICKET_FIELDS,
     TICKET_ONLY_ACTIONS,
     TRIGGER_EVENT,
@@ -116,6 +118,45 @@ class SetTicketFieldAction(_In):
             or (isinstance(self.value, dict) and set(self.value) == {"$field"})
         ):
             raise ValueError("Thema muss ein Themencode sein.")
+        return self
+
+
+class SetFieldAction(_In):
+    """S15-06: sets a text field of a property, contact or contract from the closed list
+    ``SETTABLE_FIELDS`` (notes only). The target is the entity of the event or, for a ticket
+    event, the property or contact of the ticket. ``append`` (default) adds a dated line to the
+    existing text and never loses it; ``replace`` overwrites. No payee, IBAN, amount, date,
+    status or tax field can be named."""
+
+    type: Literal["set_field"]
+    target: Literal["property", "contact", "contract"]
+    field: str
+    value: str = Field(min_length=1, max_length=SET_FIELD_MAX_LENGTH)
+    mode: Literal["append", "replace"] = "append"
+
+    @model_validator(mode="after")
+    def _field(self) -> "SetFieldAction":
+        if self.field not in SETTABLE_FIELDS[self.target]:
+            allowed = ", ".join(SETTABLE_FIELDS[self.target])
+            raise ValueError(f"Feld nicht erlaubt: {self.field} (erlaubt: {allowed})")
+        return self
+
+
+class NotifyProviderAction(_In):
+    """S15-06: e-mail draft to a service provider of the ticket's property (explicit contact or
+    the active relation with ``contract_type_code``). Draft only: approval and sending stay
+    manual (rule 0.1.6); the text contains only what the template puts in."""
+
+    type: Literal["notify_provider"]
+    contact_id: uuid.UUID | None = None
+    contract_type_code: str | None = Field(default=None, max_length=63)
+    subject: str = Field(min_length=1, max_length=300)
+    body: str = Field(min_length=1, max_length=4000)
+
+    @model_validator(mode="after")
+    def _recipient(self) -> "NotifyProviderAction":
+        if self.contact_id is None and not self.contract_type_code:
+            raise ValueError("Dienstleister braucht einen Kontakt oder eine Vertragsart.")
         return self
 
 
@@ -232,6 +273,8 @@ Action = (
     | AiTaskAction
     | CreateTaskAction
     | AssignRecordAction
+    | SetFieldAction
+    | NotifyProviderAction
 )
 _ACTION_MODELS: dict[str, type[Action]] = {
     "create_ticket": CreateTicketAction,
@@ -243,6 +286,8 @@ _ACTION_MODELS: dict[str, type[Action]] = {
     "ai_task": AiTaskAction,
     "create_task": CreateTaskAction,
     "assign_record": AssignRecordAction,
+    "set_field": SetFieldAction,
+    "notify_provider": NotifyProviderAction,
 }
 
 

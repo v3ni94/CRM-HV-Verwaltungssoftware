@@ -193,3 +193,9 @@ max_connections 300, 16 parallele Worker). Der Server teilt sich 64 Threads mit 
 Stacks; bei dauerhaft hoher Last der Nachbarstacks die Werte senken statt erhöhen. Prüfung nach
 dem Start: `./mhvp.sh exec api sh -c 'ps -o pid,cmd | grep -c uvicorn'` zeigt die Prozesse,
 `./mhvp.sh exec -T postgres psql -U postgres -Atc "show shared_buffers"` die Datenbankeinstellung.
+
+## Login-Limit hinter dem BFF (P15-05)
+
+Befund aus dem Code, im Staging zu verifizieren: CRM und Portal rufen die API über `MHVP_API_INTERNAL_URL` (`http://api:8000`, Stacknetz) auf, nicht über Traefik. Das Traefik-Limit `auth-ratelimit` (`MHVP_AUTH_RATELIMIT_PER_MINUTE`, je Client-Adresse) greift daher nur bei direkten API-Aufrufen von außen, nicht bei Anmeldungen über den BFF. Das Anwendungslimit (`core/ratelimit.py`, `rate_limit_per_minute_anonymous`, 120 je Minute) zählt unauthentifizierte Anfragen (Login, Token-Erneuerung) je Client-Adresse. Der BFF leitet keinen `X-Forwarded-For` weiter und `rate_limit_trust_forwarded_for` ist aus, daher sieht die API für alle BFF-Anmeldungen die Adresse des CRM-Containers: alle Nutzer teilen sich einen Zähler. Einschätzung: Bei vielen gleichzeitigen Anmeldungen droht ein gemeinsames Sperren, ein Schutz je echter Client-Adresse fehlt für den BFF-Pfad.
+
+Prüfung im Staging: (1) 130 Anmeldeversuche innerhalb einer Minute über die CRM-Oberfläche, Antwort 429 mit Code `MHVP-CORE-0006` erwartet nach 120; (2) gleichzeitig Anmeldung eines zweiten Nutzers von anderer Adresse, erwartet ebenfalls 429 (Bestätigung des gemeinsamen Zählers). Empfehlung: Der BFF setzt `X-Forwarded-For` aus dem Traefik-Header, die API vertraut dem Header nur von der BFF-Adresse. Das ist eine Sicherheitsänderung (Fälschbarkeit des ersten Eintrags) und braucht eine Entscheidung (siehe `docs/OPEN_QUESTIONS.md`, P15-05). Bis dahin nicht `rate_limit_trust_forwarded_for` einschalten.

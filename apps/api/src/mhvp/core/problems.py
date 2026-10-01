@@ -1207,6 +1207,24 @@ class ErrorCodes:
         "Diese IBAN ist beim Kontakt bereits hinterlegt",
         "An account with the same IBAN fingerprint already exists on this contact.",
     )
+    CONTACT_MERGE_INVALID = ErrorCode(
+        "MHVP-CONT-0010",
+        409,
+        "Die Zusammenführung ist nicht zulässig",
+        "The merge check reports blockers (same contact, inactive, kind differs, open erasure).",
+    )
+    CONTACT_MERGE_STATE = ErrorCode(
+        "MHVP-CONT-0011",
+        409,
+        "Der Zusammenführungsvorschlag hat einen anderen Status",
+        "The merge proposal is not open, or an open proposal exists for the source already.",
+    )
+    CONTACT_MERGE_FOUR_EYES = ErrorCode(
+        "MHVP-CONT-0012",
+        403,
+        "Ausführung durch eine zweite Person erforderlich",
+        "The proposer must not execute the merge (four eyes).",
+    )
     MIG_CUTOFF_MISSING = ErrorCode(
         "MHVP-MIG-0001",
         409,

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { NoticePeriodHint } from "@/components/contracts/NoticePeriodHint";
+import { RentIncreaseLinks } from "@/components/contracts/RentIncreaseLinks";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { fieldPath, type Problem } from "@/lib/problem";
@@ -1052,6 +1053,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
               <input className={ui.input} type="date" value={rentBlockUntil} onChange={(e) => setRentBlockUntil(e.target.value)} />
             </Field>
           ) : null}
+          {contract.kind === "tenancy" ? <RentIncreaseLinks contractId={contract.id} blockUntil={rentBlockUntil} /> : null}
         </div>
         <Check label={t("fields.directDebit")} checked={directDebit} onChange={setDirectDebit} />
         {directDebit ? (

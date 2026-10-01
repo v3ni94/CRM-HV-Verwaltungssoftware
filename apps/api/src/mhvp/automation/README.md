@@ -164,3 +164,8 @@ rule never removes a process code and never changes the status.
 
 - Testmodus: `automation_rule.test_mode`; im Beat-Lauf nur Run mit Status `dry_run`, keine Aktion.
 - Jobzeitpläne je Mandant: `tenant_job_schedule`, `GET/PUT /automation/job-schedules`, Prüfung über `job_schedule.job_allowed`; die Domänenjobs rufen sie noch nicht auf (docs/OPEN_QUESTIONS.md P21-01).
+
+### Aktionen Feld setzen und Dienstleister informieren (S15-06, Paket Q11)
+
+- `set_field`: Notizfelder von Objekt, Kontakt, Vertrag aus der geschlossenen Liste `models.SETTABLE_FIELDS`; Ziel ist das Ereignisobjekt oder, bei Ticketereignissen, Objekt oder Kontakt des Tickets; Modus `append` (Standard) oder `replace`. Das Änderungsereignis trägt die Automatisierungsmarke.
+- `notify_provider`: E-Mail-Entwurf (Status draft) an den Dienstleister, nie versendet; nur für Ticketereignisse (`TICKET_ONLY_ACTIONS`).

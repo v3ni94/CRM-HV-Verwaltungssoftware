@@ -23,6 +23,11 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
   const [providers, setProviders] = useState<Option[]>([]);
   const [provider, setProvider] = useState("");
   const [f, setF] = useState({ number: "", invoice_date: "", service_from: "", net: "", vat_percent: "19", account: "", order_reference: "", recipient_name: "" });
+  // M14-01/04/05: optionale Angaben zur Prüfung am Beleg (Leistungsort, Aussteller, Einbehalte).
+  const [x, setX] = useState({ service_to: "", service_place: "", issuer_vat_id: "", issuer_tax_number: "", prepaid_amount: "", retention_amount: "", discount_percent: "", discount_until: "", reverse_charge: false, construction_withholding: false, input_tax_deductible: "" });
+  const xMoney = (v: string) => v.trim() === "" || MONEY.test(v.trim());
+  const xValid = xMoney(x.prepaid_amount) && xMoney(x.retention_amount) && xMoney(x.discount_percent);
+  const xNum = (v: string) => (v.trim() === "" ? null : v.trim().replace(",", "."));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
@@ -32,7 +37,7 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
   };
   const net = MONEY.test(f.net) ? cents(f.net) : NaN;
   const vat = Number.isFinite(net) ? Math.round((net * Number(f.vat_percent)) / 100) : NaN;
-  const valid = ledger && provider && f.number.trim() && f.invoice_date && Number.isFinite(net) && f.account;
+  const valid = xValid && ledger && provider && f.number.trim() && f.invoice_date && Number.isFinite(net) && f.account;
   const submit = async () => {
     setBusy(true);
     setError(null);
@@ -47,6 +52,17 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
       gross: fmt(net + vat),
       order_reference: f.order_reference.trim() || null,
       recipient_name: f.recipient_name.trim() || null,
+      service_to: x.service_to || null,
+      service_place: x.service_place.trim() || null,
+      issuer_vat_id: x.issuer_vat_id.trim() || null,
+      issuer_tax_number: x.issuer_tax_number.trim() || null,
+      prepaid_amount: xNum(x.prepaid_amount),
+      retention_amount: xNum(x.retention_amount),
+      discount_percent: xNum(x.discount_percent),
+      discount_until: x.discount_until || null,
+      reverse_charge: x.reverse_charge,
+      construction_withholding: x.construction_withholding,
+      input_tax_deductible: x.input_tax_deductible === "" ? null : x.input_tax_deductible === "yes",
       lines: [{ account_id: f.account, net: fmt(net), vat_percent: f.vat_percent, vat: fmt(vat), text: f.number.trim() }],
     };
     const res = await bff<{ id: string }>("/api/bff/accounting/invoices", { method: "POST", body: JSON.stringify(body) });
@@ -111,6 +127,38 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
         {field("order_reference")}
         {field("recipient_name")}
       </div>
+      <details data-testid="invoice-extra">
+        <summary className="cursor-pointer text-sm font-medium">{t("extra.title")}</summary>
+        <p className={ui.help}>{t("extra.hint")}</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-4">
+          {(["service_to", "discount_until"] as const).map((k) => (
+            <label key={k} className="flex flex-col gap-1">
+              <span className={ui.label}>{t(`extra.${k}`)}</span>
+              <input className={ui.input} type="date" value={x[k]} onChange={(e) => setX((p) => ({ ...p, [k]: e.target.value }))} />
+            </label>
+          ))}
+          {(["service_place", "issuer_vat_id", "issuer_tax_number", "prepaid_amount", "retention_amount", "discount_percent"] as const).map((k) => (
+            <label key={k} className="flex flex-col gap-1">
+              <span className={ui.label}>{t(`extra.${k}`)}</span>
+              <input className={ui.input} value={x[k]} onChange={(e) => setX((p) => ({ ...p, [k]: e.target.value }))} />
+            </label>
+          ))}
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("extra.input_tax_deductible")}</span>
+            <select className={ui.input} value={x.input_tax_deductible} onChange={(e) => setX((p) => ({ ...p, input_tax_deductible: e.target.value }))}>
+              <option value="">{t("extra.unknown")}</option>
+              <option value="yes">{t("extra.yes")}</option>
+              <option value="no">{t("extra.no")}</option>
+            </select>
+          </label>
+          {(["reverse_charge", "construction_withholding"] as const).map((k) => (
+            <label key={k} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={x[k]} onChange={(e) => setX((p) => ({ ...p, [k]: e.target.checked }))} />
+              {t(`extra.${k}`)}
+            </label>
+          ))}
+        </div>
+      </details>
       <p className="text-sm text-muted" data-testid="gross">
         {Number.isFinite(net) ? t("gross", { gross: formatEur(fmt(net + vat)), vat: formatEur(fmt(vat)) }) : ""}
       </p>

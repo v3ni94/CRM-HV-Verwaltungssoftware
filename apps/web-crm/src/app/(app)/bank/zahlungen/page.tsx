@@ -71,6 +71,12 @@ export default async function PaymentOrdersPage() {
                 <td>
                   <StatusPill variant={STATUS_VARIANT[o.status] ?? "neutral"} label={t(`status_${o.status}`)} />
                   {o.status === "draft" ? <span className="block text-xs text-muted">{t("approvals", { n: o.approvals ?? 0 })}</span> : null}
+                  {/* S69-03: same person with two separate contacts, warning only. */}
+                  {((o as { approval_warnings?: string[] }).approval_warnings ?? []).map((w) => (
+                    <span key={w} className="block max-w-xs text-xs text-warning-fg" role="note">
+                      {t("identityWarning", { text: w })}
+                    </span>
+                  ))}
                   {o.status === "approved" ? (
                     <span className="block max-w-xs text-xs text-muted" data-testid="gate-g2-hint">
                       {t("fileLocked")}

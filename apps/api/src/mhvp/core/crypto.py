@@ -111,6 +111,38 @@ def decrypt(blob: bytes, scope: str | None = None) -> str:
         raise CryptoError("ciphertext cannot be decrypted") from exc
 
 
+def ciphertext_scope(blob: bytes) -> str:
+    """Scope stored in the ciphertext header (no key needed)."""
+    if blob[:2] != _VERSION:
+        raise CryptoError("unknown ciphertext version")
+    return blob[3 : 3 + blob[2]].decode()
+
+
+def decrypt_with_master(master: bytes, blob: bytes) -> str:
+    """Key rotation helper (S16-03): decrypts under an explicitly given master key, scope from
+    the header; never touches the process wide key."""
+    scope = ciphertext_scope(blob)
+    length = blob[2]
+    nonce = blob[3 + length : 3 + length + _NONCE_BYTES]
+    sealed = blob[3 + length + _NONCE_BYTES :]
+    try:
+        return AESGCM(_derive(master, scope)).decrypt(nonce, sealed, scope.encode()).decode()
+    except Exception as exc:
+        raise CryptoError("ciphertext cannot be decrypted") from exc
+
+
+def encrypt_with_master(master: bytes, plaintext: str, scope: str) -> bytes:
+    scope_bytes = scope.encode()
+    nonce = os.urandom(_NONCE_BYTES)
+    sealed = AESGCM(_derive(master, scope)).encrypt(nonce, plaintext.encode(), scope_bytes)
+    return _VERSION + bytes([len(scope_bytes)]) + scope_bytes + nonce + sealed
+
+
+def fingerprint_with_master(master: bytes, value: str, scope: str) -> str:
+    key = _derive(master, f"{scope}:fingerprint")
+    return hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
+
+
 class EncryptedText(TypeDecorator[str]):
     """Column type storing text encrypted for the current scope (tenant or platform)."""
 

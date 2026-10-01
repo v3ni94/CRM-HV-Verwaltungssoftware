@@ -35,3 +35,12 @@ Gates: no money flows; sending to portals or FLOWFACT is not implemented (M28 st
 * `rentindex.py`: Mietspiegelwerte je Gemeinde (`/letting/rent-index`, CSV-Import mit Vorschau, Abfrage `/lookup`), Regel `M26-INDEX-01`.
 * `routers.py`: Leerstandsmaßnahmen (`vacancy_case`, `PUT /letting/vacancies/{unit_id}`, Anzeige aus Leerstand), Exposé als PDF im DMS (`POST /letting/units/{unit_id}/expose/pdf`), Suchprofil der Interessenten und Abgleich (`GET /letting/listings/{id}/prospect-matches`). Regeln `M26-VAC-01`, `M26-PROS-01`.
 * Migration `0269_letting_w2`. Offen: KI-Plausibilitätsprüfung (`docs/OPEN_QUESTIONS.md` P20-01), Bilder im Exposé-PDF.
+
+## Paket Q14 (30.09.2026, Welle 3)
+
+* M26-05: `POST /letting/units/{unit_id}/expose/pdf` bettet die Bilder der Anzeige ein (PNG, JPEG, höchstens 8,
+  `Letter.images` in `mhvp.documents.letters`); Antwort mit `images_embedded`.
+* M26-03: `POST /letting/rent-increases/{id}/adopt-rent-index` übernimmt Untergrenze, Mittelwert oder Obergrenze
+  eines Mietspiegelwertes in einen Entwurfsfall und prüft neu.
+* M5-08: `rent_increase_case.ai_check_id` (Migration 0281, Verweis auf `ai_proposal`), `PUT /letting/rent-increases/{id}/ai-check`.
+* M26-06: CRM Interessentenabgleich an der Einheit; CRM Seite `/vermietung/mietspiegel`.

@@ -3,10 +3,10 @@
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import case, func, literal, or_, select
 
 from mhvp.ai.examples import delete_examples_for_contact
@@ -28,7 +28,17 @@ from mhvp.contacts.models import (
 )
 from mhvp.contacts.validation import mask_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import (
+    LIST_PARAMS_DOC,
+    ListParams,
+    apply_filters,
+    apply_sort,
+    check_include,
+    list_params,
+    sparse,
+)
 from mhvp.core.problems import ErrorCodes, ProblemError, body_validation_error
 from mhvp.integrations.lexoffice_ext import sync as lexoffice_sync
 
@@ -55,7 +65,31 @@ async def _active(session: Any, contact_id: uuid.UUID) -> Contact:
     return contact
 
 
-@router.get("/contacts", summary="Kontakte suchen und auflisten")
+_CONTACT_FILTERS = {
+    "kind": Contact.kind,
+    "blocked": Contact.blocked,
+    "language": Contact.language,
+    "preferred_channel": Contact.preferred_channel,
+    "is_consumer": Contact.is_consumer,
+    "source_system": Contact.source_system,
+    "retention_profile_id": Contact.retention_profile_id,
+}
+_CONTACT_SORT = {
+    "display_name": Contact.display_name,
+    "last_name": Contact.last_name,
+    "company_name": Contact.company_name,
+    "kind": Contact.kind,
+    "created_at": Contact.created_at,
+    "updated_at": Contact.updated_at,
+}
+
+
+@router.get(
+    "/contacts",
+    summary="Kontakte suchen und auflisten",
+    response_model=schemas.ContactPage,
+    description=LIST_PARAMS_DOC,
+)
 async def list_contacts(
     request: Request,
     q: str | None = Query(default=None, max_length=200),
@@ -66,10 +100,12 @@ async def list_contacts(
     include_deleted: bool = False,
     page: Page = 1,
     page_size: PageSize = 50,
+    params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
-) -> schemas.ContactPage:
+) -> Any:
+    check_include(params, ())
     async with tenant_tx(request, principal) as session:
-        query = select(Contact)
+        query = apply_filters(select(Contact), params, _CONTACT_FILTERS)
         if not include_deleted:
             query = query.where(Contact.deleted_at.is_(None))
         if kind:
@@ -91,16 +127,20 @@ async def list_contacts(
         total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0
         rows = (
             await session.scalars(
-                query.order_by(Contact.display_name, Contact.id)
+                apply_sort(query, params, _CONTACT_SORT, (Contact.display_name, Contact.id))
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
         ).all()
-        return schemas.ContactPage(
-            items=await services.summaries(session, list(rows)),
-            total=total,
-            page=page,
-            page_size=page_size,
+        return sparse(
+            schemas.ContactPage(
+                items=await services.summaries(session, list(rows)),
+                total=total,
+                page=page,
+                page_size=page_size,
+            ),
+            params,
+            schemas.ContactSummary,
         )
 
 
@@ -138,6 +178,69 @@ async def create_contact(
         assert out is not None  # noqa: S101 - just created in this transaction
         response.headers["ETag"] = f'"{out.version}"'
         return out
+
+
+class ContactBulkIn(BaseModel):
+    """Bulk action on contacts (S12-05): ``add_tag`` or ``remove_tag`` with ``tag``."""
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
+    action: Literal["add_tag", "remove_tag"]
+    tag: str = Field(min_length=1, max_length=63)
+
+
+@router.post(
+    "/contacts/bulk",
+    summary="Massenaktion Kontakte mit Teilerfolgsbericht",
+    response_model=BulkResultOut,
+)
+async def bulk_contacts(
+    body: ContactBulkIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BulkResultOut:
+    """Each contact is processed on its own (savepoint); a missing or deleted contact is
+    reported with its problem code and never aborts the others."""
+    name = body.tag.strip()
+    if not name:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Tag fehlt.")
+    async with tenant_tx(request, principal) as session:
+        tag = await session.scalar(select(ContactTag).where(ContactTag.name == name))
+        if tag is None and body.action == "add_tag":
+            tag = ContactTag(tenant_id=principal.tenant_id, name=name)
+            session.add(tag)
+            await session.flush()
+
+        async def act(contact_id: uuid.UUID) -> None:
+            contact = await _active(session, contact_id)
+            link = (
+                await session.scalar(
+                    select(ContactTagLink).where(
+                        ContactTagLink.contact_id == contact.id, ContactTagLink.tag_id == tag.id
+                    )
+                )
+                if tag is not None
+                else None
+            )
+            if body.action == "add_tag" and tag is not None and link is None:
+                session.add(
+                    ContactTagLink(
+                        tenant_id=principal.tenant_id, contact_id=contact.id, tag_id=tag.id
+                    )
+                )
+            elif body.action == "remove_tag" and link is not None:
+                await session.delete(link)
+            else:
+                return
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="contact.updated",
+                entity_type="contact",
+                entity_id=contact.id,
+                actor_user_id=principal.user_id,
+                payload={"bulk": body.action, "tag": name},
+            )
+
+        return await run_bulk(body.ids, act, savepoint=session.begin_nested)
 
 
 @router.post("/contacts/roles/recompute", summary="Abgeleitete Rollen neu berechnen")

@@ -69,6 +69,12 @@ const DUNNING_RUN: Record<string, StatusDescriptor> = {
     explanation: "Vorschlag ohne Wirkung nach außen. Erst nach Freigabe werden Mahnungen erzeugt.",
   },
   approved: { label: "Freigegeben", tone: "success", icon: "check" },
+  failed: {
+    label: "Fehlgeschlagen",
+    tone: "danger",
+    icon: "cross",
+    explanation: "Der geplante Lauf ist mit einem Fehler abgebrochen. Vorschau manuell neu erstellen.",
+  },
 };
 
 const DUNNING_CASE: Record<string, StatusDescriptor> = {

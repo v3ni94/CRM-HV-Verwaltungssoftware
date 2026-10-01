@@ -10,7 +10,18 @@ import { ui } from "@/lib/ui";
 type SavedFilter = { id: string; resource: string; name: string; params: Record<string, string> };
 
 /** Saved list filters of the current user; the params are the list's query string. */
-export function SavedFilters({ resource, basePath, current }: { resource: string; basePath: string; current: Record<string, string> }) {
+export function SavedFilters({
+  resource,
+  basePath,
+  current,
+  onApply,
+}: {
+  resource: string;
+  basePath: string;
+  current: Record<string, string>;
+  /** Client side lists apply the saved params in place instead of navigating (M9-03). */
+  onApply?: (params: Record<string, string>) => void;
+}) {
   const t = useTranslations("Workspace");
   const [filters, setFilters] = useState<SavedFilter[]>([]);
   const [name, setName] = useState("");
@@ -48,9 +59,15 @@ export function SavedFilters({ resource, basePath, current }: { resource: string
       <span className="text-muted">{t("savedFilters")}:</span>
       {filters.map((f) => (
         <span key={f.id} className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5">
-          <Link href={`${basePath}?${new URLSearchParams(f.params)}`} className="hover:underline">
-            {f.name}
-          </Link>
+          {onApply ? (
+            <button type="button" className="hover:underline" onClick={() => onApply(f.params)}>
+              {f.name}
+            </button>
+          ) : (
+            <Link href={`${basePath}?${new URLSearchParams(f.params)}`} className="hover:underline">
+              {f.name}
+            </Link>
+          )}
           <button type="button" aria-label={t("deleteFilter", { name: f.name })} onClick={() => void remove(f.id)}>
             ×
           </button>

@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+from mhvp.automation.job_schedule import job_allowed
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -32,6 +33,8 @@ async def reminders_once(settings: Settings, today: date | None = None) -> dict[
             )
         for tenant_id in ids:
             async with tenant_transaction(factory, tenant_id) as session:
+                if not await job_allowed(session, tenant_id, "workspace-reminders"):
+                    continue
                 created += await maintenance_reminders(session, today or local_today())
     finally:
         await engine.dispose()
@@ -59,8 +62,10 @@ async def digest_once(settings: Settings, today: date | None = None) -> dict[str
     totals = {"tenants": 0, "users": 0, "notified": 0, "empty": 0, "skipped": 0, "mails": 0}
     try:
         for tenant_id in await _active_tenants(factory):
-            totals["tenants"] += 1
             async with tenant_transaction(factory, tenant_id) as session:
+                if not await job_allowed(session, tenant_id, "workspace-digest"):
+                    continue
+                totals["tenants"] += 1
                 counts = await digest_tenant(session, settings, tenant_id, today or local_today())
             for key, value in counts.items():
                 totals[key] = totals.get(key, 0) + value
@@ -78,8 +83,10 @@ async def deadlines_once(settings: Settings, today: date | None = None) -> dict[
     totals = {"tenants": 0, "created": 0, "updated": 0, "closed": 0, "notified": 0}
     try:
         for tenant_id in await _active_tenants(factory):
-            totals["tenants"] += 1
             async with tenant_transaction(factory, tenant_id) as session:
+                if not await job_allowed(session, tenant_id, "workspace-compliance-deadlines"):
+                    continue
+                totals["tenants"] += 1
                 counts = await deadlines_tenant(session, tenant_id, today or local_today())
             for key, value in counts.items():
                 totals[key] = totals.get(key, 0) + value
@@ -96,3 +103,29 @@ def digest() -> dict[str, int]:
 @shared_task(name="mhvp.workspace.compliance_deadlines")
 def compliance_deadlines() -> dict[str, int]:
     return asyncio.run(deadlines_once(get_settings()))
+
+
+async def notification_mails_once(settings: Settings) -> dict[str, int]:
+    """Sends the mails that users asked for in their notification preferences (M23-04)."""
+    from mhvp.workspace.notification_prefs import send_pending_mails
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"tenants": 0, "sent": 0, "failed": 0, "skipped": 0}
+    try:
+        for tenant_id in await _active_tenants(factory):
+            async with tenant_transaction(factory, tenant_id) as session:
+                totals["tenants"] += 1
+                counts = await send_pending_mails(session, settings, tenant_id)
+            for key, value in counts.items():
+                totals[key] += value
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.workspace.notification_mails")
+def notification_mails() -> dict[str, int]:
+    return asyncio.run(notification_mails_once(get_settings()))

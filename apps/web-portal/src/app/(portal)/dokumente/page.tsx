@@ -2,6 +2,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 
 import Link from "next/link";
 
+import { DocumentBundleList } from "@/components/portal/DocumentBundleList";
 import type { PortalDocument } from "@/components/portal/types";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
@@ -16,11 +17,23 @@ type StaffHandover = {
 
 export const dynamic = "force-dynamic";
 
+const SORTS = ["created_desc", "created_asc", "title_asc", "title_desc"];
+
 /** Freigegebene Dokumente (M21): list plus download through /api/portal-files (binary, same
  *  access check as the API's /portal/documents/{id}/download). */
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; sort?: string }>;
+}) {
   const [t, format] = await Promise.all([getTranslations("Documents"), getFormatter()]);
-  const { data, error, response } = await serverApi().GET("/api/v1/portal/documents");
+  const params = await searchParams;
+  const q = (params.q ?? "").slice(0, 100);
+  const sort = SORTS.includes(params.sort ?? "") ? (params.sort as string) : "created_desc";
+  // M25-06: search and sort run in the API, inside the documents this account may see.
+  const { data, error, response } = await serverApi().GET("/api/v1/portal/documents", {
+    params: { query: { q: q || undefined, sort } },
+  } as never);
   redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const rows = data as unknown as PortalDocument[];
@@ -32,34 +45,34 @@ export default async function DocumentsPage() {
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
+      <form method="get" className="flex flex-wrap items-end gap-3" role="search">
+        <label className="flex flex-col gap-1 text-sm">
+          {t("search")}
+          <input name="q" type="search" defaultValue={q} placeholder={t("searchPlaceholder")} className={ui.input} maxLength={100} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          {t("sort")}
+          <select name="sort" defaultValue={sort} className={ui.input}>
+            <option value="created_desc">{t("sortCreatedDesc")}</option>
+            <option value="created_asc">{t("sortCreatedAsc")}</option>
+            <option value="title_asc">{t("sortTitleAsc")}</option>
+            <option value="title_desc">{t("sortTitleDesc")}</option>
+          </select>
+        </label>
+        <button type="submit" className={ui.buttonSm}>
+          {t("apply")}
+        </button>
+      </form>
       {rows.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
       {rows.length > 0 ? <p className="text-xs text-subtle">{t("readNote")}</p> : null}
-      <ul className="flex flex-col gap-3">
-        {rows.map((row) => (
-          <li key={row.id} className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>
-            <span className="flex flex-col gap-0.5">
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{row.title}</span>
-                <span className={ui.badge} data-testid="document-state">
-                  {row.is_new ? t("isNew") : t("read")}
-                </span>
-              </span>
-              {row.context ? <span className="text-xs text-subtle">{row.context}</span> : null}
-              <span className="text-xs text-subtle">
-                {t("created")}{" "}
-                {format.dateTime(new Date(row.created_at), { day: "2-digit", month: "2-digit", year: "numeric" })}
-              </span>
-            </span>
-            <a
-              href={`/api/portal-files/portal/documents/${row.id}/download`}
-              className={ui.buttonSm}
-              download={row.filename}
-            >
-              {t("download")}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {rows.length > 0 ? (
+        <DocumentBundleList
+          rows={rows}
+          formatDate={(value) =>
+            format.dateTime(new Date(value), { day: "2-digit", month: "2-digit", year: "numeric" })
+          }
+        />
+      ) : null}
       {handovers ? (
         <section className={ui.pageGap}>
           <h2 className="text-lg font-semibold">{t("handoversTitle")}</h2>

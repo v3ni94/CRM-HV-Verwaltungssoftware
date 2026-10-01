@@ -500,3 +500,95 @@ async def income_expense(
             "Einnahmenüberschussrechnung (EÜR) und keine Jahresabrechnung der Gemeinschaft."
         ),
     }
+
+
+async def vat_overview_by_property(
+    session: AsyncSession, ledger: Ledger, start: date, end: date
+) -> dict[str, Any]:
+    """VAT overview grouped by object and cost center (M18-06, 7.7).
+
+    Posted lines carry no property of their own: the object is derived from the line's unit
+    (``unit.property_id``); lines without a unit are listed under "ohne Objekt", the cost center
+    text of the line is the second grouping level. Same selection as ``vat_overview`` (VAT
+    relevant accounts, posted entries only); no deduction rule, no return field. The sums of
+    all groups equal the totals of ``vat_overview`` for the same period."""
+    from mhvp.accounting.models import AccountVatOption
+    from mhvp.properties.models import Property, Unit
+
+    query = (
+        select(
+            Unit.property_id,
+            JournalLine.cost_center,
+            LedgerAccount.category,
+            func.coalesce(func.sum(JournalLine.vat_amount), 0),
+            func.coalesce(func.sum(JournalLine.net_amount), 0),
+            func.count(JournalLine.id),
+        )
+        .select_from(LedgerAccount)
+        .join(JournalLine, JournalLine.account_id == LedgerAccount.id)
+        .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
+        .outerjoin(Unit, Unit.id == JournalLine.unit_id)
+        .where(
+            LedgerAccount.ledger_id == ledger.id,
+            LedgerAccount.category.in_((AccountCategory.REVENUE, AccountCategory.COST)),
+            (LedgerAccount.ust_relevant.is_(True))
+            | (LedgerAccount.vat_option != AccountVatOption.NONE),
+            JournalLine.vat_amount.is_not(None),
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.booking_date.between(start, end),
+        )
+        .group_by(Unit.property_id, JournalLine.cost_center, LedgerAccount.category)
+    )
+    groups: dict[tuple[Any, str], dict[str, Any]] = {}
+    for prop_id, cost_center, category, vat, net, count in (await session.execute(query)).all():
+        key = (prop_id, cost_center or "")
+        bucket = groups.setdefault(
+            key,
+            {
+                "property_id": prop_id,
+                "cost_center": cost_center,
+                "output_vat": ZERO,
+                "input_vat_before_deduction": ZERO,
+                "net_revenue": ZERO,
+                "net_cost": ZERO,
+                "lines": 0,
+            },
+        )
+        if category is AccountCategory.REVENUE:
+            bucket["output_vat"] += Decimal(vat)
+            bucket["net_revenue"] += Decimal(net)
+        else:
+            bucket["input_vat_before_deduction"] += Decimal(vat)
+            bucket["net_cost"] += Decimal(net)
+        bucket["lines"] += int(count)
+    ids = {k[0] for k in groups if k[0] is not None}
+    labels: dict[uuid.UUID, str] = {}
+    if ids:
+        for prop in (await session.scalars(select(Property).where(Property.id.in_(ids)))).all():
+            labels[prop.id] = " ".join(
+                p for p in (prop.street, prop.house_number, prop.city) if p
+            ) or str(prop.id)
+    rows = sorted(
+        groups.values(),
+        key=lambda g: (
+            g["property_id"] is None,
+            labels.get(g["property_id"], ""),
+            g["cost_center"] or "",
+        ),
+    )
+    for row in rows:
+        row["property_label"] = labels.get(row["property_id"], "ohne Objekt")
+    return {
+        "header": await report_header(
+            session, ledger, report="vat_overview_by_property", start=start, end=end
+        ),
+        "rows": rows,
+        "total_output_vat": sum((r["output_vat"] for r in rows), ZERO),
+        "total_input_vat_before_deduction": sum(
+            (r["input_vat_before_deduction"] for r in rows), ZERO
+        ),
+        "note": (
+            "Entwurf, keine Umsatzsteuer-Voranmeldung. Das Objekt folgt der Einheit der "
+            "Buchungszeile; Zeilen ohne Einheit stehen unter ohne Objekt."
+        ),
+    }

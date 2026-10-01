@@ -381,6 +381,19 @@ async def add_second_approval(
     row.payment_hash = payment_hash(invoice)
     row.limit_amount = None
     await session.flush()
+    # S69-02: central decision next to the legacy record.
+    from mhvp.accounting import approval_decisions
+
+    await approval_decisions.record(
+        session,
+        tenant_id=invoice.tenant_id,
+        subject_type="invoice",
+        subject_id=invoice.id,
+        step="second_approval",
+        user_id=user_id,
+        snapshot_hash=row.payment_hash,
+        legacy_ref_id=row.id,
+    )
     return row
 
 

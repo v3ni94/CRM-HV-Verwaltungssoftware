@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { AssistantTab } from "@/components/ai/AssistantTab";
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { LexofficeContactBadge, LexofficeContactSection } from "@/components/lexoffice/LexofficeContactStatus";
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
@@ -13,8 +14,11 @@ import { ContactMasterData } from "@/components/contacts/ContactMasterData";
 import { ContactQuickActions } from "@/components/contacts/ContactQuickActions";
 import { CreditorPropertiesSection, type CreditorProperty } from "@/components/contacts/CreditorPropertiesSection";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
+import { PartiesPanel } from "@/components/contacts/PartiesPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { PortalProposalsPanel } from "@/components/contacts/PortalProposalsPanel";
+import { PortalRepresentationsPanel } from "@/components/contacts/PortalRepresentationsPanel";
+import { PortalStatusBadge } from "@/components/contacts/PortalStatusBadge";
 import { RelationsPanel } from "@/components/contacts/RelationsPanel";
 import { RepresentativesPanel } from "@/components/contacts/RepresentativesPanel";
 import { RolePills } from "@/components/contacts/RolePills";
@@ -45,9 +49,11 @@ const TABS = [
   "notizen",
   "einwilligungen",
   "protokoll",
+  "assistent",
 ] as const;
 type Tab = (typeof TABS)[number];
 const TAB_KEY: Record<Tab, string> = {
+  assistent: "assistant",
   stammdaten: "master",
   beziehungen: "relations",
   kommunikation: "communication",
@@ -223,6 +229,7 @@ export default async function ContactDetailPage({
           <p className="mt-1 flex flex-wrap items-center gap-2">
             <RolePills roles={contact.roles} />
             <LexofficeContactBadge contactId={contact.id} />
+            <PortalStatusBadge contactId={contact.id} />
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
@@ -408,6 +415,12 @@ export default async function ContactDetailPage({
           <PortalProposalsPanel contactId={contact.id} canDecide={canInvitePortal} />
         </section>
       ) : null}
+      {tab === "freigaben" && (me.data?.permissions.includes("tickets:read") ?? false) ? (
+        <PortalRepresentationsPanel
+          contactId={contact.id}
+          canManage={me.data?.permissions.includes("tenant_settings:update") ?? false}
+        />
+      ) : null}
       {tab === "kommunikation" ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold">{t("calls.title")}</h2>
@@ -439,6 +452,13 @@ export default async function ContactDetailPage({
             relations={contactRelations}
             canEdit={canEditRelations}
           />
+          <PartiesPanel
+            contactId={contact.id}
+            contactName={contact.display_name}
+            canCreate={me.data?.permissions.includes("contacts:create") ?? false}
+            canUpdate={canEditRelations}
+            canDelete={canDelete}
+          />
         </>
       ) : null}
       {tab === "dokumente" ? (
@@ -463,6 +483,7 @@ export default async function ContactDetailPage({
           )}
         </section>
       ) : null}
+      {tab === "assistent" ? <AssistantTab kind="contact" /> : null}
       {tab === "protokoll" ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold">{t("log.title")}</h2>

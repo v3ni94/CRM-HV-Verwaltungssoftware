@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { BankLimitsCard } from "@/components/banking/BankLimitsCard";
 import { BankStatusImport } from "@/components/banking/BankStatusImport";
 import { PaymentRunPreview } from "@/components/banking/PaymentRunPreview";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,6 +20,7 @@ export default async function PaymentRunPage() {
       />
       <PaymentRunPreview />
       <BankStatusImport />
+      <BankLimitsCard />
     </div>
   );
 }

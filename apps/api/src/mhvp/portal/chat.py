@@ -9,8 +9,8 @@ portal user. The channel is off per tenant until ``PortalFeatureSetting.chat_ena
 
 The pre-qualification is a proposal only (rule 0.1.6): it never changes a ticket. The rule
 based part needs no provider. The AI part stays locked behind its own switch and the approved
-AI provider with data processing agreement (gateway gate); this module makes no provider call
-(open point, see docs/rules/P13-portal-w2.md)."""
+AI provider with data processing agreement (gateway gate); when both are open the AI stage
+runs through ``mhvp.ai.portal_prequalify`` (masked input, task ``classify_email``, Q06)."""
 
 import uuid
 from typing import Any
@@ -177,7 +177,8 @@ async def prequalify(
 ) -> dict[str, Any]:
     """Rule based proposal always (chat on); the AI stage is reported as available only when
     its tenant switch is on and the gateway gate (released provider with data processing
-    agreement and training opt out) is open. No provider is called here."""
+    agreement and training opt out) is open; then the masked text goes through the gateway
+    (``mhvp.ai.portal_prequalify``) and the AI proposal is added under ``ai``."""
     from mhvp.ai import gateway
     from mhvp.ai.models import AiTask
 
@@ -197,7 +198,22 @@ async def prequalify(
                 result["ai_available"] = True
             except gateway.GatewayBlockedError as exc:
                 result["ai_blocked_reason"] = str(exc)
-        return result
+    if result["ai_available"]:
+        # M21-01: AI stage through the gateway (masked input, budget), proposal only.
+        from mhvp.ai import portal_prequalify
+        from mhvp.core.auth.principal import sessions
+        from mhvp.documents.blobs import BlobStore
+
+        result["ai"] = await portal_prequalify.prequalify(
+            sessions(request),
+            principal.tenant_id,
+            ticket_id,
+            body.text,
+            BlobStore(request.app.state.settings),
+        )
+        if result["ai"].get("status") == "succeeded":
+            result["source"] = "regelbasiert_und_ki_vorschlag"
+    return result
 
 
 @admin.post(

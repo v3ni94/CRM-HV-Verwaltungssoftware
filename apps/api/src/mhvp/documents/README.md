@@ -178,3 +178,15 @@ created_at)` (migration 0127). Measurements in `docs/reviews/2026-09-26-performa
 
 * `DocumentStore.update_meta` (M6-06): Änderungen an Titel, Kategorie und Verknüpfung markieren fertige Spiegel (`document_mirror.meta_dirty`), der Spiegeljob überträgt sie. Paperless setzt zusätzlich die Custom Fields `entity_type` und `entity_id` (M6-07) und das Kategorie-Tag `document_category.paperless_tag` (M6-09); Drive schreibt Beschreibung und `appProperties`.
 * Datenschutz liegt im Modul `mhvp.privacy` (Löschprofile je Datenart, Löschantrag Art. 17, Register, Verarbeitungsverzeichnis als Entwurf), Regel `docs/rules/S16-P17-privacy.md`.
+
+## Q03 (30.09.2026): transfer, ZIP import, redactions, holds, intake address, Drive changes
+
+`transfer_routers.py` is included into `routers.router`:
+
+* `POST /documents/uploads` and `/documents/uploads/{id}/complete`: presigned PUT into `tmp/<tenant>/uploads/<id>`, then the normal checks and `store_document` (S12-06). `GET /documents/{id}/download-url`: presigned GET for S3 originals.
+* `POST /documents/zip-import`: every archive entry through the pipeline, refused files listed; recorded as `import_run` (source `document_zip`, M6-03).
+* `GET/POST /documents/{id}/redactions`, `POST .../{rid}/release`: redacted copy with reason, scope and steps (`document_redaction`), internal until a second person releases it (M25-01).
+* `GET/PUT /document-intake-address`: plus address per tenant (`intake_address.py`, stored in `TenantSettings.sources`); `intake.process_mailbox` treats mail to it as source `forward` (M6-04).
+* `POST /dms-changes/google-drive/sync` and beat `mhvp.documents.drive_changes`: Drive Changes API with cursor `changes_page_token` in `DmsConnection.options` (`drive_changes.py`, M6-05).
+* Beat `mhvp.documents.cleanup_tmp`: lifecycle rule on `tmp/` plus sweep (M6-08).
+* Retention (S711-06): `document.retention_hold_kind`, `document.permanent_record`, `retention.profile_for_document` (profile per legal entity kind), `retention.related_hold`; see `docs/rules/Q03-documents-w3.md`.

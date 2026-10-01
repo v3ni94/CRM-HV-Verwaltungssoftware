@@ -4,9 +4,9 @@ invoice end to end. Payment stays in accounting (M14/M15); board status never pa
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import func, select, update
@@ -14,8 +14,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.validation import InvalidValueError, normalise_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import ensure_session_property_allowed, session_allowed_property_ids
 from mhvp.core.escaping import content_disposition
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import (
+    LIST_PARAMS_DOC,
+    ListParams,
+    apply_filters,
+    apply_sort,
+    check_include,
+    list_params,
+    sparse,
+)
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.tickets import flows, reply_templates, tnr
@@ -1871,9 +1882,39 @@ def _parse_status_filter(raw: str | None) -> list[TicketStatus]:
         raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannter Status: {exc}") from exc
 
 
+_TICKET_FILTERS = {
+    "status": Ticket.status,
+    "priority": Ticket.priority,
+    "property_id": Ticket.property_id,
+    "unit_id": Ticket.unit_id,
+    "building_id": Ticket.building_id,
+    "contact_id": Ticket.contact_id,
+    "assignee_user_id": Ticket.assignee_user_id,
+    "team_id": Ticket.team_id,
+    "category": Ticket.category,
+    "topic": Ticket.topic,
+    "source": Ticket.source,
+    "process_code": Ticket.process_code,
+    "parent_ticket_id": Ticket.parent_ticket_id,
+    "due_on": Ticket.due_on,
+}
+_TICKET_SORT = {
+    "number": Ticket.number,
+    "created_at": Ticket.created_at,
+    "updated_at": Ticket.updated_at,
+    "priority": Ticket.priority,
+    "status": Ticket.status,
+    "due_on": Ticket.due_on,
+    "sla_due_at": Ticket.sla_due_at,
+    "title": Ticket.title,
+}
+_TICKET_LEGACY_SORT = ("urgency", "created_desc")
+
+
 @router.get(
     "/tickets",
     summary="Tickets",
+    description=LIST_PARAMS_DOC + " include: property (Objektnummer, Name, Anschrift).",
     responses={
         200: {
             "headers": {
@@ -1942,10 +1983,11 @@ async def list_tickets(
     merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
     sort: str = Query(
         default="urgency",
-        pattern="^(urgency|created_desc)$",
+        max_length=200,
         description=(
             "urgency (Standard): erledigte zuletzt, davor am längsten ohne Reaktion"
-            " unsererseits zuerst (rot, orange, gelb); created_desc: neuestes Ticket zuerst"
+            " unsererseits zuerst (rot, orange, gelb); created_desc: neuestes Ticket zuerst;"
+            " sonst allgemeine Sortierung feld,-feld (Abschnitt 12)"
         ),
     ),
     limit: int = Query(default=100, ge=1, le=500),
@@ -1956,6 +1998,7 @@ async def list_tickets(
         le=500,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
+    params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     """Liste der Tickets, neueste Nummer zuerst. Paginierung (review 26.09.2026, H7): die
@@ -1978,12 +2021,19 @@ async def list_tickets(
         urgency_order,
     )
 
+    includes = check_include(params, ("property",))
     async with tenant_tx(request, principal) as session:
         query = select(Ticket, last_staff_activity_expression(), last_inbound_expression())
+        query = apply_filters(query, params, _TICKET_FILTERS)
+        allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed is not None:
+            query = query.where(Ticket.property_id.in_(list(allowed)))
         if sort == "created_desc":
             query = query.order_by(Ticket.created_at.desc(), Ticket.number.desc())
-        else:
+        elif sort in _TICKET_LEGACY_SORT:
             query = query.order_by(*urgency_order())
+        else:
+            query = apply_sort(query, params, _TICKET_SORT, (Ticket.number.desc(), Ticket.id))
         term = (q or "").strip().lstrip("#")
         if term:
             escaped = f"%{_escape_like(term)}%"
@@ -2165,10 +2215,36 @@ async def list_tickets(
         response.headers["X-Page"] = str(page)
         response.headers["X-Page-Size"] = str(size)
         now = datetime.now(UTC)
-        return [
+        items = [
             _ticket_out(ticket) | activity_out(ticket, staff_at, inbound_at, now)
             for ticket, staff_at, inbound_at in rows
         ]
+        if "property" in includes:
+            prop_ids = {t.property_id for t, _, _ in rows if t.property_id is not None}
+            props = (
+                {
+                    p.id: {
+                        "id": p.id,
+                        "number": p.number,
+                        "name": p.name,
+                        "street": p.street,
+                        "house_number": p.house_number,
+                        "postal_code": p.postal_code,
+                        "city": p.city,
+                    }
+                    for p in (
+                        await session.scalars(select(Property).where(Property.id.in_(prop_ids)))
+                    ).all()
+                }
+                if prop_ids
+                else {}
+            )
+            for item in items:
+                item["property"] = props.get(item.get("property_id"))  # type: ignore[arg-type]
+        result: list[dict[str, Any]] = sparse(
+            items, params, None, extra=includes, response=response
+        )
+        return result
 
 
 @router.get("/tickets/{ticket_id}/assignees", summary="Zuweiser eines Tickets mit Grund")
@@ -2241,12 +2317,18 @@ async def patch_ticket(
     ticket_id: uuid.UUID,
     body: TicketPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         ticket = await session.get(Ticket, ticket_id, with_for_update=True)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_session_property_allowed(session, ticket.property_id)
+        if body.property_id is not None:
+            ensure_session_property_allowed(session, body.property_id)
+        check_if_match(if_match, ticket.updated_at)
         _assert_not_merged(ticket)
         if body.checklist_done is not None:
             ticket.checklist = [
@@ -2346,6 +2428,8 @@ async def patch_ticket(
                     field=learned_field,
                     actor_user_id=principal.user_id,
                 )
+        await session.refresh(ticket, ["updated_at"])
+        response.headers["ETag"] = etag_of(ticket.updated_at)
         return _ticket_out(ticket)
 
 
@@ -2553,12 +2637,17 @@ async def comment(
 
 @router.get("/tickets/{ticket_id}", summary="Ticket mit Verlauf und Aufträgen")
 async def get_ticket(
-    ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    ticket_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         ticket = await session.get(Ticket, ticket_id)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_session_property_allowed(session, ticket.property_id)  # M2-02/S16-02
+        response.headers["ETag"] = etag_of(ticket.updated_at)
         comments = (
             await session.scalars(
                 select(TicketComment)
@@ -2725,6 +2814,15 @@ async def create_order(
         )
         session.add(order)
         await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="work_order.created",
+            entity_type="work_order",
+            entity_id=order.id,
+            actor_user_id=principal.user_id,
+            payload={"ticket_id": str(order.ticket_id) if order.ticket_id else None},
+        )
         return _order_out(order)
 
 
@@ -2812,6 +2910,17 @@ async def order_step(
             actor_user_id=principal.user_id,
             payload={},
         )
+        if body.status is OrderStatus.DONE:
+            # S12-01: catalogue name of the completion (section 12); work_order.done stays.
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="work_order.completed",
+                entity_type="work_order",
+                entity_id=order.id,
+                actor_user_id=principal.user_id,
+                payload={},
+            )
         await session.flush()
         return _order_out(order)
 

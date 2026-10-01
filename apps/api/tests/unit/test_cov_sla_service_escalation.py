@@ -5,6 +5,7 @@ failed SMS fallback, internal alert for a role) with fake sessions; no database.
 import asyncio
 import uuid
 from datetime import UTC, datetime, time, timedelta
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -52,6 +53,10 @@ class _Session:
 
     async def scalar(self, query: Any) -> Any:
         return self._calendar
+
+    async def scalars(self, query: Any) -> Any:
+        # Notification preferences (M23-04): none stored, so the defaults (in app) apply.
+        return SimpleNamespace(all=lambda: [])
 
     async def get(self, model: Any, key: Any) -> None:
         return None

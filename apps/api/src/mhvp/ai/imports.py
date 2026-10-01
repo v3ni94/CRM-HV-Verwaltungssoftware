@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.accounting import invoices as acc_invoices
 from mhvp.accounting.models import Invoice, InvoiceKind, Ledger, PostingStatus
 from mhvp.ai import instructions as chat_instructions
+from mhvp.ai import person_match
 from mhvp.ai.examples import delete_examples_for_contact
 from mhvp.ai.models import AiTaskRun, ImportRun, ImportRunItem, ImportStatus
 from mhvp.contacts import schemas as cs
@@ -676,8 +677,36 @@ async def apply_property(
                 "types": [party_data["role"]],
             }
         )
-        contact = await create_contact(session, principal.tenant_id, principal.user_id, contact_in)
-        recorder.add("contact", contact.id)
+        matched = await person_match.match_person(
+            session,
+            {
+                k: party_data.get(k)
+                for k in (
+                    "first_name",
+                    "last_name",
+                    "company_name",
+                    "email",
+                    "iban",
+                    "postal_code",
+                    "street",
+                )
+            },
+        )
+        contact = None
+        if matched.decision == "link" and matched.best is not None:
+            contact = await session.get(Contact, matched.best.contact_id)
+            if contact is not None:
+                notes.append(f"{label}: mit bestehendem Kontakt {contact.display_name} verknüpft.")
+        elif matched.decision == "suggest" and matched.best is not None:
+            notes.append(
+                f"{label}: möglicher Treffer {matched.best.name} unter dem Schwellwert, "
+                "neuer unvollständiger Kontakt angelegt, bitte prüfen."
+            )
+        if contact is None:
+            contact = await create_contact(
+                session, principal.tenant_id, principal.user_id, contact_in
+            )
+            recorder.add("contact", contact.id)
         party = await create_party(session, principal.tenant_id, principal.user_id, [contact])
         recorder.add("party", party.id)
         start = (

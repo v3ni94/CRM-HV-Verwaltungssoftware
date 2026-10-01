@@ -134,3 +134,7 @@ Rechnungspläne erzeugen wiederkehrende Rechnungsentwürfe. Die Liste je Buchung
 
 - "Entwurf erzeugen" legt einen ungeprüften Rechnungsentwurf an. Prüfung, Freigabe und Buchung bleiben getrennte Schritte.
 - "Beenden" verlangt ein Enddatum und einen Grund. Ein Plan kann auch gelöscht werden.
+
+## Rechnungspläne bearbeiten, Kreditorenkonten, Prüfangaben am Beleg
+
+Rechnungspläne lassen sich unter "Bearbeiten" ändern (Leistung, Betrag, Rhythmus, Enddatum, Auftragsbezug, Dienstleistervertrag); geändert werden nur künftige Entwürfe. Bei Plänen mit Stichtag am 29. bis 31. zeigt die Liste den Hinweis auf den letzten Tag kürzerer Monate. Auf der Kreditorenseite legt "Kreditorenkonten anlegen" fehlende Konten für alle Dienstleisterverhältnisse des Buchungskreises an. Beim Erfassen einer Rechnung stehen unter "Weitere Angaben zur Prüfung am Beleg" optional Leistungszeitraum, Leistungsort, Steuerangaben des Ausstellers, Anzahlung, Sicherheitseinbehalt, Skonto, Reverse Charge und Bauabzugsteuer bereit; die steuerliche Bewertung bleibt bei Fachpersonal oder Steuerberater.

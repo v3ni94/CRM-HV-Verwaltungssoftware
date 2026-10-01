@@ -253,6 +253,7 @@ def test_inspection_request_flow_and_package(
         ("package", None),
         ("package", None),
         ("status", "provided"),
+        ("notified", None),  # M25-07
         ("retrieval", "retrieved"),
     ]
     assert detail["events"][1]["note"] == "Welches Jahr?"

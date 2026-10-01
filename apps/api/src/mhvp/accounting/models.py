@@ -95,6 +95,9 @@ class StatementKind(StrEnum):
     HOA_FEE = "hoa_fee"
     RESERVE = "reserve"
     OPERATING_COSTS = "operating_costs"
+    # SA-08 (migration 0278): further kinds of the statement (special levy, heating costs).
+    SPECIAL_LEVY = "special_levy"
+    HEATING = "heating"
     NONE = "none"
 
 
@@ -563,6 +566,8 @@ class ReceivableItem(IdMixin, TimestampMixin, TenantMixin, Base):
     # item stays manual; the correction is a reversal and a new receivable (rule 0.1.7).
     difference_of_item_id: Mapped[uuid.UUID | None] = _fk("receivable_item.id", nullable=True)
     difference_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    # M24-01 (migration 0278): earmarked reserve of the standing amount (contract payment).
+    reserve_id: Mapped[uuid.UUID | None] = _fk("hoa_reserve.id", nullable=True, ondelete="SET NULL")
 
 
 class AdminFeeSetting(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -790,6 +795,8 @@ class DunningRun(IdMixin, TimestampMixin, TenantMixin, Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="preview")
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     totals: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # M9-01: status ``failed`` marks a scheduled run that raised; ``error`` holds the cause.
+    error: Mapped[str | None] = mapped_column(Text)
 
 
 class DunningCase(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -1032,6 +1039,8 @@ class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
     # Leitweg-ID as entered in TenantBillingSettings at issue time (BT-10 BuyerReference).
     buyer_reference: Mapped[str | None] = mapped_column(String(64))
     xml_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    # M13-05 (migration 0282): readable invoice document (PDF on the letterhead) in the index.
+    pdf_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
     # M13-05/M13-06 (migration 0251): service period, kind (invoice or credit note), the
     # corrected invoice of a credit note, release and cancellation trail. One invoice per
     # setting and period while it is not cancelled (uq_admin_fee_invoice_period).
@@ -1138,3 +1147,66 @@ class RuleVersion(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     expert_confirmed_by: Mapped[str | None] = mapped_column(String(200))
     expert_confirmed_on: Mapped[date | None] = mapped_column(Date)
+
+
+class ApprovalDecision(IdMixin, TenantMixin, Base):
+    """Central approval record bound to a hash of the approved subject (6.9.9, E09, S69-02).
+    Written next to the existing records (``payment_approval``, ``invoice.released_hash``,
+    ``invoice_second_approval``), which stay authoritative for the current checks. A change of
+    the subject persists ``status='invalidated'`` instead of only failing a hash comparison."""
+
+    __tablename__ = "approval_decision"
+    __table_args__ = (
+        CheckConstraint("subject_type IN ('payment_order', 'invoice')", name="subject_type_valid"),
+        CheckConstraint("status IN ('valid', 'invalidated')", name="status_valid"),
+        Index("ix_approval_decision_subject", "tenant_id", "subject_type", "subject_id"),
+    )
+
+    subject_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    step: Mapped[str] = mapped_column(String(32), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    subject_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(12), nullable=False, default="valid", server_default=text("'valid'")
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invalidation_reason: Mapped[str | None] = mapped_column(String(200))
+    # Id of the legacy record (payment_approval, invoice_second_approval), if any.
+    legacy_ref_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # S69-03: warnings of the person identity check (same name and birth date etc.).
+    warnings: Mapped[list[str]] = mapped_column(
+        ARRAY(String(300)), nullable=False, default=list, server_default=text("'{}'")
+    )
+
+
+class OpenItemBalance(IdMixin, TenantMixin, Base):
+    """Maintained table of open item remainders as of a cut-off date (6.9.13, E15, B07,
+    S69-04). A read copy for lists and reports; ``services.remaining`` from the settlements
+    stays the source of truth and every refresh recomputes from it."""
+
+    __tablename__ = "open_item_balance"
+    __table_args__ = (
+        UniqueConstraint("open_item_id", "as_of", name="uq_open_item_balance_item_as_of"),
+        CheckConstraint("source IN ('job', 'manual')", name="source_valid"),
+        Index("ix_open_item_balance_ledger_as_of", "tenant_id", "ledger_id", "as_of"),
+    )
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", ondelete="CASCADE")
+    open_item_id: Mapped[uuid.UUID] = _fk("open_item.id", ondelete="CASCADE")
+    account_id: Mapped[uuid.UUID] = _fk("ledger_account.id", ondelete="CASCADE")
+    as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    due_date: Mapped[date | None] = mapped_column(Date)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    remaining: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    source: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="job", server_default=text("'job'")
+    )
+    refreshed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )

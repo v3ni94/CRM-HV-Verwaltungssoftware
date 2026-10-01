@@ -258,6 +258,8 @@ class RunOut(_Out):
     # Set when the "large" tier was chosen automatically because the input would not fit the
     # configured tier's context window ("Großes Modell wegen Umfang gewählt").
     model_tier_reason: str | None = None
+    # Cascade small to large (9.3, M7-08): one entry per stage with its own tokens and cost.
+    cascade: list[dict[str, Any]] = Field(default_factory=list)
     # Staff feedback on the answer ("helpful" / "unhelpful"), audit 29.09.2026.
     feedback: str | None = None
     # Knowledge entries that fed the answer (ids), for the proof and the feedback propagation.
@@ -346,6 +348,11 @@ class ChatActionApplyIn(_In):
     # calendar_create and deadline_create: the confirmer may correct date and time.
     entry_date: date | None = None
     entry_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    # property_create (M7-03): number and name may be corrected before confirming.
+    property_number: str | None = Field(default=None, pattern=r"^[0-9]{3}$")
+    property_name: str | None = Field(default=None, min_length=2, max_length=200)
+    # letter_create (M7-03): another active template may be chosen before confirming.
+    template_id: uuid.UUID | None = None
 
 
 class ApplyIn(_In):

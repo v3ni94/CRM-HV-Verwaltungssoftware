@@ -108,3 +108,28 @@ describe("TicketsList traffic light (M19-09)", () => {
     expect(rows[4]!.querySelector("[data-testid='attention-label']")).toBeNull();
   });
 });
+
+describe("TicketsList bulk assignment (M9-04)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("assigns the selected tickets through the workspace bulk action and refreshes", async () => {
+    refresh.mockClear();
+    const USER = "0192abcd-0000-7000-8000-0000000000c1";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("assignable-users")) return jsonResponse([{ user_id: USER, display_name: "Anna Beispiel" }]);
+      return jsonResponse({ action: "tickets.assign", requested: 2, changed: 2 });
+    });
+    renderIntl(<TicketsList initialTickets={tickets} canApprove={false} />);
+    const boxes = screen.getAllByLabelText("Ticket auswählen");
+    await userEvent.click(boxes[0]!);
+    await userEvent.click(boxes[1]!);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiter zuweisen" }));
+    await userEvent.selectOptions(await screen.findByLabelText("Bearbeiter"), USER);
+    await userEvent.click(screen.getByRole("button", { name: "2 Tickets zuweisen" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/workspace/bulk"))!;
+    expect(JSON.parse(call[1]?.body as string)).toEqual({ action: "tickets.assign", ids: ["t1", "t2"], assignee_user_id: USER });
+    expect(screen.getByText(/Geändert: 2/)).toBeInTheDocument();
+  });
+});

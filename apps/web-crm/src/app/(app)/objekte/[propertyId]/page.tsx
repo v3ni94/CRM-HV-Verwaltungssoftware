@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PropertyBankAccounts } from "@/components/banking/PropertyBankAccounts";
 import { ConsumptionInfoPanel } from "@/components/billing/ConsumptionInfoPanel";
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
+import { AssistantTab } from "@/components/ai/AssistantTab";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { PropertyMeteringTab } from "@/components/metering/PropertyMeteringTab";
@@ -16,10 +17,13 @@ import { LegalEntityBankAccounts } from "@/components/properties/LegalEntityBank
 import { MaintenancePanel, type MaintenanceRow } from "@/components/properties/MaintenancePanel";
 import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel";
 import { LegalEntityLine } from "@/components/properties/LegalEntityLine";
+import { OccupancyList } from "@/components/properties/OccupancyList";
 import { OwnersDetails } from "@/components/properties/OwnersDetails";
 import { ManagerChangeChecklist } from "@/components/properties/ManagerChangeChecklist";
+import { TakeoverChecklist } from "@/components/properties/TakeoverChecklist";
 import { ObjektakteExportPanel } from "@/components/properties/ObjektakteExportPanel";
 import { PropertyCreditorsPanel } from "@/components/properties/PropertyCreditorsPanel";
+import { PropertyGallery } from "@/components/properties/PropertyGallery";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
 import { PropertyTermination, type Termination } from "@/components/properties/PropertyTermination";
@@ -165,6 +169,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
             <Link href="/vermietung" className={ui.button}>
               {t("toLetting")}
             </Link>
+            <a href="#assistent" className={ui.button}>
+              {t("assistant")}
+            </a>
           </div>
         }
       />
@@ -209,6 +216,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
 
       <PropertyMasterData property={data as unknown as PropertyMaster} canEdit={canEdit && data.status !== "terminated"} />
 
+      <PropertyGallery
+        propertyId={propertyId}
+        version={data.version}
+        images={((data as { images?: string[] }).images ?? []) as string[]}
+        canEdit={canEdit && data.status !== "terminated"}
+      />
+
       <PropertyOwnerPanel propertyId={propertyId} managementType={data.management_type} owners={ownerRows} canEdit={canEdit} />
       {!isHoa ? (
         <OwnersDetails
@@ -237,6 +251,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
           canCreate={canCreate && canAdd}
         />
       </section>
+
+      {permissions.includes("contracts:read") ? <OccupancyList propertyId={propertyId} /> : null}
 
       <AllocationKeysPanel propertyId={propertyId} canEdit={canEdit && canAdd} canCreate={canCreate && canAdd} />
 
@@ -292,6 +308,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <ConsumptionInfoPanel propertyId={propertyId} permissions={me.data?.permissions ?? []} />
       <CompletenessPanel propertyId={propertyId} canCreateLetter={canCreateLetter} />
       <ManagerChangeChecklist propertyId={propertyId} canEdit={canEdit} />
+      <TakeoverChecklist propertyId={propertyId} canEdit={canEdit} />
       {me.data?.permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel
           sourceType="property"
@@ -303,6 +320,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       ) : null}
       <TicketsSection tickets={ticketRows} />
       <AuditLogPanel entityType="property" entityId={propertyId} />
+      <AssistantTab kind="property" />
     </div>
   );
 }

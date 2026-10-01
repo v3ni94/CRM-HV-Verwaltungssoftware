@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from mhvp.automation.job_schedule import job_allowed
 from mhvp.banking.connectors import ConnectorNotConfiguredError, UnconfiguredConnector
 from mhvp.banking.models import BankConnection, BankSyncRun, ConnectionStatus, Connector
 from mhvp.core.config import Settings, get_settings
@@ -301,6 +302,8 @@ async def sync_all_once(settings: Settings, *, hour: int | None = None) -> dict[
             async with tenant_transaction(factory, tenant_id) as session:
                 if hour is not None and await tenant_sync_hour(session) != hour:
                     continue
+                if not await job_allowed(session, tenant_id, "banking-sync-all"):
+                    continue
                 for key, value in (await sync_tenant(session, tenant_id)).items():
                     totals[key] += value
     finally:
@@ -341,6 +344,8 @@ async def sync_due_once(settings: Settings, *, now: datetime | None = None) -> d
         for tenant_id in ids:
             async with tenant_transaction(factory, tenant_id) as session:
                 if await tenant_sync_hour(session) != hour:
+                    continue
+                if not await job_allowed(session, tenant_id, "banking-sync-all"):
                     continue
                 totals["tenants"] += 1
                 totals["connections"] += (await sync_tenant(session, tenant_id))["connections"]
@@ -1213,6 +1218,8 @@ async def weekly_digest_once(settings: Settings, *, today: date | None = None) -
             )
         for tenant_id in ids:
             async with tenant_transaction(factory, tenant_id) as session:
+                if not await job_allowed(session, tenant_id, "banking-weekly-digest"):
+                    continue
                 rows = await digest.build_week(session, tenant_id=tenant_id, week_start=week_start)
             totals["tenants"] += 1
             totals["digests"] += len(rows)

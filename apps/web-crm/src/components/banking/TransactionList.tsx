@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -162,6 +163,21 @@ export function TransactionList({ canBook, canUpdate }: TransactionListProps) {
 
   return (
     <section className="flex flex-col gap-3" data-testid="transaction-list">
+      <SavedFilters
+        resource="bank_transactions"
+        basePath="/bank"
+        current={Object.fromEntries(
+          Object.entries({ account: accountId, status, direction, from, to }).filter(([, v]) => v !== ""),
+        )}
+        onApply={(p) => {
+          setAccountId(p.account ?? "");
+          setStatus((p.status ?? "") as "" | TransactionStatus);
+          setDirection((p.direction ?? "") as Direction);
+          setFrom(p.from ?? "");
+          setTo(p.to ?? "");
+          setPage(1);
+        }}
+      />
       <form
         className="flex flex-wrap items-end gap-2"
         onSubmit={(e) => {

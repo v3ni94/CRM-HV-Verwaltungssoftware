@@ -235,3 +235,70 @@ async def mirror_once(
 @shared_task(name="mhvp.documents.mirror")
 def mirror() -> dict[str, int]:
     return asyncio.run(mirror_once(get_settings()))
+
+
+# Drive changes (M6-05) and temporary objects (M6-08) ---------------------------------------
+
+TMP_MAX_AGE = timedelta(days=1)
+
+
+async def drive_changes_once(
+    settings: Settings, client: httpx.AsyncClient | None = None
+) -> dict[str, int]:
+    from mhvp.documents import drive_changes
+
+    if settings.master_key is not None and not crypto.is_configured():
+        crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    http = client or drive_http_client(timeout=TIMEOUT_SECONDS)
+    totals = {"tenants": 0, "changes": 0, "removed": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            tenant_ids = [
+                t.id
+                for t in await session.scalars(
+                    select(Tenant).where(Tenant.status == TenantStatus.ACTIVE)
+                )
+            ]
+        for tenant_id in tenant_ids:
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    result = await drive_changes.sync_session(session, tenant_id, http)
+            except (DmsError, httpx.HTTPError) as exc:
+                log.warning("drive changes failed for %s: %s", tenant_id, type(exc).__name__)
+                continue
+            if result is not None:
+                totals["tenants"] += 1
+                totals["changes"] += result.changes
+                totals["removed"] += result.removed
+    finally:
+        if client is None:
+            await http.aclose()
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.documents.drive_changes")
+def drive_changes_task() -> dict[str, int]:
+    return asyncio.run(drive_changes_once(get_settings()))
+
+
+def cleanup_tmp_once(settings: Settings, now: datetime | None = None) -> dict[str, int]:
+    """Lifecycle rule plus a sweep of ``tmp/`` (M6-08): the rule is set again every run (a
+    store without lifecycle support answers False), the sweep removes staged uploads older
+    than one day in any case."""
+    try:
+        store = BlobStore(settings)
+    except ProblemError:
+        return {"lifecycle": 0, "removed": 0}
+    lifecycle = store.ensure_tmp_lifecycle()
+    removed = store.purge_tmp((now or datetime.now(UTC)) - TMP_MAX_AGE)
+    return {"lifecycle": int(lifecycle), "removed": removed}
+
+
+@shared_task(name="mhvp.documents.cleanup_tmp")
+def cleanup_tmp() -> dict[str, int]:
+    return cleanup_tmp_once(get_settings())

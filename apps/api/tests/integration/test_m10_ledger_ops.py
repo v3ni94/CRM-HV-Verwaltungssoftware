@@ -292,8 +292,9 @@ def test_creditor_accounts_from_provider_relations(client: TestClient, world: Wo
         ),
         201,
     )
+    # M10-05: adding the relation already created and linked the creditor account.
     first = _ok(client.post(f"{A}/ledgers/{ledger}/sync-creditors", headers=h))
-    assert first == {"created": 1, "linked": 1}
+    assert first == {"created": 0, "linked": 0}
     again = _ok(client.post(f"{A}/ledgers/{ledger}/sync-creditors", headers=h))
     assert again == {"created": 0, "linked": 0}  # idempotent (B08)
     creditors = _of(_rows(client, h, ledger), "creditor")

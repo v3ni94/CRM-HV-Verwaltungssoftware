@@ -46,16 +46,24 @@ async def notify(
     """
     if target_type is not None or target_id is not None:
         entity_type, entity_id = target_type, target_id
+    # M23-04: the user's preference (channels per kind, mute) decides before anything is written.
+    from mhvp.workspace.notification_prefs import channels_for
+
+    channels = await channels_for(session, user_id, kind)
+    if not channels.in_app and not channels.email:
+        return None
     if entity_id is not None:
-        existing = await session.scalar(
-            select(Notification.id).where(
-                Notification.user_id == user_id,
-                Notification.kind == kind,
-                Notification.entity_id == entity_id,
-                Notification.read_at.is_(None),
-            )
-        )
-        if existing is not None:
+        conditions = [
+            Notification.user_id == user_id,
+            Notification.kind == kind,
+            Notification.entity_id == entity_id,
+        ]
+        if channels.in_app:
+            conditions.append(Notification.read_at.is_(None))
+        else:
+            # Mail only entries are created read; a repeated job must not mail again within a day.
+            conditions.append(Notification.created_at >= datetime.now(UTC) - timedelta(days=1))
+        if await session.scalar(select(Notification.id).where(*conditions).limit(1)) is not None:
             return None
     row = Notification(
         tenant_id=tenant_id,
@@ -65,6 +73,9 @@ async def notify(
         body=body,
         entity_type=entity_type,
         entity_id=entity_id,
+        email_pending=channels.email,
+        # Mail only: the entry is created as already read so that the bell stays quiet.
+        read_at=None if channels.in_app else datetime.now(UTC),
     )
     session.add(row)
     return row

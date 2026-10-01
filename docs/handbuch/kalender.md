@@ -78,3 +78,12 @@ zeigt sieben Spalten erst ab 1024 px, darunter eine Tagesliste.
 ## Kalender-Abo für externe Kalender
 
 Unter Kalender kann eine persönliche Abo-Adresse erzeugt werden. Sie wird nur einmal angezeigt und wie ein Passwort behandelt. Eine neue Adresse macht die bisherige ungültig, der Widerruf beendet das Abo. Der Feed enthält eigene und geteilte Termine sowie Fristen, soweit die Person die Rechte dafür hat.
+
+## Auftragstermin im Kalender
+
+Ist bei einem Auftrag im Status Terminiert oder In Arbeit ein Termin eingetragen, legt der Tagesjob
+einen internen Kalendereintrag "Auftragstermin" mit Uhrzeit und Ticketnummer an. Der Eintrag ist für
+alle Mitarbeiter sichtbar, springt auf den Auftrag und erinnert einen Tag vorher. Es wird keine
+Einladung an den Dienstleister oder in einen externen Kalender gesendet. Ändert sich der Termin oder
+wird der Auftrag erledigt, folgt der Eintrag beim nächsten Lauf. Die Ticketfälligkeit erscheint wie
+bisher als "Ticketfrist".

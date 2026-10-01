@@ -483,6 +483,10 @@ def _report_out(r: AuditReport) -> dict[str, Any]:
         "content": r.content,
         "board_statement": r.content.get("board_statement"),
         "created_at": r.created_at,
+        # M25-03 (PÜ09): optional confirmation of the version, never a resolution.
+        "confirmed_by_name": r.confirmed_by_name,
+        "confirmed_at": r.confirmed_at,
+        "confirmation_note": r.confirmation_note,
     }
 
 

@@ -57,3 +57,21 @@ Mietverträge werden im CRM unter Verträge gepflegt und werden von hier aus zur
 - Mieterhöhung mit Begründung Index, Modernisierung oder Staffel: Die Zusatzangaben (Indexwerte, Kosten und Umlagesatz, Staffeln) und das Quelldokument werden erfasst. Die Prüfung rechnet nur nach und sperrt die Freigabe bei Abweichungen. Sie sagt nichts über die Zulässigkeit.
 - Exposé: Aus der Einheit und der jüngsten Mietanzeige wird ein PDF auf dem Briefbogen im Dokumentenbereich abgelegt. Offene Angaben stehen im Dokument, solange sie fehlen, mit Entwurfskennzeichnung. Bilder sind in dieser Version nicht eingebettet.
 - Interessenten: Zusätzlich zur Einheit lassen sich Anzeige und Suchprofil erfassen. Der Abgleich je Anzeige zeigt erfüllte, nicht erfüllte und nicht prüfbare Kriterien und reiht die Interessenten. Er ist ein Vorschlag, keine Zusage.
+
+- Mietspiegel: Unter Vermietung, Mietspiegel werden Werte je Gemeinde erfasst oder per CSV eingelesen (erst Vorschau, dann Übernehmen). Die Quelle ist Pflicht und vor der Verwendung zu prüfen.
+- Mieterhöhung aus dem Mietspiegel: Im Fall im Status Entwurf Gemeinde (und Baujahr) eingeben, Spanne suchen und Untergrenze, Mittelwert oder Obergrenze übernehmen. Die Wahl der Position bleibt Sache der Verwaltung, die Prüfung läuft danach neu.
+- Exposé als PDF: An der Einheit "Exposé als PDF ablegen". Bilder der Anzeige werden eingebettet, offene Angaben stehen im Dokument.
+- Interessentenabgleich: An der Einheit mit Anzeige "Interessenten abgleichen" zeigt die Reihung nach erfüllten Kriterien. Das ist ein Vorschlag, keine Entscheidung.
+
+## Mietspiegel (Version 1.49.0)
+
+Seite `/vermietung/mietspiegel`. Zweck: Mietspiegelwerte je Gemeinde mit Quellenangabe pflegen.
+Voraussetzung zum Ändern: Recht zum Ändern von Verträgen.
+
+* Die Liste zeigt Gemeinde, Mietspiegel, Stand, Kriterien (Baujahr von, bis) und die Spanne je m² und
+  Monat (Untergrenze, Mittelwert, Obergrenze in EUR). Einträge lassen sich löschen.
+* Wert erfassen: manuell über das Formular, oder per CSV Import (Semikolon getrennt, Dezimalkomma und
+  Datum TT.MM.JJJJ zulässig). Die Vorschau meldet gelesene und fehlerhafte Zeilen, Übernehmen legt die
+  Werte an und überspringt vorhandene.
+* Grenzen: Einordnung in die Spanne und ortsübliche Vergleichsmiete bleiben eine Entscheidung der
+  Verwaltung, die Quelle ist vor der Verwendung zu prüfen.

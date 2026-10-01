@@ -257,6 +257,9 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
+    # Contact merge (M3-03): a merged source stays as a row (evidence), hidden from lists.
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 def _contact_fk() -> Mapped[uuid.UUID]:
@@ -580,3 +583,36 @@ class Consent(IdMixin, TimestampMixin, TenantMixin, Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source: Mapped[str] = mapped_column(String(200), nullable=False)
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class ContactMerge(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Merge proposal of two contacts with check result, four eyes decision and execution
+    record (M3-03, rule M3-03-kontakt-merge). The source row is never deleted."""
+
+    __tablename__ = "contact_merge"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('proposed', 'executed', 'rejected')", name="ck_contact_merge_status"
+        ),
+        CheckConstraint("source_id <> target_id", name="ck_contact_merge_distinct"),
+        Index("ix_contact_merge_tenant_status", "tenant_id", "status"),
+    )
+
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id", ondelete="RESTRICT"), nullable=False
+    )
+    target_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id", ondelete="RESTRICT"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="proposed", server_default="proposed"
+    )
+    reason: Mapped[str | None] = mapped_column(String(1000))
+    check_result: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    proposed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_note: Mapped[str | None] = mapped_column(String(1000))
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

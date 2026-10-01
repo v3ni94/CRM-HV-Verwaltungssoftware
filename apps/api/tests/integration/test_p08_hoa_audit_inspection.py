@@ -23,7 +23,7 @@ from tests.integration.conftest import Database
 from tests.integration.test_a61_inspection import _doc as _a61_doc
 from tests.integration.test_a61_inspection import _world
 from tests.integration.test_m2_platform import World, bearer, login
-from tests.integration.test_m5_contracts import _party
+from tests.integration.test_m5_contracts import _party, _unit
 from tests.integration.test_m8_import import BUCKET, _settings
 from tests.integration.test_m21_board_portal import _doc, _hoa, _ledger_with_invoice
 
@@ -237,6 +237,7 @@ def test_package_expiry_and_revocation_sd07(
         "note",
         "note",
         "status",
+        "notified",  # M25-07: the notification is its own event after "provided"
         "retrieval",
     ]
     assert not [e for e in mid["events"] if e["to_status"] in ("acknowledged", "accepted")]
@@ -280,3 +281,100 @@ def test_package_index_outside_portal_sd05(client: TestClient, world: World) -> 
         index = json.loads(zf.read("index.json"))
         assert [e["sha256"] for e in index] == [pack["entries"][0]["sha256"]]
         assert "index.csv" in zf.namelist()
+
+
+# Q09 (M25-07): notification event and owner check ---------------------------------------
+
+
+def _owner_request(
+    client: TestClient, h: dict[str, str], number: str, requested_on: str
+) -> tuple[str, str, str]:
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": number, "name": f"WEG Owner {number}", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    party, applicant = _party(client, h, f"Antragsteller{number}")
+    unit = _unit(client, h, prop["id"], "01")
+    _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "ownership",
+                "unit_id": unit,
+                "party_id": party,
+                "start_date": "2020-01-01",
+                "title_transfer_date": "2020-01-01",
+                "acquisition_kind": "first_acquisition",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    req: dict[str, Any] = _ok(
+        client.post(
+            INS,
+            json={
+                "legal_entity_id": hoa,
+                "applicant_contact_id": applicant["id"],
+                "requested_on": requested_on,
+                "scope_kinds": ["statement"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{INS}/{req['id']}/transition", json={"status": "released"}, headers=h))
+    doc = _a61_doc(
+        client, h, f"abrechnung-{number}.pdf", b"%PDF-1.4 o" + number.encode(), hoa, owner=True
+    )
+    return str(req["id"]), doc, hoa
+
+
+def test_owner_check_changed_and_unchanged(
+    client: TestClient,
+    world: World,
+    other_world: World,
+) -> None:
+    h = bearer(login(client, world, "p08admin"))
+    hr = bearer(login(client, world, "p08reader"))
+    ho = bearer(login(client, other_world, "p08other"))
+    rid, doc, _ = _owner_request(client, h, "961", "2019-06-01")
+    _ok(
+        client.post(
+            f"{INS}/{rid}/package", json={"document_ids": [doc], "valid_days": 14}, headers=h
+        )
+    )
+    provided = _ok(
+        client.post(
+            f"{INS}/{rid}/transition",
+            json={"status": "provided", "delivery_kind": "portal"},
+            headers=h,
+        )
+    )
+    kinds = [e["kind"] for e in provided["events"]]
+    assert kinds[-2:] == ["status", "notified"]
+    assert "Benachrichtigung" in provided["events"][-1]["note"]
+    assert "gültig bis" in provided["events"][-1]["note"]
+
+    checked = _ok(client.post(f"{INS}/{rid}/owner-check", headers=h))
+    assert (checked["owner_on_request_date"], checked["owner_today"]) == (False, True)
+    assert checked["ownership_changed"] is True
+    assert checked["package_active"] is True
+    assert "Widerruf" in checked["recommendation"]
+    trail = _ok(client.get(f"{INS}/{rid}", headers=h))["events"]
+    assert trail[-1]["kind"] == "owner_check"
+
+    same, _, _ = _owner_request(client, h, "962", "2021-06-01")
+    unchanged = _ok(client.post(f"{INS}/{same}/owner-check", headers=h))
+    assert unchanged["ownership_changed"] is False
+    assert unchanged["package_active"] is False
+    assert unchanged["recommendation"] == "Eigentümerstellung unverändert."
+
+    # Authorization and tenant separation: reader 403, other tenant 404.
+    assert client.post(f"{INS}/{rid}/owner-check", headers=hr).status_code == 403
+    assert client.post(f"{INS}/{rid}/owner-check", headers=ho).status_code == 404

@@ -331,3 +331,42 @@ Hinweis: Diese Funktionen sind zunächst über die Schnittstelle verfügbar, ein
   geöffneter Freigabestufe G4.
 * Der Wirtschaftsplan hat Bezeichnung, Stichtag, Zahlungsrhythmus, Fälligkeitstag, Fortgeltung
   und Vergleichsgrundlage (Vorjahresabrechnung oder Vorplan) mit Abweichung je Position.
+
+## Rücklagen, Zahlungsrhythmus, Gesamtabrechnung, Einsicht und Prüfung: Bedienung (Stand 30.09.2026)
+
+* Rücklagen: Unter Rücklagen der Gemeinschaft legen Sie zweckgebundene Rücklagen an und erfassen
+  Entnahmen, Steuern, Gebühren und Zinsen je Abrechnung. Die Entwicklung je Rücklage steht als
+  eigener Block unter dem Gesamtblock. Gezahlte Beträge erscheinen je Rücklage nur, wenn der
+  Vorschuss der Eigentümer an genau eine Rücklage gebunden ist; sonst steht "nicht zugeordnet"
+  und der gezahlte Betrag bleibt ein Gesamtwert.
+* Wirtschaftsplan: Beim Anlegen wählen Sie Zahlungsrhythmus (monatlich, vierteljährlich,
+  jährlich), Fälligkeitstag und optional den Vorplan als Vergleich. Nach der Berechnung zeigt die
+  Planseite den Vergleich mit dem Vorjahr je Komponente und je Position. Bei vierteljährlichem
+  oder jährlichem Rhythmus legt die Übernahme in die Zahlungspläne einen passenden Zahlungsplan
+  je Vertrag an; der Plan beginnt dafür zum Monatsersten. Die Vorschau zeigt den Betrag je Periode.
+* Gesamtabrechnung als PDF: Die Schnittstelle liefert sie auf dem Briefbogen des Mandanten, nur
+  mit geöffneter Freigabestufe G4 und nach interner Freigabe. Die Ausgabe ist ein Entwurf.
+* Einsichtsanfragen: Beim Erzeugen des Pakets geben Sie die Gültigkeit in Tagen an (leer: ohne
+  Ablauf). Die Frist ist eine Produktvorgabe und wird mit dem Rechtsanwalt geklärt. Die Seite
+  zeigt das Ablaufdatum und erlaubt den Widerruf mit Grund. Nach der Bereitstellung steht die
+  Benachrichtigung im Verlauf. Mit Eigentümerstellung prüfen sehen Sie, ob der Antragsteller
+  seit dem Antragstag Eigentümer geblieben ist; über einen Widerruf entscheiden Sie.
+* Prüfauftrag: In der Positionsliste öffnet Verlauf anzeigen alle Änderungen einer Position mit
+  altem und neuem Wert. Unter den Prüfberichten bestätigen Sie eine Version mit Namen und Vermerk.
+  Die Bestätigung ist kein Beschluss und kann nicht zurückgenommen werden. Der Prüfzugang des
+  Beirats erlaubt nur Lesen und Anmerken, keine Buchung.
+
+## Rücklagen (Version 1.49.0)
+
+Seite `/weg/[id]/ruecklagen` je Objekt. Zweck: zweckgebundene Rücklagen der Gemeinschaft führen und
+ihre Entwicklung ansehen. Voraussetzung ist ein Buchungskreis der Gemeinschaft für das Objekt, sonst
+zeigt die Seite einen Hinweis.
+
+* Rücklage anlegen mit Bezeichnung und Zweck. Zahlungen werden einer Rücklage zugeordnet, wenn der
+  Sollbetrag der Eigentümer an diese Rücklage gebunden ist; sonst bleibt der gezahlte Betrag ein
+  Gesamtwert.
+* Entwicklung der Rücklagen: auf Basis der berechneten Abrechnung mit Rücklagenblock (Jahr und
+  Version werden angezeigt). Je Rücklage Anfangsbestand, beschlossene Zuführungen (Soll), Gezahlt
+  (Ist), Entnahmen, Zinsen, Endbestand sowie Bankbestand und Differenz zum Endbestand.
+* Mittelverwendung erfassen: Art (Entnahme, Steuer, Gebühr, Zins), Betrag und Zweck. Die Erfassung
+  ist eine Information für die Abrechnung und bucht nichts; Belege werden an der Abrechnung verknüpft.

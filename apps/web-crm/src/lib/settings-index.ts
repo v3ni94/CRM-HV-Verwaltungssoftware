@@ -338,6 +338,16 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tenant_settings:update"],
   },
 
+  // --- Datenschutz -----------------------------------------------------------------------
+  {
+    id: "datenschutz",
+    title: "Datenschutz",
+    breadcrumb: [ROOT, "Datenschutz"],
+    href: "/einstellungen/datenschutz",
+    keywords: ["dsgvo", "löschprofil", "löschantrag", "verarbeitungsverzeichnis", "auftragsverarbeiter", "avv", "anonymisierung"],
+    permission: ["privacy:read"],
+  },
+
   // --- Bank --------------------------------------------------------------------------------
   {
     id: "bank",
@@ -562,6 +572,32 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["sla:read"],
   },
 
+  // --- Teams der Tickets und Tags der Kontakte (Paket Q05) ----------------------------------
+  {
+    id: "teams",
+    title: "Teams",
+    breadcrumb: [ROOT, "Teams"],
+    href: "/einstellungen/teams",
+    keywords: ["team", "teams", "ticketteam", "gruppe", "zuständigkeit", "mitglieder"],
+    permission: ["tickets:read"],
+  },
+  {
+    id: "dokumentkategorien",
+    title: "Dokumentkategorien",
+    breadcrumb: [ROOT, "Dokumentkategorien"],
+    href: "/einstellungen/dokumentkategorien",
+    keywords: ["dokument", "kategorie", "kategorien", "kategoriebaum", "paperless", "drive", "ordner"],
+    permission: ["documents:read"],
+  },
+  {
+    id: "kontakt-tags",
+    title: "Kontakt-Tags",
+    breadcrumb: [ROOT, "Kontakt-Tags"],
+    href: "/einstellungen/kontakt-tags",
+    keywords: ["tag", "tags", "schlagwort", "schlagwörter", "kontakte", "umbenennen", "zusammenführen"],
+    permission: ["contacts:read"],
+  },
+
   // --- Tickets: Vorlagen, Formulare, Automatisierung, Antworten -----------------------------
   {
     id: "ticketvorlagen",
@@ -727,6 +763,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     breadcrumb: [ROOT, "Profil"],
     href: "/einstellungen/profil",
     keywords: ["profil", "account", "meine daten", "passwort", "sitzung"],
+    permission: null,
+  },
+  {
+    id: "profil-benachrichtigungen",
+    title: "Benachrichtigungen",
+    breadcrumb: [ROOT, "Profil", "Benachrichtigungen"],
+    href: "/einstellungen/benachrichtigungen",
+    keywords: ["benachrichtigung", "glocke", "e-mail", "stummschalten", "kanal"],
     permission: null,
   },
   {

@@ -73,6 +73,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         title={t("title")}
         action={
           <div className="flex flex-wrap gap-2">
+            <Link href="/kontakte/zusammenfuehrung" className={ui.button}>
+              {t("mergeLink")}
+            </Link>
             <Link href="/kontakte/serienversand" className={ui.button}>
               {ts("link")}
             </Link>

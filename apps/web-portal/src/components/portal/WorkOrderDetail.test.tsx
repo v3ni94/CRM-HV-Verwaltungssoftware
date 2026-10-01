@@ -113,4 +113,26 @@ describe("WorkOrderDetail", () => {
     await user.click(screen.getByRole("button", { name: "Auftrag ablehnen" }));
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it("reads an XML e-invoice into the invoice fields and submits it with that document (M22-01)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(
+        { document_id: "d9", number: "RE-7", invoice_date: "2026-10-03", gross: "119.00", findings: ["Hinweis X"] },
+        201,
+      ),
+    );
+    renderIntl(<WorkOrderDetail order={{ ...order, status: "done" }} />);
+    const xml = new File(["<Invoice/>"], "re.xml", { type: "application/xml" });
+    await user.upload(screen.getByLabelText("E-Rechnung als XML einlesen (optional)"), xml);
+    await waitFor(() => expect(screen.getByLabelText("Rechnungsnummer")).toHaveValue("RE-7"));
+    expect(screen.getByTestId("einvoice-findings")).toHaveTextContent("Hinweis X");
+    expect(String(vi.mocked(fetch).mock.calls[0]?.[0])).toBe("/api/bff/portal/work-orders/o1/einvoice");
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ id: "s1" }, 201));
+    await user.click(screen.getByRole("button", { name: "Rechnung einreichen" }));
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls).toHaveLength(2));
+    const second = vi.mocked(fetch).mock.calls[1];
+    expect(String(second?.[0])).toBe("/api/bff/portal/work-orders/o1/invoice");
+    expect(JSON.parse(String(second?.[1]?.body)).document_id).toBe("d9");
+  });
 });

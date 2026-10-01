@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { AuditItemHistory } from "@/components/hoa/AuditItemHistory";
 import { AuditItemPicker } from "@/components/hoa/AuditItemPicker";
 import { AuditReportsPanel, type AuditReport } from "@/components/hoa/AuditReportsPanel";
 import { BoardAuditPanel, type BoardSection } from "@/components/hoa/BoardAuditPanel";
@@ -90,6 +91,7 @@ export default async function AuditPage({ params }: { params: Promise<{ property
               <th>{t("audit.statusLabel")}</th>
               <th className="text-right">{t("amount")}</th>
               <th>{t("audit.note")}</th>
+              <th>{t("audit.history.title")}</th>
             </tr>
           </thead>
           <tbody>
@@ -102,6 +104,9 @@ export default async function AuditPage({ params }: { params: Promise<{ property
                 </td>
                 <td className="text-right">{item.amount ? formatEur(item.amount) : ""}</td>
                 <td>{[item.note, item.question, item.answer].filter(Boolean).join(" · ")}</td>
+                <td>
+                  <AuditItemHistory itemId={item.id} />
+                </td>
               </tr>
             ))}
           </tbody>

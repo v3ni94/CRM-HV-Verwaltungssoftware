@@ -49,20 +49,33 @@ export function HoaCreate({
   ledgerId,
   legalEntityId,
   basePath,
+  basisPlans = [],
 }: {
   kind: "plan" | "statement" | "meeting";
   ledgerId?: string;
   legalEntityId: string;
   basePath: string;
+  /** Earlier plans offered as comparison basis of a new plan (M24-04). */
+  basisPlans?: { id: string; label: string }[];
 }) {
   const t = useTranslations("HoaWork");
   const { busy, error, call, router } = useCall();
   const year = new Date().getFullYear();
   const [value, setValue] = useState(kind === "meeting" ? "" : String(kind === "plan" ? year + 1 : year - 1));
+  const [rhythm, setRhythm] = useState("monthly");
+  const [dueDay, setDueDay] = useState("3");
+  const [basisPlan, setBasisPlan] = useState("");
   const create = async () => {
     const body =
       kind === "plan"
-        ? { ledger_id: ledgerId, year: Number(value), valid_from: `${value}-01-01` }
+        ? {
+            ledger_id: ledgerId,
+            year: Number(value),
+            valid_from: `${value}-01-01`,
+            payment_rhythm: rhythm,
+            due_day: Number(dueDay) || 1,
+            basis_plan_id: basisPlan || null,
+          }
         : kind === "statement"
           ? { ledger_id: ledgerId, year: Number(value) }
           : { legal_entity_id: legalEntityId, scheduled_at: new Date(value).toISOString() };
@@ -82,6 +95,37 @@ export function HoaCreate({
             onChange={(e) => setValue(e.target.value)}
           />
         </label>
+        {kind === "plan" ? (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("planRhythm")}</span>
+              <select className={ui.input} value={rhythm} onChange={(e) => setRhythm(e.target.value)}>
+                {["monthly", "quarterly", "yearly"].map((r) => (
+                  <option key={r} value={r}>
+                    {t(`rhythm.${r}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("planDueDayLabel")}</span>
+              <input className={ui.input} type="number" min={1} max={28} value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+            </label>
+            {basisPlans.length ? (
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{t("comparisonBasisPlan")}</span>
+                <select className={ui.input} value={basisPlan} onChange={(e) => setBasisPlan(e.target.value)}>
+                  <option value="">{t("comparisonNoBasis")}</option>
+                  {basisPlans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </>
+        ) : null}
         <button type="button" className={ui.button} onClick={create} disabled={busy || !value || (kind !== "meeting" && !ledgerId)}>
           {t(`create.${kind}`)}
         </button>
@@ -189,6 +233,8 @@ type ApplyRow = {
   current: string | null;
   new: string;
   action: "create" | "unchanged" | "zero" | "no_contract";
+  rhythm?: string;
+  instalment?: string;
 };
 type ApplyPreview = {
   valid_from: string;
@@ -250,7 +296,14 @@ export function PlanApplyPreview({ id, snapshotHash }: { id: string; snapshotHas
                     <td>{r.owner ?? ""}</td>
                     <td>{t(`components.${r.component}`)}</td>
                     <td className="num">{r.current ? formatEur(r.current) : ""}</td>
-                    <td className="num">{formatEur(r.new)}</td>
+                    <td className="num">
+                      {formatEur(r.new)}
+                      {r.rhythm && r.rhythm !== "monthly" && r.instalment ? (
+                        <span className="block text-xs text-muted" data-testid={`plan-apply-instalment-${r.unit_number}-${r.component}`}>
+                          {t(`rhythm.${r.rhythm}`)}: {formatEur(r.instalment)}
+                        </span>
+                      ) : null}
+                    </td>
                     <td>{t(`actions.${r.action}`)}</td>
                   </tr>
                 ))}

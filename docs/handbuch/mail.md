@@ -245,3 +245,7 @@ Zu einer Mail zeigt die Kompaktansicht eine Zusammenfassung (KI-Zusammenfassung,
 - "Mit KI zusammenfassen" erzeugt die Zusammenfassung, sofern ein Anbieter freigegeben ist.
 - Der Antwortvorschlag stammt aus KI-Vorschlag, Mail-Vorbereitung oder Vorlage. "Kurz senden" reicht den Entwurf zur Freigabe ein; Vier-Augen-Regel und Bestätigung gelten wie beim normalen Versand.
 - "Vollständig anzeigen" und "Weniger anzeigen" schalten den Mailtext um.
+
+- HTML-Mails erscheinen in einem geschützten Rahmen ohne Skripte. Bilder aus dem Internet sind zunächst blockiert; "Bilder laden" lädt sie für diese Mail (Zählpixel möglich).
+- Stilregeln: In den Postfacheinstellungen lassen sich Tonfall und freie Regeln für KI-Antwortentwürfe pflegen. Die Entwürfe werden nie selbstständig versendet.
+- Postversand: Der Kanal Post legt den Postauftrag automatisch an, sofern der Postdienst freigegeben ist; sonst bleibt die Zustellung vorbereitet.

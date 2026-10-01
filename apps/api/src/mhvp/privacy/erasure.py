@@ -95,7 +95,20 @@ async def blockers(
                 + (f" bis {contact.delete_after:%d.%m.%Y}." if contact.delete_after else "."),
             }
         )
+    present = {
+        r[0]
+        for r in (
+            await session.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = current_schema()"
+                )
+            )
+        ).all()
+    }
     for table, column in _referencing_columns():
+        if table not in present:
+            continue  # model ahead of its migration: no rows can exist
         count = await session.scalar(
             text(f'SELECT count(*) FROM "{table}" WHERE "{column}" = :cid'),  # noqa: S608
             {"cid": contact.id},

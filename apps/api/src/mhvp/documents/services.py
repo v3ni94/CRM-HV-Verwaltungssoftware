@@ -26,6 +26,7 @@ from mhvp.documents.models import (
     Document,
     DocumentLink,
     DocumentMirror,
+    DocumentRedaction,
     DocumentSource,
     LinkRole,
     MirrorStatus,
@@ -193,10 +194,15 @@ async def store_document(
     )
     session.add(document)
     await session.flush()
-    # Retention matrix (M6-04): the category's mapped profile and the computed period.
+    # Retention matrix (M6-04): the category's mapped profile and the computed period; a
+    # profile of the document's legal entity kind wins, a GdWE declaration of division or
+    # minutes is a permanent record (S711-06).
+    kinds = await retention.legal_entity_kinds(session, [(t, i) for t, i, _ in links])
     await retention.assign_profile(
-        session, document, await retention.profile_for_category(session, category_id)
+        session, document, await retention.profile_for_document(session, category_id, kinds)
     )
+    if await retention.is_permanent_record(session, category_id, kinds):
+        document.permanent_record = True
     for entity_type, entity_id, role in links:
         session.add(
             DocumentLink(
@@ -251,6 +257,17 @@ async def deletion_blocker(session: AsyncSession, document: Document, today: dat
     ticket_hold = await retention.ticket_hold(session, document.id)
     if ticket_hold:
         return f"Löschungssperre am Vorgang: {ticket_hold}"
+    related = await retention.related_hold(session, document.id)
+    if related:
+        return f"Löschungssperre am verbundenen Dokument: {related}"
+    if document.permanent_record:
+        return "WEG-Dauerunterlage: bleibt unabhängig vom Standardprofil erhalten (S05)."
+    if await session.scalar(
+        select(DocumentRedaction.id)
+        .where(DocumentRedaction.original_document_id == document.id)
+        .limit(1)
+    ):
+        return "Zu diesem Original bestehen geschwärzte Kopien; diese zuerst löschen."
     if document.retention_profile_id is None:
         return "Kein Aufbewahrungsprofil zugeordnet (Aufbewahrungsmatrix V17 offen)."
     profile = await session.get(RetentionProfile, document.retention_profile_id)

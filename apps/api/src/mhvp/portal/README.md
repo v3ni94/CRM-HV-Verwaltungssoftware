@@ -107,3 +107,14 @@ Rule `docs/rules/P13-portal-w2.md`, migration 0262.
 * `forms.py`, `form_routers.py`: 14 element types, delivery as ticket or e-mail.
 * `routers.py`: `GET /portal/documents` with `is_new`, `last_opened_at`, `context`; `location`
   on `POST /portal/tickets`; `GET /portal/me` with `features` and `representations`.
+
+## Welle 3 (Q10)
+
+- `GET /portal/documents?q=&sort=` (Suche in Titel und Dateiname, Sortierung created, title, filename) und `POST /portal/documents/bundle` (ZIP mit INDEX.csv, max. 100 Belege, gleiche Sichtbarkeitsprüfung, Abrufe als Indiz protokolliert).
+- `GET /portal/me` liefert zusätzlich `portal_roles` (abgeleitet über `core/auth/portal_roles.py`).
+- Tickets: `external_comments` und `external_attachments` werden im Portal durchgesetzt (Standard open, Migration 0279, Annahme A-Q10-01).
+
+- Paket Q05 (Welle 3): `GET /portal-admin/representations` liefert zusätzlich `representative_contact_id` und `representative_email`; Vollmachten im CRM am Kontakt (Liste, Anlage mit Dokument, Widerruf). Regel: `docs/rules/Q05-crm-oberflaechen.md`.
+- `GET /portal/owner/statements` und `.../statements/{id}/units/{unit_id}/pdf` (M24-03, Status issued bis locked, G4), `GET /portal/owner/allocation-properties` und `/rental-income`, `own_share` in `/portal/owner/payment-resolutions`.
+- `POST /portal/work-orders/{id}/einvoice` (M22-01, XML, Vorschlag über `mhvp.receipts.einvoice`).
+- `GET /portal/board/engagements/{id}/positions/{item_id}/context` (M25-04, lesend).

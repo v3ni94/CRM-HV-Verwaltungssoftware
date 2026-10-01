@@ -5,16 +5,18 @@ import { InvoiceCreate } from "@/components/invoices/InvoiceForms";
 import { InvoiceExtract } from "@/components/invoices/InvoiceExtract";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ proposal?: string }> }) {
+export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ proposal?: string; q?: string; review?: string; posting?: string }> }) {
   const t = await getTranslations("Invoices");
   const tr = await getTranslations("Receipts");
-  const { proposal: initialProposalId } = await searchParams;
+  const tw = await getTranslations("Workspace");
+  const { proposal: initialProposalId, q = "", review = "", posting = "" } = await searchParams;
   const api = serverApi();
   const [list, ledgers, openDrafts] = await Promise.all([
     api.GET("/api/v1/accounting/invoices"),
@@ -32,9 +34,22 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         .map((x) => ({ id: x.id, label: `${x.number} ${x.name}` }));
     }),
   );
-  const rows = (list.data ?? []) as {
+  const allRows = (list.data ?? []) as {
     id: string; number: string; invoice_date: string; gross: string; review_status: string; posting_status: string; findings: string[];
   }[];
+  // M9-03: list filters as query parameters so that they can be saved per user.
+  const needle = q.trim().toLowerCase();
+  const rows = allRows.filter(
+    (r) =>
+      (!needle || r.number.toLowerCase().includes(needle)) &&
+      (!review || r.review_status === review) &&
+      (!posting || r.posting_status === posting),
+  );
+  const currentFilter: Record<string, string> = Object.fromEntries(
+    Object.entries({ q: q.trim(), review, posting }).filter(([, v]) => v !== ""),
+  );
+  const reviewOptions = Array.from(new Set(allRows.map((r) => r.review_status)));
+  const postingOptions = Array.from(new Set(allRows.map((r) => r.posting_status)));
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -61,6 +76,32 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         initialProposalId={initialProposalId ?? null}
       />
       <InvoiceCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name }))} accounts={accounts} />
+      <SavedFilters resource="invoices" basePath="/rechnungen" current={currentFilter} />
+      <form method="get" className="flex flex-wrap items-end gap-2" aria-label={tw("filters")}>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("fields.number")}</span>
+          <input name="q" defaultValue={q} className={ui.input} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("review")}</span>
+          <select name="review" defaultValue={review} className={ui.input}>
+            <option value="">{tw("allValues")}</option>
+            {reviewOptions.map((v) => (
+              <option key={v} value={v}>{t(`reviewStatus.${v}`)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("posting")}</span>
+          <select name="posting" defaultValue={posting} className={ui.input}>
+            <option value="">{tw("allValues")}</option>
+            {postingOptions.map((v) => (
+              <option key={v} value={v}>{t(`postingStatus.${v}`)}</option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className={ui.button}>{tw("applyFilter")}</button>
+      </form>
       {rows.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (

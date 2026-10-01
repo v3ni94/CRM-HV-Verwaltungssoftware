@@ -54,9 +54,12 @@ class DispatchIn(_In):
     channel: str | None = Field(
         default=None, pattern="^(post|email|portal|sms|registered|courier)$"
     )
-    # channel post: also create the postal job (M23-05); gates and rights of the postal module
-    # apply unchanged (provider release, communication:approve for external providers).
-    submit_postal: bool = False
+    # channel post: the postal job is created automatically (M23-05, default None = automatic).
+    # Gates and rights of the postal module apply unchanged: without request context, without
+    # release of an external provider or without communication:approve the dispatch stays
+    # prepared and the job is created via POST /postal/jobs. True forces the submit (errors are
+    # reported), False suppresses it.
+    submit_postal: bool | None = None
 
 
 class SerialDispatchIn(_In):
@@ -205,12 +208,27 @@ async def _create(
             )
     session.add(row)
     await session.flush()
-    if channel == "post" and item.submit_postal:
-        if request is None:
-            raise ProblemError(ErrorCodes.VALIDATION, detail="Postauftrag hier nicht möglich.")
-        from mhvp.communication.postal import PostalSubmitIn, submit
+    if channel == "post" and item.submit_postal is not False:
+        from mhvp.communication.postal import (
+            PostalSubmitIn,
+            provider_for,
+            settings_row,
+            submit,
+        )
 
-        await submit(session, request, principal, PostalSubmitIn(dispatch_id=row.id))
+        explicit = item.submit_postal is True
+        if request is None:
+            if explicit:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Postauftrag hier nicht möglich.")
+        else:
+            automatic_ok = True
+            if not explicit:
+                settings = await settings_row(session, principal.tenant_id)
+                provider = provider_for(settings)
+                if provider.name != "manual":
+                    automatic_ok = settings.enabled and principal.has("communication:approve")
+            if automatic_ok:
+                await submit(session, request, principal, PostalSubmitIn(dispatch_id=row.id))
     return row
 
 

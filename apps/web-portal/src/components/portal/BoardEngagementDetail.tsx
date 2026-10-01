@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { BoardEngagementDetail as Detail, BoardReport } from "@/components/portal/types";
+import { PositionContext } from "@/components/portal/PositionContext";
 import { filterQuery } from "@/lib/audit-filter";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -193,6 +194,7 @@ export function BoardEngagementDetail({ detail, reports = [] }: { detail: Detail
               {p.note ? <span className="text-sm">{t("managementNote")}: {p.note}</span> : null}
               {p.question ? <span className="text-sm">{t("managementQuestion")}: {p.question}</span> : null}
               {p.answer ? <span className="text-sm">{t("managementAnswer")}: {p.answer}</span> : null}
+              <PositionContext engagementId={detail.id} itemId={p.id} />
             </li>
           ))}
         </ul>

@@ -40,6 +40,14 @@ class ReportType(StrEnum):
     PAYMENTS = "payments"  # Liste vereinbarter Zahlungen
     JOURNAL = "journal"  # staged only until the ledger exists (M10)
     BANK_TRANSACTIONS = "bank_transactions"  # staged only until M11
+    # Welle 3 (M8-02 to M8-07): reports with target fields and their own apply handler
+    # (``mhvp.imports.w3_reports``); nothing of them posts or collects money.
+    SEPA_OVERVIEW = "sepa_overview"  # SEPA-Übersicht je Objekt (Mandate, Zahlungsplan)
+    CHART_OF_ACCOUNTS = "chart_of_accounts"  # Konten-Export je Objekt
+    BANK_HISTORY = "bank_history"  # historische Bankumsätze mit Journalzuordnung
+    DOCUMENT_INDEX = "document_index"  # DMS-Dokumente mit Objekt- und Vertragsbezug
+    TICKET_HISTORY = "ticket_history"  # historische Tickets, nur lesend
+    OPEN_ITEMS = "open_items"  # offene Posten, Guthaben, Kautionen, Rücklagen, Darlehen
 
 
 class FileStatus(StrEnum):

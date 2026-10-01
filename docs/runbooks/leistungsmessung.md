@@ -42,3 +42,7 @@ als Plausibilitätsprüfung.
 - Lastdaten-Seed für Abrechnung (100 Einheiten) und Bankabruf (100 Konten mit Konnektor-Attrappe).
 - Messung auf dem Staging-Server mit produktionsnaher Datenmenge (Betreiber).
 - Die Entscheidung über Partitionierung hängt an diesen Werten (ADR 0018).
+
+## Lastdaten-Seed (S16-08)
+
+`apps/api/tests/integration/perf_seed.py` erzeugt synthetische Daten über die öffentliche API: eine WEG mit 100 Einheiten (`seed_units`) und 100 Objekte mit je einem Bankkonto (`seed_bank_accounts`, IBAN mit gültiger Prüfziffer, fiktive Bankleitzahl). Der Test `test_seed_of_100_units_and_100_bank_accounts` schreibt die Zeile `PERF seed ...`. Die Tests für Abrechnung und Bankabruf bleiben übersprungen, bis Abrechnungsdaten (Wirtschaftsplan, Kosten) und eine Konnektor-Attrappe ergänzt sind.

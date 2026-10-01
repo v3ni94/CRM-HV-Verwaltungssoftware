@@ -11,7 +11,9 @@ type Option = { id: string; label: string };
 type Plan = {
   id: string; text: string; gross: string; vat_percent: string; interval_months: number; start_date: string;
   end_date: string | null; next_due: string; ended_at: string | null; order_reference: string | null;
+  anchor_day: number | null; service_contract_id: string | null;
 };
+const MONEY = /^\d+([.,]\d{1,2})?$/;
 
 /** M14-01: recurring invoice plans of a ledger. Generating creates an unreviewed draft only. */
 export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
@@ -20,6 +22,8 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
   const [rows, setRows] = useState<Plan[] | null>(null);
   const [ending, setEnding] = useState<string | null>(null);
   const [end, setEnd] = useState({ ended_at: "", reason: "" });
+  const [editing, setEditing] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ text: "", gross: "", vat_percent: "", interval_months: "", end_date: "", order_reference: "", service_contract_id: "" });
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,8 +44,41 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
     if (!res.ok) return setError(res.message);
     setMessage(done);
     setEnding(null);
+    setEditing(null);
     await load();
   };
+  const startEdit = (p: Plan) => {
+    setEnding(null);
+    setEditing(p.id);
+    setEdit({
+      text: p.text,
+      gross: p.gross,
+      vat_percent: p.vat_percent,
+      interval_months: String(p.interval_months),
+      end_date: p.end_date ?? "",
+      order_reference: p.order_reference ?? "",
+      service_contract_id: p.service_contract_id ?? "",
+    });
+  };
+  const editValid =
+    edit.text.trim().length > 0 && MONEY.test(edit.gross) && MONEY.test(edit.vat_percent) && /^\d{1,2}$/.test(edit.interval_months) && Number(edit.interval_months) > 0;
+  const saveEdit = () =>
+    act(
+      editing ?? "",
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          text: edit.text.trim(),
+          gross: edit.gross.replace(",", "."),
+          vat_percent: edit.vat_percent.replace(",", "."),
+          interval_months: Number(edit.interval_months),
+          end_date: edit.end_date || null,
+          order_reference: edit.order_reference.trim() || null,
+          service_contract_id: edit.service_contract_id.trim() || null,
+        }),
+      },
+      t("saved"),
+    );
 
   return (
     <div className="flex flex-col gap-4">
@@ -77,6 +114,8 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
                   <td>
                     {p.text}
                     {p.order_reference ? <span className={ui.small}> ({p.order_reference})</span> : null}
+                    {p.service_contract_id ? <span className={`${ui.small} block`}>{t("contractLinked")}</span> : null}
+                    {p.anchor_day && p.anchor_day > 28 ? <span className={`${ui.small} block`}>{t("anchorDay", { day: p.anchor_day })}</span> : null}
                   </td>
                   <td className="num">{formatEur(p.gross)}</td>
                   <td>{t("months", { count: p.interval_months })}</td>
@@ -88,6 +127,7 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
                         <button type="button" className={ui.buttonSm} onClick={() => void act(`${p.id}/generate`, { method: "POST" }, t("generated"))}>
                           {t("generate")}
                         </button>
+                        <button type="button" className={ui.buttonSm} onClick={() => startEdit(p)}>{t("edit")}</button>
                         <button type="button" className={ui.buttonSm} onClick={() => setEnding(p.id)}>{t("end")}</button>
                       </>
                     )}
@@ -99,6 +139,29 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
           </table>
         </div>
       )}
+      {editing ? (
+        <section className={ui.card} data-testid="plan-edit">
+          <h2 className={ui.h2}>{t("editTitle")}</h2>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(["text", "gross", "vat_percent", "interval_months", "end_date", "order_reference", "service_contract_id"] as const).map((k) => (
+              <label key={k} className="flex flex-col gap-1">
+                <span className={ui.label}>{t(`editFields.${k}`)}</span>
+                <input
+                  className={ui.input}
+                  type={k === "end_date" ? "date" : "text"}
+                  value={edit[k]}
+                  onChange={(e) => setEdit((v) => ({ ...v, [k]: e.target.value }))}
+                />
+              </label>
+            ))}
+          </div>
+          <p className={ui.help}>{t("editHint")}</p>
+          <div className="flex gap-2">
+            <button type="button" className={ui.primary} disabled={!editValid} onClick={() => void saveEdit()}>{t("save")}</button>
+            <button type="button" className={ui.button} onClick={() => setEditing(null)}>{t("cancel")}</button>
+          </div>
+        </section>
+      ) : null}
       {ending ? (
         <section className={ui.card} data-testid="plan-end">
           <label className="flex flex-col gap-1">

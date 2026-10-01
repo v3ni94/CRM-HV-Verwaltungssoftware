@@ -39,9 +39,9 @@ async def _world(settings: Any) -> World:
         b, _ = await services.provision_tenant(factory, slug=f"rco-{RUN}", name=f"Fremd {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
-            ("rcadmin", a, "tenant_admin"),
-            ("rccare", a, "caretaker"),
-            ("rcother", b, "tenant_admin"),
+            ("rchadmin", a, "tenant_admin"),
+            ("rchcare", a, "caretaker"),
+            ("rchother", b, "tenant_admin"),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -69,9 +69,9 @@ def client(database: Database, redis_url: str) -> Iterator[TestClient]:
 
 
 def test_receipt_chain_lock_and_release(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "rcadmin"))
-    care = bearer(login(client, world, "rccare"))
-    other = bearer(login(client, world, "rcother"))
+    h = bearer(login(client, world, "rchadmin"))
+    care = bearer(login(client, world, "rchcare"))
+    other = bearer(login(client, world, "rchother"))
     w = _hoa(client, h, "871", "DE02500105170137075030")
     txs = _import(
         client,
@@ -134,7 +134,7 @@ def test_receipt_chain_lock_and_release(client: TestClient, world: World) -> Non
             headers=h,
         )
     )
-    assert flagged["decided_by"] == str(world.users["rcadmin"])
+    assert flagged["decided_by"] == str(world.users["rchadmin"])
     assert flagged["decided_at"] is not None
     _ok(client.post(f"{B}/transactions/{t1}/book", json=book, headers=h), 201)
 

@@ -244,6 +244,27 @@ def test_board_reads_positions_and_released_receipts_only_and_never_posts(
     assert {d["id"] for d in detail["documents"]} == {doc_item}
     assert "Indiz" in detail["read_receipt_note"]
 
+    # Q10 M25-04: read only context of the position; unknown position and foreign engagement 404.
+    context = _ok(
+        client.get(f"{B}/engagements/{engagement}/positions/{item['id']}/context", headers=bh)
+    )
+    assert context["item_id"] == item["id"]
+    assert context["invoice"]["number"]
+    assert isinstance(context["missing"], list)
+    unknown = "00000000-0000-7000-8000-000000000001"
+    assert (
+        client.get(
+            f"{B}/engagements/{engagement}/positions/{unknown}/context", headers=bh
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            f"{B}/engagements/{unknown}/positions/{item['id']}/context", headers=bh
+        ).status_code
+        == 404
+    )
+
     opened = client.get(f"{B}/engagements/{engagement}/documents/{doc_item}", headers=bh)
     assert opened.status_code == 200, opened.text
     assert opened.content == b"%PDF-1.4 garten"

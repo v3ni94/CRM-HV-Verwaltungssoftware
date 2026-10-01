@@ -13,13 +13,14 @@ from typing import Any
 from urllib.parse import quote as url_quote
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth import service as auth_service
+from mhvp.core.auth.portal_roles import PortalRelations, derive_portal_roles
 from mhvp.core.auth.principal import (
     TenantPrincipal,
     get_principal,
@@ -519,6 +520,7 @@ async def decide(
             raise ProblemError(ErrorCodes.CONFLICT, detail="Bereits entschieden.")
         account = await session.get(PortalAccount, row.account_id)
         payload = json.loads(row.payload)
+        receipt_draft_id: uuid.UUID | None = None
         if body.accept and account is not None:
             if row.kind == "email":
                 session.add(
@@ -564,14 +566,110 @@ async def decide(
                 )
             elif row.kind == "address":
                 await _apply_address(session, principal, row, account.contact_id, payload)
-            # invoice submissions are applied manually in the CRM (M22-01)
+            elif row.kind == "invoice_submission":
+                # M22-02: the accepted submission becomes a receipt draft (Belegeingang),
+                # never a posting; the order moves to invoiced.
+                receipt_draft_id = await _apply_invoice_submission(session, principal, row, payload)
         row.status, row.decided_by, row.decision_note = (
             ("accepted" if body.accept else "rejected"),
             principal.user_id,
             body.note,
         )
         await session.flush()
-        return {"id": row.id, "status": row.status}
+        result: dict[str, Any] = {"id": row.id, "status": row.status}
+        if receipt_draft_id is not None:
+            result["receipt_draft_id"] = receipt_draft_id
+        return result
+
+
+async def _apply_invoice_submission(
+    session: AsyncSession, principal: TenantPrincipal, row: ChangeRequest, payload: dict[str, Any]
+) -> uuid.UUID:
+    """M22-02: takes an accepted invoice submission of a provider into the Belegeingang as a
+    receipt draft (status proposed, source ``portal``) with the values the provider entered,
+    and sets the work order to ``invoiced``. The draft is reviewed and confirmed in the
+    Belegeingang like any other (M14); nothing is posted or paid here, and the release of
+    posting stays behind gate G1. Idempotent per document: an existing draft is reused."""
+    from mhvp.contacts.models import Contact
+    from mhvp.properties.models import Property
+    from mhvp.receipts.models import ReceiptDraft, ReceiptDraftStatus
+    from mhvp.tickets.models import OrderStatus, WorkOrder, WorkOrderEvent
+
+    if not principal.has("accounting:create"):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN,
+            detail="Für die Übernahme in den Belegeingang fehlt die Berechtigung Buchhaltung.",
+            developer_message="Missing accounting:create.",
+        )
+    order = await session.get(WorkOrder, uuid.UUID(payload["work_order_id"]), with_for_update=True)
+    if order is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Auftrag nicht gefunden.")
+    document_id = uuid.UUID(payload["document_id"])
+    existing = await session.scalar(
+        select(ReceiptDraft.id).where(
+            ReceiptDraft.document_id == document_id, ReceiptDraft.source == "portal"
+        )
+    )
+    if existing is not None:
+        draft_id: uuid.UUID = existing
+    else:
+        provider = await session.get(Contact, order.provider_contact_id)
+        prop = await session.get(Property, order.property_id)
+
+        def _entered(value: Any, note: str) -> dict[str, Any]:
+            # Values typed by the provider: no AI confidence, marked as entered in the portal.
+            return {"value": value, "confidence": 1.0, "source": "local", "note": note}
+
+        note = "Vom Dienstleister im Portal eingegeben"
+        fields: dict[str, Any] = {
+            "supplier_name": _entered(provider.display_name if provider else None, note),
+            "invoice_number": _entered(str(payload["number"]).strip(), note),
+            "invoice_date": _entered(payload["invoice_date"], note),
+            "gross": _entered(str(payload["gross"]), note),
+            "currency": _entered("EUR", note),
+            "property_ref": _entered(prop.number if prop else None, "Objekt des Auftrags"),
+        }
+        draft = ReceiptDraft(
+            tenant_id=row.tenant_id,
+            created_by=principal.user_id,
+            document_id=document_id,
+            source="portal",
+            status=ReceiptDraftStatus.PROPOSED.value,
+            fields=fields,
+            property_suggestions=(
+                [
+                    {
+                        "property_id": str(prop.id),
+                        "number": prop.number,
+                        "name": prop.name,
+                        "score": 1.0,
+                        "reason": "Objekt des Auftrags",
+                    }
+                ]
+                if prop
+                else []
+            ),
+            warnings=[
+                "Die Angaben stammen vom Dienstleister aus dem Portal und sind mit dem Beleg "
+                "abzugleichen."
+            ],
+        )
+        session.add(draft)
+        await session.flush()
+        draft_id = draft.id
+    if order.status is OrderStatus.DONE:
+        session.add(
+            WorkOrderEvent(
+                tenant_id=order.tenant_id,
+                work_order_id=order.id,
+                from_status=order.status.value,
+                to_status=OrderStatus.INVOICED.value,
+                user_id=principal.user_id,
+                note="Rechnungseinreichung angenommen, Belegentwurf angelegt",
+            )
+        )
+        order.status = OrderStatus.INVOICED
+    return draft_id
 
 
 async def _apply_address(
@@ -805,7 +903,7 @@ async def _scopes(session: AsyncSession, account: PortalAccount) -> dict[str, se
 
 @router.get("/me", summary="Eigene Rollen und Verträge")
 async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, Any]:
-    from mhvp.contracts.models import Contract
+    from mhvp.contracts.models import Contract, ContractKind
     from mhvp.tickets.models import WorkOrder
 
     principal, account = ctx
@@ -826,6 +924,15 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             else []
         )
         permissions = await access.staff_permissions(session, account)
+        relations = PortalRelations(
+            active_rental_contracts=sum(
+                1 for c in contracts if c.kind is not ContractKind.OWNERSHIP
+            ),
+            active_ownerships=sum(1 for c in contracts if c.kind is ContractKind.OWNERSHIP)
+            + (1 if any(g.legal_basis in ("hoa_member_right",) for g in active) else 0),
+            board_seats=1 if any(g.role == "board" for g in active) else 0,
+            service_provider_relations=1 if is_provider else 0,
+        )
         from mhvp.portal import features as portal_features
 
         feature_row = await portal_features.get_or_default(session)
@@ -836,6 +943,8 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             # M21-05: powers of attorney held by this account (role switch in the UI).
             "representations": representations,
             "contact_id": account.contact_id,
+            # S16-10 (3.4): named portal roles derived from the relations, not assigned.
+            "portal_roles": [r.value for r in derive_portal_roles(relations)],
             "roles": sorted({g.role for g in active} | ({"provider"} if is_provider else set())),
             "contracts": [
                 {
@@ -881,10 +990,19 @@ async def notifications_read(
 
 
 @router.get("/documents", summary="Freigegebene Dokumente")
-async def documents(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
+async def documents(
+    request: Request,
+    ctx: Portal = Depends(portal_user),
+    q: str | None = Query(default=None, max_length=100, description="Suche in Titel und Dateiname"),
+    sort: str = Query(
+        default="created_desc", pattern="^(created|title|filename)_(asc|desc)$|^created_desc$"
+    ),
+) -> list[dict[str, Any]]:
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        docs = await access.visible_documents(session, account, local_today())
+        docs = _filter_sort_documents(
+            await access.visible_documents(session, account, local_today()), q, sort
+        )
         ids = {d.id for d in docs}
         notes = await access.redaction_notes(session, ids)
         states = await read_receipts.states_for_account(session, account, ids)
@@ -906,6 +1024,89 @@ async def documents(request: Request, ctx: Portal = Depends(portal_user)) -> lis
             }
             for d in docs
         ]
+
+
+def _filter_sort_documents(docs: list[Any], q: str | None, sort: str) -> list[Any]:
+    """M25-06 (PÜ12): search and sort only within the documents the account may see."""
+    needle = (q or "").strip().casefold()
+    if needle:
+        docs = [
+            d
+            for d in docs
+            if needle in (d.title or "").casefold() or needle in d.filename.casefold()
+        ]
+    key, _, direction = sort.rpartition("_")
+    field = {"created": "created_at", "title": "title", "filename": "filename"}[key]
+
+    def sort_key(d: Any) -> Any:
+        value = getattr(d, field)
+        return value.casefold() if isinstance(value, str) else value
+
+    return sorted(docs, key=sort_key, reverse=direction == "desc")
+
+
+class PortalDocumentBundleIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    document_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+
+
+@router.post("/documents/bundle", summary="Sammel-Download als ZIP mit Index (M25-06)")
+async def documents_bundle(
+    body: PortalDocumentBundleIn, request: Request, ctx: Portal = Depends(portal_user)
+) -> Response:
+    """ZIP of the chosen documents with ``INDEX.csv``. The same visibility check as the single
+    download applies; one unknown or foreign id answers 404 for the whole request. Each file
+    is recorded as a download indication (D34)."""
+    import csv
+    import io
+    import zipfile
+
+    from mhvp.documents.blobs import BlobStore
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        visible = {d.id: d for d in await access.visible_documents(session, account, local_today())}
+        ids = list(dict.fromkeys(body.document_ids))
+        if any(i not in visible for i in ids):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        store = BlobStore(request.app.state.settings)
+        buffer = io.BytesIO()
+        index = io.StringIO()
+        writer = csv.writer(index, delimiter=";")
+        writer.writerow(["Datei", "Titel", "Erstellt am", "Typ", "Größe in Byte"])
+        used: set[str] = set()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for i, document_id in enumerate(ids, start=1):
+                d = visible[document_id]
+                data = store.get(d.storage_ref)
+                safe = re.sub(r"[^\w.\- ]", "_", d.filename)
+                name = f"{i:03d}_{safe}"
+                while name in used:
+                    name = f"x_{name}"
+                used.add(name)
+                archive.writestr(name, data)
+                writer.writerow(
+                    [name, d.title, d.created_at.strftime("%d.%m.%Y"), d.mime_type, len(data)]
+                )
+                await read_receipts.record(session, account, d.id, "downloaded")
+            archive.writestr("INDEX.csv", "\ufeff" + index.getvalue())
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.portal_bundle_download",
+            entity_type="portal_account",
+            entity_id=account.id,
+            actor_user_id=principal.user_id,
+            payload={"count": len(ids)},
+        )
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": content_disposition("attachment", "Belege.zip"),
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
 
 
 async def _document_contexts(session: AsyncSession, docs: list[Any]) -> dict[uuid.UUID, str]:
@@ -1168,6 +1369,35 @@ async def entity_attachments(
     return [_attachment_out(d) for d in rows]
 
 
+async def portal_ticket_attachments(
+    session: AsyncSession, ticket: Any, account: PortalAccount
+) -> list[dict[str, Any]]:
+    """Attachments of a ticket as the portal may show them (M19-03): ``external_attachments``
+    none hides all, initiator_only shows the files this account uploaded itself, open all."""
+    from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
+
+    policy = ticket.external_attachments
+    if policy == "none":
+        return []
+    items = await ticket_attachments(session, ticket.id)
+    if policy == "open" or not items:
+        return items
+    own = set(
+        await session.scalars(
+            select(Document.id)
+            .join(DocumentLink, DocumentLink.document_id == Document.id)
+            .where(
+                DocumentLink.entity_type == "ticket",
+                DocumentLink.entity_id == ticket.id,
+                DocumentLink.role == LinkRole.ATTACHMENT,
+                Document.source == DocumentSource.PORTAL,
+                Document.created_by == account.user_id,
+            )
+        )
+    )
+    return [a for a in items if a["id"] in own]
+
+
 async def ticket_attachments(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:
     """Documents linked to a ticket as attachments (A55). Shared with the CRM ticket detail
     (mhvp.tickets.routers.get_ticket)."""
@@ -1189,17 +1419,24 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
         rows = (await session.scalars(query)).all()
         out = []
         for t in rows:
-            comments = (
-                await session.scalars(
-                    select(TicketComment)
-                    .where(
-                        TicketComment.ticket_id == t.id,
-                        TicketComment.internal.is_(False),
-                        TicketComment.removed_at.is_(None),
-                    )
-                    .order_by(TicketComment.created_at)
+            comment_query = (
+                select(TicketComment)
+                .where(
+                    TicketComment.ticket_id == t.id,
+                    TicketComment.internal.is_(False),
+                    TicketComment.removed_at.is_(None),
                 )
-            ).all()
+                .order_by(TicketComment.created_at)
+            )
+            # M19-03: none shows no comments, to_manager only the account's own ones.
+            if t.external_comments == "none":
+                comments: list[Any] = []
+            else:
+                if t.external_comments == "to_manager":
+                    comment_query = comment_query.where(
+                        TicketComment.author_contact_id == account.contact_id
+                    )
+                comments = list((await session.scalars(comment_query)).all())
             out.append(
                 {
                     "id": t.id,
@@ -1207,7 +1444,7 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
                     "title": t.title,
                     "status": t.status.value,
                     "comments": [c.body for c in comments],
-                    "attachments": await ticket_attachments(session, t.id),
+                    "attachments": await portal_ticket_attachments(session, t, account),
                     # A58: open or accepted appointment proposals of the orders to this
                     # ticket; the resident accepts one via
                     # POST /portal/work-orders/{id}/appointment-proposals/{pid}/accept.
@@ -1261,6 +1498,10 @@ async def comment(
         ticket = await session.get(Ticket, ticket_id)
         if ticket is None or ticket.initiator_contact_id != account.contact_id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if ticket.external_comments == "none":
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN, detail="Für diese Meldung sind keine Kommentare freigegeben."
+            )
         row = TicketComment(
             tenant_id=principal.tenant_id,
             ticket_id=ticket.id,

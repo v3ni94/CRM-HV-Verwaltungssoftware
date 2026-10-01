@@ -121,6 +121,7 @@ class AdminFeeInvoiceOut(BaseModel):
     corrects_invoice_id: uuid.UUID | None
     corrected_by_id: uuid.UUID | None = None
     xml_document_id: uuid.UUID | None
+    pdf_document_id: uuid.UUID | None = None
     released_at: datetime | None
     cancelled_at: datetime | None
     cancel_reason: str | None
@@ -172,6 +173,7 @@ def invoice_out(row: AdminFeeInvoice, corrected_by: uuid.UUID | None = None) -> 
         corrects_invoice_id=row.corrects_invoice_id,
         corrected_by_id=corrected_by,
         xml_document_id=row.xml_document_id,
+        pdf_document_id=row.pdf_document_id,
         released_at=row.released_at,
         cancelled_at=row.cancelled_at,
         cancel_reason=row.cancel_reason,

@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
+import { GlobalDropZone } from "@/components/documents/GlobalDropZone";
 import { MobileNav } from "@/components/shell/MobileNav";
 import { PwaRegister } from "@/components/shell/PwaRegister";
 import { CommandPalette } from "@/components/shell/CommandPalette";
@@ -158,6 +159,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="ml-auto flex min-w-0 items-center gap-2">
             {/* Visible from lg (TenantSwitcher header variant); the drawer carries it below. */}
             <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
+            {/* Global drop zone for documents (11.4, M6-02). */}
+            {can("documents:create") ? <GlobalDropZone /> : null}
             <NotificationBell />
             <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>

@@ -182,3 +182,12 @@ Person und der anschließenden Buchung.
 ## Nachweis der E-Rechnung (30.09.2026)
 
 Am Belegentwurf einer E-Rechnung stehen das Profil, das Ergebnis der eigenen Formalprüfung und die Prüfsummen der empfangenen Datei und des eingebetteten XML. Das Ergebnis einer externen Prüfung (zum Beispiel KoSIT) wird mit Prüfprogramm, Version und Ergebnis nachgetragen; es belegt nur die formale Gültigkeit, nicht die Leistung. Weitere Abweichungen zwischen XML und PDF (Netto, Steuer, Datum, Fälligkeit, IBAN) werden als Hinweis an die Rechnung übernommen.
+
+## Rechnungseinreichung aus dem Dienstleisterportal
+
+Reicht ein Dienstleister im Portal eine Rechnung zu einem erledigten Auftrag ein, erscheint sie als
+Vorschlag am Kontakt. Mit "Annehmen" entsteht ein Belegentwurf im Belegeingang (Quelle Portal) mit
+Rechnungsnummer, Datum und Brutto des Dienstleisters, und der Auftrag steht auf "Abgerechnet". Es wird
+nichts gebucht und nichts bezahlt. Netto, Umsatzsteuer und Bankverbindung sind im Belegeingang anhand
+des Belegs zu prüfen und zu erfassen; die Buchung bleibt gesperrt, bis die produktive Buchhaltung
+freigegeben ist. Erforderlich sind die Rechte Kontakte bearbeiten und Buchhaltung anlegen.

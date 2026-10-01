@@ -16,3 +16,12 @@
 - CSV mit Semikolon, Spalten gemeinde, name, stand, baujahr_von, baujahr_bis, flaeche_von, flaeche_bis, ausstattung, min, mittel, max, quelle; Dezimalkomma und Datum TT.MM.JJJJ werden gelesen. Die Vorschau schreibt nichts; bei Fehlerzeilen wird nichts übernommen; identische Zeilen werden übersprungen.
 - Die Abfrage liefert die Zeilen des jüngsten gültigen Mietspiegels, die zu den angegebenen Merkmalen passen. Fehlt ein Merkmal, das eine Klasse braucht, wird die Zeile nicht geraten, sondern als nicht prüfbar vermerkt. Ohne Treffer gibt es keinen Ersatzwert.
 - Die Einordnung in die Spanne und die ortsübliche Vergleichsmiete bleiben eine Entscheidung der Verwaltung.
+
+## Nachtrag 30.09.2026 (Q14, M26-03)
+
+- Die Werte werden im CRM unter Vermietung, Mietspiegel gepflegt (Erfassen, Löschen, CSV mit Vorschau).
+- Im Mieterhöhungsfall im Status Entwurf mit Begründung Mietspiegel oder Vergleich kann die Spanne eines
+  Wertes übernommen werden (`POST /letting/rent-increases/{id}/adopt-rent-index`, Position Untergrenze,
+  Mittelwert oder Obergrenze). Übernommen werden Vergleichsmiete je m², Name und Stand des Mietspiegels,
+  Begründung und Quellenvermerk; die Prüfung läuft neu. Die Wahl der Position trifft die Sachbearbeitung, die
+  Plattform ordnet keine ortsübliche Vergleichsmiete zu.

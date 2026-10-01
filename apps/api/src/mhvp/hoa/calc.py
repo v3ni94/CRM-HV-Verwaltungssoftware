@@ -69,6 +69,7 @@ async def plan_results(
     session: AsyncSession, property_id: uuid.UUID, items: list[Any], start: date, end: date
 ) -> dict[str, Any]:
     per_unit: dict[str, dict[str, Decimal]] = {}
+    reserve_split: dict[str, dict[str, Decimal]] = {}  # M24-01: annual reserve share per reserve
     numbers: dict[str, str] = {}
     for item in items:
         dist = distribute(
@@ -79,6 +80,10 @@ async def plan_results(
             numbers[unit_id] = number
             bucket = per_unit.setdefault(unit_id, {"hoa_fee": ZERO, "reserve": ZERO})
             bucket[item.component] += value
+            if item.component == "reserve":
+                rid = str(item.reserve_id) if getattr(item, "reserve_id", None) else "none"
+                split = reserve_split.setdefault(unit_id, {})
+                split[rid] = split.get(rid, ZERO) + value
     units = []
     for unit_id, comp in sorted(per_unit.items(), key=lambda kv: numbers[kv[0]]):
         monthly = {k: (v / 12).quantize(CENT, rounding=ROUND_HALF_UP) for k, v in comp.items()}
@@ -89,6 +94,9 @@ async def plan_results(
                 "annual": {k: str(v) for k, v in comp.items()},
                 "monthly": {k: str(v) for k, v in monthly.items()},
                 "rounding_difference": {k: str(comp[k] - monthly[k] * 12) for k in comp},
+                "reserve_split": {
+                    k: str(v) for k, v in sorted(reserve_split.get(unit_id, {}).items())
+                },
             }
         )
     totals = {
@@ -99,9 +107,15 @@ async def plan_results(
 
 
 async def advances(
-    session: AsyncSession, unit_id: uuid.UUID, component: str, start: date, end: date
+    session: AsyncSession,
+    unit_id: uuid.UUID,
+    component: str,
+    start: date,
+    end: date,
+    by_reserve: dict[str, Decimal] | None = None,
 ) -> tuple[Decimal, Decimal]:
-    """Resolved advances (posted receivable items) and payments on them for a unit and year."""
+    """Resolved advances (posted receivable items) and payments on them for a unit and year.
+    ``by_reserve`` (M24-01) collects the paid part of items bound to an earmarked reserve."""
     from mhvp.accounting import services as acc
     from mhvp.accounting.models import ItemStatus, OpenItem, ReceivableItem
     from mhvp.contracts.models import Contract
@@ -125,7 +139,11 @@ async def advances(
             select(OpenItem).where(OpenItem.journal_entry_id == i.journal_entry_id)
         )
         if oi is not None:
-            paid += oi.amount - await acc.remaining(session, oi.id)
+            amount_paid = oi.amount - await acc.remaining(session, oi.id)
+            paid += amount_paid
+            if by_reserve is not None and i.reserve_id is not None:
+                key = str(i.reserve_id)
+                by_reserve[key] = by_reserve.get(key, ZERO) + amount_paid
     return due, paid
 
 
@@ -154,10 +172,13 @@ async def statement_results(
             costs[unit_id] = costs.get(unit_id, ZERO) + value
     units = []
     reserve_due = reserve_paid = ZERO
+    paid_by_reserve: dict[str, Decimal] = {}  # M24-01: payments on items bound to a reserve
     for unit_id in sorted(costs, key=lambda u: numbers[u]):
         uid = uuid.UUID(unit_id)
         soll, paid = await advances(session, uid, "hoa_fee", start, end)
-        r_due, r_paid = await advances(session, uid, "reserve", start, end)
+        r_due, r_paid = await advances(
+            session, uid, "reserve", start, end, by_reserve=paid_by_reserve
+        )
         reserve_due += r_due
         reserve_paid += r_paid
         result = costs[unit_id] - soll
@@ -192,6 +213,10 @@ async def statement_results(
         "contributions_resolved": str(reserve_due),
         "contributions_paid": str(reserve_paid),
         "contributions_open": str(reserve_due - reserve_paid),  # not available funds (W08)
+        # M24-01: paid part per earmarked reserve (binding of the receivable item); the rest
+        # cannot be assigned to a reserve and stays in the total.
+        "contributions_paid_by_reserve": {k: str(v) for k, v in sorted(paid_by_reserve.items())},
+        "contributions_paid_unassigned": str(reserve_paid - sum(paid_by_reserve.values(), ZERO)),
         "withdrawals": str(statement.reserve_withdrawals),
         "interest": str(statement.reserve_interest),
         "closing": str(closing),
@@ -959,12 +984,17 @@ async def section_35a_block(
 
 
 def reserve_positions(
-    reserves: list[Any], plan_items: list[Any], movements: list[Any]
+    reserves: list[Any],
+    plan_items: list[Any],
+    movements: list[Any],
+    paid_by_reserve: dict[str, Decimal] | None = None,
 ) -> list[dict[str, Any]]:
     """M24-01 (W08): development per earmarked reserve. Planned contribution (Soll) from the
     reserve items of the resolved plan, movements from the entered uses of funds, taxes, fees
-    and interest. Payments are not split per reserve (open point), so the closing value is
-    the planned development, shown apart from the paid total of the reserve block."""
+    and interest. Payments per reserve come from the receivable items bound to the reserve
+    (Zweckbindung, M24-01); where no item is bound, ``contributions_paid`` is zero and the
+    planned development stays the reference, shown apart from the paid total of the block."""
+    paid_by_reserve = paid_by_reserve or {}
     out = []
     for r in reserves:
         planned = sum(
@@ -975,6 +1005,7 @@ def reserve_positions(
         def of(kind: str, mine: list[Any] = mine) -> Decimal:
             return sum((m.amount for m in mine if m.kind == kind), ZERO)
 
+        paid = Decimal(str(paid_by_reserve.get(str(r.id), ZERO)))
         out.append(
             {
                 "reserve_id": str(r.id),
@@ -982,6 +1013,11 @@ def reserve_positions(
                 "purpose": r.purpose,
                 "account_id": str(r.account_id) if r.account_id else None,
                 "contributions_planned": str(planned),
+                "contributions_paid": str(paid),
+                "contributions_paid_bound": str(r.id) in paid_by_reserve,
+                "paid_change": str(
+                    paid - of("withdrawal") - of("tax") - of("fee") + of("interest")
+                ),
                 "withdrawals": str(of("withdrawal")),
                 "taxes": str(of("tax")),
                 "fees": str(of("fee")),
@@ -1023,3 +1059,33 @@ def plan_comparison(items: list[Any], basis_items: list[Any] | None) -> list[dic
             }
         )
     return rows
+
+
+def totals_comparison(
+    totals: dict[str, str], basis_snapshot: dict[str, Any], basis_kind: str
+) -> dict[str, Any]:
+    """M24-04 (W02): plan totals against the previous year. Basis plan: its component totals.
+    Basis statement: the total costs of the year against the planned Hausgeld (information,
+    no claim); reserve totals only when the basis is a plan."""
+    if basis_kind == "plan":
+        basis = dict(basis_snapshot.get("totals") or {})
+    else:
+        basis = {"hoa_fee": basis_snapshot.get("total_costs")}
+    rows = []
+    for component in ("hoa_fee", "reserve"):
+        now = Decimal(str(totals.get(component) or "0"))
+        before = basis.get(component)
+        rows.append(
+            {
+                "component": component,
+                "amount": str(now),
+                "basis_amount": str(before) if before is not None else None,
+                "deviation": str(now - Decimal(str(before))) if before is not None else None,
+                "deviation_percent": (
+                    str(((now - Decimal(str(before))) / Decimal(str(before)) * 100).quantize(CENT))
+                    if before is not None and Decimal(str(before)) != 0
+                    else None
+                ),
+            }
+        )
+    return {"basis_kind": basis_kind, "rows": rows}

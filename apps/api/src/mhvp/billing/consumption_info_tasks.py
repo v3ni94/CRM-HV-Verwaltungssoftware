@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+from mhvp.automation.job_schedule import job_allowed
 from mhvp.billing import consumption_info
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
@@ -57,8 +58,10 @@ async def run_once(
     blobs = BlobStore(settings)
     try:
         for tenant_id in await _active_tenants(factory):
-            totals["tenants"] += 1
             async with tenant_transaction(factory, tenant_id) as session:
+                if not await job_allowed(session, tenant_id, "billing-consumption-info"):
+                    continue
+                totals["tenants"] += 1
                 counts = await consumption_info.run_tenant(
                     session, blobs, tenant_id=tenant_id, month=month, actor=None, trigger="job"
                 )

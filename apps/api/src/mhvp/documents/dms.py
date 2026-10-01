@@ -80,6 +80,16 @@ class InboxFile:
     size: int | None = None
 
 
+@dataclass(frozen=True)
+class DriveChange:
+    """One entry of the Drive Changes API (11.2 ``subscribe_changes``, M6-05)."""
+
+    file_id: str
+    removed: bool  # removed from the account or moved to the trash
+    name: str | None = None
+    modified_at: str | None = None
+
+
 @dataclass
 class MirrorHit:
     """One document found in a mirror, scoped to a single property (11.2, M20-05)."""
@@ -407,6 +417,62 @@ class GoogleDriveStore:
             return False
         _raise_for(response, "trash")
         return True
+
+    CHANGES_URL = "https://www.googleapis.com/drive/v3/changes"
+
+    async def start_page_token(self) -> str:
+        """Cursor of the Changes API at this moment (M6-05); changes before it are ignored."""
+        response = await self._client.get(
+            f"{self.CHANGES_URL}/startPageToken",
+            params={"supportsAllDrives": "true"},
+            headers=await self._auth(),
+        )
+        _raise_for(response, "changes start token")
+        return str(response.json()["startPageToken"])
+
+    async def list_changes(
+        self, page_token: str, max_pages: int = 10
+    ) -> tuple[list[DriveChange], str]:
+        """Changes since ``page_token``; returns them and the cursor to store. When more than
+        ``max_pages`` pages are waiting, the cursor of the next page is returned so the next
+        run continues there."""
+        changes: list[DriveChange] = []
+        token = page_token
+        for _ in range(max_pages):
+            response = await self._client.get(
+                self.CHANGES_URL,
+                params={
+                    "pageToken": token,
+                    "fields": (
+                        "nextPageToken,newStartPageToken,"
+                        "changes(fileId,removed,file(name,trashed,modifiedTime))"
+                    ),
+                    "pageSize": "100",
+                    "supportsAllDrives": "true",
+                    "includeItemsFromAllDrives": "true",
+                },
+                headers=await self._auth(),
+            )
+            _raise_for(response, "changes listing")
+            payload = response.json()
+            for item in payload.get("changes", []):
+                if not item.get("fileId"):
+                    continue
+                file = item.get("file") or {}
+                changes.append(
+                    DriveChange(
+                        file_id=str(item["fileId"]),
+                        removed=bool(item.get("removed")) or bool(file.get("trashed")),
+                        name=file.get("name"),
+                        modified_at=file.get("modifiedTime"),
+                    )
+                )
+            if payload.get("newStartPageToken"):
+                return changes, str(payload["newStartPageToken"])
+            token = str(payload.get("nextPageToken") or token)
+            if not payload.get("nextPageToken"):
+                return changes, token
+        return changes, token
 
     async def list_folder(
         self, folder_id: str, modified_after: str | None = None, page_size: int = 100

@@ -41,17 +41,17 @@ describe("DispatchPanel", () => {
     expect(bodies[1]).toEqual({ status: "delivered", evidence_kind: "registered_mail", evidence_ref: "RS 123" });
   });
 
-  it("sends submit_postal only for the channel post and hides the form without the right", async () => {
+  it("creates the postal job automatically and sends submit_postal false only when switched off and hides the form without the right", async () => {
     const bodies: unknown[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
       bodies.push(JSON.parse(String(init?.body)));
       return jsonResponse({ id: "d2", channel: "post", status: "prepared", document_id: docs[0]!.id, further_dispatches: [] }, 201);
     });
     const { unmount } = renderIntl(<DispatchPanel contactId="c1" documents={docs} canCreate canRecord={false} />);
-    await userEvent.click(screen.getByLabelText("Postauftrag gleichzeitig anlegen"));
+    await userEvent.click(screen.getByLabelText("Postauftrag automatisch anlegen"));
     await userEvent.click(screen.getByRole("button", { name: "Zustellung vorbereiten" }));
     await waitFor(() => expect(bodies.length).toBe(1));
-    expect(bodies[0]).toMatchObject({ channel: "post", submit_postal: true });
+    expect(bodies[0]).toMatchObject({ channel: "post", submit_postal: false });
     unmount();
     renderIntl(<DispatchPanel contactId="c1" documents={docs} canCreate={false} canRecord={false} />);
     expect(screen.getByText(/nur mit Recht communication:create/)).toBeInTheDocument();

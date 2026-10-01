@@ -1909,12 +1909,21 @@ class OrderOut(BaseModel):
     open_item_id: uuid.UUID | None = None
     payout_reason: str | None = None
     bank_status_reason_code: str | None = None
+    # S69-03: warnings of the person check on the valid approvals (no block).
+    approval_warnings: list[str] = []
 
 
 async def _order_out(session: Any, order: PaymentOrder) -> OrderOut:
+    from mhvp.accounting import approval_decisions
+
     out = OrderOut.model_validate(order)
     out.counterpart_iban_suffix = order.counterpart_iban[-4:]
     out.approvals = len(await payments.valid_approvals(session, order))
+    warnings: list[str] = []
+    for decision in await approval_decisions.decisions(session, "payment_order", order.id):
+        if decision.status == "valid":
+            warnings += [w for w in decision.warnings if w not in warnings]
+    out.approval_warnings = warnings
     return out
 
 
@@ -3238,6 +3247,21 @@ async def match_invoice_transactions(
                 "proposal_created": proposal_out is not None,
             },
         )
+        # S12-01: invoice.paid once new bank evidence covers the gross amount (evidence of an
+        # outgoing payment only; nothing is booked here).
+        if created and sum((abs(row.amount) for row in all_links), Decimal("0")) >= invoice.gross:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="invoice.paid",
+                entity_type="invoice",
+                entity_id=invoice_id,
+                actor_user_id=principal.user_id,
+                payload={
+                    "basis": "bank_match",
+                    "bank_transaction_ids": [str(row.bank_transaction_id) for row in all_links],
+                },
+            )
         await session.flush()
         return InvoiceMatchResultOut(
             invoice_id=invoice_id,

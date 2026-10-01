@@ -32,6 +32,24 @@ export function CreditorsPanel({ ledgers }: { ledgers: Option[] }) {
     });
   }, [ledger]);
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const load = (id: string) =>
+    bff<Creditor[]>(`/api/bff/accounting/ledgers/${id}/creditors`).then((res) => {
+      if (res.ok) setRows(res.data);
+      else setError(res.message);
+    });
+  // M10-05: Kreditorenkonten für alle Dienstleisterverhältnisse anlegen und verknüpfen.
+  const sync = async () => {
+    setSyncing(true);
+    setError(null);
+    setSyncMessage(null);
+    const res = await bff<{ created: number; linked: number }>(`/api/bff/accounting/ledgers/${ledger}/sync-creditors`, { method: "POST" });
+    setSyncing(false);
+    if (!res.ok) return setError(res.message);
+    setSyncMessage(t("syncDone", { created: res.data.created, linked: res.data.linked }));
+    await load(ledger);
+  };
   const open = async (c: Creditor) => {
     setSelected(c);
     setStatement(null);
@@ -50,6 +68,11 @@ export function CreditorsPanel({ ledgers }: { ledgers: Option[] }) {
           ))}
         </select>
       </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className={ui.button} onClick={() => void sync()} disabled={syncing || !ledger}>{t("sync")}</button>
+        <span className={ui.help}>{t("syncHint")}</span>
+      </div>
+      {syncMessage ? <p className={ui.success} role="status">{syncMessage}</p> : null}
       {error ? <p className={ui.alert} role="alert">{error}</p> : null}
       {rows === null ? null : rows.length === 0 ? (
         <p className={ui.notice}>{t("empty")}</p>

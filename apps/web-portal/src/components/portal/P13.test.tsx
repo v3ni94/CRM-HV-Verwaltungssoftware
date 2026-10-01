@@ -68,6 +68,54 @@ describe("OwnerOverview", () => {
     expect(screen.getByText(/12\.000,00 EUR/)).toBeInTheDocument();
     expect(screen.getByText("Keine für Eigentümer freigegebenen Meldungen.")).toBeInTheDocument();
   });
+
+  it("shows the own share, allocation properties and rental income (M21-06, SA-05)", () => {
+    renderIntl(
+      <OwnerOverview
+        note="n"
+        tickets={[]}
+        payments={[
+          {
+            resolution_id: "r2",
+            number: 4,
+            decided_on: "2026-05-15",
+            subject: "Wirtschaftsplan 2027",
+            kind: "economic_plan",
+            legal_entity_name: "WEG",
+            valid_from: "2027-01-01",
+            valid_to: null,
+            rhythm: "monthly",
+            due_day: 3,
+            instalments: null,
+            total: null,
+            purpose: null,
+            sepa: null,
+            own_share: [{ unit_number: "01", annual: { hoa_fee: "1200.00" }, monthly: { hoa_fee: "100.00" } }],
+          },
+        ]}
+        allocations={[
+          {
+            unit_id: "u1",
+            unit_number: "01",
+            property_name: "WEG Musterstraße",
+            keys: [{ code: "MEA", name: "Miteigentumsanteile", unit_of_measure: "/1000", kind: "static", value: "125.0000" }],
+          },
+        ]}
+        income={[
+          {
+            property_id: "p1",
+            property_name: "WEG Musterstraße",
+            total_gross: "650.00",
+            units: [{ unit_number: "01", gross: "650.00", components: [] }],
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId("owner-share")).toHaveTextContent(/100,00 EUR/);
+    expect(screen.getByText("Umlageeigenschaften")).toBeInTheDocument();
+    expect(screen.getByText(/Miteigentumsanteile: 125.0000/)).toBeInTheDocument();
+    expect(screen.getByText(/650,00 EUR je Monat/)).toBeInTheDocument();
+  });
 });
 
 describe("SupportConsent", () => {

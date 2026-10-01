@@ -295,3 +295,23 @@ als technisches Hilfsmittel; sie ersetzen keine externe Prüfung (`docs/ASSUMPTI
 * **Eigentum.** Die Seite Eigentum zeigt beschlossene Zahlungen mit Geltungsdauer und Zahlungsempfänger sowie freigegebene Meldungen zum Objekt. Es wird keine Zahlung ausgelöst.
 * **Formularbaukasten.** Im CRM stehen 14 Elementtypen bereit. Die Zustellung ist Ticket oder Ticket mit E-Mail an eine feste Adresse der Verwaltung.
 * **Funktionen und Statistik.** Unter Einstellungen, Portalformulare schaltet der Administrator Chat, KI-Vorqualifizierung und Support-Sicht ein und sieht die Nutzungszahlen der letzten 30 Tage.
+
+## Belege suchen, sortieren und gesammelt laden (Portal)
+
+Unter Dokumente suchen Sie nach Titel oder Dateiname und sortieren nach Datum oder Titel. Mit der Auswahl und dem Knopf Sammel-Download erhalten Sie die gewählten Belege als ZIP-Datei mit einer Indexdatei (INDEX.csv). Es sind höchstens 100 Belege je Abruf möglich, es gelten dieselben Sichtbarkeitsregeln wie beim Einzelabruf.
+
+## Rollenwechsel im Portal
+
+Konten mit mehreren Rollen (zum Beispiel Mieter und Eigentümer) wählen oben die Ansicht. Die Auswahl begrenzt nur die Navigation und vergibt keine Rechte.
+
+## Eigentümer: Einzelabrechnung, Umlageeigenschaften, Mieterträge
+
+Unter Hausgeldabrechnung steht die Einzelabrechnung Ihrer Einheit als PDF, sobald die Verwaltung sie freigegeben hat (Abgabe an Eigentümer) und die Freigabestufe G4 für Ihre Gemeinschaft offen ist. Unter Eigentum sehen Sie Ihren Anteil an Wirtschaftsplan und Sonderumlage, die Umlageschlüssel Ihrer Einheiten und, bei Sondereigentumsverwaltung, die vereinbarte Miete je Objekt.
+
+## Dienstleister: E-Rechnung als XML
+
+Bei einem ausgeführten Auftrag kann eine XRechnung (XML) eingelesen werden. Rechnungsnummer, Datum und Bruttobetrag werden vorgeschlagen und vor dem Einreichen geprüft. Die Verwaltung prüft die Rechnung wie jede andere.
+
+## Beirat: Kontext einer Prüfposition
+
+Bei jeder Position zeigt Kontext anzeigen Buchung, Rechnung, Auftrag, Zahlung, Umlageschlüssel und Vorjahr sowie Hinweise auf fehlende Unterlagen. Nur lesend.

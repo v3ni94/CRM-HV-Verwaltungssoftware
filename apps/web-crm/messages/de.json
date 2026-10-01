@@ -151,6 +151,7 @@
     "ticketAnalytics": "Auswertung Tickets"
   },
   "Contacts": {
+    "mergeLink": "Zusammenführen",
     "call": "Anrufen",
     "mail": "E-Mail",
     "masterData": {
@@ -202,7 +203,8 @@
       "relations": "Beziehungen",
       "documents": "Dokumente",
       "releases": "Portal-Freigaben",
-      "log": "Ereignisprotokoll"
+      "log": "Ereignisprotokoll",
+      "assistant": "Assistent"
     },
     "calls": {
       "title": "Anrufe"
@@ -1202,7 +1204,13 @@
       "ownerships": "Eigentumsverhältnisse",
       "payments": "Zahlungen",
       "journal": "Journal",
-      "bank_transactions": "Bankumsätze"
+      "bank_transactions": "Bankumsätze",
+      "chart_of_accounts": "Kontenplan je Objekt",
+      "sepa_overview": "SEPA-Übersicht",
+      "bank_history": "Bankumsätze (Historie)",
+      "open_items": "Offene Posten, Guthaben, Kautionen, Rücklagen, Darlehen, Sonderumlagen",
+      "document_index": "DMS-Dokumente mit Objekt- und Vertragsbezug",
+      "ticket_history": "Historische Tickets (nur lesend)"
     },
     "stagedOnlyBadge": "nur Zwischenablage",
     "stagedOnlyHint": "Journal und Bankumsätze werden nur zwischengespeichert, bis die Buchhaltung verfügbar ist. Es entstehen keine Buchungen.",
@@ -1272,6 +1280,9 @@
     "listImportLink": "Listenimport (Objektdaten, Kontakte, Zuordnung) öffnen"
   },
   "Workspace": {
+    "filters": "Filter",
+    "allValues": "Alle",
+    "applyFilter": "Filter anwenden",
     "dashboard": "Start",
     "tiles": "Kennzahlen",
     "tile": {
@@ -1323,6 +1334,12 @@
     "bulkRemove": "Entfernen",
     "bulkNone": "Keine Zeilen markiert.",
     "bulkDone": "{changed} geändert.",
+    "bulkDocuments": "Sammelaktion für markierte Dokumente",
+    "bulkCategory": "Kategorie",
+    "bulkChoose": "Bitte wählen",
+    "bulkSetCategory": "Kategorie setzen",
+    "bulkProperty": "Objekt",
+    "bulkLinkProperty": "Mit Objekt verknüpfen",
     "select": "Auswählen",
     "greetingLabel": "Übersicht",
     "open": "Öffnen",
@@ -1469,6 +1486,7 @@
       "note_follow_up": "Wiedervorlage",
       "meeting": "Eigentümerversammlung",
       "ticket_due": "Ticketfrist",
+      "work_order_appointment": "Auftragstermin",
       "appointment": "Termin",
       "custom_deadline": "Eigene Frist (Fristtyp)"
     },
@@ -1686,6 +1704,22 @@
     }
   },
   "Letting": {
+    "aiCheck": {
+      "title": "KI-Plausibilität",
+      "notice": "Hinweise der KI zur Stimmigkeit der erfassten Angaben. Keine Freigabe und keine Rechtsprüfung; die Entscheidung trifft eine Person.",
+      "start": "KI-Prüfung starten",
+      "runStatus": "Letzter Lauf: {status} {error}",
+      "overall": {
+        "unauffaellig": "Gesamt: unauffällig",
+        "pruefen": "Gesamt: prüfen",
+        "kritisch": "Gesamt: kritisch"
+      },
+      "severity": {
+        "low": "gering",
+        "medium": "mittel",
+        "high": "hoch"
+      }
+    },
     "title": "Vermietung",
     "rentIncreaseNotice": "Mieterhöhungen werden nur rechnerisch geprüft. Der Versand ist bis zur Freigabestufe G3 und bis zur dokumentierten Rechtsprüfung gesperrt.",
     "noVacancies": "Kein Leerstand.",
@@ -2450,6 +2484,7 @@
     "cancel": "Verwerfen",
     "confirmCancel": "Zahlungsauftrag verwerfen?",
     "approvals": "{n} von 2 Freigaben",
+    "identityWarning": "Hinweis Personenprüfung (keine Sperre): {text}",
     "status_draft": "Entwurf",
     "status_approved": "freigegeben",
     "status_exported": "exportiert",
@@ -2485,7 +2520,8 @@
     "settings": "Mahnstufen und Gebühren",
     "runStatus": {
       "preview": "Vorschau",
-      "approved": "freigegeben"
+      "approved": "freigegeben",
+      "failed": "fehlgeschlagen"
     },
     "caseStatus": {
       "proposed": "vorgeschlagen",
@@ -2883,7 +2919,20 @@
         "statementHint": "Nur Text. Weder der Bericht noch die Abrechnung ändern dadurch ihren Status.",
         "create": "Neuen Prüfbericht erstellen",
         "confirmCreate": "Prüfbericht mit dem aktuellen Stand der Positionen erstellen?",
-        "submit": "Prüfbericht erstellen"
+        "submit": "Prüfbericht erstellen",
+        "confirmAsk": "Bericht Version {n} bestätigen? Die Bestätigung ist kein Beschluss und kann nicht zurückgenommen werden.",
+        "confirmName": "Bestätigt durch (Name)",
+        "confirmNote": "Vermerk",
+        "confirmSubmit": "Bericht bestätigen",
+        "confirmedBy": "Bestätigt durch {name} am {date}",
+        "confirmHint": "Die Bestätigung hält fest, wer den Bericht gelesen hat. Sie ersetzt keinen Beschluss der Gemeinschaft."
+      },
+      "history": {
+        "title": "Änderungen",
+        "show": "Verlauf anzeigen",
+        "hide": "Verlauf ausblenden",
+        "none": "Keine Änderungen seit Anlage.",
+        "empty": "leer"
       }
     },
     "noLedger": "Für die Gemeinschaft ist noch kein Buchungskreis angelegt.",
@@ -3130,7 +3179,26 @@
     "confirmApplyPreview": "Vorschau bestätigen und übernehmen",
     "applied": "Übernommen: {count} Sollbeträge angelegt.",
     "alreadyApplied": "Bereits übernommen am {date}.",
-    "counts": "{create} anlegen, {unchanged} unverändert, {no_contract} ohne Eigentumsverhältnis"
+    "counts": "{create} anlegen, {unchanged} unverändert, {no_contract} ohne Eigentumsverhältnis",
+    "reservesLink": "Rücklagen",
+    "planRhythm": "Zahlungsrhythmus",
+    "planDueDay": "fällig am {day}.",
+    "planDueDayLabel": "Fälligkeitstag",
+    "planContinues": "gilt fort bis zum neuen Plan",
+    "rhythm": {
+      "monthly": "monatlich",
+      "quarterly": "vierteljährlich",
+      "yearly": "jährlich"
+    },
+    "comparisonTitle": "Vergleich mit dem Vorjahr",
+    "comparisonAgainstPlan": "Gegenüber dem Vorplan, Werte je Komponente und Jahr.",
+    "comparisonAgainstStatement": "Gegenüber den Gesamtkosten der Vorjahresabrechnung (Information, keine Forderung).",
+    "comparisonPlan": "Plan",
+    "comparisonBasis": "Vorjahr",
+    "comparisonDeviation": "Abweichung",
+    "comparisonItems": "Vergleich je Position",
+    "comparisonBasisPlan": "Vergleich mit Plan",
+    "comparisonNoBasis": "kein Vergleichsplan"
   },
   "RentIncrease": {
     "title": "Mieterhöhungen",
@@ -3586,7 +3654,10 @@
         "ausstehend": "Ausstehend",
         "geloescht": "In Gmail gelöscht",
         "unbekannt": "Unbekannt"
-      }
+      },
+      "imagesBlocked": "Externe Bilder sind blockiert (Schutz vor Zählpixeln).",
+      "loadImages": "Bilder laden",
+      "htmlFrameTitle": "HTML Ansicht der Mail"
     },
     "workOrders": {
       "title": "Arbeitsaufträge",
@@ -3790,7 +3861,9 @@
       "mail_draft": "E-Mail-Entwurf aus Antwortvorlage",
       "letter_draft": "Brief-Entwurf aus Briefvorlage",
       "ai_task": "KI-Aufgabe starten",
-      "assign_record": "Zuordnen (Lernregel)"
+      "assign_record": "Zuordnen (Lernregel)",
+      "set_field": "Feld setzen (Notizen von Objekt, Kontakt, Vertrag)",
+      "notify_provider": "Entwurf an Dienstleister"
     },
     "actionValue": "Wert der Aktion",
     "ticketField": "Ticketfeld",
@@ -3850,7 +3923,9 @@
       "mailDraft": "E-Mail-Entwurf aus {template}",
       "letterDraft": "Brief-Entwurf aus {template}",
       "aiTask": "KI-Aufgabe {task}",
-      "assignRecord": "Zuordnen: {dimension} {value}"
+      "assignRecord": "Zuordnen: {dimension} {value}",
+      "setMasterField": "Feld setzen: {target} {field}",
+      "notifyProvider": "Entwurf an Dienstleister {subject}"
     },
     "log": "Protokoll",
     "filterRule": "Regel filtern",
@@ -3975,6 +4050,29 @@
       "classify_email": "E-Mail einordnen"
     },
     "aiInstruction": "Anweisung (Platzhalter erlaubt)",
+    "setFieldTarget": "Ziel",
+    "setFieldField": "Feld",
+    "setFieldMode": "Art der Änderung",
+    "setFieldValue": "Text",
+    "setFieldHelp": "Nur Notizfelder. Anhängen fügt eine Zeile mit Datum und Regelname hinzu und erhält den bisherigen Text. Kein Zahlungs-, Bank-, Betrags- oder Steuerfeld kann gesetzt werden.",
+    "setFieldTargets": {
+      "property": "Objekt",
+      "contact": "Kontakt",
+      "contract": "Vertrag"
+    },
+    "setFieldFields": {
+      "notes": "Notizen",
+      "renovation_notes": "Notizen zur Sanierung",
+      "garden_notes": "Notizen zum Garten"
+    },
+    "setFieldModes": {
+      "append": "Anhängen",
+      "replace": "Ersetzen"
+    },
+    "providerContractType": "Vertragsart des Dienstleisters am Objekt (Code)",
+    "providerSubject": "Betreff",
+    "providerBody": "Text",
+    "providerHelp": "Legt einen E-Mail-Entwurf an den aktiven Dienstleister der Vertragsart am Objekt des Tickets an. Freigabe und Versand bleiben manuell.",
     "aiTaskHelp": "Startet einen KI-Lauf über den Gateway. Ergebnis ist nur ein Vorschlag; keine Buchung, keine Freigabe.",
     "expertView": "Expertenansicht (JSON)",
     "formView": "Formularansicht",
@@ -4441,6 +4539,9 @@
     "onboardingLink": "Onboarding Drittmandanten und Export"
   },
   "Creditors": {
+    "sync": "Kreditorenkonten anlegen",
+    "syncHint": "Legt für alle Dienstleisterverhältnisse des Buchungskreises fehlende Kreditorenkonten an und verknüpft vorhandene.",
+    "syncDone": "{created} Konten angelegt, {linked} verknüpft.",
     "title": "Kreditoren",
     "ledger": "Buchungskreis",
     "empty": "Noch keine Kreditorenkonten; sie entstehen mit der ersten gebuchten Rechnung.",
@@ -4462,6 +4563,23 @@
     "runningBalance": "Saldo"
   },
   "RecurringPlans": {
+    "edit": "Bearbeiten",
+    "editTitle": "Rechnungsplan bearbeiten",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Rechnungsplan gespeichert.",
+    "contractLinked": "mit Dienstleistervertrag verknüpft",
+    "anchorDay": "Stichtag {day}. des Monats, in kürzeren Monaten der letzte Tag",
+    "editHint": "Geändert werden nur künftige Entwürfe; bereits erzeugte Rechnungsentwürfe bleiben unverändert.",
+    "editFields": {
+      "text": "Leistung",
+      "gross": "Brutto",
+      "vat_percent": "Umsatzsteuer in Prozent",
+      "interval_months": "Rhythmus in Monaten",
+      "end_date": "Enddatum",
+      "order_reference": "Auftragsbezug",
+      "service_contract_id": "ID des Dienstleistervertrags"
+    },
     "title": "Rechnungspläne",
     "notice": "Ein Rechnungsplan erzeugt nur ungeprüfte Rechnungsentwürfe; Prüfung, Freigabe und Buchung bleiben getrennte Schritte.",
     "ledger": "Buchungskreis",
@@ -4486,6 +4604,24 @@
     "endedDone": "Rechnungsplan beendet."
   },
   "Invoices": {
+    "extra": {
+      "title": "Weitere Angaben zur Prüfung am Beleg",
+      "hint": "Optional. Die Angaben dienen der rechnerischen und fachlichen Prüfung; steuerliche Bewertung (Gegenleistung, Bauabzugsteuer, Vorsteuer) erfolgt durch Fachpersonal oder Steuerberater.",
+      "service_to": "Leistungszeitraum bis",
+      "discount_until": "Skonto bis",
+      "service_place": "Leistungsort",
+      "issuer_vat_id": "USt-IdNr. des Ausstellers",
+      "issuer_tax_number": "Steuernummer des Ausstellers",
+      "prepaid_amount": "Anzahlung",
+      "retention_amount": "Sicherheitseinbehalt",
+      "discount_percent": "Skonto in Prozent",
+      "input_tax_deductible": "Vorsteuerabzug",
+      "unknown": "nicht geklärt",
+      "yes": "ja",
+      "no": "nein",
+      "reverse_charge": "Reverse Charge",
+      "construction_withholding": "Bauabzugsteuer relevant"
+    },
     "title": "Rechnungseingang",
     "notice": "Automatische Prüfungen liefern nur Hinweise. Rechnungsfreigabe, Buchung und Zahlungsfreigabe sind getrennt; die Freigabe erteilt eine zweite Person und gilt nur für die geprüfte Version.",
     "empty": "Keine Rechnungen.",
@@ -4664,6 +4800,7 @@
     }
   },
   "Properties": {
+    "assistant": "Assistent",
     "area": "Bestand",
     "title": "Objekte",
     "search": "Suchen",
@@ -5126,6 +5263,21 @@
     }
   },
   "AiChat": {
+    "assistantTab": {
+      "title": "Assistent",
+      "introProperty": "Der Assistent kennt dieses Objekt und bereitet Aktionen als Vorschlag vor.",
+      "introContact": "Der Assistent kennt diesen Kontakt und bereitet Aktionen als Vorschlag vor.",
+      "actions": {
+        "documentFile": "Dokument ablegen und verknüpfen",
+        "letter": "Brief aus einer Vorlage als Entwurf erzeugen",
+        "ticket": "Ticket anlegen",
+        "appointment": "Termin oder Frist vormerken",
+        "portalInvite": "Portaleinladung vorbereiten",
+        "note": "Notiz hinterlegen"
+      },
+      "proposalNotice": "Jede Aktion ist ein Vorschlag und wird erst nach Ihrer Bestätigung im Chat ausgeführt. Es wird nichts versendet.",
+      "open": "Assistent öffnen"
+    },
     "title": "KI-Assistent",
     "open": "KI-Assistent öffnen",
     "close": "KI-Assistent schließen",
@@ -5390,8 +5542,25 @@
       "open_items": "Offene Posten"
     },
     "chatAction": {
+      "propertyLine": "Objekt {number} {name}",
+      "managementType": {
+        "rental": "Mietverwaltung",
+        "hoa": "WEG-Verwaltung",
+        "hoa_with_sev": "WEG mit Sondereigentumsverwaltung"
+      },
+      "onboarding": "Das Objekt wird im Status Übernahme angelegt, bis Sie es aktivieren.",
+      "fileAt": "{count} Dokument(e) ablegen bei: {name}",
+      "inviteEmail": "E-Mail-Adresse aus der Kontaktakte: {email}",
+      "noSend": "Der Zugang wird nur vorbereitet. Es wird nichts versendet; das Einladungsschreiben oder die Einladungsmail erzeugen Sie danach selbst.",
+      "template": "Vorlage: {name}",
+      "letterDraft": "Der Brief wird als Entwurf abgelegt und nicht versendet.",
+      "nextSteps": "Mögliche nächste Schritte",
       "rejectReasonLabel": "Grund der Ablehnung (optional)",
       "kind": {
+        "property_create": "Vorschlag: Objekt anlegen",
+        "document_file": "Vorschlag: Dokument ablegen",
+        "portal_invite_prepare": "Vorschlag: Portaleinladung vorbereiten",
+        "letter_create": "Vorschlag: Brief aus Vorlage",
         "contact_change": "Vorschlag: Kontaktdaten ändern",
         "contact_note": "Vorschlag: Notiz am Kontakt",
         "ticket_create": "Vorschlag: Ticket anlegen",
@@ -5487,7 +5656,11 @@
       "conversation": "Gespräch",
       "reconciliation": "Bankabstimmung",
       "rules": "Bankregeln",
-      "review": "Nachkontrolle"
+      "review": "Nachkontrolle",
+      "merge": "Zusammenführung",
+      "reserves": "Rücklagen",
+      "rentIndex": "Mietspiegel",
+      "letters": "Briefe"
     }
   },
   "Settings": {
@@ -5531,6 +5704,10 @@
     "retention": {
       "title": "Aufbewahrung",
       "description": "Aufbewahrungsprofile je Unterlagenklasse bearbeiten, freigeben und Kategorien zuordnen."
+    },
+    "privacy": {
+      "title": "Datenschutz",
+      "description": "Löschprofile, Löschanträge, Register der Auftragsverarbeiter und Verzeichnis-Entwurf."
     },
     "deletionProposals": {
       "title": "Löschvorschläge",
@@ -5770,6 +5947,10 @@
     "deadlineTypes": {
       "title": "Fristtypen",
       "description": "Katalog der Fristtypen mit Auslöser, Dauer und verantwortlicher Rolle, zu verifizieren."
+    },
+    "documentCategories": {
+      "title": "Dokumentkategorien",
+      "description": "Kategoriebaum und Zuordnung zu Paperless und Drive pflegen."
     }
   },
   "Members": {
@@ -6215,6 +6396,8 @@
     "previewTitle": "Vorschau des Abgleichs (ohne Wirkung)",
     "previewClose": "Schließen",
     "previewSummary": "Würde übernehmen: {archive} archiviert, {trash} im Papierkorb, {delete} gelöscht, {reopen} wieder im Posteingang, {own} eigene Aktionen.",
+    "replyRules": "Stilregeln KI-Antwort",
+    "replyRulesHint": "Freie Regeln für Antwortentwürfe, zum Beispiel Anrede, Grußformel, Verbote. Höchstens 2000 Zeichen; die KI liefert nur Entwürfe.",
     "replyTone": "Tonfall KI-Antwort",
     "replyToneHint": "Stilvorgabe für KI-Antwortentwürfe; das Standardpostfach gilt für den ganzen Mandanten.",
     "replyToneFormell": "formell",
@@ -8228,7 +8411,10 @@
       "status": "Statuswechsel",
       "note": "Rückfrage",
       "package": "Paket erzeugt",
-      "retrieval": "Paket abgerufen"
+      "retrieval": "Paket abgerufen",
+      "revoked": "Bereitstellung widerrufen",
+      "notified": "Benachrichtigung vorgemerkt",
+      "owner_check": "Eigentümerprüfung"
     },
     "empty": "Keine Einsichtsanfragen.",
     "notFound": "Einsichtsanfrage nicht gefunden.",
@@ -8236,7 +8422,18 @@
     "saved": "Gespeichert.",
     "chooseApplicant": "Bitte einen Antragsteller aus der Suche wählen.",
     "dateRequired": "Bitte das Antragsdatum eingeben.",
-    "scopeRequired": "Bitte mindestens einen Umfang wählen oder als Freitext angeben."
+    "scopeRequired": "Bitte mindestens einen Umfang wählen oder als Freitext angeben.",
+    "validDays": "Bereitstellung gültig für (Tage)",
+    "validDaysHelp": "Produktvorgabe, keine Rechtsfrist. Leer oder 0 bedeutet ohne Ablauf; die Frist wird vor Produktivnutzung mit dem Rechtsanwalt geklärt.",
+    "expiresAt": "Abrufbar bis {date}",
+    "expired": "Abgelaufen oder widerrufen seit {date}",
+    "noExpiry": "Ohne Ablaufdatum abrufbar",
+    "revokeReason": "Grund des Widerrufs",
+    "revoke": "Bereitstellung widerrufen",
+    "revokeConfirm": "Die Bereitstellung wird sofort beendet und der Abruf gesperrt. Fortfahren?",
+    "ownerCheckHeading": "Eigentümerstellung prüfen",
+    "ownerCheckHelp": "Vergleicht die Eigentümerstellung des Antragstellers am Antragstag mit heute. Eine Änderung wird nur angezeigt und protokolliert, die Entscheidung über den Widerruf trifft die Verwaltung.",
+    "ownerCheck": "Eigentümerstellung prüfen"
   },
   "PortalForms": {
     "title": "Portalformulare",
@@ -8517,7 +8714,7 @@
     "channel": "Zustellweg",
     "channelOrPreferred": "Zustellweg",
     "preferred": "Bevorzugter Weg des Empfängers",
-    "submitPostal": "Postauftrag gleichzeitig anlegen",
+    "submitPostal": "Postauftrag automatisch anlegen",
     "prepare": "Zustellung vorbereiten",
     "hint": "Die Plattform versendet nichts selbst. E-Mail wird ein Entwurf, SMS, Einschreiben und Bote werden mit Nachweis erfasst.",
     "choose": "Bitte wählen",
@@ -8854,6 +9051,8 @@
     }
   },
   "DocumentList": {
+    "select": "{title} auswählen",
+    "colSelect": "Auswahl",
     "deletionProposalsLink": "Löschvorschläge (Aufbewahrung)",
     "area": "Verwaltung",
     "title": "Dokumente",
@@ -8874,7 +9073,8 @@
     "pagination": "Seiten",
     "previous": "Zurück",
     "next": "Weiter",
-    "pageOf": "Seite {page} von {pages}, {total} Dokumente"
+    "pageOf": "Seite {page} von {pages}, {total} Dokumente",
+    "lettersLink": "Briefe und Vorlagen"
   },
   "DocumentDetail": {
     "area": "Dokumente",
@@ -10381,7 +10581,8 @@
       "maintenance": "Sanierung und Wartung",
       "note_follow_up": "Wiedervorlage",
       "meeting": "Eigentümerversammlung",
-      "ticket_due": "Ticketfrist"
+      "ticket_due": "Ticketfrist",
+      "work_order_appointment": "Auftragstermin"
     },
     "openSource": "Zur Quelle",
     "generatedHint": "Automatisch aus den Stammdaten erzeugt, zu prüfen.",
@@ -11490,6 +11691,7 @@
       "full_month": "voller Monat"
     },
     "vatEnabled": "Umsatzsteueroption berücksichtigen",
+    "monthlyPreviewEnabled": "Monatliche Vorschau der Sollstellungen erzeugen (nur Entwürfe)",
     "paymentInterval": "Zahlweise",
     "paymentIntervalOptions": {
       "none": "kein Mandanten-Standard",
@@ -12309,12 +12511,61 @@
     },
     "readOnly": "Zum Pflegen ist das Recht tenant_settings:update erforderlich."
   },
+  "NotificationSettings": {
+    "title": "Benachrichtigungen",
+    "intro": "Legen Sie fest, welche Meldungen Sie in der App und per E-Mail erhalten. Die Einstellungen gelten nur für Ihr Konto.",
+    "channels": "Kanäle je Art",
+    "defaultRow": "Alle anderen Arten",
+    "mandatory": "verpflichtend",
+    "mute": "Stummschalten für",
+    "muteOption": {
+      "0": "Nicht stummschalten",
+      "1": "1 Stunde",
+      "8": "8 Stunden",
+      "24": "24 Stunden",
+      "168": "7 Tage"
+    },
+    "mutedUntil": "Stumm bis {date}",
+    "muteHelp": "Die Stummschaltung gilt für alle Arten außer den verpflichtenden Meldungen zu Fristen, SLA und Bankzustimmungen.",
+    "column": {
+      "kind": "Art",
+      "inApp": "In der App",
+      "email": "Per E-Mail"
+    },
+    "inAppFor": "{kind} in der App",
+    "emailFor": "{kind} per E-Mail",
+    "save": "Speichern",
+    "saved": "Einstellungen gespeichert.",
+    "kind": {
+      "ticket_assigned": "Ticket zugewiesen",
+      "ticket_mail_received": "Neue Mail zu einem Ticket",
+      "ticket_follow_up_created": "Wiedervorlage zu einem Ticket",
+      "portal_chat_message": "Nachricht im Portal",
+      "portal_chat_reply": "Antwort im Portal",
+      "mail_approval_requested": "Mail zur Freigabe",
+      "maintenance_due": "Wartung fällig",
+      "maintenance_overdue": "Wartung überfällig",
+      "calendar_reminder": "Terminerinnerung",
+      "daily_digest": "Tagesübersicht",
+      "automation": "Meldung einer Regel",
+      "consumption_info": "Verbrauchsinformation",
+      "automation_webhook_dead": "Webhook dauerhaft fehlgeschlagen",
+      "sla_escalation": "SLA Eskalation",
+      "compliance_deadline": "Frist erreicht die Vorfrist",
+      "banking_consent_expiring": "Bankzustimmung läuft ab"
+    }
+  },
   "DeadlineEntries": {
+    "select": "{title} auswählen",
+    "doneSelected": "Markierte erledigen",
+    "bulkNone": "Keine Fristen markiert.",
+    "bulkDone": "{changed} Fristen erledigt.",
     "title": "Fristen",
     "verify": "zu verifizieren",
     "empty": "Keine offenen Fristen.",
     "loadError": "Die Fristen konnten nicht geladen werden.",
     "column": {
+      "select": "Auswahl",
       "due": "Fälligkeit",
       "type": "Fristtyp",
       "title": "Bezug",
@@ -12369,6 +12620,19 @@
     "error": "Die Berechnung konnte nicht abgerufen werden.",
     "missingDate": "Zugang der Kündigung eintragen.",
     "missingPeriod": "Kündigungsfrist aus dem Vertrag eintragen."
+  },
+  "TakeoverChecklist": {
+    "title": "Objektübernahme",
+    "intro": "Checkliste der Übernahmeunterlagen und Stände je Kategorie. Fehlende Punkte bleiben offen, bis sie eingegangen oder als nicht zutreffend markiert sind.",
+    "start": "Checkliste anlegen",
+    "none": "Keine Checkliste vorhanden.",
+    "openCount": "{count} offen",
+    "status": {
+      "open": "Offen",
+      "requested": "Angefordert",
+      "received": "Erhalten",
+      "not_applicable": "Nicht zutreffend"
+    }
   },
   "ManagerChecklist": {
     "title": "Checkliste Verwalterwechsel",
@@ -12848,5 +13112,599 @@
       "revoked": "Widerrufen",
       "expired": "Abgelaufen"
     }
+  },
+  "DunningDetails": {
+    "summary": "Prüfhinweise, Zins, Zustellnachweise und Sperren",
+    "hintsTitle": "Prüfhinweise",
+    "spreadTitle": "Vorschlag Zinsaufschlag",
+    "spreadValue": "Vorschlag für {profile}: {spread} Prozentpunkte über dem Basiszinssatz. Die Einstellung wird nicht geändert.",
+    "spreadNone": "Kein Vorschlag, die Verbrauchereigenschaft des Schuldners ist nicht erfasst.",
+    "spreadProfile": {
+      "verbraucher": "Verbraucher",
+      "unternehmer": "Unternehmer"
+    },
+    "interestTitle": "Verzugszinsen",
+    "interestNone": "Keine Zinsberechnung, es fehlt ein gepflegter Basiszinssatz oder der Verzugsbeginn.",
+    "periodFrom": "Von",
+    "periodTo": "Bis",
+    "days": "Tage",
+    "rate": "Zinssatz",
+    "amount": "Zins",
+    "interestTotal": "Zinsen gesamt: {amount}",
+    "interestDraft": "Zinsentwurf anlegen",
+    "interestDrafted": "Zinsentwurf angelegt",
+    "interestDraftHint": "Der Zinsentwurf ist keine Buchung. Die Freigabe erfolgt über die Vier-Augen-Buchung und nur bei geöffnetem Gate G1; Zinssatz und Anspruchsgrundlage sind anwaltlich zu prüfen.",
+    "proofsTitle": "Zustellnachweise",
+    "proofsEmpty": "Noch kein Zustellnachweis erfasst.",
+    "proofKindLabel": "Art",
+    "proofDate": "Datum",
+    "proofReference": "Referenz",
+    "proofNote": "Notiz",
+    "proofAdd": "Nachweis erfassen",
+    "proofKind": {
+      "registered_mail": "Einschreiben",
+      "postal_receipt": "Posteinlieferungsbeleg",
+      "email_receipt": "E-Mail-Nachweis",
+      "portal_receipt": "Portalnachweis",
+      "other": "Sonstiger Nachweis"
+    },
+    "blocksTitle": "Mahnsperren je Posten",
+    "blocksHint": "Gesperrte Posten werden im Mahnlauf nicht gemahnt. Der Grund wird strukturiert erfasst und kann aufgehoben werden.",
+    "blockReasonLabel": "Sperrgrund",
+    "blockNote": "Notiz",
+    "blockSet": "Sperren",
+    "blockRelease": "Aufheben",
+    "blockReason": {
+      "installment_plan": "Ratenplan",
+      "disputed": "bestrittener Posten",
+      "set_off": "Aufrechnung",
+      "litigation": "Prozess",
+      "insolvency": "Insolvenz"
+    }
+  },
+  "DunningRates": {
+    "title": "Basiszinssätze",
+    "notice": "Die Sätze sind Betreibereingaben mit Quelle. Die Plattform liefert keinen Satz und nimmt keinen an. Ohne Satz für den Zeitraum werden keine Zinsen berechnet.",
+    "empty": "Noch kein Basiszinssatz erfasst.",
+    "validFrom": "Gültig ab",
+    "validTo": "Gültig bis",
+    "open": "offen",
+    "baseRate": "Basiszinssatz",
+    "baseRateInput": "Basiszinssatz in Prozent",
+    "source": "Quelle",
+    "add": "Satz erfassen",
+    "added": "Basiszinssatz erfasst."
+  },
+  "DirectDebitFeedback": {
+    "show": "Bankrückmeldung und Abstimmung",
+    "summary": "Kontrollsumme {sum}, offene Befunde: {findings}",
+    "debtor": "Schuldner",
+    "amount": "Betrag",
+    "bankStatus": "Bankstatus",
+    "collected": "Eingezogen",
+    "remaining": "Rest offener Posten",
+    "finding": "Befund",
+    "noFinding": "kein Befund",
+    "record": "Rückmeldung erfassen",
+    "reasonCode": "Rückgabecode",
+    "reason": "Grund",
+    "collectedAmount": "Eingezogener Betrag",
+    "save": "Rückmeldung speichern",
+    "hint": "Erfasst wird nur die Rückmeldung der Bank, es wird nichts gebucht. Eine Rücklastschrift nach Ausgleich erscheint als Befund und wird durch Storno korrigiert.",
+    "status": {
+      "open": "offen",
+      "accepted": "angenommen",
+      "rejected": "abgelehnt",
+      "collected": "eingezogen",
+      "returned": "zurückgegeben"
+    }
+  },
+  "BankLimits": {
+    "title": "Banklimits und Einreichungsfristen",
+    "notice": "Betreibereingaben nach Bankvereinbarung, ohne gesetzlichen Standardwert. Die Werte sind zu verifizieren. Leere Felder bedeuten kein hinterlegtes Limit.",
+    "account": "Auftraggeberkonto",
+    "singleLimit": "Limit je Auftrag in EUR",
+    "dailyLimit": "Tageslimit in EUR",
+    "leadFrst": "Vorlauf Erstlastschrift in Tagen",
+    "leadRcur": "Vorlauf Folgelastschrift in Tagen",
+    "leadPre": "Vorabinformation in Tagen",
+    "sourceStatus": "Quellenstatus: {status}",
+    "save": "Limits speichern",
+    "saved": "Limits gespeichert."
+  },
+  "LettingW3": {
+    "expose": {
+      "create": "Exposé als PDF ablegen",
+      "images": "{count, plural, =0 {ohne Bilder} one {mit einem Bild} other {mit # Bildern}}",
+      "draft": "Entwurf, offene Angaben im Dokument markiert."
+    },
+    "matches": {
+      "title": "Interessentenabgleich",
+      "notice": "Vorschlag für die Sachbearbeitung, keine Entscheidung. Gereiht nach erfüllten Kriterien.",
+      "run": "Interessenten abgleichen",
+      "none": "Keine Interessenten mit passendem Suchprofil.",
+      "prospect": "Interessent",
+      "met": "{count, plural, =0 {keine Kriterien erfüllt} one {ein Kriterium erfüllt} other {# Kriterien erfüllt}}",
+      "unmet": "nicht erfüllt",
+      "unknown": "nicht prüfbar"
+    },
+    "rentIndex": {
+      "title": "Mietspiegel",
+      "notice": "Manuell oder per CSV gepflegte Werte je Gemeinde mit Quellenangabe. Die Einordnung in die Spanne und die ortsübliche Vergleichsmiete bleiben eine Entscheidung der Verwaltung, die Quelle ist vor der Verwendung zu prüfen.",
+      "municipality": "Gemeinde",
+      "name": "Mietspiegel",
+      "stand": "Stand",
+      "criteria": "Kriterien",
+      "range": "Spanne je m² und Monat",
+      "none": "keine",
+      "delete": "Löschen",
+      "empty": "Noch keine Werte erfasst.",
+      "add": "Wert erfassen",
+      "min": "Untergrenze in EUR",
+      "mid": "Mittelwert in EUR",
+      "max": "Obergrenze in EUR",
+      "yearFrom": "Baujahr von",
+      "yearTo": "Baujahr bis",
+      "source": "Quelle",
+      "save": "Speichern",
+      "import": "CSV Import",
+      "importHelp": "Semikolon getrennt, Kopfzeile: {columns}. Dezimalkomma und Datum TT.MM.JJJJ sind zulässig.",
+      "preview": "Vorschau",
+      "apply": "Übernehmen",
+      "previewResult": "{rows} Zeilen gelesen, {errors} fehlerhaft.",
+      "applyResult": "{created} Werte übernommen, {skipped} bereits vorhanden.",
+      "line": "Zeile {line}"
+    },
+    "adopt": {
+      "title": "Mietspiegelspanne übernehmen",
+      "municipality": "Gemeinde",
+      "yearBuilt": "Baujahr",
+      "search": "Spanne suchen",
+      "none": "Kein passender Mietspiegelwert erfasst.",
+      "perSqm": "je m² und Monat",
+      "min": "Untergrenze übernehmen",
+      "mid": "Mittelwert übernehmen",
+      "max": "Obergrenze übernehmen"
+    }
+  },
+  "RentIncreaseLinks": {
+    "title": "Mieterhöhungsfälle zum Vertrag",
+    "case": "Fall mit Wirksamkeit ab {date}",
+    "conflict": "Ein offener Fall wird vor Ablauf der Mieterhöhungssperre ({date}) wirksam. Die Fallprüfung sperrt die Freigabe."
+  },
+  "ContactParties": {
+    "title": "Vertragsparteien",
+    "hint": "Eine Partei fasst einen oder mehrere Kontakte zusammen, die gemeinsam Vertragspartner sind. Anteile sind optional und dürfen zusammen 100 Prozent nicht übersteigen. Eine Partei, die in Verträgen, bei Eigentümern oder Forderungen verwendet wird, kann nicht gelöscht werden.",
+    "new": "Partei anlegen",
+    "newTitle": "Neue Partei",
+    "editTitle": "Partei bearbeiten",
+    "name": "Name der Partei",
+    "namePlaceholder": "leer lassen für automatischen Namen",
+    "nameHint": "Ohne Eingabe wird der Name aus den Mitgliedern gebildet.",
+    "role": "Rolle",
+    "roleFor": "Rolle von {name}",
+    "share": "Anteil in Prozent",
+    "shareFor": "Anteil in Prozent für {name}",
+    "shareValue": "{value} Prozent",
+    "shareSum": "Summe der Anteile: {sum} Prozent",
+    "removeMember": "{name} aus der Partei entfernen",
+    "remove": "Entfernen",
+    "addMember": "Weiteres Mitglied suchen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirm": "Partei {name} löschen? Das ist nur möglich, wenn sie nirgends verwendet wird.",
+    "loading": "Parteien werden geladen.",
+    "empty": "Keine Vertragsparteien vorhanden.",
+    "membersRequired": "Eine Partei braucht mindestens ein Mitglied.",
+    "sharesTooHigh": "Die Anteile übersteigen 100 Prozent.",
+    "roles": {
+      "primary": "Hauptpartei",
+      "co_party": "Mitpartei",
+      "guarantor": "Bürge",
+      "legal_representative": "Gesetzlicher Vertreter"
+    }
+  },
+  "ContactTagsAdmin": {
+    "breadcrumb": "Einstellungen",
+    "title": "Kontakt-Tags",
+    "intro": "Tags entstehen als Freitext am Kontakt. Hier werden sie für den ganzen Mandanten umbenannt, zusammengeführt oder gelöscht. Beim Zusammenführen behalten alle Kontakte den Zieltag, der Quelltag entfällt.",
+    "loading": "Tags werden geladen.",
+    "empty": "Keine Tags vorhanden.",
+    "name": "Tag",
+    "contacts": "Kontakte",
+    "actions": "Aktionen",
+    "rename": "Umbenennen",
+    "renameFor": "Tag {name} umbenennen",
+    "newNameFor": "Neuer Name für {name}",
+    "merge": "Zusammenführen",
+    "mergeFor": "Tag {name} zusammenführen",
+    "mergeTargetFor": "Zieltag für {name}",
+    "mergeTargetPlaceholder": "Zieltag wählen",
+    "mergeRun": "Zusammenführen",
+    "mergeConfirm": "Tag {source} in {target} zusammenführen? Der Tag {source} entfällt danach.",
+    "delete": "Löschen",
+    "deleteFor": "Tag {name} löschen",
+    "deleteConfirm": "Tag {name} löschen? Er wird bei {count, plural, one {# Kontakt} other {# Kontakten}} entfernt.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "error": "Die Aktion konnte nicht ausgeführt werden."
+  },
+  "TeamsAdmin": {
+    "breadcrumb": "Einstellungen",
+    "title": "Teams",
+    "intro": "Teams bündeln Mitarbeiter für die Zuweisung von Tickets und Aufträgen. Ein Team, das Tickets oder Vorlagen zugeordnet ist, kann nicht gelöscht werden.",
+    "new": "Team anlegen",
+    "newTitle": "Neues Team",
+    "editTitle": "Team bearbeiten",
+    "name": "Name",
+    "members": "Mitglieder",
+    "noMembers": "Die Mitgliederliste steht ohne das Recht zum Lesen der Benutzer nicht zur Verfügung.",
+    "noMembersAssigned": "Keine Mitglieder",
+    "loading": "Teams werden geladen.",
+    "empty": "Noch keine Teams angelegt.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "editFor": "Team {name} bearbeiten",
+    "delete": "Löschen",
+    "deleteFor": "Team {name} löschen",
+    "deleteConfirm": "Team {name} löschen?",
+    "nameRequired": "Bitte einen Namen eingeben."
+  },
+  "SettingsQ05": {
+    "teams": {
+      "title": "Teams",
+      "description": "Teams für die Zuweisung von Tickets anlegen, ändern und löschen."
+    },
+    "contactTags": {
+      "title": "Kontakt-Tags",
+      "description": "Tags der Kontakte umbenennen, zusammenführen und löschen."
+    }
+  },
+  "VatOptionHistory": {
+    "title": "Historie der Umsatzsteueroptionen",
+    "hint": "Zeiträume mit Option und Belegung (Leerstand oder Vertrag). Die Erfassung ist reine Stammdatenpflege, die steuerliche Behandlung folgt einer freigegebenen Regel.",
+    "loading": "Historie wird geladen.",
+    "empty": "Keine Umsatzsteueroptionen erfasst.",
+    "option": "Option",
+    "occupant": "Belegung",
+    "open": "offen",
+    "occupants": {
+      "vacancy": "Leerstand",
+      "contract": "Vertrag"
+    },
+    "addTitle": "Zeitraum erfassen",
+    "add": "Zeitraum hinzufügen",
+    "fromRequired": "Bitte den Beginn des Zeitraums angeben.",
+    "orderInvalid": "Das Ende liegt vor dem Beginn."
+  },
+  "PropertyGallery": {
+    "title": "Bildgalerie",
+    "intro": "Bilder des Objekts in Anzeigereihenfolge. Hochgeladene Bilder werden als Dokument am Objekt abgelegt, Metadaten werden entfernt. Entfernen nimmt das Bild nur aus der Galerie, das Dokument bleibt erhalten.",
+    "upload": "Bild hinzufügen",
+    "onlyImages": "Nur Bilddateien (JPEG, PNG, TIFF, HEIC).",
+    "saving": "Wird gespeichert.",
+    "empty": "Noch keine Bilder am Objekt.",
+    "position": "Position {position}",
+    "imageAlt": "Objektbild {position}",
+    "up": "Nach vorn",
+    "down": "Nach hinten",
+    "remove": "Entfernen",
+    "moveUp": "Bild {position} nach vorn",
+    "moveDown": "Bild {position} nach hinten",
+    "removeImage": "Bild {position} aus der Galerie entfernen",
+    "confirmRemove": "Bild aus der Galerie entfernen? Das Dokument bleibt im Dokumentenbestand.",
+    "stale": "Das Objekt wurde zwischenzeitlich geändert. Bitte die Seite neu laden und die Änderung wiederholen."
+  },
+  "OccupancyList": {
+    "title": "Belegungsliste",
+    "asOf": "Stichtag",
+    "show": "Anzeigen",
+    "today": "heute",
+    "onlyVacant": "Nur Leerstand",
+    "loading": "Belegung wird geladen.",
+    "summary": "Stichtag {date}: {units, plural, one {# Einheit} other {# Einheiten}}, davon {vacant} leer",
+    "empty": "Keine Einheiten für diese Auswahl.",
+    "unit": "Einheit",
+    "type": "Art",
+    "tenant": "Mieter",
+    "owner": "Eigentümer",
+    "status": "Status",
+    "none": "keiner",
+    "vacant": "Leerstand",
+    "occupied": "belegt"
+  },
+  "PortalStatusBadge": {
+    "none": "Kein Portalzugang",
+    "invited": "Portal eingeladen",
+    "active": "Portal aktiv",
+    "locked": "Portal gesperrt",
+    "hint": "Zum Reiter Freigaben mit Einladung und Zugangsstatus"
+  },
+  "PortalRepresentations": {
+    "title": "Vollmachten im Portal",
+    "hint": "Ein Portalzugang dieses Kontakts kann die Eigentümeransicht eines anderen Kontakts sehen, nur lesend und nur im Gültigkeitszeitraum. Das unterschriebene Vollmachtsdokument ist Pflicht. Ein Widerruf wirkt sofort.",
+    "loading": "Vollmachten werden geladen.",
+    "empty": "Keine Vollmachten hinterlegt.",
+    "represents": "Vertritt",
+    "representedBy": "Vertreten durch",
+    "thisContact": "dieser Kontakt",
+    "to": "bis",
+    "open": "unbefristet",
+    "status": {
+      "active": "aktiv",
+      "revoked": "widerrufen"
+    },
+    "revoke": "Widerrufen",
+    "revokeConfirm": "Vollmacht widerrufen? Der Portalzugriff des Vertreters endet sofort.",
+    "noAccount": "Dieser Kontakt hat keinen Portalzugang. Zuerst im Bereich Portalzugang einladen, danach kann eine Vollmacht angelegt werden.",
+    "newTitle": "Vollmacht anlegen",
+    "account": "Portalzugang des Vertreters",
+    "principal": "Vertretener Kontakt",
+    "principalChosen": "Vertretener Kontakt: {name}",
+    "document": "Vollmachtsdokument",
+    "documentHint": "PDF oder Bild, wird am vertretenen Kontakt abgelegt.",
+    "documentTitle": "Vollmacht für {name}",
+    "validFrom": "Gültig ab",
+    "validTo": "Gültig bis",
+    "note": "Notiz",
+    "create": "Vollmacht anlegen",
+    "incomplete": "Bitte Vertretenen, Vollmachtsdokument und Beginn angeben.",
+    "orderInvalid": "Das Ende liegt vor dem Beginn."
+  },
+  "TicketLocation": {
+    "propertySearch": "Objekt suchen",
+    "search": "Suchen",
+    "property": "Objekt",
+    "clearProperty": "Objekt entfernen",
+    "building": "Gebäude",
+    "noBuilding": "kein Gebäude",
+    "loading": "Gebäude werden geladen.",
+    "startDate": "Beginn",
+    "followUpDate": "Wiedervorlage",
+    "followUpHint": "Datum, an dem das Ticket erneut vorgelegt werden soll.",
+    "clear": "Entfernen",
+    "clearDate": "{field} entfernen",
+    "noPropertyHint": "Für die Gebäudeauswahl zuerst dem Ticket ein Objekt zuordnen."
+  },
+  "TicketBulkAssign": {
+    "open": "Bearbeiter zuweisen",
+    "assignee": "Bearbeiter",
+    "choose": "Bearbeiter wählen",
+    "loading": "Benutzer werden geladen.",
+    "apply": "{count, plural, one {# Ticket zuweisen} other {# Tickets zuweisen}}",
+    "cancel": "Abbrechen"
+  },
+  "PrivacyAdmin": {
+    "breadcrumb": "Einstellungen",
+    "title": "Datenschutz",
+    "intro": "Löschprofile, Löschanträge mit Freigabe durch eine zweite Person, Register der Auftragsverarbeiter und Verzeichnis von Verarbeitungstätigkeiten. Fristen und Profile sind Entwürfe des Betreibers und vor dem produktiven Einsatz rechtlich zu prüfen.",
+    "loading": "Wird geladen.",
+    "error": "Die Aktion ist fehlgeschlagen.",
+    "actions": "Aktionen",
+    "profileInvalid": "Bitte Datenart, Frist in Monaten und Fristbeginn angeben.",
+    "erasureInvalid": "Bitte Kontakt und Eingangsdatum wählen.",
+    "executeConfirm": "Kontakt jetzt anonymisieren? Gebuchte Inhalte bleiben unberührt, die Anonymisierung ist nicht umkehrbar.",
+    "dataType": {
+      "contact": "Kontakte",
+      "portal_account": "Portalzugänge",
+      "communication": "Kommunikation",
+      "ticket": "Tickets",
+      "other": "Sonstige Daten"
+    },
+    "erasureStatus": {
+      "requested": "Beantragt",
+      "approved": "Freigegeben",
+      "rejected": "Abgelehnt",
+      "executed": "Ausgeführt"
+    },
+    "kind": {
+      "processor": "Auftragsverarbeiter",
+      "sub_processor": "Unterauftragsverarbeiter",
+      "processing_activity": "Verarbeitungstätigkeit",
+      "responsibility": "Verantwortlichkeit"
+    },
+    "avv": {
+      "none": "Kein AVV",
+      "requested": "AVV angefragt",
+      "confirmed": "AVV bestätigt",
+      "not_required": "Nicht erforderlich"
+    },
+    "profiles": {
+      "title": "Löschprofile",
+      "intro": "Frist und Fristbeginn je Datenart. Ein Profil gilt erst nach Freigabe. Ohne freigegebenes Profil bleibt jede Löschung gesperrt.",
+      "empty": "Noch kein Löschprofil angelegt.",
+      "dataType": "Datenart",
+      "months": "Frist in Monaten",
+      "startRule": "Fristbeginn",
+      "basis": "Grundlage, Hinweis",
+      "status": "Status",
+      "released": "Freigegeben",
+      "draft": "Entwurf",
+      "release": "Freigeben",
+      "save": "Profil speichern",
+      "saveHint": "Eine Änderung setzt die Freigabe zurück und braucht eine neue Freigabe.",
+      "formLabel": "Löschprofil bearbeiten"
+    },
+    "erasure": {
+      "title": "Löschanträge",
+      "intro": "Die Sperrprüfung berücksichtigt Löschprofil, Aufbewahrungsfrist, Verknüpfungen und Dokumentfristen. Freigabe und Ausführung erfolgen durch eine zweite Person.",
+      "empty": "Keine Löschanträge.",
+      "received": "Eingang",
+      "contact": "Kontakt",
+      "openContact": "Kontakt öffnen",
+      "status": "Status",
+      "blockers": "Sperren",
+      "noBlockers": "Keine Sperre",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "execute": "Anonymisieren",
+      "formLabel": "Löschantrag erfassen",
+      "contactSearch": "Kontakt suchen",
+      "search": "Suchen",
+      "choose": "Kontakt wählen",
+      "reason": "Anlass",
+      "create": "Antrag anlegen"
+    },
+    "register": {
+      "title": "Register der Auftragsverarbeiter und Verarbeitungen",
+      "intro": "Dienstleister mit AVV-Status sowie Verarbeitungstätigkeiten. Grundlage für das Verzeichnis unten.",
+      "empty": "Noch keine Einträge.",
+      "name": "Name",
+      "kind": "Art",
+      "avv": "AVV-Status",
+      "purpose": "Zweck",
+      "review": "Rechtliche Prüfung",
+      "reviewed": "Geprüft",
+      "reviewOpen": "Offen",
+      "formLabel": "Registereintrag anlegen",
+      "create": "Eintrag anlegen"
+    },
+    "records": {
+      "title": "Verzeichnis von Verarbeitungstätigkeiten",
+      "intro": "Der Entwurf wird aus dem Register erzeugt. Er ist kein geprüftes Dokument und muss vor der Verwendung fachlich geprüft werden.",
+      "generate": "Entwurf erzeugen",
+      "download": "Entwurf herunterladen"
+    }
+  },
+  "ContactMerge": {
+    "breadcrumb": "Kontakte",
+    "title": "Kontakte zusammenführen",
+    "intro": "Dubletten werden vorgeschlagen, geprüft und durch eine zweite Person ausgeführt. Alle Verweise der Quelle wandern zum Ziel. Die Quelle bleibt als zusammengeführt erhalten und wird nicht gelöscht.",
+    "loading": "Wird geladen.",
+    "error": "Die Aktion ist fehlgeschlagen.",
+    "search": "Suchen",
+    "choose": "Kontakt wählen",
+    "pickTwo": "Bitte zwei verschiedene Kontakte wählen.",
+    "executeConfirm": "{source} in {target} zusammenführen? Die Quelle wird ausgeblendet, alle Verweise gehen auf das Ziel über.",
+    "status": {
+      "proposed": "Vorgeschlagen",
+      "executed": "Ausgeführt",
+      "rejected": "Abgelehnt"
+    },
+    "propose": {
+      "title": "Zusammenführung vorschlagen",
+      "intro": "Die Quelle geht im Ziel auf. Leere Felder des Ziels werden aus der Quelle ergänzt, vorhandene Werte bleiben.",
+      "source": "Quelle (wird ausgeblendet)",
+      "target": "Ziel (bleibt bestehen)",
+      "reason": "Begründung",
+      "submit": "Vorschlag anlegen"
+    },
+    "list": {
+      "title": "Vorschläge",
+      "empty": "Keine Vorschläge.",
+      "into": "in",
+      "references": "Verweise der Quelle",
+      "conflicts": "Nicht umgehängt wegen Doppelung",
+      "execute": "Ausführen",
+      "reject": "Ablehnen"
+    }
+  },
+  "GlobalDropZone": {
+    "button": "Ablegen",
+    "overlay": "Dateien hier ablegen",
+    "title": "Dokumente ablegen",
+    "zipHint": "ZIP, jede Datei wird einzeln abgelegt",
+    "property": "Objekt",
+    "noProperty": "Ohne Objekt",
+    "category": "Kategorie",
+    "noCategory": "Ohne Kategorie",
+    "submit": "Ablegen",
+    "busy": "Wird abgelegt …",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "filed": "{count, plural, =0 {Nichts abgelegt} one {# Dokument automatisch abgelegt} other {# Dokumente automatisch abgelegt}}",
+    "skipped": "{name}: nicht abgelegt ({reason})"
+  },
+  "CategoryTree": {
+    "breadcrumb": "Einstellungen",
+    "title": "Dokumentkategorien",
+    "intro": "Kategoriebaum mit Zuordnung zu Paperless-Dokumenttyp, Paperless-Tag und Drive-Ordner. Geänderte Zuordnungen werden an bestehende Spiegel übertragen.",
+    "tree": "Kategoriebaum",
+    "mapping": "Dokumenttyp {type}, Tag {tag}, Ordner {folder}",
+    "edit": "Zuordnung bearbeiten",
+    "documentType": "Paperless-Dokumenttyp",
+    "tag": "Paperless-Tag",
+    "driveFolder": "Drive-Ordner",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Zuordnung gespeichert.",
+    "created": "Kategorie angelegt.",
+    "newTitle": "Neue Kategorie",
+    "code": "Kürzel",
+    "name": "Bezeichnung",
+    "parent": "Übergeordnet",
+    "root": "Oberste Ebene",
+    "create": "Anlegen"
+  },
+  "LetterTemplates": {
+    "breadcrumb": "Dokumente",
+    "title": "Briefe und Vorlagen",
+    "intro": "Brief aus einer Vorlage auf dem Briefbogen des Mandanten erzeugen, vorab als PDF ansehen oder als Serienbrief an mehrere Empfänger erstellen. Briefe werden abgelegt und verknüpft, nicht versandt.",
+    "letterTitle": "Brief erzeugen",
+    "template": "Vorlage",
+    "recipientSearch": "Empfänger suchen",
+    "recipients": "Empfänger ({count})",
+    "remove": "{name} entfernen",
+    "subject": "Betreff (felder.betreff)",
+    "text": "Text (felder.text)",
+    "serialHint": "Bei mehreren Empfängern entsteht ein Serienbrief mit einem Dokument je Empfänger; Vertretungen werden nach der Zustellregel berücksichtigt.",
+    "preview": "Vorschau",
+    "previewTitle": "Vorschau des Briefs",
+    "previewFailed": "Die Vorschau konnte nicht erstellt werden.",
+    "create": "Brief erzeugen",
+    "createSerial": "Serienbrief erzeugen",
+    "created": "{count, plural, one {# Brief erzeugt und abgelegt} other {# Briefe erzeugt und abgelegt}}",
+    "templatesTitle": "Vorlagen verwalten",
+    "code": "Kürzel",
+    "name": "Bezeichnung",
+    "templateSubject": "Betreffvorlage",
+    "templateBody": "Textvorlage",
+    "placeholders": "Platzhalter: {list}",
+    "saveTemplate": "Speichern (neue Version)",
+    "templateSaved": "Vorlage gespeichert, Version {version}."
+  },
+  "HoaReserves": {
+    "title": "Rücklagen",
+    "hint": "Zweckgebundene Rücklagen der Gemeinschaft. Zahlungen werden einer Rücklage zugeordnet, wenn der Sollbetrag der Eigentümer an diese Rücklage gebunden ist; sonst bleibt der gezahlte Betrag ein Gesamtwert.",
+    "noLedger": "Für dieses Objekt ist kein Buchungskreis der Gemeinschaft angelegt.",
+    "list": "Angelegte Rücklagen",
+    "none": "Noch keine zweckgebundene Rücklage angelegt.",
+    "create": "Rücklage anlegen",
+    "name": "Bezeichnung",
+    "purpose": "Zweck",
+    "createSubmit": "Anlegen",
+    "developmentTitle": "Entwicklung der Rücklagen",
+    "basedOn": "Stand: Abrechnung {year}, Version {version}.",
+    "noStatement": "Keine berechnete Abrechnung mit Rücklagenblock vorhanden.",
+    "opening": "Anfangsbestand",
+    "resolved": "Beschlossene Zuführungen (Soll)",
+    "paid": "Gezahlt (Ist)",
+    "withdrawals": "Entnahmen",
+    "interest": "Zinsen",
+    "closing": "Endbestand",
+    "bankBalance": "Bankbestand der Rücklagenkonten",
+    "bankDifference": "Differenz Bank zu Endbestand",
+    "unassigned": "Davon keiner Rücklage zuordenbar: {amount}.",
+    "reserve": "Rücklage",
+    "planned": "Soll laut Plan",
+    "taxes": "Steuern",
+    "fees": "Gebühren",
+    "change": "Veränderung",
+    "notBound": "nicht zugeordnet",
+    "movementTitle": "Mittelverwendung erfassen",
+    "kind": "Art",
+    "kinds": {
+      "withdrawal": "Entnahme",
+      "tax": "Steuer",
+      "fee": "Gebühr",
+      "interest": "Zins"
+    },
+    "amount": "Betrag",
+    "movementPurpose": "Zweck",
+    "movementSubmit": "Erfassen",
+    "movementHint": "Die Erfassung ist eine Information für die Abrechnung und bucht nichts. Belege werden an der Abrechnung verknüpft."
   }
 }

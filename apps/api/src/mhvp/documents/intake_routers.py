@@ -229,6 +229,16 @@ async def accept_intake_proposal(
         proposal.decision = Decision.ACCEPTED if unchanged else Decision.MODIFIED
         proposal.decided_by = principal.user_id
         proposal.decided_at = datetime.now(UTC)
+        # S12-01: ai_proposal.decided (decision of a person, never of the AI).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_proposal.decided",
+            entity_type="ai_proposal",
+            entity_id=proposal.id,
+            actor_user_id=principal.user_id,
+            payload={"decision": proposal.decision.value},
+        )
         proposal.final = final
         await session.flush()
         await emit(
@@ -258,6 +268,16 @@ async def reject_intake_proposal(
         proposal.decision = Decision.REJECTED
         proposal.decided_by = principal.user_id
         proposal.decided_at = datetime.now(UTC)
+        # S12-01: ai_proposal.decided (decision of a person, never of the AI).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_proposal.decided",
+            entity_type="ai_proposal",
+            entity_id=proposal.id,
+            actor_user_id=principal.user_id,
+            payload={"decision": proposal.decision.value},
+        )
         proposal.final = {"reason": body.reason} if body.reason else None
         learned = False
         classification = proposed.get("classification") or {}

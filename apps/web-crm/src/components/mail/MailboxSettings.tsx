@@ -265,6 +265,22 @@ function MailboxRow({
             <option value="freundlich">{t("replyToneFreundlich")}</option>
           </select>
         </label>
+        <label className="flex w-full flex-col gap-1" title={t("replyRulesHint")}>
+          {t("replyRules")}
+          <textarea
+            key={box.reply_style?.rules ?? ""}
+            className={ui.input}
+            rows={2}
+            maxLength={2000}
+            defaultValue={box.reply_style?.rules ?? ""}
+            disabled={busy}
+            onBlur={(e) => {
+              const rules = e.target.value.trim();
+              if (rules !== (box.reply_style?.rules ?? "")) void patch({ reply_style: { ...(box.reply_style ?? {}), rules } });
+            }}
+            data-testid="reply-rules"
+          />
+        </label>
         {box.kind === "gmail" ? (
           <button type="button" className={ui.button} disabled={busy} onClick={() => void reconcile(true)} data-testid="reconcile-preview">
             {t("reconcilePreview")}

@@ -63,4 +63,26 @@ describe("AuditReportsPanel", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/bff/hoa/audits/${AUDIT}/reports`);
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ findings: "Zweite Runde", recommendation: null });
   });
+
+  it("confirms a report version with name and note, shows an existing confirmation (M25-03)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ version: 1 }));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = userEvent.setup();
+    renderIntl(<AuditReportsPanel auditId={AUDIT} reports={[report]} />);
+    const submit = screen.getByRole("button", { name: "Bericht bestätigen" });
+    expect(submit).toBeDisabled();
+    await user.type(screen.getByLabelText("Bestätigt durch (Name)"), "Erika Beirat");
+    await user.click(submit);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/bff/hoa/audits/${AUDIT}/reports/1/confirm`);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ confirmed_by_name: "Erika Beirat", note: null });
+  });
+
+  it("shows the confirmation of a confirmed report without a form", () => {
+    renderIntl(
+      <AuditReportsPanel auditId={AUDIT} reports={[{ ...report, confirmed_by_name: "Erika Beirat", confirmed_at: "2026-09-27T10:00:00Z", confirmation_note: "gelesen" }]} />,
+    );
+    expect(screen.getByTestId("report-confirmed")).toHaveTextContent("Bestätigt durch Erika Beirat am 27.09.2026");
+    expect(screen.queryByTestId("report-confirm")).not.toBeInTheDocument();
+  });
 });

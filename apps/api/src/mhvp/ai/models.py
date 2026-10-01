@@ -73,6 +73,9 @@ class AiTask(StrEnum):
     # Einbettungen für die Ähnlichkeitssuche (M7-03, Betreiberentscheidung 26.09.2026): kein
     # Vorschlag, nur Vektoren je Mandant; Budgetzählung wie jeder andere Lauf.
     EMBED = "embed"
+    # KI-Plausibilität eines Mieterhöhungsfalls (M26-01, 6.3 ai_check_id): nur Hinweise mit
+    # Schweregrad, nie Freigabe, nie Rechtsprüfung; Ablauf in mhvp.ai.rent_increase_check.
+    RENT_INCREASE_CHECK = "rent_increase_check"
 
 
 class RunStatus(StrEnum):
@@ -382,3 +385,23 @@ class AiEmbedding(IdMixin, TimestampMixin, TenantMixin, Base):
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     model: Mapped[str] = mapped_column(String(100), nullable=False)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS), nullable=False)
+
+
+class OnboardingMatchSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Per tenant thresholds of the person match in the property onboarding (10.2 step 4)."""
+
+    __tablename__ = "onboarding_match_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_onboarding_match_setting_tenant"),
+        CheckConstraint(
+            "suggest_threshold > 0 AND link_threshold <= 1 AND link_threshold >= suggest_threshold",
+            name="thresholds",
+        ),
+    )
+
+    link_threshold: Mapped[Decimal] = mapped_column(
+        Numeric(4, 2), nullable=False, default=Decimal("0.90"), server_default="0.90"
+    )
+    suggest_threshold: Mapped[Decimal] = mapped_column(
+        Numeric(4, 2), nullable=False, default=Decimal("0.60"), server_default="0.60"
+    )

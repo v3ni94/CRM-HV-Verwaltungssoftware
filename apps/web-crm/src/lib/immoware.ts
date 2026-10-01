@@ -11,6 +11,16 @@ export type StagingRow = S["RowOut"];
 export type RowStatus = S["RowStatus"];
 
 /** Wizard order: recommended import order first, then the staged only reports. */
+/** Report types added in Welle 3 (M8-02 to M8-07); typed separately until the API client is regenerated. */
+const WAVE3_REPORT_TYPES = [
+  "chart_of_accounts",
+  "sepa_overview",
+  "bank_history",
+  "open_items",
+  "document_index",
+  "ticket_history",
+] as unknown as ReportType[];
+
 export const REPORT_TYPES: ReportType[] = [
   "properties",
   "units",
@@ -20,6 +30,7 @@ export const REPORT_TYPES: ReportType[] = [
   "payments",
   "journal",
   "bank_transactions",
+  ...WAVE3_REPORT_TYPES,
 ];
 
 /** Reports without target fields: rows are only staged until the ledger exists (18, M8). */
@@ -35,7 +46,7 @@ export type RunReport = {
   test_run?: boolean;
   counts: Record<string, number>;
   problems: RunProblem[];
-  sums?: { source_gross: string; created_gross: string };
+  sums?: { source_gross?: string; created_gross?: string; source_amount?: string; created_amount?: string; field?: string };
 };
 export type UnitsPerProperty = Record<string, { file: number; platform: number; difference: number }>;
 /** Reconciliation as built by mhvp.imports.services.reconcile. */

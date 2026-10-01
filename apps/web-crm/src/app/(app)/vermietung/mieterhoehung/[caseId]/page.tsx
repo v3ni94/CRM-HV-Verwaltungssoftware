@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { LetterRecordForm } from "@/components/documents/LetterRecordForm";
 import { RentIncreaseActions } from "@/components/letting/RentIncreaseForms";
+import { RentIncreaseAiCheck } from "@/components/letting/RentIncreaseAiCheck";
+import { RentIndexAdopt } from "@/components/letting/RentIndexAdopt";
 import { RentIncreaseReceipt } from "@/components/letting/RentIncreaseReceipt";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
@@ -72,6 +74,13 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
         ) : null}
       </dl>
       <p className={ui.notice}>{check.note}</p>
+      {String(data.status) === "draft" && ["mietspiegel", "comparison"].includes(String(data.basis)) ? (
+        <RentIndexAdopt
+          caseId={caseId}
+          livingArea={data.living_area_sqm ? String(data.living_area_sqm) : null}
+          canEdit={permissions.includes("contracts:create")}
+        />
+      ) : null}
       {check.flags.length ? (
         <ul className="list-inside list-disc text-sm" data-testid="flags">
           {check.flags.map((f) => (
@@ -138,6 +147,7 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
         />
       ) : null}
       <RentIncreaseReceipt caseId={caseId} status={String(data.status)} receivedOn={receivedOn} canRecord={permissions.includes("contracts:approve")} />
+      <RentIncreaseAiCheck caseId={caseId} canStart={permissions.includes("contracts:create")} />
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel
           sourceType="rent_increase_case"

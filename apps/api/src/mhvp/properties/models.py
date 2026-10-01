@@ -811,3 +811,44 @@ class PropertyCreditor(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     # Bank transaction that led to the link (source proposal); reference only.
     source_transaction_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+TAKEOVER_CATEGORIES = (
+    "legitimation",
+    "bank_authority",
+    "insurance",
+    "service_contracts",
+    "meters",
+    "reserves",
+    "open_items",
+)
+TAKEOVER_STATUSES = ("open", "requested", "received", "not_applicable")
+
+
+class PropertyTakeoverItem(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Checklist point of the property takeover (10.2 step 6, M7-01): one row per category."""
+
+    __tablename__ = "property_takeover_item"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "property_id", "category", name="uq_property_takeover_item"),
+        CheckConstraint(
+            "category IN ('legitimation','bank_authority','insurance','service_contracts',"
+            "'meters','reserves','open_items')",
+            name="takeover_category",
+        ),
+        CheckConstraint(
+            "status IN ('open','requested','received','not_applicable')",
+            name="takeover_status",
+        ),
+    )
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    category: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="open", server_default="open"
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    due_date: Mapped[date | None] = mapped_column(Date)
+    document_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL", index=False
+    )

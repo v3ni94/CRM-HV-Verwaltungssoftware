@@ -55,6 +55,7 @@ ALERTING = {
     "bank_connections_error",
     "payment_orders_rejected_24h",
     "dunning_cases_blocked",
+    "dunning_runs_failed_24h",
     "backup_verify_failed",
     "backup_verify_stale",
     "backup_offsite_failed",
@@ -221,7 +222,7 @@ def job_gauges(jobs: dict[str, dict[str, Any]]) -> dict[str, int]:
 
 
 async def collect(request: Request) -> dict[str, int]:
-    from mhvp.accounting.models import DunningCase
+    from mhvp.accounting.models import DunningCase, DunningRun
     from mhvp.ai.models import AiTaskRun, RunStatus
     from mhvp.banking.models import (
         BankConnection,
@@ -253,6 +254,7 @@ async def collect(request: Request) -> dict[str, int]:
         "bank_connections_error": 0,
         "payment_orders_rejected_24h": 0,
         "dunning_cases_blocked": 0,
+        "dunning_runs_failed_24h": 0,
     }
     queries: dict[str, Any] = {
         "webhook_deliveries_pending": select(func.count()).where(
@@ -286,6 +288,10 @@ async def collect(request: Request) -> dict[str, int]:
         # itself only creates previews and records no failure state.
         "dunning_cases_blocked": select(func.count()).where(
             DunningCase.status == "proposed", DunningCase.bank_warning.is_not(None)
+        ),
+        # M9-01: scheduled dunning runs that raised (status failed, see accounting.tasks).
+        "dunning_runs_failed_24h": select(func.count()).where(
+            DunningRun.created_at >= since, DunningRun.status == "failed"
         ),
     }
     for tenant_id in tenant_ids:

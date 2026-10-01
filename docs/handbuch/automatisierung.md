@@ -132,3 +132,14 @@ Hinweise zur Verarbeitung:
 
 - **Dauerhafter Testmodus**: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt.
 - **Standardjobs je Mandant**: Über die Schnittstelle `/automation/job-schedules` lassen sich Standardjobs abschalten und mit einer Uhrzeit (Europa/Berlin) versehen. Die Anbindung der einzelnen Jobs an diese Einstellung erfolgt schrittweise.
+
+## Aktionen Feld setzen und Entwurf an Dienstleister
+
+- Feld setzen: trägt einen Text in das Notizfeld von Objekt, Kontakt oder Vertrag ein. Bei Ticket
+  Ereignissen sind Ziel das Objekt oder der Kontakt des Tickets. "Anhängen" ergänzt eine Zeile mit Datum
+  und Regelname und erhält den bisherigen Text, "Ersetzen" überschreibt. Andere Felder (Zahlungs-,
+  Bank-, Betrags-, Datums- und Statusfelder) sind nicht wählbar.
+- Entwurf an Dienstleister: legt einen E-Mail-Entwurf an den aktiven Dienstleister der angegebenen
+  Vertragsart am Objekt des Tickets an. Die Freigabe und der Versand erfolgen manuell im Postfach. Die
+  Aktion gibt es nur bei Ticket-Ereignissen; fehlt ein Dienstleister oder dessen E-Mail-Adresse, meldet
+  der Testlauf den Fehler.

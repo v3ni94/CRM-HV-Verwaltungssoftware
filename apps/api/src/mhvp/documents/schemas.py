@@ -86,6 +86,8 @@ class DocumentOut(_Out):
     retention_until: date | None
     retention_base_on: date | None = None
     retention_hold_reason: str | None
+    retention_hold_kind: str | None = None
+    permanent_record: bool = False
     visibility: list[str]
     created_at: datetime
     links: list[LinkOut] = Field(default_factory=list)
@@ -120,6 +122,8 @@ class DocumentPatch(_In):
     retention_base_on: date | None = Field(
         default=None, description="Fristbeginn: Vertragsende, letzte Eintragung, Zweckende"
     )
+    # S711-06: WEG permanent record (S05); clearing it needs documents:approve.
+    permanent_record: bool | None = None
 
     @field_validator("visibility")
     @classmethod
@@ -132,8 +136,13 @@ class DocumentPatch(_In):
         return value
 
 
+HOLD_KINDS = ("litigation", "tax_procedure", "evidence", "legal_matter", "other")
+
+
 class HoldIn(_In):
     reason: str = Field(min_length=5, max_length=500)
+    # S711-06: structured kind of the hold (7.11 S05); ignored when a hold is cleared.
+    kind: str | None = Field(default=None, pattern=r"^(" + "|".join(HOLD_KINDS) + r")$")
 
 
 class CategoryIn(_In):
@@ -355,3 +364,104 @@ class LetterOut(DocumentOut):
 
 class SerialLetterOut(BaseModel):
     documents: list[DocumentOut]
+
+
+# Wave 3 (Q03): presigned transfer, ZIP import, redactions, intake address, Drive changes ----
+
+
+class DocumentUploadIntentIn(_In):
+    filename: str = Field(min_length=1, max_length=255)
+    mime_type: str = Field(min_length=3, max_length=127)
+    size: int = Field(gt=0)
+
+
+class DocumentUploadIntentOut(BaseModel):
+    upload_id: uuid.UUID
+    url: str
+    method: str = "PUT"
+    headers: dict[str, str]
+    expires_in: int
+
+
+class DocumentUploadCompleteIn(_In):
+    filename: str = Field(min_length=1, max_length=255)
+    mime_type: str = Field(min_length=3, max_length=127)
+    title: str | None = Field(default=None, max_length=300)
+    category_id: uuid.UUID | None = None
+    links: list[LinkIn] = Field(default_factory=list, max_length=20)
+
+
+class DocumentDownloadUrlOut(BaseModel):
+    url: str
+    expires_in: int
+
+
+class DocumentZipSkippedOut(BaseModel):
+    name: str
+    reason: str
+
+
+class DocumentZipImportOut(BaseModel):
+    import_run_id: uuid.UUID | None
+    created: list[uuid.UUID]
+    skipped: list[DocumentZipSkippedOut]
+
+
+class DocumentRedactionOut(_Out):
+    id: uuid.UUID
+    original_document_id: uuid.UUID
+    copy_document_id: uuid.UUID
+    reason: str
+    scope: str
+    steps: list[str]
+    created_by: uuid.UUID | None
+    created_at: datetime
+    released_at: datetime | None
+    released_by: uuid.UUID | None
+    released_visibility: list[str] | None
+
+
+class DocumentRedactionReleaseIn(_In):
+    visibility: list[str] = Field(min_length=1)
+
+    @field_validator("visibility")
+    @classmethod
+    def _visibility(cls, value: list[str]) -> list[str]:
+        allowed = {"tenant", "owner", "provider", "board"}
+        if set(value) - allowed:
+            raise ValueError(f"erlaubt: {', '.join(sorted(allowed))}")
+        return value
+
+
+class DocumentIntakeAddressIn(_In):
+    mailbox_address: str = Field(
+        pattern=r"^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", max_length=254
+    )
+    allowed_senders: list[str] = Field(default_factory=list, max_length=50)
+    enabled: bool = True
+
+    @field_validator("allowed_senders")
+    @classmethod
+    def _senders(cls, value: list[str]) -> list[str]:
+        cleaned = []
+        for item in value:
+            entry = item.strip().lower()
+            if not entry or " " in entry or len(entry) > 254 or "." not in entry:
+                raise ValueError("Absender als Adresse oder @domain angeben.")
+            cleaned.append(entry)
+        return cleaned
+
+
+class DocumentIntakeAddressOut(BaseModel):
+    configured: bool
+    enabled: bool = False
+    address: str | None = None
+    mailbox_address: str | None = None
+    allowed_senders: list[str] = Field(default_factory=list)
+
+
+class DocumentDriveChangesOut(BaseModel):
+    started: bool
+    changes: int
+    matched: int
+    removed: int

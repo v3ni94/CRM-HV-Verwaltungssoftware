@@ -68,9 +68,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^mail\/playbooks$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
-  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats|ticket-analytics)$/ },
+  { method: "GET", pattern: /^workspace\/(search|notifications|notification-preferences|calendar|filters|dashboard\/stats|ticket-analytics)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|calendar\/refresh|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
+  { method: "PUT", pattern: /^workspace\/notification-preferences$/ },
   // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).
   { method: "GET", pattern: /^workspace\/(digest|deadlines|job-settings)$/ },
   { method: "PUT", pattern: /^workspace\/job-settings$/ },
@@ -149,9 +150,29 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^contact-tags$/ },
   { method: "PATCH", pattern: new RegExp(`^contact-tags/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^contact-tags/${ID}$`) },
+  { method: "GET", pattern: /^contact-merges$/ },
+  { method: "POST", pattern: /^contact-merges$/ },
+  { method: "GET", pattern: new RegExp(`^contact-merges/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^contact-merges/${ID}/(reject|execute)$`) },
   { method: "POST", pattern: new RegExp(`^contact-tags/${ID}/merge$`) },
   { method: "PATCH", pattern: new RegExp(`^properties/${ID}/(bank-accounts|service-providers)/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/takeover-checklist$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/takeover-checklist$`) },
+  { method: "PATCH", pattern: new RegExp(`^properties/${ID}/takeover-checklist/[a-z_]+$`) },
+  { method: "POST", pattern: /^onboarding\/person-match$/ },
+  { method: "GET", pattern: /^onboarding\/match-settings$/ },
+  { method: "PUT", pattern: /^onboarding\/match-settings$/ },
   { method: "GET", pattern: new RegExp(`^units/${ID}/vat-options$`) },
+  // Paket Q05 (Welle 3): CRM-Oberflächen für Parteien, USt-Optionshistorie, Belegungsliste,
+  // Gebäudeauswahl am Ticket und Teamverwaltung (Endpunkte bestehen, nur die Freigabe fehlte).
+  { method: "GET", pattern: /^parties$/ },
+  { method: "POST", pattern: /^parties$/ },
+  { method: "GET", pattern: new RegExp(`^parties/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^units/${ID}/vat-options$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/(buildings|occupancy)$`) },
+  { method: "POST", pattern: /^teams$/ },
+  { method: "PATCH", pattern: new RegExp(`^teams/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^teams/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^contracts/${ID}/(custom-fields|payments/${ID}|schedules/${ID})$`) },
   { method: "PATCH", pattern: new RegExp(`^deposits/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^contacts/${ID}$`) },
@@ -317,6 +338,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
   // Vollimport mit Stichtag (M8-01, M8-02, V9): Vorprüfung, Trockenlauf, Übernahme, Abgleichbericht.
   { method: "GET", pattern: /^imports\/immoware24\/vollimport(\/exporttypen)?$/ },
+  { method: "GET", pattern: /^imports\/immoware24\/history\/(tickets|open-items|open-items\/summary|bank-links)$/ },
   { method: "POST", pattern: /^imports\/immoware24\/vollimport(\/vorpruefung)?$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/vollimport/${ID}(/pdf)?$`) },
   // Migration von Immoware24 ohne Parallelbetrieb (6.9.10, M8-03): Status, Journal, Salden,
@@ -349,7 +371,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   {
     method: "GET",
     pattern: new RegExp(
-      `^accounting/ledgers/${ID}/reports/(monthly-matrix|target-actual|bank-statement|vat-overview|income-expense|revenue|payments-by-debtor|trial-balance|open-items|account-sheet|xlsx)$`,
+      `^accounting/ledgers/${ID}/reports/(monthly-matrix|target-actual|bank-statement|vat-overview|vat-overview-by-property|income-expense|revenue|payments-by-debtor|trial-balance|open-items|account-sheet|xlsx)$`,
     ),
   },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/procedure-documentation$`) },
@@ -381,6 +403,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^accounting\/admin-fee-invoices$/ },
   { method: "GET", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/(release|cancel)$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/(document|xrechnung-credit-note/document)$`) },
+  { method: "POST", pattern: /^accounting\/admin-fees-run$/ },
   { method: "GET", pattern: new RegExp(`^accounting/invoices/${ID}/xrechnung(\\.xml|/check)$`) },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/xrechnung/document$`) },
   // Bank (M11, M12): statement import, proposals, confirmed booking, ignore with reason.
@@ -441,6 +465,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/(post|approve|reverse)$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/(lock|sync-creditors)$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/year-carryover$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/year-carryover$`) },
+  // S69-04: maintained open item remainders as of a cut-off date; S69-02: approval decisions.
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/open-item-balances$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/open-item-balances/refresh$`) },
+  { method: "GET", pattern: /^accounting\/approval-decisions$/ },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/accounts$`) },
   { method: "PATCH", pattern: new RegExp(`^accounting/ledgers/${ID}/accounts/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/accounts/${ID}/(allocations|sheet)$`) },
@@ -462,6 +492,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/payment-runs\/(orders|payout-orders|bank-status-reports|previews)$/ },
   { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/reconciliation$`) },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/bank-status$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/payment-runs/bank-limits/${ID}$`) },
+  { method: "PUT", pattern: new RegExp(`^accounting/payment-runs/bank-limits/${ID}$`) },
   // finAPI (M11-finapi): read only aggregator onboarding, consent, fetch (Stufen 1-3).
   { method: "GET", pattern: /^banking\/finapi\/config$/ },
   { method: "PUT", pattern: /^banking\/finapi\/config$/ },
@@ -640,7 +672,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^hoa\/inspection-requests$/ },
   { method: "POST", pattern: /^hoa\/inspection-requests$/ },
   { method: "GET", pattern: new RegExp(`^hoa/inspection-requests/${ID}(/candidates|/package)?$`) },
-  { method: "POST", pattern: new RegExp(`^hoa/inspection-requests/${ID}/(transition|notes|package|revoke)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/inspection-requests/${ID}/(transition|notes|package|revoke|owner-check)$`) },
   // Prüfposition: Änderungshistorie und Berichtsbestätigung (M25-03, M25-05).
   { method: "GET", pattern: new RegExp(`^hoa/audit-items/${ID}/history$`) },
   { method: "POST", pattern: new RegExp(`^hoa/audits/${ID}/reports/[0-9]+/confirm$`) },
@@ -651,6 +683,18 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/letter/pdf$`) },
   { method: "PATCH", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/prospects/${ID}$`) },
+  // Mietspiegelpflege und Übernahme der Spanne (M26-03), Interessentenabgleich (M26-06),
+  // Exposé als PDF mit Bildern (M26-05), Mieterhöhungsfälle je Vertrag (M5-08).
+  { method: "GET", pattern: /^letting\/rent-index(\/lookup)?$/ },
+  { method: "POST", pattern: /^letting\/rent-index(\/import)?$/ },
+  { method: "DELETE", pattern: new RegExp(`^letting/rent-index/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/adopt-rent-index$`) },
+  // M26-01: KI-Plausibilität des Mieterhöhungsfalls (nur Hinweise).
+  { method: "GET", pattern: new RegExp(`^letting/rent-increases/${ID}/ai-check$`) },
+  { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/ai-check$`) },
+  { method: "GET", pattern: /^letting\/rent-increases$/ },
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/prospect-matches$`) },
+  { method: "POST", pattern: new RegExp(`^letting/units/${ID}/expose/pdf$`) },
   // Makler (M28-01): listings for rent and sale. No FLOWFACT connection.
   { method: "GET", pattern: /^letting\/listings$/ },
   { method: "GET", pattern: /^letting\/listings\/prefill$/ },
@@ -980,6 +1024,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^receipts/drafts/${ID}/(confirm|reject)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
+  // Q03 (M6-01 to M6-09): ZIP bulk upload, letter templates, letters with preview, serial
+  // letters (drafts filed, nothing sent), category tree.
+  { method: "POST", pattern: /^documents\/zip-import$/ },
+  { method: "POST", pattern: /^document-templates$/ },
+  { method: "POST", pattern: /^letters(\/preview|\/serial)?$/ },
+  { method: "POST", pattern: /^document-categories$/ },
   // Schwarzes Brett je Objekt (M21-01, A54): maintenance of notices at the property.
   // Verwaltung beenden und wieder aktivieren (operator 27.09.2026).
   { method: "GET", pattern: new RegExp(`^properties/${ID}/termination$`) },

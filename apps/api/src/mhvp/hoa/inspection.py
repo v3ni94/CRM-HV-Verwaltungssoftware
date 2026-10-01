@@ -126,7 +126,9 @@ class InspectionEvent(IdMixin, TenantMixin, Base):
     __tablename__ = "hoa_inspection_event"
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('status', 'note', 'package', 'retrieval', 'revoked')", name="kind"
+            "kind IN ('status', 'note', 'package', 'retrieval', 'revoked', 'notified', "
+            "'owner_check')",
+            name="kind",
         ),
         Index("ix_hoa_inspection_event_request", "tenant_id", "request_id"),
     )
@@ -439,7 +441,106 @@ async def transition(
             to_status=body.status,
             note=body.note,
         )
+        if body.status == "provided":
+            # M25-07 (PÜ13): notification as its own event; the message itself is a draft of
+            # the communication module and is never sent here.
+            until = (
+                f", Bereitstellung gültig bis {row.package_expires_at:%d.%m.%Y}"
+                if row.package_expires_at
+                else ", ohne Ablaufdatum"
+            )
+            await _trail(
+                session,
+                principal,
+                row,
+                kind="notified",
+                note=f"Benachrichtigung des Antragstellers vorgemerkt{until}",
+                applicant_contact_id=row.applicant_contact_id,
+                delivery_kind=row.delivery_kind,
+                expires_at=row.package_expires_at,
+            )
         return await _out(session, row)
+
+
+class OwnerCheckOut(BaseModel):
+    request_id: uuid.UUID
+    applicant_contact_id: uuid.UUID
+    owner_on_request_date: bool
+    owner_today: bool
+    ownership_changed: bool
+    package_active: bool
+    recommendation: str
+
+
+async def _is_owner(session: AsyncSession, row: InspectionRequest, day: date) -> bool:
+    from sqlalchemy import or_
+
+    from mhvp.contacts.models import PartyMember
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.properties.models import Unit
+
+    found = await session.scalar(
+        select(Contract.id)
+        .join(Unit, Unit.id == Contract.unit_id)
+        .join(PartyMember, PartyMember.party_id == Contract.party_id)
+        .where(
+            Unit.property_id == row.property_id,
+            PartyMember.contact_id == row.applicant_contact_id,
+            Contract.kind == ContractKind.OWNERSHIP,
+            Contract.start_date <= day,
+            or_(Contract.end_date.is_(None), Contract.end_date >= day),
+        )
+        .limit(1)
+    )
+    return found is not None
+
+
+@router.post(
+    "/inspection-requests/{request_id}/owner-check",
+    summary="Eigentümerstellung des Antragstellers prüfen (PÜ13, M25-07)",
+)
+async def owner_check(
+    request_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(WRITE)
+) -> OwnerCheckOut:
+    """Compares the applicant's ownership on the request date with today. A change is shown
+    and recorded, never acted on automatically: whether a provided package is revoked or
+    historical claims remain is a decision of the manager (open question P08-02)."""
+    async with tenant_tx(request, principal) as session:
+        row = await _load(session, request_id)
+        then = await _is_owner(session, row, row.requested_on)
+        today = await _is_owner(session, row, _now().date())
+        active = row.package_document_id is not None and (
+            row.package_expires_at is None or row.package_expires_at > _now()
+        )
+        changed = then != today
+        if not changed:
+            advice = "Eigentümerstellung unverändert."
+        elif active:
+            advice = (
+                "Eigentümerstellung hat sich seit der Anfrage geändert und das Paket ist "
+                "abrufbar: Widerruf der Bereitstellung prüfen (Rechtsfrage, P08-02)."
+            )
+        else:
+            advice = "Eigentümerstellung hat sich geändert; Bereitstellung ist nicht aktiv."
+        await _trail(
+            session,
+            principal,
+            row,
+            kind="owner_check",
+            note=advice,
+            owner_on_request_date=then,
+            owner_today=today,
+        )
+        await session.flush()
+        return OwnerCheckOut(
+            request_id=row.id,
+            applicant_contact_id=row.applicant_contact_id,
+            owner_on_request_date=then,
+            owner_today=today,
+            ownership_changed=changed,
+            package_active=active,
+            recommendation=advice,
+        )
 
 
 @router.post("/inspection-requests/{request_id}/notes", status_code=201, summary="Rückfrage")

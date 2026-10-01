@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ResolutionDialog, isClosingStatus } from "@/components/tickets/ResolutionDialog";
+import { BuildingSelect, PropertyPicker, type PickedProperty } from "@/components/tickets/TicketLocationFields";
 import { bff } from "@/lib/bff";
 import { isPastDate } from "@/lib/entry-standards";
 import { ui } from "@/lib/ui";
@@ -48,6 +49,12 @@ export function TicketCreate() {
   const [priority, setPriority] = useState("normal");
   const [dueOn, setDueOn] = useState("");
   const [pastConfirmed, setPastConfirmed] = useState(false);
+  // M19-04: optional location and dates (6.6 ticket): property, building, start, follow-up.
+  const [property, setProperty] = useState<PickedProperty | null>(null);
+  const [buildingId, setBuildingId] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const tq = useTranslations("TicketLocation");
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [templateId, setTemplateId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -76,6 +83,10 @@ export function TicketCreate() {
         template_id: templateId || null,
         // Optional working due date (spec 4.9); omitted when empty, the SLA stays separate.
         ...(dueOn ? { due_on: dueOn } : {}),
+        ...(property ? { property_id: property.id } : {}),
+        ...(property && buildingId ? { building_id: buildingId } : {}),
+        ...(startDate ? { start_date: startDate } : {}),
+        ...(followUpDate ? { follow_up_date: followUpDate } : {}),
       }),
     });
     setBusy(false);
@@ -127,6 +138,20 @@ export function TicketCreate() {
             title={t("dueOnHint")}
           />
         </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{tq("startDate")}</span>
+          <input type="date" className={ui.input} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{tq("followUpDate")}</span>
+          <input
+            type="date"
+            className={ui.input}
+            value={followUpDate}
+            title={tq("followUpHint")}
+            onChange={(e) => setFollowUpDate(e.target.value)}
+          />
+        </label>
         <button
           type="button"
           className={`${ui.primary} ${ui.actionFull}`}
@@ -135,6 +160,29 @@ export function TicketCreate() {
         >
           {t("create")}
         </button>
+      </div>
+      <div className="flex flex-wrap items-end gap-3" data-testid="ticket-create-location">
+        {property ? (
+          <p className="flex items-center gap-2 text-sm">
+            <span className={ui.label}>{tq("property")}</span>
+            <span>
+              {property.number} {property.name}
+            </span>
+            <button
+              type="button"
+              className={ui.buttonSm}
+              onClick={() => {
+                setProperty(null);
+                setBuildingId("");
+              }}
+            >
+              {tq("clearProperty")}
+            </button>
+          </p>
+        ) : (
+          <PropertyPicker onPick={setProperty} />
+        )}
+        {property ? <BuildingSelect propertyId={property.id} value={buildingId} onChange={setBuildingId} /> : null}
       </div>
       {pastDue ? (
         <label className={`${ui.warning} flex items-center gap-2`}>
@@ -168,6 +216,10 @@ export function TicketEdit({
   dueOn = null,
   internalDescription = "",
   canChangeAnyStatus = false,
+  propertyId = null,
+  buildingId = null,
+  startDate = null,
+  followUpDate = null,
 }: {
   id: string;
   status: string;
@@ -177,8 +229,15 @@ export function TicketEdit({
   /** 6.6 interne Beschreibung (Review 26.09.2026, M6): nur für Mitarbeiter, nie im Portal. */
   internalDescription?: string;
   canChangeAnyStatus?: boolean;
+  /** M19-04 (6.6): property of the ticket (needed for the building select), building, start date
+   *  and follow-up date (JJJJ-MM-TT); editable inline, null when not set. */
+  propertyId?: string | null;
+  buildingId?: string | null;
+  startDate?: string | null;
+  followUpDate?: string | null;
 }) {
   const t = useTranslations("Tickets");
+  const tq = useTranslations("TicketLocation");
   const router = useRouter();
   const [comment, setComment] = useState("");
   const [internal, setInternal] = useState(true);
@@ -253,6 +312,51 @@ export function TicketEdit({
             ) : null}
           </span>
         </label>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="ticket-edit-location">
+        {(
+          [
+            ["start_date", "startDate", startDate],
+            ["follow_up_date", "followUpDate", followUpDate],
+          ] as const
+        ).map(([field, key, current]) => (
+          <label key={field} className="flex flex-col gap-1">
+            <span className={ui.label}>{tq(key)}</span>
+            <span className="flex items-center gap-1">
+              <input
+                type="date"
+                className={ui.input}
+                value={current ?? ""}
+                disabled={busy}
+                title={key === "followUpDate" ? tq("followUpHint") : undefined}
+                onChange={(e) => {
+                  if (e.target.value) void send("", "PATCH", { [field]: e.target.value });
+                }}
+              />
+              {current ? (
+                <button
+                  type="button"
+                  className={ui.buttonSm}
+                  disabled={busy}
+                  aria-label={tq("clearDate", { field: tq(key) })}
+                  onClick={() => void send("", "PATCH", { [field]: null })}
+                >
+                  {tq("clear")}
+                </button>
+              ) : null}
+            </span>
+          </label>
+        ))}
+        {propertyId ? (
+          <BuildingSelect
+            propertyId={propertyId}
+            value={buildingId ?? ""}
+            disabled={busy}
+            onChange={(next) => void send("", "PATCH", { building_id: next || null })}
+          />
+        ) : (
+          <p className={`${ui.help} self-end`}>{tq("noPropertyHint")}</p>
+        )}
       </div>
       {pendingDue ? (
         <div role="status" className={`${ui.warning} flex flex-wrap items-center gap-2`}>

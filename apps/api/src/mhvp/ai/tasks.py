@@ -205,12 +205,30 @@ class ChatActionChange(_Out):
     new: str = Field(description="neuer Wert; bei phone und email den Platzhalter übernehmen")
 
 
+class ChatActionProperty(_Out):
+    number: str | None = Field(default=None, description="dreistellige Objektnummer")
+    name: str | None = None
+    management_type: Literal["rental", "hoa", "hoa_with_sev"] | None = None
+    street: str | None = None
+    house_number: str | None = None
+    postal_code: str | None = None
+    city: str | None = None
+
+
 class ChatAction(_Out):
     """Vorgeschlagene Änderung aus dem Chat; die Plattform prüft sie und legt nur einen
     Vorschlag an, den ein Mensch bestätigt (nie Bankverbindungen)."""
 
     kind: Literal[
-        "contact_change", "contact_note", "ticket_create", "calendar_create", "deadline_create"
+        "contact_change",
+        "contact_note",
+        "ticket_create",
+        "calendar_create",
+        "deadline_create",
+        "property_create",
+        "document_file",
+        "portal_invite_prepare",
+        "letter_create",
     ]
     refs: list[str] = Field(
         description="IDs der betroffenen Treffer der Plattformsuche (Kontakt, Objekt, Einheit)"
@@ -226,6 +244,10 @@ class ChatAction(_Out):
         default=None,
         description="Terminart: uebergabe, besichtigung, telefonat, vor_ort, sonstiges",
     )
+    # property_create (M7-03): Werte wörtlich aus der Nachricht des Nutzers.
+    property: ChatActionProperty | None = None
+    # letter_create (M7-03): Name oder Code der Briefvorlage aus der Nachricht.
+    template: str | None = Field(default=None, description="Vorlagenname oder Code, sonst null")
     reason: str = Field(default="", description="kurz, warum diese Änderung vorgeschlagen wird")
 
 
@@ -422,6 +444,29 @@ class CheckStatementResult(_Out):
     summary: str = Field(max_length=1000, description="ein bis drei Sätze, ohne Beträge")
 
 
+class RentIncreaseFinding(_Out):
+    """Ein Hinweis zu einem Mieterhöhungsfall (M26-01). Nur Hinweis mit Schweregrad; nie eine
+    Freigabe, keine Rechtsauskunft, kein neuer Betrag (rule 0.1.6)."""
+
+    field: str = Field(
+        max_length=64,
+        description=(
+            "geprüftes Merkmal, z. B. source_missing, check_inconsistent, dates_inconsistent, "
+            "values_inconsistent, basis_data_missing, comparison_flats"
+        ),
+    )
+    description: str = Field(max_length=600, description="kurzer Hinweis auf Deutsch, ohne Beträge")
+    severity: Severity
+
+
+class RentIncreaseCheckResult(_Out):
+    findings: list[RentIncreaseFinding]
+    overall: Literal["unauffaellig", "pruefen", "kritisch"] = Field(
+        description="Gesamteinschätzung; die Plattform leitet sie auch aus den Schweregraden ab"
+    )
+    summary: str = Field(max_length=1000, description="ein bis drei Sätze, ohne Beträge")
+
+
 class PostingSplit(_Out):
     """Ein Teilbetrag eines Kontierungsvorschlags (Splitbuchung, 9.2 ``propose_posting``)."""
 
@@ -476,6 +521,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.CONTACT_MASTER_DATA_CHANGE: ContactChangeResult,
     AiTask.CALL_SUMMARY: CallSummaryResult,
     AiTask.PROPOSE_POSTING: PostingProposalResult,
+    AiTask.RENT_INCREASE_CHECK: RentIncreaseCheckResult,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.CHECK_STATEMENT: "large",
@@ -491,6 +537,7 @@ DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.CONTACT_MASTER_DATA_CHANGE: "small",
     AiTask.CALL_SUMMARY: "small",
     AiTask.PROPOSE_POSTING: "large",
+    AiTask.RENT_INCREASE_CHECK: "large",
 }
 
 

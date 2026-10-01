@@ -22,6 +22,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^portal\/notifications\/read$/ },
   // M21/M22 Portal Mieter, Eigentümer und Dienstleister.
   { method: "GET", pattern: /^portal\/documents$/ },
+  // M25-06: Sammel-Download der Belege als ZIP mit Index.
+  { method: "POST", pattern: /^portal\/documents\/bundle$/ },
   { method: "POST", pattern: /^portal\/uploads$/ },
   { method: "GET", pattern: /^portal\/tickets$/ },
   { method: "POST", pattern: /^portal\/tickets$/ },
@@ -44,7 +46,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // die lesende Support-Sicht (SA-02).
   { method: "GET", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
-  { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info)$/ },
+  { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info|allocation-properties|rental-income|statements)$/ },
   { method: "GET", pattern: new RegExp(`^portal/owner/consumption-info/${ID}$`) },
   { method: "GET", pattern: /^portal\/support-consent$/ },
   { method: "POST", pattern: /^portal\/support-consent$/ },
@@ -64,6 +66,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals/${ID}/accept$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/complete$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/invoice$`) },
+  // M22-01: XML e-invoice upload (multipart), read into a proposal.
+  { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/einvoice$`) },
   // Übergabeprotokolle (M30 Stufe 3): fill in, photos, signatures, completion.
   { method: "GET", pattern: /^portal\/handover$/ },
   // Staff mit Portalrecht handover:read (M2-08 entschieden): Liste aller Protokolle des Mandanten.
@@ -80,13 +84,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/board\/engagements$/ },
   { method: "GET", pattern: new RegExp(`^portal/board/engagements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^portal/board/engagements/${ID}/notes$`) },
+  // M25-04: Kontext einer Prüfposition (lesend).
+  { method: "GET", pattern: new RegExp(`^portal/board/engagements/${ID}/positions/${ID}/context$`) },
   // A76: reports of the engagement and the board statement on a report version (text only).
   { method: "GET", pattern: new RegExp(`^portal/board/engagements/${ID}/reports$`) },
   { method: "POST", pattern: new RegExp(`^portal/board/engagements/${ID}/reports/${ID}/statement$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
-const MULTIPART = new RegExp(`^portal/(handover/${ID}/documents|uploads)$`);
+const MULTIPART = new RegExp(`^portal/(handover/${ID}/documents|uploads|work-orders/${ID}/einvoice)$`);
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 

@@ -6,11 +6,14 @@ resolved advances, arrears apart, reserve development, key figures and the § 35
 document is marked as a draft; issuing to owners stays behind G4 and the resolution (W06).
 """
 
+import html
 import io
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from mhvp.billing.letters import fmt_eur
+from mhvp.billing.letters import fmt_date, fmt_eur
+from mhvp.documents import letters
 
 DRAFT_LABEL = "Entwurf, kein Versand"
 
@@ -57,6 +60,10 @@ def rows(snapshot: dict[str, Any], unit: dict[str, Any]) -> dict[str, list[list[
         reserve_rows.append(
             [f"Rücklage {pos['name']}: Veränderung Plan", _eur(pos["planned_change"])]
         )
+        if pos.get("contributions_paid_bound"):
+            reserve_rows.append(
+                [f"Rücklage {pos['name']}: Veränderung nach Zahlungen", _eur(pos["paid_change"])]
+            )
     s35a = snapshot.get("section_35a") or {}
     labour = (s35a.get("per_unit") or {}).get(uid)
     tax_rows = (
@@ -119,3 +126,127 @@ def render(year: int, snapshot: dict[str, Any], unit: dict[str, Any], snapshot_h
     ]
     doc.build(story)
     return buffer.getvalue()
+
+
+def total_rows(snapshot: dict[str, Any]) -> dict[str, list[list[str]]]:
+    """Table rows of the Gesamtabrechnung (pure function, read from the stored snapshot)."""
+    positions = [
+        [p["label"], p.get("basis", ""), _eur(p["amount"])] for p in snapshot.get("positions", [])
+    ]
+    positions.append(["Gesamtkosten", "", _eur(snapshot.get("total_costs"))])
+    units = [
+        [
+            u["unit_number"],
+            _eur(u["cost_share"]),
+            _eur(u["advances_resolved"]),
+            _eur(u["result"]),
+            _eur(u["advances_paid"]),
+            _eur(u["arrears"]),
+        ]
+        for u in snapshot.get("units", [])
+    ]
+    sums = {
+        k: sum((Decimal(str(u[k])) for u in snapshot.get("units", [])), Decimal(0))
+        for k in ("cost_share", "advances_resolved", "result", "advances_paid", "arrears")
+    }
+    if units:
+        units.append(["Summe", *(_eur(sums[k]) for k in sums)])
+    reserve = snapshot.get("reserve") or {}
+    development = [
+        ["Anfangsbestand", _eur(reserve.get("opening"))],
+        ["Beschlossene Zuführungen (Soll)", _eur(reserve.get("contributions_resolved"))],
+        ["Gezahlte Zuführungen (Ist)", _eur(reserve.get("contributions_paid"))],
+        ["Entnahmen", _eur(reserve.get("withdrawals"))],
+        ["Zinsen", _eur(reserve.get("interest"))],
+        ["Endbestand", _eur(reserve.get("closing"))],
+        ["Bankbestand der Rücklagenkonten", _eur(reserve.get("bank_balance"))],
+        ["Differenz Bank zu Endbestand", _eur(reserve.get("bank_difference"))],
+    ]
+    per_reserve = [
+        [
+            pos["name"],
+            _eur(pos["contributions_planned"]),
+            _eur(pos.get("contributions_paid")),
+            _eur(pos["withdrawals"]),
+            _eur(pos["taxes"]),
+            _eur(pos["fees"]),
+            _eur(pos["interest"]),
+        ]
+        for pos in reserve.get("positions", [])
+    ]
+    return {
+        "positions": positions,
+        "units": units,
+        "reserve": development,
+        "per_reserve": per_reserve,
+    }
+
+
+def build_total_letter(
+    year: int,
+    snapshot: dict[str, Any],
+    snapshot_hash: str,
+    *,
+    recipient_lines: list[str],
+    property_line: str,
+    letter_date: date,
+    signatory: list[str],
+) -> letters.Letter:
+    """Gesamtabrechnung on the letter blocks of the tenant (DIN 5008), marked as a draft."""
+    data = total_rows(snapshot)
+    marker = letters.TABLE_MARKER
+    tables = {
+        "kosten": letters.LetterTable(
+            header=["Kostenposition", "Verteilerschlüssel", "Gesamt"],
+            rows=data["positions"],
+            right_aligned=(2,),
+            total_row=True,
+            widths=(0.5, 0.3, 0.2),
+        ),
+        "einheiten": letters.LetterTable(
+            header=["Einheit", "Kostenanteil", "Soll", "Ergebnis", "Gezahlt", "Rückstand"],
+            rows=data["units"],
+            right_aligned=(1, 2, 3, 4, 5),
+            total_row=bool(snapshot.get("units")),
+            widths=(0.14, 0.17, 0.17, 0.17, 0.17, 0.18),
+        ),
+        "ruecklage": letters.LetterTable(
+            header=["Entwicklung der Erhaltungsrücklage", "Betrag"],
+            rows=data["reserve"],
+            right_aligned=(1,),
+            total_row=False,
+            widths=(0.7, 0.3),
+        ),
+    }
+    paragraphs = [
+        "Sehr geehrte Damen und Herren,",
+        f"für das Wirtschaftsjahr {year} der Gemeinschaft {property_line} erhalten Sie die "
+        "Gesamtabrechnung. Alle Werte sind dem gespeicherten Berechnungsstand entnommen. Das "
+        "Ergebnis je Einheit ist gegen die beschlossenen Vorschüsse berechnet, Rückstände "
+        "bleiben eigene Forderungen und sind keine neue Forderung aus dieser Abrechnung.",
+        marker.format(name="kosten"),
+        marker.format(name="einheiten"),
+        marker.format(name="ruecklage"),
+    ]
+    if data["per_reserve"]:
+        tables["je_ruecklage"] = letters.LetterTable(
+            header=["Rücklage", "Soll", "Gezahlt", "Entnahme", "Steuer", "Gebühr", "Zins"],
+            rows=data["per_reserve"],
+            right_aligned=(1, 2, 3, 4, 5, 6),
+            widths=(0.25, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125),
+        )
+        paragraphs.append(marker.format(name="je_ruecklage"))
+    paragraphs.append(
+        "Dieses Schreiben ist ein Entwurf; die Ausgabe an die Eigentümer erfolgt nach "
+        "Beschluss und Freigabe."
+    )
+    return letters.Letter(
+        recipient_lines=recipient_lines,
+        subject=f"Gesamtabrechnung {year}, {property_line}, Stand {fmt_date(letter_date)}",
+        body="\n\n".join(p if p.startswith("[[table:") else html.escape(p) for p in paragraphs),
+        letter_date=letter_date,
+        info=[("Wirtschaftsjahr", str(year)), ("Berechnungsstand", snapshot_hash[:12])],
+        signatory=signatory,
+        tables=tables,
+        draft_notice=DRAFT_LABEL,
+    )

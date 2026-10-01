@@ -24,3 +24,16 @@ which reads the displayed notation (`1.250,00`), plain German and the API notati
 returns null for unreadable input instead of 0 or a guess; nothing is booked without an explicit confirmation of the
 signed in person. Tests: `*.test.tsx` next to each component (vitest), core path
 `e2e/bank-buchen.spec.ts` (Playwright against the API).
+
+## Q02: Lastschriftrückmeldung und Banklimits (Welle 3)
+
+`DirectDebitReconciliation` (Lastschriftliste, Läufe `file_generated` und `exported`) liest
+`GET /accounting/direct-debits/{id}/reconciliation` und erfasst je Lastschrift die Bankrückmeldung
+über `POST .../bank-status` (angenommen, abgelehnt, eingezogen mit Betrag, zurückgegeben mit
+Rückgabecode). Es wird nichts gebucht. `BankLimitsCard` (Zahllauf) pflegt Limit je Auftrag,
+Tageslimit und Einreichungsfristen je Auftraggeberkonto über `GET/PUT /accounting/payment-runs/bank-limits/{id}`
+als Betreibereingabe (zu verifizieren) und zeigt den Hinweis zur Empfängerprüfung.
+Mahnwesen: `components/accounting/DunningCaseDetails.tsx` (Prüfhinweise, Aufschlagsvorschlag,
+Zinsdetail und Zinsentwurf, Zustellnachweise, Sperren je Posten) und `DunningInterestRates.tsx`
+(Basiszinssatzhistorie). Rechnungen: Plan bearbeiten, Kreditorenkonten anlegen, optionale
+Prüfangaben in `InvoiceForms.tsx`.

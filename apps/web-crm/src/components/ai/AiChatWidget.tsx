@@ -23,6 +23,7 @@ import { mergeChatContext, readChatContextAttribute, useChatContextOverride } fr
 import { chatPageContext, suggestionsFor, type ChatArea, type ChatPageContext } from "@/lib/chat-suggestions";
 import { ui } from "@/lib/ui";
 
+import { ASSISTANT_OPEN_EVENT } from "./AssistantTab";
 import { ChatActionProposal } from "./ChatActionProposal";
 import { ChatLinks } from "./ChatLinks";
 import { ContactProposal } from "./ContactProposal";
@@ -105,6 +106,12 @@ export function AiChatWidget() {
     .filter(Boolean)
     .join(" / ");
   const [open, setOpen] = useState(false);
+  // Reiter "Assistent" am Objekt und am Kontakt (M7-05) opens the widget with the record.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(ASSISTANT_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, onOpen);
+  }, []);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [flow, setFlow] = useState<Flow>({ step: "idle" });
   const [conversation, setConversation] = useState<Conversation | null>(null);

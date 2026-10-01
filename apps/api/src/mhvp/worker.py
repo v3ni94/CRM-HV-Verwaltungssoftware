@@ -126,6 +126,19 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(hour=6, minute=30),
                 "options": {"queue": "io"},
             },
+            # Drive Changes API (M6-05): hourly, cursor per tenant; marks mirror files removed
+            # in Drive, never deletes an index entry.
+            "documents-drive-changes": {
+                "task": "mhvp.documents.drive_changes",
+                "schedule": crontab(minute=40),
+                "options": {"queue": "io"},
+            },
+            # Temporary objects (M6-08): lifecycle rule for tmp/ and sweep of staged uploads.
+            "documents-cleanup-tmp": {
+                "task": "mhvp.documents.cleanup_tmp",
+                "schedule": crontab(hour=4, minute=10),
+                "options": {"queue": "io"},
+            },
             # Restore test of the newest backup (A67, M9, 15.1 ops.backup_verify): daily
             # 02:00; result (status, duration, checked file, error) in /platform/ops/metrics.
             # Not configured tenants/hosts record "not_configured" instead of failing.
@@ -152,6 +165,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "ai-examples-retention": {
                 "task": "mhvp.ai.examples_retention",
                 "schedule": crontab(hour=3, minute=45),
+            },
+            # Nightly collective run of deferred AI runs (9.3 batch processing, M7-07).
+            "ai-batch-nightly": {
+                "task": "mhvp.ai.batch_nightly",
+                "schedule": crontab(hour=1, minute=30),
+                "options": {"queue": "io"},
             },
             # Monthly deletion proposal (M6-04, V17): lists documents whose released retention
             # period ended; deletes nothing, approval and execution are two persons.
@@ -213,6 +232,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.accounting.receivable_run",
                 "schedule": crontab(day_of_month=1, hour=5, minute=0),
             },
+            # S69-04: nightly read copy of open item remainders (no posting).
+            "accounting-open-item-balance": {
+                "task": "mhvp.accounting.open_item_balance_refresh",
+                "schedule": crontab(hour=2, minute=35),
+            },
             # Dunning previews on the 5th (15.1); approval and sending stay manual.
             "accounting-dunning-run": {
                 "task": "mhvp.accounting.dunning_run",
@@ -270,6 +294,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "workspace-reminders": {
                 "task": "mhvp.workspace.reminders",
                 "schedule": 3600.0,
+            },
+            # Mails zu Benachrichtigungen nach Benutzereinstellung (M23-04), alle 5 Minuten.
+            "workspace-notification-mails": {
+                "task": "mhvp.workspace.notification_mails",
+                "schedule": 300.0,
             },
             # Daily digest per user 07:00 (A40, 15.1 tasks.digest): in-app notification, mail
             # only with the tenant switch (default off); idempotent per user and day.

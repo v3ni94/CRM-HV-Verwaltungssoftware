@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +15,7 @@ from mhvp.ai import (
     connection_test,
     embeddings,
     examples,
+    followups,
     gateway,
     imports,
     jobs,
@@ -856,6 +858,7 @@ async def get_run(
         out.input_stats = dict(ref.get("input_stats") or {})
         out.progress = ref.get("progress")
         out.model_tier_reason = ref.get("model_tier_reason")
+        out.cascade = list(ref.get("cascade") or [])
         out.knowledge_ids = [uuid.UUID(str(x)) for x in ref.get("knowledge_ids") or []]
         out.warnings = list(ref.get("warnings") or [])
         if ref.get("lookup") is not None:
@@ -995,6 +998,16 @@ async def reject_proposal(
         proposal = await _pending(session, proposal_id)
         proposal.decision, proposal.decided_by = Decision.REJECTED, principal.user_id
         proposal.decided_at = datetime.now(UTC)
+        # S12-01: ai_proposal.decided (decision of a person, never of the AI).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_proposal.decided",
+            entity_type="ai_proposal",
+            entity_id=proposal.id,
+            actor_user_id=principal.user_id,
+            payload={"decision": proposal.decision.value},
+        )
         reason = body.reason if body is not None else None
         proposal.rejection_reason = reason.strip() if reason else None
         run_row = await _get(session, AiTaskRun, proposal.task_run_id)
@@ -1043,6 +1056,13 @@ async def apply_proposal(
         return await _apply_chat_action(proposal_id, kind, body, request, principal)
     async with tenant_tx(request, principal) as session:
         proposal = await _pending(session, proposal_id)
+        if proposal.entity_type not in required:
+            # Hint proposals (statement check, rent increase check, posting) carry findings
+            # only; nothing is applied from them (rule 0.1.6, M26-01).
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Dieser Vorschlag enthält nur Hinweise und kann nicht übernommen werden.",
+            )
         missing = required[proposal.entity_type] - set(principal.permissions)
         if missing:
             raise ProblemError(ErrorCodes.FORBIDDEN, developer_message=f"missing {sorted(missing)}")
@@ -1075,9 +1095,35 @@ async def apply_proposal(
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Angaben zur Rechnung fehlen.")
             summary = await imports.apply_invoice(session, import_run, principal, body.invoice)
             modified = True
+        # Follow up steps (10.1 step 6, M7-04): offers only, each a separate confirmed action.
+        steps: list[dict[str, Any]] = []
+        if proposal.entity_type == "contacts":
+            await session.flush()
+            steps = await followups.after_contacts(session, import_run, summary.get("role"))
+        elif proposal.entity_type == "property":
+            steps = followups.after_property(summary.get("property_id"))
+        if steps:
+            summary = {**summary, "next_steps": steps}
+            followups.post_message(
+                session,
+                tenant_id=principal.tenant_id,
+                conversation_id=run_row.conversation_id,
+                task_run_id=run_row.id,
+                steps=steps,
+            )
         import_run.summary = summary
         proposal.decision = Decision.MODIFIED if modified else Decision.ACCEPTED
         proposal.decided_by, proposal.decided_at = principal.user_id, datetime.now(UTC)
+        # S12-01: ai_proposal.decided (decision of a person, never of the AI).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_proposal.decided",
+            entity_type="ai_proposal",
+            entity_id=proposal.id,
+            actor_user_id=principal.user_id,
+            payload={"decision": proposal.decision.value},
+        )
         proposal.final = body.model_dump(mode="json")
         proposal.import_run_id = import_run.id
         await _event(
@@ -1204,6 +1250,21 @@ async def _apply_chat_action(
                 payload={"proposal_id": str(proposal.id), "kind": kind},
             )
             summary |= {"calendar_entry_id": str(entry.id), "date": when.isoformat()}
+        elif kind == "property_create":
+            summary |= await _chat_property_create(session, principal, data, edit)
+            modified = bool(
+                (edit.property_number and edit.property_number != data.get("number"))
+                or (edit.property_name and edit.property_name != data.get("name"))
+            )
+        elif kind == "document_file":
+            summary |= await _chat_document_file(session, principal, data)
+        elif kind == "letter_create":
+            summary |= await _chat_letter_create(request, session, principal, data, edit)
+            modified = bool(edit.template_id and str(edit.template_id) != data.get("template_id"))
+        elif kind == "portal_invite_prepare":
+            # The portal account is provisioned in its own transactions (platform user,
+            # membership); the proposal decision follows below (see _apply_chat_action).
+            summary |= {"contact_id": str(data["contact_id"])}
         else:
             modified = bool(
                 (edit.title and edit.title != data.get("title"))
@@ -1221,8 +1282,30 @@ async def _apply_chat_action(
                 principal,
             )
             summary |= {"ticket_id": str(ticket["id"]), "number": ticket["number"]}
+        if kind == "portal_invite_prepare":
+            summary |= await _chat_portal_invite(request, principal, data)
+        steps = followups.after_chat_action(kind, summary)
+        if steps:
+            summary |= {"next_steps": steps}
+            followups.post_message(
+                session,
+                tenant_id=principal.tenant_id,
+                conversation_id=run_row.conversation_id,
+                task_run_id=run_row.id,
+                steps=steps,
+            )
         proposal.decision = Decision.MODIFIED if modified else Decision.ACCEPTED
         proposal.decided_by, proposal.decided_at = principal.user_id, datetime.now(UTC)
+        # S12-01: ai_proposal.decided (decision of a person, never of the AI).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_proposal.decided",
+            entity_type="ai_proposal",
+            entity_id=proposal.id,
+            actor_user_id=principal.user_id,
+            payload={"decision": proposal.decision.value},
+        )
         proposal.final = body.model_dump(mode="json")
         proposal.import_run_id = import_run.id
         import_run.summary = summary
@@ -1230,6 +1313,172 @@ async def _apply_chat_action(
             session, principal, "import_run.applied", import_run.id, source=import_run.source
         )
         return await _import_out(session, import_run)
+
+
+async def _chat_property_create(
+    session: Any, principal: TenantPrincipal, data: dict[str, Any], edit: s.ChatActionApplyIn
+) -> dict[str, Any]:
+    """Property from the chat (M7-03, 10.3): the checks and steps of ``POST /properties``
+    in the confirmation transaction; status ``onboarding`` (model default) until the user
+    activates it (10.2 step 5)."""
+    from sqlalchemy.exc import IntegrityError
+
+    from mhvp.properties import services as psvc
+    from mhvp.properties.models import Property
+    from mhvp.properties.schemas import PropertyIn
+
+    try:
+        body = PropertyIn(
+            number=edit.property_number or str(data["number"]),
+            name=edit.property_name or str(data["name"]),
+            management_type=data["management_type"],
+            street=data.get("street"),
+            house_number=data.get("house_number"),
+            postal_code=data.get("postal_code"),
+            city=data.get("city"),
+        )
+    except ValidationError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc.errors()[0]["msg"])) from None
+    psvc.check_postcode(body.country, body.postal_code)
+    payload = body.model_dump()
+    payload["custom_fields"] = await psvc.check_custom_fields(
+        session, "property", body.custom_fields, management_type=body.management_type, create=True
+    )
+    prop = Property(tenant_id=principal.tenant_id, created_by=principal.user_id, **payload)
+    session.add(prop)
+    try:
+        async with session.begin_nested():
+            await session.flush()
+    except IntegrityError:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail=f"Objektnummer {body.number} ist bereits vergeben."
+        ) from None
+    await psvc.ensure_hoa_entity(session, prop)
+    await psvc.copy_key_templates(session, prop)
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="property.created",
+        entity_type="property",
+        entity_id=prop.id,
+        actor_user_id=principal.user_id,
+        payload={"number": prop.number, "management_type": prop.management_type.value},
+    )
+    return {"property_id": str(prop.id), "number": prop.number, "status": prop.status.value}
+
+
+async def _chat_document_file(
+    session: Any, principal: TenantPrincipal, data: dict[str, Any]
+) -> dict[str, Any]:
+    """Links the chat's documents to the hit (M7-03) like ``POST /documents/{id}/links``;
+    an existing link is kept, never duplicated."""
+    from mhvp.documents import services as dsvc
+    from mhvp.documents.models import DocumentLink, LinkRole
+
+    entity_type, entity_id = str(data["entity_type"]), uuid.UUID(str(data["entity_id"]))
+    await dsvc.check_link_target(session, entity_type, entity_id)
+    linked: list[str] = []
+    for raw in data.get("document_ids") or []:
+        document = await _get(session, Document, uuid.UUID(str(raw)))
+        exists = await session.scalar(
+            select(DocumentLink.id).where(
+                DocumentLink.document_id == document.id,
+                DocumentLink.entity_type == entity_type,
+                DocumentLink.entity_id == entity_id,
+                DocumentLink.role == LinkRole.ATTACHMENT,
+            )
+        )
+        if exists is not None:
+            continue
+        session.add(
+            DocumentLink(
+                tenant_id=principal.tenant_id,
+                document_id=document.id,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                role=LinkRole.ATTACHMENT,
+            )
+        )
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.linked",
+            entity_type="document",
+            entity_id=document.id,
+            actor_user_id=principal.user_id,
+            payload={"target_type": entity_type, "target_id": str(entity_id)},
+        )
+        await dsvc.mark_mirrors_dirty(session, document.id)
+        linked.append(str(document.id))
+    return {"entity_type": entity_type, "entity_id": str(entity_id), "linked": linked}
+
+
+async def _chat_letter_create(
+    request: Request,
+    session: Any,
+    principal: TenantPrincipal,
+    data: dict[str, Any],
+    edit: s.ChatActionApplyIn,
+) -> dict[str, Any]:
+    """Letter from a template (M7-03): the path of ``POST /letters`` (filed and linked,
+    never sent). Placeholders come from the records, never from the model."""
+    from mhvp.documents import services as dsvc
+    from mhvp.documents.routers import _blobs, _letter, _template, _today
+
+    template = await _template(session, edit.template_id or uuid.UUID(str(data["template_id"])))
+    head = await dsvc.letterhead(session, _blobs(request))
+    _, document = await _letter(
+        session,
+        request,
+        principal,
+        template,
+        head,
+        contact_id=uuid.UUID(str(data["contact_id"])),
+        property_id=chat_actions.uuid_or_none(data.get("property_id")),
+        unit_id=chat_actions.uuid_or_none(data.get("unit_id")),
+        contract_id=None,
+        letter_date=_today(),
+        reference=None,
+        fields={},
+        signatory=[],
+        store=True,
+    )
+    assert document is not None  # noqa: S101 - store=True
+    return {"document_id": str(document.id), "template_code": template.code}
+
+
+async def _chat_portal_invite(
+    request: Request, principal: TenantPrincipal, data: dict[str, Any]
+) -> dict[str, Any]:
+    """Portal invitation prepared (M7-03): the account is provisioned like ``POST
+    /portal/admin/accounts`` with the e-mail address of the contact file (never a value of the
+    model); nothing is sent. The invitation code is not stored in the summary: the letter or
+    mail is produced from the contact file (invitation letter rotates the code)."""
+    from mhvp.contacts.models import Contact, ContactEmail
+    from mhvp.portal.routers import provision_account
+
+    contact_id = uuid.UUID(str(data["contact_id"]))
+    async with tenant_tx(request, principal) as session:
+        contact = await session.get(Contact, contact_id)
+        email = await session.scalar(
+            select(ContactEmail.email)
+            .where(ContactEmail.contact_id == contact_id)
+            .order_by(ContactEmail.is_primary.desc(), ContactEmail.created_at)
+            .limit(1)
+        )
+    if contact is None or not email:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Der Kontakt hat keine E-Mail-Adresse in der Akte."
+        )
+    result = await provision_account(
+        request,
+        principal,
+        contact_id=contact_id,
+        email=str(email),
+        display_name=contact.display_name,
+    )
+    return {"portal_account_id": str(result["id"]), "grants": result.get("grants")}
 
 
 async def _import_out(session: Any, row: ImportRun) -> s.ImportOut:

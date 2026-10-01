@@ -26,7 +26,10 @@ export type ActionType =
   | "ai_task"
   | "create_task"
   // Lern-Workflow (Regel M9-11): only created by accepting a rule proposal, not offered here.
-  | "assign_record";
+  | "assign_record"
+  // S15-06: Stammdatenfeld (Notizen) setzen und Entwurf an einen Dienstleister.
+  | "set_field"
+  | "notify_provider";
 export type Action = Record<string, unknown> & { type: ActionType };
 export type TriggerKind = "event" | "schedule";
 export type Schedule = {
@@ -162,9 +165,17 @@ const ACTION_TYPES: ActionType[] = [
   "mail_draft",
   "letter_draft",
   "ai_task",
+  "set_field",
+  "notify_provider",
 ];
 /** Aktionen, die ein Ticket brauchen und daher auf einem Zeitplan nicht angeboten werden. */
-const TICKET_ONLY: ActionType[] = ["set_ticket_field", "mail_draft"];
+const TICKET_ONLY: ActionType[] = ["set_ticket_field", "mail_draft", "notify_provider"];
+/** Erlaubte Notizfelder je Zielobjekt von "Feld setzen" (Liste wie im Backend, SETTABLE_FIELDS). */
+const MASTER_FIELDS: Record<string, string[]> = {
+  property: ["notes", "renovation_notes", "garden_notes"],
+  contact: ["notes"],
+  contract: ["notes"],
+};
 const CUSTOM = "__custom__";
 
 export function parseConditions(
@@ -252,6 +263,10 @@ export function defaultAction(type: ActionType, pickers: Pickers): Action {
       };
     case "assign_record":
       return { type, target: "message", dimension: "property", value: "" };
+    case "set_field":
+      return { type, target: "property", field: "notes", value: "", mode: "append" };
+    case "notify_provider":
+      return { type, contact_id: null, contract_type_code: "", subject: "", body: "" };
   }
 }
 
@@ -298,6 +313,13 @@ export function summariseAction(a: Action, t: T, pickers: Pickers): string {
     });
   if (a.type === "create_task")
     return t("summary.createTask", { title: String(a.title ?? "") });
+  if (a.type === "set_field")
+    return t("summary.setMasterField", {
+      target: t(`setFieldTargets.${String(a.target)}`),
+      field: String(a.field ?? ""),
+    });
+  if (a.type === "notify_provider")
+    return t("summary.notifyProvider", { subject: String(a.subject ?? "") });
   if (a.type === "assign_record")
     return t("summary.assignRecord", {
       dimension: String(a.dimension ?? ""),
@@ -1033,6 +1055,71 @@ function ActionEditor({
             />
           </label>
           <p className={ui.help}>{t("aiTaskHelp")}</p>
+        </div>
+      ) : null}
+      {action.type === "set_field" ? (
+        <div className="flex flex-col gap-2" data-testid="action-set-field">
+          <div className="flex flex-wrap gap-2">
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("setFieldTarget")}</span>
+              <select
+                className={ui.input}
+                value={String(action.target ?? "property")}
+                onChange={(e) =>
+                  set({ target: e.target.value, field: MASTER_FIELDS[e.target.value]?.[0] ?? "notes" })
+                }
+              >
+                {Object.keys(MASTER_FIELDS).map((target) => (
+                  <option key={target} value={target}>
+                    {t(`setFieldTargets.${target}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("setFieldField")}</span>
+              <select className={ui.input} value={String(action.field ?? "")} onChange={(e) => set({ field: e.target.value })}>
+                {(MASTER_FIELDS[String(action.target ?? "property")] ?? []).map((field) => (
+                  <option key={field} value={field}>
+                    {t(`setFieldFields.${field}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("setFieldMode")}</span>
+              <select className={ui.input} value={String(action.mode ?? "append")} onChange={(e) => set({ mode: e.target.value })}>
+                <option value="append">{t("setFieldModes.append")}</option>
+                <option value="replace">{t("setFieldModes.replace")}</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("setFieldValue")}</span>
+            <textarea className={ui.input} rows={2} maxLength={2000} value={String(action.value ?? "")} onChange={(e) => set({ value: e.target.value })} />
+          </label>
+          <p className={ui.help}>{t("setFieldHelp")}</p>
+        </div>
+      ) : null}
+      {action.type === "notify_provider" ? (
+        <div className="flex flex-col gap-2" data-testid="action-notify-provider">
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("providerContractType")}</span>
+            <input
+              className={ui.input}
+              value={String(action.contract_type_code ?? "")}
+              onChange={(e) => set({ contract_type_code: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("providerSubject")}</span>
+            <input className={ui.input} maxLength={300} value={String(action.subject ?? "")} onChange={(e) => set({ subject: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("providerBody")}</span>
+            <textarea className={ui.input} rows={3} maxLength={4000} value={String(action.body ?? "")} onChange={(e) => set({ body: e.target.value })} />
+          </label>
+          <p className={ui.help}>{t("providerHelp")}</p>
         </div>
       ) : null}
       {action.type === "create_task" ? (

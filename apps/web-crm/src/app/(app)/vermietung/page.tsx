@@ -14,10 +14,11 @@ import { ui } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 
 export default async function LettingPage() {
-  const [t, tr, tc] = await Promise.all([
+  const [t, tr, tc, tw] = await Promise.all([
     getTranslations("Letting"),
     getTranslations("RentIncrease"),
     getTranslations("ContractForm"),
+    getTranslations("LettingW3"),
   ]);
   const api = serverApi();
   const today = new Date().toISOString().slice(0, 10);
@@ -39,9 +40,14 @@ export default async function LettingPage() {
       <PageHeader
         title={t("title")}
         action={
-          <Link href="/vertraege" className={ui.button}>
-            {tc("page.list")}
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/vermietung/mietspiegel" className={ui.button}>
+              {tw("rentIndex.title")}
+            </Link>
+            <Link href="/vertraege" className={ui.button}>
+              {tc("page.list")}
+            </Link>
+          </div>
         }
       />
       <p className={ui.notice}>{t("rentIncreaseNotice")}</p>

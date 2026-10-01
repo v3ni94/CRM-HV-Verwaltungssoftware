@@ -60,6 +60,9 @@ class RentIncreaseCase(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
     received_on: Mapped[date | None] = mapped_column(Date)  # Zugang beim Mieter
+    # 6.3: reference to the AI check (ai_proposal) of the case; the JSONB ``check`` stays the
+    # deterministic check (M5-08).
+    ai_check_id: Mapped[uuid.UUID | None] = _fk("ai_proposal.id", ondelete="SET NULL")
     # Recorded inputs of the basis modernization, index and graduated (M26-02, rule M26-02a):
     # values entered with their source, never derived by the platform.
     basis_data: Mapped[dict[str, Any]] = mapped_column(

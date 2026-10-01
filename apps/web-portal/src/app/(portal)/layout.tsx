@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { InstallHint } from "@/components/shell/InstallHint";
 import { LogoutButton } from "@/components/shell/LogoutButton";
+import { RoleSwitcher } from "@/components/shell/RoleSwitcher";
 import { PortalNav } from "@/components/shell/PortalNav";
 import { ThemeSwitch } from "@/components/shell/ThemeToggle";
 import { type Me, showsHandover } from "@/components/portal/types";
@@ -27,7 +29,12 @@ export default async function PortalLayout({ children }: { children: React.React
     getTranslations("Home"),
     currentMe(),
   ]);
-  const provider = Boolean(me?.roles.includes("provider"));
+  // M21-05, S16-10: an account with several portal roles may narrow the navigation to one of
+  // them (cookie); an unknown value is ignored. This grants nothing, the API decides access.
+  const portalRoles = me?.portal_roles ?? [];
+  const requested = (await cookies()).get("portal_view")?.value ?? null;
+  const view = requested && portalRoles.includes(requested) ? requested : null;
+  const provider = view ? view === "service_provider" : Boolean(me?.roles.includes("provider"));
   // A52: a pure board account (no contract of its own) sees only the audit room.
   const board = Boolean(me?.roles.includes("board"));
   const boardOnly = board && !me?.roles.some((role) => role !== "board");
@@ -49,12 +56,13 @@ export default async function PortalLayout({ children }: { children: React.React
         // (same rule as the start tile, showsHandover), so the protocol stays one tap away.
         ...(me && showsHandover(me) ? [{ href: "/uebergabe", label: t("nav.handover") }] : []),
         // A51: owner pages (read only), shown only with the owner role.
-        ...(me?.roles.includes("owner")
+        ...(me?.roles.includes("owner") && (!view || view === "owner" || view === "board_member")
           ? [
               { href: "/beschluesse", label: t("nav.resolutions") },
               { href: "/versammlungen", label: t("nav.meetings") },
               { href: "/ansprechpartner", label: t("nav.contacts") },
               { href: "/hausgeldkonto", label: t("nav.hoaAccount") },
+              { href: "/abrechnungen", label: t("nav.ownerStatements") },
               { href: "/eigentum", label: t("nav.ownerOverview") },
             ]
           : []),
@@ -84,6 +92,7 @@ export default async function PortalLayout({ children }: { children: React.React
             </div>
             {/* Darstellung Hell, Dunkel, Automatisch (stored in this browser) next to Abmelden. */}
             <div className="flex flex-wrap items-center gap-2">
+              <RoleSwitcher roles={portalRoles} current={view} />
               <ThemeSwitch />
               <LogoutButton />
             </div>

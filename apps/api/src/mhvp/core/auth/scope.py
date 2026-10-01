@@ -143,6 +143,20 @@ def ensure_session_property_allowed(session: AsyncSession, property_id: uuid.UUI
     ensure_property_allowed(session_principal(session), property_id)
 
 
+async def property_path_guard(request: Request) -> None:
+    """Router dependency: a ``{property_id}`` path parameter outside the membership's property
+    assignment answers 404 before the endpoint runs (M2-02/S16-02). Paths without the
+    parameter or with an unparsable value (the endpoint answers 422) pass unchanged."""
+    raw = request.path_params.get("property_id")
+    if raw is None:
+        return
+    try:
+        property_id = uuid.UUID(str(raw))
+    except ValueError:
+        return
+    ensure_property_allowed(await get_principal(request), property_id)
+
+
 __all__ = [
     "PROPERTY_UNSCOPED_ROLES",
     "SCOPED_ROLES",
@@ -158,6 +172,7 @@ __all__ = [
     "legal_entity_allowed",
     "legal_entity_scope",
     "property_allowed",
+    "property_path_guard",
     "session_allowed_legal_entity_ids",
     "session_allowed_property_ids",
     "session_principal",

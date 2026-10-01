@@ -5,4 +5,4 @@
 * Regel: Vergleichbare Buchungen aus `migrated_journal_entry` und `migrated_journal_line` (Schlagwortabgleich auf dem Buchungstext, abgestimmte Buchungen zuerst, neueste zuerst, höchstens drei) werden als nur lesende Beispiele mit Kontonummern, Soll und Haben in den Prompt aufgenommen. Texte werden maskiert. Es wird nichts gebucht oder verändert, der Vorschlag bleibt freigabepflichtig.
 * Quellenstatus Anhang C: Fachliche Umsetzung (Masterprompt M8 Zeile 18, 13.1).
 * Abnahmefall: `tests/unit/test_ai_journal_history.py` (Schlagwortauswahl).
-* Änderungsgrund: Befund M8-05 (Lückenliste 30.09.2026). Bankzuordnungen der Historie sind noch nicht angebunden.
+* Änderungsgrund: Befund M8-05 (Lückenliste 30.09.2026). Nachtrag Q06: historische Bankzuordnungen (`migrated_bank_link`) sind angebunden, siehe Q06-08.

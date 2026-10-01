@@ -56,3 +56,9 @@ Fristtypen, Dauer und Vorfrist-Tage pflegt die Geschäftsführung unter Einstell
 Die berechneten Termine sind Orientierung; für Notfristen und rechtlich maßgebliche Fristen ist eine manuelle Prüfung erforderlich. Berechnete Vorfristenanlässe folgen der Konfiguration, nicht einer Gesetzesregel.
 
 Im Parallelbetrieb mit Immoware24 werden Fristen nur in der Plattform geführt (kein Rückschreiben).
+
+## Mehrere Fristaufgaben erledigen
+
+In der Liste "Eigene Fristen" lassen sich offene Fristen ankreuzen und mit "Markierte erledigen" in einem
+Schritt abschließen (Recht Tickets bearbeiten). Die Aktion gilt ganz oder gar nicht: ist eine Frist
+unbekannt, wird keine geändert. Die Rückmeldung nennt die Zahl der tatsächlich geänderten Fristen.

@@ -117,3 +117,18 @@ Fragen, Antworten, Links und Vorschläge bleiben im Assistentenprotokoll nachvol
 * Beim Ablehnen eines Kontakt- oder Chat-Vorschlags kann ein Grund eingetragen werden (freiwillig, höchstens 2.000 Zeichen). Er wird im Protokoll gespeichert und als Lernbeispiel verwendet.
 * Die Kostenübersicht in den KI-Einstellungen zeigt je Aufgabe zusätzlich die Zahl der Läufe und der Token im laufenden Monat.
 * Vor dem Aufruf eines externen Anbieters werden Straßen mit Hausnummer und Postleitzahl mit Ort durch Platzhalter ersetzt, Namen bleiben erhalten (Regel AI-MASK-02).
+
+## Weitere Aktionen und Folgeschritte (Nachtrag 30.09.2026)
+
+Der Assistent bereitet zusätzlich vor, jeweils als Vorschlag mit Bestätigung im Chat:
+
+* Objekt anlegen: Nennen Sie Objektnummer, Namen, Verwaltungsart (Miete, WEG oder WEG mit SEV) und gegebenenfalls die Anschrift in Ihrer Nachricht. Das Objekt entsteht im Status Übernahme.
+* Dokument ablegen: Hängen Sie das Dokument an die Nachricht an und nennen Sie Objekt, Einheit oder Kontakt.
+* Portaleinladung vorbereiten: Der Zugang wird mit der E-Mail-Adresse aus der Kontaktakte angelegt. Es wird nichts versendet; das Einladungsschreiben erzeugen Sie danach in der Kontaktakte.
+* Brief aus Vorlage: Nennen Sie Vorlage und Empfänger. Der Brief wird als Entwurf abgelegt und nicht versendet.
+
+Nach einer Übernahme zeigt der Chat mögliche nächste Schritte, zum Beispiel Portaleinladungen, Verträge anlegen oder fehlende Daten per Formular anfordern. Jeder Schritt ist eine eigene Aktion.
+
+Am Kontakt gibt es den Reiter Assistent, am Objekt den Bereich Assistent (Schaltfläche oben rechts). Beide öffnen den Chat mit dem geöffneten Datensatz als Kontext.
+
+Kosten: Liefert das kleine Modell eine ungültige Antwort oder eine Konfidenz unter der eingetragenen Schwelle, fragt die Plattform einmal das große Modell. Beide Stufen erscheinen getrennt mit ihren Kosten im Lauf. Ist das Monatsbudget erreicht, sperrt die Plattform weitere Läufe und benachrichtigt die Personen mit Recht auf die Einstellungen.

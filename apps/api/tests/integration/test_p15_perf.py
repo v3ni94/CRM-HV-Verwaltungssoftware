@@ -5,8 +5,9 @@ PostgreSQL, never in the shared CI run. Each test prints its measurement as a
 
 Targets (16): P95 below 300 ms for a list of 10.000 rows; monthly receivable run of 1.000
 contracts below 2 minutes (covered by ``test_m13_receivables.py::test_a27_...``, 869 units);
-statement of 100 units below 1 minute; bank retrieval of 100 accounts. The last two need a
-load data seed that does not exist yet and are skipped with that reason, not faked."""
+statement of 100 units below 1 minute; bank retrieval of 100 accounts. The seed lives in
+``perf_seed.py``; the last two still lack statement data and a connector stub and are skipped
+with that reason, not faked."""
 
 import asyncio
 import os
@@ -110,9 +111,30 @@ def test_list_of_10000_contacts_p95_below_300_ms(client: TestClient, world: Worl
     assert p95 < P95_LIMIT_SECONDS
 
 
+def test_seed_of_100_units_and_100_bank_accounts(client: TestClient, world: World) -> None:
+    """Load data seed (S16-08): 100 units and 100 bank accounts of synthetic data. It is the
+    base for the statement and bank retrieval measurements."""
+    from tests.integration.perf_seed import ACCOUNTS, UNITS, seed_bank_accounts, seed_units
+
+    headers = bearer(login(client, world, "perfadmin"))
+    started = time.perf_counter()
+    property_id = seed_units(client, headers)
+    units = client.get(f"/api/v1/properties/{property_id}/units", headers=headers)
+    assert units.status_code == 200, units.text
+    assert len(units.json()) >= UNITS
+    accounts = seed_bank_accounts(client, headers)
+    assert len(set(accounts)) == ACCOUNTS
+    print(  # noqa: T201 - measurement protocol
+        f"PERF seed units={UNITS} bank_accounts={ACCOUNTS} "
+        f"seconds={time.perf_counter() - started:.1f}"
+    )
+
+
 def test_statement_of_100_units_below_one_minute() -> None:
-    pytest.skip("Lastdaten-Seed für eine Abrechnung mit 100 Einheiten fehlt (S16-08)")
+    pytest.skip(
+        "Seed der 100 Einheiten vorhanden; Abrechnungsdaten (Wirtschaftsplan, Kosten) fehlen (S16-08)"
+    )
 
 
 def test_bank_retrieval_of_100_accounts() -> None:
-    pytest.skip("Lastdaten-Seed für 100 Bankkonten mit Konnektor-Attrappe fehlt (S16-08)")
+    pytest.skip("Seed der 100 Konten vorhanden; Konnektor-Attrappe für den Abruf fehlt (S16-08)")

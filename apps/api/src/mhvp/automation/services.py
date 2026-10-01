@@ -22,7 +22,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +34,7 @@ from mhvp.automation.models import (
     RUN_STATUS_EXECUTED,
     RUN_STATUS_FAILED,
     SCHEDULE_EVENT_TYPE,
+    SET_FIELD_MAX_LENGTH,
     TRIGGER_SCHEDULE,
     WEBHOOK_MAX_ATTEMPTS,
     WEBHOOK_RETRY_SCHEDULE_SECONDS,
@@ -63,6 +64,8 @@ from mhvp.automation.schemas import (
     LetterDraftAction,
     MailDraftAction,
     NotifyAction,
+    NotifyProviderAction,
+    SetFieldAction,
     SetTicketFieldAction,
     WebhookAction,
     parse_actions,
@@ -1286,6 +1289,186 @@ async def _mail_draft(
     }
 
 
+async def _target_id(
+    session: AsyncSession, context: dict[str, Any], target: str
+) -> uuid.UUID | None:
+    """Entity the field is set on: the event's own entity, or the property or contact of the
+    ticket of a ticket event. A contract comes only from a contract event."""
+    entity_type = context.get("entity_type")
+    raw = context.get("entity_id")
+    if entity_type == target and raw:
+        return uuid.UUID(str(raw))
+    if entity_type == "ticket" and raw and target in ("property", "contact"):
+        ticket = await session.get(Ticket, uuid.UUID(str(raw)))
+        if ticket is None:
+            raise ActionError("Ticket nicht gefunden.")
+        return ticket.property_id if target == "property" else ticket.contact_id
+    return None
+
+
+async def _set_field(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    action: SetFieldAction,
+    context: dict[str, Any],
+    dry_run: bool,
+) -> dict[str, Any]:
+    """S15-06: set a note field of a property, contact or contract (closed list)."""
+    from mhvp.contacts.models import Contact
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import Property
+
+    model: Any = {"property": Property, "contact": Contact, "contract": Contract}[action.target]
+    value = (render(action.value, context) or "").strip()[:SET_FIELD_MAX_LENGTH]
+    preview: dict[str, Any] = {
+        "type": "set_field",
+        "target": action.target,
+        "field": action.field,
+        "mode": action.mode,
+        "value": value,
+    }
+    target_id = await _target_id(session, context, action.target)
+    if dry_run and target_id is None:
+        return preview | {"ok": True, "detail": "Testlauf: Feld würde gesetzt."}
+    if target_id is None:
+        raise ActionError(f"Feld setzen ({action.target}) braucht ein passendes Ereignis.")
+    if not value:
+        raise ActionError("Der Wert ist nach dem Einsetzen der Platzhalter leer.")
+    preview["entity_type"], preview["entity_id"] = action.target, str(target_id)
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: Feld würde gesetzt."}
+    row = await session.get(model, target_id, with_for_update=True)
+    if row is None:
+        raise ActionError("Zielobjekt nicht gefunden.")
+    old = getattr(row, action.field)
+    if action.mode == "append" and old:
+        stamp = datetime.now(UTC).strftime("%d.%m.%Y")
+        new = f"{old}\n[{stamp}, Regel {rule.name}] {value}"
+    else:
+        new = value
+    if new == old:
+        return preview | {"ok": True, "detail": "Wert bereits gesetzt."}
+    setattr(row, action.field, new)
+    row.updated_by = None
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type=f"{action.target}.updated",
+        entity_type=action.target,
+        entity_id=target_id,
+        actor_user_id=None,
+        payload={
+            "fields": [action.field],
+            "via": "automation",
+            **automation_marker(rule.id, event_id),
+        },
+    )
+    return preview | {"ok": True, "detail": "Feld gesetzt (Anhängen, kein Überschreiben)."}
+
+
+PROVIDER_DRY_RUN = "Testlauf: Entwurf an Dienstleister würde angelegt."
+
+
+async def _notify_provider(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    action: NotifyProviderAction,
+    context: dict[str, Any],
+    dry_run: bool,
+) -> dict[str, Any]:
+    """S15-06: mail draft to a service provider of the ticket's property; never sent."""
+    from mhvp.communication.models import Message
+    from mhvp.contacts.models import Contact, ContactEmail
+    from mhvp.properties.models import ServiceProviderRelation
+    from mhvp.sla.channels import default_mailbox
+    from mhvp.workspace.services import local_today
+
+    subject = (render(action.subject, context) or "")[:300]
+    body = render(action.body, context) or ""
+    preview: dict[str, Any] = {"type": "notify_provider", "subject": subject}
+    if dry_run and not context.get("entity_id"):
+        return preview | {"ok": True, "detail": PROVIDER_DRY_RUN}
+    ticket = await _ticket_of(context, session, "Information an Dienstleister")
+    contact_id = action.contact_id
+    if contact_id is None:
+        if ticket.property_id is None:
+            raise ActionError("Das Ticket hat kein Objekt; Dienstleister nicht bestimmbar.")
+        today = local_today()
+        relation = await session.scalar(
+            select(ServiceProviderRelation)
+            .where(
+                ServiceProviderRelation.property_id == ticket.property_id,
+                ServiceProviderRelation.contract_type_code == action.contract_type_code,
+                or_(
+                    ServiceProviderRelation.valid_to.is_(None),
+                    ServiceProviderRelation.valid_to >= today,
+                ),
+                ServiceProviderRelation.valid_from <= today,
+            )
+            .order_by(ServiceProviderRelation.valid_from.desc())
+            .limit(1)
+        )
+        if relation is None:
+            raise ActionError("Kein aktiver Dienstleister für diese Vertragsart am Objekt.")
+        contact_id = relation.contact_id
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
+        raise ActionError("Dienstleister nicht gefunden.")
+    address = await session.scalar(
+        select(ContactEmail.email)
+        .where(ContactEmail.contact_id == contact_id)
+        .order_by(ContactEmail.is_primary.desc(), ContactEmail.created_at)
+        .limit(1)
+    )
+    if not address:
+        raise ActionError("Der Dienstleister hat keine E-Mail-Adresse.")
+    preview["to_addresses"] = [address]
+    if dry_run:
+        return preview | {"ok": True, "detail": PROVIDER_DRY_RUN}
+    mailbox = await default_mailbox(session, tenant_id)
+    draft = Message(
+        tenant_id=tenant_id,
+        created_by=None,
+        direction="out",
+        status="draft",
+        mailbox_id=mailbox.id if mailbox else None,
+        to_addresses=[address],
+        subject=subject,
+        body=body,
+        contact_id=contact.id,
+        property_id=ticket.property_id,
+        ticket_id=ticket.id,
+        attachment_document_ids=[],
+    )
+    session.add(draft)
+    await session.flush()
+    session.add(
+        TicketEvent(
+            tenant_id=tenant_id,
+            ticket_id=ticket.id,
+            kind="automation",
+            user_id=None,
+            data={
+                "rule_id": str(rule.id),
+                "rule_name": rule.name,
+                "action": "notify_provider",
+                "message_id": str(draft.id),
+            },
+        )
+    )
+    return preview | {
+        "ok": True,
+        "entity_type": "message",
+        "entity_id": str(draft.id),
+        "detail": "Entwurf an den Dienstleister angelegt (Freigabe und Versand bleiben manuell).",
+    }
+
+
 async def _letter_draft(
     session: AsyncSession,
     *,
@@ -1600,6 +1783,20 @@ async def _execute_one(
             action=action,
             context=context,
             dry_run=dry_run,
+        )
+    if isinstance(action, SetFieldAction):
+        return await _set_field(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            event_id=event_id,
+            action=action,
+            context=context,
+            dry_run=dry_run,
+        )
+    if isinstance(action, NotifyProviderAction):
+        return await _notify_provider(
+            session, tenant_id=tenant_id, rule=rule, action=action, context=context, dry_run=dry_run
         )
     return await _set_ticket_field(
         session,

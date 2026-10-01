@@ -185,11 +185,33 @@ async def list_representations(
     account_id: uuid.UUID | None = None,
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    from mhvp.platform.models import User
+
     async with tenant_tx(request, principal) as session:
         query = select(PortalRepresentation).order_by(PortalRepresentation.valid_from.desc())
         if account_id is not None:
             query = query.where(PortalRepresentation.account_id == account_id)
-        return [_rep_out(r) for r in (await session.scalars(query)).all()]
+        reps = (await session.scalars(query)).all()
+        # Representative (portal account) of each row for the CRM (M21-05): contact and login
+        # address of the account; nothing else of the account or the user is exposed.
+        accounts = {
+            account.id: (account.contact_id, email)
+            for account, email in (
+                await session.execute(
+                    select(PortalAccount, User.email)
+                    .join(User, User.id == PortalAccount.user_id)
+                    .where(PortalAccount.id.in_({r.account_id for r in reps}))
+                )
+            ).all()
+        }
+        out = []
+        for r in reps:
+            contact_id, email = accounts.get(r.account_id, (None, None))
+            out.append(
+                _rep_out(r)
+                | {"representative_contact_id": contact_id, "representative_email": email}
+            )
+        return out
 
 
 @admin.post("/representations", status_code=201, summary="Vertreter mit Vollmacht anlegen")

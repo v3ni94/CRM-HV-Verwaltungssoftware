@@ -27,6 +27,7 @@ const KINDS = [
   "note_follow_up",
   "meeting",
   "ticket_due",
+  "work_order_appointment",
   // Rule WS-01: user created deadlines from the type catalogue.
   "custom_deadline",
   // Manual calendar entries with reminders (recurring ones per occurrence), computed on read.

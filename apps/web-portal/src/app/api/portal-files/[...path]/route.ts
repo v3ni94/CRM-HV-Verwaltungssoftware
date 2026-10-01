@@ -13,6 +13,8 @@ const ALLOWED: RegExp[] = [
   new RegExp(`^portal/handover/${ID}/documents/${ID}/thumbnail$`),
   new RegExp(`^portal/handover/${ID}/pdf$`),
   new RegExp(`^portal/documents/${ID}/download$`),
+  // M24-03: Einzelabrechnung Hausgeld (PDF) des Eigentümers nach Freigabe.
+  new RegExp(`^portal/owner/statements/${ID}/units/${ID}/pdf$`),
   // Anlage eines Aushangs (Schwarzes Brett, A54); visibility follows the notice.
   new RegExp(`^portal/notices/${ID}/document$`),
   // Beleg eines Prüfauftrags (A52): nur freigegebene Belege, Abruf als Indiz vermerkt.

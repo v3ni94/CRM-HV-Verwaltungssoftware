@@ -74,12 +74,38 @@ DEADLINE_INTENT = re.compile(
     r"|\b(trag|leg|merk|setz).{0,160}?(frist|wiedervorlage|erinnerung).{0,160}?\b(ein|an|vor)\b",
     re.I | re.S,
 )
+# M7-03 (10.3 Werkzeuge des Chats): property proposal, filing a document, preparing a portal
+# invitation, a letter from a template.
+PROPERTY_INTENT = re.compile(
+    r"(objekt|liegenschaft|weg|haus).{0,120}?(anleg|erstell|aufnehm|neu)"
+    r"|\b(leg|nimm|erstell).{0,120}?(objekt|liegenschaft)",
+    re.I | re.S,
+)
+DOCUMENT_INTENT = re.compile(
+    r"(dokument|datei|unterlage|anhang|pdf|beleg).{0,160}?(ableg|zuordn|verknüpf|hinterleg)"
+    r"|\b(leg|ordne|verknüpfe?).{0,160}?\b(ab|zu)\b",
+    re.I | re.S,
+)
+PORTAL_INTENT = re.compile(r"portal.{0,80}?(einlad|zugang)|einladung.{0,80}?portal", re.I | re.S)
+LETTER_INTENT = re.compile(
+    r"(brief|schreiben|anschreiben).{0,160}?(erstell|erzeug|entw|vorlage|schreib)"
+    r"|vorlage.{0,160}?(brief|schreiben)"
+    r"|(erstell|erzeug|entw|schreib).{0,80}?(brief|anschreiben)",
+    re.I | re.S,
+)
+PROPERTY_FIELDS = ("number", "name", "street", "house_number", "postal_code", "city")
+MANAGEMENT_TYPES = ("rental", "hoa", "hoa_with_sev")
+
 INTENT = {
     "contact_change": CHANGE_INTENT,
     "contact_note": NOTE_INTENT,
     "ticket_create": TICKET_INTENT,
     "calendar_create": CALENDAR_INTENT,
     "deadline_create": DEADLINE_INTENT,
+    "property_create": PROPERTY_INTENT,
+    "document_file": DOCUMENT_INTENT,
+    "portal_invite_prepare": PORTAL_INTENT,
+    "letter_create": LETTER_INTENT,
 }
 APPOINTMENT_KINDS = ("uebergabe", "besichtigung", "telefonat", "vor_ort", "sonstiges")
 DEADLINE_REMINDERS = ["1d", "7d"]  # reminder codes of ``workspace.jobs.REMINDER_OFFSET_DAYS``
@@ -105,6 +131,10 @@ PERMISSIONS = {
     # is what every chat caller holds.
     "calendar_create": "ai:create",
     "deadline_create": "ai:create",
+    "property_create": "properties:create",
+    "document_file": "documents:update",
+    "portal_invite_prepare": "contacts:update",
+    "letter_create": "documents:create",
 }
 
 
@@ -305,7 +335,162 @@ def build(run: AiTaskRun) -> tuple[dict[str, Any] | None, str | None]:
             "unit_label": unit["label"] if unit else None,
             "reason": str(action.get("reason") or "")[:500],
         }, None
+    if kind == "property_create":
+        return _property(action, instruction)
+    if kind == "document_file":
+        return _document_file(run, action, found)
+    if kind in ("portal_invite_prepare", "letter_create"):
+        if mentions_bank(instruction):
+            return None, BANK_REFUSAL
+        if contact is None:
+            return None, "Für diese Aktion fehlt ein eindeutig gefundener Kontakt."
+        prop = _hits(found, refs, "property")
+        unit = _hits(found, refs, "unit")
+        payload: dict[str, Any] = {
+            "kind": kind,
+            "contact_id": contact["id"],
+            "contact_label": contact["label"],
+            "reason": str(action.get("reason") or "")[:500],
+        }
+        if kind == "letter_create":
+            payload |= {
+                "template_query": str(action.get("template") or "").strip()[:200],
+                "property_id": prop["id"] if prop else None,
+                "property_label": prop["label"] if prop else None,
+                "unit_id": unit["id"] if unit else None,
+                "unit_label": unit["label"] if unit else None,
+            }
+        return payload, None
     return None, None
+
+
+def _property(action: dict[str, Any], instruction: str) -> tuple[dict[str, Any] | None, str | None]:
+    """Property proposal (status onboarding at creation): every value must appear in the
+    user's message; the management type is one of the platform values."""
+    if mentions_bank(instruction):
+        return None, BANK_REFUSAL
+    data = action.get("property") or {}
+    values: dict[str, str | None] = {}
+    for name in PROPERTY_FIELDS:
+        value = str(data.get(name) or "").strip()
+        if value and not _stated(value, instruction):
+            return None, f"Bitte nennen Sie {PROPERTY_LABELS[name]} wörtlich in Ihrer Nachricht."
+        values[name] = value or None
+    if not values["number"] or not re.fullmatch(r"[0-9]{3}", values["number"] or ""):
+        return None, "Bitte nennen Sie die dreistellige Objektnummer in Ihrer Nachricht."
+    if not values["name"] or len(values["name"] or "") < 2:
+        return None, "Bitte nennen Sie den Namen des Objekts in Ihrer Nachricht."
+    management = str(data.get("management_type") or "")
+    if management not in MANAGEMENT_TYPES:
+        return None, "Bitte nennen Sie die Verwaltungsart (Miete, WEG oder WEG mit SEV)."
+    return {
+        "kind": "property_create",
+        **values,
+        "management_type": management,
+        "reason": str(action.get("reason") or "")[:500],
+    }, None
+
+
+PROPERTY_LABELS = {
+    "number": "die Objektnummer",
+    "name": "den Namen des Objekts",
+    "street": "die Straße",
+    "house_number": "die Hausnummer",
+    "postal_code": "die Postleitzahl",
+    "city": "den Ort",
+}
+FILE_TARGETS = ("property", "unit", "contact")
+
+
+def _document_file(
+    run: AiTaskRun, action: dict[str, Any], found: dict[str, Any] | None
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Files the documents attached to this chat message at one hit of the run (property, unit
+    or contact); never a document the model names on its own."""
+    documents = [str(d) for d in run.input_ref.get("document_ids") or []]
+    if not documents:
+        return None, "Bitte hängen Sie das Dokument an Ihre Nachricht an."
+    refs = [str(r) for r in action.get("refs") or []]
+    target = next(((t, h) for t in FILE_TARGETS if (h := _hits(found, refs, t)) is not None), None)
+    if target is None:
+        return None, "Für die Ablage fehlt ein eindeutig gefundenes Objekt, Einheit oder Kontakt."
+    type_, hit = target
+    return {
+        "kind": "document_file",
+        "document_ids": documents[:20],
+        "entity_type": type_,
+        "entity_id": hit["id"],
+        "entity_label": hit["label"],
+        "reason": str(action.get("reason") or "")[:500],
+    }, None
+
+
+async def enrich(session: Any, payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    """Checks that need the database (M7-03), in the job's session under RLS: the letter
+    template must be an active template named in the request; the portal invitation needs an
+    e-mail address in the contact file and no existing portal account."""
+    from sqlalchemy import func, or_, select
+
+    kind = payload.get("kind")
+    if kind == "letter_create":
+        from mhvp.documents.models import DocumentTemplate
+
+        query = str(payload.get("template_query") or "").strip()
+        if not query:
+            return None, "Bitte nennen Sie die Briefvorlage (Name oder Code)."
+        rows = (
+            await session.scalars(
+                select(DocumentTemplate)
+                .where(
+                    DocumentTemplate.active.is_(True),
+                    or_(
+                        func.lower(DocumentTemplate.code) == query.lower(),
+                        DocumentTemplate.name.ilike(f"%{query}%"),
+                    ),
+                )
+                .order_by(DocumentTemplate.code, DocumentTemplate.version.desc())
+            )
+        ).all()
+        latest = {r.code: r for r in reversed(rows)}
+        if len(latest) != 1:
+            return None, (
+                "Keine aktive Briefvorlage gefunden. Bitte nennen Sie den Namen der Vorlage."
+                if not latest
+                else "Mehrere Briefvorlagen passen. Bitte nennen Sie die Vorlage genauer."
+            )
+        template = next(iter(latest.values()))
+        return {
+            **payload,
+            "template_id": str(template.id),
+            "template_label": template.name,
+        }, None
+    if kind == "portal_invite_prepare":
+        from mhvp.contacts.models import ContactEmail
+        from mhvp.portal.models import PortalAccount
+
+        contact_id = uuid.UUID(str(payload["contact_id"]))
+        if await session.scalar(
+            select(PortalAccount.id).where(PortalAccount.contact_id == contact_id)
+        ):
+            return None, "Für den Kontakt besteht bereits ein Portalzugang."
+        email = await session.scalar(
+            select(ContactEmail.email)
+            .where(ContactEmail.contact_id == contact_id)
+            .order_by(ContactEmail.is_primary.desc(), ContactEmail.created_at)
+            .limit(1)
+        )
+        if not email:
+            return (
+                None,
+                "Der Kontakt hat keine E-Mail-Adresse; bitte zuerst in der Kontaktakte erfassen.",
+            )
+        return {**payload, "email_masked": _mask_email(str(email))}, None
+    return payload, None
+
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    return f"{local[:1]}***@{domain}" if domain else "***"
 
 
 def proposal(run: AiTaskRun, payload: dict[str, Any], provider_used: str | None) -> AiProposal:

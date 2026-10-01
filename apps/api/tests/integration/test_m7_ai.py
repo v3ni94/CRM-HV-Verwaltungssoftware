@@ -347,7 +347,8 @@ def test_contact_list_to_contacts_and_undo(
             headers=admin,
         )
     )
-    assert applied["summary"] == {"contacts_created": 2, "linked_existing": 1}
+    summary = {k: v for k, v in applied["summary"].items() if k != "next_steps"}  # M7-04
+    assert summary == {"contacts_created": 2, "linked_existing": 1}
     assert [i["entity_type"] for i in applied["items"]] == ["contact", "party", "contact", "party"]
     found = _ok(client.get("/api/v1/contacts", params={"q": f"Muster{RUN}"}, headers=admin), 200)
     assert found["total"] == 1
@@ -705,7 +706,8 @@ def test_answer_question_budget_lock_and_failures(
     assert run["status"] == "succeeded"
     assert run["model"] == "claude-haiku-4-5"  # small tier for questions (9.3)
     assert f"Hausordnung {RUN}" in fake.calls[-1]["messages"][0]["content"]
-    fake.queue += [{"summary": 1}, {"summary": 2}]
+    # Small tier schema error, retry, then the cascade to large (M7-08) fails the same way.
+    fake.queue += [{"summary": 1}, {"summary": 2}, {"summary": 3}, {"summary": 4}]
     failed = _chat(client, admin, "summarize", "Fasse zusammen", [])
     assert failed["status"] == "failed"
     assert failed["error"].startswith("Schemafehler")
@@ -1194,7 +1196,8 @@ def test_d57_instruction_in_contacts_and_property_output_has_no_effect(
             headers=admin,
         )
     )
-    assert applied["summary"] == {"contacts_created": 0, "linked_existing": 1}
+    summary = {k: v for k, v in applied["summary"].items() if k != "next_steps"}  # M7-04
+    assert summary == {"contacts_created": 0, "linked_existing": 1}
     assert applied["items"] == []
     after = _ok(client.get(f"/api/v1/contacts/{existing['id']}", headers=admin), 200)
     assert after["version"] == existing["version"]

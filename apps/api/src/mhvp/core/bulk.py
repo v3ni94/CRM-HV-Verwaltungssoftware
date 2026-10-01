@@ -12,6 +12,8 @@ from pydantic import BaseModel
 
 from mhvp.core.problems import ProblemError
 
+BULK_MAX_ITEMS = 500
+
 
 class BulkItemOut(BaseModel):
     id: uuid.UUID

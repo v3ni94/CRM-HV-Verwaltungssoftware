@@ -78,7 +78,8 @@
       "label": "Main navigation",
       "submissions": "Board submissions",
       "security": "Security",
-      "handover": "Handover"
+      "handover": "Handover",
+      "ownerStatements": "Annual statement"
     },
     "notifications": {
       "title": "Notifications",
@@ -112,7 +113,15 @@
     "loading": "Loading content",
     "notFoundTitle": "Page not found",
     "notFoundHint": "The requested page does not exist or is not available to your account.",
-    "toStart": "To the overview"
+    "toStart": "To the overview",
+    "roleSwitch": {
+      "label": "View",
+      "tenant_resident": "Tenant",
+      "owner": "Owner",
+      "board_member": "Board member",
+      "service_provider": "Service provider",
+      "all": "All roles"
+    }
   },
   "Documents": {
     "title": "Documents",
@@ -124,7 +133,19 @@
     "readNote": "The status New or Read shows whether you opened the document. It is an indication, not a delivery.",
     "handoversTitle": "Handover protocols",
     "handoversEmpty": "No handover protocols available.",
-    "handoverDate": "Handover on"
+    "handoverDate": "Handover on",
+    "search": "Search",
+    "searchPlaceholder": "Title or file name",
+    "sort": "Sort",
+    "sortCreatedDesc": "Newest first",
+    "sortCreatedAsc": "Oldest first",
+    "sortTitleAsc": "Title A to Z",
+    "sortTitleDesc": "Title Z to A",
+    "apply": "Apply",
+    "bundleDownload": "Bundle download ({count} selected)",
+    "selectAll": "Select all",
+    "select": "Select {title}",
+    "bundleError": "The bundle download failed. Please try again."
   },
   "Tickets": {
     "title": "Reports",
@@ -320,7 +341,9 @@
     "appointmentRequired": "Please select an appointment.",
     "reportRequired": "Please enter the completion report.",
     "invoiceFieldsRequired": "Please enter invoice number, invoice date and invoice amount.",
-    "orderTitle": "Work order"
+    "orderTitle": "Work order",
+    "einvoiceXml": "Read e-invoice from XML (optional)",
+    "einvoiceHelp": "Number, date and gross amount are proposed from the file. Please check before submitting."
   },
   "Handover": {
     "title": "Handover protocols",
@@ -835,7 +858,18 @@
       "cancel": "Cancel",
       "statementSaved": "The statement has been saved."
     },
-    "costTableCaption": "Cost items of the audit engagement"
+    "costTableCaption": "Cost items of the audit engagement",
+    "context": {
+      "show": "Show context",
+      "booking": "Booking",
+      "invoice": "Invoice",
+      "service": "Service period",
+      "order": "Order",
+      "contract": "Contract",
+      "payment": "Payment",
+      "allocation": "Allocation key",
+      "previousYear": "Previous year (actual, previous, difference)"
+    }
   },
   "Forms": {
     "title": "Forms",
@@ -932,7 +966,13 @@
     "payee": "Payee and account of the community",
     "ticketsTitle": "Reports on the property",
     "ticketsEmpty": "No reports released for owners.",
-    "toAccount": "To the fee account"
+    "toAccount": "To the fee account",
+    "ownShare": "Your share, unit {unit}",
+    "perMonth": "per month",
+    "allocationsTitle": "Allocation properties",
+    "unit": "Unit",
+    "noValue": "no value on file",
+    "incomeTitle": "Rental income per property (agreed rent)"
   },
   "SupportConsent": {
     "title": "Access by the management",
@@ -942,5 +982,13 @@
     "grant": "Grant consent",
     "revoke": "Withdraw consent",
     "active": "The management may view your account read only until {until}."
+  },
+  "OwnerStatements": {
+    "title": "Annual statement",
+    "ownersOnly": "This page is for owners only.",
+    "empty": "No released individual statement yet.",
+    "row": "Individual statement {year}, unit {unit}",
+    "version": "Version {version}",
+    "download": "Download PDF"
   }
 }

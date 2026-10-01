@@ -200,7 +200,7 @@ def test_ticket_fields_building_dates_visibility(client: TestClient, world: Worl
     assert ticket["building_id"] == building["id"]
     assert ticket["follow_up_date"] == "2026-10-20"
     assert ticket["external_comments"] == "to_manager"
-    assert ticket["external_attachments"] == "none"
+    assert ticket["external_attachments"] == "open"
     patched = _ok(
         client.patch(
             f"/api/v1/tickets/{ticket['id']}",

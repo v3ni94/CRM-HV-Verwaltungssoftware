@@ -175,3 +175,13 @@ account, `bank_connection_id`; IBAN, kind and legal entity stay fixed), `PATCH
 `images` (document ids, checked against the tenant) on the property, `photo_document_id` on meter
 readings, `bank_connection_id` on bank accounts (migration 0265). Rule:
 `docs/rules/P16-stammdaten-pflege.md`.
+
+## Checkliste Objektübernahme (M7-01)
+
+`GET/POST /properties/{id}/takeover-checklist`, `PATCH .../takeover-checklist/{category}`.
+Sieben Kategorien (Legitimation, Bankvollmachten, Versicherungen, Dienstleisterverträge,
+Zähler, Rücklagenstände, offene Posten) mit Status offen, angefordert, erhalten, nicht
+zutreffend. Anlegen ist idempotent. Anzeige im CRM am Objekt (`TakeoverChecklist`).
+Aufgabenerzeugung für fehlende Punkte ist noch nicht umgesetzt.
+
+Paket Q05 (Welle 3): CRM-Oberflächen für die Historie der Umsatzsteueroptionen (Einheitenseite), die Bildgalerie (Feld `images`, Änderung per `PATCH /properties/{id}` mit If-Match, Upload über `POST /documents` mit Verknüpfung `property`) und die Belegungsliste mit Stichtag (`GET /properties/{id}/occupancy`). Regel: `docs/rules/Q05-crm-oberflaechen.md`.

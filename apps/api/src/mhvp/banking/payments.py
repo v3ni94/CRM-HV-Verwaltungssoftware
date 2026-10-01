@@ -86,6 +86,12 @@ async def invalidate(session: AsyncSession, order: PaymentOrder) -> None:
         a.invalidated_at = now
     if order.status is OrderStatus.APPROVED:
         order.status = OrderStatus.DRAFT
+    # S69-02: persist the fall back on the central decisions as well.
+    from mhvp.accounting import approval_decisions
+
+    await approval_decisions.invalidate(
+        session, "payment_order", order.id, current_hash=None, reason="Auftrag geändert"
+    )
     await session.flush()
 
 
@@ -236,8 +242,8 @@ async def _identity(
     session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID
 ) -> tuple[str | None, uuid.UUID | None]:
     """(e-mail, linked contact) of a user in the tenant, the features the platform can compare
-    to tell two accounts of one person apart (6.9.9, D36). The limit of this check is documented
-    under M15-02: one person with two separate contacts is not detectable here."""
+    to tell two accounts of one person apart (6.9.9, D36). One person with two separate contacts
+    is not blocked here; ``mhvp.accounting.approval_decisions.person_warnings`` warns (S69-03)."""
     from mhvp.platform.models import Membership, User
 
     row = (
@@ -299,15 +305,36 @@ async def approve(
         return order  # repeated click (B08)
     # The creator may be one of the two approvers; the two approvers must be two persons (D36).
     await ensure_different_person(session, order, user_id, {a.user_id for a in valid})
-    session.add(
-        PaymentApproval(
-            tenant_id=order.tenant_id,
-            order_id=order.id,
-            user_id=user_id,
-            snapshot_hash=snapshot(order),
-        )
+    from mhvp.accounting import approval_decisions
+
+    current = snapshot(order)
+    # S69-02: decisions on an older snapshot fall back persistently (status invalidated).
+    await approval_decisions.invalidate(
+        session, "payment_order", order.id, current_hash=current, reason="Auftrag geändert"
     )
+    # S69-03: same person with two separate contacts, warning only.
+    warnings = await approval_decisions.person_warnings(
+        session, order.tenant_id, user_id, {a.user_id for a in valid}
+    )
+    legacy = PaymentApproval(
+        tenant_id=order.tenant_id,
+        order_id=order.id,
+        user_id=user_id,
+        snapshot_hash=current,
+    )
+    session.add(legacy)
     await session.flush()
+    await approval_decisions.record(
+        session,
+        tenant_id=order.tenant_id,
+        subject_type="payment_order",
+        subject_id=order.id,
+        step="approval",
+        user_id=user_id,
+        snapshot_hash=current,
+        legacy_ref_id=legacy.id,
+        warnings=warnings,
+    )
     if len({a.user_id for a in await valid_approvals(session, order)}) >= REQUIRED_APPROVALS:
         order.status = OrderStatus.APPROVED
     await session.flush()

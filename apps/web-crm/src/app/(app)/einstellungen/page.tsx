@@ -15,6 +15,7 @@ export default async function SettingsPage() {
   const t = await getTranslations("Settings");
   const tw = await getTranslations("Webhooks");
   const tm = await getTranslations("Metering");
+  const tq = await getTranslations("SettingsQ05");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
@@ -28,6 +29,8 @@ export default async function SettingsPage() {
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/aufbewahrung", title: t("retention.title"), description: t("retention.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/dokumentkategorien", title: t("documentCategories.title"), description: t("documentCategories.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/datenschutz", title: t("privacy.title"), description: t("privacy.description"), show: can("privacy:read") },
     { href: "/dokumente/loeschvorschlaege", title: t("deletionProposals.title"), description: t("deletionProposals.description"), show: can("documents:read") },
     { href: "/einstellungen/bank", title: t("bank.title"), description: t("bank.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/telefonie", title: t("telephony.title"), description: t("telephony.description"), show: can("tenant_settings:read") },
@@ -101,6 +104,8 @@ export default async function SettingsPage() {
       description: t("objektakte.description"),
       show: can("documents:read"),
     },
+    { href: "/einstellungen/teams", title: tq("teams.title"), description: tq("teams.description"), show: can("tickets:read") },
+    { href: "/einstellungen/kontakt-tags", title: tq("contactTags.title"), description: tq("contactTags.description"), show: can("contacts:read") },
     { href: "/einstellungen/profil", title: t("profile.title"), description: t("profile.description"), show: true },
     { href: "/plattform", title: t("platform.title"), description: t("platform.description"), show: Boolean(me.data?.is_platform_admin) },
   ].filter((c) => c.show);

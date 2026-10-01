@@ -24,7 +24,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.ai import instructions as chat_instructions
-from mhvp.ai import lookup, providers, table_mapper, tasks
+from mhvp.ai import journal_history, lookup, providers, table_mapper, tasks
 from mhvp.ai.journal_history import journal_examples
 from mhvp.ai.masking import mask_personal_data
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
@@ -80,6 +80,7 @@ MASKED_TASKS: frozenset[AiTask] = frozenset(
         AiTask.CLASSIFY_DOCUMENT,
         AiTask.DRAFT_REPLY,
         AiTask.CALL_SUMMARY,
+        AiTask.RENT_INCREASE_CHECK,
     }
 )
 # Fast table import (M7-06): deterministic column mapping instead of sending every row to the
@@ -739,6 +740,34 @@ async def posting_block_reason(session: AsyncSession) -> str | None:
     return None
 
 
+BUDGET_BLOCK_MARK = "Monatsbudget erreicht"
+BUDGET_BLOCK_KIND = "ai.budget_blocked"
+BUDGET_BLOCK_PERMISSION = "tenant_settings:update"
+
+
+async def notify_budget_block(session: AsyncSession, tenant_id: uuid.UUID, reason: str) -> int:
+    """Hard budget stop with notification (9.1, M7-09): every member allowed to change the AI
+    settings gets one unread notification per tenant (``workspace.services.notify`` is
+    idempotent on the unread notification of the same subject). Returns the number created."""
+    from mhvp.banking.tasks import users_with_permission
+    from mhvp.workspace.services import notify
+
+    count = 0
+    for user_id in await users_with_permission(session, tenant_id, BUDGET_BLOCK_PERMISSION):
+        created = await notify(
+            session,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            kind=BUDGET_BLOCK_KIND,
+            title="KI gesperrt: Monatsbudget erreicht",
+            body=reason[:1000],
+            target_type="ai_usage",
+            target_id=tenant_id,
+        )
+        count += 1 if created is not None else 0
+    return count
+
+
 async def _provider_order(session: AsyncSession, strategy: str) -> list[AiProvider]:
     """Preferred provider first; "alternate" starts with the provider not used last."""
     if strategy in ONLY:
@@ -865,6 +894,92 @@ async def route(session: AsyncSession, task: AiTask) -> Route:
 def cost(route_: Route, tokens_in: int, tokens_out: int) -> Decimal:
     # Cache reads are priced like normal input here: an upper bound for the budget check.
     return (Decimal(tokens_in) * route_.price_in + Decimal(tokens_out) * route_.price_out) / MTOK
+
+
+# Cascade small to large (9.3, M7-08) ----------------------------------------------------------
+# The operator enters the confidence threshold per provider in the small tier entry
+# (``models.small.cascade_confidence_below``, a decimal between 0 and 1); without it only a
+# schema error escalates. Nothing here invents a threshold.
+CASCADE_KEY = "cascade_confidence_below"
+CASCADE_REASON_SCHEMA = "Schemafehler im kleinen Modell"
+CASCADE_REASON_CONFIDENCE = "Konfidenz unter Schwelle"
+
+
+def cascade_threshold(route_: Route) -> Decimal | None:
+    """Operator threshold of the small tier, ``None`` when unset or unusable."""
+    entry = (route_.config.models or {}).get(route_.tier) or {}
+    value = entry.get(CASCADE_KEY)
+    if value is None:
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except ArithmeticError:
+        return None
+    return parsed if Decimal(0) < parsed <= Decimal(1) else None
+
+
+def large_route_of(route_: Route) -> Route | None:
+    """The "large" tier of the same provider, or ``None`` when not configured."""
+    entry = (route_.config.models or {}).get("large") or {}
+    try:
+        price_in = Decimal(str(entry["input_eur_per_mtok"]))
+        price_out = Decimal(str(entry["output_eur_per_mtok"]))
+        model = str(entry["model"])
+    except (KeyError, ArithmeticError):
+        return None
+    context_tokens = entry.get("context_tokens")
+    return Route(
+        route_.config,
+        model,
+        price_in,
+        price_out,
+        tier="large",
+        context_tokens=int(context_tokens) if context_tokens is not None else None,
+        max_output_tokens=max_output_tokens_of(entry),
+    )
+
+
+def output_confidence(task: AiTask, data: dict[str, Any] | None) -> Decimal | None:
+    """Confidence of an output: per item mean (``confidence_of``) or a top level field."""
+    if not data:
+        return None
+    value = confidence_of(task, data)
+    if value is not None:
+        return value
+    top = data.get("confidence")
+    if isinstance(top, int | float) and not isinstance(top, bool):
+        return Decimal(str(round(min(max(float(top), 0.0), 1.0), 8)))
+    return None
+
+
+def cascade_reason(
+    task: AiTask, route_: Route, output: dict[str, Any] | None, error: str | None
+) -> str | None:
+    """Why the small tier's answer escalates to large (9.3), or ``None``."""
+    if route_.tier != "small":
+        return None
+    if output is None:
+        return CASCADE_REASON_SCHEMA if error and error.startswith("Schemafehler") else None
+    threshold = cascade_threshold(route_)
+    found = output_confidence(task, output)
+    if threshold is not None and found is not None and found < threshold:
+        return CASCADE_REASON_CONFIDENCE
+    return None
+
+
+def stage_record(
+    route_: Route, tokens_in: int, tokens_out: int, reason: str | None
+) -> dict[str, Any]:
+    """One cascade stage with its own cost (separate accounting per tier, M7-08)."""
+    return {
+        "tier": route_.tier,
+        "provider": route_.config.provider.value,
+        "model": route_.model,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "cost_eur": str(cost(route_, tokens_in, tokens_out)),
+        "reason": reason,
+    }
 
 
 def input_hash(task: AiTask, version: str, text: str, context: dict[str, Any]) -> str:
@@ -1542,6 +1657,8 @@ async def execute(
                     fast_table = None  # no usable route for the mapping call: silent fallback
         except GatewayBlockedError as exc:
             run.status, run.error = RunStatus.BLOCKED, str(exc)
+            if BUDGET_BLOCK_MARK in str(exc):
+                await notify_budget_block(session, tenant_id, str(exc))
             await emit(
                 session,
                 tenant_id=tenant_id,
@@ -1575,6 +1692,8 @@ async def execute(
         if task is AiTask.PROPOSE_POSTING:
             # M8-05: comparable entries of the migrated journal as read only few shot examples.
             shots = [*shots, *await journal_examples(session, item.text)]
+            # M8-05: historical bank assignments (migrated_bank_link) as learning examples.
+            shots = [*shots, *await journal_history.bank_examples(session, item.text)]
         keys = {c.config.provider: c.config.api_key or "" for c, _, _ in [*plan, *map_plan]}
         chosen, spent, budget = plan[0]
         total_parts = len(item.chunks) if item.chunks else 1
@@ -1602,6 +1721,8 @@ async def execute(
 
     outputs: list[dict[str, Any]] = []
     fast_used = False
+    cascade_stages: list[dict[str, Any]] = []
+    cascade_cost: Decimal | None = None
     if fast_table is not None:
         # Fast table import (M7-06): map_columns plus deterministic rows, only residual rows
         # (if any) go through the chunked LLM extraction below.
@@ -1696,6 +1817,41 @@ async def execute(
                 result.skips,
                 result.chosen,
             )
+            # Cascade (9.3, M7-08): a small tier answer with a schema error or a confidence
+            # below the operator threshold is asked once more with the large tier of the same
+            # provider; each stage keeps its own tokens and cost.
+            reason = cascade_reason(task, chosen, output, error)
+            large = large_route_of(chosen) if reason else None
+            if reason and large is not None:
+                first = stage_record(chosen, tokens_in, tokens_out, None)
+                messages = _messages(
+                    item.text, item.context, shots, item.instruction, masked=task in MASKED_TASKS
+                )
+                step = next(
+                    (st for st in plan if st[0].config.provider is chosen.config.provider), plan[0]
+                )
+                second = await _call_plan(
+                    [(large, step[1], step[2])],
+                    keys,
+                    prompt.system,
+                    messages,
+                    schema,
+                    task,
+                    tenant_id=tenant_id,
+                    run_id=run_id,
+                )
+                cascade_stages = [
+                    first,
+                    stage_record(large, second.tokens_in, second.tokens_out, reason),
+                ]
+                cascade_cost = cost(chosen, tokens_in, tokens_out) + cost(
+                    large, second.tokens_in, second.tokens_out
+                )
+                tokens_in += second.tokens_in
+                tokens_out += second.tokens_out
+                if second.output is not None or output is None:
+                    output, error = second.output, second.error
+                chosen = large
 
     skipped.extend(skipped_extra)
     async with tenant_transaction(factory, tenant_id) as session:
@@ -1747,7 +1903,11 @@ async def execute(
             "progress": {"stage": "Fertig", "current": total_parts, "total": total_parts},
         }
         run.tokens_in, run.tokens_out = tokens_in, tokens_out
-        run.cost_eur = cost(chosen, tokens_in, tokens_out)
+        run.cost_eur = (
+            cascade_cost if cascade_cost is not None else cost(chosen, tokens_in, tokens_out)
+        )
+        if cascade_stages:
+            run.input_ref = {**run.input_ref, "cascade": cascade_stages}
         run.duration_ms = int((time.monotonic() - started) * 1000)
         if output is not None:
             run.status, run.output = RunStatus.SUCCEEDED, output

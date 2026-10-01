@@ -7,16 +7,26 @@ from datetime import UTC, date, datetime
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.auth.scope import session_allowed_legal_entity_ids
+from mhvp.core.auth.scope import session_allowed_legal_entity_ids, session_allowed_property_ids
 from mhvp.core.escaping import content_disposition
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import (
+    LIST_PARAMS_DOC,
+    ListParams,
+    apply_filters,
+    apply_sort,
+    check_include,
+    list_params,
+    sparse,
+)
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters, mirror_deletion, retention
 from mhvp.documents import schemas as s
@@ -91,13 +101,38 @@ def _scope_filter(session: Any) -> Any:
     )
 
 
+def _property_scope_filter(session: Any) -> Any:
+    """M2-02/S16-02 (docs/rules/M2-02-objektzuordnung.md): for a membership with a property
+    assignment only documents linked to an assigned property, or to a unit, contract or ticket
+    of one, exist; returns the subquery of allowed document ids or ``None`` when unrestricted."""
+    allowed = session_allowed_property_ids(session)
+    if allowed is None:
+        return None
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import Unit
+
+    ids = list(allowed)
+    return select(DocumentLink.document_id).where(
+        or_(
+            (DocumentLink.entity_type == "property") & DocumentLink.entity_id.in_(ids),
+            (DocumentLink.entity_type == "unit")
+            & DocumentLink.entity_id.in_(select(Unit.id).where(Unit.property_id.in_(ids))),
+            (DocumentLink.entity_type == "contract")
+            & DocumentLink.entity_id.in_(select(Contract.id).where(Contract.property_id.in_(ids))),
+            (DocumentLink.entity_type == "ticket")
+            & DocumentLink.entity_id.in_(select(Ticket.id).where(Ticket.property_id.in_(ids))),
+        )
+    )
+
+
 async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     row = await session.get(model, entity_id)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     if model is Document:
-        scoped = _scope_filter(session)
-        if scoped is not None:
+        for scoped in (_scope_filter(session), _property_scope_filter(session)):
+            if scoped is None:
+                continue
             visible = await session.scalar(
                 select(Document.id).where(Document.id == entity_id, Document.id.in_(scoped))
             )
@@ -219,7 +254,32 @@ async def upload(
         return await _out(session, document)
 
 
-@router.get("/documents", summary="Dokumente suchen (Volltext)")
+_DOCUMENT_FILTERS = {
+    "category_id": Document.category_id,
+    "mime_type": Document.mime_type,
+    "source": Document.source,
+    "storage": Document.storage,
+    "text_status": Document.text_status,
+    "retention_profile_id": Document.retention_profile_id,
+    "created_by": Document.created_by,
+    "source_system": Document.source_system,
+}
+_DOCUMENT_SORT = {
+    "created_at": Document.created_at,
+    "updated_at": Document.updated_at,
+    "title": Document.title,
+    "filename": Document.filename,
+    "size": Document.size,
+    "retention_until": Document.retention_until,
+}
+
+
+@router.get(
+    "/documents",
+    summary="Dokumente suchen (Volltext)",
+    response_model=s.DocumentPage,
+    description=LIST_PARAMS_DOC,
+)
 async def list_documents(
     request: Request,
     q: str | None = Query(default=None, min_length=2, max_length=200),
@@ -233,10 +293,12 @@ async def list_documents(
     ),
     page: Page = 1,
     page_size: PageSize = 50,
+    params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
-) -> s.DocumentPage:
+) -> Any:
+    check_include(params, ())
     async with tenant_tx(request, principal) as session:
-        query = select(Document)
+        query = apply_filters(select(Document), params, _DOCUMENT_FILTERS)
         if is_draft is not None:
             # A83: a draft is marked with ``source_meta["is_draft"] = true`` (automation letters).
             query = query.where(_draft_marker() == is_draft)
@@ -264,14 +326,21 @@ async def list_documents(
         scoped = _scope_filter(session)  # A37: legal entity scope of the membership
         if scoped is not None:
             query = query.where(Document.id.in_(scoped))
+        property_scoped = _property_scope_filter(session)  # M2-02/S16-02
+        if property_scoped is not None:
+            query = query.where(Document.id.in_(property_scoped))
         total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0
         columns: list[Any] = [Document] + (
             [snippet.label("snippet")] if snippet is not None else []
         )
         rows = (
             await session.execute(
-                query.with_only_columns(*columns)
-                .order_by(Document.created_at.desc())
+                apply_sort(
+                    query.with_only_columns(*columns),
+                    params,
+                    _DOCUMENT_SORT,
+                    (Document.created_at.desc(), Document.id),
+                )
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
@@ -282,7 +351,11 @@ async def list_documents(
             hit.is_draft = bool((row[0].source_meta or {}).get("is_draft"))
             hit.snippet = row[1] if len(row) > 1 else None
             items.append(hit)
-        return s.DocumentPage(items=items, total=total, page=page, page_size=page_size)
+        return sparse(
+            s.DocumentPage(items=items, total=total, page=page, page_size=page_size),
+            params,
+            s.DocumentHit,
+        )
 
 
 def _deletions(rows: list[DocumentMirrorDeletion]) -> list[s.DocumentDeletionOut]:
@@ -364,10 +437,15 @@ async def retry_deletion(
 
 @router.get("/documents/{document_id}", summary="Dokument lesen")
 async def get_document(
-    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    document_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
-        return await _out(session, await _get(session, Document, document_id))
+        document = await _get(session, Document, document_id)
+        response.headers["ETag"] = etag_of(document.updated_at)  # S12-04
+        return await _out(session, document)
 
 
 @router.get(
@@ -438,15 +516,32 @@ async def patch_document(
     document_id: uuid.UUID,
     body: s.DocumentPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
+        check_if_match(if_match, document.updated_at)
         changes = body.model_dump(exclude_unset=True)
+        if "permanent_record" in changes:
+            # S711-06: the permanent record flag is only ever cleared with documents:approve.
+            if changes["permanent_record"] is None:
+                raise svc.invalid("permanent_record ist true oder false.")
+            if (
+                document.permanent_record
+                and not changes["permanent_record"]
+                and not principal.has("documents:approve")
+            ):
+                raise ProblemError(
+                    ErrorCodes.FORBIDDEN,
+                    detail="Die Kennzeichnung als Dauerunterlage hebt nur die Freigabe auf.",
+                )
         if changes.get("category_id"):
             await _get(session, DocumentCategory, changes["category_id"])
         if changes.get("retention_profile_id"):
             await _get(session, RetentionProfile, changes["retention_profile_id"])
+        before_roles = set(document.visibility or []) - {"internal"}
         for key, value in changes.items():
             setattr(document, key, value)
         # Retention matrix (M6-04): a new category takes the mapped profile, a new profile or
@@ -462,7 +557,16 @@ async def patch_document(
             if profile is not None:
                 await retention.assign_profile(session, document, profile)
         await _event(session, principal, "document.updated", document.id, fields=sorted(changes))
+        added_roles = sorted(set(document.visibility or []) - {"internal"} - before_roles)
+        if "visibility" in changes and added_roles:
+            # S12-01: newly released for portal roles (tenant, owner, provider, board).
+            await _event(
+                session, principal, "document.shared", document.id, roles=",".join(added_roles)
+            )
         await svc.mark_mirrors_dirty(session, document.id)
+        await session.flush()
+        await session.refresh(document, ["updated_at"])
+        response.headers["ETag"] = etag_of(document.updated_at)
         return await _out(session, document)
 
 
@@ -523,7 +627,15 @@ async def set_hold(
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
         document.retention_hold_reason = body.reason
-        await _event(session, principal, "document.hold_set", document.id, reason=body.reason)
+        document.retention_hold_kind = body.kind or "other"
+        await _event(
+            session,
+            principal,
+            "document.hold_set",
+            document.id,
+            reason=body.reason,
+            kind=document.retention_hold_kind,
+        )
         return await _out(session, document)
 
 
@@ -538,6 +650,7 @@ async def clear_hold(
         document = await _get(session, Document, document_id)
         previous = document.retention_hold_reason
         document.retention_hold_reason = None
+        document.retention_hold_kind = None
         await _event(
             session,
             principal,
@@ -1561,3 +1674,9 @@ async def dms_document_file(
         return StreamingResponse(
             iter([file.content]), media_type=file.content_type, headers=headers
         )
+
+
+# Wave 3 (Q03): presigned transfer, ZIP import, redactions, intake address, Drive changes.
+from mhvp.documents.transfer_routers import router as _transfer_router  # noqa: E402
+
+router.include_router(_transfer_router)

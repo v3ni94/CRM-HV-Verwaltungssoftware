@@ -10,6 +10,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
 import { ATTENTION_BORDER, type Attention } from "@/components/tickets/attention";
 import { AttentionBadge, AttentionLegend } from "@/components/tickets/TicketAttention";
+import { TicketBulkAssign } from "@/components/tickets/TicketBulkAssign";
 import { TicketProcessBadge } from "@/components/tickets/TicketProcessBadge";
 import { STATUSES } from "@/components/tickets/TicketForms";
 import { bff } from "@/lib/bff";
@@ -211,6 +212,15 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
           <button type="button" className={ui.primary} disabled={busy || overLimit} onClick={() => void applyBulk()}>
             {t("bulkStatusApply")}
           </button>
+          <TicketBulkAssign
+            ids={selectedIds}
+            disabled={busy || overLimit}
+            onDone={(changed) => {
+              setResult({ changed, failed: [] });
+              setSelected(new Set());
+              router.refresh();
+            }}
+          />
           {!canApprove ? <span className="text-xs text-muted">{t("bulkLimitHint")}</span> : null}
           {overLimit ? (
             <span role="alert" className="text-xs text-danger-fg">

@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { formatEur } from "@/components/portal/HoaAccountTable";
-import type { OwnerTicket, PaymentResolution } from "@/components/portal/types";
+import type { OwnerAllocationUnit, OwnerRentalIncome, OwnerTicket, PaymentResolution } from "@/components/portal/types";
 import { ui } from "@/lib/ui";
 
 /** Eigentümerübersicht (M21-06, SA-05), lesend: beschlossene Zahlungen der Gemeinschaft mit
@@ -15,10 +15,14 @@ export function OwnerOverview({
   payments,
   note,
   tickets,
+  allocations = [],
+  income = [],
 }: {
   payments: PaymentResolution[];
   note: string;
   tickets: OwnerTicket[];
+  allocations?: OwnerAllocationUnit[];
+  income?: OwnerRentalIncome[];
 }) {
   const t = useTranslations("OwnerOverview");
   const format = useFormatter();
@@ -57,6 +61,16 @@ export function OwnerOverview({
                 </span>
               ) : null}
               {p.purpose ? <span>{p.purpose}</span> : null}
+              {(p.own_share ?? []).map((share) => (
+                <span key={share.unit_number} data-testid="owner-share">
+                  {t("ownShare", { unit: share.unit_number })}:{" "}
+                  {share.amount
+                    ? `${formatEur(share.amount)}${share.instalments ? `, ${t("instalments", { count: share.instalments })}` : ""}`
+                    : Object.entries(share.monthly ?? {})
+                        .map(([component, value]) => `${component} ${formatEur(value)} ${t("perMonth")}`)
+                        .join(", ")}
+                </span>
+              ))}
               {p.sepa ? (
                 <span className="break-all" data-testid="owner-sepa">
                   {t("payee")}: {p.sepa.holder}, {p.sepa.iban}
@@ -67,6 +81,48 @@ export function OwnerOverview({
           ))}
         </ul>
       </section>
+      {allocations.length > 0 ? (
+        <section className="flex flex-col gap-3" aria-labelledby="owner-allocations">
+          <h2 id="owner-allocations" className={ui.h2}>
+            {t("allocationsTitle")}
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {allocations.map((unit) => (
+              <li key={unit.unit_id} className={`${ui.card} flex flex-col gap-1 text-sm`}>
+                <span className="font-medium">
+                  {unit.property_name}, {t("unit")} {unit.unit_number}
+                </span>
+                {unit.keys.map((k) => (
+                  <span key={k.code}>
+                    {k.name}: {k.value ?? t("noValue")} {k.value ? k.unit_of_measure : ""}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {income.length > 0 ? (
+        <section className="flex flex-col gap-3" aria-labelledby="owner-income">
+          <h2 id="owner-income" className={ui.h2}>
+            {t("incomeTitle")}
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {income.map((row) => (
+              <li key={row.property_id} className={`${ui.card} flex flex-col gap-1 text-sm`}>
+                <span className="font-medium">
+                  {row.property_name}: {formatEur(row.total_gross)} {t("perMonth")}
+                </span>
+                {row.units.map((u) => (
+                  <span key={u.unit_number}>
+                    {t("unit")} {u.unit_number}: {formatEur(u.gross)}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <section className="flex flex-col gap-3" aria-labelledby="owner-tickets">
         <h2 id="owner-tickets" className={ui.h2}>
           {t("ticketsTitle")}

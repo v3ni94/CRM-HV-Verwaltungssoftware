@@ -60,3 +60,44 @@ describe("RecurringPlansPanel", () => {
     expect(await screen.findByText("beendet zum 01.03.2026")).toBeInTheDocument();
   });
 });
+
+describe("Q02 creditor sync and plan edit", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("syncs creditor accounts and reloads the list", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => jsonResponse([]))
+      .mockImplementationOnce(async () => jsonResponse({ created: 2, linked: 1 }))
+      .mockImplementationOnce(async () => jsonResponse([{ account_id: ACC, number: "070001", name: "Neu GmbH", balance: "0.00", open_items: 0, open_amount: "0.00", invoices: 0 }]));
+    renderIntl(<CreditorsPanel ledgers={[{ id: "l1", label: "WEG" }]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Kreditorenkonten anlegen" }));
+    expect(await screen.findByText("2 Konten angelegt, 1 verknüpft.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/bff/accounting/ledgers/l1/sync-creditors");
+    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("POST");
+    expect(await screen.findByText("Neu GmbH")).toBeInTheDocument();
+  });
+
+  it("edits a plan with PATCH and validates the amount", async () => {
+    const plan = { id: PLAN, text: "Wartung", gross: "119.00", vat_percent: "19.00", interval_months: 1, start_date: "2026-01-31", end_date: null, next_due: "2026-03-31", ended_at: null, order_reference: "V-7", anchor_day: 31, service_contract_id: null };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => jsonResponse([plan]))
+      .mockImplementationOnce(async () => jsonResponse({ ...plan, gross: "238.00" }))
+      .mockImplementationOnce(async () => jsonResponse([{ ...plan, gross: "238.00" }]));
+    renderIntl(<RecurringPlansPanel ledgers={[{ id: "l1", label: "WEG" }]} />);
+    expect(await screen.findByText(/Stichtag 31\. des Monats/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const gross = screen.getByLabelText("Brutto", { selector: "input" });
+    await userEvent.clear(gross);
+    await userEvent.type(gross, "abc");
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    await userEvent.clear(gross);
+    await userEvent.type(gross, "238,00");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Rechnungsplan gespeichert."));
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(`/api/bff/accounting/recurring-invoices/${PLAN}`);
+    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PATCH");
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toMatchObject({ gross: "238.00", text: "Wartung", interval_months: 1, order_reference: "V-7" });
+  });
+});

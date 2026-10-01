@@ -158,7 +158,12 @@ def _letter_dispatch(c: TestClient, h: dict[str, str], suffix: str) -> dict[str,
     dispatch: dict[str, Any] = _ok(
         c.post(
             "/api/v1/dispatches",
-            json={"document_id": doc["id"], "contact_id": contact["id"], "channel": "post"},
+            json={
+                "document_id": doc["id"],
+                "contact_id": contact["id"],
+                "channel": "post",
+                "submit_postal": False,
+            },
             headers=h,
         ),
         201,

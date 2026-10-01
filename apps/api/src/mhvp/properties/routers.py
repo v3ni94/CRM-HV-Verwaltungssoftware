@@ -5,10 +5,11 @@ import uuid
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,22 @@ from mhvp.contacts.services import recompute_for_party
 from mhvp.contacts.validation import mask_iban
 from mhvp.core import crypto
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_property_allowed,
+    property_path_guard,
+    session_allowed_property_ids,
+)
+from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import (
+    LIST_PARAMS_DOC,
+    ListParams,
+    apply_filters,
+    apply_sort,
+    check_include,
+    list_params,
+    sparse,
+)
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
 from mhvp.properties import schemas as s
@@ -51,7 +67,7 @@ from mhvp.properties.models import (
     UnitVatOption,
 )
 
-router = APIRouter(tags=["Objekte"])
+router = APIRouter(tags=["Objekte"], dependencies=[Depends(property_path_guard)])
 Page = Annotated[int, Query(ge=1)]
 PageSize = Annotated[int, Query(ge=1, le=200)]
 READ = require_permission("properties:read")
@@ -67,6 +83,11 @@ async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     row = await session.get(model, entity_id)
     if row is None:
         raise _nf()
+    # M2-02/S16-02: property assignment of the membership (404 outside it).
+    if model is Property:
+        ensure_session_property_allowed(session, row.id)
+    elif isinstance(getattr(row, "property_id", None), uuid.UUID):
+        ensure_session_property_allowed(session, row.property_id)
     return row
 
 
@@ -98,7 +119,34 @@ async def _property_out(session: Any, prop: Property) -> s.PropertyOut:
 # Properties ----------------------------------------------------------------------------
 
 
-@router.get("/properties", summary="Objekte")
+_PROPERTY_FILTERS = {
+    "status": Property.status,
+    "management_type": Property.management_type,
+    "management_mode": Property.management_mode,
+    "property_type_code": Property.property_type_code,
+    "city": Property.city,
+    "postal_code": Property.postal_code,
+    "manager_user_id": Property.manager_user_id,
+    "source_system": Property.source_system,
+}
+_PROPERTY_SORT = {
+    "number": Property.number,
+    "name": Property.name,
+    "city": Property.city,
+    "postal_code": Property.postal_code,
+    "status": Property.status,
+    "managed_from": Property.managed_from,
+    "created_at": Property.created_at,
+    "updated_at": Property.updated_at,
+}
+
+
+@router.get(
+    "/properties",
+    summary="Objekte",
+    response_model=s.PropertyPage,
+    description=LIST_PARAMS_DOC,
+)
 async def list_properties(
     request: Request,
     q: str | None = Query(default=None, max_length=200),
@@ -121,9 +169,12 @@ async def list_properties(
     ),
     page: Page = 1,
     page_size: PageSize = 50,
+    params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
-) -> s.PropertyPage:
+) -> Any:
     from mhvp.contracts.models import Contract
+
+    check_include(params, ())
 
     today = datetime.now(ZoneInfo("Europe/Berlin")).date()
     owned = select(PropertyOwner.property_id).where(svc.active_owner_filter(today))
@@ -133,7 +184,10 @@ async def list_properties(
         include_terminated or status is PropertyStatus.TERMINATED
     )
     async with tenant_tx(request, principal) as session:
-        query = select(Property)
+        query = apply_filters(select(Property), params, _PROPERTY_FILTERS)
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            query = query.where(Property.id.in_(list(allowed)))
         if without_owner:
             query = query.where(
                 Property.management_type == ManagementType.RENTAL, Property.id.not_in(owned)
@@ -167,7 +221,9 @@ async def list_properties(
         total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0
         rows = (
             await session.scalars(
-                query.order_by(Property.number).offset((page - 1) * page_size).limit(page_size)
+                apply_sort(query, params, _PROPERTY_SORT, (Property.number, Property.id))
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             )
         ).all()
         rental = [r.id for r in rows if r.management_type is ManagementType.RENTAL]
@@ -189,12 +245,55 @@ async def list_properties(
                 r.id not in with_owner
             )
             items.append(item)
-        return s.PropertyPage(
-            items=items,
-            total=total,
-            page=page,
-            page_size=page_size,
+        return sparse(
+            s.PropertyPage(items=items, total=total, page=page, page_size=page_size),
+            params,
+            s.PropertySummary,
         )
+
+
+class PropertyBulkIn(BaseModel):
+    """Bulk action on properties (S12-05): ``set_consumption_info`` switches the monthly
+    consumption information (rule H03) per property on or off."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
+    action: Literal["set_consumption_info"]
+    value: bool
+
+
+@router.post(
+    "/properties/bulk",
+    summary="Massenaktion Objekte mit Teilerfolgsbericht",
+    response_model=BulkResultOut,
+)
+async def bulk_properties(
+    body: PropertyBulkIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BulkResultOut:
+    """Each property on its own (savepoint); a property outside the tenant or the object
+    assignment of the membership is reported as not found."""
+    async with tenant_tx(request, principal) as session:
+
+        async def act(property_id: uuid.UUID) -> None:
+            prop = await _get(session, Property, property_id)
+            if prop.consumption_info_enabled is body.value:
+                return
+            before = {"consumption_info_enabled": prop.consumption_info_enabled}
+            prop.consumption_info_enabled = body.value
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="property.updated",
+                entity_type="property",
+                entity_id=prop.id,
+                actor_user_id=principal.user_id,
+                payload={"bulk": body.action},
+                changes=diff(before, {"consumption_info_enabled": body.value}),
+            )
+
+        return await run_bulk(body.ids, act, savepoint=session.begin_nested)
 
 
 @router.post("/properties", status_code=201, summary="Objekt anlegen")
@@ -1510,6 +1609,11 @@ async def add_provider(
         )
         session.add(row)
         await session.flush()
+        # 7.2 / M10-05: creditor account 07xxxx per provider relation in every ledger of the
+        # property; account master data only, no posting.
+        from mhvp.accounting.ledger_ops import ensure_creditor_for_relation
+
+        await ensure_creditor_for_relation(session, row)
         await emit(
             session,
             tenant_id=principal.tenant_id,

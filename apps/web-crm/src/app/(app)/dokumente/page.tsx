@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { DocumentBulkBar } from "@/components/workspace/DocumentBulkBar";
 import { DocumentListFilter, draftFilterOf } from "@/components/documents/DocumentListFilter";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -53,6 +54,8 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
       <PageHeader eyebrow={t("area")} title={t("title")} description={t("intro")} />
       <p className={ui.small}>
         <Link href="/dokumente/loeschvorschlaege">{t("deletionProposalsLink")}</Link>
+        {" · "}
+        <Link href="/dokumente/briefe">{t("lettersLink")}</Link>
       </p>
       <DocumentListFilter q={q} draft={draft} />
       <SavedFilters resource="documents" basePath="/dokumente" current={Object.fromEntries(Object.entries({ q, entwurf: params.entwurf ?? "" }).filter(([, v]) => v))} />
@@ -63,12 +66,15 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
       ) : items.length === 0 ? (
         <EmptyState title={draft === "true" ? t("emptyDrafts") : t("empty")} />
       ) : (
+        <div id="documents-bulk" className="flex flex-col gap-3">
+        <DocumentBulkBar formId="documents-bulk" />
         <ResponsiveList
           rows={items}
           keyOf={(d) => d.id}
           testId="documents"
           card={(d) => (
             <div className="flex flex-col gap-1">
+              <input type="checkbox" name="bulk-id" value={d.id} aria-label={t("select", { title: d.title })} />
               <Link href={`/dokumente/${d.id}`} className="font-medium hover:underline [overflow-wrap:anywhere]">
                 {d.title}
               </Link>
@@ -85,6 +91,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
           <table className={ui.table}>
             <thead>
               <tr>
+                <th>{t("colSelect")}</th>
                 <th>{t("colTitle")}</th>
                 <th>{t("colFilename")}</th>
                 <th>{t("colCreated")}</th>
@@ -94,6 +101,9 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
             <tbody>
               {items.map((d) => (
                 <tr key={d.id}>
+                  <td>
+                    <input type="checkbox" name="bulk-id" value={d.id} aria-label={t("select", { title: d.title })} />
+                  </td>
                   <td>
                     <Link href={`/dokumente/${d.id}`} className="hover:underline">
                       {d.title}
@@ -109,6 +119,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
           </table>
           }
         />
+        </div>
       )}
       {data && pages > 1 ? (
         <nav className="flex items-center gap-3 text-sm" aria-label={t("pagination")}>

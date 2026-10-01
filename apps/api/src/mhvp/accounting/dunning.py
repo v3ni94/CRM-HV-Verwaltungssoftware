@@ -50,6 +50,7 @@ from mhvp.accounting.models import (
     LedgerAccount,
 )
 from mhvp.contacts import recipients
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 CENT = Decimal("0.01")
@@ -681,6 +682,19 @@ async def preview(
             counts["excluded" if reason else "proposed"] += 1
     run.totals = counts
     await session.flush()
+    # S12-01: one dunning_case.created per case of the run (proposal, nothing is sent).
+    for case in (
+        await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))
+    ).all():
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="dunning_case.created",
+            entity_type="dunning_case",
+            entity_id=case.id,
+            actor_user_id=user_id,
+            payload={"run_id": str(run.id), "level": case.level, "status": case.status},
+        )
     return run
 
 
@@ -817,6 +831,15 @@ async def mark_sent(
     case.received_on = received_on
     case.updated_by = user_id
     await session.flush()
+    await emit(
+        session,
+        tenant_id=case.tenant_id,
+        type="dunning_case.sent",
+        entity_type="dunning_case",
+        entity_id=case.id,
+        actor_user_id=user_id,
+        payload={"level": case.level, "channel": channel},
+    )
     return case
 
 

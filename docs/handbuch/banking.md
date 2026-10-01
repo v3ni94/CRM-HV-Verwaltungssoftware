@@ -396,3 +396,11 @@ Der Zahllauf zeigt die zahlbaren, freigegebenen und gebuchten Rechnungen je Rech
 - Nach Auswahl und Ausführungsdatum legt die Schaltfläche "Aufträge als Entwurf anlegen" Zahlungsaufträge an. Es entstehen nur Entwürfe. Jeder Auftrag braucht zwei Freigaben, die Zahlungsdatei ist erst mit Freigabestufe G2 möglich. Banklimits werden bei der Datei geprüft und als Warnung angezeigt.
 - Der Bereich "Fällige Lastschriftläufe" listet die Läufe mit Anzahl der Lastschriften und weist auf fehlende Vorabinformationen hin.
 - Unter "Bankstatusbericht einlesen" wird eine XML-Datei (pain.002 oder camt.054) hochgeladen. Es werden nur Status übernommen. Eine bereits eingelesene Datei führt zu keiner Änderung. Rückgaben korrigiert eine Person per Storno.
+
+## Gespeicherte Filter in der Bankliste
+
+Über der Filterzeile der Bankbewegungen können Konto, Status, Richtung und Zeitraum unter einem Namen gespeichert werden. Ein Klick auf den Namen setzt die Filter wieder. Die Filter gehören der angemeldeten Person. Dasselbe gilt für die Rechnungsliste (Filter nach Nummer, Prüfstatus und Buchungsstatus).
+
+## Lastschriften: Bankrückmeldung und Abstimmung, Banklimits
+
+In der Lastschriftliste zeigt "Bankrückmeldung und Abstimmung" je Lastschrift Bankstatus, eingezogenen Betrag, Rest des offenen Postens und Befunde. Mit "Rückmeldung erfassen" wird die Antwort der Bank festgehalten (angenommen, abgelehnt, eingezogen mit Betrag, zurückgegeben mit Rückgabecode). Es wird nichts gebucht; eine Rücklastschrift nach Ausgleich erscheint als Befund und wird durch Storno korrigiert. Im Zahllauf pflegt der Bereich "Banklimits und Einreichungsfristen" je Auftraggeberkonto das Limit je Auftrag, das Tageslimit und die Vorlauffristen nach Bankvereinbarung (Betreibereingabe, zu verifizieren) und weist auf die bankseitige Empfängerprüfung hin.

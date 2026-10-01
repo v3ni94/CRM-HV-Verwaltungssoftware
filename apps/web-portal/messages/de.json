@@ -78,7 +78,8 @@
       "label": "Hauptnavigation",
       "submissions": "Beiratsvorlagen",
       "security": "Sicherheit",
-      "handover": "Übergabe"
+      "handover": "Übergabe",
+      "ownerStatements": "Hausgeldabrechnung"
     },
     "notifications": {
       "title": "Benachrichtigungen",
@@ -112,7 +113,15 @@
     "loading": "Inhalt wird geladen",
     "notFoundTitle": "Seite nicht gefunden",
     "notFoundHint": "Die aufgerufene Seite existiert nicht oder steht Ihrem Zugang nicht zur Verfügung.",
-    "toStart": "Zur Übersicht"
+    "toStart": "Zur Übersicht",
+    "roleSwitch": {
+      "label": "Ansicht",
+      "tenant_resident": "Mieter",
+      "owner": "Eigentümer",
+      "board_member": "Beirat",
+      "service_provider": "Dienstleister",
+      "all": "Alle Rollen"
+    }
   },
   "Documents": {
     "title": "Dokumente",
@@ -124,7 +133,19 @@
     "readNote": "Der Status Neu oder Gelesen zeigt, ob Sie das Dokument geöffnet haben. Er ist ein Indiz und keine Zustellung.",
     "handoversTitle": "Übergabeprotokolle",
     "handoversEmpty": "Keine Übergabeprotokolle vorhanden.",
-    "handoverDate": "Übergabe am"
+    "handoverDate": "Übergabe am",
+    "search": "Suche",
+    "searchPlaceholder": "Titel oder Dateiname",
+    "sort": "Sortierung",
+    "sortCreatedDesc": "Neueste zuerst",
+    "sortCreatedAsc": "Älteste zuerst",
+    "sortTitleAsc": "Titel A bis Z",
+    "sortTitleDesc": "Titel Z bis A",
+    "apply": "Anwenden",
+    "bundleDownload": "Sammel-Download ({count} ausgewählt)",
+    "selectAll": "Alle auswählen",
+    "select": "{title} auswählen",
+    "bundleError": "Der Sammel-Download ist fehlgeschlagen. Bitte erneut versuchen."
   },
   "Tickets": {
     "title": "Meldungen",
@@ -320,7 +341,9 @@
     "appointmentRequired": "Bitte einen Termin auswählen.",
     "reportRequired": "Bitte den Ausführungsbericht eingeben.",
     "invoiceFieldsRequired": "Bitte Rechnungsnummer, Rechnungsdatum und Rechnungsbetrag angeben.",
-    "orderTitle": "Auftrag"
+    "orderTitle": "Auftrag",
+    "einvoiceXml": "E-Rechnung als XML einlesen (optional)",
+    "einvoiceHelp": "Rechnungsnummer, Datum und Bruttobetrag werden aus der Datei vorgeschlagen. Bitte prüfen, bevor Sie einreichen."
   },
   "Handover": {
     "title": "Übergabeprotokolle",
@@ -835,7 +858,18 @@
       "cancel": "Abbrechen",
       "statementSaved": "Die Stellungnahme wurde gespeichert."
     },
-    "costTableCaption": "Abrechnungspositionen des Prüfauftrags"
+    "costTableCaption": "Abrechnungspositionen des Prüfauftrags",
+    "context": {
+      "show": "Kontext anzeigen",
+      "booking": "Buchung",
+      "invoice": "Rechnung",
+      "service": "Leistungszeit",
+      "order": "Auftrag",
+      "contract": "Vertrag",
+      "payment": "Zahlung",
+      "allocation": "Umlageschlüssel",
+      "previousYear": "Vorjahr (Ist, Vorjahr, Differenz)"
+    }
   },
   "Forms": {
     "title": "Formulare",
@@ -932,7 +966,13 @@
     "payee": "Zahlungsempfänger und Konto der Gemeinschaft",
     "ticketsTitle": "Meldungen zum Objekt",
     "ticketsEmpty": "Keine für Eigentümer freigegebenen Meldungen.",
-    "toAccount": "Zum Hausgeldkonto"
+    "toAccount": "Zum Hausgeldkonto",
+    "ownShare": "Ihr Anteil, Einheit {unit}",
+    "perMonth": "je Monat",
+    "allocationsTitle": "Umlageeigenschaften",
+    "unit": "Einheit",
+    "noValue": "kein Wert hinterlegt",
+    "incomeTitle": "Mieterträge je Objekt (vereinbarte Miete)"
   },
   "SupportConsent": {
     "title": "Einsicht durch die Verwaltung",
@@ -942,5 +982,13 @@
     "grant": "Einwilligung erteilen",
     "revoke": "Einwilligung widerrufen",
     "active": "Die Verwaltung darf lesend Einsicht nehmen bis {until}."
+  },
+  "OwnerStatements": {
+    "title": "Hausgeldabrechnung",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "empty": "Es liegt noch keine freigegebene Einzelabrechnung vor.",
+    "row": "Einzelabrechnung {year}, Einheit {unit}",
+    "version": "Version {version}",
+    "download": "PDF herunterladen"
   }
 }

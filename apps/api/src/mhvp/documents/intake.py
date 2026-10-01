@@ -54,6 +54,7 @@ from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ProblemError
+from mhvp.documents import intake_address
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.dms import DmsError, GoogleDriveStore
@@ -81,6 +82,7 @@ PROMPT_VERSION = "intake-rules-v1"
 SOURCE_PAPERLESS = "paperless"
 SOURCE_DRIVE = "google_drive"
 SOURCE_MAILBOX = "mailbox"
+SOURCE_FORWARD = "forward"  # M6-04: mail to the tenant intake address
 WATERMARK_KEY = "intake_watermark"
 INBOX_FOLDER_KEY = "inbox_folder_id"
 MAILBOX_WATERMARK_KEY = "document_intake_mailbox_watermark"
@@ -663,8 +665,23 @@ async def process_mailbox(session: AsyncSession, tenant_id: uuid.UUID) -> int:
     messages = (await session.scalars(stmt)).all()
     created = 0
     latest: datetime | None = None
+    address = intake_address.load(sources)
     for message in messages:
         latest = message.created_at
+        # M6-04: forwards to the tenant intake address; another tenant's token is skipped,
+        # a sender outside the allowed list as well.
+        kind = intake_address.classify(
+            address, list(message.to_addresses or []) + list(message.cc_addresses or [])
+        )
+        if kind == "foreign":
+            continue
+        if (
+            kind == "own"
+            and address is not None
+            and not intake_address.sender_allowed(address, message.from_address)
+        ):
+            log.info("document_intake_forward_sender_rejected")
+            continue
         for document_id in message.attachment_document_ids:
             document = await session.get(Document, document_id)
             if document is None:
@@ -678,7 +695,7 @@ async def process_mailbox(session: AsyncSession, tenant_id: uuid.UUID) -> int:
                 session,
                 tenant_id,
                 document,
-                source=SOURCE_MAILBOX,
+                source=SOURCE_FORWARD if kind == "own" else SOURCE_MAILBOX,
                 extra_text="\n".join(p for p in (message.subject, message.body) if p),
                 head=message.subject,
                 sender=message.from_address,

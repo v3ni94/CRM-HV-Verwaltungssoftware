@@ -4,10 +4,13 @@ import Link from "next/link";
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { OwnershipTransfer } from "@/components/contracts/OwnershipTransfer";
+import { ExposePdf } from "@/components/letting/ExposePdf";
+import { ProspectMatches } from "@/components/letting/ProspectMatches";
 import { Prospects } from "@/components/letting/Prospects";
 import { EnergyCertificateForm, type EnergyBuilding } from "@/components/properties/EnergyCertificateForm";
 import { UnitDetails } from "@/components/properties/UnitDetails";
 import { UnitMasterData, type UnitMaster } from "@/components/properties/UnitMasterData";
+import { VatOptionHistory } from "@/components/properties/VatOptionHistory";
 import { MeterChangesPanel, VacancyValuesPanel, type MeterChangeRow, type VacancyValueRow } from "@/components/properties/UnitPanels";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { KeyValueList } from "@/components/ui/KeyValueList";
@@ -125,6 +128,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
         <OwnershipTransfer contractId={occupants.data.owner.contract_id} sevAllowed={property.data?.management_type === "hoa_with_sev"} canUpdate={canTransfer} />
       ) : null}
       <VacancyValuesPanel rows={vacancyValues} />
+      <VatOptionHistory unitId={unitId} canEdit={canEdit} />
       <MeterChangesPanel rows={meterChanges} />
       {building.data ? <EnergyCertificateForm building={building.data as unknown as EnergyBuilding} canEdit={canEdit} /> : null}
       <section className={ui.card}>
@@ -152,9 +156,11 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
           {t("missing")}: {missing.map((m) => (m.includes(".") ? `${t(`fields.${m.split(".")[0]}.title`)} ${t(`fields.${m}`)}` : t(`fields.${m}`))).join(", ")}
         </p>
         <p className="mt-1 text-xs text-muted">{String(expose.data.note)}</p>
+        <ExposePdf unitId={unitId} canCreate={permissions.includes("contracts:create")} />
       </section>
       <h2 className={ui.h2}>{t("title")}</h2>
       <Prospects unitId={unitId} rows={rows} names={names} />
+      {listingId ? <ProspectMatches listingId={listingId} names={names} /> : null}
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel sourceType="unit" sourceId={unitId} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />
       ) : null}

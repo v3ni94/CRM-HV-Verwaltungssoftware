@@ -142,6 +142,12 @@ async def run_and_propose(
             session.add(check)
             await session.flush()
             proposal_id = check.id
+        if run.status is RunStatus.SUCCEEDED and run.task is AiTask.RENT_INCREASE_CHECK:
+            # M26-01: hints only, linked as ai_check_id of the case; never a release.
+            from mhvp.ai import rent_increase_check
+
+            hint = await rent_increase_check.store_result(session, run, provider_used)
+            proposal_id = hint.id
         if run.status is RunStatus.SUCCEEDED and run.task is AiTask.PROPOSE_POSTING:
             # M7-09 KI-Kontierung: proposal only (entity_type posting); nothing is posted and
             # the bank transaction stays untouched (rule 0.1.6, 7.4).
@@ -195,6 +201,8 @@ async def run_and_propose(
             # for the automation or intake callers of the task), checked by the platform,
             # proposal only; nothing is written before a human confirms it (0.1.6).
             payload, action_note = chat_actions.build(run)
+            if payload is not None:
+                payload, action_note = await chat_actions.enrich(session, payload)
             if payload is not None:
                 action = chat_actions.proposal(run, payload, provider_used)
                 session.add(action)
@@ -325,3 +333,40 @@ async def examples_retention_once(settings: Settings) -> dict[str, Any]:
 @shared_task(name="mhvp.ai.examples_retention", acks_late=True)
 def examples_retention() -> dict[str, Any]:
     return asyncio.run(examples_retention_once(get_settings()))
+
+
+async def batch_nightly_once(settings: Settings) -> dict[str, Any]:
+    """Nightly collective run of deferred runs over all active tenants (9.3, M7-07)."""
+    from mhvp.ai import batch
+    from mhvp.platform.models import Tenant, TenantStatus
+
+    if settings.master_key is not None and not crypto.is_configured():
+        crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    report: dict[str, Any] = {"tenants": 0, "runs": 0, "succeeded": 0, "errors": []}
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            try:
+                summary = await batch.submit_deferred(factory, tenant_id, BlobStore(settings))
+            except Exception as exc:  # the other tenants must still run
+                log.exception("ai batch nightly failed", tenant_id=str(tenant_id))
+                report["errors"].append(f"{tenant_id}: {failure_text(exc)}")
+                continue
+            report["tenants"] += 1
+            report["runs"] += summary["runs"]
+            report["succeeded"] += summary["succeeded"]
+    finally:
+        await engine.dispose()
+    return report
+
+
+@shared_task(name="mhvp.ai.batch_nightly", acks_late=True)
+def batch_nightly() -> dict[str, Any]:
+    return asyncio.run(batch_nightly_once(get_settings()))

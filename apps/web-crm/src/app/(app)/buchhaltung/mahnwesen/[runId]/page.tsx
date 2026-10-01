@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { DunningApproveButton } from "@/components/accounting/DunningApproveButton";
 import { DunningCaseActions } from "@/components/accounting/DunningCaseActions";
+import { DunningCaseDetails, type DunningCaseInfo } from "@/components/accounting/DunningCaseDetails";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -35,6 +36,14 @@ type Case = {
   // Objekt des Falls, aus dem Ledger abgeleitet (M16-15): fehlt bei Konten ohne Objektbezug.
   property_id?: string | null;
   property_number?: string | null;
+  // Prüfhinweise, Zinsdetail, Aufschlagsvorschlag, Zustellnachweise und Posten (M16-01 bis M16-06).
+  check_hints?: string[];
+  interest_amount?: string | null;
+  interest_entry_id?: string | null;
+  interest_detail?: DunningCaseInfo["interest_detail"];
+  interest_spread_suggestion?: DunningCaseInfo["interest_spread_suggestion"];
+  delivery_proofs?: DunningCaseInfo["delivery_proofs"];
+  open_items?: DunningCaseInfo["open_items"];
 };
 
 export default async function DunningRunPage({ params }: { params: Promise<{ runId: string }> }) {
@@ -155,6 +164,7 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
                     hasLetter={Boolean(c.letter_document_id)}
                   />
                 ) : null}
+                {c.status !== "excluded" ? <DunningCaseDetails c={{ ...c, id: c.id }} /> : null}
               </td>
             </tr>
           ))}

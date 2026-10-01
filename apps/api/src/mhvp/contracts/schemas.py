@@ -262,6 +262,7 @@ class PaymentOut(_Out):
     valid_to: date | None
     reason: PaymentReason
     revenue_account_id: uuid.UUID | None = None
+    reserve_id: uuid.UUID | None = None  # M24-01: earmarked reserve of the standing amount
 
 
 class ScheduleIn(_In):

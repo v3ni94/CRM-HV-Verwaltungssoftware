@@ -37,7 +37,17 @@ ACTION_TYPES: tuple[str, ...] = (
     "ai_task",
     "create_task",
     "assign_record",
+    "set_field",
+    "notify_provider",
 )
+# S15-06: closed list of the master data text fields a rule may set (``set_field``): notes
+# only, never a payee, IBAN, amount, date, status, resolution, fee or tax field (rule 0.1.6).
+SETTABLE_FIELDS: dict[str, tuple[str, ...]] = {
+    "property": ("notes", "renovation_notes", "garden_notes"),
+    "contact": ("notes",),
+    "contract": ("notes",),
+}
+SET_FIELD_MAX_LENGTH = 2000
 # Trigger kinds: a domain event type or a schedule (stage 2, A39).
 TRIGGER_KINDS: tuple[str, ...] = ("event", "schedule")
 TRIGGER_EVENT = "event"
@@ -45,7 +55,12 @@ TRIGGER_SCHEDULE = "schedule"
 # Synthetic event type of schedule runs (never emitted by the event system).
 SCHEDULE_EVENT_TYPE = "schedule.due"
 # Actions that need a ticket entity and are therefore not available on a schedule.
-TICKET_ONLY_ACTIONS: tuple[str, ...] = ("set_ticket_field", "mail_draft", "assign_record")
+TICKET_ONLY_ACTIONS: tuple[str, ...] = (
+    "set_ticket_field",
+    "mail_draft",
+    "assign_record",
+    "notify_provider",
+)
 CONDITION_OPS: tuple[str, ...] = ("eq", "ne", "contains", "gt", "lt")
 GROUP_OPS: tuple[str, ...] = ("and", "or")
 # Fields a rule may set on the ticket the event belongs to (stage 1).
@@ -133,6 +148,7 @@ JOB_CATALOG: dict[str, str] = {
     "billing-consumption-info": "Verbrauchsinformation",
     "accounting-receivable-run": "Sollstellungslauf",
     "accounting-dunning-run": "Mahnlauf",
+    "accounting-open-item-balance": "Offene Posten zum Stichtag (Lesekopie)",
     "workspace-reminders": "Erinnerungen",
     "workspace-digest": "Tagesübersicht",
     "workspace-compliance-deadlines": "Fristenhinweise",

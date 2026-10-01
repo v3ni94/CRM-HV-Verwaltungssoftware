@@ -4,9 +4,10 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 
@@ -29,14 +30,30 @@ from mhvp.contracts.models import (
     SepaMandate,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_property_allowed,
+    property_path_guard,
+    session_allowed_property_ids,
+)
+from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import (
+    LIST_PARAMS_DOC,
+    ListParams,
+    apply_filters,
+    apply_sort,
+    check_include,
+    list_params,
+    sparse,
+)
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.documents.models import Document, DocumentLink, LinkRole
 from mhvp.properties.models import AllocationKey, ManagementType, Property, Unit
 from mhvp.properties.services import check_catalog, check_custom_fields, check_ledger_account
 
-router = APIRouter(tags=["Verträge"])
+router = APIRouter(tags=["Verträge"], dependencies=[Depends(property_path_guard)])
 READ = require_permission("contracts:read")
 CREATE = require_permission("contracts:create")
 UPDATE = require_permission("contracts:update")
@@ -52,6 +69,9 @@ async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     row = await session.get(model, entity_id)
     if row is None:
         raise _nf()
+    # M2-02/S16-02: property assignment of the membership (404 outside it).
+    if isinstance(getattr(row, "property_id", None), uuid.UUID):
+        ensure_session_property_allowed(session, row.property_id)
     return row
 
 
@@ -306,7 +326,38 @@ def _search_condition(q: str) -> Any:
     return and_(*conditions)
 
 
-@router.get("/contracts", summary="Verträge", responses=PAGE_HEADERS)
+_CONTRACT_FILTERS = {
+    "kind": Contract.kind,
+    "property_id": Contract.property_id,
+    "unit_id": Contract.unit_id,
+    "party_id": Contract.party_id,
+    "legal_entity_id": Contract.legal_entity_id,
+    "direct_debit": Contract.direct_debit,
+    "dunning_block": Contract.dunning_block,
+    "vat_option": Contract.vat_option,
+    "sev_enabled": Contract.sev_enabled,
+    "approval_status": Contract.approval_status,
+    "start_date": Contract.start_date,
+    "end_date": Contract.end_date,
+}
+_CONTRACT_SORT = {
+    "number": Contract.number,
+    "start_date": Contract.start_date,
+    "end_date": Contract.end_date,
+    "termination_date": Contract.termination_date,
+    "kind": Contract.kind,
+    "created_at": Contract.created_at,
+    "updated_at": Contract.updated_at,
+}
+
+
+@router.get(
+    "/contracts",
+    summary="Verträge",
+    responses=PAGE_HEADERS,
+    response_model=list[s.ContractOut],
+    description=LIST_PARAMS_DOC,
+)
 async def list_contracts(
     request: Request,
     response: Response,
@@ -335,13 +386,15 @@ async def list_contracts(
         le=1000,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
+    params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
-) -> list[s.ContractOut]:
+) -> Any:
     """Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt
     eine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.
     ``status=ended`` liefert beendete Verträge (Ende vor dem Stichtag)."""
+    check_include(params, ())
     async with tenant_tx(request, principal) as session:
-        query = select(Contract)
+        query = apply_filters(select(Contract), params, _CONTRACT_FILTERS)
         if status is not None:
             day = as_of or datetime.now(UTC).date()
             if status == "ended":
@@ -368,15 +421,88 @@ async def list_contracts(
             )
         if q and q.strip():
             query = query.where(_search_condition(q))
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            query = query.where(Contract.property_id.in_(list(allowed)))
         rows = await paginate(
             session,
-            query.order_by(Contract.number, Contract.version),
+            apply_sort(
+                query, params, _CONTRACT_SORT, (Contract.number, Contract.version, Contract.id)
+            ),
             response,
             page=page,
             page_size=page_size,
             limit=limit,
         )
-        return await _outs(session, rows)
+        return sparse(await _outs(session, rows), params, s.ContractOut, response=response)
+
+
+class ContractBulkIn(BaseModel):
+    """Bulk action on contracts (S12-05): ``set_dunning_block`` sets or lifts the dunning
+    block; setting it needs ``reason`` (same rule as ``PATCH /contracts/{id}/notes``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
+    action: Literal["set_dunning_block"]
+    value: bool
+    reason: str | None = Field(default=None, max_length=500)
+
+
+@router.post(
+    "/contracts/bulk",
+    summary="Massenaktion Verträge mit Teilerfolgsbericht",
+    response_model=BulkResultOut,
+)
+async def bulk_contracts(
+    body: ContractBulkIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BulkResultOut:
+    """Each contract on its own (savepoint). A dunning block only stops proposals of the
+    dunning run; nothing is posted or sent."""
+    reason = (body.reason or "").strip() or None
+    if body.value and reason is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Mahnsperre braucht eine Begründung",
+            errors=[
+                FieldError(
+                    location=["body", "reason"],
+                    field="reason",
+                    code="required",
+                    message="Mahnsperre braucht eine Begründung",
+                )
+            ],
+        )
+    async with tenant_tx(request, principal) as session:
+
+        async def act(contract_id: uuid.UUID) -> None:
+            contract = await _get(session, Contract, contract_id)
+            before = {
+                "dunning_block": contract.dunning_block,
+                "dunning_block_reason": contract.dunning_block_reason,
+            }
+            after = {
+                "dunning_block": body.value,
+                "dunning_block_reason": reason if body.value else None,
+            }
+            if before == after:
+                return
+            contract.dunning_block = body.value
+            contract.dunning_block_reason = after["dunning_block_reason"]
+            contract.updated_by = principal.user_id
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="contract.updated",
+                entity_type="contract",
+                entity_id=contract.id,
+                actor_user_id=principal.user_id,
+                payload={"bulk": body.action},
+                changes=diff(before, after),
+            )
+
+        return await run_bulk(body.ids, act, savepoint=session.begin_nested)
 
 
 @router.post("/contracts", status_code=201, summary="Vertrag anlegen")
@@ -559,10 +685,16 @@ async def reject_import(
 
 @router.get("/contracts/{contract_id}", summary="Vertrag lesen")
 async def get_contract(
-    contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    contract_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> s.ContractOut:
     async with tenant_tx(request, principal) as session:
-        return await _out(session, await _get(session, Contract, contract_id))
+        contract = await _get(session, Contract, contract_id)
+        # S12-04: lock token from updated_at (version is the business version, ADR 0012).
+        response.headers["ETag"] = etag_of(contract.updated_at)
+        return await _out(session, contract)
 
 
 _NOTES_FIELDS = ("notes", "dunning_block", "dunning_block_reason")
@@ -573,12 +705,15 @@ async def patch_contract_notes(
     contract_id: uuid.UUID,
     body: s.ContractNotesPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> s.ContractOut:
     """In place update without a new contract version (AP8): remarks, dunning block and its
     reason only. Payments, terms and parties keep the version path (``POST .../versions``)."""
     async with tenant_tx(request, principal) as session:
         contract = await _get(session, Contract, contract_id)
+        check_if_match(if_match, contract.updated_at)
         before = {k: getattr(contract, k) for k in _NOTES_FIELDS}
         after = before | body.model_dump(exclude_unset=True)
         if after["dunning_block"] and not (after["dunning_block_reason"] or "").strip():
@@ -608,6 +743,8 @@ async def patch_contract_notes(
             payload={"fields": sorted(body.model_dump(exclude_unset=True))},
             changes=diff(before, after),
         )
+        await session.refresh(contract, ["updated_at"])
+        response.headers["ETag"] = etag_of(contract.updated_at)
         return await _out(session, contract)
 
 

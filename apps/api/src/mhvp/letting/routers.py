@@ -192,6 +192,10 @@ def _case_out(c: RentIncreaseCase) -> dict[str, Any]:
         "comparison_flats": c.comparison_flats,
         "new_payment_id": c.new_payment_id,
         "basis_data": c.basis_data,
+        "ai_check_id": c.ai_check_id,
+        "rent_index_date": c.rent_index_date,
+        "comparison_rent_per_sqm": c.comparison_rent_per_sqm,
+        "living_area_sqm": c.living_area_sqm,
     }
 
 
@@ -339,6 +343,166 @@ async def get_rent_increase(
         if case is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         return _case_out(case)
+
+
+class RentIndexAdoptIn(LettingBaseIn):
+    entry_id: uuid.UUID
+    position: str = Field(pattern="^(min|mid|max)$")
+
+
+class RentIncreaseAiCheckIn(LettingBaseIn):
+    proposal_id: uuid.UUID | None = None
+
+
+@router.post(
+    "/rent-increases/{case_id}/adopt-rent-index",
+    summary="Mietspiegelspanne in den Mieterhöhungsfall übernehmen",
+)
+async def adopt_rent_index(
+    case_id: uuid.UUID,
+    body: RentIndexAdoptIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """Takes one value of a maintained index row (lower bound, middle or upper bound) as the
+    comparison rent per m² of a draft case, with index name, Stand and source note, and runs
+    the check again. The choice of the position stays with the clerk; the platform does not
+    decide the local comparative rent (M26-03)."""
+    from mhvp.contracts.models import Contract
+    from mhvp.letting.models import RentIndexEntry
+    from mhvp.letting.rentlaw import statutory_check
+    from mhvp.properties.models import Property
+
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(RentIncreaseCase, case_id, with_for_update=True)
+        entry = await session.get(RentIndexEntry, body.entry_id)
+        if case is None or entry is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if case.status != "draft":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur im Status draft änderbar.")
+        value = {"min": entry.rent_min, "mid": entry.rent_mid, "max": entry.rent_max}[body.position]
+        if value is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Der Mittelwert ist nicht erfasst.")
+        case.comparison_rent_per_sqm = value
+        case.rent_index_name = entry.index_name
+        case.rent_index_date = entry.valid_from
+        case.justification = "mietspiegel"
+        note = (
+            f"Mietspiegel {entry.index_name} ({entry.municipality}), "
+            f"{body.position}: {entry.source_note}"
+        )
+        case.source_note = note[:2000]
+        contract = await session.get(Contract, case.contract_id)
+        check = _check(case, contract.rent_increase_block_until if contract else None)
+        if contract is not None:
+            prop = await session.get(Property, contract.property_id)
+            statutory = await statutory_check(session, case, contract, prop)
+            check["statutory"] = statutory
+            check["ok"] = check["ok"] and not statutory["flags"]
+        case.check = check
+        await session.flush()
+        return _case_out(case)
+
+
+@router.put(
+    "/rent-increases/{case_id}/ai-check",
+    summary="KI-Prüfung mit dem Mieterhöhungsfall verknüpfen",
+)
+async def link_rent_increase_ai_check(
+    case_id: uuid.UUID,
+    body: RentIncreaseAiCheckIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    from mhvp.ai.models import AiProposal
+
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(RentIncreaseCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if body.proposal_id is not None and await session.get(AiProposal, body.proposal_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        case.ai_check_id = body.proposal_id
+        await session.flush()
+        return _case_out(case)
+
+
+@router.post(
+    "/rent-increases/{case_id}/ai-check",
+    status_code=202,
+    summary="KI-Plausibilität des Mieterhöhungsfalls anstoßen (nur Hinweise)",
+)
+async def start_rent_increase_ai_check(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """M26-01: queues the AI task ``rent_increase_check`` through the gateway (release, DPA
+    evidence, budget). The result is a hint proposal linked as ``ai_check_id``; the case, its
+    status and its deterministic check stay unchanged (rule 0.1.6)."""
+    from mhvp.ai import rent_increase_check
+    from mhvp.billing.ai_check_routers import _dispatch
+    from mhvp.core.events import emit
+
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(RentIncreaseCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        run = rent_increase_check.queue_run(
+            session, tenant_id=principal.tenant_id, user_id=principal.user_id, case=case
+        )
+        await session.flush()
+        run_id = run.id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="rent_increase.ai_check_requested",
+            entity_type="rent_increase_case",
+            entity_id=case.id,
+            actor_user_id=principal.user_id,
+            payload={"run_id": str(run_id)},
+        )
+    await _dispatch(request, principal, run_id)
+    return await get_rent_increase_ai_check(case_id, request, principal)
+
+
+@router.get("/rent-increases/{case_id}/ai-check", summary="KI-Plausibilität des Falls lesen")
+async def get_rent_increase_ai_check(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.ai import rent_increase_check
+    from mhvp.ai.models import AiProposal
+
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(RentIncreaseCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        run = await rent_increase_check.latest_run(session, case_id)
+        proposal = await session.get(AiProposal, case.ai_check_id) if case.ai_check_id else None
+        return {
+            "case_id": case_id,
+            "ai_check_id": case.ai_check_id,
+            "latest_run": (
+                {
+                    "id": run.id,
+                    "status": run.status.value,
+                    "error": run.error,
+                    "model": run.model,
+                    "created_at": run.created_at,
+                }
+                if run is not None
+                else None
+            ),
+            "latest": (
+                {
+                    "id": proposal.id,
+                    "entity_type": proposal.entity_type,
+                    "decision": proposal.decision.value,
+                    "created_at": proposal.created_at,
+                    "proposed": proposal.proposed,
+                }
+                if proposal is not None
+                else None
+            ),
+        }
 
 
 @router.get("/rent-increases/{case_id}/letter", summary="Musterschreiben (Entwurf)")
@@ -923,6 +1087,9 @@ def _eur_text(value: Any) -> str:
     return f"{Decimal(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " EUR"
 
 
+EXPOSE_MAX_IMAGES = 8
+
+
 @router.post(
     "/units/{unit_id}/expose/pdf",
     status_code=201,
@@ -933,8 +1100,8 @@ async def expose_pdf(
 ) -> dict[str, Any]:
     """Exposé from master data and the newest rental listing (title and description of the
     advertisement), filed as generated document of unit, property and listing. Fields missing
-    in the master data are listed in the document as open; nothing is invented. Images of the
-    advertisement are not embedded in this version."""
+    in the master data are listed in the document as open; nothing is invented. Image
+    documents linked to the listing are embedded (M26-05), at most ``EXPOSE_MAX_IMAGES``."""
     from mhvp.documents import letter_records
     from mhvp.documents import services as doc_services
     from mhvp.documents.blobs import BlobStore
@@ -999,6 +1166,14 @@ async def expose_pdf(
                 + html.escape(", ".join(data["missing"]))
                 + "."
             )
+        expose_images: list[bytes] = []
+        if listing is not None:
+            found = await _listing_images(session, request, listing.id)
+            expose_images = [
+                i.data
+                for i in found
+                if i.mime_type.lower() in ("image/jpeg", "image/jpg", "image/png")
+            ][:EXPOSE_MAX_IMAGES]
         today = local_today()
         title = (listing.title if listing and listing.title else None) or str(f["title"])
         letter = Letter(
@@ -1011,6 +1186,7 @@ async def expose_pdf(
             draft_notice="ENTWURF, Pflichtangaben vor Veröffentlichung prüfen"
             if data["missing"]
             else None,
+            images=expose_images,
         )
         links: list[tuple[str, uuid.UUID]] = [("unit", unit.id), ("property", unit.property_id)]
         if listing is not None:
@@ -1032,6 +1208,7 @@ async def expose_pdf(
             "listing_id": data["listing_id"],
             "missing": data["missing"],
             "draft": bool(data["missing"]),
+            "images_embedded": len(expose_images),
         }
 
 

@@ -98,3 +98,22 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   due_day, continues_until_new_plan, obsolete_at) and `comparison` in the plan snapshot.
 * `GET /hoa/statements/{id}/units/{unit_id}/pdf`: unit statement PDF draft (G4, after approval).
 * Migration 0256. Rule: `docs/rules/M24-W2-abrechnung-plan.md`.
+
+## Wave 3, package Q09 (30.09.2026)
+
+* Reserve binding (M24-01, migration 0278): `contract_payment.reserve_id` and
+  `receivable_item.reserve_id` (earmark of the standing amount, carried into the receivable
+  item). `plan_results` adds `reserve_split` per unit; `apply_plan` binds a unit's reserve
+  advance only when it goes to exactly one reserve. The statement sums payments per reserve
+  (`reserve.contributions_paid_by_reserve`, `contributions_paid_unassigned`); `positions` carry
+  `contributions_paid`, `contributions_paid_bound` and `paid_change`.
+* Rhythm (P07-03): a quarterly or yearly plan creates a payment schedule per contract on apply
+  (`_ensure_schedule`, advance, amount per month, due day of the plan); response field
+  `schedules_set`; preview rows carry `rhythm` and `instalment`.
+* `GET /hoa/statements/{id}/pdf`: Gesamtabrechnung on the tenant letterhead (G4, after
+  approval, `statement_pdf.build_total_letter`).
+* `totals_comparison` in the plan snapshot (previous plan or previous statement).
+* Inspection: event kinds `notified` and `owner_check`, `POST /hoa/inspection-requests/{id}/owner-check`.
+* Reports list returns `confirmed_by_name`, `confirmed_at`, `confirmation_note`.
+* `statement_kind` accepts `special_levy` and `heating` (accounting enum, SA-08).
+* Rules: `docs/rules/M24-W3-ruecklage-rhythmus.md`, `docs/rules/M25-W3-einsicht-pruefrolle.md`.

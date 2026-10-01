@@ -288,3 +288,7 @@ Order (every step is recorded, the run is part of the restore protocol):
 
 Technical acceptance: `apps/api/tests/integration/test_m9_restore_replay.py` (D47). The
 functional release of the procedure (data protection) stays open under M9-03.
+
+## Prüfskript Offsite-Lauf (M9-06)
+
+`scripts/backup-offsite-check.sh` baut ein lokales Verzeichnis als Ersatz für den Bucket (oder nimmt mit `--dir` ein vorhandenes), füttert `backup-offsite.sh --dry-run --list` mit dem Schlüsselverzeichnis und prüft den Aufbewahrungsplan: neueste Tagesläufe bleiben erhalten, nichts Neueres als der älteste Tageslauf wird gelöscht, `--list` ohne `--dry-run` wird abgelehnt. Kein S3-Zugriff, keine Schlüssel. Ausgabe `backup-offsite-check: ... status=ok|failed`, Exit 0 bei Erfolg.

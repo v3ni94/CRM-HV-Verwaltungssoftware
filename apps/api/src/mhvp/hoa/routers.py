@@ -486,6 +486,19 @@ async def calculate_plan(
         )
         # M24-04: plan basis and deviation per item (information, part of the snapshot).
         result["comparison"] = calc.plan_comparison(items, basis_items)
+        basis_snapshot = None
+        if plan.basis_plan_id:
+            basis_plan = await session.get(EconomicPlan, plan.basis_plan_id)
+            basis_snapshot = basis_plan.snapshot if basis_plan else None
+            basis_kind = "plan"
+        elif plan.basis_statement_id:
+            basis_st = await session.get(HoaStatement, plan.basis_statement_id)
+            basis_snapshot = basis_st.snapshot if basis_st else None
+            basis_kind = "statement"
+        if basis_snapshot is not None:
+            result["totals_comparison"] = calc.totals_comparison(
+                result["totals"], basis_snapshot, basis_kind
+            )
         plan.snapshot, plan.snapshot_hash = result, calc.digest(result)
         plan.status = StatementStatus.CALCULATED
         await session.flush()
@@ -508,6 +521,74 @@ async def transition_plan(
         await _move(session, plan, body, principal)
         await session.flush()
         return _plan_out(plan)
+
+
+def _bound_reserve(unit: dict[str, Any] | None, component: str) -> uuid.UUID | None:
+    """M24-01 (Zweckbindung der Sollstellung): the reserve of a unit's reserve advance when
+    the plan directs all of it to exactly one earmarked reserve, otherwise unbound (the
+    contract payment has one amount per component)."""
+    if component != "reserve" or unit is None:
+        return None
+    split = unit.get("reserve_split") or {}
+    if len(split) == 1:
+        only = next(iter(split))
+        return uuid.UUID(only) if only != "none" else None
+    return None
+
+
+RHYTHM_INTERVAL = {"quarterly": "quarterly", "yearly": "annual"}
+
+
+async def _ensure_schedule(
+    session: AsyncSession, contract: Any, plan: EconomicPlan, principal: TenantPrincipal
+) -> bool:
+    """P07-03: non monthly advances become a payment schedule of the contract (interval,
+    due in advance, contract amount per month, due day of the plan). The monthly amounts of
+    the plan are summed per instalment by the receivable run. Returns True when a schedule
+    was created; a schedule with the same interval already standing is left untouched."""
+    from mhvp.contracts.models import DueDayRule, PaymentInterval, PaymentSchedule
+    from mhvp.contracts.services import add_schedule
+
+    interval = PaymentInterval(RHYTHM_INTERVAL[plan.payment_rhythm])
+    current = await session.scalar(
+        select(PaymentSchedule).where(
+            PaymentSchedule.contract_id == contract.id,
+            PaymentSchedule.valid_from <= plan.valid_from,
+            (PaymentSchedule.valid_to.is_(None)) | (PaymentSchedule.valid_to >= plan.valid_from),
+        )
+    )
+    if current is not None and current.interval == interval:
+        return False
+    later = await session.scalar(
+        select(func.count())
+        .select_from(PaymentSchedule)
+        .where(
+            PaymentSchedule.contract_id == contract.id,
+            PaymentSchedule.valid_from > plan.valid_from,
+        )
+    )
+    if later:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail=f"Vertrag {contract.number} hat einen späteren Zahlungsplan; "
+            "bitte zuerst bereinigen (P07-03).",
+        )
+    await add_schedule(
+        session,
+        contract,
+        PaymentSchedule(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            contract_id=contract.id,
+            interval=interval,
+            due_day_rule=DueDayRule.DAY,
+            due_day=plan.due_day,
+            valid_from=plan.valid_from,
+            payment_mode="advance",
+            amount_basis="per_month",
+        ),
+    )
+    return True
 
 
 class PlanApplyIn(HoaBaseIn):
@@ -555,6 +636,11 @@ async def _plan_apply_preview(session: AsyncSession, plan: EconomicPlan) -> dict
                 "current": None,
                 "new": str(new),
                 "valid_from": plan.valid_from,
+                "rhythm": plan.payment_rhythm,
+                # P07-03: monthly amount times the months of the instalment (information)
+                "instalment": str(
+                    new * {"monthly": 1, "quarterly": 3, "yearly": 12}[plan.payment_rhythm]
+                ),
             }
             if contract is None:
                 row["action"] = "no_contract"
@@ -665,10 +751,11 @@ async def apply_plan(
                 ErrorCodes.VALIDATION,
                 detail="Die Vorschau der Übernahme ist zu bestätigen (confirm).",
             )
-        if plan.payment_rhythm != "monthly":
+        if plan.payment_rhythm != "monthly" and plan.valid_from.day != 1:
             raise ProblemError(
                 ErrorCodes.CONFLICT,
-                detail="Übernahme als Vertragszahlung nur für monatliche Vorschüsse (M24-04).",
+                detail="Vierteljährliche oder jährliche Vorschüsse beginnen zum Monatsersten "
+                "(Anker des Zahlungsplans, P07-03).",
             )
         if body.snapshot_hash != plan.snapshot_hash:
             raise ProblemError(
@@ -682,6 +769,8 @@ async def apply_plan(
             )
         preview = await _plan_apply_preview(session, plan)
         created = 0
+        scheduled: dict[uuid.UUID, bool] = {}
+        unit_map = {u["unit_id"]: u for u in (plan.snapshot or {}).get("units", [])}
         for row in preview["rows"]:
             if row["action"] != "create":
                 continue
@@ -701,9 +790,13 @@ async def apply_plan(
                     gross=amount,
                     valid_from=plan.valid_from,
                     reason=PaymentReason.ADJUSTMENT_FROM_STATEMENT,
+                    reserve_id=_bound_reserve(unit_map.get(row["unit_id"]), row["component"]),
                 ),
             )
             created += 1
+            if plan.payment_rhythm != "monthly" and contract.id not in scheduled:
+                changed = await _ensure_schedule(session, contract, plan, principal)
+                scheduled[contract.id] = changed
         plan.applied_at = datetime.now(UTC)
         # M24-04: earlier applied plans of the ledger become obsolete (Fortgeltung ends).
         for older in (
@@ -735,6 +828,7 @@ async def apply_plan(
         await session.flush()
         return _plan_out(plan) | {
             "payments_created": created,
+            "schedules_set": sum(1 for v in scheduled.values() if v),
             "counts": preview["counts"],
             "posted_months": preview["posted_months"],
         }
@@ -861,7 +955,15 @@ async def calculate_statement(
                     )
                 ).all()
             )
-            result["reserve"]["positions"] = calc.reserve_positions(reserves, plan_items, movements)
+            result["reserve"]["positions"] = calc.reserve_positions(
+                reserves,
+                plan_items,
+                movements,
+                {
+                    k: Decimal(v)
+                    for k, v in result["reserve"]["contributions_paid_by_reserve"].items()
+                },
+            )
         # M24-03: loans shown per unit only when the manager entered a loan with key and
         # basis; the shares are information and never change the result.
         if st.loan_allocation:
@@ -1507,3 +1609,56 @@ async def unit_statement_pdf(
                 )
             },
         )
+
+
+@router.get(
+    "/statements/{statement_id}/pdf",
+    summary="Gesamtabrechnung als PDF auf dem Briefbogen des Mandanten (Entwurf, G4)",
+)
+async def statement_total_pdf(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    """M24-03 (7.8 W12): all values from the stored snapshot, nothing recalculated. Needs an
+    open G4 and the internal approval; the tenant's letterhead is required (no invented
+    company data): an incomplete letterhead is a conflict, not a silent plain document."""
+    from mhvp.documents import letters as letter_blocks
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.hoa import statement_pdf
+    from mhvp.properties.models import LegalEntity, Property
+    from mhvp.workspace.services import local_today
+
+    await ensure_release_gate_open(
+        ReleaseGate.G4, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.snapshot is None or st.status in (StatementStatus.DRAFT, StatementStatus.CALCULATED):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Ausgabe nur nach interner Freigabe.")
+        ledger = await _hoa_ledger(session, st.ledger_id)
+        prop = await session.get(Property, ledger.property_id)
+        entity = await session.get(LegalEntity, ledger.legal_entity_id)
+        head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
+        property_line = (
+            f"{prop.number} {prop.name}, {prop.street or ''} {prop.house_number or ''}, "
+            f"{prop.postal_code or ''} {prop.city or ''}".replace("  ", " ").strip(" ,")
+            if prop
+            else str(ledger.property_id)
+        )
+        letter = statement_pdf.build_total_letter(
+            st.year,
+            st.snapshot,
+            st.snapshot_hash or "",
+            recipient_lines=[entity.name] if entity else [],
+            property_line=property_line,
+            letter_date=local_today(),
+            signatory=[s for s in (str(head.company.get("name", "")),) if s],
+        )
+        content = letter_blocks.render_pdf(head, letter)
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="gesamtabrechnung-{st.year}.pdf"'},
+    )

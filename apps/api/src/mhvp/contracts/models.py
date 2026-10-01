@@ -279,6 +279,9 @@ class ContractPayment(IdMixin, TimestampMixin, TenantMixin, Base):
     revenue_account_id: Mapped[uuid.UUID | None] = _fk(
         "ledger_account.id", nullable=True, ondelete="SET NULL"
     )
+    # M24-01 (migration 0278): earmarked reserve the standing amount is bound to (Zweckbindung
+    # der Sollstellung, 7.8 W08); the receivable item carries it on, payments follow the item.
+    reserve_id: Mapped[uuid.UUID | None] = _fk("hoa_reserve.id", nullable=True, ondelete="SET NULL")
 
 
 class PaymentSchedule(IdMixin, TimestampMixin, TenantMixin, Base):

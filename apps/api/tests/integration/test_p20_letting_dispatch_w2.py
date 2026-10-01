@@ -510,9 +510,13 @@ def test_dispatch_channels_serial_merge_and_calendar_feed(client: TestClient, wo
     )
     courier = _ok(dispatch(no_phone["id"], "courier"), 201)
     assert courier["channel"] == "courier"
+    # M23-05: channel post creates the postal job automatically (manual provider), False opts out
     plain = _ok(dispatch(no_phone["id"], "post"), 201)
     jobs = _ok(client.get("/api/v1/postal/jobs", headers=h))
-    assert plain["id"] not in {j["dispatch_id"] for j in jobs}
+    assert plain["id"] in {j["dispatch_id"] for j in jobs}
+    quiet = _ok(dispatch(no_phone["id"], "post", submit_postal=False), 201)
+    jobs = _ok(client.get("/api/v1/postal/jobs", headers=h))
+    assert quiet["id"] not in {j["dispatch_id"] for j in jobs}
     auto = _ok(dispatch(no_phone["id"], "post", submit_postal=True), 201)
     jobs = _ok(client.get("/api/v1/postal/jobs", headers=h))
     assert auto["id"] in {j["dispatch_id"] for j in jobs}

@@ -49,7 +49,7 @@ describe("PlanApplyPreview", () => {
     applied_at: null,
     can_apply: true,
     rows: [
-      { unit_number: "01", component: "hoa_fee", owner: "Eigentümer 01", contract_number: "E-1", current: "250.00", new: "300.00", action: "create" },
+      { unit_number: "01", component: "hoa_fee", owner: "Eigentümer 01", contract_number: "E-1", current: "250.00", new: "300.00", action: "create", rhythm: "quarterly", instalment: "900.00" },
       { unit_number: "02", component: "reserve", owner: null, contract_number: null, current: null, new: "40.00", action: "no_contract" },
     ],
     counts: { create: 1, unchanged: 0, zero: 0, no_contract: 1 },
@@ -66,6 +66,7 @@ describe("PlanApplyPreview", () => {
     await userEvent.click(screen.getByTestId("plan-apply-load"));
     expect(await screen.findByTestId("plan-apply-row-01-hoa_fee")).toHaveTextContent("300,00 EUR");
     expect(screen.getByTestId("plan-apply-row-01-hoa_fee")).toHaveTextContent("anlegen");
+    expect(screen.getByTestId("plan-apply-instalment-01-hoa_fee")).toHaveTextContent("vierteljährlich: 900,00 EUR");
     expect(screen.getByTestId("plan-apply-row-02-reserve")).toHaveTextContent("kein Eigentumsverhältnis");
     expect(screen.getByText("1 anlegen, 0 unverändert, 1 ohne Eigentumsverhältnis")).toBeInTheDocument();
     expect(screen.getByText(/Bereits gebuchte Monate ab Wirksamkeitsbeginn: 2/)).toBeInTheDocument();

@@ -7,7 +7,8 @@ import { useState } from "react";
 import { CollapsibleBody } from "@/components/mail/CompactView";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { RECEIPT_MIME_TYPES } from "@/components/tickets/TicketMailAttachments";
-import { SafeHtml, SafeLine, SafeText } from "@/components/ui/SafeText";
+import { MailHtmlFrame } from "@/components/mail/MailHtmlFrame";
+import { SafeLine, SafeText } from "@/components/ui/SafeText";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { formatDateTime } from "@/lib/format";
 import { formatBytes, isPreviewable, splitQuoted } from "@/lib/mailText";
@@ -125,7 +126,7 @@ function MessageBody({ message }: { message: ThreadMessage }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {asHtml && message.body_html ? (
-        <SafeHtml html={message.body_html} className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-html" />
+        <MailHtmlFrame html={message.body_html} className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-html" />
       ) : (
         <CollapsibleBody text={visible} limit={1200}>
           {(shown) => (

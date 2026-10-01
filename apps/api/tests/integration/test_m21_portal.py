@@ -463,6 +463,37 @@ def test_portal_access_matrix(client: TestClient, world: World) -> None:
         )
     )
     assert done["status"] == "done"
+    # Q10 M22-01: XML e-invoice is read into a proposal; PDF, broken XML and foreign orders fail.
+    from tests.unit.test_m14_einvoice import UBL
+
+    xml_url = f"{P}/work-orders/{order['id']}/einvoice"
+    proposal = _ok(
+        client.post(
+            xml_url, files={"file": ("re.xml", UBL.encode(), "application/xml")}, headers=pv
+        ),
+        201,
+    )
+    assert proposal["number"] == "RE-2026-042"
+    assert proposal["document_id"]
+    assert (
+        client.post(
+            xml_url, files={"file": ("x.xml", b"<a><b/></a>", "application/xml")}, headers=pv
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            xml_url, files={"file": ("x.pdf", b"%PDF-1.4 x", "application/pdf")}, headers=pv
+        ).status_code
+        == 422
+    )
+    foreign_url = f"{P}/work-orders/{foreign['id']}/einvoice"
+    assert (
+        client.post(
+            foreign_url, files={"file": ("re.xml", UBL.encode(), "application/xml")}, headers=pv
+        ).status_code
+        == 404
+    )
     sub = _ok(
         client.post(
             f"{P}/work-orders/{order['id']}/invoice",

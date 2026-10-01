@@ -104,3 +104,63 @@ describe("Ticket due date", () => {
     expect(JSON.parse(patch?.[1]?.body as string)).toEqual({ due_on: null });
   });
 });
+
+describe("Ticket location and dates (M19-04)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const PROPERTY = "0192abcd-0000-7000-8000-0000000000aa";
+  const BUILDING = "0192abcd-0000-7000-8000-0000000000bb";
+
+  it("sends property, building, start and follow-up date on create only when set", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/tickets/templates")) return jsonResponse([]);
+      if (url.includes("/api/bff/properties?")) return jsonResponse({ items: [{ id: PROPERTY, number: "101", name: "Musterstraße 1" }] });
+      if (url.includes(`/properties/${PROPERTY}/buildings`)) return jsonResponse([{ id: BUILDING, name: "Haus A" }]);
+      return jsonResponse({ id: ID }, 201);
+    });
+    renderIntl(<TicketCreate />);
+    await userEvent.type(screen.getByLabelText("Titel"), "Dach prüfen");
+    await userEvent.type(screen.getByLabelText("Objekt suchen"), "Muster");
+    await userEvent.click(screen.getByRole("button", { name: "Suchen" }));
+    await userEvent.click(await screen.findByRole("button", { name: "101 Musterstraße 1" }));
+    await userEvent.selectOptions(await screen.findByLabelText("Gebäude"), BUILDING);
+    await userEvent.type(screen.getByLabelText("Beginn"), "2026-11-02");
+    await userEvent.type(screen.getByLabelText("Wiedervorlage"), "2026-11-20");
+    await userEvent.click(screen.getByText("Ticket anlegen"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/tickets/${ID}`));
+    const createCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(createCall?.[1]?.body as string)).toMatchObject({
+      title: "Dach prüfen",
+      property_id: PROPERTY,
+      building_id: BUILDING,
+      start_date: "2026-11-02",
+      follow_up_date: "2026-11-20",
+    });
+  });
+
+  it("patches and clears the follow-up date inline", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}));
+    renderIntl(<TicketEdit id={ID} status="new" priority="normal" followUpDate="2026-11-20" />);
+    expect(screen.getByLabelText("Wiedervorlage")).toHaveValue("2026-11-20");
+    await userEvent.click(screen.getByRole("button", { name: "Wiedervorlage entfernen" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(patch?.[1]?.body as string)).toEqual({ follow_up_date: null });
+  });
+
+  it("changes the building of a ticket with a property and hints otherwise", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/buildings")) return jsonResponse([{ id: BUILDING, name: "Haus A" }]);
+      return jsonResponse({});
+    });
+    const { unmount } = renderIntl(<TicketEdit id={ID} status="new" priority="normal" propertyId={PROPERTY} />);
+    await userEvent.selectOptions(await screen.findByLabelText("Gebäude"), BUILDING);
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(patch?.[1]?.body as string)).toEqual({ building_id: BUILDING });
+    unmount();
+    renderIntl(<TicketEdit id={ID} status="new" priority="normal" />);
+    expect(screen.getByText("Für die Gebäudeauswahl zuerst dem Ticket ein Objekt zuordnen.")).toBeInTheDocument();
+  });
+});
