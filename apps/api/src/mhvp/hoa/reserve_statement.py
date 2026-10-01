@@ -32,6 +32,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa.models import HoaStatement, Resolution, _fk, _status
@@ -200,7 +201,7 @@ async def create(
         return _out(st)
 
 
-@router.get("", summary="Rücklagenabrechnungen")
+@router.get("", summary="Rücklagenabrechnungen", dependencies=[Depends(strict_query)])
 async def list_statements(
     request: Request,
     ledger_id: uuid.UUID | None = None,

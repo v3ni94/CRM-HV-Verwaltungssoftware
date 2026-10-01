@@ -26,6 +26,7 @@ from mhvp.contacts.models import (
 from mhvp.contacts.routers import DELETE, READ, UPDATE, _active, _not_found, _party_out
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(tags=["Kontakte"])
@@ -258,7 +259,11 @@ async def _tag_out(session: Any, tag: ContactTag) -> TagOut:
     return TagOut(id=tag.id, name=tag.name, contacts=int(count or 0))
 
 
-@router.get("/contact-tags", summary="Tags des Mandanten mit Verwendung")
+@router.get(
+    "/contact-tags",
+    summary="Tags des Mandanten mit Verwendung",
+    dependencies=[Depends(strict_query)],
+)
 async def list_tags(request: Request, principal: TenantPrincipal = Depends(READ)) -> list[TagOut]:
     async with tenant_tx(request, principal) as session:
         rows = (

@@ -5,6 +5,52 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.58.0 (01.10.2026) Welle 13, Folgearbeiten der zweiten Lückenanalyse: Freigabestufen mit Objektbezug, Nebenbuchabgleich, strikte Listenparameter, WEG-Versammlung und Vermögensbericht, Portalstatus, Plattformaudit
+
+- Übersicht: Welle 13 der zweiten Lückenanalyse (Folgearbeiten zu Welle 12) mit 14 Paketen AB01 bis AB14, Migrationen 0320 bis 0333, davon 0331 (portal_account.locale) und 0332 (platform_audit_event) als echte Migrationen und die übrigen (0320 bis 0330 und 0333) als Platzhalter ohne Schemaänderung. Neue offene Entscheidungen: AB10-01, AB12-01.
+- API: Listenendpunkte lehnen unbekannte Abfrageparameter mit 422 ab (strict_query an allen GET-Listen); externe API-Nutzer prüfen ihre Parameter, /tenant/events akzeptiert limit als Alias für page_size
+- API: filter[feld], sort und fields stehen nun auch an Auftragsliste, SLA-Uhren, Notfallalarmen, Regeln, Synchronisationsläufen, Abrufaufträgen, Bankregeln, Zahlungsaufträgen, Anzeigen und Interessenten bereit; filter, sort, fields, include und as_of nur dort, wo die Liste sie anbietet.
+- API: Änderungen an SLA-Regeln, Automatisierungsregeln, Anzeigen, Interessenten, Zahlungsaufträgen, Teams und Postfächern prüfen If-Match (412 bei veraltetem Stand) und liefern ETag.
+- Plattform: Buchungs- und Zahlungsrouten mit Objektbezug (führendes System, Sofortbuchung Ausgleich, Zahlungsdatei herunterladen und einreichen) prüfen die Freigabestufe mit Objekt und Rechtsträger, eine begrenzte Freigabe öffnet nur das Pilotobjekt.
+- Plattform: Neue CRM-Seite Freigabestufen mit Stand je Mandant, Checkliste, Antrag mit Nachweisdokument, Genehmigung, Ablehnung und Widerruf mit Kommentar sowie Anzeige von Öffnung und Widerruf.
+- Plattform: Neuer Endpunkt GET /platform/tenants/{id}/release-gates liefert Stand und Anträge eines Mandanten für Plattformadministratoren.
+- Plattform: Plattformaktionen ohne Mandantenkontext (Kundendomain, Mandantenstatus, OIDC-Client anlegen, Secret erneuern, aktivieren, deaktivieren) werden in der unveränderlichen Tabelle platform_audit_event festgeschrieben, ohne Secrets im Payload (Migration 0332).
+- Plattform: Neuer Endpunkt GET /platform/audit-events listet das Plattformaudit paginiert und nach Aktion filterbar, nur für Plattformadministratoren.
+- Plattform: Die Objektsuche im Zuordnungsassistenten des Messdienstes nutzt page_size und liest die Seitenantwort korrekt.
+- Plattform: Ein Integrationstest ruft jede registrierte gate-pflichtige Route bei geschlossenem Gate auf und weist die Ablehnung mit MHVP-GATE-0001 und dem zuständigen Gate nach, Routen mit vorgelagerter Datensatzprüfung sind mit Grund aufgeführt.
+- Buchhaltung: Die Auswertungen zeigen den Nebenbuchabgleich je Debitor und Kreditor zum gewählten Stichtag mit hervorgehobenen Differenzen.
+- Buchhaltung: Der Prüfexport enthält die Tabelle nebenbuchabgleich.csv mit Hauptbuchsaldo, offenen Posten und Differenz je Debitor und Kreditor zum Zeitraumende.
+- Buchhaltung: Das Verwalterhonorar-Formular im CRM ist um Verwalterkontakt, Kündigungsdatum, Fälligkeitsregel, Erlöskonto und SE-Gebührenbetrag erweitert, die Honorarliste zeigt die Felder an.
+- Buchhaltung: Rechnungspläne zeigen das Kennzeichen automatische Buchung (ja/nein, Umschalter); der Planlauf meldet den Sperrzustand (G1, Automatikschalter) und erzeugt weiterhin nur Entwürfe.
+- Buchhaltung: Die Kreditorenansicht erklärt die Standard-Bankregel (Vorschlag, keine Buchung); Integrationstests für Honorarfelder, Standardregel und Planflag ergänzt.
+- Buchhaltung: Der Abrechnungslauf speichert ID und Wirksamkeitsdatum des Registereintrags im Snapshot und zeigt die Regelversion im CRM an.
+- Buchhaltung: Fällige Prüfpunkte des Regelregisters werden über rule-versions/due-checkpoints als Hinweis ohne Rechtsfolge gemeldet.
+- Buchhaltung: Die Eingangsrechnung zeigt den Freigabepunkt § 13b UStG bei Reverse Charge, ohne Automatik.
+- WEG: Wiederholungs- und Fortsetzungsversammlungen sind im CRM mit Auswahl der Ursprungsversammlung anlegbar, Vorlagen werden aus einer Liste gewählt.
+- WEG: Die öffentliche Beschreibung der Versammlung wird Eigentümern im Portal angezeigt, die interne nie.
+- WEG: Der Hinweis zur Geltungsdauer des Grundlagenbeschlusses zur virtuellen Versammlung über drei Jahre erscheint dauerhaft in der Versammlungsdetailansicht (API und CRM).
+- WEG: Der Vermögensbericht kann nach Ausgabe je Eigentümer per Brief über den bestehenden Versand bereitgestellt werden (Zustellweg aus Kontakt oder Mandantenstandard, standardmäßig nur ohne Portalabruf, hinter G4); das Bereitstellungsprotokoll zeigt Abrufe und Briefe je Eigentümer.
+- WEG: Sonderfälle Ersterwerb, Zwangsversteigerung und Sonderrechtsnachfolge erscheinen mit deutscher Fallbezeichnung in Befund und Freigabeliste des Abrechnungspakets; die Zuordnung bleibt offen (AA07-01).
+- WEG: Das Informationsblatt zur Betriebskostenabrechnung kann als Dokument am Abrechnungslauf abgelegt werden (G3), Vorschau und Liste der Ausgaben im CRM; Texte zu Belegeinsicht und Einwendungen sind als "Text nicht freigegeben" gekennzeichnet.
+- WEG: Für die Eigentümerabrechnung gibt es eine Vorschau von Anschreiben und eigenem Nachweis nach § 35a, beide Dokumente werden nach interner Freigabe am Abrechnungslauf abgelegt (G3); der steuerliche Hinweis ist als "Text nicht freigegeben" gekennzeichnet.
+- Portal: Der Status des Portalzugangs (nicht eingeladen, eingeladen, aktiv, gesperrt, abgelaufen, entzogen) wird gespeichert; ein Beat-Job setzt abgelaufene Einladungen auf expired und gesperrte Zugänge auf locked.
+- Portal: Portalzugänge lassen sich ohne Einladung anlegen (send_invitation=false) und später einladen; die Annahme setzt den Status invited voraus.
+- Portal: Die Sprachwahl wird am Portalkonto gespeichert (Migration 0331, PATCH /portal/me/locale), bei der Anmeldung übernommen und ist auch auf der Anmeldeseite wählbar.
+- Portal: Neue CRM-Einstellungsseite Dienstleister im Portal zur Pflege der Verfügbarkeitsfenster und der Freigaben je Unterlagenklasse.
+- Kommunikation: message.delivered_at wird bei Versandannahme und Zugangsnachweis gesetzt, read_at beim Öffnen eines Dokuments der Nachricht im Portal (Indizien ohne Rechtswirkung).
+- Kommunikation: Tests erzeugen bank_transaction.imported, portal_account.activated, contract.changed und contract_payment.changed über den Fachpfad und prüfen Signatur und Mindestnutzlast.
+- Dokumente: Neue CRM-Seite Erzeugte Dokumente mit Filter nach Vorlage und Zeitraum und Link zum Dokument.
+- Dokumente: Kontexttypen einer Vorlage sind per PATCH und im Vorlagenformular pflegbar, verwendete Platzhalter werden angezeigt.
+- Dokumente: Der Verweis auf den Freigabe-Workflow ist am Auftrag per PATCH und auf der CRM-Auftragsseite pflegbar.
+- Automatisierung: Der Job Dokumenteneingang serialisiert gleichzeitige Läufe je Mandant per Sperre, ein zweiter Lauf indexiert keine Datei doppelt; der Job Verbrauchsinformation ist ebenso je Mandant gesperrt.
+- Automatisierung: Tests für Direktablage in beiden Schalterzuständen mit Mandantentrennung und Protokollierung sowie Parallellauf und Wiederholung beider Jobs.
+- Import: Schreiber für die HeiWaKo-Satzarten L und M mit Roundtrip- und Byte-Identitätstests gegen den Parser ergänzt, nur mit im Repo belegten Feldern.
+- Betrieb: Integrationstests für die konfigurierte Vertragsnummer (Format, Startwert nur bei unbenutztem Kreis) und den Mandantenstandard des Zustellwegs im Versand; Komponententests für die Plattformseiten Domains und OIDC-Clients; Test für contact.updated mit Fehlzustellung und Neuzustellung geschärft.
+- Doku: Abschnitt Faktenstand mit Zweck, Stack, Datenmodell, Schnittstellen und Status in den Dossiers Übergabeprotokoll, Müller FLOW und smart-einzug ergänzt.
+- Buchhaltung: Registerverweis im Abrechnungs-Snapshot verträgt ungespeicherte Regelversionen (Feld id leer statt Zeichenkette None)
+- KI-Chat: Seitenkontext kennt die neuen Seiten Erzeugte Dokumente und Freigabestufen
+- Dokumente: Liste der erzeugten Dokumente mit Scroll-Rahmen auf schmalen Bildschirmen
+
 ## 1.57.0 (01.10.2026) Welle 12 der zweiten Lückenanalyse: Freigabestufen, Buchhaltungsprüfungen, WEG-Versammlung und Vermögensbericht, Schwarzes Brett, Portal, Automatisierung
 
 - Übersicht: Welle 12 der zweiten Lückenanalyse (Lückenliste vom 01.10.2026) mit 17 Paketen AA01 bis AA17, Migrationen 0303 bis 0319, davon 0303, 0304, 0305, 0307, 0308, 0309, 0310, 0311, 0312, 0313 und 0316 als echte Migrationen und die übrigen (0306, 0314, 0315, 0317, 0318, 0319) als Platzhalter ohne Schemaänderung. Neue offene Entscheidungen: AA01-01, AA02-01 bis AA02-03, AA03-01, AA04-01, AA05-01 bis AA05-03, AA06-01, AA06-02, AA07-01, AA07-02, AA08-01, AA10-01 bis AA10-03, AA11-01 bis AA11-03, AA12-01 bis AA12-04, AA13-01, AA14-01 bis AA14-03, AA15-01, AA15-02, AA16-01 bis AA16-03, AA17-01 bis AA17-03.

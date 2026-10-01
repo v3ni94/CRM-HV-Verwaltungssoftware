@@ -55,6 +55,7 @@ from mhvp.automation.models import (
 from mhvp.automation.rules import is_automation_event
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import DomainEvent, emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 log = logging.getLogger(__name__)
@@ -891,7 +892,11 @@ def proposal_out(
     )
 
 
-@router.get("/rule-proposals", summary="Regelvorschläge aus wiederholten Entscheidungen")
+@router.get(
+    "/rule-proposals",
+    summary="Regelvorschläge aus wiederholten Entscheidungen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_proposals(
     request: Request,
     status: StatusFilter = Query(default="proposed"),

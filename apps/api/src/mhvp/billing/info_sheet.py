@@ -16,7 +16,9 @@ from typing import Any
 from mhvp.billing.letters import DRAFT_LABEL, fmt_date, fmt_eur
 from mhvp.documents import letters
 
-TEXT_PENDING = "Textbaustein vom Betreiber nicht freigegeben (AA11-01)"
+# GA06-02: marking of every legally relevant paragraph until AA11-01 is decided.
+TEXT_NOT_RELEASED = "Text nicht freigegeben"
+TEXT_PENDING = f"{TEXT_NOT_RELEASED}: Textbaustein des Betreibers ausstehend (AA11-01)"
 
 
 def positions(snapshot_inputs: dict[str, Any]) -> list[dict[str, Any]]:

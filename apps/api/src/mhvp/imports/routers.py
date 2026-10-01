@@ -11,6 +11,7 @@ from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_unrestricted_guard
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -166,7 +167,7 @@ async def create_mapping(
         return MappingOut.model_validate(row)
 
 
-@router.get("/mappings", summary="Mapping-Vorlagen")
+@router.get("/mappings", summary="Mapping-Vorlagen", dependencies=[Depends(strict_query)])
 async def list_mappings(
     request: Request,
     report_type: ReportType | None = None,
@@ -223,7 +224,11 @@ async def get_source(
         return SourceOut.model_validate(await _get(session, ImportSourceFile, source_id))
 
 
-@router.get("/files/{source_id}/rows", summary="Zeilen mit Status (Validierungsbericht)")
+@router.get(
+    "/files/{source_id}/rows",
+    summary="Zeilen mit Status (Validierungsbericht)",
+    dependencies=[Depends(strict_query)],
+)
 async def rows(
     source_id: uuid.UUID,
     request: Request,

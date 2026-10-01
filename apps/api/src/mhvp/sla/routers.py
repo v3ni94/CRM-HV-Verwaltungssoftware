@@ -2,15 +2,17 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.config import get_settings
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.sla.channels import (
     SMS_TEST_TEXT,
@@ -255,7 +257,7 @@ def _calendar_out(row: WorkCalendar) -> dict[str, Any]:
 # --- Regeln ---------------------------------------------------------------
 
 
-@router.get("/rules", summary="SLA-Regeln")
+@router.get("/rules", summary="SLA-Regeln", dependencies=[Depends(strict_query)])
 async def list_rules(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -287,12 +289,15 @@ async def update_rule(
     rule_id: uuid.UUID,
     body: SlaRuleIn,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(MANAGE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         rule = await session.get(SlaRule, rule_id)
         if rule is None:
             raise ProblemError(ErrorCodes.NOT_FOUND)
+        check_if_match(if_match, rule.updated_at)  # GA04-06
         data = body.data()
         _check_channels(data["channels_by_level"])
         other = await _same_rule(session, principal.tenant_id, body.priority, data["category"])
@@ -315,6 +320,9 @@ async def update_rule(
             _set_draft(rule)
         rule.updated_by = principal.user_id
         await session.flush()
+        await session.flush()
+        await session.refresh(rule, ["updated_at"])
+        response.headers["ETag"] = etag_of(rule.updated_at)
         return _rule_out(rule)
 
 
@@ -487,7 +495,11 @@ async def delete_rule(
         await session.delete(rule)
 
 
-@router.get("/rules/{rule_id}/steps", summary="Eskalationsstufen einer Regel")
+@router.get(
+    "/rules/{rule_id}/steps",
+    summary="Eskalationsstufen einer Regel",
+    dependencies=[Depends(strict_query)],
+)
 async def list_steps(
     rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -536,12 +548,28 @@ async def delete_step(
 # --- Uhren -----------------------------------------------------------------
 
 
-@router.get("/clocks", summary="SLA-Uhren")
+_CLOCK_LIST = ListSpec(  # GA04-05
+    filters={
+        "state": SlaClock.state,
+        "color": SlaClock.color,
+        "ticket_id": SlaClock.ticket_id,
+        "rule_id": SlaClock.rule_id,
+    },
+    sort={
+        "started_at": SlaClock.started_at,
+        "due_response_at": SlaClock.due_response_at,
+        "due_resolution_at": SlaClock.due_resolution_at,
+    },
+)
+
+
+@router.get("/clocks", summary="SLA-Uhren", dependencies=[Depends(strict_query)])
 async def list_clocks(
     request: Request,
     state: ClockState | None = None,
     color: SlaColor | None = None,
     limit: int = Query(default=200, ge=1, le=1000),
+    params: ListParams = Depends(_CLOCK_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
@@ -550,8 +578,9 @@ async def list_clocks(
             query = query.where(SlaClock.state == state)
         if color:
             query = query.where(SlaClock.color == color)
-        rows = await session.scalars(query.order_by(SlaClock.started_at.desc()).limit(limit))
-        return [_clock_out(r) for r in rows.all()]
+        query = _CLOCK_LIST.apply(query, params, (SlaClock.started_at.desc(),))
+        rows = await session.scalars(query.limit(limit))
+        return sparse([_clock_out(r) for r in rows.all()], params, None)  # type: ignore[no-any-return]
 
 
 @router.get("/tickets/{ticket_id}/sla", summary="SLA-Uhr eines Tickets")
@@ -593,7 +622,7 @@ async def resume(
 # --- Bereitschaft ------------------------------------------------------------
 
 
-@router.get("/on-call", summary="Bereitschaftsplan")
+@router.get("/on-call", summary="Bereitschaftsplan", dependencies=[Depends(strict_query)])
 async def list_on_call(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -642,19 +671,31 @@ async def delete_on_call(
 # --- Notfallalarme -----------------------------------------------------------
 
 
-@router.get("/alerts", summary="Notfallalarme")
+_ALERT_LIST = ListSpec(  # GA04-05
+    filters={
+        "ticket_id": EmergencyAlert.ticket_id,
+        "level": EmergencyAlert.level,
+        "channel": EmergencyAlert.channel,
+    },
+    sort={"sent_at": EmergencyAlert.sent_at, "level": EmergencyAlert.level},
+)
+
+
+@router.get("/alerts", summary="Notfallalarme", dependencies=[Depends(strict_query)])
 async def list_alerts(
     request: Request,
     unacknowledged: bool = False,
     limit: int = Query(default=100, ge=1, le=500),
+    params: ListParams = Depends(_ALERT_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         query = select(EmergencyAlert)
         if unacknowledged:
             query = query.where(EmergencyAlert.acknowledged_at.is_(None))
-        rows = await session.scalars(query.order_by(EmergencyAlert.sent_at.desc()).limit(limit))
-        return [_alert_out(r) for r in rows.all()]
+        query = _ALERT_LIST.apply(query, params, (EmergencyAlert.sent_at.desc(),))
+        rows = await session.scalars(query.limit(limit))
+        return sparse([_alert_out(r) for r in rows.all()], params, None)  # type: ignore[no-any-return]
 
 
 @router.post("/alerts/{alert_id}/ack", summary="Notfallalarm bestätigen")

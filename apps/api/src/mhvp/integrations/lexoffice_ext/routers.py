@@ -21,6 +21,7 @@ from mhvp.communication.models import Mailbox
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.integrations.lexoffice_async import LexofficeError, LexofficeValidationError
 from mhvp.integrations.lexoffice_ext import invoice_copy, invoice_drafts, matching, tasks
@@ -217,7 +218,11 @@ async def apply_config(
 # Configs -----------------------------------------------------------------------------------
 
 
-@router.get("/configs", summary="Lexware Office Organisationen je Gesellschaft")
+@router.get(
+    "/configs",
+    summary="Lexware Office Organisationen je Gesellschaft",
+    dependencies=[Depends(strict_query)],
+)
 async def list_configs(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> list[s.LexofficeOrganisationOut]:
@@ -303,7 +308,9 @@ async def check_config_connection(
         return await _config_out(session, config)
 
 
-@router.get("/configs/{config_id}/runs", summary="Letzte Läufe")
+@router.get(
+    "/configs/{config_id}/runs", summary="Letzte Läufe", dependencies=[Depends(strict_query)]
+)
 async def config_runs(
     config_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ACCOUNTING_READ)
 ) -> list[s.LexofficeRunOut]:
@@ -318,7 +325,11 @@ async def config_runs(
         return [s.LexofficeRunOut.model_validate(r) for r in rows]
 
 
-@router.get("/legal-entities", summary="Gesellschaften des Mandanten (für die Zuordnung)")
+@router.get(
+    "/legal-entities",
+    summary="Gesellschaften des Mandanten (für die Zuordnung)",
+    dependencies=[Depends(strict_query)],
+)
 async def legal_entities(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> list[s.LexofficeLegalEntityOut]:
@@ -373,7 +384,11 @@ async def _mappings(
     return out
 
 
-@router.get("/invoice-kinds", summary="Zuordnung Rechnungsart zu Gesellschaft")
+@router.get(
+    "/invoice-kinds",
+    summary="Zuordnung Rechnungsart zu Gesellschaft",
+    dependencies=[Depends(strict_query)],
+)
 async def list_invoice_kinds(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> list[s.LexofficeInvoiceKindMappingOut]:
@@ -427,7 +442,7 @@ async def put_invoice_kinds(
 # Outbox --------------------------------------------------------------------------------------
 
 
-@router.get("/outbox", summary="Warteschlange")
+@router.get("/outbox", summary="Warteschlange", dependencies=[Depends(strict_query)])
 async def list_outbox(
     request: Request,
     principal: TenantPrincipal = Depends(SETTINGS_WRITE),
@@ -525,7 +540,11 @@ async def _link_out(
     )
 
 
-@router.get("/configs/{config_id}/contacts/links", summary="Kontaktzuordnungen")
+@router.get(
+    "/configs/{config_id}/contacts/links",
+    summary="Kontaktzuordnungen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_links(
     config_id: uuid.UUID,
     request: Request,
@@ -816,7 +835,11 @@ async def push_batch(
         return {"queued": count}
 
 
-@router.get("/configs/{config_id}/contacts/search", summary="Lexware Kontakt suchen")
+@router.get(
+    "/configs/{config_id}/contacts/search",
+    summary="Lexware Kontakt suchen",
+    dependencies=[Depends(strict_query)],
+)
 async def search_remote(
     config_id: uuid.UUID,
     request: Request,
@@ -857,7 +880,11 @@ async def search_remote(
         return out[:50]
 
 
-@router.get("/contacts/{contact_id}/lexoffice", summary="Lexware Office Status eines Kontakts")
+@router.get(
+    "/contacts/{contact_id}/lexoffice",
+    summary="Lexware Office Status eines Kontakts",
+    dependencies=[Depends(strict_query)],
+)
 async def contact_status(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CONTACTS_READ)
 ) -> list[s.LexofficeContactStatusOut]:
@@ -970,7 +997,7 @@ async def create_draft(
         return s.LexofficeInvoiceDraftOut.model_validate(draft)
 
 
-@router.get("/invoice-drafts", summary="Rechnungsentwürfe")
+@router.get("/invoice-drafts", summary="Rechnungsentwürfe", dependencies=[Depends(strict_query)])
 async def list_drafts(
     request: Request,
     principal: TenantPrincipal = Depends(ACCOUNTING_READ),
@@ -1014,7 +1041,9 @@ def _prep_out(
     return out
 
 
-@router.get("/recurring-preps", summary="Vorbereitete Dauerrechnungen")
+@router.get(
+    "/recurring-preps", summary="Vorbereitete Dauerrechnungen", dependencies=[Depends(strict_query)]
+)
 async def list_recurring(
     request: Request,
     principal: TenantPrincipal = Depends(ACCOUNTING_READ),
@@ -1097,7 +1126,11 @@ async def _request(
     return row
 
 
-@router.get("/tickets/{ticket_id}/invoice-copies", summary="Rechnungskopie Anfragen eines Tickets")
+@router.get(
+    "/tickets/{ticket_id}/invoice-copies",
+    summary="Rechnungskopie Anfragen eines Tickets",
+    dependencies=[Depends(strict_query)],
+)
 async def list_invoice_copies(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(TICKETS_UPDATE)
 ) -> list[s.LexofficeInvoiceCopyOut]:

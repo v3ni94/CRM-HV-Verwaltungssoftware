@@ -191,3 +191,7 @@ Rechnungsnummer, Datum und Brutto des Dienstleisters, und der Auftrag steht auf 
 nichts gebucht und nichts bezahlt. Netto, Umsatzsteuer und Bankverbindung sind im Belegeingang anhand
 des Belegs zu prüfen und zu erfassen; die Buchung bleibt gesperrt, bis die produktive Buchhaltung
 freigegeben ist. Erforderlich sind die Rechte Kontakte bearbeiten und Buchhaltung anlegen.
+
+## Freigabepunkt § 13b UStG (AB10)
+
+Ist ein Beleg als Reverse Charge gekennzeichnet, zeigt die Eingangsrechnung einen eigenen Hinweis. Der Steuerberater bestätigt die Normzuordnung; es gibt keine automatische Buchung oder Steuerfolge.

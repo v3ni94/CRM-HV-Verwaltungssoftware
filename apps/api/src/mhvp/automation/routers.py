@@ -8,9 +8,9 @@ event and returns the action previews; nothing is written.
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,7 +51,9 @@ from mhvp.automation.services import (
     seal_actions,
 )
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/automation", tags=["Automatisierung"])
@@ -155,7 +157,11 @@ async def _assert_unique_name(session: AsyncSession, name: str, exclude: uuid.UU
         raise ProblemError(ErrorCodes.CONFLICT, detail="Eine Regel mit diesem Namen existiert.")
 
 
-@router.get("/rule-templates", summary="Regelvorlagen (Beispiele, nicht aktiv)")
+@router.get(
+    "/rule-templates",
+    summary="Regelvorlagen (Beispiele, nicht aktiv)",
+    dependencies=[Depends(strict_query)],
+)
 async def rule_templates(
     principal: TenantPrincipal = Depends(_read_principal),
 ) -> list[dict[str, Any]]:
@@ -184,15 +190,30 @@ async def meta(principal: TenantPrincipal = Depends(_read_principal)) -> dict[st
     }
 
 
-@router.get("/rules", summary="Regeln auflisten")
+_RULE_LIST = ListSpec(  # GA04-05
+    filters={
+        "active": AutomationRule.active,
+        "test_mode": AutomationRule.test_mode,
+        "trigger_kind": AutomationRule.trigger_kind,
+        "trigger_event_type": AutomationRule.trigger_event_type,
+    },
+    sort={"name": AutomationRule.name, "created_at": AutomationRule.created_at},
+)
+
+
+@router.get("/rules", summary="Regeln auflisten", dependencies=[Depends(strict_query)])
 async def list_rules(
-    request: Request, principal: TenantPrincipal = Depends(_read_principal)
+    request: Request,
+    params: ListParams = Depends(_RULE_LIST.dependency),
+    principal: TenantPrincipal = Depends(_read_principal),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         rows = await session.scalars(
-            select(AutomationRule).order_by(AutomationRule.name, AutomationRule.id)
+            _RULE_LIST.apply(
+                select(AutomationRule), params, (AutomationRule.name, AutomationRule.id)
+            )
         )
-        return [_rule_out(r) for r in rows]
+        return sparse([_rule_out(r) for r in rows], params, None)  # type: ignore[no-any-return]
 
 
 @router.post("/rules", status_code=201, summary="Regel anlegen")
@@ -225,10 +246,15 @@ async def create_rule(
 
 @router.get("/rules/{rule_id}", summary="Regel lesen")
 async def get_rule(
-    rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(_read_principal)
+    rule_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(_read_principal),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        return _rule_out(await _get_rule(session, rule_id))
+        rule = await _get_rule(session, rule_id)
+        response.headers["ETag"] = etag_of(rule.updated_at)  # GA04-06
+        return _rule_out(rule)
 
 
 @router.patch("/rules/{rule_id}", summary="Regel ändern")
@@ -236,10 +262,13 @@ async def patch_rule(
     rule_id: uuid.UUID,
     body: AutomationRulePatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(MANAGE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         rule = await _get_rule(session, rule_id)
+        check_if_match(if_match, rule.updated_at)  # GA04-06
         values = body.model_dump(exclude_unset=True)
         if "name" in values and values["name"] is not None:
             await _assert_unique_name(session, values["name"], rule.id)
@@ -291,6 +320,9 @@ async def patch_rule(
         )
         await session.flush()
         await session.refresh(rule)
+        await session.flush()
+        await session.refresh(rule, ["updated_at"])
+        response.headers["ETag"] = etag_of(rule.updated_at)
         return _rule_out(rule)
 
 
@@ -451,7 +483,11 @@ class JobScheduleIn(BaseModel):
     run_at: str | None = Field(default=None, max_length=5, description="HH:MM, Europe/Berlin")
 
 
-@router.get("/job-schedules", summary="Standardjobs und Zeitpläne des Mandanten")
+@router.get(
+    "/job-schedules",
+    summary="Standardjobs und Zeitpläne des Mandanten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_job_schedules(
     request: Request, principal: TenantPrincipal = Depends(_read_principal)
 ) -> list[dict[str, Any]]:

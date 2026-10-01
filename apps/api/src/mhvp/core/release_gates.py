@@ -87,6 +87,42 @@ async def ensure_release_gate_open(
         raise ReleaseGateClosedError(gate)
 
 
+async def ensure_release_gate_open_for(
+    gate: ReleaseGate,
+    tenant_id: UUID | None,
+    resolver: ReleaseGateResolver,
+    *,
+    property_id: UUID | None = None,
+    legal_entity_id: UUID | None = None,
+    function: str | None = None,
+) -> None:
+    """Like :func:`ensure_release_gate_open`, with the object context of the route (GA14-02).
+
+    An unrestricted approval opens every context; a restricted approval (pilot property,
+    legal entity, function) only opens a matching context. A resolver without
+    ``is_open_for`` falls back to ``is_open``. Fails closed like the context free check.
+    """
+    if tenant_id is None:
+        raise ReleaseGateClosedError(gate)
+    check = getattr(resolver, "is_open_for", None)
+    try:
+        if check is None:
+            is_open = await resolver.is_open(tenant_id, gate)
+        else:
+            is_open = await check(
+                tenant_id,
+                gate,
+                property_id=property_id,
+                legal_entity_id=legal_entity_id,
+                function=function,
+            )
+    except Exception:
+        _log.exception("release_gate_resolver_failed", gate=gate.value)
+        raise ReleaseGateClosedError(gate) from None
+    if is_open is not True:
+        raise ReleaseGateClosedError(gate)
+
+
 def require_release_gate(gate: ReleaseGate) -> Callable[[Request], Awaitable[None]]:
     """FastAPI dependency: ``dependencies=[Depends(require_release_gate(ReleaseGate.G1))]``.
 

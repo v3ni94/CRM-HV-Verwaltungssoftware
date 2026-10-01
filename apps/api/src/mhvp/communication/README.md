@@ -493,3 +493,7 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
 
 `/reply-ai/approve` requires `draft_hash` (SHA-256 of the stored draft without approval
 fields, `compact.reply_draft_hash`); mismatch 409 `MHVP-COMM-0010`. Rule T12.
+
+## Zustell- und Leseindizien (GA04-09, AB03)
+
+`message.delivered_at` wird beim Statuswechsel auf `sent` (Annahme durch den Transport) und beim Zugangsnachweis einer verknüpften Zustellung gesetzt, `message.read_at` beim Öffnen eines Dokuments der Nachricht im Portal (`GET /portal/documents/{id}`). Beide sind Indizien ohne Rechtswirkung, der erste Wert bleibt. Logik in `receipts.py`. Eine Zustellbestätigung des Anbieters ist nicht verfügbar.

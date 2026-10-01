@@ -57,6 +57,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate
 from mhvp.platform import gates
@@ -751,7 +752,11 @@ def _export_out(row: TenantExportRequest) -> dict[str, Any]:
     }
 
 
-@router.get("/tenants/{tenant_id}/export-requests", summary="Mandanten-Export: Anträge")
+@router.get(
+    "/tenants/{tenant_id}/export-requests",
+    summary="Mandanten-Export: Anträge",
+    dependencies=[Depends(strict_query)],
+)
 async def list_export_requests(
     tenant_id: uuid.UUID, request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[dict[str, Any]]:

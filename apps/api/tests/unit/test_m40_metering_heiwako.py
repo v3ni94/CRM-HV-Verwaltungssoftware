@@ -4,6 +4,7 @@ bved 3.10 PDF (Q14); no provider file is used and nothing is stored."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
@@ -388,3 +389,39 @@ def test_write_a_records_rejects_oversized_reference() -> None:
     )
     with pytest.raises(ValueError, match="passt nicht"):
         heiwako.write_a_records([bad])
+
+
+def test_write_l_and_m_records_roundtrip_and_byte_identity() -> None:
+    l_text = l_line(PROP, ("010125", "311225"))
+    m_text = m_line(PROP, "0001", "Mustermann, Max")
+    parsed = heiwako.parse_file(encode(l_text, m_text), filename="DTM310_20260927120000123.DAT")
+    (l_rec,) = parsed.of_type("L")
+    (m_rec,) = parsed.of_type("M")
+    raw = heiwako.write_l_records([l_rec]) + heiwako.write_m_records([m_rec])
+    # Fixtures only use documented positions, so the export reproduces them byte for byte.
+    assert raw == encode(l_text, m_text)
+    again = heiwako.parse_file(raw, filename="DTM310_20260927120000124.DAT")
+    assert again.errors == []
+    assert again.of_type("L") == [l_rec]
+    assert again.of_type("M") == [m_rec]
+
+
+def test_write_m_record_negative_amount_blank_stays_blank_and_vacancy() -> None:
+    parsed = heiwako.parse_file(encode(m_line(PROP, "0002", "Leerstand", vacancy="1")))
+    (rec,) = parsed.of_type("M")
+    changed = replace(rec, heating_prepayment_net=Decimal("-12.30"), vacancy_flag=1)
+    (back,) = heiwako.parse_file(heiwako.write_m_records([changed])).of_type("M")
+    assert back.heating_prepayment_net == Decimal("-12.30")
+    assert back.cold_water_shares is None  # blank, never zero
+    assert back.vacancy_flag == 1
+    assert len(heiwako.write_m_records([changed])) == 2048 + 2
+
+
+def test_write_l_m_records_reject_oversized_values() -> None:
+    (rec,) = heiwako.parse_file(encode(l_line(PROP, ("010125", "311225")))).of_type("L")
+    with pytest.raises(ValueError, match="passt nicht"):
+        heiwako.write_l_records([replace(rec, total_area=Decimal("123456789.00"))])
+    with pytest.raises(ValueError, match="passt nicht"):
+        heiwako.write_l_records([replace(rec, city="x" * 36)])
+    with pytest.raises(ValueError, match="zweistelligem"):
+        heiwako.write_l_records([replace(rec, period_from=date(2070, 1, 1))])

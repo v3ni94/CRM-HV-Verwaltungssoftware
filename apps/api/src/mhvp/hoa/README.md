@@ -203,3 +203,28 @@ Migration 0308. Rules: `docs/rules/AA06-versammlung-beschluss-sammlung.md`.
   `MHVP-HOA-0030` only with `tenant_settings.hoa_virtual_basis_term_lock_enabled` (default
   off, `PUT /hoa/meeting-settings` field `virtual_basis_term_lock_enabled`). Transition rule
   § 48 Abs. 6 WEG not implemented (AA06-02).
+
+## Follow-up AB06 (01.10.2026, migration 0325 noop)
+
+* GA03-01: the CRM creation form offers `repeat` and `continuation` with a selection of earlier
+  meetings of the same community (`origin_meeting_id`); templates for invitation, proxy and
+  ballot are chosen from `GET /document-templates` instead of typing an ID. The owner portal
+  shows `public_description` (the internal description never leaves the API for the portal).
+* GA07-01: `GET /hoa/meetings/{id}` returns `virtual_basis_term_notice` permanently (same text
+  as on creation); the CRM detail view shows it. The lock `MHVP-HOA-0030` stays behind the
+  tenant switch (default off), decision AA06-02 open.
+* GA03-03 stays partial: `void` unchanged until AA06-01 is decided.
+
+### Problem code assignment (HOA)
+
+Codes `MHVP-HOA-0006` to `MHVP-HOA-0019` are unassigned and stay free; they are not reused
+for renumbering. Assigned: 0001 to 0005 (M24/M25 base), 0020 (GA07-03 four eyes), 0030
+(GA07-01 term lock). Rule: a new code takes the next number above the highest assigned one of its package group
+(parallel packages reserve their own number; gaps are allowed); existing codes are never
+renumbered or reassigned (ADR 0004, codes are part of the API contract). Register
+every new code in `mhvp.core.problems` at the end of the HOA block and in the rule file.
+
+## Follow-up AB07 (01.10.2026, migration 0326 noop)
+
+- `POST /hoa/asset-reports/{id}/dispatch` (accounting:create, G4, status `issued`): one letter per resolved recipient of each ownership contract on the reporting date, filed as generated document (`generated_document.context_type = hoa_asset_report`) and handed to `mhvp.communication.dispatch` (channel of the request, else contact preference, else tenant default). Default only owners without portal retrieval; contracts with an existing letter are skipped. The provision log lists `dispatches` per contract.
+- `acquisition.py`: German case labels (`case_label`, findings) for first acquisition, forced sale and special succession; tests for these cases. No allocation rule (AA07-01), `calc.py` unchanged.

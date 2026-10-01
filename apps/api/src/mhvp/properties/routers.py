@@ -36,6 +36,7 @@ from mhvp.core.listparams import (
     check_include,
     embed,
     list_params,
+    strict_query,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
@@ -153,6 +154,7 @@ _PROPERTY_SORT = {
     response_model=s.PropertyPage,
     description=LIST_PARAMS_DOC
     + " include: legal_entities (Rechtsträger des Objekts und der Objekteigentümer).",
+    dependencies=[Depends(strict_query)],
 )
 async def list_properties(
     request: Request,
@@ -447,7 +449,9 @@ async def change_status(
 # Buildings and units -------------------------------------------------------------------
 
 
-@router.get("/properties/{property_id}/buildings", summary="Gebäude")
+@router.get(
+    "/properties/{property_id}/buildings", summary="Gebäude", dependencies=[Depends(strict_query)]
+)
 async def list_buildings(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.BuildingOut]:
@@ -671,7 +675,11 @@ def _current(entries: list[tuple[s.OccupantOut, bool]], kind: str) -> s.Occupant
     return next((o for o, cur in entries if cur and o.kind == kind), None)
 
 
-@router.get("/properties/{property_id}/units", summary="Einheiten, optional zum Stichtag")
+@router.get(
+    "/properties/{property_id}/units",
+    summary="Einheiten, optional zum Stichtag",
+    dependencies=[Depends(strict_query)],
+)
 async def list_units(
     property_id: uuid.UUID,
     request: Request,
@@ -821,7 +829,11 @@ async def update_unit(
 # Allocation keys and values ------------------------------------------------------------
 
 
-@router.get("/properties/{property_id}/allocation-keys", summary="Umlageschlüssel")
+@router.get(
+    "/properties/{property_id}/allocation-keys",
+    summary="Umlageschlüssel",
+    dependencies=[Depends(strict_query)],
+)
 async def list_keys(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.AllocationKeyOut]:
@@ -982,7 +994,11 @@ async def allocation_summary(
         )
 
 
-@router.get("/units/{unit_id}/allocation-values", summary="Schlüsselwerte, Historie oder Stichtag")
+@router.get(
+    "/units/{unit_id}/allocation-values",
+    summary="Schlüsselwerte, Historie oder Stichtag",
+    dependencies=[Depends(strict_query)],
+)
 async def list_values(
     unit_id: uuid.UUID,
     request: Request,
@@ -1177,7 +1193,11 @@ def _berlin_today() -> date:
     return datetime.now(ZoneInfo("Europe/Berlin")).date()
 
 
-@router.get("/properties/{property_id}/owners", summary="Aktuelle Objekteigentümer")
+@router.get(
+    "/properties/{property_id}/owners",
+    summary="Aktuelle Objekteigentümer",
+    dependencies=[Depends(strict_query)],
+)
 async def list_owners(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.CurrentOwnerOut]:
@@ -1279,7 +1299,11 @@ async def set_owner(
         return s.OwnerSetOut(status=status, owner=s.CurrentOwnerOut(**view), ended=ended)
 
 
-@router.get("/properties/{property_id}/legal-entities", summary="Rechtsträger des Objekts")
+@router.get(
+    "/properties/{property_id}/legal-entities",
+    summary="Rechtsträger des Objekts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_entities(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.LegalEntityOut]:
@@ -1330,7 +1354,11 @@ async def _set_default_account(session: AsyncSession, account: PropertyBankAccou
     await session.flush()
 
 
-@router.get("/properties/{property_id}/bank-accounts", summary="Bankkonten")
+@router.get(
+    "/properties/{property_id}/bank-accounts",
+    summary="Bankkonten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_accounts(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.BankAccountOut]:
@@ -1423,6 +1451,7 @@ async def set_default_account(
 @router.get(
     "/properties/{property_id}/bank-account-options",
     summary="Auswählbare Bankkonten des Objekts (Stammkonten und zugeordnete Konten)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_account_options(
     property_id: uuid.UUID,
@@ -1448,7 +1477,11 @@ async def list_account_options(
 # Contacts, meters, providers, maintenance -----------------------------------------------
 
 
-@router.get("/properties/{property_id}/contacts", summary="Ansprechpartner")
+@router.get(
+    "/properties/{property_id}/contacts",
+    summary="Ansprechpartner",
+    dependencies=[Depends(strict_query)],
+)
 async def list_property_contacts(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.PropertyContactOut]:
@@ -1499,7 +1532,9 @@ async def add_property_contact(
         )
 
 
-@router.get("/properties/{property_id}/meters", summary="Zähler")
+@router.get(
+    "/properties/{property_id}/meters", summary="Zähler", dependencies=[Depends(strict_query)]
+)
 async def list_meters(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.MeterOut]:
@@ -1530,7 +1565,9 @@ async def add_meter(
         return s.MeterOut.model_validate(meter)
 
 
-@router.get("/meters/{meter_id}/readings", summary="Zählerstände")
+@router.get(
+    "/meters/{meter_id}/readings", summary="Zählerstände", dependencies=[Depends(strict_query)]
+)
 async def list_readings(
     meter_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.ReadingOut]:
@@ -1574,7 +1611,11 @@ async def add_reading(
         return s.ReadingOut.model_validate(reading).model_copy(update={"implausible": implausible})
 
 
-@router.get("/properties/{property_id}/service-providers", summary="Dienstleisterverhältnisse")
+@router.get(
+    "/properties/{property_id}/service-providers",
+    summary="Dienstleisterverhältnisse",
+    dependencies=[Depends(strict_query)],
+)
 async def list_providers(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.ProviderOut]:
@@ -1647,7 +1688,11 @@ async def add_provider(
         return s.ProviderOut.model_validate(row)
 
 
-@router.get("/properties/{property_id}/maintenance", summary="Wartung und Prüfpflichten")
+@router.get(
+    "/properties/{property_id}/maintenance",
+    summary="Wartung und Prüfpflichten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_maintenance(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.MaintenanceOut]:
@@ -1710,7 +1755,11 @@ async def _emit_simple(
     )
 
 
-@router.get("/properties/{property_id}/billing-periods", summary="Abrechnungszeiträume")
+@router.get(
+    "/properties/{property_id}/billing-periods",
+    summary="Abrechnungszeiträume",
+    dependencies=[Depends(strict_query)],
+)
 async def list_billing_periods(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.BillingPeriodOut]:
@@ -1789,7 +1838,11 @@ async def delete_billing_period(
         return Response(status_code=204)
 
 
-@router.get("/properties/{property_id}/sub-communities", summary="Untergemeinschaften")
+@router.get(
+    "/properties/{property_id}/sub-communities",
+    summary="Untergemeinschaften",
+    dependencies=[Depends(strict_query)],
+)
 async def list_sub_communities(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.SubCommunityOut]:
@@ -1900,7 +1953,11 @@ async def delete_sub_community(
         return Response(status_code=204)
 
 
-@router.get("/properties/{property_id}/portal-documents", summary="Objektmappe")
+@router.get(
+    "/properties/{property_id}/portal-documents",
+    summary="Objektmappe",
+    dependencies=[Depends(strict_query)],
+)
 async def list_portal_documents(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.PortalDocumentOut]:
@@ -1993,6 +2050,7 @@ def _vacancy_value_out(
 @router.get(
     "/units/{unit_id}/vacancy-allocation-values",
     summary="Umlagewerte für Leerstandszeiten, Historie oder Stichtag",
+    dependencies=[Depends(strict_query)],
 )
 async def list_vacancy_values(
     unit_id: uuid.UUID,
@@ -2055,7 +2113,9 @@ async def add_vacancy_value(
         return _vacancy_value_out(row, key)
 
 
-@router.get("/meters/{meter_id}/changes", summary="Zählerwechsel")
+@router.get(
+    "/meters/{meter_id}/changes", summary="Zählerwechsel", dependencies=[Depends(strict_query)]
+)
 async def list_meter_changes(
     meter_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.MeterChangeOut]:
@@ -2121,7 +2181,11 @@ async def add_meter_change(
 # Templates (catalogues and custom fields: routers_catalogs.py) ----------------------------
 
 
-@router.get("/allocation-key-templates", summary="Muster Umlageschlüssel")
+@router.get(
+    "/allocation-key-templates",
+    summary="Muster Umlageschlüssel",
+    dependencies=[Depends(strict_query)],
+)
 async def list_templates(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.AllocationKeyIn]:

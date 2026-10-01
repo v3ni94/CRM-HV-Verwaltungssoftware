@@ -244,6 +244,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Portalzugang einladen von der Kontaktakte aus (M21, Lückenliste A86).
   { method: "GET", pattern: /^portal-admin\/accounts$/ },
   { method: "POST", pattern: /^portal-admin\/accounts$/ },
+  // GA11-04 (AB12): Verfügbarkeitsfenster und Klassenfreigaben der Dienstleister.
+  { method: "GET", pattern: /^portal-admin\/provider-availability$/ },
+  { method: "POST", pattern: /^portal-admin\/provider-availability$/ },
+  { method: "DELETE", pattern: new RegExp(`^portal-admin/provider-availability/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^portal-admin/accounts/${ID}/document-class-grants$`) },
+  { method: "POST", pattern: new RegExp(`^portal-admin/accounts/${ID}/document-class-grants$`) },
   // P13: Portalfunktionen und Statistik (M21-08, SA-01), Vollmachten (M21-05), Support-Sicht mit
   // Einwilligung (SA-02), Antwort im Chat zur Meldung (M21-01).
   { method: "GET", pattern: /^portal-admin\/(features|statistics|representations)$/ },
@@ -644,6 +650,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(letters|letters/preview|result-entries|inspections)$`) },
   // GA06-02: Informationsblatt zur Abrechnung (PDF draft).
   { method: "POST", pattern: new RegExp(`^statements/${ID}/info-sheet/preview$`) },
+  // AB07 (GA06-02): info sheet filed and linked to the statement run (G3), outputs list.
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/info-sheet$`) },
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/outputs$`) },
   { method: "PATCH", pattern: new RegExp(`^statements/${ID}/inspections/${ID}$`) },
   // Draft heating statement (M17-02): inputs, consumption import, preview and feed; G3 unchanged.
   { method: "GET", pattern: new RegExp(`^statements/${ID}/heating(/consumption-info)?$`) },
@@ -676,6 +685,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/transition$`) },
   // GA03-08: output options (attach receipts).
   { method: "PATCH", pattern: new RegExp(`^billing/owner-statements/${ID}/options$`) },
+  // AB07 (GA06-03): previews of letter and § 35a proof, filing behind G3, outputs list.
+  { method: "GET", pattern: new RegExp(`^billing/owner-statements/${ID}/preview/(letter|s35a)$`) },
+  { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/outputs$`) },
+  { method: "GET", pattern: new RegExp(`^billing/owner-statements/${ID}/outputs$`) },
   { method: "GET", pattern: /^hoa\/reserve-statements$/ },
   { method: "GET", pattern: new RegExp(`^hoa/reserve-statements/${ID}$`) },
   { method: "POST", pattern: /^hoa\/reserve-statements$/ },
@@ -1082,6 +1095,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^dispatches\/(serial|serial-merge)$/ },
   { method: "POST", pattern: new RegExp(`^dispatches/${ID}/evidence$`) },
   { method: "GET", pattern: /^document-templates$/ },
+  { method: "PATCH", pattern: new RegExp(`^document-templates/${ID}$`) },
+  { method: "GET", pattern: /^generated-documents$/ },
+  { method: "PATCH", pattern: new RegExp(`^work-orders/${ID}/approval-workflow$`) },
   { method: "GET", pattern: /^workspace\/calendar-feed\/token$/ },
   { method: "POST", pattern: /^workspace\/calendar-feed\/token$/ },
   { method: "DELETE", pattern: /^workspace\/calendar-feed\/token$/ },
@@ -1169,6 +1185,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^hoa/asset-reports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/asset-reports/${ID}/(calculate|transition)$`) },
   { method: "GET", pattern: new RegExp(`^hoa/asset-reports/${ID}/pdf$`) },
+  // AB07 (GA07-02): letter dispatch of the issued asset report (G4).
+  { method: "POST", pattern: new RegExp(`^hoa/asset-reports/${ID}/dispatch$`) },
   // Gesamtabrechnung WEG als PDF (M24-03): nur nach interner Freigabe und bei offenem G4 (API).
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/pdf$`) },
   { method: "PUT", pattern: new RegExp(`^hoa/statements/${ID}/loan-allocation$`) },
@@ -1243,6 +1261,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/(approve|reject)$`) },
   { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/download$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/run$`) },
+  // Release gates (GA14-04, AB02): platform overview and decisions per tenant, requests and
+  // revocations in the signed in tenant; the API checks platform admin and permissions.
+  { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/release-gates$`) },
+  { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/release-gates/requests/${ID}/(approve|reject)$`) },
+  { method: "GET", pattern: /^tenant\/release-gates(\/checklists|\/requests)?$/ },
+  { method: "POST", pattern: /^tenant\/release-gates\/requests$/ },
+  { method: "POST", pattern: new RegExp(`^tenant/release-gates/requests/${ID}/revoke$`) },
   // Licences, price list, billing preview and usage history (M27-02, M27-03, M27-05); platform
   // administrators only, checked by the API.
   { method: "GET", pattern: /^platform\/price-list$/ },

@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import (
     GateRequestStatus,
@@ -306,7 +307,11 @@ async def overview(
     return OverviewOut(tenants=figures, totals=totals)
 
 
-@router.get("/tickets", summary="Offene Tickets über die Mandanten des Aufrufers")
+@router.get(
+    "/tickets",
+    summary="Offene Tickets über die Mandanten des Aufrufers",
+    dependencies=[Depends(strict_query)],
+)
 async def overview_tickets(
     request: Request,
     principal: Principal = Depends(require_platform_admin),
@@ -324,7 +329,11 @@ async def overview_tickets(
     return merged
 
 
-@router.get("/properties", summary="Objekte über die Mandanten des Aufrufers")
+@router.get(
+    "/properties",
+    summary="Objekte über die Mandanten des Aufrufers",
+    dependencies=[Depends(strict_query)],
+)
 async def overview_properties(
     request: Request,
     principal: Principal = Depends(require_platform_admin),

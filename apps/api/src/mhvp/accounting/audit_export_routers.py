@@ -25,6 +25,7 @@ from mhvp.core.auth.scope import (
     session_allowed_legal_entity_ids,
 )
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -132,7 +133,7 @@ def dispatch_audit_export(run_id: str, tenant_id: str) -> None:
     audit_export_run.delay(run_id, tenant_id)
 
 
-@router.get("", summary="Prüfexporte auflisten")
+@router.get("", summary="Prüfexporte auflisten", dependencies=[Depends(strict_query)])
 async def list_audit_exports(
     request: Request,
     ledger_id: uuid.UUID | None = Query(default=None),

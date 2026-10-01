@@ -23,6 +23,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
 from mhvp.portal import access
@@ -220,7 +221,11 @@ async def _stats(session: Any, n: PropertyNotice, today: date) -> dict[str, int]
     return {"recipients": len(recipients), "read": len(readers & recipients) if recipients else 0}
 
 
-@crm_router.get("/properties/{property_id}/notices", summary="Aushänge des Objekts")
+@crm_router.get(
+    "/properties/{property_id}/notices",
+    summary="Aushänge des Objekts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_notices(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -463,7 +468,11 @@ async def _visible_notices(
     ]
 
 
-@portal_router.get("/notices", summary="Aushänge der eigenen Objekte (Schwarzes Brett)")
+@portal_router.get(
+    "/notices",
+    summary="Aushänge der eigenen Objekte (Schwarzes Brett)",
+    dependencies=[Depends(strict_query)],
+)
 async def portal_notices(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:

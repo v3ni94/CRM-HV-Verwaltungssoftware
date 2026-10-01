@@ -29,6 +29,7 @@ from mhvp.core.auth.principal import (
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 RATE = Numeric(20, 8)
@@ -379,7 +380,9 @@ def _area_out(a: CapArea) -> dict[str, Any]:
     }
 
 
-@tenant_router.get("/rules", summary="Mietrechtliche Parameter (lesend)")
+@tenant_router.get(
+    "/rules", summary="Mietrechtliche Parameter (lesend)", dependencies=[Depends(strict_query)]
+)
 async def list_rules(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -388,7 +391,11 @@ async def list_rules(
         return [_rule_out(r) for r in rows.all()]
 
 
-@tenant_router.get("/cap-areas", summary="Gebiete mit abgesenkter Kappungsgrenze (lesend)")
+@tenant_router.get(
+    "/cap-areas",
+    summary="Gebiete mit abgesenkter Kappungsgrenze (lesend)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_areas(
     request: Request, state: str | None = None, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

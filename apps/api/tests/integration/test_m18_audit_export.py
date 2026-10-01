@@ -374,6 +374,7 @@ def test_d55_audit_export_zip_contents_hashes_and_reversal(
             "verteilungsschluessel.csv",
             "verteilungsschluessel_werte.csv",
             "belege.csv",
+            "nebenbuchabgleich.csv",
             "export.json",
             "index.csv",
             "index.json",
@@ -466,6 +467,14 @@ def test_d55_audit_export_zip_contents_hashes_and_reversal(
             for r in open_items
             if r["Buchung-ID"] == w["receivable"]["id"]
         ] == [(w["receivable"]["id"], "400,00", "receivable")]
+
+        # AB01: sub ledger reconciliation per debtor account as of the period end (GA05-03).
+        subledger = _table(zf, "nebenbuchabgleich.csv")
+        assert [
+            (r["Art"], r["Saldo Hauptbuch"], r["Offene Posten"], r["Differenz"])
+            for r in subledger
+            if r["Art"] == "debtor"
+        ] == [("debtor", "250,00", "250,00", "0,00")]
 
         approvals = _table(zf, "freigaben.csv")
         assert [(r["Objektart"], r["Objekt-ID"], r["Schritt"], r["Person"]) for r in approvals] == [

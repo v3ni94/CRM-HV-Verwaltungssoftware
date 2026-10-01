@@ -6,7 +6,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-export type LetterTemplate = { id: string; code: string; name: string; subject: string; body: string; version: number; active: boolean };
+export type LetterTemplate = { id: string; code: string; name: string; subject: string; body: string; version: number; active: boolean; context_types?: string[]; placeholders_used?: string[] };
+
+/** Context types a template can be limited to (``TEMPLATE_CONTEXT_TYPES`` of the API). */
+export const CONTEXT_TYPES = ["contact", "contract", "unit", "property", "meeting", "statement", "ticket"] as const;
 type ContactItem = { id: string; display_name: string };
 
 /** Placeholders the template may use (``mhvp.documents.letters``); shown as a hint. */
@@ -27,6 +30,8 @@ export function letterBody(templateId: string, contacts: ContactItem[], subject:
 export function LetterTemplates({ templates: initial, canManage }: { templates: LetterTemplate[]; canManage: boolean }) {
   const t = useTranslations("LetterTemplates");
   const [templates, setTemplates] = useState(initial);
+  const [contexts, setContexts] = useState<string[]>([]);
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: "", name: "", subject: "", body: "" });
   const [templateId, setTemplateId] = useState(initial[0]?.id ?? "");
   const [query, setQuery] = useState("");
@@ -61,11 +66,26 @@ export function LetterTemplates({ templates: initial, canManage }: { templates: 
 
   function pick(template: LetterTemplate) {
     setForm({ code: template.code, name: template.name, subject: template.subject, body: template.body });
+    setContexts(template.context_types ?? []);
+    setPickedId(template.id);
+  }
+
+  function toggleContext(kind: string) {
+    setContexts((all) => (all.includes(kind) ? all.filter((k) => k !== kind) : [...all, kind]));
+  }
+
+  async function saveContext() {
+    if (!pickedId) return;
+    const res = await bff<LetterTemplate>(`/api/bff/document-templates/${pickedId}`, { method: "PATCH", body: JSON.stringify({ context_types: contexts }) });
+    if (res.ok) {
+      setTemplates((all) => all.map((x) => (x.id === res.data.id ? res.data : x)));
+      setMessage({ ok: true, text: t("contextSaved") });
+    } else setMessage({ ok: false, text: res.message });
   }
 
   async function saveTemplate(e: FormEvent) {
     e.preventDefault();
-    const res = await bff<LetterTemplate>("/api/bff/document-templates", { method: "POST", body: JSON.stringify(form) });
+    const res = await bff<LetterTemplate>("/api/bff/document-templates", { method: "POST", body: JSON.stringify({ ...form, context_types: contexts }) });
     if (res.ok) {
       setTemplates((all) => [...all.filter((x) => x.code !== res.data.code), res.data]);
       setTemplateId(res.data.id);
@@ -205,7 +225,27 @@ export function LetterTemplates({ templates: initial, canManage }: { templates: 
               <textarea className={ui.input} required rows={8} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
             </label>
             <p className={`${ui.help} sm:col-span-2`}>{t("placeholders", { list: PLACEHOLDER_HINT })}</p>
-            <div>
+            <fieldset className="sm:col-span-2 flex flex-wrap gap-3">
+              <legend className={ui.label}>{t("contextTypes")}</legend>
+              {CONTEXT_TYPES.map((kind) => (
+                <label key={kind} className="flex items-center gap-1 text-sm">
+                  <input type="checkbox" checked={contexts.includes(kind)} onChange={() => toggleContext(kind)} />
+                  {t(`context_${kind}`)}
+                </label>
+              ))}
+              <p className={`${ui.help} w-full`}>{t("contextHint")}</p>
+            </fieldset>
+            {pickedId ? (
+              <p className={`${ui.help} sm:col-span-2`}>
+                {t("placeholdersUsed", { list: (templates.find((x) => x.id === pickedId)?.placeholders_used ?? []).join(", ") || t("none") })}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {pickedId ? (
+                <button type="button" className={ui.secondary} onClick={() => void saveContext()}>
+                  {t("saveContext")}
+                </button>
+              ) : null}
               <button type="submit" className={ui.primary}>
                 {t("saveTemplate")}
               </button>

@@ -177,3 +177,7 @@ Nach der Berechnung zeigt die Eigentümerabrechnung die möglichen nächsten Sch
 ## Fristausnahme, Informationsblatt und Belegmappe
 
 In der Betriebskostenabrechnung zeigt der Abschnitt "Ausnahme von der Abrechnungsfrist", ob eine Nachforderung nach Ablauf der Fristorientierung gesperrt ist. Im Entwurf werden Ausnahmegrund und die Dokument-ID des Nachweises erfasst; erst mit beiden ist die Ausnahme wirksam. Unter "Anschreiben" stehen die Vorschau mit Informationsblatt und das Informationsblatt als eigenes PDF bereit; die Texte zu Belegeinsicht und Einwendungen erscheinen erst nach Freigabe durch den Betreiber. In der Eigentümerabrechnung fügt die Option "Belege der gebuchten Ausgaben an die PDF-Ausgabe anfügen" die verknüpften PDF-Belege an; Buchungen ohne Beleg stehen im Block "Belegmappe" und auf einer Schlussseite. Für SEV-Eigentümer erscheinen die belegten Lohnanteile nach § 35a EStG aus der WEG-Abrechnung zur Information.
+
+### Ausgaben zum Abrechnungslauf
+
+In der Betriebskostenabrechnung und in der Eigentümerabrechnung zeigt der Abschnitt "Ausgaben zum Abrechnungslauf" die Vorschau (Informationsblatt, Anschreiben, Nachweis § 35a) und die abgelegten Dokumente. "Als Dokument ablegen" speichert die Ausgabe am Abrechnungslauf; das ist erst mit Freigabestufe G3 möglich, bei der Eigentümerabrechnung zusätzlich nach interner Freigabe. Absätze mit der Kennzeichnung "Text nicht freigegeben" sind Platzhalter, bis der Betreiber die Texte freigegeben hat. Es wird nichts versendet.

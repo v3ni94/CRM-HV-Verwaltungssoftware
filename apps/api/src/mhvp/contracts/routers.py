@@ -46,6 +46,7 @@ from mhvp.core.listparams import (
     check_include,
     embed,
     list_params,
+    strict_query,
 )
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
@@ -379,6 +380,7 @@ _CONTRACT_SORT = {
     response_model=list[s.ContractOut],
     description=LIST_PARAMS_DOC
     + " include: party (Vertragspartei mit Mitgliedern), property (Objekt).",
+    dependencies=[Depends(strict_query)],
 )
 async def list_contracts(
     request: Request,
@@ -627,6 +629,7 @@ async def _pending_out(session: Any, rows: Sequence[Contract]) -> list[s.Pending
     "/contracts/pending-approval",
     summary="Importverträge mit ausstehender Freigabe",
     responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
 )
 async def pending_approval(
     request: Request,
@@ -799,7 +802,11 @@ async def patch_contract_notes(
         return await _out(session, contract)
 
 
-@router.get("/contracts/{contract_id}/versions", summary="Vertragsversionen")
+@router.get(
+    "/contracts/{contract_id}/versions",
+    summary="Vertragsversionen",
+    dependencies=[Depends(strict_query)],
+)
 async def contract_versions(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.ContractOut]:
@@ -916,6 +923,7 @@ async def terminate(
 @router.get(
     "/contracts/{contract_id}/termination-readings",
     summary="Zählerstände zur Vertragsbeendigung",
+    dependencies=[Depends(strict_query)],
 )
 async def termination_readings(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -962,7 +970,11 @@ async def _allocation_values_out(
     return out
 
 
-@router.get("/contracts/{contract_id}/allocation-values", summary="Umlagewerte des Vertrags")
+@router.get(
+    "/contracts/{contract_id}/allocation-values",
+    summary="Umlagewerte des Vertrags",
+    dependencies=[Depends(strict_query)],
+)
 async def list_allocation_values(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.ContractAllocationValueOut]:
@@ -1196,7 +1208,11 @@ async def add_payment(
         return s.PaymentOut.model_validate(row)
 
 
-@router.get("/contracts/{contract_id}/payments", summary="Zahlungshistorie")
+@router.get(
+    "/contracts/{contract_id}/payments",
+    summary="Zahlungshistorie",
+    dependencies=[Depends(strict_query)],
+)
 async def payment_history(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.PaymentOut]:
@@ -1263,7 +1279,12 @@ async def _mandates_out(session: Any, mandates: Sequence[SepaMandate]) -> list[s
     return out
 
 
-@router.get("/sepa-mandates", summary="SEPA-Mandate", responses=PAGE_HEADERS)
+@router.get(
+    "/sepa-mandates",
+    summary="SEPA-Mandate",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_mandates(
     request: Request,
     response: Response,
@@ -1418,7 +1439,9 @@ async def create_deposit(
         return await _deposit_out(session, deposit)
 
 
-@router.get("/contracts/{contract_id}/deposits", summary="Kautionen")
+@router.get(
+    "/contracts/{contract_id}/deposits", summary="Kautionen", dependencies=[Depends(strict_query)]
+)
 async def list_deposits(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.DepositOut]:
@@ -1432,7 +1455,12 @@ async def list_deposits(
         return await _deposits_out(session, rows)
 
 
-@router.get("/deposits", summary="Kautionsliste", responses=PAGE_HEADERS)
+@router.get(
+    "/deposits",
+    summary="Kautionsliste",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_all_deposits(
     request: Request,
     response: Response,
@@ -1565,7 +1593,11 @@ async def add_deposit_movement(
 # Overviews -----------------------------------------------------------------------------
 
 
-@router.get("/properties/{property_id}/occupancy", summary="Belegungsliste")
+@router.get(
+    "/properties/{property_id}/occupancy",
+    summary="Belegungsliste",
+    dependencies=[Depends(strict_query)],
+)
 async def occupancy(
     property_id: uuid.UUID,
     request: Request,
@@ -1624,7 +1656,11 @@ async def occupancy(
         return rows
 
 
-@router.get("/properties/{property_id}/vacancies", summary="Leerstand zum Stichtag")
+@router.get(
+    "/properties/{property_id}/vacancies",
+    summary="Leerstand zum Stichtag",
+    dependencies=[Depends(strict_query)],
+)
 async def vacancies(
     property_id: uuid.UUID,
     request: Request,

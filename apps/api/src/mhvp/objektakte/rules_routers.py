@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import DocumentCategory
 from mhvp.objektakte.models import ClassificationPatternType, ObjektakteClassificationRule
@@ -38,7 +39,7 @@ def _out(row: ObjektakteClassificationRule) -> dict[str, Any]:
     }
 
 
-@router.get("", summary="Klassifikationsregeln auflisten")
+@router.get("", summary="Klassifikationsregeln auflisten", dependencies=[Depends(strict_query)])
 async def list_rules(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

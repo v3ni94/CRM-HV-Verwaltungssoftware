@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from mhvp.accounting.models import Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import w3_reports
 from mhvp.imports.history_models import MigratedBankLink, MigratedOpenItem, MigratedTicket
@@ -73,7 +74,9 @@ class HistoryBankLinkOut(BaseModel):
     source_entry_id: str | None
 
 
-@router.get("/tickets", summary="Historische Tickets (nur lesend)")
+@router.get(
+    "/tickets", summary="Historische Tickets (nur lesend)", dependencies=[Depends(strict_query)]
+)
 async def history_tickets(
     request: Request,
     property_id: uuid.UUID | None = None,
@@ -96,7 +99,11 @@ async def history_tickets(
         return [HistoryTicketOut.model_validate(r) for r in rows.all()]
 
 
-@router.get("/open-items", summary="Übernommene Einzelposten der Altdaten")
+@router.get(
+    "/open-items",
+    summary="Übernommene Einzelposten der Altdaten",
+    dependencies=[Depends(strict_query)],
+)
 async def history_open_items(
     request: Request,
     ledger_id: uuid.UUID | None = None,
@@ -144,7 +151,11 @@ async def history_open_item_summary(
         }
 
 
-@router.get("/bank-links", summary="Zuordnung historischer Bankumsätze zum Journal")
+@router.get(
+    "/bank-links",
+    summary="Zuordnung historischer Bankumsätze zum Journal",
+    dependencies=[Depends(strict_query)],
+)
 async def history_bank_links(
     request: Request,
     open_only: bool = False,
@@ -203,6 +214,7 @@ class HistoryJournalCandidateOut(BaseModel):
 @router.get(
     "/bank-links/{bank_transaction_id}/candidates",
     summary="Vorschlag: Journalbuchungen zu einem historischen Bankumsatz (Kandidatenliste)",
+    dependencies=[Depends(strict_query)],
 )
 async def history_bank_link_candidates(
     request: Request,

@@ -35,6 +35,7 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
         include=[
             "mhvp.core.tasks",
             "mhvp.core.webhook_tasks",
+            "mhvp.portal.tasks",
             "mhvp.documents.tasks",
             "mhvp.documents.paperless_webhook",
             "mhvp.documents.intake",
@@ -370,6 +371,12 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",
                 "schedule": 300.0,
+            },
+            # Portal account status model (6.2, AB08): expired and locked are persisted.
+            "portal-account-status": {
+                "task": "mhvp.portal.sync_account_status",
+                "schedule": 900.0,
+                "options": {"queue": "io"},
             },
             # Immoware24-DAV-Abholung (M32): Beat fest alle 15 Minuten, Task prueft selbst
             # anhand von ``poll_minutes``, ob ein Lauf faellig ist (read only, kein Schreibpfad).

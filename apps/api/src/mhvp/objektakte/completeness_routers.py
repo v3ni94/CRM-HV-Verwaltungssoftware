@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_path_guard
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letter_records
 from mhvp.documents import services as doc_services
@@ -50,7 +51,11 @@ def _row_out(row: ObjektakteRequiredDocument) -> dict[str, Any]:
     }
 
 
-@router.get("/required-documents", summary="Pflichtunterlagen je Verwaltungsart auflisten")
+@router.get(
+    "/required-documents",
+    summary="Pflichtunterlagen je Verwaltungsart auflisten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_required_documents(
     request: Request,
     management_type: ManagementType | None = Query(default=None),

@@ -45,6 +45,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
           </ul>
         </section>
       ) : null}
+      {d.reverse_charge ? (
+        <section className={ui.notice} data-testid="reverse-charge-gate">
+          <h2 className={ui.h2}>{t("reverseChargeGateTitle")}</h2>
+          <p>{t("reverseChargeGateText")}</p>
+        </section>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="mhvp-table">
           <thead>

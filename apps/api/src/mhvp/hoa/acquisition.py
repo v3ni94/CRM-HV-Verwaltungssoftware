@@ -31,6 +31,15 @@ APPROVE = require_permission("accounting:approve")
 
 # Kinds that need the release; purchase and missing information do not (the regular case).
 SPECIAL_KINDS = ("first_acquisition", "inheritance", "foreclosure", "gift", "other")
+# German labels of the special cases (GA07-03): shown in findings and in the CRM list.
+KIND_LABELS: dict[str, str] = {
+    "first_acquisition": "Ersterwerb",
+    "inheritance": "Erbfall",
+    "foreclosure": "Zwangsversteigerung",
+    "gift": "Schenkung",
+    "other": "Sonstiger Erwerb",
+}
+SUCCESSION_LABEL = "Sonderrechtsnachfolge"
 PROPOSAL_NOTE = (
     "Vorschlag zur fachlichen Prüfung, keine Rechtsregel. Maßgeblich sind Beschluss, "
     "Gemeinschaftsordnung und Rechtslage; im Zweifel Rechtsanwalt einbeziehen."
@@ -88,6 +97,13 @@ def proposal_for(kind: str | None, succession: bool) -> str:
     return " ".join(parts)
 
 
+def label_for(kind: str | None, succession: bool) -> str:
+    parts = [KIND_LABELS[kind]] if kind in KIND_LABELS else []
+    if succession:
+        parts.append(SUCCESSION_LABEL)
+    return ", ".join(parts) or "Sonderfall"
+
+
 async def special_contracts(session: AsyncSession, st: HoaStatement) -> list[Any]:
     """Ownership contracts of the statement year with a special acquisition (see module doc)."""
     from mhvp.accounting.models import Ledger
@@ -137,6 +153,7 @@ def _item(contract: Any, number: str, release: Any) -> dict[str, Any]:
         "contract_number": contract.number,
         "unit_number": number,
         "acquisition_kind": kind,
+        "case_label": label_for(kind, contract.special_succession_liability),
         "special_succession_liability": contract.special_succession_liability,
         "start_date": contract.start_date,
         "title_transfer_date": contract.title_transfer_date,
@@ -161,7 +178,10 @@ async def blocking_findings(session: AsyncSession, st: HoaStatement) -> list[dic
         release = releases.get(contract.id)
         if release is not None and release.released_at is not None:
             continue
-        kind = contract.acquisition_kind.value if contract.acquisition_kind else "Sondernachfolge"
+        kind = label_for(
+            contract.acquisition_kind.value if contract.acquisition_kind else None,
+            contract.special_succession_liability,
+        )
         step = "zweite Person muss freigeben" if release else "Freigabe beantragen"
         findings.append(
             {

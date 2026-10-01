@@ -46,7 +46,7 @@ def _property(client: TestClient, h: dict[str, str], number: str) -> dict[str, A
     # Property numbers are NNN: derive a per run number so reruns on the shared database
     # never reuse assignments of an earlier run.
     number = f"{(int(RUN[:6], 16) + int(number)) % 1000:03d}"
-    existing = _ok(client.get("/api/v1/properties", params={"search": number}, headers=h))
+    existing = _ok(client.get("/api/v1/properties", params={"q": number}, headers=h))
     for row in existing if isinstance(existing, list) else existing.get("items", []):
         if row.get("number") == number:
             if "building_id" not in row:

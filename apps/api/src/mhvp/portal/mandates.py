@@ -29,6 +29,7 @@ from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import session_allowed_property_ids
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access
 from mhvp.portal.models import PortalAccount, SepaMandateProposal
@@ -233,7 +234,9 @@ async def preview(
         }
 
 
-@router.get("/sepa-mandates", summary="Eigene Mandatsvorschläge")
+@router.get(
+    "/sepa-mandates", summary="Eigene Mandatsvorschläge", dependencies=[Depends(strict_query)]
+)
 async def mine(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
@@ -346,7 +349,11 @@ class DecideIn(_In):
     note: str | None = Field(default=None, max_length=2000)
 
 
-@admin.get("/sepa-mandate-proposals", summary="Mandatsvorschläge aus dem Portal")
+@admin.get(
+    "/sepa-mandate-proposals",
+    summary="Mandatsvorschläge aus dem Portal",
+    dependencies=[Depends(strict_query)],
+)
 async def proposals(
     request: Request,
     principal: TenantPrincipal = Depends(MANAGE),

@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import or_, select
 
 from mhvp.core.auth.principal import tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.owner import _owner_scope
 from mhvp.portal.routers import Portal, portal_user
@@ -46,7 +47,11 @@ async def _own_properties(session: Any, ownership: set[uuid.UUID]) -> set[uuid.U
     )
 
 
-@router.get("/tickets", summary="Meldungen zu den eigenen Objekten (für Eigentümer freigegeben)")
+@router.get(
+    "/tickets",
+    summary="Meldungen zu den eigenen Objekten (für Eigentümer freigegeben)",
+    dependencies=[Depends(strict_query)],
+)
 async def owner_tickets(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:
@@ -229,7 +234,11 @@ async def _consumption_scope(session: Any, account: Any, today: date) -> set[uui
     return ownership
 
 
-@router.get("/consumption-info", summary="Verbrauchsinformation der selbst genutzten Einheiten")
+@router.get(
+    "/consumption-info",
+    summary="Verbrauchsinformation der selbst genutzten Einheiten",
+    dependencies=[Depends(strict_query)],
+)
 async def owner_consumption(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:

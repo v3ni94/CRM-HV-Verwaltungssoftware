@@ -344,3 +344,104 @@ def test_learning_examples_are_embedded_and_ranked(
             await engine.dispose()
 
     asyncio.run(run())
+
+
+def test_ab05_template_context_patch_generated_filter_and_workflow_ref(
+    client: TestClient, world: World
+) -> None:
+    h = bearer(login(client, world, "aa5admin"))
+    care = bearer(login(client, world, "aa5care"))
+    other = bearer(login(client, world, "aa5other"))
+    tpl = _ok(
+        client.post(
+            "/api/v1/document-templates",
+            json={
+                "code": f"ab5_{RUN}",
+                "name": "AB05",
+                "subject": "S {{ felder.a }}",
+                "body": "{{ empfaenger.anrede }} {{ felder.b }}",
+            },
+            headers=h,
+        )
+    )
+    assert tpl["context_types"] == []
+    url = f"/api/v1/document-templates/{tpl['id']}"
+    patched = _ok(
+        client.patch(url, json={"context_types": ["unit", "contact", "unit"]}, headers=h), 200
+    )
+    assert patched["context_types"] == ["contact", "unit"]
+    assert patched["placeholders_used"] == ["empfaenger.anrede", "felder.a", "felder.b"]
+    assert client.patch(url, json={"context_types": ["x"]}, headers=h).status_code == 422
+    assert client.patch(url, json={"context_types": []}, headers=care).status_code == 403
+    assert client.patch(url, json={"context_types": []}, headers=other).status_code == 404
+
+    # Generated documents: filter by template and period
+    for params in (
+        {"template_id": tpl["id"]},
+        {"created_from": "2026-01-01", "created_to": "2026-01-02"},
+    ):
+        assert _ok(client.get("/api/v1/generated-documents", params=params, headers=h), 200) == []
+    assert (
+        client.get(
+            "/api/v1/generated-documents", params={"created_from": "bad"}, headers=h
+        ).status_code
+        == 422
+    )
+    assert isinstance(
+        _ok(
+            client.get(
+                "/api/v1/generated-documents", params={"created_to": "2999-01-01"}, headers=h
+            ),
+            200,
+        ),
+        list,
+    )
+
+    # Work order reference
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "593",
+                "name": "AB05 Auftrag",
+                "management_type": "rental",
+                "street": "Rheinpromenade",
+                "house_number": "15",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            },
+            headers=h,
+        )
+    )
+    provider = _contact(client, h, "Handwerk AB05")
+    order = _ok(
+        client.post(
+            "/api/v1/work-orders",
+            json={
+                "property_id": prop["id"],
+                "provider_contact_id": provider["id"],
+                "description": "Dach pruefen",
+            },
+            headers=h,
+        )
+    )
+    wf = str(uuid.uuid4())
+    path = f"/api/v1/work-orders/{order['id']}/approval-workflow"
+    assert (
+        _ok(client.patch(path, json={"approval_workflow_id": wf}, headers=h), 200)[
+            "approval_workflow_id"
+        ]
+        == wf
+    )
+    assert (
+        _ok(client.get(f"/api/v1/work-orders/{order['id']}", headers=h), 200)[
+            "approval_workflow_id"
+        ]
+        == wf
+    )
+    assert client.patch(path, json={"approval_workflow_id": "nope"}, headers=h).status_code == 422
+    assert client.patch(path, json={"approval_workflow_id": wf}, headers=other).status_code == 404
+    unknown = f"/api/v1/work-orders/{uuid.uuid4()}/approval-workflow"
+    assert client.patch(unknown, json={"approval_workflow_id": wf}, headers=h).status_code == 404
+    read_only = client.patch(path, json={"approval_workflow_id": None}, headers=care)
+    assert read_only.status_code in (200, 403)

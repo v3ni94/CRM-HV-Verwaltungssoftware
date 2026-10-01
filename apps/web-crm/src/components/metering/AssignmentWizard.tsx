@@ -44,8 +44,8 @@ export function AssignmentWizard({
   const connection = connections.find((c) => c.id === connectionId);
 
   async function search() {
-    const res = await bff<PropertyOption[]>(`/api/bff/properties?q=${encodeURIComponent(query)}&limit=20`);
-    if (res.ok) setOptions(res.data);
+    const res = await bff<{ items: PropertyOption[] }>(`/api/bff/properties?q=${encodeURIComponent(query)}&page_size=20`);
+    if (res.ok) setOptions(res.data.items);
     else setError(res.message);
   }
 

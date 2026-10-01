@@ -14,16 +14,18 @@ import uuid
 import zipfile
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Header, Query, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
@@ -358,7 +360,7 @@ async def create_rent_increase(
     return out
 
 
-@router.get("/rent-increases", summary="Mieterhöhungsfälle")
+@router.get("/rent-increases", summary="Mieterhöhungsfälle", dependencies=[Depends(strict_query)])
 async def list_rent_increases(
     request: Request,
     contract_id: uuid.UUID | None = None,
@@ -925,7 +927,9 @@ def _vacancy_row(
     }
 
 
-@router.get("/vacancies", summary="Leerstandsliste (Mietobjekte)")
+@router.get(
+    "/vacancies", summary="Leerstandsliste (Mietobjekte)", dependencies=[Depends(strict_query)]
+)
 async def vacancies(
     request: Request,
     as_of: date | None = None,
@@ -1298,15 +1302,32 @@ async def create_prospect(
         return _prospect_out(row)
 
 
-@router.get("/prospects", summary="Interessenten je Einheit")
+_PROSPECT_LIST = ListSpec(  # GA04-05
+    filters={
+        "status": Prospect.status,
+        "listing_id": Prospect.listing_id,
+        "contact_id": Prospect.contact_id,
+        "source": Prospect.source,
+    },
+    sort={"created_at": Prospect.created_at, "viewing_at": Prospect.viewing_at},
+)
+
+
+@router.get("/prospects", summary="Interessenten je Einheit", dependencies=[Depends(strict_query)])
 async def list_prospects(
-    unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    unit_id: uuid.UUID,
+    request: Request,
+    params: ListParams = Depends(_PROSPECT_LIST.dependency),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(Prospect).where(Prospect.unit_id == unit_id).order_by(Prospect.created_at)
+        query = _PROSPECT_LIST.apply(
+            select(Prospect).where(Prospect.unit_id == unit_id),
+            params,
+            (Prospect.created_at, Prospect.id),
         )
-        return [_prospect_out(p) for p in rows.all()]
+        rows = await session.scalars(query)
+        return sparse([_prospect_out(p) for p in rows.all()], params, None)  # type: ignore[no-any-return]
 
 
 @router.patch("/prospects/{prospect_id}", summary="Interessent ändern")
@@ -1314,12 +1335,15 @@ async def patch_prospect(
     prospect_id: uuid.UUID,
     body: ProspectPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await session.get(Prospect, prospect_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        check_if_match(if_match, row.updated_at)  # GA04-06
         changes = body.model_dump(exclude_none=True, exclude={"search_profile"})
         if body.listing_id is not None:
             listing = await session.get(Listing, body.listing_id)
@@ -1332,6 +1356,9 @@ async def patch_prospect(
         if body.search_profile is not None:
             row.search_profile = body.search_profile.model_dump(mode="json", exclude_defaults=True)
         await session.flush()
+        await session.flush()
+        await session.refresh(row, ["updated_at"])
+        response.headers["ETag"] = etag_of(row.updated_at)
         return _prospect_out(row)
 
 
@@ -1387,6 +1414,7 @@ def _match(profile: dict[str, Any], listing: Listing) -> dict[str, list[str]]:
 @router.get(
     "/listings/{listing_id}/prospect-matches",
     summary="Interessenten zur Anzeige abgleichen und reihen",
+    dependencies=[Depends(strict_query)],
 )
 async def prospect_matches(
     listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1724,13 +1752,29 @@ async def create_listing(
         return _listing_out(listing, prop.number if prop else None, unit.number if unit else None)
 
 
-@router.get("/listings", summary="Anzeigen")
+_LISTING_LIST = ListSpec(  # GA04-05
+    filters={
+        "unit_id": Listing.unit_id,
+        "publication_status": Listing.publication_status,
+        "object_type": Listing.object_type,
+    },
+    sort={
+        "created_at": Listing.created_at,
+        "available_from": Listing.available_from,
+        "price": Listing.price,
+        "title": Listing.title,
+    },
+)
+
+
+@router.get("/listings", summary="Anzeigen", dependencies=[Depends(strict_query)])
 async def list_listings(
     request: Request,
     kind: str | None = None,
     status: str | None = None,
     property_id: uuid.UUID | None = None,
     q: str | None = None,
+    params: ListParams = Depends(_LISTING_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     from mhvp.properties.models import Property, Unit
@@ -1751,8 +1795,10 @@ async def list_listings(
         if q:
             like = f"%{q}%"
             query = query.where(or_(Listing.title.ilike(like), Property.number.ilike(like)))
+        query = _LISTING_LIST.apply(query, params, (Listing.created_at.desc(), Listing.id))
         rows = (await session.execute(query.limit(500))).all()
-        return [_listing_out(listing, prop.number, unit.number) for listing, prop, unit in rows]
+        result = [_listing_out(listing, prop.number, unit.number) for listing, prop, unit in rows]
+        return sparse(result, params, None)  # type: ignore[no-any-return]
 
 
 @router.get(
@@ -1797,7 +1843,10 @@ async def get_listings_openimmo_zip(
 
 @router.get("/listings/{listing_id}", summary="Anzeige")
 async def get_listing(
-    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    listing_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     from mhvp.properties.models import Property, Unit
 
@@ -1807,6 +1856,7 @@ async def get_listing(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         prop = await session.get(Property, listing.property_id)
         unit = await session.get(Unit, listing.unit_id)
+        response.headers["ETag"] = etag_of(listing.updated_at)  # GA04-06
         return _listing_out(listing, prop.number if prop else None, unit.number if unit else None)
 
 
@@ -1815,6 +1865,8 @@ async def patch_listing(
     listing_id: uuid.UUID,
     body: ListingPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     from mhvp.properties.models import Property, Unit
@@ -1823,6 +1875,7 @@ async def patch_listing(
         listing = await session.get(Listing, listing_id, with_for_update=True)
         if listing is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        check_if_match(if_match, listing.updated_at)  # GA04-06
         changes = body.model_dump(exclude_none=True)
         new_status = changes.pop("status", None)
         if "features" in changes:
@@ -1901,6 +1954,9 @@ async def patch_listing(
         )
         prop = await session.get(Property, listing.property_id)
         unit = await session.get(Unit, listing.unit_id)
+        await session.flush()
+        await session.refresh(listing, ["updated_at"])
+        response.headers["ETag"] = etag_of(listing.updated_at)
         return _listing_out(listing, prop.number if prop else None, unit.number if unit else None)
 
 
@@ -2426,7 +2482,11 @@ async def _listing_image_rows(session: Any, listing_id: uuid.UUID) -> list[dict[
     return [_image_out(document, link) for document, link in rows]
 
 
-@router.get("/listings/{listing_id}/images", summary="Bilder einer Anzeige")
+@router.get(
+    "/listings/{listing_id}/images",
+    summary="Bilder einer Anzeige",
+    dependencies=[Depends(strict_query)],
+)
 async def list_listing_images(
     listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -2657,7 +2717,11 @@ async def create_prospect_viewing(
         return _viewing_out(row)
 
 
-@router.get("/prospects/{prospect_id}/viewings", summary="Besichtigungstermine je Interessent")
+@router.get(
+    "/prospects/{prospect_id}/viewings",
+    summary="Besichtigungstermine je Interessent",
+    dependencies=[Depends(strict_query)],
+)
 async def list_prospect_viewings(
     prospect_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -2690,7 +2754,11 @@ async def patch_prospect_viewing(
 # Absage-Textbausteine (rejection templates) -----------------------------------------------
 
 
-@router.get("/prospects/rejection-templates", summary="Absage-Textbausteine")
+@router.get(
+    "/prospects/rejection-templates",
+    summary="Absage-Textbausteine",
+    dependencies=[Depends(strict_query)],
+)
 async def get_rejection_templates(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, str]]:
@@ -2794,7 +2862,9 @@ async def create_self_disclosure_link(
 
 
 @router.get(
-    "/prospects/{prospect_id}/self-disclosure-links", summary="Selbstauskunft-Links je Interessent"
+    "/prospects/{prospect_id}/self-disclosure-links",
+    summary="Selbstauskunft-Links je Interessent",
+    dependencies=[Depends(strict_query)],
 )
 async def list_self_disclosure_links(
     prospect_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

@@ -89,3 +89,21 @@ Ausgangsrechnungen als weitere Schnittstelle, ebenfalls noch offen).
 9. Eine direkte lexoffice-API-Anbindung besteht in der Plattform noch nicht.
 10. Nächster Schritt: Betreiber führt den Anhang-B-Prompt im smart-einzug-Projekt aus und klärt
     lexoffice-Zugangsdaten (siehe auch Punkt V12 Steuerberater-Rückfragen zu DATEV/E-Rechnung).
+
+## Ergänzung 01.10.2026 (GA09-02): Faktenstand aus dem Repo
+
+Belegt sind nur Master-Prompt Abschnitt 13.3 und die Sendeseite der Plattform
+(`docs/integrations/smart-einzug.md`, `docs/integrations/webhooks.md`).
+
+- Zweck: Zahlungseinzug in Verbindung mit lexoffice. Genauer Einzugsprozess: offen, Dossier
+  erforderlich (AA16-03).
+- Stack: eigenes Projekt auf einem separaten VPS, nicht Teil des Serverumzugs. Sprache,
+  Framework, Datenbank und Betrieb: offen, Dossier erforderlich (AA16-03).
+- Datenmodell: offen, Dossier erforderlich (AA16-03).
+- Schnittstellen: die Plattform sendet signierte ausgehende Webhooks `contact.updated` (nur
+  Kennungen und geänderte Feldnamen, keine Klardaten), `contact.mandate_iban_changed` und
+  `invoice.issued` mit stabilem `Idempotency-Key` je Zustellung und Wiederholung bei
+  Fehlzustellung. Test: `apps/api/tests/integration/test_ga09_smart_einzug_contact_updated.py`.
+  Die Empfangsseite von smart-einzug ist offen, Dossier erforderlich (AA16-03).
+- Status: Sendeseite umgesetzt, Empfang und Signaturprüfung durch smart-einzug nicht
+  bestätigt.

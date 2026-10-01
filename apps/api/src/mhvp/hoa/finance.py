@@ -23,6 +23,7 @@ from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
     session_allowed_legal_entity_ids,
 )
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import (
     HoaInsuranceClaim,
@@ -329,7 +330,7 @@ async def create_measure(
         return _measure_out(row)
 
 
-@router.get("/measures", summary="Maßnahmen einer GdWE")
+@router.get("/measures", summary="Maßnahmen einer GdWE", dependencies=[Depends(strict_query)])
 async def list_measures(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -491,7 +492,7 @@ async def create_loan(
         return _loan_out(row)
 
 
-@router.get("/loans", summary="Darlehen einer GdWE")
+@router.get("/loans", summary="Darlehen einer GdWE", dependencies=[Depends(strict_query)])
 async def list_loans(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -669,7 +670,11 @@ async def create_claim(
         return _claim_out(row)
 
 
-@router.get("/insurance-claims", summary="Versicherungsfälle einer GdWE")
+@router.get(
+    "/insurance-claims",
+    summary="Versicherungsfälle einer GdWE",
+    dependencies=[Depends(strict_query)],
+)
 async def list_claims(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

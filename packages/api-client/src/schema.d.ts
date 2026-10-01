@@ -2658,6 +2658,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/rule-versions/due-checkpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fällige Prüfpunkte als Hinweis
+         * @description GA08-02: dated check points (group Prüfpunkt) that are due; hint only, no lock.
+         */
+        get: operations["due_rule_checkpoints_api_v1_accounting_rule_versions_due_checkpoints_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/rule-versions/effective": {
         parameters: {
             query?: never;
@@ -6302,6 +6322,29 @@ export interface paths {
         patch: operations["options_api_v1_billing_owner_statements__statement_id__options_patch"];
         trace?: never;
     };
+    "/api/v1/billing/owner-statements/{statement_id}/outputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgelegte Ausgaben der Eigentümerabrechnung */
+        get: operations["list_outputs_api_v1_billing_owner_statements__statement_id__outputs_get"];
+        put?: never;
+        /**
+         * Anschreiben und § 35a-Nachweis ablegen (GA06-03, nur mit Freigabestufe G3)
+         * @description Files the letter and the § 35a proof of the approved statement as generated documents
+         *     linked to the statement run (context ``owner_statement``), the legal entity and the
+         *     property. Internal drafts, nothing is sent.
+         */
+        post: operations["file_outputs_api_v1_billing_owner_statements__statement_id__outputs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/owner-statements/{statement_id}/pdf": {
         parameters: {
             query?: never;
@@ -6311,6 +6354,27 @@ export interface paths {
         };
         /** Ausgabe als PDF (nur mit Freigabestufe G3) */
         get: operations["pdf_api_v1_billing_owner_statements__statement_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/owner-statements/{statement_id}/preview/{part}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vorschau Anschreiben oder § 35a-Nachweis als PDF-Entwurf (GA06-03, kein Versand)
+         * @description Draft preview from the calculated snapshot; carries the draft marking and the
+         *     placeholders "Text nicht freigegeben" (AA11-02). Issuing and filing need G3.
+         */
+        get: operations["output_preview_api_v1_billing_owner_statements__statement_id__preview__part__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8425,6 +8489,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/document-templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Kontexttypen einer Vorlage pflegen
+         * @description Context types are metadata of a version; placeholders_used is recomputed from the text.
+         */
+        patch: operations["update_template_context_api_v1_document_templates__template_id__patch"];
+        trace?: never;
+    };
     "/api/v1/documents": {
         parameters: {
             query?: never;
@@ -9638,6 +9722,30 @@ export interface paths {
         put?: never;
         /** Berechnen und gegen Buchhaltung abstimmen */
         post: operations["calculate_asset_report_api_v1_hoa_asset_reports__report_id__calculate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/asset-reports/{report_id}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vermögensbericht je Eigentümer als Brief über den Versand (GA07-02, G4)
+         * @description One letter per resolved recipient of each ownership contract of the reporting date,
+         *     filed as a generated document (context ``hoa_asset_report``) and handed to the existing
+         *     dispatch (``mhvp.communication.dispatch``): post becomes a prepared postal dispatch, e-mail
+         *     a draft, portal the inbox. Needs gate G4 and an issued report like the portal output.
+         *     A contract that already has a letter of this report is skipped (no double dispatch).
+         */
+        post: operations["dispatch_asset_report_api_v1_hoa_asset_reports__report_id__dispatch_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17367,6 +17475,23 @@ export interface paths {
         patch: operations["patch_party_api_v1_parties__party_id__patch"];
         trace?: never;
     };
+    "/api/v1/platform/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plattformaudit auflisten */
+        get: operations["list_platform_audit_events_api_v1_platform_audit_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/licenses": {
         parameters: {
             query?: never;
@@ -18075,6 +18200,27 @@ export interface paths {
          *     the operator documents them (M27-02). A gate is only reported, never changed.
          */
         get: operations["readiness_api_v1_platform_tenants__tenant_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{tenant_id}/release-gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Freigabestufen und Anträge eines Mandanten (Plattform, GA14-04)
+         * @description Read only overview for the CRM page Plattform, Freigabestufen: state per gate and every
+         *     request with opening and revocation. Nothing is opened here.
+         */
+        get: operations["platform_gate_overview_api_v1_platform_tenants__tenant_id__release_gates_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -19382,6 +19528,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/locale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Sprachwahl am Portalkonto speichern */
+        patch: operations["set_locale_api_v1_portal_me_locale_patch"];
         trace?: never;
     };
     "/api/v1/portal/meetings": {
@@ -22407,6 +22570,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/statements/{statement_id}/info-sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Informationsblatt als Dokument zum Abrechnungslauf ablegen (GA06-02, G3)
+         * @description Files the info sheet of the current snapshot as a generated document linked to the
+         *     statement run (context ``statement``) and the property. Output of the statement, so G3 is
+         *     required; the legally relevant paragraphs stay marked "Text nicht freigegeben" (AA11-01).
+         */
+        post: operations["info_sheet_file_api_v1_statements__statement_id__info_sheet_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/statements/{statement_id}/info-sheet/preview": {
         parameters: {
             query?: never;
@@ -22540,6 +22725,23 @@ export interface paths {
         };
         /** Nutzer und Leerstand im Zeitraum */
         get: operations["list_occupants_api_v1_statements__statement_id__occupants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/statements/{statement_id}/outputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgelegte Ausgaben des Abrechnungslaufs */
+        get: operations["statement_outputs_api_v1_statements__statement_id__outputs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24441,6 +24643,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-orders/{order_id}/approval-workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Freigabe-Workflow des Auftrags
+         * @description Only a reference (AA05-01): there is no workflow table yet, so the id is not checked
+         *     against one; the board vote stays the effective approval. Tenant isolation by RLS.
+         */
+        patch: operations["set_order_workflow_api_v1_work_orders__order_id__approval_workflow_patch"];
+        trace?: never;
+    };
     "/api/v1/work-orders/{order_id}/steps": {
         parameters: {
             query?: never;
@@ -26298,6 +26521,18 @@ export interface components {
             approved: number;
             /** Ids */
             ids: string[];
+        };
+        /** AssetReportDispatchIn */
+        AssetReportDispatchIn: {
+            /** Channel */
+            channel?: string | null;
+            /** Contract Ids */
+            contract_ids?: string[] | null;
+            /**
+             * Only Without Retrieval
+             * @default true
+             */
+            only_without_retrieval: boolean;
         };
         /** AssetReportIn */
         AssetReportIn: {
@@ -40145,6 +40380,14 @@ export interface components {
             scheduled_at?: string | null;
             status: components["schemas"]["OrderStatus"];
         };
+        /**
+         * OrderWorkflowRefIn
+         * @description GA04-07: set or clear the reference to the approval workflow of an order.
+         */
+        OrderWorkflowRefIn: {
+            /** Approval Workflow Id */
+            approval_workflow_id?: string | null;
+        };
         /** OutgoingSwitchIn */
         OutgoingSwitchIn: {
             /** Enabled */
@@ -40981,6 +41224,57 @@ export interface components {
              */
             vat_percent: number | string;
         };
+        /** PlatformAuditEventOut */
+        PlatformAuditEventOut: {
+            /** Action */
+            action: string;
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Target Id */
+            target_id: string;
+            /** Target Type */
+            target_type: string;
+        };
+        /** PlatformAuditPage */
+        PlatformAuditPage: {
+            /** Items */
+            items: components["schemas"]["PlatformAuditEventOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * PlatformGateOverviewOut
+         * @description GA14-04 (AB02): platform view of one tenant's gates and requests.
+         */
+        PlatformGateOverviewOut: {
+            /** Gates */
+            gates: components["schemas"]["GateStateOut"][];
+            /** Requests */
+            requests: components["schemas"]["GateRequestOut"][];
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
         /**
          * PlatformSettingsOut
          * @description Platform wide switches (ADR 0011); ``gate_superadmin_bypass`` weakens the four eyes
@@ -41242,6 +41536,11 @@ export interface components {
             display_name: string;
             /** Email */
             email: string;
+            /**
+             * Send Invitation
+             * @default true
+             */
+            send_invitation: boolean;
         };
         /** PortalInvoiceSubmitIn */
         PortalInvoiceSubmitIn: {
@@ -41265,6 +41564,11 @@ export interface components {
             number: string;
             /** Vat Rate */
             vat_rate?: number | string | null;
+        };
+        /** PortalLocaleIn */
+        PortalLocaleIn: {
+            /** Locale */
+            locale?: string | null;
         };
         /** PortalMandateIn */
         PortalMandateIn: {
@@ -46118,6 +46422,14 @@ export interface components {
             provider_label: string | null;
             /** Webhook Path */
             webhook_path: string;
+        };
+        /**
+         * TemplateContextIn
+         * @description Maintain the context types of an existing template version in place (GA04-10).
+         */
+        TemplateContextIn: {
+            /** Context Types */
+            context_types?: string[];
         };
         /** TemplateIn */
         TemplateIn: {
@@ -54506,6 +54818,37 @@ export interface operations {
             };
         };
     };
+    due_rule_checkpoints_api_v1_accounting_rule_versions_due_checkpoints_get: {
+        parameters: {
+            query?: {
+                on?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleVersionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     effective_rule_version_api_v1_accounting_rule_versions_effective_get: {
         parameters: {
             query: {
@@ -57640,7 +57983,9 @@ export interface operations {
     patch_rule_api_v1_automation_rules__rule_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 rule_id: string;
             };
@@ -59910,7 +60255,9 @@ export interface operations {
     patch_order_api_v1_banking_payment_orders__order_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 order_id: string;
             };
@@ -61746,6 +62093,72 @@ export interface operations {
             };
         };
     };
+    list_outputs_api_v1_billing_owner_statements__statement_id__outputs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    file_outputs_api_v1_billing_owner_statements__statement_id__outputs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     pdf_api_v1_billing_owner_statements__statement_id__pdf_get: {
         parameters: {
             query?: never;
@@ -61764,6 +62177,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    output_preview_api_v1_billing_owner_statements__statement_id__preview__part__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                part: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
                 };
             };
             /** @description Validation Error */
@@ -66435,6 +66880,41 @@ export interface operations {
             };
         };
     };
+    update_template_context_api_v1_document_templates__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateContextIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_documents_api_v1_documents_get: {
         parameters: {
             query?: {
@@ -67460,6 +67940,9 @@ export interface operations {
                 context_type?: string | null;
                 context_id?: string | null;
                 recipient_contact_id?: string | null;
+                template_id?: string | null;
+                created_from?: string | null;
+                created_to?: string | null;
                 limit?: number;
                 offset?: number;
             };
@@ -69020,6 +69503,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dispatch_asset_report_api_v1_hoa_asset_reports__report_id__dispatch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AssetReportDispatchIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -78477,7 +78997,9 @@ export interface operations {
     patch_listing_api_v1_letting_listings__listing_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 listing_id: string;
             };
@@ -79080,7 +79602,9 @@ export interface operations {
     patch_prospect_api_v1_letting_prospects__prospect_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 prospect_id: string;
             };
@@ -80487,7 +81011,9 @@ export interface operations {
     patch_mailbox_api_v1_mail_mailboxes__mailbox_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 mailbox_id: string;
             };
@@ -85531,6 +86057,39 @@ export interface operations {
             };
         };
     };
+    list_platform_audit_events_api_v1_platform_audit_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                action?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAuditPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_licenses_api_v1_platform_licenses_get: {
         parameters: {
             query: {
@@ -87033,6 +87592,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_gate_overview_api_v1_platform_tenants__tenant_id__release_gates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformGateOverviewOut"];
                 };
             };
             /** @description Validation Error */
@@ -89614,6 +90204,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    set_locale_api_v1_portal_me_locale_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalLocaleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -95276,7 +95897,9 @@ export interface operations {
     update_rule_api_v1_sla_rules__rule_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 rule_id: string;
             };
@@ -96528,6 +97151,39 @@ export interface operations {
             };
         };
     };
+    info_sheet_file_api_v1_statements__statement_id__info_sheet_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     info_sheet_preview_api_v1_statements__statement_id__info_sheet_preview_post: {
         parameters: {
             query?: never;
@@ -96838,6 +97494,39 @@ export interface operations {
             };
         };
     };
+    statement_outputs_api_v1_statements__statement_id__outputs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_result_entries_api_v1_statements__statement_id__result_entries_post: {
         parameters: {
             query?: never;
@@ -97105,7 +97794,9 @@ export interface operations {
     patch_team_api_v1_teams__team_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
             path: {
                 team_id: string;
             };
@@ -97475,6 +98166,8 @@ export interface operations {
                 page?: number;
                 page_size?: number;
                 type?: string | null;
+                /** @description Alias für page_size (Altclients) */
+                limit?: number | null;
             };
             header?: never;
             path?: never;
@@ -101079,6 +101772,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_order_workflow_api_v1_work_orders__order_id__approval_workflow_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderWorkflowRefIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Tenant
 from mhvp.privacy import erasure, register_doc
@@ -118,7 +119,11 @@ def _nf() -> ProblemError:
     return ProblemError(ErrorCodes.NOT_FOUND)
 
 
-@router.get("/privacy/register", summary="Register der Auftragsverarbeiter und Verarbeitungen")
+@router.get(
+    "/privacy/register",
+    summary="Register der Auftragsverarbeiter und Verarbeitungen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_register(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[PrivacyRegisterOut]:
@@ -194,7 +199,11 @@ async def processing_records(
         )
 
 
-@router.get("/privacy/deletion-profiles", summary="Löschprofile je Datenart")
+@router.get(
+    "/privacy/deletion-profiles",
+    summary="Löschprofile je Datenart",
+    dependencies=[Depends(strict_query)],
+)
 async def list_profiles(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[PrivacyDeletionProfileOut]:
@@ -255,7 +264,11 @@ async def release_profile(
         return PrivacyDeletionProfileOut.model_validate(row)
 
 
-@router.get("/privacy/erasure-requests", summary="Löschanträge (Art. 17)")
+@router.get(
+    "/privacy/erasure-requests",
+    summary="Löschanträge (Art. 17)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_requests(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[PrivacyErasureOut]:

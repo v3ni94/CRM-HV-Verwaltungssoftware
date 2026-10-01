@@ -15,6 +15,7 @@ from mhvp.billing import heating_calc, heating_services
 from mhvp.billing.models import HeatingRuleTable, HeatingRuleTableKind, Statement
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 # M2-02/S16-02: statements outside the membership's property assignment answer 404.
@@ -298,7 +299,11 @@ async def consumption_info(
         }
 
 
-@router.get("/billing/heating-rule-tables", summary="Regeltabellen Heizkosten (CO2, Gradtage)")
+@router.get(
+    "/billing/heating-rule-tables",
+    summary="Regeltabellen Heizkosten (CO2, Gradtage)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_rule_tables(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

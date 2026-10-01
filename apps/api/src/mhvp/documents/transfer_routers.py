@@ -18,6 +18,7 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.storage import presigned_download_url, presigned_upload_url
 from mhvp.documents import intake_address
@@ -332,7 +333,11 @@ async def zip_import(
 # Redacted copies (M25-01) ------------------------------------------------------------------
 
 
-@router.get("/documents/{document_id}/redactions", summary="Geschwärzte Kopien eines Originals")
+@router.get(
+    "/documents/{document_id}/redactions",
+    summary="Geschwärzte Kopien eines Originals",
+    dependencies=[Depends(strict_query)],
+)
 async def list_redactions(
     document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.DocumentRedactionOut]:

@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import forms
 from mhvp.portal.forms import PortalFormSubmission, PortalFormTemplate
@@ -95,7 +96,7 @@ def _out(t: PortalFormTemplate, *, admin_view: bool) -> dict[str, Any]:
 # Management -----------------------------------------------------------------------------
 
 
-@admin.get("/forms", summary="Formularvorlagen des Portals")
+@admin.get("/forms", summary="Formularvorlagen des Portals", dependencies=[Depends(strict_query)])
 async def list_templates(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -189,7 +190,11 @@ async def delete_template(
         await session.delete(t)
 
 
-@admin.get("/forms/{template_id}/submissions", summary="Einreichungen einer Formularvorlage")
+@admin.get(
+    "/forms/{template_id}/submissions",
+    summary="Einreichungen einer Formularvorlage",
+    dependencies=[Depends(strict_query)],
+)
 async def list_submissions(
     template_id: uuid.UUID,
     request: Request,
@@ -258,7 +263,9 @@ async def _roles(session: Any, account: Any) -> set[str]:
     return {g.role for g in await access.grants(session, account, local_today())}
 
 
-@router.get("/forms", summary="Formulare für die eigene Zielgruppe")
+@router.get(
+    "/forms", summary="Formulare für die eigene Zielgruppe", dependencies=[Depends(strict_query)]
+)
 async def portal_forms(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:

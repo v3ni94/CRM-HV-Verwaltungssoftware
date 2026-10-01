@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ContactPicker } from "../hoa/ContactPicker";
 import { AdminFeeRun } from "./AdminFeeRun";
 
 export type PropertyOption = { id: string; label: string };
@@ -19,6 +20,13 @@ type Fee = {
   vat_percent: string;
   amounts_per_unit_type: Record<string, string>;
   invoice_count: number;
+  // GA03-06 (Migration 0312)
+  manager_contact_id?: string | null;
+  termination_date?: string | null;
+  due_day_rule?: string | null;
+  due_day?: number | null;
+  account_id?: string | null;
+  sev_fee_amount?: string | null;
 };
 type PeriodRow = {
   fee_setting_id: string;
@@ -45,6 +53,8 @@ type Invoice = {
 type Check = { structure_ok: boolean; findings: { code: string; message: string }[] };
 
 const base = "/api/bff/accounting";
+const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const MONEY = /^\d+([.,]\d{1,2})?$/;
 
 /** Verwalterhonorar (18 M13): set up, change or end a fee, preview the due service periods,
  *  issue once per period (gapless number), release, cancel by credit note, XRechnung download,
@@ -70,7 +80,20 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
     apartment: "",
     commercial: "",
     parking: "",
+    termination_date: "",
+    due_day_rule: "",
+    due_day: "",
+    account_id: "",
+    sev_fee_amount: "",
   });
+  const [manager, setManager] = useState<{ id: string; name: string } | null>(null);
+  const dueDayNeeded = form.due_day_rule === "day" || form.due_day_rule === "day_next_month";
+  const dueDayNumber = Number(form.due_day);
+  const extraValid =
+    (form.termination_date === "" || form.termination_date >= form.start_date) &&
+    (!dueDayNeeded || (Number.isInteger(dueDayNumber) && dueDayNumber >= 1 && dueDayNumber <= 31)) &&
+    (form.account_id.trim() === "" || UUID.test(form.account_id.trim())) &&
+    (form.sev_fee_amount.trim() === "" || MONEY.test(form.sev_fee_amount.trim()));
   const label = (id: string) => properties.find((p) => p.id === id)?.label ?? id;
 
   const load = useCallback(async () => {
@@ -115,6 +138,12 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
             start_date: form.start_date,
             vat_percent: form.vat_percent || "0",
             amounts_per_unit_type: amounts,
+            ...(manager ? { manager_contact_id: manager.id } : {}),
+            ...(form.termination_date ? { termination_date: form.termination_date } : {}),
+            ...(form.due_day_rule ? { due_day_rule: form.due_day_rule } : {}),
+            ...(dueDayNeeded ? { due_day: dueDayNumber } : {}),
+            ...(form.account_id.trim() ? { account_id: form.account_id.trim() } : {}),
+            ...(form.sev_fee_amount.trim() ? { sev_fee_amount: form.sev_fee_amount.trim().replace(",", ".") } : {}),
           }),
         }).then(async (res) => {
           if (res.ok && form.interval !== "monthly") {
@@ -221,7 +250,51 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
             </label>
           ))}
         </div>
-        <button type="button" className={`${ui.primary} mt-3`} onClick={create} disabled={busy || !form.property_id}>
+        <h3 className="mb-1 mt-3 text-sm font-semibold">{t("extra.title")}</h3>
+        <div className="grid gap-2 sm:grid-cols-4" data-testid="fee-extra-fields">
+          <div className="sm:col-span-2">
+            <ContactPicker label={t("extra.manager")} onPick={(c) => setManager({ id: c.id, name: c.display_name })} />
+            {manager ? (
+              <p className={ui.small}>
+                {t("extra.managerPicked", { name: manager.name })}{" "}
+                <button type="button" className="underline" onClick={() => setManager(null)}>
+                  {t("extra.managerClear")}
+                </button>
+              </p>
+            ) : null}
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("extra.termination")}</span>
+            <input type="date" className={ui.input} value={form.termination_date} onChange={(e) => setForm({ ...form, termination_date: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("extra.sevFee")}</span>
+            <input className={ui.input} inputMode="decimal" value={form.sev_fee_amount} onChange={(e) => setForm({ ...form, sev_fee_amount: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("extra.dueRule")}</span>
+            <select className={ui.input} value={form.due_day_rule} onChange={(e) => setForm({ ...form, due_day_rule: e.target.value })}>
+              <option value="">{t("extra.dueRules.none")}</option>
+              {["day", "last_day", "day_next_month"].map((v) => (
+                <option key={v} value={v}>
+                  {t(`extra.dueRules.${v}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {dueDayNeeded ? (
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("extra.dueDay")}</span>
+              <input className={ui.input} inputMode="numeric" value={form.due_day} onChange={(e) => setForm({ ...form, due_day: e.target.value })} />
+            </label>
+          ) : null}
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className={ui.label}>{t("extra.account")}</span>
+            <input className={ui.input} value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} />
+          </label>
+        </div>
+        <p className={ui.help}>{t("extra.hint")}</p>
+        <button type="button" className={`${ui.primary} mt-3`} onClick={create} disabled={busy || !form.property_id || !extraValid}>
           {t("create")}
         </button>
       </div>
@@ -238,6 +311,7 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
               <th>{t("end")}</th>
               <th>{t("interval")}</th>
               <th>{t("rates")}</th>
+              <th>{t("extra.columnTerms")}</th>
               <th />
             </tr>
           </thead>
@@ -252,6 +326,16 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                   {Object.entries(f.amounts_per_unit_type)
                     .map(([k, v]) => `${k}: ${formatEur(v)}`)
                     .join(", ")}
+                </td>
+                <td className="text-xs">
+                  {f.termination_date ? <span className="block">{t("extra.terminatedOn", { date: formatDate(f.termination_date) })}</span> : null}
+                  {f.due_day_rule ? (
+                    <span className="block">
+                      {t(`extra.dueRules.${f.due_day_rule}`)}
+                      {f.due_day ? ` (${f.due_day})` : ""}
+                    </span>
+                  ) : null}
+                  {f.sev_fee_amount ? <span className="block">{t("extra.sevFeeShort", { amount: formatEur(f.sev_fee_amount) })}</span> : null}
                 </td>
                 <td>
                   <button type="button" className={ui.buttonSm} onClick={() => endFee(f)} disabled={busy}>

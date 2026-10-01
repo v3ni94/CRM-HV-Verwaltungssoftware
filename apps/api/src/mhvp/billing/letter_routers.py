@@ -159,6 +159,62 @@ async def info_sheet_preview(
 
 
 @router.post(
+    "/{statement_id}/info-sheet",
+    status_code=201,
+    summary="Informationsblatt als Dokument zum Abrechnungslauf ablegen (GA06-02, G3)",
+)
+async def info_sheet_file(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Files the info sheet of the current snapshot as a generated document linked to the
+    statement run (context ``statement``) and the property. Output of the statement, so G3 is
+    required; the legally relevant paragraphs stay marked "Text nicht freigegeben" (AA11-01)."""
+    from mhvp.billing import outputs
+    from mhvp.documents.blobs import BlobStore
+
+    await ensure_release_gate_open(
+        ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        st, snap = await _statement_with_snapshot(session, statement_id)
+        pdf = await _info_sheet_pdf(session, request, st)
+        document = await outputs.file_output(
+            session,
+            BlobStore(request.app.state.settings),
+            principal,
+            pdf=pdf,
+            title=f"Informationsblatt Betriebskostenabrechnung {st.period_from.year} (Entwurf)",
+            filename=f"betriebskosten_{st.period_from.year}_informationsblatt.pdf",
+            links=[("property", st.property_id)],
+            context_type="statement",
+            context_id=st.id,
+            origin="billing_info_sheet",
+        )
+        return {
+            "statement_id": st.id,
+            "document_id": document.id,
+            "snapshot_hash": snap.hash,
+            "text_status": info_sheet.TEXT_NOT_RELEASED,
+        }
+
+
+@router.get("/{statement_id}/outputs", summary="Abgelegte Ausgaben des Abrechnungslaufs")
+async def statement_outputs(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.billing import outputs
+
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(Statement, statement_id)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return {
+            "statement_id": st.id,
+            "items": await outputs.list_outputs(session, "statement", st.id),
+        }
+
+
+@router.post(
     "/{statement_id}/letters",
     status_code=201,
     summary="Anschreiben je Mieter als PDF-Entwurf ablegen (Dokument je Vertrag, kein Versand)",

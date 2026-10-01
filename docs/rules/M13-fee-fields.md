@@ -13,3 +13,4 @@
 3. Eine SE-Gebühr mit `sev_fee_amount` berechnet diesen Nettobetrag je Einheit; die WEG-Gebühr bleibt bei `amounts_per_unit_type`.
 4. `auto_post` am Rechnungsplan ist Standard aus, nur bei `auto_posting_enabled` setzbar und löst keine Buchung aus (OPEN_QUESTIONS AA10-01).
 5. Die Standard-Bankregel je Dienstleister entsteht nur als Vorschlag, nie aktiv (G1, Vier-Augen).
+6. (AB09) Der Lauf aus einem Rechnungsplan erzeugt immer nur einen Entwurf. Die Antwort nennt `auto_post_requested` und `auto_post_state`: `draft_only` (Kennzeichen nein), `locked_g1` (G1 geschlossen), `locked_switch` (Automatik des Mandanten aus) oder `draft_pending_rule` (G1 offen und Automatik an: weiterhin Entwurf, Buchung braucht aktive freigegebene Regel nach 7.4). Abnahmetests: `tests/integration/test_ab09_fee_creditor_plan.py`.

@@ -10,11 +10,20 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.etag import check_if_match, etag_of
+from mhvp.core.listparams import (
+    ListParams,
+    ListSpec,
+    apply_filters,
+    apply_sort,
+    sparse,
+    strict_query,
+)
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.tickets.models import (
     OrderStatus,
@@ -49,6 +58,7 @@ def _order_row(o: WorkOrder) -> dict[str, Any]:
             "description",
             "budget_limit",
             "requires_board_approval",
+            "approval_workflow_id",
             "status",
             "quote_amount",
             "quote_document_id",
@@ -64,7 +74,27 @@ def _order_row(o: WorkOrder) -> dict[str, Any]:
     }
 
 
-@router.get("/work-orders", summary="Aufträge (Filter Status, Dienstleister, Objekt, Ticket)")
+_WORK_ORDER_LIST = ListSpec(  # GA04-05
+    filters={
+        "status": WorkOrder.status,
+        "property_id": WorkOrder.property_id,
+        "provider_contact_id": WorkOrder.provider_contact_id,
+        "ticket_id": WorkOrder.ticket_id,
+        "requires_board_approval": WorkOrder.requires_board_approval,
+    },
+    sort={
+        "created_at": WorkOrder.created_at,
+        "scheduled_at": WorkOrder.scheduled_at,
+        "status": WorkOrder.status,
+    },
+)
+
+
+@router.get(
+    "/work-orders",
+    summary="Aufträge (Filter Status, Dienstleister, Objekt, Ticket)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_work_orders(
     request: Request,
     response: Response,
@@ -74,10 +104,11 @@ async def list_work_orders(
     ticket_id: uuid.UUID | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=200)] = 50,
+    params: ListParams = Depends(_WORK_ORDER_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
-        query = select(WorkOrder)
+        query = apply_filters(select(WorkOrder), params, _WORK_ORDER_LIST.filters)
         for column, value in (
             (WorkOrder.status, status),
             (WorkOrder.provider_contact_id, provider_contact_id),
@@ -89,7 +120,12 @@ async def list_work_orders(
         total = int(await session.scalar(select(func.count()).select_from(query.subquery())) or 0)
         rows = (
             await session.scalars(
-                query.order_by(WorkOrder.created_at.desc(), WorkOrder.id)
+                apply_sort(
+                    query,
+                    params,
+                    _WORK_ORDER_LIST.sort,
+                    (WorkOrder.created_at.desc(), WorkOrder.id),
+                )
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
@@ -104,10 +140,11 @@ async def list_work_orders(
                 t.id: t.number
                 for t in (await session.scalars(select(Ticket).where(Ticket.id.in_(ids)))).all()
             }
-        return [
+        result = [
             _order_row(o) | {"ticket_number": ticket_numbers.get(o.ticket_id or uuid.UUID(int=0))}
             for o in rows
         ]
+        return sparse(result, params, None, response=response)  # type: ignore[no-any-return]
 
 
 @router.get("/work-orders/{order_id}", summary="Auftrag mit Verlauf")
@@ -160,6 +197,31 @@ async def get_work_order(
         }
 
 
+class OrderWorkflowRefIn(BaseModel):
+    """GA04-07: set or clear the reference to the approval workflow of an order."""
+
+    model_config = ConfigDict(extra="forbid")
+    approval_workflow_id: uuid.UUID | None = None
+
+
+@router.patch("/work-orders/{order_id}/approval-workflow", summary="Freigabe-Workflow des Auftrags")
+async def set_order_workflow(
+    order_id: uuid.UUID,
+    body: OrderWorkflowRefIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Only a reference (AA05-01): there is no workflow table yet, so the id is not checked
+    against one; the board vote stays the effective approval. Tenant isolation by RLS."""
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id, with_for_update=True)
+        if order is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        order.approval_workflow_id = body.approval_workflow_id
+        await session.flush()
+        return _order_row(order)
+
+
 # Teams (M19-02) -------------------------------------------------------------------------
 
 
@@ -167,7 +229,7 @@ def _team_out(team: Team) -> dict[str, Any]:
     return {"id": team.id, "name": team.name, "member_user_ids": team.member_user_ids}
 
 
-@router.get("/teams", summary="Teams")
+@router.get("/teams", summary="Teams", dependencies=[Depends(strict_query)])
 async def list_teams(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -178,12 +240,16 @@ async def list_teams(
 
 @router.get("/teams/{team_id}", summary="Team")
 async def get_team(
-    team_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    team_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         team = await session.get(Team, team_id)
         if team is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        response.headers["ETag"] = etag_of(team.updated_at)  # GA04-06
         return _team_out(team)
 
 
@@ -192,12 +258,15 @@ async def patch_team(
     team_id: uuid.UUID,
     body: TicketTeamPatchIn,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         team = await session.get(Team, team_id, with_for_update=True)
         if team is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        check_if_match(if_match, team.updated_at)  # GA04-06
         if body.name is not None and body.name != team.name:
             clash = await session.scalar(
                 select(Team.id).where(Team.name == body.name, Team.id != team.id)
@@ -208,6 +277,9 @@ async def patch_team(
         if body.member_user_ids is not None:
             team.member_user_ids = list(dict.fromkeys(body.member_user_ids))
         await session.flush()
+        await session.flush()
+        await session.refresh(team, ["updated_at"])
+        response.headers["ETag"] = etag_of(team.updated_at)
         return _team_out(team)
 
 
@@ -251,7 +323,11 @@ def _comment_out(c: TicketComment) -> dict[str, Any]:
     }
 
 
-@router.get("/tickets/{ticket_id}/comments", summary="Kommentare eines Tickets")
+@router.get(
+    "/tickets/{ticket_id}/comments",
+    summary="Kommentare eines Tickets",
+    dependencies=[Depends(strict_query)],
+)
 async def list_comments(
     ticket_id: uuid.UUID,
     request: Request,

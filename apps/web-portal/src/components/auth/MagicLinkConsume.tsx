@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { adoptAccountLocale } from "@/lib/locale-sync";
 import { ui } from "@/lib/ui";
 
 type ConsumeResult = { status: "ok" } | { status: "code_required"; link_id: string; tenant_id: string };
@@ -44,6 +45,7 @@ export function MagicLinkConsume({ token }: { token?: string }) {
       }
       if (result.data.status === "ok") {
         setState({ step: "done" });
+        await adoptAccountLocale();
         router.push("/start");
         router.refresh();
         return;
@@ -68,6 +70,7 @@ export function MagicLinkConsume({ token }: { token?: string }) {
       return;
     }
     setState({ step: "done" });
+    await adoptAccountLocale();
     router.push("/start");
     router.refresh();
   }

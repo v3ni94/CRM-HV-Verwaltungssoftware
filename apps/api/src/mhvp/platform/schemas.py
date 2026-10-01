@@ -701,3 +701,11 @@ class GateStateOut(BaseModel):
     scopes: list[str]
     # GA14-02: approvals restricted to properties, legal entities or functions only.
     partially_open: bool = False
+
+
+class PlatformGateOverviewOut(BaseModel):
+    """GA14-04 (AB02): platform view of one tenant's gates and requests."""
+
+    tenant_id: uuid.UUID
+    gates: list[GateStateOut]
+    requests: list[GateRequestOut]

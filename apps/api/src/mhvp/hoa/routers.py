@@ -15,7 +15,7 @@ from mhvp.billing.status import StatementStatus, TransitionError, check_transiti
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
-from mhvp.core.listparams import ListParams, ListSpec, sparse
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
@@ -1354,7 +1354,9 @@ async def new_version(
 # Read endpoints for the CRM screens -------------------------------------------------------
 
 
-@router.get("/plans", summary="Wirtschaftspläne eines Buchungskreises")
+@router.get(
+    "/plans", summary="Wirtschaftspläne eines Buchungskreises", dependencies=[Depends(strict_query)]
+)
 async def list_plans(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1483,7 +1485,11 @@ async def diff_hoa_statement(
         } | _snapshot_diff(other.snapshot, st.snapshot)
 
 
-@router.get("/statements", summary="Hausgeldabrechnungen eines Buchungskreises")
+@router.get(
+    "/statements",
+    summary="Hausgeldabrechnungen eines Buchungskreises",
+    dependencies=[Depends(strict_query)],
+)
 async def list_hoa_statements(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1538,7 +1544,9 @@ async def create_reserve(
         return _reserve_out(row)
 
 
-@router.get("/reserves", summary="Rücklagen eines Buchungskreises")
+@router.get(
+    "/reserves", summary="Rücklagen eines Buchungskreises", dependencies=[Depends(strict_query)]
+)
 async def list_reserves(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

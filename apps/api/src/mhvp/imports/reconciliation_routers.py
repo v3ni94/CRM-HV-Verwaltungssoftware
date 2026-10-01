@@ -12,6 +12,7 @@ from sqlalchemy import select
 from mhvp.ai.models import ImportRun
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import allowed_property_ids
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import reconciliation as rec
 
@@ -96,7 +97,7 @@ async def _get_report(session: Any, report_id: uuid.UUID) -> ImportRun:
     return run
 
 
-@router.get("", summary="Abgleichberichte")
+@router.get("", summary="Abgleichberichte", dependencies=[Depends(strict_query)])
 async def list_reports(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),

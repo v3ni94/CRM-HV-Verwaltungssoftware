@@ -22,6 +22,7 @@ from sqlalchemy import select
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_property_allowed
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import features
 from mhvp.portal.models import PortalAccount
@@ -106,7 +107,11 @@ def _message_out(row: TicketComment, account: PortalAccount) -> dict[str, Any]:
     }
 
 
-@router.get("/tickets/{ticket_id}/messages", summary="Chatverlauf zur eigenen Meldung")
+@router.get(
+    "/tickets/{ticket_id}/messages",
+    summary="Chatverlauf zur eigenen Meldung",
+    dependencies=[Depends(strict_query)],
+)
 async def list_messages(
     ticket_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:

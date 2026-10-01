@@ -33,3 +33,7 @@
   keine Änderungen, weil der Index der Plattform führt).
 - Kontaktvorschau: Rolle je Zeile (kommt zur Rolle des Laufs hinzu) und optionale Übernahme leerer
   Felder beim Verknüpfen; vorhandene Werte werden nie überschrieben.
+
+## Ergänzung AB11 (01.10.2026)
+
+Die Direktablage ist in `tests/integration/test_ab11_jobs_intake.py` für beide Schalterzustände getestet: aus (Vorschlag), an unter der Schwelle (Vorschlag), an bei zwei Objekten über der Schwelle (Vorschlag), an bei einem eindeutigen Objekt (Ablage mit Ereignis `document.intake_auto_filed`). Der Schalter eines Mandanten wirkt nie auf einen anderen Mandanten. Die Entscheidung AA13-01 bleibt offen, der Schalter bleibt Standard aus.

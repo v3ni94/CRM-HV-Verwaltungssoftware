@@ -19,6 +19,7 @@ from mhvp.billing import betrkv
 from mhvp.billing.models import Statement, StatementCostItem
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/billing/operating-cost-types", tags=["Abrechnung"])
@@ -70,7 +71,11 @@ async def list_catalogue(principal: TenantPrincipal = Depends(READ)) -> dict[str
     return {"source": betrkv.SOURCE, "items": betrkv.catalogue()}
 
 
-@router.get("/accounts", summary="Kostenkonten eines Buchungskreises mit Katalogzuordnung")
+@router.get(
+    "/accounts",
+    summary="Kostenkonten eines Buchungskreises mit Katalogzuordnung",
+    dependencies=[Depends(strict_query)],
+)
 async def list_accounts(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

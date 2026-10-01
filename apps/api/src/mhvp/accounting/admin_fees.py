@@ -23,6 +23,7 @@ from mhvp.accounting import numbering, receivables
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, AdminFeeSetting
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
@@ -275,7 +276,12 @@ async def _invoice(
 # Settings ----------------------------------------------------------------------------------
 
 
-@router.get("/admin-fees", summary="Verwalterhonorare", responses=PAGE_HEADERS)
+@router.get(
+    "/admin-fees",
+    summary="Verwalterhonorare",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_fees(
     request: Request,
     response: Response,
@@ -434,7 +440,12 @@ async def period_preview(
 # Invoices ----------------------------------------------------------------------------------
 
 
-@router.get("/admin-fee-invoices", summary="Honorarrechnungen", responses=PAGE_HEADERS)
+@router.get(
+    "/admin-fee-invoices",
+    summary="Honorarrechnungen",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_invoices(
     request: Request,
     response: Response,

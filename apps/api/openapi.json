@@ -3701,6 +3701,46 @@
         "title": "ApproveOut",
         "type": "object"
       },
+      "AssetReportDispatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "pattern": "^(post|email|portal)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "contract_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Ids"
+          },
+          "only_without_retrieval": {
+            "default": true,
+            "title": "Only Without Retrieval",
+            "type": "boolean"
+          }
+        },
+        "title": "AssetReportDispatchIn",
+        "type": "object"
+      },
       "AssetReportIn": {
         "additionalProperties": false,
         "properties": {
@@ -47130,6 +47170,26 @@
         "title": "OrderStep",
         "type": "object"
       },
+      "OrderWorkflowRefIn": {
+        "additionalProperties": false,
+        "description": "GA04-07: set or clear the reference to the approval workflow of an order.",
+        "properties": {
+          "approval_workflow_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Workflow Id"
+          }
+        },
+        "title": "OrderWorkflowRefIn",
+        "type": "object"
+      },
       "OutgoingSwitchIn": {
         "additionalProperties": false,
         "properties": {
@@ -49208,6 +49268,122 @@
         "title": "PlanIn",
         "type": "object"
       },
+      "PlatformAuditEventOut": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurred_at",
+          "actor_user_id",
+          "action",
+          "target_type",
+          "target_id",
+          "payload"
+        ],
+        "title": "PlatformAuditEventOut",
+        "type": "object"
+      },
+      "PlatformAuditPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformAuditEventOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PlatformAuditPage",
+        "type": "object"
+      },
+      "PlatformGateOverviewOut": {
+        "description": "GA14-04 (AB02): platform view of one tenant's gates and requests.",
+        "properties": {
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/GateStateOut"
+            },
+            "title": "Gates",
+            "type": "array"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/GateRequestOut"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "gates",
+          "requests"
+        ],
+        "title": "PlatformGateOverviewOut",
+        "type": "object"
+      },
       "PlatformSettingsOut": {
         "description": "Platform wide switches (ADR 0011); ``gate_superadmin_bypass`` weakens the four eyes\ncontrol of ADR 0003 and stays off until the operator switches it on.",
         "properties": {
@@ -49941,6 +50117,11 @@
             "minLength": 3,
             "title": "Email",
             "type": "string"
+          },
+          "send_invitation": {
+            "default": true,
+            "title": "Send Invitation",
+            "type": "boolean"
           }
         },
         "required": [
@@ -50036,6 +50217,25 @@
           "document_id"
         ],
         "title": "PortalInvoiceSubmitIn",
+        "type": "object"
+      },
+      "PortalLocaleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          }
+        },
+        "title": "PortalLocaleIn",
         "type": "object"
       },
       "PortalMandateIn": {
@@ -65201,6 +65401,22 @@
           "webhook_path"
         ],
         "title": "TelephonySettingsOut",
+        "type": "object"
+      },
+      "TemplateContextIn": {
+        "additionalProperties": false,
+        "description": "Maintain the context types of an existing template version in place (GA04-10).",
+        "properties": {
+          "context_types": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 7,
+            "title": "Context Types",
+            "type": "array"
+          }
+        },
+        "title": "TemplateContextIn",
         "type": "object"
       },
       "TemplateIn": {
@@ -82679,6 +82895,61 @@
         ]
       }
     },
+    "/api/v1/accounting/rule-versions/due-checkpoints": {
+      "get": {
+        "description": "GA08-02: dated check points (group Prüfpunkt) that are due; hint only, no lock.",
+        "operationId": "due_rule_checkpoints_api_v1_accounting_rule_versions_due_checkpoints_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleVersionOut"
+                  },
+                  "title": "Response Due Rule Checkpoints Api V1 Accounting Rule Versions Due Checkpoints Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fällige Prüfpunkte als Hinweis",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/rule-versions/effective": {
       "get": {
         "operationId": "effective_rule_version_api_v1_accounting_rule_versions_effective_get",
@@ -87153,6 +87424,22 @@
               "title": "Rule Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -90467,6 +90754,22 @@
               "title": "Order Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -93145,6 +93448,95 @@
         ]
       }
     },
+    "/api/v1/billing/owner-statements/{statement_id}/outputs": {
+      "get": {
+        "operationId": "list_outputs_api_v1_billing_owner_statements__statement_id__outputs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Outputs Api V1 Billing Owner Statements  Statement Id  Outputs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgelegte Ausgaben der Eigentümerabrechnung",
+        "tags": [
+          "Abrechnung"
+        ]
+      },
+      "post": {
+        "description": "Files the letter and the § 35a proof of the approved statement as generated documents\nlinked to the statement run (context ``owner_statement``), the legal entity and the\nproperty. Internal drafts, nothing is sent.",
+        "operationId": "file_outputs_api_v1_billing_owner_statements__statement_id__outputs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response File Outputs Api V1 Billing Owner Statements  Statement Id  Outputs Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anschreiben und § 35a-Nachweis ablegen (GA06-03, nur mit Freigabestufe G3)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
     "/api/v1/billing/owner-statements/{statement_id}/pdf": {
       "get": {
         "operationId": "pdf_api_v1_billing_owner_statements__statement_id__pdf_get",
@@ -93181,6 +93573,55 @@
           }
         },
         "summary": "Ausgabe als PDF (nur mit Freigabestufe G3)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}/preview/{part}": {
+      "get": {
+        "description": "Draft preview from the calculated snapshot; carries the draft marking and the\nplaceholders \"Text nicht freigegeben\" (AA11-02). Issuing and filing need G3.",
+        "operationId": "output_preview_api_v1_billing_owner_statements__statement_id__preview__part__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "part",
+            "required": true,
+            "schema": {
+              "title": "Part",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschau Anschreiben oder § 35a-Nachweis als PDF-Entwurf (GA06-03, kein Versand)",
         "tags": [
           "Abrechnung"
         ]
@@ -100735,6 +101176,60 @@
         ]
       }
     },
+    "/api/v1/document-templates/{template_id}": {
+      "patch": {
+        "description": "Context types are metadata of a version; placeholders_used is recomputed from the text.",
+        "operationId": "update_template_context_api_v1_document_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateContextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kontexttypen einer Vorlage pflegen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/documents": {
       "get": {
         "description": "Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: properties (Objekte über Verknüpfung mit Objekt, Einheit, Vertrag, Ticket).",
@@ -102439,6 +102934,57 @@
                 }
               ],
               "title": "Recipient Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created To"
             }
           },
           {
@@ -105179,6 +105725,69 @@
           }
         },
         "summary": "Berechnen und gegen Buchhaltung abstimmen",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/asset-reports/{report_id}/dispatch": {
+      "post": {
+        "description": "One letter per resolved recipient of each ownership contract of the reporting date,\nfiled as a generated document (context ``hoa_asset_report``) and handed to the existing\ndispatch (``mhvp.communication.dispatch``): post becomes a prepared postal dispatch, e-mail\na draft, portal the inbox. Needs gate G4 and an issued report like the portal output.\nA contract that already has a letter of this report is skipped (no double dispatch).",
+        "operationId": "dispatch_asset_report_api_v1_hoa_asset_reports__report_id__dispatch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AssetReportDispatchIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dispatch Asset Report Api V1 Hoa Asset Reports  Report Id  Dispatch Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vermögensbericht je Eigentümer als Brief über den Versand (GA07-02, G4)",
         "tags": [
           "WEG"
         ]
@@ -119137,6 +119746,22 @@
               "title": "Listing Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -120013,6 +120638,22 @@
               "format": "uuid",
               "title": "Prospect Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -122011,6 +122652,22 @@
               "format": "uuid",
               "title": "Mailbox Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -129981,6 +130638,79 @@
         ]
       }
     },
+    "/api/v1/platform/audit-events": {
+      "get": {
+        "operationId": "list_platform_audit_events_api_v1_platform_audit_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plattformaudit auflisten",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/platform/licenses": {
       "get": {
         "operationId": "list_licenses_api_v1_platform_licenses_get",
@@ -132126,6 +132856,50 @@
         "summary": "Onboarding- und G5-Status",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenant_id}/release-gates": {
+      "get": {
+        "description": "Read only overview for the CRM page Plattform, Freigabestufen: state per gate and every\nrequest with opening and revocation. Nothing is opened here.",
+        "operationId": "platform_gate_overview_api_v1_platform_tenants__tenant_id__release_gates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformGateOverviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigabestufen und Anträge eines Mandanten (Plattform, GA14-04)",
+        "tags": [
+          "Plattform"
         ]
       }
     },
@@ -135942,6 +136716,40 @@
           }
         },
         "summary": "Eigene Rollen und Verträge",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/locale": {
+      "patch": {
+        "operationId": "set_locale_api_v1_portal_me_locale_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalLocaleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sprachwahl am Portalkonto speichern",
         "tags": [
           "Portal"
         ]
@@ -144443,6 +145251,22 @@
               "title": "Rule Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -146208,6 +147032,52 @@
         ]
       }
     },
+    "/api/v1/statements/{statement_id}/info-sheet": {
+      "post": {
+        "description": "Files the info sheet of the current snapshot as a generated document linked to the\nstatement run (context ``statement``) and the property. Output of the statement, so G3 is\nrequired; the legally relevant paragraphs stay marked \"Text nicht freigegeben\" (AA11-01).",
+        "operationId": "info_sheet_file_api_v1_statements__statement_id__info_sheet_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Info Sheet File Api V1 Statements  Statement Id  Info Sheet Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Informationsblatt als Dokument zum Abrechnungslauf ablegen (GA06-02, G3)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
     "/api/v1/statements/{statement_id}/info-sheet/preview": {
       "post": {
         "operationId": "info_sheet_preview_api_v1_statements__statement_id__info_sheet_preview_post",
@@ -146673,6 +147543,51 @@
         ]
       }
     },
+    "/api/v1/statements/{statement_id}/outputs": {
+      "get": {
+        "operationId": "statement_outputs_api_v1_statements__statement_id__outputs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Statement Outputs Api V1 Statements  Statement Id  Outputs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgelegte Ausgaben des Abrechnungslaufs",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
     "/api/v1/statements/{statement_id}/result-entries": {
       "post": {
         "operationId": "create_result_entries_api_v1_statements__statement_id__result_entries_post",
@@ -147058,6 +147973,22 @@
               "format": "uuid",
               "title": "Team Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -147635,6 +148566,26 @@
                 }
               ],
               "title": "Type"
+            }
+          },
+          {
+            "description": "Alias für page_size (Altclients)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Alias für page_size (Altclients)",
+              "title": "Limit"
             }
           }
         ],
@@ -153343,6 +154294,63 @@
         "summary": "Terminvorschläge des Dienstleisters zum Auftrag mit bestätigtem Termin",
         "tags": [
           "tickets"
+        ]
+      }
+    },
+    "/api/v1/work-orders/{order_id}/approval-workflow": {
+      "patch": {
+        "description": "Only a reference (AA05-01): there is no workflow table yet, so the id is not checked\nagainst one; the board vote stays the effective approval. Tenant isolation by RLS.",
+        "operationId": "set_order_workflow_api_v1_work_orders__order_id__approval_workflow_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderWorkflowRefIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Order Workflow Api V1 Work Orders  Order Id  Approval Workflow Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigabe-Workflow des Auftrags",
+        "tags": [
+          "Tickets und Aufträge",
+          "Tickets und Aufträge"
         ]
       }
     },

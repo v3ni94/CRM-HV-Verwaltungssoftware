@@ -6,6 +6,7 @@ import { AllocabilityHints, type AllocabilityHint } from "@/components/billing/A
 import { DeadlineExceptionPanel, type DeadlineException } from "@/components/billing/DeadlineExceptionPanel";
 import { HeatingPanel } from "@/components/billing/HeatingPanel";
 import { StatementLettersPanel } from "@/components/billing/StatementLettersPanel";
+import { StatementOutputsPanel } from "@/components/billing/StatementOutputsPanel";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -21,6 +22,7 @@ type Snapshot = {
   results?: { unit_number: string; costs: string; advances_due: string; advances_paid: string; balance: string }[];
   vacancy_owner_share?: string;
   allocability_hints?: AllocabilityHint[];
+  rule_register?: { rule_id: string; version: number; status: string; effective_from: string } | null;
 };
 
 export default async function StatementPage({ params }: { params: Promise<{ id: string }> }) {
@@ -52,6 +54,19 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         description={`${t(`status.${String(data.status)}`)} · ${t("deadline", { date: formatDate(String(data.deadline_orientation)) })}`}
       />
       <p className={ui.notice}>{t("notice")}</p>
+      {snap ? (
+        <p className={ui.help} data-testid="rule-register">
+          <strong>{t("ruleRegisterTitle")}: </strong>
+          {snap.rule_register
+            ? t("ruleRegisterText", {
+                rule: snap.rule_register.rule_id,
+                version: snap.rule_register.version,
+                status: snap.rule_register.status,
+                date: formatDate(snap.rule_register.effective_from),
+              })
+            : t("ruleRegisterNone")}
+        </p>
+      ) : null}
       <h2 className={ui.h2}>{t("items")}</h2>
       <div className="overflow-x-auto">
 <table className="mhvp-table">
@@ -84,6 +99,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
       ) : null}
       <DeadlineExceptionPanel id={id} status={String(data.status)} initial={data as unknown as DeadlineException} />
       <StatementLettersPanel id={id} status={String(data.status)} hasSnapshot={Boolean(snap)} />
+      <StatementOutputsPanel base={`/api/bff/statements/${id}`} previews={[{ key: "infoSheet", path: "info-sheet/preview", method: "POST" }]} filePath="info-sheet" enabled={Boolean(snap)} />
       <AllocabilityHints id={id} initial={snap?.allocability_hints ?? null} />
       <AdvanceProposalsPanel id={id} hasSnapshot={Boolean(snap)} snapshotHash={snap?.hash ?? null} />
       <AiPlausibilityCard kind="statements" id={id} snapshotHash={snap?.hash ?? null} />

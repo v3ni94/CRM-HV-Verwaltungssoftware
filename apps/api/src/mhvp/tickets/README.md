@@ -261,3 +261,4 @@ of `mhvp.workspace.jobs.DEADLINE_KINDS`, never a duration) and document kinds.
 * Paket AA03 (Welle 12, GA04-01, GA04-08): `POST /tickets/{id}/comments` erzeugt das Ereignis `ticket.commented` (Ticket-ID, Kommentar-ID, internal, nie der Text). `ticket.category_id` verweist auf `ticket_template` (Migration 0305, Trigger setzt die ID aus dem Freitext `category`, Freitext bleibt Fallback).
 
 * AA05 (GA04-07): `WorkOrder.approval_workflow_id` (optional UUID without FK, in `POST /work-orders` and the order output, migration 0307). The board vote stays the effective approval until AA05-01 is decided.
+* AB05 (GA04-07): `PATCH /work-orders/{id}/approval-workflow` sets or clears the reference (`tickets:update`, 404 other tenant, 422 invalid UUID); list and detail output carry `approval_workflow_id`. No check against a workflow table (AA05-01). CRM: reference field on the order page.

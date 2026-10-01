@@ -36,6 +36,7 @@ from mhvp.communication.postal_providers import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 
@@ -662,7 +663,11 @@ async def check_settings(
         return settings_out(row)
 
 
-@router.get("/jobs", summary="Postausgang: Aufträge mit Anbieterstatus")
+@router.get(
+    "/jobs",
+    summary="Postausgang: Aufträge mit Anbieterstatus",
+    dependencies=[Depends(strict_query)],
+)
 async def list_jobs(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
@@ -720,7 +725,9 @@ async def get_job(
 
 
 @router.get(
-    "/dispatches/{dispatch_id}/history", summary="Statushistorie der Zustellung (Postdienst)"
+    "/dispatches/{dispatch_id}/history",
+    summary="Statushistorie der Zustellung (Postdienst)",
+    dependencies=[Depends(strict_query)],
 )
 async def dispatch_history(
     dispatch_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

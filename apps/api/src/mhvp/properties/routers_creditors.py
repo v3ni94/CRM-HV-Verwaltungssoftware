@@ -25,6 +25,7 @@ from mhvp.core.auth.scope import (
     session_allowed_property_ids,
 )
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties import creditors as svc
 from mhvp.properties.models import (
@@ -135,7 +136,11 @@ def _nf() -> ProblemError:
     return ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
-@router.get("/properties/{property_id}/creditors", summary="Dienstleister/Handwerker des Objekts")
+@router.get(
+    "/properties/{property_id}/creditors",
+    summary="Dienstleister/Handwerker des Objekts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_creditors(
     property_id: uuid.UUID,
     request: Request,
@@ -259,7 +264,11 @@ async def backfill_creditors(
         return BackfillOut(**result)
 
 
-@router.get("/contacts/{contact_id}/creditor-properties", summary="Objekte als Dienstleister")
+@router.get(
+    "/contacts/{contact_id}/creditor-properties",
+    summary="Objekte als Dienstleister",
+    dependencies=[Depends(strict_query)],
+)
 async def creditor_properties(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CONTACTS_READ)
 ) -> list[CreditorPropertyOut]:

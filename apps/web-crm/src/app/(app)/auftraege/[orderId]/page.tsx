@@ -2,7 +2,9 @@ import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkOrderProposals, type WorkOrderProposalsData } from "@/components/workorders/WorkOrderProposals";
+import { WorkOrderWorkflowRef } from "@/components/workorders/WorkOrderWorkflowRef";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,10 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ orde
   redirectIfUnauthenticated(response);
   if (!response.ok) return <p role="alert" className={ui.alert}>{t("notFound")}</p>;
   const data = (await response.json()) as WorkOrderProposalsData;
+  const orderRes = await serverFetch(`/api/v1/work-orders/${encodeURIComponent(orderId)}`);
+  const order = orderRes.ok ? ((await orderRes.json()) as { approval_workflow_id?: string | null }) : null;
+  const me = await getMe();
+  const canEdit = (me.data?.permissions ?? []).includes("tickets:update");
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
@@ -24,6 +30,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ orde
         description={data.description}
       />
       <WorkOrderProposals initial={data} />
+      {order ? <WorkOrderWorkflowRef orderId={orderId} initial={order.approval_workflow_id ?? null} canEdit={canEdit} /> : null}
     </div>
   );
 }

@@ -60,6 +60,12 @@ export default async function SettingsPage() {
       show: can("tickets:read"),
     },
     {
+      href: "/einstellungen/dienstleister-portal",
+      title: t("portalProviders.title"),
+      description: t("portalProviders.description"),
+      show: can("contacts:update"),
+    },
+    {
       href: "/einstellungen/automatisierung",
       title: t("automation.title"),
       description: t("automation.description"),

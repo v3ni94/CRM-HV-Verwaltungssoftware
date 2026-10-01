@@ -1698,6 +1698,25 @@
           "done": "fertig",
           "failed": "fehlgeschlagen"
         }
+      },
+      "subledger": {
+        "title": "Nebenbuchabgleich (Prüfbericht)",
+        "description": "Je Debitor und Kreditor der Saldo des Hauptbuchs gegen die offenen Posten zum Stichtag {date}. Eine Differenz ist ein Prüfhinweis, zum Beispiel eine nicht zugeordnete Zahlung oder eine Buchung ohne offenen Posten, und kein Buchungsfehler.",
+        "noDifferences": "Keine Differenz zwischen Haupt- und Nebenbuch.",
+        "differences": "{count, plural, one {# Konto mit Differenz} other {# Konten mit Differenz}} zur Prüfung.",
+        "sections": {
+          "debtor": "Debitoren",
+          "creditor": "Kreditoren"
+        },
+        "empty": "Keine Konten mit Bewegung bis zum Stichtag.",
+        "account": "Konto",
+        "ledgerBalance": "Saldo Hauptbuch",
+        "openItems": "Offene Posten",
+        "difference": "Differenz",
+        "toReview": "zu prüfen",
+        "asOf": "Stichtag",
+        "show": "Anzeigen",
+        "error": "Die Konsistenzprüfung konnte nicht geladen werden."
       }
     }
   },
@@ -2727,6 +2746,9 @@
     "applied": "Import in die Abrechnung übernommen und gesperrt."
   },
   "Billing": {
+    "ruleRegisterTitle": "Regelversion der Abrechnung",
+    "ruleRegisterText": "Regel {rule} Version {version} ({status}), wirksam ab {date}. Eine spätere Regelversion ändert diese Abrechnung nicht.",
+    "ruleRegisterNone": "Keine Regelversion im Register zum Abrechnungsbeginn erfasst.",
     "letters": {
       "interim": "Unterjährige Abrechnung (Sonderzeitraum)",
       "purpose": "Zweck des Sonderzeitraums",
@@ -2923,6 +2945,19 @@
       "documentInvalid": "Bitte eine gültige Dokument-ID angeben.",
       "save": "Ausnahme speichern",
       "readOnly": "Änderung nur im Entwurf, sonst über eine neue Version."
+    },
+    "outputs": {
+      "title": "Ausgaben zum Abrechnungslauf",
+      "textNotice": "Rechtlich maßgebliche Texte sind als \"Text nicht freigegeben\" gekennzeichnet, bis der Betreiber sie freigegeben hat (AA11-01, AA11-02).",
+      "preview": {
+        "infoSheet": "Vorschau Informationsblatt",
+        "ownerLetter": "Vorschau Anschreiben",
+        "s35a": "Vorschau Nachweis § 35a"
+      },
+      "file": "Als Dokument ablegen",
+      "gate": "Die Ablage ist eine Ausgabe der Abrechnung und erst mit Freigabestufe G3 möglich. Es wird nichts versendet.",
+      "filed": "Ausgabe abgelegt und mit dem Abrechnungslauf verknüpft",
+      "none": "Noch keine Ausgaben abgelegt."
     }
   },
   "HoaWork": {
@@ -3251,13 +3286,16 @@
         "partial": "Teilversammlung",
         "circular_resolution": "Umlaufverfahren"
       },
+      "selectOrigin": "Ursprungsversammlung wählen",
+      "originRequired": "Bitte die Ursprungsversammlung wählen.",
+      "noTemplate": "Keine Vorlage",
       "origin": "Ursprungsversammlung",
       "endsAt": "Ende",
       "publicDescription": "Öffentliche Beschreibung (Eigentümerportal)",
       "internalDescription": "Interne Beschreibung (nur Verwaltung)",
-      "invitationTemplate": "Vorlage Einladung (ID)",
-      "proxyTemplate": "Vorlage Vollmacht (ID)",
-      "ballotTemplate": "Vorlage Stimmzettel (ID)",
+      "invitationTemplate": "Vorlage Einladung",
+      "proxyTemplate": "Vorlage Vollmacht",
+      "ballotTemplate": "Vorlage Stimmzettel",
       "save": "Angaben speichern",
       "saved": "Angaben gespeichert.",
       "endBeforeStart": "Das Ende muss nach dem Beginn liegen.",
@@ -3284,6 +3322,7 @@
     },
     "meetingForm": {
       "title": "Versammlungsform und Einladung",
+      "termNotice": "Hinweis zur Geltungsdauer des zulassenden Beschlusses",
       "mode": "Form",
       "modes": {
         "presence": "Präsenz",
@@ -4745,6 +4784,7 @@
   },
   "Creditors": {
     "loadError": "Die Buchungskreise konnten nicht geladen werden. Bitte Seite neu laden oder die Berechtigungen prüfen.",
+    "defaultRuleHint": "Beim Anlegen eines Dienstleisterverhältnisses mit der Option Standard-Bankregel entsteht für den Kreditor eine Vorschlagsregel (Zustand vorgeschlagen, niedrige Priorität). Sie bucht nichts und braucht Freigabe durch eine zweite Person.",
     "sync": "Kreditorenkonten anlegen",
     "syncHint": "Legt für alle Dienstleisterverhältnisse des Buchungskreises fehlende Kreditorenkonten an und verknüpft vorhandene.",
     "syncDone": "{created} Konten angelegt, {linked} verknüpft.",
@@ -4769,6 +4809,20 @@
     "runningBalance": "Saldo"
   },
   "RecurringPlans": {
+    "autoPost": {
+      "column": "Automatische Buchung",
+      "yes": "ja",
+      "no": "nein",
+      "turnOn": "Anfordern",
+      "turnOff": "Zurücknehmen",
+      "saved": "Kennzeichen gespeichert.",
+      "hint": "Nein: Der Lauf erzeugt nur Rechnungsentwürfe. Ja: ist nur bei freigeschalteter Automatik des Mandanten möglich und bucht trotzdem nichts, solange die Freigabestufe G1 und eine aktive Regel fehlen."
+    },
+    "autoPostState": {
+      "locked_g1": "Automatische Buchung gesperrt (Freigabestufe G1 geschlossen), Entwurf erzeugt.",
+      "locked_switch": "Automatische Buchung gesperrt (Automatik des Mandanten aus), Entwurf erzeugt.",
+      "draft_pending_rule": "Entwurf erzeugt, eine Buchung braucht eine aktive freigegebene Regel."
+    },
     "createTitle": "Neuen Rechnungsplan anlegen",
     "createFields": {
       "provider_search": "Aussteller suchen",
@@ -4830,6 +4884,8 @@
     "endedDone": "Rechnungsplan beendet."
   },
   "Invoices": {
+    "reverseChargeGateTitle": "Freigabepunkt § 13b UStG",
+    "reverseChargeGateText": "Der Beleg ist als Reverse Charge gekennzeichnet. Ob § 13b UStG einschlägig ist, wird nicht automatisch entschieden: Normzuordnung und Steuerschuldnerschaft bestätigt der Steuerberater, bis dahin gibt es keine automatische Buchung oder Steuerfolge.",
     "extra": {
       "attachment_document_ids": "Anlagen zum Beleg (Dokument-IDs)",
       "attachment_hint": "{count} Anlage(n) verknüpft. Mehrere IDs mit Leerzeichen, Komma oder Zeilenumbruch trennen; das Dokument muss im DMS vorhanden sein.",
@@ -5897,6 +5953,8 @@
       "learning": "Lernphase",
       "domains": "Kundendomains",
       "oidcClients": "OIDC-Clients",
+      "generated": "Erzeugte Dokumente",
+      "releaseGates": "Freigabestufen",
       "gateG5": "Freigabe G5",
       "rentLaw": "Mietrecht",
       "onboarding": "Onboarding",
@@ -6212,6 +6270,10 @@
     "documentCategories": {
       "title": "Dokumentkategorien",
       "description": "Kategoriebaum und Zuordnung zu Paperless und Drive pflegen."
+    },
+    "portalProviders": {
+      "title": "Dienstleister im Portal",
+      "description": "Verfügbarkeitsfenster und Freigaben je Unterlagenklasse der Dienstleister."
     }
   },
   "Members": {
@@ -9179,7 +9241,20 @@
     "firstRetrieved": "Erster Abruf",
     "lastRetrieved": "Letzter Abruf",
     "retrievals": "Abrufe",
-    "notRetrieved": "Noch nicht abgerufen"
+    "notRetrieved": "Noch nicht abgerufen",
+    "letter": "Brief",
+    "noLetter": "Kein Brief",
+    "dispatch": "Bericht per Brief versenden",
+    "dispatchAll": "Auch an Eigentümer mit Portalabruf versenden",
+    "dispatchResult": "{created} Briefe vorbereitet, {skipped} Einheiten übersprungen",
+    "channels": {
+      "post": "Post",
+      "email": "E-Mail",
+      "portal": "Portal",
+      "sms": "SMS",
+      "registered": "Einschreiben",
+      "courier": "Bote"
+    }
   },
   "HoaFinance": {
     "loans": "Darlehen",
@@ -9434,6 +9509,25 @@
       "downloaded": "heruntergeladen"
     }
   },
+  "GeneratedDocuments": {
+    "breadcrumb": "Dokumente",
+    "title": "Erzeugte Dokumente",
+    "intro": "Briefe aus Vorlagen mit Vorlage, Version, Kontext und Zustellung. Filter nach Vorlage und Zeitraum.",
+    "filter": "Filter",
+    "template": "Vorlage",
+    "allTemplates": "Alle Vorlagen",
+    "from": "Von",
+    "to": "Bis",
+    "empty": "Keine erzeugten Dokumente gefunden.",
+    "colCreated": "Erzeugt",
+    "colTemplate": "Vorlage",
+    "colContext": "Kontext",
+    "colDelivery": "Zustellung",
+    "colDocument": "Dokument",
+    "noTemplate": "ohne Vorlage",
+    "notSent": "nicht versandt",
+    "open": "Dokument öffnen"
+  },
   "DocumentList": {
     "select": "{title} auswählen",
     "colSelect": "Auswahl",
@@ -9458,7 +9552,8 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageOf": "Seite {page} von {pages}, {total} Dokumente",
-    "lettersLink": "Briefe und Vorlagen"
+    "lettersLink": "Briefe und Vorlagen",
+    "generatedLink": "Erzeugte Dokumente"
   },
   "DocumentRedactions": {
     "title": "Geschwärzte Kopien",
@@ -9804,7 +9899,13 @@
         "superseded": "ersetzt"
       },
       "toTicket": "Zum Ticket"
-    }
+    },
+    "workflowTitle": "Freigabe-Workflow",
+    "workflowId": "Kennung des Freigabe-Workflows",
+    "workflowHint": "Nur ein Verweis. Eine Tabelle für Freigabeabläufe gibt es noch nicht, die Beiratsfreigabe des Auftrags bleibt maßgeblich.",
+    "workflowSave": "Speichern",
+    "workflowSaved": "Verweis gespeichert.",
+    "workflowInvalid": "Die Kennung ist keine gültige UUID."
   },
   "Webhooks": {
     "card": {
@@ -12328,6 +12429,49 @@
     "releaseHint": "Freigabe: Antrag G5 im Mandanten stellen, Genehmigung durch den Superadmin. Ein Widerruf läuft über den Antrag.",
     "noData": "Kein Mandant vorhanden."
   },
+  "PlatformGates": {
+    "title": "Freigabestufen",
+    "link": "Freigabestufen G1 bis G5",
+    "notice": "Übersicht der Freigabestufen je Mandant mit Anträgen, Checkliste und Nachweisdokument. Die Prüfregeln liegen in der API: Vier-Augen-Prinzip, vollständige Checkliste und Nachweisdokument für G2 bis G4, G5 nur durch den Superadmin. Diese Seite ändert keine Regel.",
+    "forbidden": "Nur für Plattformadministratoren.",
+    "tenant": "Mandant",
+    "gatesCaption": "Stand der Freigabestufen",
+    "gate": "Stufe",
+    "state": "Stand",
+    "scopes": "Freigegebener Umfang",
+    "stateOpen": "offen",
+    "statePartial": "begrenzt offen",
+    "stateClosed": "geschlossen",
+    "requests": "Anträge",
+    "noRequests": "Keine Anträge vorhanden.",
+    "evidence": "Prüfnachweis",
+    "evidenceDocument": "Nachweisdokument",
+    "evidenceDocumentId": "Nachweisdokument (Dokument-ID, Pflicht für G2 bis G4)",
+    "openedBy": "Geöffnet von",
+    "revokedBy": "Widerrufen von",
+    "properties": "Begrenzt auf Objekte",
+    "none": "keine Angabe",
+    "comment": "Kommentar",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "revoke": "Widerrufen",
+    "newRequest": "Antrag stellen",
+    "scope": "Umfang (Funktionen und Objektgruppe)",
+    "propertyIds": "Begrenzung auf Objekte (Objekt-IDs, durch Komma getrennt, leer bedeutet alle)",
+    "checklist": "Checkliste (Bestätigung je Punkt)",
+    "checkNote": "Bestätigung {item}",
+    "noChecklist": "Für diese Stufe ist keine Checkliste hinterlegt.",
+    "submit": "Antrag stellen",
+    "onlyOwnTenant": "Anträge und Widerrufe sind nur im angemeldeten Mandanten möglich. Melden Sie sich im gewählten Mandanten an.",
+    "invalidId": "Bitte gültige IDs angeben.",
+    "noData": "Kein Mandant vorhanden.",
+    "status": {
+      "requested": "beantragt",
+      "approved": "genehmigt",
+      "rejected": "abgelehnt",
+      "revoked": "widerrufen"
+    }
+  },
   "PlatformOnboarding": {
     "title": "Onboarding Drittmandanten",
     "notice": "Assistent für Plattformadministratoren. Der Mandant erhält Rechtsträger, ersten Administrator, CI-Einstellungen und Standardrollen. Feature-Flags bleiben aus, kein Gate wird geöffnet, die Willkommens-E-Mail ist nur ein Entwurf.",
@@ -13634,6 +13778,27 @@
       "yearly": "jährlich",
       "annual": "jährlich"
     },
+    "extra": {
+      "title": "Weitere Honorarangaben",
+      "manager": "Verwalterkontakt suchen",
+      "managerPicked": "Verwalter: {name}",
+      "managerClear": "entfernen",
+      "termination": "Kündigungsdatum (optional)",
+      "sevFee": "Honorar je SE-Einheit netto (optional)",
+      "dueRule": "Fälligkeitsregel",
+      "dueRules": {
+        "none": "Keine (nach Vertrag)",
+        "day": "Fester Tag im Monat",
+        "last_day": "Letzter Tag des Monats",
+        "day_next_month": "Fester Tag im Folgemonat"
+      },
+      "dueDay": "Tag (1 bis 31)",
+      "account": "Erlöskonto (ID, optional)",
+      "hint": "Das Kündigungsdatum begrenzt den Honorarlauf. Die Fälligkeitsregel gilt für künftig ausgestellte Honorarrechnungen. Es wird nichts gebucht und nichts versendet.",
+      "columnTerms": "Kündigung, Fälligkeit, SE",
+      "terminatedOn": "Kündigung zum {date}",
+      "sevFeeShort": "SE-Einheit: {amount}"
+    },
     "unitTypes": {
       "apartment": "Je Wohnung (netto)",
       "commercial": "Je Gewerbeeinheit (netto)",
@@ -14283,7 +14448,20 @@
     "templateBody": "Textvorlage",
     "placeholders": "Platzhalter: {list}",
     "saveTemplate": "Speichern (neue Version)",
-    "templateSaved": "Vorlage gespeichert, Version {version}."
+    "templateSaved": "Vorlage gespeichert, Version {version}.",
+    "contextTypes": "Erlaubte Kontexte",
+    "contextHint": "Ohne Auswahl ist die Vorlage nicht eingeschränkt. Die Speicherung gilt für die gewählte Version, ein neuer Text legt eine neue Version an.",
+    "saveContext": "Kontexte der gewählten Version speichern",
+    "contextSaved": "Kontexte gespeichert.",
+    "placeholdersUsed": "Verwendete Platzhalter: {list}",
+    "none": "keine",
+    "context_contact": "Kontakt",
+    "context_contract": "Vertrag",
+    "context_unit": "Einheit",
+    "context_property": "Objekt",
+    "context_meeting": "Versammlung",
+    "context_statement": "Abrechnung",
+    "context_ticket": "Ticket"
   },
   "HoaReserves": {
     "title": "Rücklagen",
@@ -14678,6 +14856,50 @@
       "secretOnce": "Client-Secret (nur jetzt sichtbar, bitte sofort im Zielsystem hinterlegen):",
       "none": "Keine Clients angelegt.",
       "confirmRotate": "Secret erneuern? Das bisherige Secret wird sofort ungültig."
+    }
+  },
+  "PortalProviders": {
+    "title": "Dienstleister im Portal",
+    "breadcrumb": "Einstellungen",
+    "description": "Verfügbarkeitsfenster und Freigaben je Unterlagenklasse der Dienstleister.",
+    "intro": "Wählen Sie einen Dienstleister. Die Zeitfenster sieht der Dienstleister im Portal nur lesend. Eine Klassenfreigabe macht die Unterlagen einer Klasse eines Rechtsträgers für sein Portalkonto sichtbar, sie ersetzt keine fachliche Prüfung.",
+    "pickProvider": "Dienstleister suchen",
+    "loading": "Lädt …",
+    "window": {
+      "heading": "Verfügbarkeit von {name}",
+      "none": "Keine Zeitfenster erfasst.",
+      "remove": "Entfernen",
+      "add": "Zeitfenster erfassen",
+      "start": "Beginn",
+      "end": "Ende",
+      "kindLabel": "Art",
+      "note": "Hinweis",
+      "required": "Bitte Beginn und Ende angeben.",
+      "order": "Das Ende muss nach dem Beginn liegen.",
+      "kind": {
+        "available": "verfügbar",
+        "unavailable": "nicht verfügbar"
+      }
+    },
+    "grants": {
+      "heading": "Freigaben je Unterlagenklasse",
+      "noAccount": "Für diesen Kontakt besteht kein Portalzugang.",
+      "none": "Keine Klassenfreigaben.",
+      "account": "Portalkonto",
+      "add": "Klasse freigeben",
+      "entity": "Rechtsträger",
+      "class": "Unterlagenklasse",
+      "roleLabel": "Rolle",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "choose": "Bitte wählen",
+      "required": "Bitte Rechtsträger und Unterlagenklasse wählen.",
+      "role": {
+        "provider": "Dienstleister",
+        "tenant": "Mieter",
+        "owner": "Eigentümer",
+        "board": "Beirat"
+      }
     }
   }
 }

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.hoa import meeting_rules
 from mhvp.portal.owner import _owner_scope
 from mhvp.portal.routers import Portal, portal_user
@@ -27,7 +28,11 @@ DIAL_IN_NOTE = (
 )
 
 
-@router.get("/meetings", summary="Eigentümerversammlungen der eigenen Gemeinschaft (Eigentümer)")
+@router.get(
+    "/meetings",
+    summary="Eigentümerversammlungen der eigenen Gemeinschaft (Eigentümer)",
+    dependencies=[Depends(strict_query)],
+)
 async def meetings(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     from mhvp.hoa.models import Meeting, Resolution
     from mhvp.properties.models import LegalEntity

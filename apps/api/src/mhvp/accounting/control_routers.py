@@ -16,6 +16,7 @@ from mhvp.accounting import approval_decisions, open_item_balances
 from mhvp.accounting.models import Invoice, Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
 
@@ -85,6 +86,7 @@ async def _subject(session: AsyncSession, subject_type: str, subject_id: uuid.UU
 @router.get(
     "/approval-decisions",
     summary="Freigabeentscheidungen eines Vorgangs (Zahlung, Rechnung)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_approval_decisions(
     request: Request,
@@ -122,6 +124,7 @@ def _out(ledger_id: uuid.UUID, as_of: date | None, rows: list) -> AccOpenItemBal
 @router.get(
     "/ledgers/{ledger_id}/open-item-balances",
     summary="Offene Posten zum Stichtag (gepflegte Lesekopie)",
+    dependencies=[Depends(strict_query)],
 )
 async def get_open_item_balances(
     ledger_id: uuid.UUID,

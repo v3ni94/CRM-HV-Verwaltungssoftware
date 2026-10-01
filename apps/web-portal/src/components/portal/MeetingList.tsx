@@ -29,6 +29,11 @@ export function MeetingList({ rows }: { rows: PortalMeeting[] }) {
             {KNOWN_STATUS.has(row.status) ? t(`status.${row.status}`) : row.status}
             {row.location ? ` · ${row.location}` : ""}
           </p>
+          {row.public_description ? (
+            <p className="text-sm text-fg whitespace-pre-line break-words" data-testid="meeting-description">
+              {row.public_description}
+            </p>
+          ) : null}
           {row.notice ? <p className="text-sm text-fg whitespace-pre-line">{row.notice}</p> : null}
           {row.dial_in_url || row.dial_in_access ? (
             <div className="flex flex-col gap-1 rounded-md border border-border p-3" data-testid="dial-in">

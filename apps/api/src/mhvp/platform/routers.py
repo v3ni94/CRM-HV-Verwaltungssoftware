@@ -32,6 +32,7 @@ from mhvp.core.auth.principal import (
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import AuditLog, DomainEvent, diff, emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import GATE_LABELS, ReleaseGate
@@ -97,6 +98,7 @@ from mhvp.platform.schemas import (
     MemberRoles,
     MemberStatusIn,
     PasswordResetIn,
+    PlatformGateOverviewOut,
     PlatformSettingsOut,
     PlatformSettingsPatch,
     ReceivableRulesConfig,
@@ -163,7 +165,9 @@ async def hash_self_disclosure_tokens_endpoint(
     return PlatformTokenHashOut(converted=result["converted"])
 
 
-@platform_router.get("/tenants", summary="Mandanten auflisten")
+@platform_router.get(
+    "/tenants", summary="Mandanten auflisten", dependencies=[Depends(strict_query)]
+)
 async def list_tenants(
     request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[TenantOut]:
@@ -417,6 +421,43 @@ async def reject_gate(
     principal: Principal = Depends(require_platform_admin),
 ) -> GateRequestOut:
     return await _decide(request, principal, tenant_id, request_id, False, body.comment)
+
+
+@platform_router.get(
+    "/tenants/{tenant_id}/release-gates",
+    summary="Freigabestufen und Anträge eines Mandanten (Plattform, GA14-04)",
+)
+async def platform_gate_overview(
+    tenant_id: uuid.UUID,
+    request: Request,
+    principal: Principal = Depends(require_platform_admin),
+) -> PlatformGateOverviewOut:
+    """Read only overview for the CRM page Plattform, Freigabestufen: state per gate and every
+    request with opening and revocation. Nothing is opened here."""
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        states = []
+        for gate in ReleaseGate:
+            scopes = await gates.approved_scopes(session, tenant_id, gate)
+            fully = await gates.open_without_context(session, tenant_id, gate)
+            states.append(
+                GateStateOut(
+                    gate=gate.value,
+                    label=GATE_LABELS[gate],
+                    open=fully,
+                    scopes=scopes,
+                    partially_open=bool(scopes) and not fully,
+                )
+            )
+        rows = (
+            await session.scalars(
+                select(ReleaseGateRequest)
+                .where(ReleaseGateRequest.tenant_id == tenant_id)
+                .order_by(ReleaseGateRequest.created_at.desc())
+            )
+        ).all()
+        return PlatformGateOverviewOut(
+            tenant_id=tenant_id, gates=states, requests=[_gate_out(r) for r in rows]
+        )
 
 
 # Tenant settings and branding ----------------------------------------------------------
@@ -1052,7 +1093,7 @@ def _check_permissions(values: list[str]) -> None:
         raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
 
 
-@tenant_router.get("/roles", summary="Rollen")
+@tenant_router.get("/roles", summary="Rollen", dependencies=[Depends(strict_query)])
 async def list_roles(
     request: Request, principal: TenantPrincipal = Depends(require_permission("roles:read"))
 ) -> list[RoleOut]:
@@ -1148,7 +1189,9 @@ async def set_role_permissions(
     return out
 
 
-@tenant_router.get("/members", summary="Mitglieder des Mandanten")
+@tenant_router.get(
+    "/members", summary="Mitglieder des Mandanten", dependencies=[Depends(strict_query)]
+)
 async def list_members(
     request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
 ) -> list[MemberOut]:
@@ -1626,7 +1669,11 @@ async def revoke_staff_portal_access(
     return True
 
 
-@tenant_router.get("/competence-catalogue", summary="Kompetenzkatalog (Basis und Mandant)")
+@tenant_router.get(
+    "/competence-catalogue",
+    summary="Kompetenzkatalog (Basis und Mandant)",
+    dependencies=[Depends(strict_query)],
+)
 async def get_competence_catalogue(
     request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
 ) -> list[dict[str, str]]:
@@ -1698,7 +1745,9 @@ def _uuid_list(raw: object) -> list[uuid.UUID]:
 
 
 @tenant_router.get(
-    "/legal-entities", summary="Rechtsträger des Mandanten (Auswahl für Zugriffsbereiche, A37)"
+    "/legal-entities",
+    summary="Rechtsträger des Mandanten (Auswahl für Zugriffsbereiche, A37)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_legal_entity_options(
     request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
@@ -1856,7 +1905,11 @@ async def put_member_mobile_phone(
     return Response(status_code=204)
 
 
-@tenant_router.get("/position-catalogue", summary="Positionen für die E-Mail-Signatur")
+@tenant_router.get(
+    "/position-catalogue",
+    summary="Positionen für die E-Mail-Signatur",
+    dependencies=[Depends(strict_query)],
+)
 async def get_position_catalogue(
     request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
 ) -> list[str]:
@@ -1974,7 +2027,7 @@ def _key_out(key: ApiKey) -> ApiKeyOut:
     )
 
 
-@tenant_router.get("/api-keys", summary="API-Schlüssel")
+@tenant_router.get("/api-keys", summary="API-Schlüssel", dependencies=[Depends(strict_query)])
 async def list_api_keys(
     request: Request, principal: TenantPrincipal = Depends(require_permission("api_keys:read"))
 ) -> list[ApiKeyOut]:
@@ -2080,7 +2133,7 @@ def _check_url(request: Request, url: str) -> None:
         raise ProblemError(ErrorCodes.WEBHOOK_TARGET, detail=str(exc)) from None
 
 
-@tenant_router.get("/webhooks", summary="Webhook-Abonnements")
+@tenant_router.get("/webhooks", summary="Webhook-Abonnements", dependencies=[Depends(strict_query)])
 async def list_webhooks(
     request: Request, principal: TenantPrincipal = Depends(require_permission("webhooks:read"))
 ) -> list[WebhookOut]:
@@ -2093,7 +2146,11 @@ async def list_webhooks(
         return [_hook_out(h, await _last_delivery(session, h.id)) for h in hooks]
 
 
-@tenant_router.get("/webhooks/event-types", summary="Ereigniskatalog für Webhooks")
+@tenant_router.get(
+    "/webhooks/event-types",
+    summary="Ereigniskatalog für Webhooks",
+    dependencies=[Depends(strict_query)],
+)
 async def list_webhook_event_types(
     principal: TenantPrincipal = Depends(require_permission("webhooks:read")),
 ) -> list[WebhookEventTypeOut]:
@@ -2186,7 +2243,11 @@ async def delete_webhook(
     return Response(status_code=204)
 
 
-@tenant_router.get("/webhooks/{hook_id}/deliveries", summary="Zustellprotokoll")
+@tenant_router.get(
+    "/webhooks/{hook_id}/deliveries",
+    summary="Zustellprotokoll",
+    dependencies=[Depends(strict_query)],
+)
 async def list_deliveries(
     hook_id: uuid.UUID,
     request: Request,
@@ -2238,14 +2299,19 @@ async def redeliver_endpoint(
 # Events and audit ----------------------------------------------------------------------
 
 
-@tenant_router.get("/events", summary="Domänenereignisse")
+@tenant_router.get("/events", summary="Domänenereignisse", dependencies=[Depends(strict_query)])
 async def list_events(
     request: Request,
     page: Page = 1,
     page_size: PageSize = 50,
     type: str | None = None,
+    limit: Annotated[
+        int | None, Query(ge=1, le=200, description="Alias für page_size (Altclients)")
+    ] = None,
     principal: TenantPrincipal = Depends(require_permission("audit:read")),
 ) -> list[EventOut]:
+    if limit is not None:  # AB04: formerly ignored, now honoured instead of rejected
+        page_size = limit
     async with tenant_tx(request, principal) as session:
         query = select(DomainEvent).order_by(DomainEvent.occurred_at.desc(), DomainEvent.id.desc())
         if type:
@@ -2266,7 +2332,7 @@ async def list_events(
         ]
 
 
-@tenant_router.get("/audit-log", summary="Änderungsprotokoll")
+@tenant_router.get("/audit-log", summary="Änderungsprotokoll", dependencies=[Depends(strict_query)])
 async def list_audit(
     request: Request,
     page: Page = 1,
@@ -2381,7 +2447,11 @@ def _gate_out(item: ReleaseGateRequest) -> GateRequestOut:
     )
 
 
-@tenant_router.get("/release-gates", summary="Stand der Freigabestufen G1 bis G5")
+@tenant_router.get(
+    "/release-gates",
+    summary="Stand der Freigabestufen G1 bis G5",
+    dependencies=[Depends(strict_query)],
+)
 async def gate_state(
     request: Request, principal: TenantPrincipal = Depends(require_permission("release_gates:read"))
 ) -> list[GateStateOut]:
@@ -2402,7 +2472,11 @@ async def gate_state(
         return result
 
 
-@tenant_router.get("/release-gates/checklists", summary="Voraussetzungen der Freigabestufen (18.0)")
+@tenant_router.get(
+    "/release-gates/checklists",
+    summary="Voraussetzungen der Freigabestufen (18.0)",
+    dependencies=[Depends(strict_query)],
+)
 async def gate_checklists(
     principal: TenantPrincipal = Depends(require_permission("release_gates:read")),
 ) -> list[GateChecklistOut]:
@@ -2421,7 +2495,9 @@ async def gate_checklists(
     ]
 
 
-@tenant_router.get("/release-gates/requests", summary="Freigabeanträge")
+@tenant_router.get(
+    "/release-gates/requests", summary="Freigabeanträge", dependencies=[Depends(strict_query)]
+)
 async def list_gate_requests(
     request: Request, principal: TenantPrincipal = Depends(require_permission("release_gates:read"))
 ) -> list[GateRequestOut]:

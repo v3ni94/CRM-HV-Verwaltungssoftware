@@ -344,3 +344,8 @@ Ist die Einladung eines Kontakts abgelaufen und nicht angenommen, zeigt der Absc
 - Sprache: Im Kopf des Portals wählt der Nutzer Deutsch oder English; ohne Wahl gilt die Browsersprache, sonst Deutsch. Eine weitere Sprache erfordert nur eine Übersetzungsdatei.
 - Formulare: Der Formularbaukasten bietet 20 Elementtypen (neu: Anschrift, Standort, Unterschrift als Name, Einwilligung, Betrag, Trennlinie).
 - Dienstleister: Die Seite Rahmenverträge zeigt die eigenen Rahmenverträge und den Verfügbarkeitskalender (nur lesend). Zeitfenster erfasst die Verwaltung über `POST /api/v1/portal-admin/provider-availability`.
+
+## Sprache und Dienstleister im Portal (AB12)
+
+* Die Sprache wählen Sie im Portal oben rechts und auf der Anmeldeseite. Angemeldete Personen haben die Wahl am Portalkonto gespeichert; bei der nächsten Anmeldung gilt diese Sprache auch auf einem anderen Gerät. Wer nicht angemeldet ist, behält die im Browser gewählte Sprache.
+* Einstellungen, Dienstleister im Portal (Recht: Kontakte ändern): Dienstleister suchen, Verfügbarkeitsfenster erfassen oder entfernen und Unterlagenklassen eines Rechtsträgers für das Portalkonto freigeben. Der Dienstleister sieht die Fenster im Portal nur lesend. Bewertungen werden dort nicht angezeigt.

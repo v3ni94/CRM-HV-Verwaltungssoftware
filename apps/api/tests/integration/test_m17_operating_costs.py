@@ -906,6 +906,48 @@ def test_d28_rule_version_pinned_in_snapshot(
     assert _ok(client.get(f"{S}/{st['id']}", headers=h))["snapshot"]["hash"] == old["hash"]
 
 
+def test_ab10_snapshot_keeps_rule_register_version(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """AB10 GA08-05: the run keeps id and effective date of the register entry it used; a later
+    register version leaves the old run and its recalculation identical (hand values: 120,00)."""
+    client, _ = clients
+    h = bearer(login(client, world, "m17admin"))
+    w = _rental_world(client, h, "776")
+    rule = {"rule_id": "M17-betrkv-statement", "title": "BetrKV Abrechnung"}
+    v1 = _ok(
+        client.post(f"{A}/rule-versions", json={**rule, "effective_from": "2020-01-01"}, headers=h),
+        201,
+    )
+    item = {
+        "label": "Gartenpflege",
+        "amount": "120.00",
+        "allocation_key_id": w["keys"]["WFL"],
+        "basis": "§ 4 Mietvertrag, Nr. 10 BetrKV",
+    }
+    st = _statement(client, h, w["ledger"])
+    _ok(client.post(f"{S}/{st['id']}/cost-items", json=item, headers=h), 201)
+    old = _ok(client.post(f"{S}/{st['id']}/calculate", headers=h))["snapshot"]
+    assert old["rule_register"]["id"] == v1["id"]
+    assert (old["rule_register"]["version"], old["rule_register"]["effective_from"]) == (
+        1,
+        "2020-01-01",
+    )
+    _ok(
+        client.post(f"{A}/rule-versions", json={**rule, "effective_from": "2026-06-01"}, headers=h),
+        201,
+    )
+    kept = _ok(client.get(f"{S}/{st['id']}", headers=h))["snapshot"]
+    assert (kept["hash"], kept["rule_register"]) == (old["hash"], old["rule_register"])
+    # A posted statement is recalculated only through a new statement version (A05); the
+    # old run keeps its register entry and the new run still picks version 1 for its period.
+    v2 = _ok(client.post(f"{S}/{st['id']}/new-version", headers=h), 201)
+    again = _ok(client.post(f"{S}/{v2['id']}/calculate", headers=h))["snapshot"]
+    assert again["results"] == old["results"]
+    assert again["rule_register"]["version"] == 1
+    assert again["rule_register"]["id"] == v1["id"]
+
+
 # A34 (7.6 A07): tenant letters from the statement snapshot ------------------------------
 
 LETTER_BUCKET = "mhvp-statement-letters"

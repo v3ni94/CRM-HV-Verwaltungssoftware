@@ -17,6 +17,7 @@ from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.auth.scope import property_unrestricted_guard
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import objektdaten, vollimport
 from mhvp.imports.models import FullRunStatus, ImportFullRun
@@ -109,7 +110,11 @@ def _number_map(text: str) -> dict[str, str]:
         ) from exc
 
 
-@router.get("/exporttypen", summary="Bekannte Immoware24-Exporttypen mit erwarteten Spalten")
+@router.get(
+    "/exporttypen",
+    summary="Bekannte Immoware24-Exporttypen mit erwarteten Spalten",
+    dependencies=[Depends(strict_query)],
+)
 async def export_kinds(principal: TenantPrincipal = Depends(READ)) -> list[ExportKindOut]:
     return [
         ExportKindOut(
@@ -240,7 +245,9 @@ async def run_full_import(
         }
 
 
-@router.get("", summary="Gespeicherte Vollimport-Läufe und Abgleiche")
+@router.get(
+    "", summary="Gespeicherte Vollimport-Läufe und Abgleiche", dependencies=[Depends(strict_query)]
+)
 async def list_runs(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[FullRunListOut]:

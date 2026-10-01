@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.webhooks import UnsafeWebhookTargetError, check_target
 from mhvp.integrations.schadenstool import schemas as s
@@ -183,7 +184,11 @@ async def _ticket(session: AsyncSession, ticket_id: uuid.UUID) -> Ticket:
     return ticket
 
 
-@router.get("/tickets/{ticket_id}", summary="Austausch mit dem Schadenbearbeiter je Ticket")
+@router.get(
+    "/tickets/{ticket_id}",
+    summary="Austausch mit dem Schadenbearbeiter je Ticket",
+    dependencies=[Depends(strict_query)],
+)
 async def ticket_link(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(TICKET_READ)
 ) -> s.TicketLinkOut:
@@ -338,7 +343,11 @@ async def push_attachment(
     return s.QueuedOut(queued=True, link_id=link_id)
 
 
-@router.get("/takeover", summary="Vorhandene Schadentickets zur Übernahme")
+@router.get(
+    "/takeover",
+    summary="Vorhandene Schadentickets zur Übernahme",
+    dependencies=[Depends(strict_query)],
+)
 async def list_takeover(
     request: Request, principal: TenantPrincipal = Depends(TICKET_CREATE)
 ) -> list[s.TakeoverOut]:

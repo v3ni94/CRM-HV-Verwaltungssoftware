@@ -24,6 +24,7 @@ from mhvp.core.auth.scope import (
     session_allowed_legal_entity_ids,
 )
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import HoaMajorityRule, Resolution
 from mhvp.hoa.property_scope import HOA_GUARD
@@ -319,7 +320,11 @@ async def _ensure_unique(
         )
 
 
-@router.get("/majority-rules/subject-rules", summary="Mehrheitsregeln je Beschlussgegenstand")
+@router.get(
+    "/majority-rules/subject-rules",
+    summary="Mehrheitsregeln je Beschlussgegenstand",
+    dependencies=[Depends(strict_query)],
+)
 async def list_subject_rules(
     request: Request,
     legal_entity_id: uuid.UUID | None = None,

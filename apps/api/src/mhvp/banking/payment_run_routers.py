@@ -28,6 +28,7 @@ from mhvp.banking.payment_run_tasks import store_preview
 from mhvp.banking.routers import OrderOut, _order_out
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
 
@@ -249,7 +250,11 @@ async def import_status_report(
         return out
 
 
-@router.get("/bank-status-reports", summary="Eingelesene Bankstatusberichte")
+@router.get(
+    "/bank-status-reports",
+    summary="Eingelesene Bankstatusberichte",
+    dependencies=[Depends(strict_query)],
+)
 async def list_status_reports(
     request: Request,
     limit: int = Query(default=50, ge=1, le=500),
@@ -301,7 +306,9 @@ async def create_preview(
         return PaymentRunPreviewOut.model_validate(row)
 
 
-@router.get("/previews", summary="Gespeicherte Zahllauf-Vorschauen")
+@router.get(
+    "/previews", summary="Gespeicherte Zahllauf-Vorschauen", dependencies=[Depends(strict_query)]
+)
 async def list_previews(
     request: Request,
     limit: int = Query(default=20, ge=1, le=200),

@@ -74,7 +74,7 @@ def _property(client: TestClient, h: dict[str, str], number: str) -> dict[str, A
     number = f"{(int(RUN[:6], 16) + int(number)) % 1000:03d}"  # NNN, unique per run
     """Property without building: the metering assignment needs only the property; unit
     assignments are covered by the stage 1 cases."""
-    existing = _ok(client.get("/api/v1/properties", params={"search": number}, headers=h))
+    existing = _ok(client.get("/api/v1/properties", params={"q": number}, headers=h))
     rows = existing if isinstance(existing, list) else existing.get("items", [])
     for row in rows:
         if row.get("number") == number:

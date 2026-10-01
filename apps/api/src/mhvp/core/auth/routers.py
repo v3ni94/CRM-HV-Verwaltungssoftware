@@ -12,6 +12,7 @@ from mhvp.core.auth import passwords, service, tokens, webauthn
 from mhvp.core.auth.principal import Principal, get_principal, sessions
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.request_identity import client_ip
 from mhvp.platform.models import (
@@ -440,7 +441,9 @@ async def change_password(
     return Response(status_code=204)
 
 
-@router.get("/sessions", summary="Aktive Sitzungen (Geräteliste)")
+@router.get(
+    "/sessions", summary="Aktive Sitzungen (Geräteliste)", dependencies=[Depends(strict_query)]
+)
 async def list_sessions(
     request: Request, principal: Principal = Depends(get_principal)
 ) -> list[SessionOut]:
@@ -496,7 +499,11 @@ async def revoke_session(
     return Response(status_code=204)
 
 
-@router.get("/trusted-devices", summary="Gemerkte Geräte (TOTP-Ausnahme)")
+@router.get(
+    "/trusted-devices",
+    summary="Gemerkte Geräte (TOTP-Ausnahme)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_trusted_devices(
     request: Request, principal: Principal = Depends(get_principal)
 ) -> list[TrustedDeviceOut]:
@@ -550,7 +557,11 @@ async def webauthn_status(
     )
 
 
-@router.get("/webauthn/credentials", summary="Eigene Passkeys (WebAuthn) auflisten")
+@router.get(
+    "/webauthn/credentials",
+    summary="Eigene Passkeys (WebAuthn) auflisten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_webauthn_credentials(
     request: Request, principal: Principal = Depends(get_principal)
 ) -> list[AuthWebAuthnCredentialOut]:

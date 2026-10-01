@@ -18,6 +18,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access
 from mhvp.portal.models import PortalAccount
@@ -105,7 +106,11 @@ def _votes_summary(votes: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-@router.get("/resolutions", summary="Beschluss-Sammlung der eigenen Gemeinschaft (Eigentümer)")
+@router.get(
+    "/resolutions",
+    summary="Beschluss-Sammlung der eigenen Gemeinschaft (Eigentümer)",
+    dependencies=[Depends(strict_query)],
+)
 async def resolutions(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     """Announced resolutions only: a resolution row exists once a result was announced
     (``/hoa/agenda/{id}/announce``), a circular resolution was recorded or an external
@@ -146,7 +151,11 @@ async def resolutions(request: Request, ctx: Portal = Depends(portal_user)) -> l
         ]
 
 
-@router.get("/property-contacts", summary="Ansprechpartner des Objekts (Eigentümer)")
+@router.get(
+    "/property-contacts",
+    summary="Ansprechpartner des Objekts (Eigentümer)",
+    dependencies=[Depends(strict_query)],
+)
 async def property_contacts(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:

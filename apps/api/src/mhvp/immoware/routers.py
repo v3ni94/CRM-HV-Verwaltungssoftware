@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from mhvp.contacts.models import Contact, ContactEmail, ContactKind, ContactPhone
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.immoware import schemas as s
 from mhvp.immoware import service as svc
@@ -186,15 +187,27 @@ async def trigger_sync(
     return {"run_id": str(run.id)}
 
 
-@router.get("/sync/runs", summary="Letzte Synchronisationslaeufe")
+_SYNC_RUN_LIST = ListSpec(  # GA04-05
+    filters={"kind": ImmowareSyncRun.kind, "status": ImmowareSyncRun.status},
+    sort={"started_at": ImmowareSyncRun.started_at, "finished_at": ImmowareSyncRun.finished_at},
+)
+
+
+@router.get(
+    "/sync/runs", summary="Letzte Synchronisationslaeufe", dependencies=[Depends(strict_query)]
+)
 async def sync_runs(
-    request: Request, principal: TenantPrincipal = Depends(READ)
+    request: Request,
+    params: ListParams = Depends(_SYNC_RUN_LIST.dependency),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[s.ImmowareSyncRunOut]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(ImmowareSyncRun).order_by(ImmowareSyncRun.started_at.desc()).limit(50)
+        query = _SYNC_RUN_LIST.apply(
+            select(ImmowareSyncRun), params, (ImmowareSyncRun.started_at.desc(),)
         )
-        return [s.ImmowareSyncRunOut.model_validate(r) for r in rows]
+        rows = await session.scalars(query.limit(50))
+        result = [s.ImmowareSyncRunOut.model_validate(r) for r in rows]
+        return sparse(result, params, s.ImmowareSyncRunOut)  # type: ignore[no-any-return]
 
 
 def _paginate(page: int, page_size: int) -> tuple[int, int]:

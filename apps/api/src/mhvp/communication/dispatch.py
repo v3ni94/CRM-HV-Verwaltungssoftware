@@ -18,6 +18,7 @@ from mhvp.communication import calendar_feed  # noqa: F401  (registers the token
 from mhvp.communication.models import Dispatch, Message
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 
@@ -403,6 +404,12 @@ async def evidence(
             row.sent_at = at
         if body.status == "delivered":
             row.delivered_at = at
+            if row.message_id is not None:
+                from mhvp.communication.receipts import mark_delivered
+
+                linked = await session.get(Message, row.message_id)
+                if linked is not None:
+                    mark_delivered(linked, at)
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -416,7 +423,11 @@ async def evidence(
         return _out(row)
 
 
-@router.get("/contacts/{contact_id}/history", summary="Kommunikationshistorie des Kontakts")
+@router.get(
+    "/contacts/{contact_id}/history",
+    summary="Kommunikationshistorie des Kontakts",
+    dependencies=[Depends(strict_query)],
+)
 async def history(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ_CONTACTS)
 ) -> list[dict[str, Any]]:

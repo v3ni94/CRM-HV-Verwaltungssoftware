@@ -51,6 +51,7 @@ from mhvp.core.auth.scope import (
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import (
@@ -311,7 +312,9 @@ async def _trail(
     )
 
 
-@router.get("/inspection-requests", summary="Einsichtsanfragen (A61)")
+@router.get(
+    "/inspection-requests", summary="Einsichtsanfragen (A61)", dependencies=[Depends(strict_query)]
+)
 async def list_requests(
     request: Request,
     legal_entity_id: uuid.UUID | None = None,
@@ -376,7 +379,9 @@ async def get_request(
 
 
 @router.get(
-    "/inspection-requests/{request_id}/candidates", summary="Dokumente des Objekts für das Paket"
+    "/inspection-requests/{request_id}/candidates",
+    summary="Dokumente des Objekts für das Paket",
+    dependencies=[Depends(strict_query)],
 )
 async def list_candidates(
     request_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

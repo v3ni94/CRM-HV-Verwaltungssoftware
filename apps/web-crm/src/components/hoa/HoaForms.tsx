@@ -51,6 +51,7 @@ export function HoaCreate({
   legalEntityId,
   basePath,
   basisPlans = [],
+  originMeetings = [],
 }: {
   kind: "plan" | "statement" | "meeting";
   ledgerId?: string;
@@ -58,6 +59,8 @@ export function HoaCreate({
   basePath: string;
   /** Earlier plans offered as comparison basis of a new plan (M24-04). */
   basisPlans?: { id: string; label: string }[];
+  /** Earlier meetings of the same community, origin of a repeat or continuation (GA03-01). */
+  originMeetings?: { id: string; label: string }[];
 }) {
   const t = useTranslations("HoaWork");
   const { busy, error, call, router } = useCall();
@@ -67,8 +70,16 @@ export function HoaCreate({
   const [dueDay, setDueDay] = useState("3");
   const [basisPlan, setBasisPlan] = useState("");
   const [meetingKind, setMeetingKind] = useState("ordinary");
+  const [originId, setOriginId] = useState("");
+  const needsOrigin = meetingKind === "repeat" || meetingKind === "continuation";
+  const [localError, setLocalError] = useState<string | null>(null);
   const tKinds = useTranslations("HoaWork.meetingDetails");
   const create = async () => {
+    setLocalError(null);
+    if (kind === "meeting" && needsOrigin && !originId) {
+      setLocalError(tKinds("originRequired"));
+      return;
+    }
     const body =
       kind === "plan"
         ? {
@@ -85,6 +96,7 @@ export function HoaCreate({
               legal_entity_id: legalEntityId,
               scheduled_at: new Date(value).toISOString(),
               ...(meetingKind !== "ordinary" ? { kind: meetingKind } : {}),
+              ...(needsOrigin ? { origin_meeting_id: originId } : {}),
             };
     const path = kind === "plan" ? "plans" : kind === "statement" ? "statements" : "meetings";
     const res = await call<{ id: string }>(path, body);
@@ -106,10 +118,22 @@ export function HoaCreate({
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{tKinds("kind")}</span>
             <select className={ui.input} value={meetingKind} onChange={(e) => setMeetingKind(e.target.value)} data-testid="meeting-kind-select">
-              {/* repeat and continuation need the original meeting (API) */}
-              {MEETING_KINDS.filter((k) => k !== "repeat" && k !== "continuation").map((k) => (
+              {MEETING_KINDS.map((k) => (
                 <option key={k} value={k}>
                   {tKinds(`kinds.${k}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {kind === "meeting" && needsOrigin ? (
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{tKinds("origin")}</span>
+            <select className={ui.input} value={originId} onChange={(e) => setOriginId(e.target.value)} data-testid="meeting-origin-select">
+              <option value="">{tKinds("selectOrigin")}</option>
+              {originMeetings.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
                 </option>
               ))}
             </select>
@@ -150,7 +174,7 @@ export function HoaCreate({
           {t(`create.${kind}`)}
         </button>
       </div>
-      <ErrorLine error={error} />
+      <ErrorLine error={localError ?? error} />
     </div>
   );
 }

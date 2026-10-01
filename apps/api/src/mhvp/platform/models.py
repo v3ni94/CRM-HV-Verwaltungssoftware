@@ -137,6 +137,27 @@ class PlatformSettings(IdMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
+class PlatformAuditEvent(IdMixin, Base):
+    """Append-only audit trail of platform actions without tenant context (AB13, GA01-10/12).
+
+    Platform table, no RLS (section 5.3). ``payload`` never holds secrets.
+    """
+
+    __tablename__ = "platform_audit_event"
+    __table_args__ = (Index("ix_platform_audit_event_occurred_at", "occurred_at"),)
+
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+
+
 class Membership(IdMixin, TimestampMixin, Base):
     """User in a tenant. Platform level: login lists memberships before a tenant is chosen."""
 

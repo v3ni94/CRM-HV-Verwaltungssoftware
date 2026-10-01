@@ -684,6 +684,7 @@
     "intro": "Owners' meetings of your community. The invitation sent by the management remains authoritative.",
     "empty": "No meetings available.",
     "ownersOnly": "This page is available to owners only.",
+    "description": "Description",
     "dialIn": "Access data for online participation",
     "mode": {
       "presence": "In person",

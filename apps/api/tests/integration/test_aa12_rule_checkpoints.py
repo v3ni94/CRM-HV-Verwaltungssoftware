@@ -36,3 +36,24 @@ def test_seed_checkpoints_idempotent_draft_only(client: TestClient, world: World
         200,
     )
     assert foreign == []
+
+
+def test_due_checkpoints_hint_only(client: TestClient, world: World) -> None:  # noqa: F811
+    """AB10 GA08-02: only reached check points are reported; read right suffices, no lock."""
+    h = bearer(login(client, world, "p10admin"))
+    tax = bearer(login(client, world, "p10tax"))
+    other = bearer(login(client, world, "p10other"))
+    body = {
+        "rule_id": "AB10-pruefpunkt",
+        "title": "Prüfpunkt Test",
+        "effective_from": "2027-03-01",
+        "case_groups": ["Prüfpunkt"],
+        "source_status": "Entwurf",
+    }
+    _ok(client.post(f"{A}/rule-versions", json=body, headers=h), 201)
+    path = f"{A}/rule-versions/due-checkpoints"
+    early = _ok(client.get(path, params={"on": "2027-02-28"}, headers=tax), 200)
+    assert "AB10-pruefpunkt" not in {r["rule_id"] for r in early}
+    due = _ok(client.get(path, params={"on": "2027-03-01"}, headers=tax), 200)
+    assert "AB10-pruefpunkt" in {r["rule_id"] for r in due}
+    assert _ok(client.get(path, params={"on": "2027-03-01"}, headers=other), 200) == []

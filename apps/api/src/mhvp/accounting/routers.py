@@ -106,6 +106,7 @@ from mhvp.core.listparams import (
     check_include,
     embed,
     list_params,
+    strict_query,
 )
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -124,6 +125,28 @@ async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     return row
+
+
+async def _ensure_gate_for_ledger(
+    request: Request, principal: TenantPrincipal, session: AsyncSession, ledger_id: uuid.UUID
+) -> None:
+    """G1 check with the object context of the ledger (GA14-02): a restricted approval opens
+    only its pilot property or legal entity. Unknown ledgers are checked without context,
+    so a closed gate still answers 403 before 404."""
+    from mhvp.core.release_gates import ensure_release_gate_open_for
+
+    row = (
+        await session.execute(
+            select(Ledger.property_id, Ledger.legal_entity_id).where(Ledger.id == ledger_id)
+        )
+    ).first()
+    await ensure_release_gate_open_for(
+        ReleaseGate.G1,
+        principal.tenant_id,
+        request.app.state.release_gate_resolver,
+        property_id=row[0] if row else None,
+        legal_entity_id=row[1] if row else None,
+    )
 
 
 async def _ledger(session: AsyncSession, ledger_id: uuid.UUID, *, lock: bool = False) -> Ledger:
@@ -191,7 +214,7 @@ def _lines(body: JournalEntryIn) -> list[svc.LineIn]:
 # Templates ----------------------------------------------------------------------------
 
 
-@router.get("/templates", summary="Kontenrahmen-Vorlagen")
+@router.get("/templates", summary="Kontenrahmen-Vorlagen", dependencies=[Depends(strict_query)])
 async def templates(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ChartTemplateOut]:
@@ -269,7 +292,7 @@ async def create_ledger(
         return LedgerOut.model_validate(ledger)
 
 
-@router.get("/ledgers", summary="Buchungskreise")
+@router.get("/ledgers", summary="Buchungskreise", dependencies=[Depends(strict_query)])
 async def list_ledgers(
     request: Request,
     property_id: uuid.UUID | None = None,
@@ -347,10 +370,9 @@ async def set_leading(
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> LedgerOut:
-    if body.leading_system is LeadingSystem.MHVP:
-        resolver: ReleaseGateResolver = request.app.state.release_gate_resolver
-        await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
     async with tenant_tx(request, principal) as session:
+        if body.leading_system is LeadingSystem.MHVP:
+            await _ensure_gate_for_ledger(request, principal, session, ledger_id)
         ledger = await _ledger(session, ledger_id, lock=True)
         ledger.leading_system = body.leading_system
         await emit(
@@ -369,7 +391,7 @@ async def set_leading(
 # Accounts -----------------------------------------------------------------------------
 
 
-@router.get("/ledgers/{ledger_id}/accounts", summary="Konten")
+@router.get("/ledgers/{ledger_id}/accounts", summary="Konten", dependencies=[Depends(strict_query)])
 async def accounts(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[AccountOut]:
@@ -553,7 +575,12 @@ async def delete_entry(
         await session.delete(entry)
 
 
-@router.get("/ledgers/{ledger_id}/entries", summary="Journal", responses=PAGE_HEADERS)
+@router.get(
+    "/ledgers/{ledger_id}/entries",
+    summary="Journal",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def journal(
     ledger_id: uuid.UUID,
     request: Request,
@@ -636,6 +663,7 @@ class AccountingEntryNoteOut(BaseModel):
 @router.get(
     "/ledgers/{ledger_id}/entries/{entry_id}/notes",
     summary="Vermerke zum Buchungssatz (alle Versionen)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_entry_notes(
     ledger_id: uuid.UUID,
@@ -837,6 +865,7 @@ async def _allocation_out(session: AsyncSession, account: LedgerAccount) -> Acco
 @router.get(
     "/ledgers/{ledger_id}/accounts/{account_id}/allocations",
     summary="Verteilung eines Kostenkontos auf Umlageschlüssel",
+    dependencies=[Depends(strict_query)],
 )
 async def get_allocations(
     ledger_id: uuid.UUID,
@@ -978,7 +1007,11 @@ async def trial_balance(
         return await svc.trial_balance(session, await _ledger(session, ledger_id), as_of, start)
 
 
-@router.get("/ledgers/{ledger_id}/open-items", summary="Offene Posten zum Stichtag")
+@router.get(
+    "/ledgers/{ledger_id}/open-items",
+    summary="Offene Posten zum Stichtag",
+    dependencies=[Depends(strict_query)],
+)
 async def open_items(
     ledger_id: uuid.UUID,
     request: Request,
@@ -1034,10 +1067,9 @@ async def settlement_confirm(
     """A staff member confirms the recomputed proposal (fingerprint), which becomes a draft
     debtor payment with an explicit settlement plan; the confirmation is audited with the rule
     version. ``post_immediately`` posts the draft and requires release gate G1."""
-    if body.post_immediately:
-        resolver: ReleaseGateResolver = request.app.state.release_gate_resolver
-        await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
     async with tenant_tx(request, principal) as session:
+        if body.post_immediately:
+            await _ensure_gate_for_ledger(request, principal, session, ledger_id)
         ledger = await _ledger(session, ledger_id)
         proposal = await _proposal(session, ledger, body)
         settlement.verify_fingerprint(proposal, body.fingerprint)
@@ -1293,7 +1325,12 @@ async def preview_run(
         return _run_out(run, await _items(session, run.id))
 
 
-@router.get("/receivable-runs", summary="Sollstellungsläufe", responses=PAGE_HEADERS)
+@router.get(
+    "/receivable-runs",
+    summary="Sollstellungsläufe",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_runs(
     request: Request,
     response: Response,
@@ -2068,6 +2105,7 @@ _INVOICE_SORT = {
     responses=PAGE_HEADERS,
     response_model=list[dict[str, Any]],
     description=LIST_PARAMS_DOC + " include: creditor (Kreditor, Kontakt des Rechnungsstellers).",
+    dependencies=[Depends(strict_query)],
 )
 async def list_invoices(
     request: Request,
@@ -2392,7 +2430,14 @@ async def generate_plan(
         )
         plan.next_due = following
         await session.flush()
-        return await _invoice_full(session, inv)
+        out = await _invoice_full(session, inv)
+        # GA03-07: the flag decides what the run may do. Off: draft only. On: the request is
+        # recorded, but nothing is posted here (G1 and the 7.4 automatic switch decide later).
+        out["auto_post_requested"] = bool(plan.auto_post)
+        out["auto_post_state"] = await creditor_routers.auto_post_state(
+            session, request, principal, bool(plan.auto_post)
+        )
+        return out
 
 
 # Dunning (M16, 7.5); only the leading system may dun ------------------------------------
@@ -2604,6 +2649,7 @@ async def get_dunning_settings(
 @router.get(
     "/dunning-settings/overrides",
     summary="Objekte mit eigener Mahnstufen-Überschreibung",
+    dependencies=[Depends(strict_query)],
 )
 async def list_dunning_overrides(
     request: Request, principal: TenantPrincipal = Depends(READ)
@@ -3026,7 +3072,11 @@ async def dunning_add_delivery_proof(
         return _proof_out(proof)
 
 
-@router.get("/dunning-cases/{case_id}/delivery-proofs", summary="Zustellnachweise eines Mahnfalls")
+@router.get(
+    "/dunning-cases/{case_id}/delivery-proofs",
+    summary="Zustellnachweise eines Mahnfalls",
+    dependencies=[Depends(strict_query)],
+)
 async def dunning_list_delivery_proofs(
     case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -3107,7 +3157,9 @@ async def dunning_block_create(
         return _block_out(block)
 
 
-@router.get("/dunning-blocks", summary="Mahnsperren je Posten")
+@router.get(
+    "/dunning-blocks", summary="Mahnsperren je Posten", dependencies=[Depends(strict_query)]
+)
 async def dunning_block_list(
     request: Request,
     open_item_id: uuid.UUID | None = None,
@@ -3161,7 +3213,11 @@ def _rate_out(rate: Any) -> dict[str, Any]:
     }
 
 
-@router.get("/dunning-interest-rates", summary="Basiszinssätze mit Gültigkeitszeitraum")
+@router.get(
+    "/dunning-interest-rates",
+    summary="Basiszinssätze mit Gültigkeitszeitraum",
+    dependencies=[Depends(strict_query)],
+)
 async def dunning_interest_rates(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -3515,7 +3571,11 @@ async def liquidity(
         )
 
 
-@router.get("/ledgers/{ledger_id}/payments-by-debtor", summary="Zahlungen je Debitor")
+@router.get(
+    "/ledgers/{ledger_id}/payments-by-debtor",
+    summary="Zahlungen je Debitor",
+    dependencies=[Depends(strict_query)],
+)
 async def payments_by_debtor(
     ledger_id: uuid.UUID,
     start: date,
@@ -3529,7 +3589,11 @@ async def payments_by_debtor(
         )
 
 
-@router.get("/ledgers/{ledger_id}/revenue", summary="Erträge je Erlöskonto")
+@router.get(
+    "/ledgers/{ledger_id}/revenue",
+    summary="Erträge je Erlöskonto",
+    dependencies=[Depends(strict_query)],
+)
 async def revenue(
     ledger_id: uuid.UUID,
     start: date,

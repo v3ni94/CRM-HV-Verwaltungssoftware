@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { adoptAccountLocale } from "@/lib/locale-sync";
 import { ui } from "@/lib/ui";
 import { signInWithPasskey } from "@/lib/webauthn";
 
@@ -43,6 +44,7 @@ export function MfaForm({ next }: { next?: string }) {
       setError(t("noTenant"));
       return;
     }
+    await adoptAccountLocale();
     router.push(target);
     router.refresh();
   }
@@ -61,6 +63,7 @@ export function MfaForm({ next }: { next?: string }) {
       setError(t("noTenant"));
       return;
     }
+    await adoptAccountLocale();
     router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/start");
     router.refresh();
   }

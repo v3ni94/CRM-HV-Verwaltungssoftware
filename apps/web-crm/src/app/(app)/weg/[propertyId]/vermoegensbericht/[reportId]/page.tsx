@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { AssetReportDispatch } from "@/components/hoa/AssetReportDispatch";
 import { AssetReportActions, type ManualItem } from "@/components/hoa/AssetReportForms";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -61,7 +62,7 @@ export default async function AssetReportPage({ params }: { params: Promise<{ pr
   const tp = await getTranslations("HoaProvision");
   const provisionResponse = report.status === "issued" ? await serverFetch(`/api/v1/hoa/asset-reports/${encodeURIComponent(reportId)}/provisions`) : null;
   const provisions = provisionResponse?.ok
-    ? ((await provisionResponse.json()) as { items: { contract_id: string; unit_number: string; first_retrieved_at: string | null; last_retrieved_at: string | null; retrievals: number }[]; note: string })
+    ? ((await provisionResponse.json()) as { items: { contract_id: string; unit_number: string; first_retrieved_at: string | null; last_retrieved_at: string | null; retrievals: number; dispatches?: { dispatch_id: string; channel: string; status: string }[] }[]; note: string; dispatch_note?: string })
     : null;
   return (
     <div className="flex flex-col gap-4">
@@ -80,6 +81,7 @@ export default async function AssetReportPage({ params }: { params: Promise<{ pr
                   <th>{tp("firstRetrieved")}</th>
                   <th>{tp("lastRetrieved")}</th>
                   <th className="num">{tp("retrievals")}</th>
+                  <th>{tp("letter")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,11 +91,13 @@ export default async function AssetReportPage({ params }: { params: Promise<{ pr
                     <td>{p.first_retrieved_at ? formatDate(p.first_retrieved_at) : tp("notRetrieved")}</td>
                     <td>{p.last_retrieved_at ? formatDate(p.last_retrieved_at) : ""}</td>
                     <td className="num">{p.retrievals}</td>
+                    <td>{(p.dispatches ?? []).map((d) => `${tp(`channels.${d.channel}`)} (${d.status})`).join(", ") || tp("noLetter")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <AssetReportDispatch reportId={report.id} note={provisions.dispatch_note ?? ""} />
         </section>
       ) : null}
       {!snap || !reserve ? (

@@ -68,7 +68,7 @@ def test_owner_sees_takeover_checklist_read_only(client: TestClient, world: Worl
     assert client.get(f"{P}/owner/takeover-checklist", headers=resident).status_code == 403
     assert _ok(client.get(f"{P}/owner/takeover-checklist", headers=owner))["items"] == []
 
-    listed = _ok(client.get("/api/v1/properties", params={"limit": 200}, headers=ha), 200)
+    listed = _ok(client.get("/api/v1/properties", params={"page_size": 200}, headers=ha), 200)
     rows = listed["items"] if isinstance(listed, dict) else listed
     props = {p["number"]: p["id"] for p in rows}
     for number in ("952", "953"):

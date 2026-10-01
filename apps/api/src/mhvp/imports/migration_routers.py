@@ -30,6 +30,7 @@ from mhvp.core.auth.scope import (
     session_principal,
 )
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGateResolver
 from mhvp.documents.blobs import BlobStore
@@ -361,7 +362,7 @@ def _resolver(request: Request) -> ReleaseGateResolver:
 # Status ----------------------------------------------------------------------------------
 
 
-@router.get("/status", summary="Migrationsstatus je Objekt")
+@router.get("/status", summary="Migrationsstatus je Objekt", dependencies=[Depends(strict_query)])
 async def status(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -562,7 +563,11 @@ async def import_journal(
 # Opening balances ------------------------------------------------------------------------
 
 
-@router.get("/ledgers/{ledger_id}/opening-balances", summary="Eröffnungssalden des Buchungskreises")
+@router.get(
+    "/ledgers/{ledger_id}/opening-balances",
+    summary="Eröffnungssalden des Buchungskreises",
+    dependencies=[Depends(strict_query)],
+)
 async def list_opening_balances(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[OpeningBalancesOut]:
@@ -697,7 +702,11 @@ async def post_opening_balances(
 # Reconciliation --------------------------------------------------------------------------
 
 
-@router.get("/properties/{property_id}/reconciliation", summary="Abgleichberichte des Objekts")
+@router.get(
+    "/properties/{property_id}/reconciliation",
+    summary="Abgleichberichte des Objekts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_reports(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[MigrationReportListOut]:
@@ -824,7 +833,11 @@ async def get_report_pdf(
 # Switch of the leading system -----------------------------------------------------------
 
 
-@router.get("/switch-requests", summary="Anträge auf Wechsel des führenden Systems")
+@router.get(
+    "/switch-requests",
+    summary="Anträge auf Wechsel des führenden Systems",
+    dependencies=[Depends(strict_query)],
+)
 async def list_switch_requests(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
@@ -1026,7 +1039,11 @@ async def _check_report(
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
-@router.get("/properties/{property_id}/acceptance", summary="Abnahmeprotokolle des Objekts")
+@router.get(
+    "/properties/{property_id}/acceptance",
+    summary="Abnahmeprotokolle des Objekts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_acceptances(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[MigAcceptanceOut]:

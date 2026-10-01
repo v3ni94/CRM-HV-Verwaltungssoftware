@@ -12,3 +12,9 @@
 | Change reason | GA07-02, GA07-03, 01.10.2026 |
 
 Die Freigabe gilt je Abrechnungsversion; eine neue Version braucht eine neue Freigabe. Wer nicht im Portal abruft, erhält den Bericht auf anderem Weg (Brief); das Protokoll weist Abrufe aus, keine Zustellung.
+
+## Änderung AB07 (01.10.2026)
+
+- GA07-02: Versandpfad per Brief. `POST /hoa/asset-reports/{id}/dispatch` erzeugt je Empfänger eines Eigentumsvertrags zum Stichtag (Zustellregel der Bevollmächtigten) einen Brief, legt ihn als erzeugtes Dokument ab (Kontext `hoa_asset_report`, Verknüpfung mit Kontakt, Vertrag und Gemeinschaft) und übergibt ihn an den bestehenden Versand. Zustellweg: Vorgabe im Aufruf, sonst bevorzugter Weg des Kontakts, sonst Mandantenstandard. Standard: nur Eigentümer ohne Portalabruf; ein Vertrag mit vorhandenem Brief wird übersprungen. Voraussetzung: Status `issued` und Freigabestufe G4. Das Bereitstellungsprotokoll zeigt je Eigentümer Abrufe und Versandeinträge. Ob der Portalabruf genügt, bleibt offen (AA07-02).
+- GA07-03: Sonderfälle Ersterwerb, Zwangsversteigerung und Sonderrechtsnachfolge (Kennzeichen am Vertrag, auch bei Kauf) sind mit deutscher Fallbezeichnung (`case_label`) im Befund und in der Liste geführt und mit Freigabeschritt getestet. Die Zuordnung je Erwerbsart ist nicht entschieden (AA07-01); `calc.py` unverändert.
+- Quellenstatus: Fachliche Umsetzung (7.8 W07, W11), keine Rechtsgrundlage neu. Abnahmefall: tests/integration/test_ab07_outputs.py.

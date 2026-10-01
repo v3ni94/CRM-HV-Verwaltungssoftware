@@ -4,9 +4,11 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
 import { LOCALE_NAMES, SUPPORTED_LOCALES, isLocale } from "@/lib/locale";
+import { persistAccountLocale } from "@/lib/locale-sync";
 
-/** Language selection in the portal header (GA11-01); the choice is a cookie, the page reloads. */
-export function LanguageSwitch({ className = "" }: { className?: string }) {
+/** Language selection in the portal header and on the sign-in page (GA11-01); the choice is a
+ *  cookie (priority for visitors who are not signed in) and, when signed in, stored at the account. */
+export function LanguageSwitch({ className = "", persist = true }: { className?: string; persist?: boolean }) {
   const t = useTranslations("Portal");
   const locale = useLocale();
   const router = useRouter();
@@ -17,7 +19,11 @@ export function LanguageSwitch({ className = "" }: { className?: string }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ locale: value }),
     });
-    if (res.ok) router.refresh();
+    if (res.ok) {
+      // Signed in: the choice is also stored at the account (GA11-01); on the sign-in page it is not.
+      if (persist) await persistAccountLocale(value);
+      router.refresh();
+    }
   }
   return (
     <label className={`inline-flex items-center gap-1 text-xs text-muted ${className}`}>

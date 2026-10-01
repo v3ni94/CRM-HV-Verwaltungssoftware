@@ -131,3 +131,13 @@ Umfang auf Objekte, Rechtsträger oder Funktionen begrenzen. Eine zweite Person 
 Punkt oder das Dokument, bleibt der Antrag offen. Beim Widerruf bleiben öffnende Person und
 Zeitpunkt sichtbar. Grenzen: Eine begrenzte Freigabe öffnet die Stufe nicht für den ganzen
 Mandanten. Alle Stufen bleiben bis zur Entscheidung des Betreibers geschlossen.
+
+## Freigabestufen verwalten (Plattform)
+
+Unter Plattform, Freigabestufen G1 bis G5 sehen Plattformadministratoren je Mandant den Stand
+jeder Stufe (offen, begrenzt offen, geschlossen) und alle Anträge mit Nachweisdokument, öffnender
+Person und Zeitpunkt sowie Widerruf mit Kommentar. Im angemeldeten Mandanten lässt sich ein Antrag
+mit Checkliste, Nachweisdokument (Dokument-ID) und optionaler Begrenzung auf Objekte stellen und
+eine Freigabe widerrufen. Genehmigen und Ablehnen erfolgt durch eine zweite Person mit Kommentar.
+Grenzen: Die Seite ändert keine Prüfregel; eine begrenzte Freigabe öffnet Buchungs- und
+Zahlungsfunktionen nur für das genannte Objekt.

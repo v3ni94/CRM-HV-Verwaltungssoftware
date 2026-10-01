@@ -41,6 +41,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.models import PortalAccount
 from mhvp.tickets.models import Ticket, TicketEvent, WorkOrder
@@ -597,7 +598,9 @@ async def _own_submission(
     return s
 
 
-@portal_router.get("", summary="Vorlagen an den eigenen Verwaltungsbeirat")
+@portal_router.get(
+    "", summary="Vorlagen an den eigenen Verwaltungsbeirat", dependencies=[Depends(strict_query)]
+)
 async def portal_list(request: Request, ctx: Any = Depends(_portal_ctx)) -> list[dict[str, Any]]:
     principal, account = ctx
     today = _today()

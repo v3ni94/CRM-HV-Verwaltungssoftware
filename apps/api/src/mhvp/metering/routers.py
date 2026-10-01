@@ -31,6 +31,7 @@ from mhvp.core.auth.permissions import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import content_disposition
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.metering import csv_io, services, transmissions
@@ -95,7 +96,9 @@ class MeteringProviderOut(BaseModel):
     auth_note: str
 
 
-@router.get("/providers", summary="Anbieterkatalog mit Recherchestand")
+@router.get(
+    "/providers", summary="Anbieterkatalog mit Recherchestand", dependencies=[Depends(strict_query)]
+)
 async def list_providers(principal: TenantPrincipal = Depends(READ)) -> list[MeteringProviderOut]:
     from mhvp.metering.adapters import adapter_for
 
@@ -233,7 +236,9 @@ def _connection_out(row: MeteringConnection) -> MeteringConnectionOut:
     )
 
 
-@router.get("/connections", summary="Verbindungen des Mandanten")
+@router.get(
+    "/connections", summary="Verbindungen des Mandanten", dependencies=[Depends(strict_query)]
+)
 async def list_connections(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[MeteringConnectionOut]:
@@ -473,6 +478,7 @@ async def _assignment_out(session: Any, row: MeteringPropertyAssignment) -> Assi
     "/assignments",
     summary="Objektzuordnungen (Objektreiter und zentrale Übersicht)",
     responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
 )
 async def list_assignments(
     request: Request,
@@ -683,7 +689,9 @@ async def _unit_out(session: Any, row: MeteringUnitAssignment) -> UnitAssignment
 
 
 @router.get(
-    "/assignments/{assignment_id}/units", summary="Einheitenzuordnungen einer Objektzuordnung"
+    "/assignments/{assignment_id}/units",
+    summary="Einheitenzuordnungen einer Objektzuordnung",
+    dependencies=[Depends(strict_query)],
 )
 async def list_unit_assignments(
     assignment_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -801,7 +809,27 @@ def _job_out(row: MeteringSyncJob) -> SyncJobOut:
     )
 
 
-@router.get("/sync-jobs", summary="Abrufaufträge", responses=PAGE_HEADERS)
+_SYNC_JOB_LIST = ListSpec(  # GA04-05
+    filters={
+        "connection_id": MeteringSyncJob.connection_id,
+        "property_assignment_id": MeteringSyncJob.property_assignment_id,
+        "status": MeteringSyncJob.status,
+        "data_kind": MeteringSyncJob.data_kind,
+    },
+    sort={
+        "created_at": MeteringSyncJob.created_at,
+        "started_at": MeteringSyncJob.started_at,
+        "finished_at": MeteringSyncJob.finished_at,
+    },
+)
+
+
+@router.get(
+    "/sync-jobs",
+    summary="Abrufaufträge",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_sync_jobs(
     request: Request,
     response: Response,
@@ -811,15 +839,20 @@ async def list_sync_jobs(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int | None, Query(ge=1, le=200)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    params: ListParams = Depends(_SYNC_JOB_LIST.dependency),
 ) -> list[SyncJobOut]:
     async with tenant_tx(request, principal) as session:
-        query = select(MeteringSyncJob).order_by(MeteringSyncJob.created_at.desc())
+        query = _SYNC_JOB_LIST.apply(
+            select(MeteringSyncJob), params, (MeteringSyncJob.created_at.desc(),)
+        )
         if connection_id is not None:
             query = query.where(MeteringSyncJob.connection_id == connection_id)
         if status is not None:
             query = query.where(MeteringSyncJob.status == status.value)
         rows = await paginate(session, query, response, page=page, page_size=page_size, limit=limit)
-        return [_job_out(r) for r in rows]
+        return sparse(  # type: ignore[no-any-return]
+            [_job_out(r) for r in rows], params, SyncJobOut, response=response
+        )
 
 
 @router.post("/sync-jobs", status_code=202, summary="Jetzt abrufen (nur lesend)")
@@ -900,7 +933,12 @@ def _clearing_out(row: MeteringClearingItem) -> ClearingItemOut:
     )
 
 
-@router.get("/clearing-items", summary="Klärungsbereich", responses=PAGE_HEADERS)
+@router.get(
+    "/clearing-items",
+    summary="Klärungsbereich",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_clearing_items(
     request: Request,
     response: Response,
@@ -982,7 +1020,9 @@ class BillingResultOut(BaseModel):
 
 
 @router.get(
-    "/assignments/{assignment_id}/consumption", summary="Verbrauchswerte (zeitlich filterbar)"
+    "/assignments/{assignment_id}/consumption",
+    summary="Verbrauchswerte (zeitlich filterbar)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_consumption(
     assignment_id: uuid.UUID,
@@ -1009,6 +1049,7 @@ async def list_consumption(
 @router.get(
     "/assignments/{assignment_id}/billing-results",
     summary="Abrechnungsergebnisse (prüfbare Fremddaten)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_billing_results(
     assignment_id: uuid.UUID,
@@ -1383,6 +1424,7 @@ def _transmission_out(row: MeteringTransmission) -> TransmissionOut:
 @router.get(
     "/transmissions",
     summary="Übermittlungen (Rollen, Abrechnungsdaten, Ordnungsbegriffsabgleich)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_transmissions(
     request: Request,

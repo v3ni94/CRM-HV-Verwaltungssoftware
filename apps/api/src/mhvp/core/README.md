@@ -128,6 +128,20 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   `/mail/messages` (filters only, own order kept). ETag/If-Match (GA04-06) added to
   `PATCH /hoa/resolutions/{id}` and `GET`/`PATCH /mail/messages/{id}`; If-Match stays optional
   (ADR 0012) until AA04-01 is decided.
+- AB04 (GA04-05, GA04-06 follow-up): `listparams.strict_query` is attached as route dependency
+  (`dependencies=[Depends(strict_query)]`) to every GET list route (response `list[...]` or a
+  page with `items`): every query parameter the route does not declare answers 422; `filter[...]`,
+  `sort`, `fields`, `include` and `as_of` pass only to routes that parse them (`list_params` or a
+  `ListSpec`). Existing parameters stay declared; `/tenant/events` now honours the formerly
+  ignored `limit` as alias of `page_size`. Further `ListSpec` lists: `/work-orders`,
+  `/sla/clocks`, `/sla/alerts`, `/automation/rules`, `/immoware/sync/runs`,
+  `/metering/sync-jobs`, `/banking/rules`, `/banking/payment-orders`, `/letting/listings`,
+  `/letting/prospects`. ETag/If-Match (optional, 412 on a stale token) on `PATCH /sla/rules/{id}`,
+  `/automation/rules/{id}`, `/letting/listings/{id}`, `/letting/prospects/{id}`,
+  `/banking/payment-orders/{id}`, `/teams/{id}`, `/mail/mailboxes/{id}`; ETag on `GET` of
+  automation rules, listings and teams. Inventory test: `tests/integration/test_ab04_list_inventory.py`
+  (list `REMAINING` for routes not converted, currently empty). GET routes without response model
+  (60, mostly files and exports) are not part of the inventory.
 - `listparams.py` (S12-03): `list_params` dependency parses `filter[field]=value` (comma means
   `IN`, `null` means `IS NULL`), `sort=field,-field`, `fields=a,b` and `include=x`.
   `apply_filters` and `apply_sort` accept only the columns a list declares, `check_include`

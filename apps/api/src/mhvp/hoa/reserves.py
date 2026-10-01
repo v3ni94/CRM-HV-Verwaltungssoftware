@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing.status import StatementStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import EconomicPlan, HoaReserve, HoaReserveMovement, HoaStatement, PlanItem
 from mhvp.hoa.property_scope import HOA_GUARD
@@ -362,6 +363,7 @@ async def get_reserve_development(
 @router.get(
     "/statements/{statement_id}/reserve-movements",
     summary="Mittelverwendung je Rücklage einer Abrechnung",
+    dependencies=[Depends(strict_query)],
 )
 async def list_reserve_movements(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

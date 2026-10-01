@@ -38,6 +38,7 @@ from mhvp.core.auth.principal import (
 )
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import ApiKey, Tenant, TenantStatus
 from mhvp.platform.schemas import ApiKeyOut
@@ -360,7 +361,9 @@ async def _active_tenant_ids(request: Request) -> list[uuid.UUID]:
         )
 
 
-@router.get("/metrics-keys", summary="API-Schlüssel der Überwachung")
+@router.get(
+    "/metrics-keys", summary="API-Schlüssel der Überwachung", dependencies=[Depends(strict_query)]
+)
 async def list_metrics_keys(
     request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[MetricsKeyOut]:

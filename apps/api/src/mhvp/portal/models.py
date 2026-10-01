@@ -48,8 +48,7 @@ class PortalAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     invitation_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # GA02-07 (migration 0310): roles derived from the access grants (tenant, owner), time of
-    # the invitation. ``expired`` and ``locked`` are derived when read (invitation_expires_at,
-    # user lock), not stored.
+    # the invitation. The status is stored and maintained by mhvp.portal.status (6.2).
     roles: Mapped[list[str]] = mapped_column(
         ARRAY(String(16)), nullable=False, default=list, server_default=text("'{}'")
     )
@@ -57,6 +56,8 @@ class PortalAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     # M21-01: optional second factor by e-mail code on top of the magic link login, switched on
     # per account by the management (portal-admin); off by default (Produktschutz, docs/rules).
     magic_link_2fa: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # GA11-01 (migration 0331): language chosen by the person, applied at login; null = browser.
+    locale: Mapped[str | None] = mapped_column(String(8))
 
 
 class AccessGrant(IdMixin, TimestampMixin, TenantMixin, Base):

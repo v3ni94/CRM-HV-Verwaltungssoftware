@@ -16,6 +16,7 @@ from mhvp.accounting import chart_release as svc
 from mhvp.accounting.models import ChartTemplate
 from mhvp.accounting.schemas import ChartTemplateOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/accounting/templates", tags=["Buchhaltung"])
@@ -85,7 +86,11 @@ async def update_accounts(
         return ChartTemplateOut.model_validate(template)
 
 
-@router.get("/{template_id}/history", summary="Versionsverlauf des Kontenrahmens")
+@router.get(
+    "/{template_id}/history",
+    summary="Versionsverlauf des Kontenrahmens",
+    dependencies=[Depends(strict_query)],
+)
 async def history(
     template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ChartTemplateOut]:

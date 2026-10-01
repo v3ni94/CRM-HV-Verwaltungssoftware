@@ -28,7 +28,13 @@ def test_withdrawn_is_skipped_and_reference_kept() -> None:
     assert picked is not None
     assert picked.version == 1
     ref = rr.snapshot_reference(picked)
-    assert ref == {"rule_id": "x", "version": 1, "status": "confirmed"}
+    assert ref == {
+        "id": None,
+        "rule_id": "x",
+        "version": 1,
+        "status": "confirmed",
+        "effective_from": "2020-01-01",
+    }
     assert rr.snapshot_reference(None) is None
 
 

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/mail", tags=["Postfach"])
@@ -66,7 +67,11 @@ async def _listing(session: AsyncSession, document_ids: list[uuid.UUID]) -> list
     return [_attachment_out(by_id[i]) for i in document_ids if i in by_id]
 
 
-@router.get("/messages/{message_id}/attachments", summary="Anhänge einer Nachricht")
+@router.get(
+    "/messages/{message_id}/attachments",
+    summary="Anhänge einer Nachricht",
+    dependencies=[Depends(strict_query)],
+)
 async def list_attachments(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -80,6 +85,7 @@ async def list_attachments(
 @router.get(
     "/messages/{message_id}/attachment-candidates",
     summary="Dokumente des Mandanten als Anhang suchen (DMS)",
+    dependencies=[Depends(strict_query)],
 )
 async def attachment_candidates(
     message_id: uuid.UUID,

@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Membership, MembershipStatus, User
 from mhvp.workspace import deadlines, jobs
@@ -85,7 +86,11 @@ class DeadlineTypePatch(_In):
     is_active: bool | None = None
 
 
-@router.get("/deadline-types", summary="Fristtypen des Mandanten (WS-01, Dauer zu verifizieren)")
+@router.get(
+    "/deadline-types",
+    summary="Fristtypen des Mandanten (WS-01, Dauer zu verifizieren)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_deadline_types(
     request: Request, principal: TenantPrincipal = Depends(member)
 ) -> list[DeadlineTypeOut]:
@@ -147,7 +152,11 @@ class AssignableUserOut(BaseModel):
     display_name: str
 
 
-@router.get("/assignable-users", summary="Aktive Mitglieder als Verantwortliche (ES-10)")
+@router.get(
+    "/assignable-users",
+    summary="Aktive Mitglieder als Verantwortliche (ES-10)",
+    dependencies=[Depends(strict_query)],
+)
 async def assignable_users(
     request: Request, principal: TenantPrincipal = Depends(member)
 ) -> list[AssignableUserOut]:
@@ -237,7 +246,9 @@ async def _entry_out(session: Any, entry: DeadlineEntry) -> DeadlineEntryOut:
     return out
 
 
-@router.get("/deadline-entries", summary="Eigene Fristen (WS-01)")
+@router.get(
+    "/deadline-entries", summary="Eigene Fristen (WS-01)", dependencies=[Depends(strict_query)]
+)
 async def list_deadline_entries(
     request: Request,
     source_type: str | None = Query(default=None, pattern=SOURCE_PATTERN),
@@ -458,7 +469,11 @@ class PropertyChecklistItemIn(_In):
     done: bool
 
 
-@router.get("/checklists", summary="Checklisten eines Objekts (Verwalterwechsel)")
+@router.get(
+    "/checklists",
+    summary="Checklisten eines Objekts (Verwalterwechsel)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_checklists(
     request: Request,
     property_id: uuid.UUID,

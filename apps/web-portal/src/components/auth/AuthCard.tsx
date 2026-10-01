@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { BrandMark, LegalLinks } from "@/components/shell/Branding";
+import { LanguageSwitch } from "@/components/shell/LanguageSwitch";
 import { fetchPortalBranding } from "@/lib/branding";
 
 /** Sign-in frame of the portal: neutral, or with the tenant branding of the portal host
@@ -16,6 +17,7 @@ export async function AuthCard({ title, children }: { title: string; children: R
       <div className="rounded-xl border border-border bg-surface p-6 shadow-card">{children}</div>
       <p className="text-xs text-subtle">{t("intro")}</p>
       <LegalLinks branding={branding} />
+      <LanguageSwitch persist={false} className="self-start" />
     </main>
   );
 }

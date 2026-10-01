@@ -24,6 +24,9 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
     // M25-03: Teilnahmenachweis mit Kanal (Präsenz, online, Vollmacht).
     serverFetch(`/api/v1/hoa/meetings/${encodeURIComponent(meetingId)}/attendance-list`),
   ]);
+  // GA03-01: Vorlagen als Auswahlliste (aktive Vorlagen des Mandanten).
+  const templatesResponse = await serverFetch("/api/v1/document-templates");
+  const templates = templatesResponse.ok ? ((await templatesResponse.json()) as { id: string; name: string }[]) : [];
   const attendance = attendanceResponse.ok ? (((await attendanceResponse.json()) as { rows?: AttendanceRow[] }).rows ?? []) : [];
   redirectIfUnauthenticated(response);
   const entity = String(data?.legal_entity_id ?? "");
@@ -43,7 +46,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
       </p>
       <p className={ui.notice}>{t("meetingNotice")}</p>
       <MeetingFormPanel meetingId={meetingId} data={data as unknown as MeetingFormData} attendance={attendance} />
-      <MeetingDetailsForm meetingId={meetingId} data={data as unknown as MeetingDetails} closed={String(data.status) === "closed"} />
+      <MeetingDetailsForm meetingId={meetingId} data={data as unknown as MeetingDetails} closed={String(data.status) === "closed"} templates={templates.map((x) => ({ id: String(x.id), name: String(x.name) }))} />
       {data.mode === "virtual" ? (
         <MeetingDeadlineForm
           meetingId={meetingId}

@@ -12,6 +12,7 @@ from mhvp.contacts import merge
 from mhvp.contacts.models import Contact, ContactMerge
 from mhvp.contacts.routers import APPROVE, READ, UPDATE
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(tags=["Kontakte"])
@@ -73,7 +74,11 @@ async def _load(session: Any, merge_id: uuid.UUID) -> ContactMerge:
     return row
 
 
-@router.get("/contact-merges", summary="Zusammenführungsvorschläge von Kontakten")
+@router.get(
+    "/contact-merges",
+    summary="Zusammenführungsvorschläge von Kontakten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_merges(
     request: Request,
     status: str | None = Query(default=None, pattern="^(proposed|executed|rejected)$"),

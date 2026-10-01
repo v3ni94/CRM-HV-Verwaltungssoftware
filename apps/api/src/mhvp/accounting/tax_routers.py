@@ -32,6 +32,7 @@ from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents.models import Document, DocumentSource, LinkRole
@@ -447,7 +448,11 @@ async def approve_withholding(
 # § 35a markers per line --------------------------------------------------------------------------
 
 
-@router.get("/invoices/{invoice_id}/section35a", summary="§-35a-Kennzeichen der Positionen")
+@router.get(
+    "/invoices/{invoice_id}/section35a",
+    summary="§-35a-Kennzeichen der Positionen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_section35a(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[Section35aOut]:

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties import schemas as s
 from mhvp.properties.catalogs import ANNEX_B_CATALOGS
@@ -89,7 +90,7 @@ async def _field(session: AsyncSession, field_id: uuid.UUID) -> CustomFieldDefin
 # Catalogues ---------------------------------------------------------------------------------
 
 
-@router.get("/catalogs", summary="Kataloge")
+@router.get("/catalogs", summary="Kataloge", dependencies=[Depends(strict_query)])
 async def list_catalogs(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.CatalogSummaryOut]:
@@ -120,7 +121,7 @@ async def list_catalogs(
         return sorted(out, key=lambda c: c.catalog)
 
 
-@router.get("/catalogs/{catalog}", summary="Katalog")
+@router.get("/catalogs/{catalog}", summary="Katalog", dependencies=[Depends(strict_query)])
 async def list_catalog(
     catalog: str,
     request: Request,
@@ -228,7 +229,7 @@ async def delete_catalog_entry(
 # Custom fields ------------------------------------------------------------------------------
 
 
-@router.get("/custom-fields", summary="Zusatzfelder")
+@router.get("/custom-fields", summary="Zusatzfelder", dependencies=[Depends(strict_query)])
 async def list_custom_fields(
     request: Request,
     principal: TenantPrincipal = Depends(READ),

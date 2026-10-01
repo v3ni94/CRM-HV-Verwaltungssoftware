@@ -23,6 +23,7 @@ from mhvp.core.auth.scope import (
     session_principal,
 )
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import Property
 from mhvp.workspace.services import local_date
@@ -160,7 +161,9 @@ async def _event(
     )
 
 
-@router.get("/service-contracts", summary="Dienstleisterverträge")
+@router.get(
+    "/service-contracts", summary="Dienstleisterverträge", dependencies=[Depends(strict_query)]
+)
 async def list_service_contracts(
     request: Request,
     property_id: uuid.UUID | None = None,

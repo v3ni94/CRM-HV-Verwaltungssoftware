@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.automation.job_schedule import job_allowed
+from mhvp.automation.job_schedule import job_allowed, lock_job
 from mhvp.billing import consumption_info
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
@@ -61,6 +61,9 @@ async def run_once(
             async with tenant_transaction(factory, tenant_id) as session:
                 if not await job_allowed(session, tenant_id, "billing-consumption-info"):
                     continue
+                # GA12-06: parallel runs of one tenant are serialised; the second one finds
+                # the rows of the first (unique per unit and month) and adds nothing.
+                await lock_job(session, tenant_id, "billing-consumption-info")
                 totals["tenants"] += 1
                 counts = await consumption_info.run_tenant(
                     session, blobs, tenant_id=tenant_id, month=month, actor=None, trigger="job"

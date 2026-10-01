@@ -17,6 +17,7 @@ from mhvp.ai.models import Decision, ImportRun, ImportStatus
 from mhvp.communication.models import Message
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentSource
@@ -276,7 +277,7 @@ async def create_draft_from_paperless(
     return await _start(request, principal, document_id, ReceiptDraftSource.PAPERLESS.value, None)
 
 
-@router.get("/drafts", summary="Belegentwürfe")
+@router.get("/drafts", summary="Belegentwürfe", dependencies=[Depends(strict_query)])
 async def list_drafts(
     request: Request,
     principal: TenantPrincipal = Depends(READ),

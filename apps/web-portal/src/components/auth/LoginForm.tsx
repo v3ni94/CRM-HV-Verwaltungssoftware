@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { adoptAccountLocale } from "@/lib/locale-sync";
 import { ui } from "@/lib/ui";
 
 import { MagicLinkForm } from "./MagicLinkForm";
@@ -64,6 +65,7 @@ function PasswordLoginForm({ next, onMagicLink }: { next?: string; onMagicLink: 
       // Password alone was enough (no second factor enabled, or a remembered device): the
       // session cookies are already set, no second factor step needed.
       const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/start";
+      await adoptAccountLocale();
       router.push(target);
       router.refresh();
       return;

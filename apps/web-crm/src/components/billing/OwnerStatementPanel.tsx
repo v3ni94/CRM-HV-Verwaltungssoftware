@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { StatementOutputsPanel } from "./StatementOutputsPanel";
 import { StatementStatusActions, type StatementStatusValue, type StatusLogEntry } from "./StatementStatusActions";
 
 type Line = { account_number?: string; account_name?: string; amount: string };
@@ -198,6 +199,15 @@ export function OwnerStatementPanel({ ledgers }: { ledgers: { id: string; name: 
             </label>
           ) : null}
           {selected.results ? <Blocks results={selected.results} findings={selected.findings ?? []} /> : <p className={`${ui.help} mt-3`}>{t("notCalculated")}</p>}
+          <StatementOutputsPanel
+            base={`/api/bff/billing/owner-statements/${selected.id}`}
+            previews={[
+              { key: "ownerLetter", path: "preview/letter", method: "GET" },
+              { key: "s35a", path: "preview/s35a", method: "GET" },
+            ]}
+            filePath="outputs"
+            enabled={Boolean(selected.results)}
+          />
           {selected.status !== "draft" ? (
             <StatementStatusActions<OwnerStatement>
               url={`${BASE}/${selected.id}`}

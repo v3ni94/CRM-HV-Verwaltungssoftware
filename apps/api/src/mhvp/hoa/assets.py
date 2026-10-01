@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
@@ -465,7 +466,9 @@ async def create_asset_report(
         return _out(row)
 
 
-@router.get("/asset-reports", summary="Vermögensberichte einer GdWE")
+@router.get(
+    "/asset-reports", summary="Vermögensberichte einer GdWE", dependencies=[Depends(strict_query)]
+)
 async def list_asset_reports(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
@@ -813,6 +816,7 @@ async def asset_report_provisions(
                 )
             ).all()
         }
+        dispatches = await _report_dispatches(session, row.id)
         items = [
             {
                 "contract_id": c.id,
@@ -822,7 +826,244 @@ async def asset_report_provisions(
                 "first_retrieved_at": seen[c.id][0] if c.id in seen else None,
                 "last_retrieved_at": seen[c.id][1] if c.id in seen else None,
                 "retrievals": seen[c.id][2] if c.id in seen else 0,
+                # GA07-02: letters of this report handed to the dispatch, per recipient.
+                "dispatches": dispatches.get(c.id, []),
             }
             for c, number in contracts
         ]
-        return {"report_id": row.id, "status": row.status, "items": items, "note": PROVISION_NOTE}
+        return {
+            "report_id": row.id,
+            "status": row.status,
+            "items": items,
+            "note": PROVISION_NOTE,
+            "dispatch_note": DISPATCH_NOTE,
+        }
+
+
+# --- letter dispatch (GA07-02 rest) ----------------------------------------------------------
+
+DISPATCH_NOTE = (
+    "Versand über den Zustellweg des Kontakts, sonst über den Standard des Mandanten. Der "
+    "Versandeintrag ist ein Nachweis der Vorbereitung; Zustellung und Zugang werden im "
+    "Versandprotokoll mit Nachweis erfasst. Ob die Bereitstellung im Portal genügt, ist "
+    "offen (AA07-02)."
+)
+DISPATCH_CONTEXT = "hoa_asset_report"
+
+
+class AssetReportDispatchIn(_In):
+    # Default: only owners without a portal retrieval of the report get the letter.
+    only_without_retrieval: bool = True
+    # None: preferred channel of the contact, else the tenant default (GA01-08).
+    channel: str | None = Field(default=None, pattern="^(post|email|portal)$")
+    contract_ids: list[uuid.UUID] | None = Field(default=None, max_length=500)
+
+
+async def _owner_contracts(session: AsyncSession, row: HoaAssetReport) -> list[tuple[Any, str]]:
+    from sqlalchemy import or_
+
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.properties.models import Unit
+
+    rows = await session.execute(
+        select(Contract, Unit.number)
+        .join(Unit, Unit.id == Contract.unit_id)
+        .where(
+            Contract.legal_entity_id == row.legal_entity_id,
+            Contract.kind == ContractKind.OWNERSHIP,
+            Contract.start_date <= row.as_of,
+            or_(Contract.end_date.is_(None), Contract.end_date >= row.as_of),
+        )
+        .order_by(Unit.number)
+    )
+    return [(c, n) for c, n in rows.all()]
+
+
+async def _report_dispatches(
+    session: AsyncSession, report_id: uuid.UUID
+) -> dict[uuid.UUID, list[dict[str, Any]]]:
+    """Dispatch rows of the report letters per ownership contract (via the contract link of
+    the generated document)."""
+    from mhvp.communication.models import Dispatch
+    from mhvp.documents.models import DocumentLink, GeneratedDocument
+
+    rows = await session.execute(
+        select(Dispatch, DocumentLink.entity_id)
+        .join(GeneratedDocument, GeneratedDocument.dispatch_id == Dispatch.id)
+        .join(
+            DocumentLink,
+            (DocumentLink.document_id == GeneratedDocument.document_id)
+            & (DocumentLink.entity_type == "contract"),
+        )
+        .where(
+            GeneratedDocument.context_type == DISPATCH_CONTEXT,
+            GeneratedDocument.context_id == report_id,
+        )
+        .order_by(Dispatch.created_at)
+    )
+    out: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for d, contract_id in rows.all():
+        out.setdefault(contract_id, []).append(
+            {
+                "dispatch_id": d.id,
+                "document_id": d.document_id,
+                "contact_id": d.contact_id,
+                "channel": d.channel,
+                "status": d.status,
+                "sent_at": d.sent_at,
+                "delivered_at": d.delivered_at,
+                "evidence_kind": d.evidence_kind,
+                "created_at": d.created_at,
+            }
+        )
+    return out
+
+
+@router.post(
+    "/asset-reports/{report_id}/dispatch",
+    status_code=201,
+    summary="Vermögensbericht je Eigentümer als Brief über den Versand (GA07-02, G4)",
+)
+async def dispatch_asset_report(
+    report_id: uuid.UUID,
+    request: Request,
+    body: AssetReportDispatchIn | None = None,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """One letter per resolved recipient of each ownership contract of the reporting date,
+    filed as a generated document (context ``hoa_asset_report``) and handed to the existing
+    dispatch (``mhvp.communication.dispatch``): post becomes a prepared postal dispatch, e-mail
+    a draft, portal the inbox. Needs gate G4 and an issued report like the portal output.
+    A contract that already has a letter of this report is skipped (no double dispatch)."""
+    import dataclasses
+
+    from mhvp.communication.dispatch import DispatchIn, _create
+    from mhvp.contacts.models import PartyMember
+    from mhvp.contacts.recipients import resolve_recipients
+    from mhvp.documents import letters
+    from mhvp.documents import services as docs
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import DocumentSource, GeneratedDocument, LinkRole
+    from mhvp.hoa.models import HoaAssetReportProvision
+    from mhvp.properties.models import LegalEntity
+
+    body = body or AssetReportDispatchIn()
+    await ensure_release_gate_open(
+        ReleaseGate.G4, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, report_id)
+        if row.status != "issued" or row.snapshot is None:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Versand erst nach Ausgabe (issued).")
+        retrieved = set(
+            (
+                await session.scalars(
+                    select(HoaAssetReportProvision.contract_id).where(
+                        HoaAssetReportProvision.report_id == row.id
+                    )
+                )
+            ).all()
+        )
+        already = await _report_dispatches(session, row.id)
+        blobs = BlobStore(request.app.state.settings)
+        head = await docs.letterhead(session, blobs)
+        entity = await session.get(LegalEntity, row.legal_entity_id)
+        name = entity.name if entity is not None else "Gemeinschaft der Wohnungseigentümer"
+        base = compose_pdf(row, row.snapshot, name, datetime.now(UTC).date())
+        wanted = set(body.contract_ids) if body.contract_ids is not None else None
+        created: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        for contract, number in await _owner_contracts(session, row):
+            if wanted is not None and contract.id not in wanted:
+                continue
+            reason = None
+            if contract.id in already:
+                reason = "already_dispatched"
+            elif body.only_without_retrieval and contract.id in retrieved:
+                reason = "retrieved_in_portal"
+            if reason:
+                skipped.append(
+                    {"contract_id": contract.id, "unit_number": number, "reason": reason}
+                )
+                continue
+            members = list(
+                (
+                    await session.scalars(
+                        select(PartyMember.contact_id)
+                        .where(PartyMember.party_id == contract.party_id)
+                        .order_by(PartyMember.created_at, PartyMember.id)
+                    )
+                ).all()
+            )
+            for recipient in await resolve_recipients(session, members, on=row.as_of):
+                _, lines, _data = await docs.recipient(session, recipient.contact_id)
+                letter = dataclasses.replace(
+                    base,
+                    recipient_lines=lines,
+                    info=[*base.info, ("Einheit", number)],
+                )
+                pdf = letters.render_pdf(head, letter)
+                document = await docs.store_document(
+                    session,
+                    blobs,
+                    tenant_id=principal.tenant_id,
+                    data=pdf,
+                    title=f"Vermögensbericht zum {row.as_of:%d.%m.%Y}, Einheit {number}",
+                    filename=f"vermoegensbericht-{row.as_of.isoformat()}-{number}.pdf",
+                    mime_type="application/pdf",
+                    source=DocumentSource.GENERATED,
+                    category_id=None,
+                    links=[
+                        ("contact", recipient.contact_id, LinkRole.GENERATED),
+                        ("contract", contract.id, LinkRole.GENERATED),
+                        ("legal_entity", row.legal_entity_id, LinkRole.GENERATED),
+                    ],
+                    created_by=principal.user_id,
+                )
+                dispatch = await _create(
+                    session,
+                    principal,
+                    DispatchIn(
+                        document_id=document.id,
+                        contact_id=recipient.contact_id,
+                        channel=body.channel,
+                    ),
+                    f"ar-{row.id.hex[:13]}",
+                    request,
+                )
+                session.add(
+                    GeneratedDocument(
+                        tenant_id=principal.tenant_id,
+                        created_by=principal.user_id,
+                        document_id=document.id,
+                        template_code="hoa_asset_report",
+                        context_type=DISPATCH_CONTEXT,
+                        context_id=row.id,
+                        recipient_contact_id=recipient.contact_id,
+                        dispatch_id=dispatch.id,
+                    )
+                )
+                created.append(
+                    {
+                        "contract_id": contract.id,
+                        "unit_number": number,
+                        "contact_id": recipient.contact_id,
+                        "document_id": document.id,
+                        "dispatch_id": dispatch.id,
+                        "channel": dispatch.channel,
+                        "status": dispatch.status,
+                    }
+                )
+        await session.flush()
+        from mhvp.core.events import emit
+
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa_asset_report.dispatched",
+            entity_type=DISPATCH_CONTEXT,
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"letters": len(created), "skipped": len(skipped)},
+        )
+        return {"report_id": row.id, "created": created, "skipped": skipped, "note": DISPATCH_NOTE}

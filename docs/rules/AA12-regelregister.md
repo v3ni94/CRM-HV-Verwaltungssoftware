@@ -13,3 +13,15 @@ Regeln: Der Registereintrag wird nach dem Beginn des Abrechnungszeitraums gewäh
 Tagesdatum. Der Snapshot hält Regel, Version und Status fest; ein späterer Eintrag ändert eine
 erstellte Abrechnung nicht. Prüfpunkte tragen den Hinweis "ohne Rechtsfolge". § 13b UStG ist ein
 gesonderter Freigabepunkt mit Prüfbefund, keine Automatik.
+
+## Ergänzung AB10 (GA08-02, GA08-05, GA08-01)
+
+- Der Abrechnungs-Snapshot hält zusätzlich ID und Wirksamkeitsdatum des Registereintrags fest
+  (`inputs.rule_register`); der Lauf zeigt sie im CRM an. Eine spätere Regelversion ändert den
+  alten Lauf und seine Nachrechnung nicht (Test `test_ab10_snapshot_keeps_rule_register_version`).
+- Prüfpunkte sind konfigurierbare Einträge der Gruppe "Prüfpunkt" (Datum, Bezeichnung, Quelle
+  Anhang C Status), Standard leer. `GET /accounting/rule-versions/due-checkpoints` meldet die
+  erreichten Punkte als Hinweis ohne Rechtsfolge. Fristen und Inhalte sind nicht hinterlegt
+  (OPEN_QUESTIONS AB10-01).
+- § 13b UStG: die Eingangsrechnung zeigt den Freigabepunkt im CRM; der Test
+  `test_reverse_charge_13b_triggers_no_automation` belegt, dass keine Automatik greift.

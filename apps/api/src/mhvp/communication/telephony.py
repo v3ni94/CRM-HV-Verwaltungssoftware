@@ -63,6 +63,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Tenant, TenantStatus
@@ -551,7 +552,9 @@ async def _outs(session: AsyncSession, rows: list[CallLog], *, unmasked: bool) -
     return out
 
 
-@router.get("/communication/calls", summary="Anrufliste des Mandanten")
+@router.get(
+    "/communication/calls", summary="Anrufliste des Mandanten", dependencies=[Depends(strict_query)]
+)
 async def list_calls(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
@@ -574,7 +577,11 @@ async def list_calls(
         return await _outs(session, rows, unmasked=principal.has("contacts:read"))
 
 
-@router.get("/contacts/{contact_id}/calls", summary="Anrufliste eines Kontakts")
+@router.get(
+    "/contacts/{contact_id}/calls",
+    summary="Anrufliste eines Kontakts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_contact_calls(
     contact_id: uuid.UUID,
     request: Request,

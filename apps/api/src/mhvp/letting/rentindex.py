@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.letting.models import RentIndexEntry
 
@@ -167,7 +168,7 @@ def parse_csv(text: str) -> tuple[list[RentIndexEntryIn], list[dict[str, Any]]]:
     return rows, errors
 
 
-@router.get("", summary="Mietspiegelwerte")
+@router.get("", summary="Mietspiegelwerte", dependencies=[Depends(strict_query)])
 async def list_entries(
     request: Request,
     municipality: str | None = None,

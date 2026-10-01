@@ -23,6 +23,7 @@ export default async function PlatformPage() {
   const t = await getTranslations("Platform");
   const tl = await getTranslations("PlatformLicensing");
   const tx = await getTranslations("AA17");
+  const tg = await getTranslations("PlatformGates");
   const api = serverApi();
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
@@ -52,6 +53,9 @@ export default async function PlatformPage() {
         </Link>
         <Link className="underline" href="/plattform/freigabe-g5">
           {t("g5Link")}
+        </Link>
+        <Link className="underline" href="/plattform/freigabestufen">
+          {tg("link")}
         </Link>
         <Link className="underline" href="/plattform/domains">
           {tx("domainsLink")}

@@ -152,3 +152,13 @@ def test_reverse_charge_flags_13b_release_point() -> None:
     out = ic.amount_findings(_inv(reverse_charge=True))
     assert any("§ 13b UStG" in f and "keine Automatik" in f for f in out)
     assert not any("§ 13b UStG" in f for f in ic.amount_findings(_inv(reverse_charge=False)))
+
+
+def test_reverse_charge_13b_triggers_no_automation() -> None:
+    """AB10 GA08-01: the flag only adds hints; amounts, VAT and flags stay as entered."""
+    inv = _inv(reverse_charge=True, vat=Decimal("0.00"), gross=Decimal("1000.00"))
+    before = (inv.gross, inv.vat, inv.reverse_charge, inv.construction_withholding)
+    out = ic.amount_findings(inv)
+    assert (inv.gross, inv.vat, inv.reverse_charge, inv.construction_withholding) == before
+    assert sum("§ 13b UStG" in f for f in out) == 1
+    assert not any("Umsatzsteuer ausgewiesen" in f for f in out)

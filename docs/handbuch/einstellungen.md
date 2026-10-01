@@ -464,3 +464,7 @@ In der DMS-Anbindung bestimmt das Ordnerschema, in welche Ordner die Direktablag
 ## Kundendomains und OIDC-Clients (Plattform)
 
 Plattformadministratoren pflegen unter Plattform, Domains die Hostnamen eines Mandanten (Zweck Portal, CRM oder API) mit Hinweis auf den CNAME-Eintrag und sperren oder entsperren den Mandanten. Unter Plattform, OIDC-Clients werden Clients der Anmeldung für Bestandstools angelegt, das Secret erneuert und Clients deaktiviert. Das Secret wird nur einmal angezeigt.
+
+## Plattformaudit
+
+Plattformadministratoren sehen die festgeschriebenen Plattformaktionen (Domain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert) über `GET /api/v1/platform/audit-events` (Parameter `limit`, `offset`, `action`). Die Einträge sind nicht änderbar und enthalten keine Secrets. Eine Oberfläche dafür ist noch nicht vorhanden.

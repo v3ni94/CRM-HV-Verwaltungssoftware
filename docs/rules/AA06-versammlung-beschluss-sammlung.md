@@ -47,3 +47,10 @@ spätestes Gültigkeitsende 01.03.2029.
 ## Änderungsgrund
 
 Lückenliste 01.10.2026, Paket AA06 (Welle 12).
+
+## Nachtrag AB06 (01.10.2026)
+
+* GA03-01: Wiederholungs- und Fortsetzungsversammlungen sind im CRM anlegbar (Auswahl der Ursprungsversammlung derselben GdWE, Pflicht), Vorlagen werden aus der Liste der aktiven Vorlagen gewählt. Das Portal zeigt nur die öffentliche Beschreibung, nie die interne.
+* GA07-01: Der Hinweis zum Gültigkeitsende über drei Jahre nach Beschlussdatum erscheint dauerhaft in `GET /hoa/meetings/{id}` und in der CRM-Detailansicht. Die Sperre MHVP-HOA-0030 bleibt hinter dem Mandantenschalter (Standard aus). Offen: AA06-02, G4.
+* GA03-03 bleibt teilweise offen (AA06-01, Status void).
+* Änderungsgrund: Folgearbeit aus Welle 12 (Abnahmefall unverändert).

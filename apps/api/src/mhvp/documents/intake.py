@@ -46,7 +46,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from mhvp.ai.models import AiExample, AiProposal, AiTask, AiTaskRun, Decision, RunStatus
-from mhvp.automation.job_schedule import job_allowed
+from mhvp.automation.job_schedule import job_allowed, lock_job
 from mhvp.communication.models import Message
 from mhvp.contacts.models import (
     Contact,
@@ -976,6 +976,9 @@ async def process_inbox_once(
                 # GA12-01: per tenant job setting (switch and start time).
                 if not await job_allowed(session, tenant_id, "documents-process-inbox"):
                     continue
+                # GA12-06: parallel runs of one tenant are serialised; the second one finds
+                # the documents of the first via source_id and indexes nothing twice.
+                await lock_job(session, tenant_id, "documents-process-inbox")
                 counts = await process_tenant_inbox(session, store, settings, tenant_id, http)
             for key, value in counts.items():
                 totals[key] += value

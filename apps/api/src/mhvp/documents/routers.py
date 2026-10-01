@@ -3,7 +3,7 @@
 import html
 import json
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
@@ -26,6 +26,7 @@ from mhvp.core.listparams import (
     check_include,
     embed,
     list_params,
+    strict_query,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters, mirror_deletion, retention
@@ -325,6 +326,7 @@ _DOCUMENT_SORT = {
     response_model=s.DocumentPage,
     description=LIST_PARAMS_DOC
     + " include: properties (Objekte über Verknüpfung mit Objekt, Einheit, Vertrag, Ticket).",
+    dependencies=[Depends(strict_query)],
 )
 async def list_documents(
     request: Request,
@@ -428,7 +430,11 @@ def _deletions(rows: list[DocumentMirrorDeletion]) -> list[s.DocumentDeletionOut
     return out
 
 
-@router.get("/documents/deletions", summary="Löschungen mit Spiegelschritten")
+@router.get(
+    "/documents/deletions",
+    summary="Löschungen mit Spiegelschritten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_deletions(
     request: Request,
     status: MirrorDeletionStatus | None = Query(default=None),
@@ -861,7 +867,9 @@ async def remirror(
 # Categories, retention profiles ----------------------------------------------------------
 
 
-@router.get("/document-categories", summary="Dokumentkategorien")
+@router.get(
+    "/document-categories", summary="Dokumentkategorien", dependencies=[Depends(strict_query)]
+)
 async def list_categories(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.CategoryOut]:
@@ -876,7 +884,11 @@ async def list_categories(
         return [s.CategoryOut.model_validate(r) for r in rows]
 
 
-@router.get("/document-folders", summary="Ordnerstruktur der Objektakte")
+@router.get(
+    "/document-folders",
+    summary="Ordnerstruktur der Objektakte",
+    dependencies=[Depends(strict_query)],
+)
 async def list_document_folders(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -954,7 +966,9 @@ async def patch_category(
         return s.CategoryOut.model_validate(row)
 
 
-@router.get("/retention-profiles", summary="Aufbewahrungsprofile")
+@router.get(
+    "/retention-profiles", summary="Aufbewahrungsprofile", dependencies=[Depends(strict_query)]
+)
 async def list_profiles(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.RetentionProfileOut]:
@@ -1140,7 +1154,7 @@ async def _proposal_out(session: Any, proposal: DeletionProposal) -> s.DeletionP
     return out
 
 
-@router.get("/deletion-proposals", summary="Löschvorschläge")
+@router.get("/deletion-proposals", summary="Löschvorschläge", dependencies=[Depends(strict_query)])
 async def list_deletion_proposals(
     request: Request,
     status: DeletionProposalStatus | None = Query(default=None),
@@ -1172,7 +1186,11 @@ async def create_deletion_proposal(
         return await _proposal_out(session, proposal)
 
 
-@router.get("/deletion-proposals/{proposal_id}", summary="Löschvorschlag lesen")
+@router.get(
+    "/deletion-proposals/{proposal_id}",
+    summary="Löschvorschlag lesen",
+    dependencies=[Depends(strict_query)],
+)
 async def get_deletion_proposal(
     proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> s.DeletionProposalOut:
@@ -1261,7 +1279,7 @@ def _paperless_options(options: dict[str, str]) -> dict[str, str]:
     return options
 
 
-@router.get("/dms-connections", summary="DMS-Anbindungen")
+@router.get("/dms-connections", summary="DMS-Anbindungen", dependencies=[Depends(strict_query)])
 async def list_connections(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS)
 ) -> list[s.DmsConnectionOut]:
@@ -1341,7 +1359,7 @@ async def put_connection(
 # Templates and letters -------------------------------------------------------------------
 
 
-@router.get("/document-templates", summary="Vorlagen")
+@router.get("/document-templates", summary="Vorlagen", dependencies=[Depends(strict_query)])
 async def list_templates(
     request: Request,
     context_type: Annotated[
@@ -1400,6 +1418,25 @@ async def create_template(
             **body.model_dump(),
         )
         session.add(row)
+        await _flush(session, "Vorlage konnte nicht gespeichert werden.")
+        return s.TemplateOut.model_validate(row)
+
+
+@router.patch("/document-templates/{template_id}", summary="Kontexttypen einer Vorlage pflegen")
+async def update_template_context(
+    template_id: uuid.UUID,
+    body: s.TemplateContextIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.TemplateOut:
+    """Context types are metadata of a version; placeholders_used is recomputed from the text."""
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, DocumentTemplate, template_id)
+        row.context_types = body.context_types
+        try:
+            row.placeholders_used = letters.placeholders_of(row.subject, row.body)
+        except letters.PlaceholderError as exc:
+            raise ProblemError(ErrorCodes.PLACEHOLDER, detail=str(exc)) from None
         await _flush(session, "Vorlage konnte nicht gespeichert werden.")
         return s.TemplateOut.model_validate(row)
 
@@ -1626,13 +1663,20 @@ async def serial_letter(
         return s.SerialLetterOut(documents=documents)
 
 
-@router.get("/generated-documents", summary="Erzeugte Dokumente mit Herkunft und Zustellung")
+@router.get(
+    "/generated-documents",
+    summary="Erzeugte Dokumente mit Herkunft und Zustellung",
+    dependencies=[Depends(strict_query)],
+)
 async def list_generated_documents(
     request: Request,
     document_id: uuid.UUID | None = None,
     context_type: Annotated[str | None, Query(max_length=32)] = None,
     context_id: uuid.UUID | None = None,
     recipient_contact_id: uuid.UUID | None = None,
+    template_id: uuid.UUID | None = None,
+    created_from: date | None = None,
+    created_to: date | None = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     principal: TenantPrincipal = Depends(READ),
@@ -1661,6 +1705,17 @@ async def list_generated_documents(
             query = query.where(GeneratedDocument.context_id == context_id)
         if recipient_contact_id is not None:
             query = query.where(GeneratedDocument.recipient_contact_id == recipient_contact_id)
+        if template_id is not None:
+            query = query.where(GeneratedDocument.template_id == template_id)
+        if created_from is not None:
+            query = query.where(
+                GeneratedDocument.created_at >= datetime.combine(created_from, time.min, UTC)
+            )
+        if created_to is not None:
+            query = query.where(
+                GeneratedDocument.created_at
+                < datetime.combine(created_to, time.min, UTC) + timedelta(days=1)
+            )
         out: list[s.GeneratedDocumentOut] = []
         for row, dispatch in (await session.execute(query)).all():
             item = s.GeneratedDocumentOut.model_validate(row)
@@ -1834,6 +1889,7 @@ async def ticket_dms_documents(
 @router.get(
     "/dms-documents/companies",
     summary="Gesellschaften des Paperless-Gesellschaftsfilters",
+    dependencies=[Depends(strict_query)],
 )
 async def dms_document_companies(
     request: Request, principal: TenantPrincipal = Depends(READ)

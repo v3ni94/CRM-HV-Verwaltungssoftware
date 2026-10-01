@@ -143,9 +143,15 @@ Zu prüfen (Betreiber, M40-02): Zugang zum Techem DXS Filetransfer Service bezie
 
 `write_a_records` (`apps/api/src/mhvp/metering/heiwako.py`) schreibt die Satzart A (128 Byte,
 `DTA310_*.DAT`, ISO 8859-15, CR LF) mit den belegten Feldern 1 bis 6 und 7 bis 31 aus Q14.
-Alle übrigen Stellen bleiben leer. Satzarten L und M (Stammdaten der Liegenschaft und Nutzer)
-werden nicht geschrieben, weil nur der Lesepfad aus Q14 belegt ist und ein Schreiber Felder
-erfinden müsste. Der Writer ist an keine Übermittlung angebunden. Ob die Messdienste eine
+Alle übrigen Stellen bleiben leer. Seit 01.10.2026 (AB14) schreiben `write_l_records` und
+`write_m_records` zusätzlich die Satzarten L und M (je 2048 Byte, `DTM310_*.DAT`), und zwar
+ausschließlich die Positionen, die der Lesepfad aus Q14 auswertet: bei L die Felder 1 bis 18 und
+die fünf Kennzeichen 159 bis 165, bei M Nutzer, Eigentümer, Belegungszeitraum, Anteile, Vorauszahlungen,
+drei Umlageschlüssel und die Felder 67 bis 70. Offen bleiben, weil im Repo nicht belegt: die
+CO2-Felder ab Position 166 der Satzart L, die Umlagezeilen 4 bis 6 (Felder 36 bis 41) sowie die
+Dienstleister- und Empfängerblöcke (Felder 42 bis 66) der Satzart M, die bewusst nicht geschrieben
+werden (Kontodaten des Dienstleisters), und die Satzarten B und K. Roundtrip-Tests Export gegen
+Parser in `tests/unit/test_m40_metering_heiwako.py`. Der Writer ist an keine Übermittlung angebunden. Ob die Messdienste eine
 Stammdatenlieferung in diesem Format erwarten, ist offen (AA16-01 in `docs/OPEN_QUESTIONS.md`);
 bis dahin bleibt der CSV-Export der Zuordnungen und die Rollenübermittlung per bved-API der
 Stammdatenweg. Roundtrip-Test: `apps/api/tests/unit/test_m40_metering_heiwako.py`.

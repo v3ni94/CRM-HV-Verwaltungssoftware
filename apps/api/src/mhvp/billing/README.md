@@ -124,3 +124,11 @@ Rule: `docs/rules/S69-01-statement-status-model.md`.
 - Owner statement: `results.receipts` (posted cost entries with receipt reference),
   `results.section_35a` (WEG labour shares of the SEV owner's units, information only),
   `attach_receipts` with `PATCH /billing/owner-statements/{id}/options` (GA03-08, GA06-03).
+
+- AB10: `inputs.rule_register` of the snapshot carries id, version, status and effective date; the statement output exposes it as `snapshot.rule_register` (GA08-05).
+
+## AB07 Ausgaben am Abrechnungslauf (01.10.2026)
+
+- `outputs.py`: files a generated PDF and links it to the run via `generated_document` (context `statement` or `owner_statement`); `list_outputs` for the CRM.
+- `POST /statements/{id}/info-sheet` (G3) and `GET /statements/{id}/outputs`; `GET /billing/owner-statements/{id}/preview/{letter|s35a}`, `POST|GET /billing/owner-statements/{id}/outputs` (G3, after internal approval).
+- Legally relevant paragraphs are placeholders marked `Text nicht freigegeben` (`info_sheet.TEXT_PENDING`, `owner_statement_pdf.TAX_TEXT_PENDING`) until AA11-01 and AA11-02 are decided.

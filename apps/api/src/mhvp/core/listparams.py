@@ -320,3 +320,40 @@ class ListSpec:
         if params.sort:
             return apply_sort(query, params, self.sort, default)
         return query.order_by(None).order_by(*default)
+
+
+# Strict query check for lists without generic parameters (GA04-05, AB04) ----------------
+
+
+def _route_declares(request: Request) -> tuple[set[str], bool]:
+    """Query aliases the route declares, and whether it parses the generic list parameters
+    itself (``list_params`` or a :class:`ListSpec` dependency)."""
+    route = request.scope.get("route")
+    dependant = getattr(route, "dependant", None)
+    declared: set[str] = set()
+    generic = False
+    if dependant is not None:
+        stack = [dependant]
+        while stack:
+            dep = stack.pop()
+            declared.update(p.alias for p in dep.query_params)
+            call = dep.call
+            if call is list_params or isinstance(getattr(call, "__self__", None), ListSpec):
+                generic = True
+            stack.extend(dep.dependencies)
+    return declared, generic
+
+
+def strict_query(request: Request) -> None:
+    """Route dependency for lists that offer no generic list parameters yet: every query
+    parameter the route does not declare answers 422 (also ``filter[...]``, ``sort``,
+    ``fields``, ``include`` and ``as_of``), so a caller never mistakes an unfiltered list
+    for a filtered one. Routes that parse the generic parameters themselves are left to
+    that parser. Use as ``@router.get(..., dependencies=[Depends(strict_query)])``."""
+    declared, generic = _route_declares(request)
+    for key in request.query_params:
+        if key in declared:
+            continue
+        if generic and (key.startswith("filter[") or key in GENERIC_LIST_KEYS):
+            continue
+        raise _invalid(key, f"Parameter '{key}' wird von dieser Liste nicht angeboten.")

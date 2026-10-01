@@ -366,6 +366,22 @@ class TemplateOut(TemplateIn):
     placeholders_used: list[str] = Field(default_factory=list)
 
 
+class TemplateContextIn(_In):
+    """Maintain the context types of an existing template version in place (GA04-10)."""
+
+    context_types: list[str] = Field(default_factory=list, max_length=7)
+
+    @field_validator("context_types")
+    @classmethod
+    def _context_types(cls, value: list[str]) -> list[str]:
+        from mhvp.documents.models import TEMPLATE_CONTEXT_TYPES
+
+        unknown = [v for v in value if v not in TEMPLATE_CONTEXT_TYPES]
+        if unknown:
+            raise ValueError(f"Unbekannte Kontexttypen: {', '.join(unknown)}.")
+        return sorted(set(value))
+
+
 class GeneratedDocumentOut(_Out):
     """Provenance of a produced document (GA04-11): template and version, context, recipient
     and the dispatch record with channel and evidence."""

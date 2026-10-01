@@ -19,6 +19,7 @@ from sqlalchemy import func, select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access, features
 from mhvp.portal.models import (
@@ -188,7 +189,9 @@ def _rep_out(r: PortalRepresentation) -> dict[str, Any]:
     }
 
 
-@admin.get("/representations", summary="Vertreter mit Vollmacht")
+@admin.get(
+    "/representations", summary="Vertreter mit Vollmacht", dependencies=[Depends(strict_query)]
+)
 async def list_representations(
     request: Request,
     account_id: uuid.UUID | None = None,
@@ -493,7 +496,11 @@ async def support_view(
         }
 
 
-@admin.get("/accounts/{account_id}/support-log", summary="Protokoll der Support-Sicht")
+@admin.get(
+    "/accounts/{account_id}/support-log",
+    summary="Protokoll der Support-Sicht",
+    dependencies=[Depends(strict_query)],
+)
 async def support_log(
     account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> list[dict[str, Any]]:

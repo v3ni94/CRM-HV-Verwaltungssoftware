@@ -55,6 +55,7 @@ from mhvp.contacts.models import Contact, ContactKind
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.config import Settings
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.integrations.lexoffice_ext import invoice_copy as lexoffice_invoice_copy
 from mhvp.integrations.lexoffice_ext import sync as lexoffice_sync
@@ -1356,7 +1357,11 @@ def _require_contact_update(principal: TenantPrincipal) -> None:
         )
 
 
-@router.get("/tickets/{ticket_id}/proposals", summary="Vorschläge zum Ticket (Stammdatenänderung)")
+@router.get(
+    "/tickets/{ticket_id}/proposals",
+    summary="Vorschläge zum Ticket (Stammdatenänderung)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_proposals(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ContactChangeProposalOut]:

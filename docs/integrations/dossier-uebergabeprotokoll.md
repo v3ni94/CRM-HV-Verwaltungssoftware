@@ -85,3 +85,26 @@ Faktor für Gehilfen (M30-05).
 9. Kompatibilität des Exportformats mit dem vorhandenen Parser ist ungeprüft.
 10. Nächster Schritt: Betreiber führt den Anhang-B-Prompt im Bestandsprojekt aus und bestätigt
     die Ablösereife.
+
+## Ergänzung 01.10.2026 (GA09-02): Faktenstand aus dem Repo
+
+Nur Angaben, die im Repo belegt sind (`apps/api/src/mhvp/handover/uprotokoll_import.py`,
+`docs/plans/M30-uebergabeprotokoll.md`). Alles andere ist offen, Dossier erforderlich (AA16-03).
+
+- Zweck: Wohnungsübergabe mit Protokollarten Miete, Verkauf und allgemein (`rental`, `sale`,
+  `general`); Zählerstände, Schlüssel, Mängel, Räume, Positionen, Notizen, Dateien,
+  Unterschriften, Versionen und E-Mails je Protokoll.
+- Stack: PHP mit MariaDB, Quellrepository `github.com/v3ni94/UProtkoll`, Schema in
+  `database/migrations/001_create_schema.sql` dieses Repositorys (laut Modulkopf des Importers).
+  Hosting, Webserver und Betrieb: offen, Dossier erforderlich (AA16-03).
+- Datenmodell: 13 Tabellen werden gelesen: `protocols`, `protocol_participants`,
+  `protocol_bank_details`, `protocol_meters`, `protocol_rooms`, `protocol_defects`,
+  `protocol_keys`, `protocol_items`, `protocol_notes`, `protocol_files`,
+  `protocol_signatures`, `protocol_versions`, `protocol_emails`. Folgeprotokolle sind über
+  `parent_protocol_id` verknüpft. Spaltenweise Belegung: offen, Dossier erforderlich (AA16-03).
+- Schnittstellen: `mysqldump` (utf8mb4), gelesen ohne SQL-Ausführung, Vorschau vor Übernahme,
+  Übernahme idempotent je Quell-ID (`uprotokoll:<protocols.id>`); Binärdateien aus einem
+  ZIP des Speicherverzeichnisses, zugeordnet über Pfad oder SHA-256. Eine Live-Schnittstelle
+  ist nicht belegt.
+- Status: Zielmodul `handover` (M30) umgesetzt, Import Stufe 4 vorhanden, Bestandsprojekt
+  nicht stillgelegt. Anhang-B-Lauf offen (AA16-03).

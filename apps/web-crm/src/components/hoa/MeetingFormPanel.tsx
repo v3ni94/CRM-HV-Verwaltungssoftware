@@ -20,6 +20,7 @@ export type MeetingFormData = {
   invitation_notice: string | null;
   virtual_basis: { id: string; number: number; decided_on: string } | null;
   virtual_basis_valid_until: string | null;
+  virtual_basis_term_notice?: string | null;
   has_dial_in: boolean;
 };
 
@@ -95,6 +96,12 @@ export function MeetingFormPanel({
         ) : null}
       </dl>
       <p className="text-xs text-muted">{t("deadlineHint")}</p>
+      {data.virtual_basis_term_notice ? (
+        <p role="status" className={ui.notice} data-testid="basis-term-notice">
+          <span className={ui.label}>{t("termNotice")}: </span>
+          {data.virtual_basis_term_notice}
+        </p>
+      ) : null}
       {data.invitation_short_notice ? (
         <p role="status" className={ui.alert} data-testid="short-notice">
           {data.short_notice_note ?? t("shortNotice")}

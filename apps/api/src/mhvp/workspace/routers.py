@@ -29,6 +29,7 @@ from mhvp.communication import gcal, gmail
 from mhvp.communication.models import Mailbox, MailboxUser
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import jobs, links, services
 from mhvp.workspace import ticket_analytics as ticket_analytics_module
@@ -483,7 +484,11 @@ async def dashboard_stats(
 # Global search -------------------------------------------------------------------------
 
 
-@router.get("/search", summary="Globale Suche über alle Bereiche (Strg+K)")
+@router.get(
+    "/search",
+    summary="Globale Suche über alle Bereiche (Strg+K)",
+    dependencies=[Depends(strict_query)],
+)
 async def search(
     request: Request,
     q: str = Query(min_length=2, max_length=200),
@@ -883,7 +888,11 @@ async def approvals(
         return {k: int(v or 0) for k, v in zip(wanted, row, strict=True)}
 
 
-@router.get("/deadlines", summary="Fristenliste des Mandanten (A41, Orientierung, zu prüfen)")
+@router.get(
+    "/deadlines",
+    summary="Fristenliste des Mandanten (A41, Orientierung, zu prüfen)",
+    dependencies=[Depends(strict_query)],
+)
 async def deadlines(
     request: Request,
     kind: str | None = Query(
@@ -1022,7 +1031,9 @@ async def put_job_settings(
 # Notifications -------------------------------------------------------------------------
 
 
-@router.get("/notifications", summary="Eigene Benachrichtigungen")
+@router.get(
+    "/notifications", summary="Eigene Benachrichtigungen", dependencies=[Depends(strict_query)]
+)
 async def notifications(
     request: Request,
     unread: bool = False,
@@ -1121,6 +1132,7 @@ async def _preferences_out(session: AsyncSession, user_id: uuid.UUID) -> Notific
 @router.get(
     "/notification-preferences",
     summary="Eigene Benachrichtigungseinstellungen (Kanal je Art, Stummschaltung)",
+    dependencies=[Depends(strict_query)],
 )
 async def notification_preferences(
     request: Request, principal: TenantPrincipal = Depends(member)
@@ -1426,7 +1438,11 @@ async def _fetch_google_items(
     return items, notice
 
 
-@router.get("/calendar", summary="Kalender: eigene Termine, geteilte Termine, Fristen aus Daten")
+@router.get(
+    "/calendar",
+    summary="Kalender: eigene Termine, geteilte Termine, Fristen aus Daten",
+    dependencies=[Depends(strict_query)],
+)
 async def calendar(
     request: Request,
     start: date,
@@ -1859,7 +1875,7 @@ async def delete_google_entry(
 # Saved list filters --------------------------------------------------------------------
 
 
-@router.get("/filters", summary="Gespeicherte Listenfilter")
+@router.get("/filters", summary="Gespeicherte Listenfilter", dependencies=[Depends(strict_query)])
 async def list_filters(
     request: Request, resource: str | None = None, principal: TenantPrincipal = Depends(member)
 ) -> list[FilterOut]:

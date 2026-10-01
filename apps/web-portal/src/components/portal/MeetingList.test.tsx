@@ -35,4 +35,9 @@ describe("MeetingList", () => {
     renderIntl(<MeetingList rows={[]} />);
     expect(screen.getByText("Keine Versammlungen vorhanden.")).toBeInTheDocument();
   });
+
+  it("shows the public description (GA03-01)", () => {
+    renderIntl(<MeetingList rows={[{ ...row, public_description: "Bitte Unterlagen mitbringen." }]} />);
+    expect(screen.getByTestId("meeting-description")).toHaveTextContent("Unterlagen mitbringen");
+  });
 });

@@ -73,3 +73,19 @@ die Regel-Engine kennt bisher nur eigene, im CRM angelegte Regeln.
 8. Ein Konnektor zur Übernahme bestehender FLOW-Regeln existiert nicht.
 9. Empfehlung ist ohne Anhang-B-Erhebung im FLOW-Projekt nicht seriös möglich.
 10. Nächster Schritt: Betreiber führt den Anhang-B-Prompt im FLOW-Projekt aus.
+
+## Ergänzung 01.10.2026 (GA09-02): Faktenstand aus dem Repo
+
+Im Repo ist über Müller FLOW nur das aus `docs/MASTER-PROMPT.md` Abschnitt 13.4 und 6 belegt.
+
+- Zweck: Prozess- und Automatisierungssoftware der HVM, Projektname "Müller FLOW: Fable 5.1 und
+  Ultracode Strategie" (Claude-Code-Projekt des Betreibers). Konkrete Prozesse: offen,
+  Dossier erforderlich (AA16-03).
+- Stack: offen, Dossier erforderlich (AA16-03).
+- Datenmodell: offen, Dossier erforderlich (AA16-03).
+- Schnittstellen: vorgesehen ist die Anbindung an die Regel-Engine und das Ticketsystem über
+  Webhooks sowie Single Sign-on über die OIDC-Provider-Fähigkeit der Plattform (Master-Prompt
+  Abschnitt 6). Die tatsächlichen Endpunkte von FLOW sind offen, Dossier erforderlich
+  (AA16-03).
+- Status: Zielbild Ablösung durch `mhvp.automation`; Entscheidung anbinden, übernehmen oder
+  ablösen erst nach dem Anhang-B-Lauf (AA16-03).

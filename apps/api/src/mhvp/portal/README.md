@@ -160,6 +160,27 @@ Entscheidung außerhalb der Zuordnung 404.
 invited, active, locked, expired, revoked (migration 0310). `GET /portal-admin/accounts` returns
 `roles` and the derived status (`expired`, `locked`); see `docs/rules/AA08-abrechnungszeitraum-status.md`.
 
+## Status model of the portal account (AB08, GA02-07)
+
+The status of 6.2 is stored (`mhvp.portal.status`), the check constraint of migration 0310 is
+authoritative. Beat job `mhvp.portal.sync_account_status` (every 15 minutes, `portal/tasks.py`)
+persists `expired` and `locked`/`active`; it is idempotent and never touches `revoked`.
+
+| From | To | Trigger |
+| --- | --- | --- |
+| new | not_invited | create with `send_invitation=false` |
+| new | invited | create with invitation |
+| not_invited | invited | invitation by mail or letter |
+| invited | active | acceptance (`activated_at`) |
+| invited | expired | job, `invitation_expires_at` passed |
+| expired | invited | reissued invitation (mail or letter) |
+| active | locked | job, platform user locked or inactive |
+| locked | active | job, lock lapsed (account was activated) |
+| any | revoked | staff access withdrawn (`revoke_staff_portal_access`), final |
+
+`last_login_at` lives on the platform user and is written on every successful login.
+Rule: `docs/rules/AA08-abrechnungszeitraum-status.md`.
+
 ## Access grants by document class, provider information (AA14)
 
 * `AccessGrant.scope_type = "document_class"` (migration 0316, GA03-05): `scope_id` is the legal
@@ -173,3 +194,9 @@ invited, active, locked, expired, revoked (migration 0310). `GET /portal-admin/a
 * `forms.py` knows 20 element types (GA11-02), see rule AA14 and A-AA14-01.
 * Access path protocol: `tests/integration/test_aa14_access_paths.py` (list, detail, download,
   bundle, search, export, CRM API, AI scope and AI input).
+
+## Sprache am Portalkonto (GA11-01, AB12)
+
+* `portal_account.locale` (migration 0331, nullable). `PATCH /portal/me/locale` speichert `de` oder `en` (`PORTAL_LOCALES`, sonst 422, `null` löscht); `GET /portal/me` liefert `locale`. Das Portal übernimmt die Sprache bei der Anmeldung in den Cookie (`apps/web-portal/src/lib/locale-sync.ts`); der Cookie hat Vorrang für nicht angemeldete Besucher.
+* CRM: Seite `/einstellungen/dienstleister-portal` (Zeitfenster und Klassenfreigaben, bestehende API `portal-admin/provider-availability` und `document-class-grants`).
+* Offen: AB12-01 (Gate G5 für Klassenfreigaben, nichts geändert).

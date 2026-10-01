@@ -626,6 +626,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tickets:read"],
   },
   {
+    id: "dienstleister-portal",
+    title: "Dienstleister im Portal",
+    breadcrumb: [ROOT, "Dienstleister im Portal"],
+    href: "/einstellungen/dienstleister-portal",
+    keywords: ["dienstleister", "verfügbarkeit", "zeitfenster", "klassenfreigabe", "unterlagenklasse"],
+    permission: ["contacts:update"],
+  },
+  {
     id: "automatisierung",
     title: "Automatisierung",
     breadcrumb: [ROOT, "Automatisierung"],

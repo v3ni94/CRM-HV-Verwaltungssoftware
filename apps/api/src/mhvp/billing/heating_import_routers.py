@@ -15,6 +15,7 @@ from mhvp.billing import heating_import
 from mhvp.billing.models import HeatingCostImport, Statement
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_property_allowed, session_allowed_property_ids
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(tags=["Abrechnung"])
@@ -146,7 +147,7 @@ async def _refs(session: Any, body: HeatingImportHeaderIn) -> None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Messdienst (Kontakt) nicht gefunden.")
 
 
-@router.get(P, summary="Messdienstimporte Heizkosten")
+@router.get(P, summary="Messdienstimporte Heizkosten", dependencies=[Depends(strict_query)])
 async def list_heating_cost_imports(
     request: Request,
     property_id: uuid.UUID | None = Query(default=None),

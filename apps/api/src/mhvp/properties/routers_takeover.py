@@ -15,6 +15,7 @@ from sqlalchemy import select
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import TAKEOVER_CATEGORIES, Property, PropertyTakeoverItem
 from mhvp.properties.routers import READ, UPDATE, _get
@@ -118,6 +119,7 @@ async def _checklist(session: object, property_id: uuid.UUID) -> TakeoverCheckli
 @router.get(
     "/properties/{property_id}/takeover-checklist",
     summary="Checkliste Objektübernahme lesen",
+    dependencies=[Depends(strict_query)],
 )
 async def get_checklist(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

@@ -39,3 +39,14 @@
    Abhängigkeiten). Jede neue schreibende Route mit Geld-, Abrechnungs- oder Versandpfad ohne
    Gate lässt den Test fehlschlagen, bis sie gegatet oder in `REVIEWED_UNGATED` eingestuft ist.
    `REVIEWED_UNGATED` ist eine Bestandsaufnahme vom 01.10.2026, keine Freigabe (AA01-01).
+7. **Laufzeitnachweis (AB01, 01.10.2026).** `tests/integration/test_ab01_gate_runtime.py` ruft
+   jede Route aus `GATED_ROUTES` als Mandantenverwaltung mit geschlossenem Gate auf und erwartet
+   403 `MHVP-GATE-0001` mit dem genannten Gate. Routen, deren Gate erst nach einem vorhandenen
+   Datensatz oder einer Bedingung greift, stehen in `PRECONDITION_FIRST` mit Grund; für sie
+   prüft der Test, dass ohne Datensatz nichts geschieht. Der Antrag auf Öffnung von G1 ist bei
+   geschlossenem G1 zulässig und öffnet nichts. `REVIEWED_UNGATED` wird nicht aufgerufen
+   (AA01-01).
+8. **Nebenbuchabgleich im CRM und Prüfexport (AB01).** Die Auswertungen des Buchungskreises
+   zeigen den Abgleich aus Punkt 3 je Debitor und Kreditor zum gewählten Stichtag. Der Prüfexport
+   (ZIP) enthält die Tabelle `nebenbuchabgleich.csv` mit Stichtag gleich Zeitraumende. Keine
+   neue Fachregel: Darstellung und Ablage des bestehenden Abgleichs.

@@ -15,6 +15,7 @@ from sqlalchemy import select
 from mhvp.contacts.models import Contact
 from mhvp.contracts.service_contracts import ServiceContract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.models import ProviderAvailability
 from mhvp.portal.property_scope import portal_admin_guard
@@ -27,7 +28,11 @@ admin = APIRouter(
 MANAGE = require_permission("contacts:update")
 
 
-@router.get("/provider/framework-contracts", summary="Eigene Rahmenverträge (Dienstleister)")
+@router.get(
+    "/provider/framework-contracts",
+    summary="Eigene Rahmenverträge (Dienstleister)",
+    dependencies=[Depends(strict_query)],
+)
 async def framework_contracts(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:
@@ -70,7 +75,11 @@ def _out(a: ProviderAvailability) -> dict[str, Any]:
     }
 
 
-@router.get("/provider/availability", summary="Eigener Verfügbarkeitskalender (Dienstleister)")
+@router.get(
+    "/provider/availability",
+    summary="Eigener Verfügbarkeitskalender (Dienstleister)",
+    dependencies=[Depends(strict_query)],
+)
 async def own_availability(
     request: Request, ctx: Portal = Depends(portal_user)
 ) -> list[dict[str, Any]]:
@@ -96,7 +105,11 @@ class ProviderAvailabilityIn(BaseModel):
     note: str | None = Field(default=None, max_length=300)
 
 
-@admin.get("/provider-availability", summary="Verfügbarkeit der Dienstleister")
+@admin.get(
+    "/provider-availability",
+    summary="Verfügbarkeit der Dienstleister",
+    dependencies=[Depends(strict_query)],
+)
 async def list_availability(
     request: Request,
     provider_contact_id: uuid.UUID | None = Query(default=None),

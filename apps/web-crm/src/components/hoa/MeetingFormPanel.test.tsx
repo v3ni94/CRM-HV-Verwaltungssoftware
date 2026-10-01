@@ -60,4 +60,9 @@ describe("MeetingFormPanel", () => {
     renderIntl(<MeetingFormPanel meetingId={M} data={{ ...base, mode: "presence", invitation_notice: null }} attendance={[]} />);
     expect(screen.getAllByTestId("dial-in-url")).toHaveLength(1);
   });
+
+  it("shows the term notice of the enabling resolution permanently (GA07-01)", () => {
+    renderIntl(<MeetingFormPanel meetingId={M} data={{ ...base, mode: "virtual", virtual_basis_term_notice: "Gültigkeitsende 02.03.2029 liegt über drei Jahre." }} attendance={[]} />);
+    expect(screen.getByTestId("basis-term-notice")).toHaveTextContent("über drei Jahre");
+  });
 });

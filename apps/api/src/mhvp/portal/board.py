@@ -37,6 +37,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import AuditEngagement, AuditItem, AuditReport, HoaCostItem
 from mhvp.portal import read_receipts
@@ -346,7 +347,9 @@ def _engagement_out(eng: AuditEngagement, name: str | None) -> dict[str, Any]:
     }
 
 
-@router.get("/engagements", summary="Eigene Prüfaufträge (Beirat)")
+@router.get(
+    "/engagements", summary="Eigene Prüfaufträge (Beirat)", dependencies=[Depends(strict_query)]
+)
 async def list_engagements(
     request: Request, ctx: Any = Depends(_board_user)
 ) -> list[dict[str, Any]]:
@@ -655,7 +658,11 @@ def _report_out(r: AuditReport) -> dict[str, Any]:
     }
 
 
-@router.get("/engagements/{engagement_id}/reports", summary="Prüfberichte des Prüfauftrags (PÜ09)")
+@router.get(
+    "/engagements/{engagement_id}/reports",
+    summary="Prüfberichte des Prüfauftrags (PÜ09)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_reports(
     engagement_id: uuid.UUID, request: Request, ctx: Any = Depends(_board_user)
 ) -> list[dict[str, Any]]:

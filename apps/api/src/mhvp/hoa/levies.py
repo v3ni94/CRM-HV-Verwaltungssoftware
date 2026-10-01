@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing.calc import distribute
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa import calc
 from mhvp.hoa.models import Resolution, SpecialLevy
@@ -117,7 +118,9 @@ async def create_levy(
         return _out(row)
 
 
-@router.get("/special-levies", summary="Sonderumlagen einer GdWE")
+@router.get(
+    "/special-levies", summary="Sonderumlagen einer GdWE", dependencies=[Depends(strict_query)]
+)
 async def list_levies(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

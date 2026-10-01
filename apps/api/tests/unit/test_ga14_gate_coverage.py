@@ -6,8 +6,8 @@ levels) that the named gate is referenced. Every other mutating route whose path
 a money, statement or dispatch function must be listed in ``REVIEWED_UNGATED``: a new route
 of that kind fails the test until it is gated or classified. ``REVIEWED_UNGATED`` is the
 inventory of 01.10.2026; its classification is open question AA01-01 (operator, G1 to G4),
-it is not a release. The runtime proof (403 MHVP-GATE-0001 with the closed resolver) exists
-for selected routes in ``test_d50_authorization.py``.
+it is not a release. The runtime proof (403 MHVP-GATE-0001 with the closed resolver) for every
+route of the register is ``tests/integration/test_ab01_gate_runtime.py`` (AB01).
 """
 
 import inspect

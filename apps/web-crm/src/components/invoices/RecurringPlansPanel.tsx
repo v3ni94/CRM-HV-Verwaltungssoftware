@@ -13,7 +13,7 @@ type Option = { id: string; label: string };
 type Plan = {
   id: string; text: string; gross: string; vat_percent: string; interval_months: number; start_date: string;
   end_date: string | null; next_due: string; ended_at: string | null; order_reference: string | null;
-  anchor_day: number | null; service_contract_id: string | null;
+  anchor_day: number | null; service_contract_id: string | null; auto_post?: boolean;
 };
 const MONEY = /^\d+([.,]\d{1,2})?$/;
 
@@ -42,9 +42,11 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
   const act = async (path: string, init: RequestInit, done: string) => {
     setError(null);
     setMessage(null);
-    const res = await bff<unknown>(`/api/bff/accounting/recurring-invoices/${path}`, init);
+    const res = await bff<{ auto_post_state?: string } | null>(`/api/bff/accounting/recurring-invoices/${path}`, init);
     if (!res.ok) return setError(res.message);
-    setMessage(done);
+    // GA03-07: lock state of the flag in the run (the run itself always creates a draft only).
+    const state = res.data?.auto_post_state;
+    setMessage(state && state !== "draft_only" ? `${done} ${t(`autoPostState.${state}`)}` : done);
     setEnding(null);
     setEditing(null);
     await load();
@@ -85,6 +87,7 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
   return (
     <div className="flex flex-col gap-4">
       <p className={ui.notice}>{t("notice")}</p>
+      <p className={ui.help}>{t("autoPost.hint")}</p>
       <label className="flex max-w-sm flex-col gap-1">
         <span className={ui.label}>{t("ledger")}</span>
         <select className={ui.input} value={ledger} onChange={(e) => setLedger(e.target.value)}>
@@ -108,6 +111,7 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
                 <th>{t("interval")}</th>
                 <th>{t("nextDue")}</th>
                 <th>{t("status")}</th>
+                <th>{t("autoPost.column")}</th>
                 <th>{t("actions")}</th>
               </tr>
             </thead>
@@ -124,6 +128,20 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
                   <td>{t("months", { count: p.interval_months })}</td>
                   <td>{formatDate(p.next_due)}</td>
                   <td>{p.ended_at ? t("ended", { date: formatDate(p.ended_at) }) : t("active")}</td>
+                  <td data-testid="plan-auto-post">
+                    {p.auto_post ? t("autoPost.yes") : t("autoPost.no")}
+                    {p.ended_at ? null : (
+                      <button
+                        type="button"
+                        className={`${ui.buttonSm} ml-2`}
+                        onClick={() =>
+                          void act(p.id, { method: "PATCH", body: JSON.stringify({ auto_post: !p.auto_post }) }, t("autoPost.saved"))
+                        }
+                      >
+                        {p.auto_post ? t("autoPost.turnOff") : t("autoPost.turnOn")}
+                      </button>
+                    )}
+                  </td>
                   <td className="flex flex-wrap gap-2">
                     {p.ended_at ? null : (
                       <>

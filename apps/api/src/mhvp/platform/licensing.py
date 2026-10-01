@@ -32,6 +32,7 @@ from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate
 
@@ -146,7 +147,7 @@ class UsageIn(LicensingBaseIn):
     month: date
 
 
-@router.get("/price-list", summary="Preisliste")
+@router.get("/price-list", summary="Preisliste", dependencies=[Depends(strict_query)])
 async def price_list(
     request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[dict[str, Any]]:
@@ -366,7 +367,7 @@ async def end_license(
         return _license_out(lic)
 
 
-@router.get("/licenses", summary="Lizenzen eines Mandanten")
+@router.get("/licenses", summary="Lizenzen eines Mandanten", dependencies=[Depends(strict_query)])
 async def list_licenses(
     tenant_id: uuid.UUID, request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[dict[str, Any]]:

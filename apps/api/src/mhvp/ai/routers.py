@@ -45,6 +45,7 @@ from mhvp.ai.models import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -88,7 +89,7 @@ def _provider_out(row: AiProviderConfig) -> s.ProviderOut:
 # Provider configuration ------------------------------------------------------------------
 
 
-@router.get("/ai/providers", summary="KI-Anbieter")
+@router.get("/ai/providers", summary="KI-Anbieter", dependencies=[Depends(strict_query)])
 async def list_providers(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS)
 ) -> list[s.ProviderOut]:
@@ -580,7 +581,7 @@ def _can_audit(principal: TenantPrincipal) -> bool:
     return AUDIT_PERMISSION in principal.permissions
 
 
-@router.get("/ai/conversations", summary="Chats")
+@router.get("/ai/conversations", summary="Chats", dependencies=[Depends(strict_query)])
 async def list_conversations(
     request: Request,
     context_type: str | None = None,
@@ -1564,7 +1565,7 @@ async def _import_out(session: Any, row: ImportRun) -> s.ImportOut:
     return out
 
 
-@router.get("/imports", summary="Importläufe")
+@router.get("/imports", summary="Importläufe", dependencies=[Depends(strict_query)])
 async def list_imports(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.ImportOut]:
@@ -1577,7 +1578,9 @@ async def list_imports(
         return [s.ImportOut.model_validate(r) for r in rows]
 
 
-@router.get("/imports/{import_id}", summary="Importlauf lesen")
+@router.get(
+    "/imports/{import_id}", summary="Importlauf lesen", dependencies=[Depends(strict_query)]
+)
 async def get_import(
     import_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> s.ImportOut:
@@ -1731,7 +1734,7 @@ async def knowledge_feedback(
         return _knowledge_out(row)
 
 
-@router.get("/ai/knowledge", summary="Wissensbasis")
+@router.get("/ai/knowledge", summary="Wissensbasis", dependencies=[Depends(strict_query)])
 async def list_knowledge(
     request: Request,
     property_id: uuid.UUID | None = None,
@@ -1758,7 +1761,11 @@ async def list_knowledge(
         return [_knowledge_out(r) for r in rows]
 
 
-@router.get("/ai/knowledge/{entry_id}/versions", summary="Versionsverlauf")
+@router.get(
+    "/ai/knowledge/{entry_id}/versions",
+    summary="Versionsverlauf",
+    dependencies=[Depends(strict_query)],
+)
 async def list_knowledge_versions(
     entry_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.KnowledgeEntryOut]:

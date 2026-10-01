@@ -32,6 +32,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import emit
 from mhvp.core.ids import uuid7
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.tickets.models import Ticket, TicketEvent
 
@@ -941,7 +942,11 @@ async def _message_checked(
     return row
 
 
-@router.get("/mail/assignment-reviews/open", summary="Offene Rückfragen zur Zuordnung (Mail)")
+@router.get(
+    "/mail/assignment-reviews/open",
+    summary="Offene Rückfragen zur Zuordnung (Mail)",
+    dependencies=[Depends(strict_query)],
+)
 async def open_mail_reviews(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),
@@ -955,6 +960,7 @@ async def open_mail_reviews(
 @router.get(
     "/mail/messages/{message_id}/assignment-review",
     summary="Zuordnungsprüfung einer Mail (Kontakt, Objekt)",
+    dependencies=[Depends(strict_query)],
 )
 async def get_message_review(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MAIL_READ)
@@ -980,7 +986,11 @@ async def decide_message_review(
         return [review_out(r, message) for r in reviews]
 
 
-@router.get("/tickets/assignment-reviews/open", summary="Offene Rückfragen zur Zuordnung (Tickets)")
+@router.get(
+    "/tickets/assignment-reviews/open",
+    summary="Offene Rückfragen zur Zuordnung (Tickets)",
+    dependencies=[Depends(strict_query)],
+)
 async def open_ticket_reviews(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),
@@ -994,6 +1004,7 @@ async def open_ticket_reviews(
 @router.get(
     "/tickets/{ticket_id}/assignment-review",
     summary="Zuordnungsprüfung eines Tickets (Kontakt, Objekt, Einheit)",
+    dependencies=[Depends(strict_query)],
 )
 async def get_ticket_review(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(TICKET_READ)

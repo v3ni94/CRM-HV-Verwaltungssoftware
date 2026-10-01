@@ -34,6 +34,7 @@ from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access, magic_link, read_receipts
 from mhvp.portal.models import AccessGrant, ChangeRequest, PortalAccount
@@ -42,6 +43,7 @@ from mhvp.portal.property_scope import (
     ensure_contact_visible,
     portal_admin_guard,
 )
+from mhvp.portal.status import LOGIN_STATUSES, target_status, user_locked
 from mhvp.workspace.models import Notification
 from mhvp.workspace.routers import NotificationOut, notification_out
 from mhvp.workspace.services import local_today
@@ -74,6 +76,9 @@ class PortalInviteIn(_In):
     contact_id: uuid.UUID
     email: str = Field(min_length=3, max_length=320)
     display_name: str = Field(min_length=1, max_length=200)
+    # AB08 (6.2): false creates the account as not_invited; a later POST for the same contact
+    # sends the invitation (status invited).
+    send_invitation: bool = True
 
 
 class PortalAcceptIn(_In):
@@ -181,6 +186,7 @@ async def provision_account(
     contact_id: uuid.UUID,
     email: str,
     display_name: str,
+    invite: bool = True,
 ) -> dict[str, Any]:
     """Create the platform user (role portal_user), the portal account and the derived grants.
 
@@ -204,11 +210,12 @@ async def provision_account(
                 existing.status == "invited"
                 and existing.invitation_expires_at is not None
                 and existing.invitation_expires_at <= now
-            ):
+            ) or existing.status in ("expired", "not_invited"):
                 secret = secrets.token_urlsafe(32)
                 existing.invitation_hash = _hash(secret)
                 existing.invitation_expires_at = now + timedelta(days=INVITE_DAYS)
                 existing.invited_at = now
+                existing.status = "invited"  # 6.2: expired or not_invited -> invited
                 grants = await access.sync_grants(session, existing)
                 await emit(
                     session,
@@ -274,9 +281,12 @@ async def provision_account(
             created_by=principal.user_id,
             user_id=user_id,
             contact_id=contact_id,
-            invitation_hash=_hash(secret),
-            invitation_expires_at=datetime.now(UTC) + timedelta(days=INVITE_DAYS),
-            invited_at=datetime.now(UTC),
+            status="invited" if invite else "not_invited",
+            invitation_hash=_hash(secret) if invite else None,
+            invitation_expires_at=(
+                datetime.now(UTC) + timedelta(days=INVITE_DAYS) if invite else None
+            ),
+            invited_at=datetime.now(UTC) if invite else None,
         )
         session.add(account)
         await session.flush()
@@ -290,33 +300,25 @@ async def provision_account(
             actor_user_id=principal.user_id,
             payload={"grants": grants},
         )
-        token = f"{principal.tenant_id.hex}.{secret}"
+        invite_token = f"{principal.tenant_id.hex}.{secret}" if invite else None
         return {
             "id": account.id,
             "user_id": user_id,
             "grants": grants,
-            "invitation_token": token,
+            "invitation_token": invite_token,
             # A56: link to the portal's invitation page (shown as text and QR in the CRM); None
             # when no public portal URL is configured.
-            "invitation_url": invitation_url(request, token),
+            "invitation_url": invitation_url(request, invite_token) if invite_token else None,
         }
 
 
-def _user_locked(user: Any, now: datetime) -> bool:
-    return bool(not user.active or (user.locked_until is not None and user.locked_until > now))
+_user_locked = user_locked
 
 
 def effective_account_status(account: PortalAccount, user: Any, now: datetime) -> str:
-    """GA02-07: status as shown (6.1): ``expired`` for an unaccepted invitation past its
-    expiry and ``locked`` for an active account whose login is locked are derived when read;
-    the stored value stays invited or active. ``revoked`` is kept as the stored end state."""
-    if account.status == "invited" and (
-        account.invitation_expires_at is not None and account.invitation_expires_at < now
-    ):
-        return "expired"
-    if account.status == "active" and _user_locked(user, now):
-        return "locked"
-    return account.status
+    """GA02-07 (6.2): the status is stored (``mhvp.portal.status``, beat job); between two job
+    runs the read applies the same rule, so the list never shows a stale value."""
+    return target_status(account, user, now)
 
 
 class PortalAccountOut(BaseModel):
@@ -339,7 +341,9 @@ class PortalAccountOut(BaseModel):
     magic_link_2fa: bool
 
 
-@admin.get("/accounts", summary="Portalzugänge eines Kontakts")
+@admin.get(
+    "/accounts", summary="Portalzugänge eines Kontakts", dependencies=[Depends(strict_query)]
+)
 async def list_accounts(
     contact_id: uuid.UUID,
     request: Request,
@@ -392,6 +396,7 @@ async def invite(
         contact_id=body.contact_id,
         email=body.email,
         display_name=body.display_name,
+        invite=body.send_invitation,
     )
 
 
@@ -427,6 +432,7 @@ class DocumentClassGrantOut(_In):
     "/accounts/{account_id}/document-class-grants",
     summary="Freigaben je Unterlagenklasse",
     response_model=list[DocumentClassGrantOut],
+    dependencies=[Depends(strict_query)],
 )
 async def list_document_class_grants(
     account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
@@ -612,6 +618,8 @@ async def invitation_letter(
         account.invitation_hash = _hash(secret)
         account.invitation_expires_at = datetime.now(UTC) + timedelta(days=QR_INVITE_DAYS)
         account.invited_at = datetime.now(UTC)
+        if account.status in ("not_invited", "expired"):
+            account.status = "invited"  # 6.2: the letter is the invitation
         token = f"{principal.tenant_id.hex}.{secret}"
         name: str | None
         try:
@@ -653,7 +661,9 @@ async def invitation_letter(
     )
 
 
-@admin.get("/change-requests", summary="Vorschläge aus dem Portal")
+@admin.get(
+    "/change-requests", summary="Vorschläge aus dem Portal", dependencies=[Depends(strict_query)]
+)
 async def change_requests(
     request: Request,
     principal: TenantPrincipal = Depends(MANAGE),
@@ -1087,6 +1097,7 @@ async def accept(body: PortalAcceptIn, request: Request) -> dict[str, str]:
         )
         if (
             account is None
+            or account.status != "invited"
             or account.invitation_expires_at is None
             or account.invitation_expires_at < datetime.now(UTC)
         ):
@@ -1228,7 +1239,8 @@ async def portal_user(request: Request) -> tuple[TenantPrincipal, PortalAccount]
     async with tenant_tx(request, tp) as session:
         account = await session.scalar(
             select(PortalAccount).where(
-                PortalAccount.user_id == principal.user_id, PortalAccount.status == "active"
+                PortalAccount.user_id == principal.user_id,
+                PortalAccount.status.in_(LOGIN_STATUSES),
             )
         )
     if account is None:
@@ -1299,6 +1311,8 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             # M21-05: powers of attorney held by this account (role switch in the UI).
             "representations": representations,
             "contact_id": account.contact_id,
+            # GA11-01: language stored at the account (null: no choice yet).
+            "locale": account.locale,
             # S16-10 (3.4): named portal roles derived from the relations, not assigned.
             "portal_roles": [r.value for r in derive_portal_roles(relations)]
             + (["representative"] if representations else []),
@@ -1318,7 +1332,34 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
         }
 
 
-@router.get("/notifications", summary="Eigene Benachrichtigungen (Portal)")
+# GA11-01: portal languages; a further language needs its message file in the portal and its code
+# here (the code list is the only server side place).
+PORTAL_LOCALES = ("de", "en")
+
+
+class PortalLocaleIn(_In):
+    locale: str | None = Field(default=None, max_length=8)
+
+
+@router.patch("/me/locale", status_code=204, summary="Sprachwahl am Portalkonto speichern")
+async def set_locale(
+    body: PortalLocaleIn, request: Request, ctx: Portal = Depends(portal_user)
+) -> None:
+    principal, account = ctx
+    if body.locale is not None and body.locale not in PORTAL_LOCALES:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Sprache nicht verfügbar.")
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(PortalAccount, account.id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.locale = body.locale
+
+
+@router.get(
+    "/notifications",
+    summary="Eigene Benachrichtigungen (Portal)",
+    dependencies=[Depends(strict_query)],
+)
 async def notifications(
     request: Request, unread: bool = False, ctx: Portal = Depends(portal_user)
 ) -> list[NotificationOut]:
@@ -1346,7 +1387,7 @@ async def notifications_read(
         await session.execute(query.values(read_at=datetime.now(UTC)))
 
 
-@router.get("/documents", summary="Freigegebene Dokumente")
+@router.get("/documents", summary="Freigegebene Dokumente", dependencies=[Depends(strict_query)])
 async def documents(
     request: Request,
     ctx: Portal = Depends(portal_user),
@@ -1501,6 +1542,11 @@ async def open_document(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # no hint whether it exists
         note = (await access.redaction_notes(session, {document.id})).get(document.id)
         await read_receipts.record(session, account, document.id, "opened")
+        if account.contact_id is not None:
+            from mhvp.communication.receipts import mark_read_for_document
+
+            # GA04-09: read indication on the sent mail that carried the document.
+            await mark_read_for_document(session, account.contact_id, document.id)
         return {
             "id": document.id,
             "title": document.title,
@@ -1766,7 +1812,9 @@ async def ticket_attachments(session: AsyncSession, ticket_id: uuid.UUID) -> lis
     return await entity_attachments(session, "ticket", ticket_id)
 
 
-@router.get("/tickets", summary="Eigene Meldungen mit Verlauf")
+@router.get(
+    "/tickets", summary="Eigene Meldungen mit Verlauf", dependencies=[Depends(strict_query)]
+)
 async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     from mhvp.tickets.models import Ticket, TicketComment
 
@@ -2198,7 +2246,9 @@ async def _order(session: AsyncSession, o: Any) -> dict[str, Any]:
     }
 
 
-@router.get("/work-orders", summary="Eigene Aufträge (Dienstleister)")
+@router.get(
+    "/work-orders", summary="Eigene Aufträge (Dienstleister)", dependencies=[Depends(strict_query)]
+)
 async def work_orders(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     from mhvp.tickets.models import WorkOrder
 
@@ -2455,6 +2505,7 @@ async def propose_appointments(
 @router.get(
     "/work-orders/{order_id}/appointment-proposals",
     summary="Terminvorschläge zum Auftrag (Dienstleister oder betroffener Bewohner)",
+    dependencies=[Depends(strict_query)],
 )
 async def appointment_proposals(
     order_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)

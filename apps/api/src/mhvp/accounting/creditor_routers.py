@@ -32,6 +32,7 @@ from mhvp.accounting.models import (
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
@@ -82,6 +83,32 @@ async def check_auto_post(session: AsyncSession, requested: bool) -> None:
             ErrorCodes.CONFLICT,
             detail="Automatische Buchung ist für den Mandanten nicht freigeschaltet.",
         )
+
+
+async def auto_post_state(
+    session: AsyncSession, request: Request, principal: TenantPrincipal, requested: bool
+) -> str:
+    """GA03-07: effect of the plan flag in a generation run. ``draft_only`` (flag off),
+    ``locked_g1`` (G1 closed), ``locked_switch`` (automatic switch off) or
+    ``draft_pending_rule`` (both open: still a draft, a posting needs an active 7.4 rule)."""
+    if not requested:
+        return "draft_only"
+    from mhvp.core.release_gates import (
+        ClosedReleaseGateResolver,
+        ReleaseGate,
+        ReleaseGateClosedError,
+        ensure_release_gate_open,
+    )
+    from mhvp.platform.models import TenantSettings
+
+    resolver = getattr(request.app.state, "release_gate_resolver", ClosedReleaseGateResolver())
+    try:
+        await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
+    except ReleaseGateClosedError:
+        return "locked_g1"
+    if not await session.scalar(select(TenantSettings.auto_posting_enabled)):
+        return "locked_switch"
+    return "draft_pending_rule"
 
 
 async def check_contract(
@@ -137,6 +164,7 @@ class CreditorOut(BaseModel):
 @router.get(
     "/ledgers/{ledger_id}/creditors",
     summary="Kreditoren des Buchungskreises mit Saldo und offenen Posten",
+    dependencies=[Depends(strict_query)],
 )
 async def list_creditors(
     ledger_id: uuid.UUID,
@@ -212,6 +240,7 @@ async def list_creditors(
 @router.get(
     "/ledgers/{ledger_id}/creditors/{account_id}/open-items",
     summary="Offene Posten eines Kreditors",
+    dependencies=[Depends(strict_query)],
 )
 async def creditor_open_items(
     ledger_id: uuid.UUID,
@@ -307,7 +336,12 @@ async def _generated(session: AsyncSession, plan: RecurringInvoicePlan) -> int:
     )
 
 
-@router.get("/recurring-invoices", summary="Rechnungspläne", responses=PAGE_HEADERS)
+@router.get(
+    "/recurring-invoices",
+    summary="Rechnungspläne",
+    responses=PAGE_HEADERS,
+    dependencies=[Depends(strict_query)],
+)
 async def list_plans(
     request: Request,
     response: Response,

@@ -1,27 +1,74 @@
-# ruff: noqa: F811
 """AA08 (GA02-07): portal account with roles, invited_at and the statuses of 6.1. ``roles``
 follow the access grants (owner from an ownership contract), ``invited_at`` is set on the
 invitation, an invitation past its expiry reads ``expired`` (derived, the stored value stays
 ``invited``), an accepted one reads ``active``. A contact without contract has no roles."""
 
+import asyncio
 import uuid
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
+import boto3
 import pytest
 from fastapi.testclient import TestClient
+from moto import mock_aws
 from sqlalchemy import text
 
+from mhvp.main import create_app
 from mhvp.portal.routers import effective_account_status
 from tests.integration.conftest import Database
-from tests.integration.test_a86_portal_accounts import PA, client, world  # noqa: F401
-from tests.integration.test_m2_platform import PASSWORD, World, bearer, login
+from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _party, _unit
+from tests.integration.test_m8_import import BUCKET, _settings
 from tests.integration.test_m21_portal import _contact_of, _ok
 from tests.integration.test_m21_read_receipts import _db
 
 pytestmark = pytest.mark.integration
+PA = "/api/v1/portal-admin"
+
+
+async def _world(settings: Any) -> World:
+    from mhvp.core import crypto
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.platform import services
+
+    crypto.set_master_key(b"k" * 32)
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        a, _ = await services.provision_tenant(factory, slug=f"aa08a-{RUN}", name=f"AA08 A {RUN}")
+        b, _ = await services.provision_tenant(factory, slug=f"aa08b-{RUN}", name=f"AA08 B {RUN}")
+        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        for name, tenant in (("aa08admin", a), ("aa08other", b)):
+            uid = await services.create_user(
+                factory, email=world.email(name), display_name=name, password=PASSWORD
+            )
+            world.users[name] = uid
+            await services.add_member(
+                factory,
+                tenant_id=tenant,
+                user_id=uid,
+                role_codes=["tenant_admin"],
+                actor_user_id=None,
+            )
+        return world
+    finally:
+        await engine.dispose()
+
+
+@pytest.fixture(scope="module")
+def world(database: Database, redis_url: str) -> World:
+    return asyncio.run(_world(_settings(database, redis_url)))
+
+
+@pytest.fixture
+def client(database: Database, redis_url: str) -> Iterator[TestClient]:
+    with mock_aws():
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+        with TestClient(create_app(_settings(database, redis_url))) as test_client:
+            yield test_client
 
 
 def test_effective_status_is_derived() -> None:
@@ -45,7 +92,7 @@ def test_effective_status_is_derived() -> None:
 def test_portal_account_roles_invited_at_and_expiry(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    h = bearer(login(client, world, "a86admin"))
+    h = bearer(login(client, world, "aa08admin"))
     prop = _ok(
         client.post(
             "/api/v1/properties",
@@ -99,7 +146,7 @@ def test_portal_account_roles_invited_at_and_expiry(
 
 
 def test_contact_without_contract_has_no_roles(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "a86admin"))
+    h = bearer(login(client, world, "aa08admin"))
     party, _ = _party(client, h, "AA08Ohne")
     contact = _contact_of(client, h, party)
     _ok(
@@ -112,5 +159,5 @@ def test_contact_without_contract_has_no_roles(client: TestClient, world: World)
     )
     row = _ok(client.get(f"{PA}/accounts", params={"contact_id": contact}, headers=h))[0]
     assert row["roles"] == []
-    other = bearer(login(client, world, "a86other"))
+    other = bearer(login(client, world, "aa08other"))
     assert _ok(client.get(f"{PA}/accounts", params={"contact_id": contact}, headers=other)) == []

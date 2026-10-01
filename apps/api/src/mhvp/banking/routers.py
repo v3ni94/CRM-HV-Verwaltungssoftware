@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -60,8 +60,9 @@ from mhvp.core.auth.scope import (
     session_allowed_property_ids,
 )
 from mhvp.core.db.tenancy import after_commit
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
-from mhvp.core.listparams import ListParams, ListSpec, sparse
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -234,7 +235,11 @@ async def create_connection(
         return _conn_out(row)
 
 
-@router.get("/connections", summary="Bankverbindungen (ohne Zugangsdaten)")
+@router.get(
+    "/connections",
+    summary="Bankverbindungen (ohne Zugangsdaten)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_connections(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ConnectionOut]:
@@ -345,7 +350,7 @@ def _queue_proposals(
     after_commit(session, _start)
 
 
-@router.get("/runs", summary="Sync-Protokoll")
+@router.get("/runs", summary="Sync-Protokoll", dependencies=[Depends(strict_query)])
 async def runs(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),
@@ -444,7 +449,11 @@ async def review(
         return _tx_out(row)
 
 
-@router.get("/accounts/{bank_account_id}/reconciliation", summary="Bankabstimmung (B09)")
+@router.get(
+    "/accounts/{bank_account_id}/reconciliation",
+    summary="Bankabstimmung (B09)",
+    dependencies=[Depends(strict_query)],
+)
 async def reconciliation(
     bank_account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -975,6 +984,7 @@ async def reject_proposals(
 @router.get(
     "/transactions/{tx_id}/decisions",
     summary="Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0014)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_decisions(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1102,15 +1112,41 @@ async def _rule_event(
     )
 
 
-@router.get("/rules", summary="Bankregeln")
-async def list_rules(request: Request, principal: TenantPrincipal = Depends(READ)) -> list[RuleOut]:
+_RULE_LIST = ListSpec(  # GA04-05
+    filters={
+        "legal_entity_id": BankRule.legal_entity_id,
+        "property_id": BankRule.property_id,
+        "contract_id": BankRule.contract_id,
+        "approval_state": BankRule.approval_state,
+        "learned_from_ai": BankRule.learned_from_ai,
+    },
+    sort={
+        "priority": BankRule.priority,
+        "name": BankRule.name,
+        "hit_count": BankRule.hit_count,
+        "last_hit_at": BankRule.last_hit_at,
+        "created_at": BankRule.created_at,
+    },
+)
+
+
+@router.get("/rules", summary="Bankregeln", dependencies=[Depends(strict_query)])
+async def list_rules(
+    request: Request,
+    params: ListParams = Depends(_RULE_LIST.dependency),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[RuleOut]:
     async with tenant_tx(request, principal) as session:
         rule_query = select(BankRule)
         rule_allowed = session_allowed_property_ids(session)  # M2-02, R08-01
         if rule_allowed is not None:
             rule_query = rule_query.where(rule_property_filter(rule_allowed, BankRule))
-        rows = await session.scalars(rule_query.order_by(BankRule.priority, BankRule.created_at))
-        return [RuleOut.model_validate(r) for r in rows.all()]
+        rule_query = _RULE_LIST.apply(
+            rule_query, params, (BankRule.priority, BankRule.created_at, BankRule.id)
+        )
+        rows = await session.scalars(rule_query)
+        result = [RuleOut.model_validate(r) for r in rows.all()]
+        return sparse(result, params, RuleOut)  # type: ignore[no-any-return]
 
 
 async def _rule(session: Any, rule_id: uuid.UUID) -> BankRule:
@@ -1728,7 +1764,9 @@ async def correct_transaction(
         }
 
 
-@router.get("/rule-proposals", summary="Gelernte Regelvorschläge")
+@router.get(
+    "/rule-proposals", summary="Gelernte Regelvorschläge", dependencies=[Depends(strict_query)]
+)
 async def list_rule_proposals(
     request: Request,
     status: str | None = None,
@@ -1810,7 +1848,11 @@ async def reject_rule_proposal(
         return learning_svc.proposal_out(row)
 
 
-@router.get("/auto-posting/reviews", summary="Nachkontrolle automatischer Buchungen")
+@router.get(
+    "/auto-posting/reviews",
+    summary="Nachkontrolle automatischer Buchungen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_reviews(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1887,7 +1929,11 @@ async def open_clarification(
         return await clarification_svc.row_out(session, row)
 
 
-@router.get("/clarifications", summary="Buchungen ohne Beleg (Klärungsstatus B05)")
+@router.get(
+    "/clarifications",
+    summary="Buchungen ohne Beleg (Klärungsstatus B05)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_clarifications(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
@@ -2035,24 +2081,45 @@ async def _order(session: Any, order_id: uuid.UUID) -> PaymentOrder:
     return order  # type: ignore[no-any-return]
 
 
-@router.get("/payment-orders", summary="Zahlungsaufträge")
+_ORDER_LIST = ListSpec(  # GA04-05
+    filters={
+        "status": PaymentOrder.status,
+        "kind": PaymentOrder.kind,
+        "ledger_id": PaymentOrder.ledger_id,
+        "property_bank_account_id": PaymentOrder.property_bank_account_id,
+        "batch_id": PaymentOrder.batch_id,
+        "invoice_id": PaymentOrder.invoice_id,
+    },
+    sort={
+        "execution_date": PaymentOrder.execution_date,
+        "amount": PaymentOrder.amount,
+        "created_at": PaymentOrder.created_at,
+    },
+)
+
+
+@router.get("/payment-orders", summary="Zahlungsaufträge", dependencies=[Depends(strict_query)])
 async def list_orders(
     request: Request,
     status: str | None = Query(
         default=None, pattern="^(" + "|".join(s.value for s in OrderStatus) + ")$"
     ),
     limit: int = Query(default=200, ge=1, le=1000),
+    params: ListParams = Depends(_ORDER_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[OrderOut]:
     async with tenant_tx(request, principal) as session:
-        query = select(PaymentOrder).order_by(PaymentOrder.execution_date.desc(), PaymentOrder.id)
+        query = _ORDER_LIST.apply(
+            select(PaymentOrder), params, (PaymentOrder.execution_date.desc(), PaymentOrder.id)
+        )
         if status is not None:
             query = query.where(PaymentOrder.status == OrderStatus(status))
         visible = session_account_filter(session)  # M2-02/S16-02
         if visible is not None:
             query = query.where(PaymentOrder.property_bank_account_id.in_(visible))
         rows = (await session.scalars(query.limit(limit))).all()
-        return [await _order_out(session, o) for o in rows]
+        result = [await _order_out(session, o) for o in rows]
+        return sparse(result, params, OrderOut)  # type: ignore[no-any-return]
 
 
 @router.post("/payment-orders", status_code=201, summary="Zahlungsauftrag aus Rechnung (Entwurf)")
@@ -2080,10 +2147,13 @@ async def patch_order(
     order_id: uuid.UUID,
     body: OrderPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> OrderOut:
     async with tenant_tx(request, principal) as session:
         order = await _order(session, order_id)
+        check_if_match(if_match, order.updated_at)  # GA04-06
         changed = await payments.change_order(session, order, body.model_dump(exclude_none=True))
         if changed:
             await emit(
@@ -2095,6 +2165,9 @@ async def patch_order(
                 actor_user_id=principal.user_id,
                 payload={"fields": sorted(body.model_dump(exclude_none=True))},
             )
+        await session.flush()
+        await session.refresh(order, ["updated_at"])
+        response.headers["ETag"] = etag_of(order.updated_at)
         return await _order_out(session, order)
 
 
@@ -2249,6 +2322,29 @@ async def _bank_config(session: Any, account_id: uuid.UUID) -> PaymentBankConfig
     return config
 
 
+async def _ensure_g2_for_batch(
+    request: Request, principal: TenantPrincipal, session: Any, batch_id: uuid.UUID
+) -> None:
+    """G2 check with the property of the batch's bank account (GA14-02). Unknown batches are
+    checked without context, so a closed gate still answers 403 before 404."""
+    from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open_for
+    from mhvp.properties.models import PropertyBankAccount
+
+    property_id = (
+        await session.execute(
+            select(PropertyBankAccount.property_id)
+            .join(PaymentBatch, PaymentBatch.property_bank_account_id == PropertyBankAccount.id)
+            .where(PaymentBatch.id == batch_id)
+        )
+    ).scalar_one_or_none()
+    await ensure_release_gate_open_for(
+        ReleaseGate.G2,
+        principal.tenant_id,
+        request.app.state.release_gate_resolver,
+        property_id=property_id,
+    )
+
+
 async def _batch(session: Any, batch_id: uuid.UUID, *, lock: bool = False) -> PaymentBatch:
     batch: PaymentBatch | None = await session.get(PaymentBatch, batch_id, with_for_update=lock)
     if batch is None:
@@ -2256,7 +2352,9 @@ async def _batch(session: Any, batch_id: uuid.UUID, *, lock: bool = False) -> Pa
     return batch
 
 
-@router.get("/payment-batches", summary="Zahlungsdateien (Sammler)")
+@router.get(
+    "/payment-batches", summary="Zahlungsdateien (Sammler)", dependencies=[Depends(strict_query)]
+)
 async def list_batches(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -2306,12 +2404,9 @@ async def download_batch_file(
     """Hand-out for the manual upload in the online banking (FileDownloadSubmitter). Every
     hand-out is logged with user, time and checksum; the stored bytes are re-checked against
     the checksum recorded at generation, so a manipulated document is never handed out."""
-    from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 
-    await ensure_release_gate_open(
-        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
-    )
     async with tenant_tx(request, principal) as session:
+        await _ensure_g2_for_batch(request, principal, session, batch_id)
         batch = await _batch(session, batch_id, lock=True)
         if batch.document_id is None or not batch.file_sha256:
             raise ProblemError(ErrorCodes.PAYMENT_FILE_STATE, detail="Keine Datei abgelegt.")
@@ -2368,12 +2463,9 @@ async def submit_batch(
     least one logged download. ``fints`` and ``ebics`` are scaffolds and refuse
     (MHVP-BANK-0017) until released by the operator (V2)."""
     from mhvp.banking import payment_submitters
-    from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 
-    await ensure_release_gate_open(
-        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
-    )
     async with tenant_tx(request, principal) as session:
+        await _ensure_g2_for_batch(request, principal, session, batch_id)
         batch = await _batch(session, batch_id, lock=True)
         config = await _bank_config(session, batch.property_bank_account_id)
         channel = body.channel or (config.submission_channel if config else "file")
@@ -2841,7 +2933,11 @@ async def create_finapi_connection(
         )
 
 
-@finapi_router.get("/connections", summary="Bankverbindungen (finAPI) mit Konten")
+@finapi_router.get(
+    "/connections",
+    summary="Bankverbindungen (finAPI) mit Konten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_finapi_connections(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[FinApiConnectionOut]:
@@ -3382,6 +3478,7 @@ async def match_invoice_transactions(
 @router.get(
     "/invoice-matching/{invoice_id}",
     summary="Verknüpfte Bankumsätze einer Rechnung (nur lesen)",
+    dependencies=[Depends(strict_query)],
 )
 async def get_invoice_matches(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -3483,6 +3580,7 @@ class LegalEntityDefaultIn(_In):
 @router.get(
     "/accounts",
     summary="Bankkonten je Objekt und Rechtsträger (mit Kontostand und letzten Umsätzen)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_bank_accounts(
     request: Request,
@@ -3793,7 +3891,11 @@ async def create_csv_mapping(
         return CsvMappingOut.model_validate(row)
 
 
-@router.get("/csv-mappings", summary="Gespeicherte CSV-Mappings eines Kontos")
+@router.get(
+    "/csv-mappings",
+    summary="Gespeicherte CSV-Mappings eines Kontos",
+    dependencies=[Depends(strict_query)],
+)
 async def list_csv_mappings(
     request: Request,
     property_bank_account_id: uuid.UUID,
@@ -3996,7 +4098,11 @@ def _digest_out(row: Any) -> BankingDigestOut:
     )
 
 
-@router.get("/auto-posting/digests", summary="Wochendigest der Stufe L3")
+@router.get(
+    "/auto-posting/digests",
+    summary="Wochendigest der Stufe L3",
+    dependencies=[Depends(strict_query)],
+)
 async def list_digests(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[BankingDigestOut]:

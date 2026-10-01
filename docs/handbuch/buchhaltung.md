@@ -332,3 +332,16 @@ Die Konsistenzprüfung des Buchungskreises meldet zusätzlich Lücken in der Num
 Geschäftsjahr und Abweichungen des Nummernzählers. Der Nebenbuchabgleich zeigt je Debitor und
 Kreditor den Kontensaldo, den Restbetrag der offenen Posten und die Differenz zum Stichtag.
 Eine Differenz ist ein Prüfhinweis, zum Beispiel für eine noch nicht zugeordnete Zahlung.
+
+Den Nebenbuchabgleich finden Sie unter **Buchhaltung, Auswertungen** im Abschnitt
+**Nebenbuchabgleich (Prüfbericht)**, getrennt nach Debitoren und Kreditoren. Der Stichtag ist
+der oben gewählte Stichtag. Konten mit Differenz sind hervorgehoben. Der Prüfexport (ZIP)
+enthält denselben Abgleich als Tabelle `nebenbuchabgleich.csv` zum Ende des Exportzeitraums.
+
+## Honorarfelder, Rechnungsplan und Standard-Bankregel (AB09)
+
+**Verwalterhonorar, weitere Angaben.** Im Formular Verwalterhonorar (Buchhaltung, Verwalterhonorar) steht unter "Weitere Honorarangaben": Verwalterkontakt (Suche, nur Name), Kündigungsdatum, Fälligkeitsregel (fester Tag im Monat, letzter Tag, fester Tag im Folgemonat), Tag, Erlöskonto (ID) und Honorar je SE-Einheit netto. Alle Angaben sind optional. Das Kündigungsdatum begrenzt den Honorarlauf, die Fälligkeitsregel gilt für künftig ausgestellte Rechnungen. Die Liste zeigt Kündigung, Fälligkeit und SE-Betrag. Es wird nichts gebucht und nichts versendet.
+
+**Rechnungsplan, automatische Buchung ja oder nein.** In der Planliste (Kreditoren, Rechnungspläne) zeigt die Spalte "Automatische Buchung" das Kennzeichen. Nein: Der Lauf erzeugt nur Rechnungsentwürfe. Ja kann nur angefordert werden, wenn der Mandant die Automatik freigeschaltet hat; gebucht wird trotzdem nichts, solange die Freigabestufe G1 geschlossen ist und keine aktive, freigegebene Regel besteht. Nach "Entwurf erzeugen" meldet die Oberfläche den Sperrgrund.
+
+**Standard-Bankregel.** Wird ein Dienstleisterverhältnis mit der Option Standard-Bankregel angelegt (Bankverbindung und Kreditorenkonto vorhanden), entsteht eine Vorschlagsregel (Zustand vorgeschlagen, Priorität 900). Sie bucht nichts; Freigabe und Aktivierung laufen über die Regelverwaltung mit zweiter Person. Ohne die Option entsteht keine Regel, pro Bankverbindung höchstens eine.

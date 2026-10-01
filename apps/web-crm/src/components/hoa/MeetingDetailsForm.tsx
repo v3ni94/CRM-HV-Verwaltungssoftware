@@ -31,7 +31,17 @@ function toLocalInput(value: string | null): string {
 
 /** GA03-01: Ende, Vorlagenbezüge sowie öffentliche (Portal) und interne Beschreibung der
  *  Versammlung. Die Art ist beim Anlegen festgelegt und wird hier nur angezeigt. */
-export function MeetingDetailsForm({ meetingId, data, closed }: { meetingId: string; data: MeetingDetails; closed: boolean }) {
+export function MeetingDetailsForm({
+  meetingId,
+  data,
+  closed,
+  templates: templateOptions = [],
+}: {
+  meetingId: string;
+  data: MeetingDetails;
+  closed: boolean;
+  templates?: { id: string; name: string }[];
+}) {
   const t = useTranslations("HoaWork.meetingDetails");
   const router = useRouter();
   const [endsAt, setEndsAt] = useState(toLocalInput(data.ends_at));
@@ -104,13 +114,23 @@ export function MeetingDetailsForm({ meetingId, data, closed }: { meetingId: str
         {(["invitation_template_id", "proxy_template_id", "ballot_template_id"] as const).map((key) => (
           <label key={key} className="flex flex-col gap-1">
             <span className={ui.label}>{t(key.replace("_template_id", "Template"))}</span>
-            <input
+            <select
               className={ui.input}
               value={templates[key]}
               disabled={closed}
               onChange={(e) => setTemplates((prev) => ({ ...prev, [key]: e.target.value }))}
               data-testid={`meeting-${key}`}
-            />
+            >
+              <option value="">{t("noTemplate")}</option>
+              {templates[key] && !templateOptions.some((o) => o.id === templates[key]) ? (
+                <option value={templates[key]}>{templates[key]}</option>
+              ) : null}
+              {templateOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
           </label>
         ))}
       </div>

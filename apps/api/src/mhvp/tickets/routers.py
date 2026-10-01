@@ -27,6 +27,7 @@ from mhvp.core.listparams import (
     check_include,
     list_params,
     sparse,
+    strict_query,
 )
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -708,7 +709,7 @@ async def list_resolution_kinds(
     return {"kinds": [dict(k) for k in kinds]}
 
 
-@router.get("/tickets/templates", summary="Ticketvorlagen")
+@router.get("/tickets/templates", summary="Ticketvorlagen", dependencies=[Depends(strict_query)])
 async def list_templates(
     request: Request,
     active: bool | None = None,
@@ -949,7 +950,9 @@ async def _assert_building_of_property(
         raise ProblemError(ErrorCodes.VALIDATION, detail="Das Gebäude gehört nicht zum Objekt.")
 
 
-@router.get("/tickets/reply-templates", summary="Antwortvorlagen")
+@router.get(
+    "/tickets/reply-templates", summary="Antwortvorlagen", dependencies=[Depends(strict_query)]
+)
 async def list_reply_templates(
     request: Request,
     active: bool | None = None,
@@ -965,7 +968,11 @@ async def list_reply_templates(
         return [_reply_template_out(t) for t in (await session.scalars(query)).all()]
 
 
-@router.get("/tickets/reply-templates/placeholders", summary="Platzhalter der Antwortvorlagen")
+@router.get(
+    "/tickets/reply-templates/placeholders",
+    summary="Platzhalter der Antwortvorlagen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_reply_placeholders(principal: TenantPrincipal = Depends(READ)) -> list[str]:
     return list(reply_templates.PLACEHOLDERS)
 
@@ -1499,7 +1506,11 @@ async def _attachment_rows(session: AsyncSession, ids: list[uuid.UUID]) -> list[
     return out
 
 
-@router.get("/tickets/{ticket_id}/messages", summary="Mailverlauf des Tickets mit Anhängen")
+@router.get(
+    "/tickets/{ticket_id}/messages",
+    summary="Mailverlauf des Tickets mit Anhängen",
+    dependencies=[Depends(strict_query)],
+)
 async def ticket_messages(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1596,7 +1607,9 @@ async def ticket_mail_attachment_content(
 
 
 @router.get(
-    "/tickets/{ticket_id}/reply-documents", summary="Dokumente als Anhang der Antwort suchen"
+    "/tickets/{ticket_id}/reply-documents",
+    summary="Dokumente als Anhang der Antwort suchen",
+    dependencies=[Depends(strict_query)],
 )
 async def ticket_reply_documents(
     ticket_id: uuid.UUID,
@@ -1997,6 +2010,7 @@ _TICKET_LEGACY_SORT = ("urgency", "created_desc")
             }
         }
     },
+    dependencies=[Depends(strict_query)],
 )
 async def list_tickets(
     request: Request,
@@ -2317,7 +2331,11 @@ async def list_tickets(
         return result
 
 
-@router.get("/tickets/{ticket_id}/assignees", summary="Zuweiser eines Tickets mit Grund")
+@router.get(
+    "/tickets/{ticket_id}/assignees",
+    summary="Zuweiser eines Tickets mit Grund",
+    dependencies=[Depends(strict_query)],
+)
 async def list_assignees(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

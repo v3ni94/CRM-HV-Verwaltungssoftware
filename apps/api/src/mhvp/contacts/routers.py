@@ -38,6 +38,7 @@ from mhvp.core.listparams import (
     check_include,
     embed,
     list_params,
+    strict_query,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError, body_validation_error
 from mhvp.integrations.lexoffice_ext import sync as lexoffice_sync
@@ -124,6 +125,7 @@ async def _contact_property_refs(
     response_model=schemas.ContactPage,
     description=LIST_PARAMS_DOC
     + " include: properties (Objekte über Vertragspartei oder Objekteigentum).",
+    dependencies=[Depends(strict_query)],
 )
 async def list_contacts(
     request: Request,
@@ -298,7 +300,11 @@ async def recompute_roles(
         return schemas.RecomputeRolesOut(changed=changed)
 
 
-@router.get("/contacts/duplicates", summary="Dublettenvorschläge für neue Angaben")
+@router.get(
+    "/contacts/duplicates",
+    summary="Dublettenvorschläge für neue Angaben",
+    dependencies=[Depends(strict_query)],
+)
 async def duplicates(
     request: Request,
     first_name: str | None = None,
@@ -553,7 +559,11 @@ async def delete_contact(
     return Response(status_code=204)
 
 
-@router.get("/contacts/{contact_id}/duplicates", summary="Dublettenvorschläge zu einem Kontakt")
+@router.get(
+    "/contacts/{contact_id}/duplicates",
+    summary="Dublettenvorschläge zu einem Kontakt",
+    dependencies=[Depends(strict_query)],
+)
 async def contact_duplicates(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[schemas.DuplicateCandidate]:
@@ -596,7 +606,11 @@ async def export_contact(
         return data
 
 
-@router.get("/contacts/{contact_id}/sepa-mandates", summary="SEPA-Mandate eines Kontakts (kompakt)")
+@router.get(
+    "/contacts/{contact_id}/sepa-mandates",
+    summary="SEPA-Mandate eines Kontakts (kompakt)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_sepa_mandates(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[schemas.SepaMandateOut]:
@@ -928,7 +942,7 @@ async def reject_bank_account(
 # Notes, relations, consents ------------------------------------------------------------
 
 
-@router.get("/contacts/{contact_id}/notes", summary="Notizen")
+@router.get("/contacts/{contact_id}/notes", summary="Notizen", dependencies=[Depends(strict_query)])
 async def list_notes(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[schemas.NoteOut]:
@@ -1038,6 +1052,7 @@ def _relation_out(row: ContactRelation, contact_id: uuid.UUID, name: str) -> sch
 @router.get(
     "/contacts/{contact_id}/contact-relations",
     summary="Beziehungen zu anderen Kontakten (Bevollmächtigte, Ehepartner, Erben)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_contact_relations(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1179,7 +1194,11 @@ async def delete_contact_relation(
     return Response(status_code=204)
 
 
-@router.get("/contacts/{contact_id}/relations", summary="Objektbezüge eines Kontakts")
+@router.get(
+    "/contacts/{contact_id}/relations",
+    summary="Objektbezüge eines Kontakts",
+    dependencies=[Depends(strict_query)],
+)
 async def list_object_relations(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[schemas.ObjectRelationOut]:
@@ -1188,7 +1207,11 @@ async def list_object_relations(
         return await services.object_relations(session, contact)
 
 
-@router.get("/contacts/{contact_id}/consents", summary="Einwilligungen")
+@router.get(
+    "/contacts/{contact_id}/consents",
+    summary="Einwilligungen",
+    dependencies=[Depends(strict_query)],
+)
 async def list_consents(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[schemas.ConsentOut]:
@@ -1326,7 +1349,7 @@ async def get_party(
         return await _party_out(session, party)
 
 
-@router.get("/parties", summary="Parteien eines Kontakts")
+@router.get("/parties", summary="Parteien eines Kontakts", dependencies=[Depends(strict_query)])
 async def list_parties(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[schemas.PartyOut]:
@@ -1345,7 +1368,7 @@ async def list_parties(
 # Global search -------------------------------------------------------------------------
 
 
-@router.get("/search", summary="Globale Suche (Strg+K)")
+@router.get("/search", summary="Globale Suche (Strg+K)", dependencies=[Depends(strict_query)])
 async def global_search(
     request: Request,
     q: str = Query(min_length=2, max_length=200),

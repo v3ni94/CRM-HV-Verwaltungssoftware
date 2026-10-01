@@ -23,6 +23,14 @@ from mhvp.documents import letters
 
 DRAFT_LABEL = "Entwurf, kein Versand"
 ZERO = Decimal("0.00")
+# GA06-03: the tax note of the letter and of the § 35a proof is a placeholder until the
+# operator released a text with tax advice (OPEN_QUESTIONS AA11-02). Nothing is formulated here.
+TEXT_NOT_RELEASED = "Text nicht freigegeben"
+TAX_TEXT_PENDING = f"{TEXT_NOT_RELEASED}: Steuerlicher Hinweis zu § 35a EStG ausstehend (AA11-02)"
+NO_SOURCE_35A = (
+    "Für diese Abrechnung liegt keine freigegebene Quelle für belegte Lohnanteile vor; es "
+    "werden keine Beträge ausgewiesen."
+)
 
 
 def _d(value: Any) -> Decimal:
@@ -178,6 +186,7 @@ def build_letter(
             widths=(0.7, 0.3),
         )
         paragraphs += [letters.TABLE_MARKER.format(name="s35a"), str(s35a["note"])]
+    paragraphs.append(TAX_TEXT_PENDING + ".")
     receipts = results.get("receipts") or {}
     if st.attach_receipts and receipts.get("lines"):
         paragraphs.append(
@@ -191,6 +200,63 @@ def build_letter(
     return letters.Letter(
         recipient_lines=recipient_lines,
         subject=subject,
+        body="\n\n".join(p if p.startswith("[[table:") else html.escape(p) for p in paragraphs),
+        letter_date=letter_date,
+        info=[("Regelversion", st.rule_version), ("Ergebnis", (st.snapshot_hash or "")[:12])],
+        signatory=signatory,
+        tables=tables,
+        draft_notice=DRAFT_LABEL,
+    )
+
+
+def build_s35a_sheet(
+    st: OwnerStatement,
+    *,
+    recipient_lines: list[str],
+    property_line: str,
+    letter_date: date,
+    signatory: list[str],
+) -> letters.Letter:
+    """GA06-03: separate § 35a proof of the owner statement, read from the snapshot only. The
+    amounts are the documented labour shares of the WEG individual statement (SEV); a rental
+    statement has no released source and shows no amount. The explanatory tax text is a
+    placeholder marked "Text nicht freigegeben" until AA11-02 is decided."""
+    results = (st.snapshot or {}).get("results") or {}
+    s35a = results.get("section_35a") or {}
+    tables: dict[str, letters.LetterTable] = {}
+    paragraphs = [
+        f"Nachweis belegter Lohnanteile für das Objekt {property_line}, Zeitraum "
+        f"{fmt_date(st.period_from)} bis {fmt_date(st.period_to)}."
+    ]
+    if s35a.get("per_unit"):
+        tables["s35a"] = letters.LetterTable(
+            header=["Einheit", "Belegte Lohnanteile (Information)"],
+            rows=[
+                *[
+                    [line["unit_number"] or line["unit_id"][:8], fmt_eur(_d(line["amount"]))]
+                    for line in s35a.get("lines", [])
+                ],
+                ["Summe", fmt_eur(_d(s35a["total"]))],
+            ],
+            right_aligned=(1,),
+            total_row=True,
+            widths=(0.6, 0.4),
+        )
+        paragraphs += [
+            letters.TABLE_MARKER.format(name="s35a"),
+            "Quelle: WEG-Einzelabrechnung der Gemeinschaft.",
+        ]
+    else:
+        paragraphs.append(NO_SOURCE_35A)
+    if s35a.get("note"):
+        paragraphs.append(str(s35a["note"]))
+    paragraphs.append(TAX_TEXT_PENDING + ".")
+    return letters.Letter(
+        recipient_lines=recipient_lines,
+        subject=(
+            f"Nachweis § 35a EStG {property_line}, {fmt_date(st.period_from)} bis "
+            f"{fmt_date(st.period_to)}"
+        ),
         body="\n\n".join(p if p.startswith("[[table:") else html.escape(p) for p in paragraphs),
         letter_date=letter_date,
         info=[("Regelversion", st.rule_version), ("Ergebnis", (st.snapshot_hash or "")[:12])],

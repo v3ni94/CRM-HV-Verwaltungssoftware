@@ -22,6 +22,7 @@ from mhvp.accounting.reports import ensure_ledger_in_scope
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import session_allowed_legal_entity_ids
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
 
@@ -87,7 +88,7 @@ async def _run(session: AsyncSession, export_id: uuid.UUID) -> ExportRun:
     return run
 
 
-@router.get("/exports", summary="DATEV-Exporte des Mandanten")
+@router.get("/exports", summary="DATEV-Exporte des Mandanten", dependencies=[Depends(strict_query)])
 async def list_exports(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ExportRunOut]:

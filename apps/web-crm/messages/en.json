@@ -1698,6 +1698,25 @@
           "done": "done",
           "failed": "failed"
         }
+      },
+      "subledger": {
+        "title": "Subledger reconciliation (audit report)",
+        "description": "Per debtor and creditor the general ledger balance against the open items as of {date}. A difference is a review note, for example an unapplied payment or a posting without open item, not a booking error.",
+        "noDifferences": "No difference between general ledger and subledger.",
+        "differences": "{count, plural, one {# account with difference} other {# accounts with difference}} to review.",
+        "sections": {
+          "debtor": "Debtors",
+          "creditor": "Creditors"
+        },
+        "empty": "No accounts with movements up to the cut-off date.",
+        "account": "Account",
+        "ledgerBalance": "General ledger balance",
+        "openItems": "Open items",
+        "difference": "Difference",
+        "toReview": "to review",
+        "asOf": "Cut-off date",
+        "show": "Show",
+        "error": "The consistency check could not be loaded."
       }
     }
   },
@@ -2727,6 +2746,9 @@
     "applied": "Import fed into the statement and locked."
   },
   "Billing": {
+    "ruleRegisterTitle": "Rule version of the statement",
+    "ruleRegisterText": "Rule {rule} version {version} ({status}), effective from {date}. A later rule version does not change this statement.",
+    "ruleRegisterNone": "No rule version recorded in the register for the start of the period.",
     "letters": {
       "interim": "Interim statement (special period)",
       "purpose": "Purpose of the special period",
@@ -2923,6 +2945,19 @@
       "documentInvalid": "Please enter a valid document ID.",
       "save": "Save exception",
       "readOnly": "Editable in draft only, otherwise via a new version."
+    },
+    "outputs": {
+      "title": "Outputs of the statement run",
+      "textNotice": "Legally relevant texts are marked \"Text not released\" until the operator has released them (AA11-01, AA11-02).",
+      "preview": {
+        "infoSheet": "Preview info sheet",
+        "ownerLetter": "Preview cover letter",
+        "s35a": "Preview § 35a proof"
+      },
+      "file": "File as document",
+      "gate": "Filing is an output of the statement and needs release gate G3. Nothing is sent.",
+      "filed": "Output filed and linked to the statement run",
+      "none": "No outputs filed yet."
     }
   },
   "HoaWork": {
@@ -3249,13 +3284,16 @@
         "partial": "Partial meeting",
         "circular_resolution": "Circular procedure"
       },
+      "selectOrigin": "Select original meeting",
+      "originRequired": "Please select the original meeting.",
+      "noTemplate": "No template",
       "origin": "Original meeting",
       "endsAt": "End",
       "publicDescription": "Public description (owner portal)",
       "internalDescription": "Internal description (management only)",
-      "invitationTemplate": "Invitation template (ID)",
-      "proxyTemplate": "Proxy template (ID)",
-      "ballotTemplate": "Ballot template (ID)",
+      "invitationTemplate": "Invitation template",
+      "proxyTemplate": "Proxy template",
+      "ballotTemplate": "Ballot template",
       "save": "Save details",
       "saved": "Details saved.",
       "endBeforeStart": "The end must be after the start.",
@@ -3282,6 +3320,7 @@
     },
     "meetingForm": {
       "title": "Meeting form and invitation",
+      "termNotice": "Notice on the term of the enabling resolution",
       "mode": "Form",
       "modes": {
         "presence": "In person",
@@ -4745,6 +4784,7 @@
   },
   "Creditors": {
     "loadError": "The ledgers could not be loaded. Reload the page or check permissions.",
+    "defaultRuleHint": "Creating a service provider relation with the default bank rule option creates a proposed rule for the creditor (state proposed, low priority). It posts nothing and needs approval by a second person.",
     "sync": "Create creditor accounts",
     "syncHint": "Creates missing creditor accounts for all service provider relations of the ledger and links existing ones.",
     "syncDone": "{created} accounts created, {linked} linked.",
@@ -4769,6 +4809,20 @@
     "runningBalance": "Balance"
   },
   "RecurringPlans": {
+    "autoPost": {
+      "column": "Automatic posting",
+      "yes": "yes",
+      "no": "no",
+      "turnOn": "Request",
+      "turnOff": "Withdraw",
+      "saved": "Flag saved.",
+      "hint": "No: the run creates invoice drafts only. Yes: only possible while the tenant released automatic posting, and still posts nothing while gate G1 and an active rule are missing."
+    },
+    "autoPostState": {
+      "locked_g1": "Automatic posting locked (gate G1 closed), draft created.",
+      "locked_switch": "Automatic posting locked (tenant automation off), draft created.",
+      "draft_pending_rule": "Draft created, a posting needs an active approved rule."
+    },
     "createTitle": "Create a new invoice plan",
     "createFields": {
       "provider_search": "Search issuer",
@@ -4830,6 +4884,8 @@
     "endedDone": "Plan ended."
   },
   "Invoices": {
+    "reverseChargeGateTitle": "Release point section 13b UStG",
+    "reverseChargeGateText": "The document is flagged as reverse charge. Whether section 13b UStG applies is not decided automatically: the tax advisor confirms the norm and the liable party; until then no automatic posting or tax effect applies.",
     "extra": {
       "attachment_document_ids": "Attachments of the invoice (document IDs)",
       "attachment_hint": "{count} attachment(s) linked. Separate several IDs by space, comma or line break; the document must exist in the DMS.",
@@ -5897,6 +5953,8 @@
       "learning": "Learning phase",
       "domains": "Customer domains",
       "oidcClients": "OIDC clients",
+      "generated": "Generated documents",
+      "releaseGates": "Release gates",
       "gateG5": "Gate G5 release",
       "rentLaw": "Rent law",
       "onboarding": "Onboarding",
@@ -6212,6 +6270,10 @@
     "documentCategories": {
       "title": "Document categories",
       "description": "Maintain the category tree and the mapping to Paperless and Drive."
+    },
+    "portalProviders": {
+      "title": "Service providers in the portal",
+      "description": "Availability windows and document class releases of service providers."
     }
   },
   "Members": {
@@ -9179,7 +9241,20 @@
     "firstRetrieved": "First retrieval",
     "lastRetrieved": "Last retrieval",
     "retrievals": "Retrievals",
-    "notRetrieved": "Not retrieved yet"
+    "notRetrieved": "Not retrieved yet",
+    "letter": "Letter",
+    "noLetter": "No letter",
+    "dispatch": "Send report by letter",
+    "dispatchAll": "Also send to owners who retrieved it in the portal",
+    "dispatchResult": "{created} letters prepared, {skipped} units skipped",
+    "channels": {
+      "post": "Post",
+      "email": "E-mail",
+      "portal": "Portal",
+      "sms": "SMS",
+      "registered": "Registered mail",
+      "courier": "Courier"
+    }
   },
   "HoaFinance": {
     "loans": "Loans",
@@ -9434,6 +9509,25 @@
       "downloaded": "downloaded"
     }
   },
+  "GeneratedDocuments": {
+    "breadcrumb": "Documents",
+    "title": "Generated documents",
+    "intro": "Letters from templates with template, version, context and delivery. Filter by template and period.",
+    "filter": "Filter",
+    "template": "Template",
+    "allTemplates": "All templates",
+    "from": "From",
+    "to": "To",
+    "empty": "No generated documents found.",
+    "colCreated": "Created",
+    "colTemplate": "Template",
+    "colContext": "Context",
+    "colDelivery": "Delivery",
+    "colDocument": "Document",
+    "noTemplate": "no template",
+    "notSent": "not sent",
+    "open": "Open document"
+  },
   "DocumentList": {
     "select": "Select {title}",
     "colSelect": "Select",
@@ -9458,7 +9552,8 @@
     "previous": "Previous",
     "next": "Next",
     "pageOf": "Page {page} of {pages}, {total} documents",
-    "lettersLink": "Letters and templates"
+    "lettersLink": "Letters and templates",
+    "generatedLink": "Generated documents"
   },
   "DocumentRedactions": {
     "title": "Redacted copies",
@@ -9804,7 +9899,13 @@
         "superseded": "superseded"
       },
       "toTicket": "To the ticket"
-    }
+    },
+    "workflowTitle": "Approval workflow",
+    "workflowId": "Approval workflow id",
+    "workflowHint": "Reference only. There is no table for approval workflows yet, the board approval of the order stays decisive.",
+    "workflowSave": "Save",
+    "workflowSaved": "Reference saved.",
+    "workflowInvalid": "The id is not a valid UUID."
   },
   "Webhooks": {
     "card": {
@@ -12328,6 +12429,49 @@
     "releaseHint": "Release: file the G5 request in the tenant, approval by the superadmin. Revocation runs through the request.",
     "noData": "No tenant available."
   },
+  "PlatformGates": {
+    "title": "Release gates",
+    "link": "Release gates G1 to G5",
+    "notice": "Overview of the release gates per tenant with requests, checklist and evidence document. The API keeps the rules: four eyes, complete checklist and evidence document for G2 to G4, G5 only by the superadmin. This page changes no rule.",
+    "forbidden": "Platform administrators only.",
+    "tenant": "Tenant",
+    "gatesCaption": "Release gate state",
+    "gate": "Gate",
+    "state": "State",
+    "scopes": "Approved scope",
+    "stateOpen": "open",
+    "statePartial": "partially open",
+    "stateClosed": "closed",
+    "requests": "Requests",
+    "noRequests": "No requests.",
+    "evidence": "Evidence",
+    "evidenceDocument": "Evidence document",
+    "evidenceDocumentId": "Evidence document (document ID, required for G2 to G4)",
+    "openedBy": "Opened by",
+    "revokedBy": "Revoked by",
+    "properties": "Restricted to properties",
+    "none": "not set",
+    "comment": "Comment",
+    "approve": "Approve",
+    "reject": "Reject",
+    "revoke": "Revoke",
+    "newRequest": "Request gate",
+    "scope": "Scope (functions and property group)",
+    "propertyIds": "Restrict to properties (property IDs, comma separated, empty means all)",
+    "checklist": "Checklist (confirmation per item)",
+    "checkNote": "Confirmation {item}",
+    "noChecklist": "No checklist for this gate.",
+    "submit": "Submit request",
+    "onlyOwnTenant": "Requests and revocations are only possible in the signed in tenant. Sign in to the selected tenant.",
+    "invalidId": "Please enter valid IDs.",
+    "noData": "No tenant available.",
+    "status": {
+      "requested": "requested",
+      "approved": "approved",
+      "rejected": "rejected",
+      "revoked": "revoked"
+    }
+  },
   "PlatformOnboarding": {
     "title": "Third party onboarding",
     "notice": "Wizard for platform administrators. The tenant receives legal entities, a first administrator, CI settings and system roles. Feature flags stay off, no gate opens, the welcome mail is a draft only.",
@@ -13634,6 +13778,27 @@
       "yearly": "yearly",
       "annual": "yearly"
     },
+    "extra": {
+      "title": "Further fee details",
+      "manager": "Search manager contact",
+      "managerPicked": "Manager: {name}",
+      "managerClear": "remove",
+      "termination": "Termination date (optional)",
+      "sevFee": "Fee per SEV unit, net (optional)",
+      "dueRule": "Due date rule",
+      "dueRules": {
+        "none": "None (per contract)",
+        "day": "Fixed day of the month",
+        "last_day": "Last day of the month",
+        "day_next_month": "Fixed day of the following month"
+      },
+      "dueDay": "Day (1 to 31)",
+      "account": "Revenue account (ID, optional)",
+      "hint": "The termination date limits the fee run. The due date rule applies to fee invoices issued from now on. Nothing is posted and nothing is sent.",
+      "columnTerms": "Termination, due date, SEV",
+      "terminatedOn": "Terminated on {date}",
+      "sevFeeShort": "SEV unit: {amount}"
+    },
     "unitTypes": {
       "apartment": "Per apartment (net)",
       "commercial": "Per commercial unit (net)",
@@ -14283,7 +14448,20 @@
     "templateBody": "Body template",
     "placeholders": "Placeholders: {list}",
     "saveTemplate": "Save (new version)",
-    "templateSaved": "Template saved, version {version}."
+    "templateSaved": "Template saved, version {version}.",
+    "contextTypes": "Allowed contexts",
+    "contextHint": "Without a selection the template is unrestricted. Saving applies to the selected version, new text creates a new version.",
+    "saveContext": "Save contexts of the selected version",
+    "contextSaved": "Contexts saved.",
+    "placeholdersUsed": "Placeholders used: {list}",
+    "none": "none",
+    "context_contact": "Contact",
+    "context_contract": "Contract",
+    "context_unit": "Unit",
+    "context_property": "Property",
+    "context_meeting": "Meeting",
+    "context_statement": "Statement",
+    "context_ticket": "Ticket"
   },
   "HoaReserves": {
     "title": "Reserves",
@@ -14678,6 +14856,50 @@
       "secretOnce": "Client secret (visible only now, store it in the target system at once):",
       "none": "No clients created.",
       "confirmRotate": "Rotate the secret? The previous secret stops working immediately."
+    }
+  },
+  "PortalProviders": {
+    "title": "Service providers in the portal",
+    "breadcrumb": "Settings",
+    "description": "Availability windows and document class releases of service providers.",
+    "intro": "Select a service provider. The provider sees the windows read only in the portal. A class release makes the documents of one class of a legal entity visible to the portal account; it does not replace a professional review.",
+    "pickProvider": "Search service provider",
+    "loading": "Loading ...",
+    "window": {
+      "heading": "Availability of {name}",
+      "none": "No windows entered.",
+      "remove": "Remove",
+      "add": "Add window",
+      "start": "Start",
+      "end": "End",
+      "kindLabel": "Type",
+      "note": "Note",
+      "required": "Please enter start and end.",
+      "order": "The end must be after the start.",
+      "kind": {
+        "available": "available",
+        "unavailable": "unavailable"
+      }
+    },
+    "grants": {
+      "heading": "Releases by document class",
+      "noAccount": "This contact has no portal access.",
+      "none": "No class releases.",
+      "account": "Portal account",
+      "add": "Release class",
+      "entity": "Legal entity",
+      "class": "Document class",
+      "roleLabel": "Role",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "choose": "Please choose",
+      "required": "Please choose legal entity and document class.",
+      "role": {
+        "provider": "Service provider",
+        "tenant": "Tenant",
+        "owner": "Owner",
+        "board": "Advisory board"
+      }
     }
   }
 }

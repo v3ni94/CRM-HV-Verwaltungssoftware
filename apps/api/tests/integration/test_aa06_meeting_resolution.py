@@ -384,6 +384,10 @@ def test_virtual_basis_three_year_term_notice_and_lock(client: TestClient, world
     long = body | {"virtual_basis_valid_until": "2029-03-02"}
     noticed = _ok(c.post(f"{H}/meetings", json=long, headers=h), 201)
     assert "01.03.2029" in noticed["virtual_basis_term_notice"]
+    # GA07-01 (AB06): the notice is permanent, also in the detail view
+    detail = _ok(c.get(f"{H}/meetings/{noticed['id']}", headers=h))
+    assert detail["virtual_basis_term_notice"] == noticed["virtual_basis_term_notice"]
+    assert _ok(c.get(f"{H}/meetings/{ok['id']}", headers=h))["virtual_basis_term_notice"] is None
     settings = _ok(
         c.put(
             f"{H}/meeting-settings",

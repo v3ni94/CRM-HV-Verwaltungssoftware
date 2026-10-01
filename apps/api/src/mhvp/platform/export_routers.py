@@ -15,6 +15,7 @@ from sqlalchemy import select
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform import export_job
 from mhvp.platform.models import TenantExportJob
@@ -92,7 +93,7 @@ async def create_export_job(
     return out
 
 
-@router.get("", summary="Mandantenexporte auflisten")
+@router.get("", summary="Mandantenexporte auflisten", dependencies=[Depends(strict_query)])
 async def list_export_jobs(
     request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> list[dict[str, Any]]:

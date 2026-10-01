@@ -684,6 +684,7 @@
     "intro": "Eigentümerversammlungen Ihrer Gemeinschaft. Maßgeblich bleibt die Einladung der Verwaltung.",
     "empty": "Keine Versammlungen vorhanden.",
     "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "description": "Beschreibung",
     "dialIn": "Zugangsdaten für die Online-Teilnahme",
     "mode": {
       "presence": "Präsenz",

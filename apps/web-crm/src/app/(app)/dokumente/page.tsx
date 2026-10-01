@@ -56,6 +56,8 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
         <Link href="/dokumente/loeschvorschlaege">{t("deletionProposalsLink")}</Link>
         {" · "}
         <Link href="/dokumente/briefe">{t("lettersLink")}</Link>
+        {" · "}
+        <Link href="/dokumente/erzeugt">{t("generatedLink")}</Link>
       </p>
       <DocumentListFilter q={q} draft={draft} />
       <SavedFilters resource="documents" basePath="/dokumente" current={Object.fromEntries(Object.entries({ q, entwurf: params.entwurf ?? "" }).filter(([, v]) => v))} />

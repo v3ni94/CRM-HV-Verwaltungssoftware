@@ -18,6 +18,7 @@ from sqlalchemy import or_, select
 
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.escaping import content_disposition
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink
@@ -87,7 +88,9 @@ async def _granted(
 # Staff (tenant members with the portal permission "handover:read", M2-08 entschieden) --------
 
 
-@router.get("/protocols", summary="Übergabeprotokolle (Mitarbeiter)")
+@router.get(
+    "/protocols", summary="Übergabeprotokolle (Mitarbeiter)", dependencies=[Depends(strict_query)]
+)
 async def list_protocols_staff(request: Request, ctx: Ctx) -> list[dict[str, Any]]:
     """List of every protocol of the tenant for staff with "handover:read"; minimal fields
     only, the full record still goes through the participant/staff detail path below. External
@@ -156,7 +159,7 @@ async def _visible_note(session: Any, section: str, item_id: uuid.UUID) -> None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
-@router.get("", summary="Eigene Übergabeprotokolle")
+@router.get("", summary="Eigene Übergabeprotokolle", dependencies=[Depends(strict_query)])
 async def list_protocols(request: Request, ctx: Ctx) -> list[dict[str, Any]]:
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
@@ -466,7 +469,9 @@ def _staff_row(p: HandoverProtocol) -> dict[str, Any]:
     }
 
 
-@staff_router.get("", summary="Übergabeprotokolle lesen (Mitarbeiter)")
+@staff_router.get(
+    "", summary="Übergabeprotokolle lesen (Mitarbeiter)", dependencies=[Depends(strict_query)]
+)
 async def staff_list_handovers(
     request: Request,
     ctx: Ctx,

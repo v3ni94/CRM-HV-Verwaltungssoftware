@@ -41,10 +41,10 @@ async def _world(settings: Any) -> World:
         b, _ = await services.provision_tenant(factory, slug=f"aa04b-{RUN}", name=f"AA04 B {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in (
-            ("q13admin", a, "tenant_admin"),
-            ("q13admin_b", b, "tenant_admin"),
-            ("q13clerk", a, "standard"),
-            ("q13reader", a, "read_only"),
+            ("aa04admin", a, "tenant_admin"),
+            ("aa04admin_b", b, "tenant_admin"),
+            ("aa04clerk", a, "standard"),
+            ("aa04reader", a, "read_only"),
         ):
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -99,7 +99,7 @@ def test_lists_reject_unknown_parameters(
     world: World,
     path: str,
 ) -> None:
-    h = _h(client, world, "q13admin", world.tenant_a)
+    h = _h(client, world, "aa04admin", world.tenant_a)
     assert client.get(path, params={"filter[status]": "x" * 3}, headers=h).status_code in (
         200,
         422,
@@ -110,7 +110,7 @@ def test_lists_reject_unknown_parameters(
 
 
 def test_bank_transactions_filter_sort_fields(client: TestClient, world: World) -> None:
-    h = _h(client, world, "q13admin", world.tenant_a)
+    h = _h(client, world, "aa04admin", world.tenant_a)
     r = client.get(
         "/api/v1/banking/transactions",
         params={"filter[status]": "new", "sort": "-amount", "fields": "amount"},
@@ -129,7 +129,7 @@ def test_bank_transactions_filter_sort_fields(client: TestClient, world: World) 
 
 
 def test_resolution_list_and_etag(client: TestClient, world: World) -> None:
-    h = _h(client, world, "q13admin", world.tenant_a)
+    h = _h(client, world, "aa04admin", world.tenant_a)
     hoa, rid = _resolution(client, h)
     base = {"legal_entity_id": hoa}
     rows = client.get("/api/v1/hoa/resolutions", params=base, headers=h).json()
@@ -177,14 +177,14 @@ def test_resolution_list_and_etag(client: TestClient, world: World) -> None:
         client.patch(f"/api/v1/hoa/resolutions/{rid}", json={"status": "x"}, headers=h).status_code
         == 422
     )
-    reader = _h(client, world, "q13reader", world.tenant_a)
+    reader = _h(client, world, "aa04reader", world.tenant_a)
     assert (
         client.patch(
             f"/api/v1/hoa/resolutions/{rid}", json={"status": "final"}, headers=reader
         ).status_code
         == 403
     )
-    other = _h(client, world, "q13admin_b", world.tenant_b)
+    other = _h(client, world, "aa04admin_b", world.tenant_b)
     assert (
         client.patch(
             f"/api/v1/hoa/resolutions/{rid}", json={"status": "final"}, headers=other
@@ -195,7 +195,7 @@ def test_resolution_list_and_etag(client: TestClient, world: World) -> None:
 
 
 def test_message_patch_if_match_unknown(client: TestClient, world: World) -> None:
-    h = _h(client, world, "q13admin", world.tenant_a)
+    h = _h(client, world, "aa04admin", world.tenant_a)
     missing = client.patch(
         f"/api/v1/mail/messages/{uuid.uuid4()}",
         json={"status": "done"},

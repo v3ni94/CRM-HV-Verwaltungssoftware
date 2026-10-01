@@ -124,7 +124,7 @@ async def request_link(
             PortalAccount.tenant_id == tenant_id, PortalAccount.user_id == user_id
         )
     )
-    if account is None or account.status not in ("invited", "active"):
+    if account is None or account.status not in ("invited", "active", "locked"):
         return
     secret = tokens.new_opaque_secret()
     session.add(

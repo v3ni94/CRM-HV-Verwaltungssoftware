@@ -125,7 +125,12 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
             </li>
           ))}
         </ul>
-        <HoaCreate kind="meeting" legalEntityId={ctx.entity.id} basePath={base} />
+        <HoaCreate
+          kind="meeting"
+          legalEntityId={ctx.entity.id}
+          basePath={base}
+          originMeetings={(meetings.data ?? []).map((m) => ({ id: String(m.id), label: `${formatDateTime(String(m.scheduled_at))} · ${tw(`meetingStatus.${String(m.status)}`)}` }))}
+        />
         {meetingSettings ? (
           <MeetingSettings weeks={Number(meetingSettings.invitation_weeks ?? 3)} virtualEnabled={Boolean(meetingSettings.virtual_meetings_enabled)}
             termLockEnabled={Boolean((meetingSettings as { virtual_basis_term_lock_enabled?: boolean }).virtual_basis_term_lock_enabled)}

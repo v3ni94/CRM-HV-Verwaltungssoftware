@@ -33,4 +33,15 @@ describe("LanguageSwitch (GA11-01)", () => {
     );
     expect(refresh).toHaveBeenCalled();
   });
+
+  it("stores the choice at the account when signed in, not on the sign-in page", async () => {
+    const { unmount } = renderIntl(<LanguageSwitch />);
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Sprache" }), "en");
+    expect(fetchMock.mock.calls.map((c) => c[0])).toContain("/api/bff/portal/me/locale");
+    unmount();
+    fetchMock.mockClear();
+    renderIntl(<LanguageSwitch persist={false} />);
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Sprache" }), "en");
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(["/api/locale"]);
+  });
 });

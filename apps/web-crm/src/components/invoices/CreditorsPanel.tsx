@@ -72,6 +72,7 @@ export function CreditorsPanel({ ledgers }: { ledgers: Option[] }) {
         <button type="button" className={ui.button} onClick={() => void sync()} disabled={syncing || !ledger}>{t("sync")}</button>
         <span className={ui.help}>{t("syncHint")}</span>
       </div>
+      <p className={ui.help} data-testid="creditor-default-rule-hint">{t("defaultRuleHint")}</p>
       {syncMessage ? <p className={ui.success} role="status">{syncMessage}</p> : null}
       {error ? <p className={ui.alert} role="alert">{error}</p> : null}
       {rows === null ? null : rows.length === 0 ? (

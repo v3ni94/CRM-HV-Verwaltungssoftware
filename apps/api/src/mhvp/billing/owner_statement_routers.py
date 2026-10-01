@@ -28,6 +28,7 @@ from mhvp.billing.owner_statement import (
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents import letters
@@ -145,7 +146,7 @@ async def create(
         return _out(st)
 
 
-@router.get("", summary="Eigentümerabrechnungen")
+@router.get("", summary="Eigentümerabrechnungen", dependencies=[Depends(strict_query)])
 async def list_statements(
     request: Request,
     ledger_id: uuid.UUID | None = None,
@@ -367,7 +368,9 @@ def _eur(value: str) -> str:
     return f"{text} EUR"
 
 
-async def render_letter_pdf(session: AsyncSession, request: Request, st: OwnerStatement) -> bytes:
+async def render_letter_pdf(
+    session: AsyncSession, request: Request, st: OwnerStatement, part: str = "letter"
+) -> bytes:
     """PDF on the tenant's letterhead via the letter blocks (M17-05); falls back to the plain
     block list when the tenant's company data is incomplete (draft, never blocked by it)."""
     from mhvp.documents import services as doc_services
@@ -387,7 +390,8 @@ async def render_letter_pdf(session: AsyncSession, request: Request, st: OwnerSt
         if prop
         else str(st.property_id)
     )
-    letter = owner_pdf.build_letter(
+    build = owner_pdf.build_s35a_sheet if part == "s35a" else owner_pdf.build_letter
+    letter = build(
         st,
         recipient_lines=[entity.name] if entity else [],
         property_line=property_line,
@@ -461,3 +465,99 @@ async def pdf(
                 "Content-Disposition": f'attachment; filename="eigentuemerabrechnung-{st.id}.pdf"'
             },
         )
+
+
+OUTPUT_PARTS = {
+    "letter": ("Anschreiben Eigentümerabrechnung", "anschreiben", "owner_statement_letter"),
+    "s35a": ("Nachweis § 35a EStG", "nachweis-35a", "owner_statement_s35a"),
+}
+
+
+@router.get(
+    "/{statement_id}/preview/{part}",
+    summary="Vorschau Anschreiben oder § 35a-Nachweis als PDF-Entwurf (GA06-03, kein Versand)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def output_preview(
+    statement_id: uuid.UUID,
+    part: str,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    """Draft preview from the calculated snapshot; carries the draft marking and the
+    placeholders "Text nicht freigegeben" (AA11-02). Issuing and filing need G3."""
+    if part not in OUTPUT_PARTS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Teil: letter oder s35a.")
+    async with tenant_tx(request, principal) as session:
+        st = await _statement(session, statement_id)
+        if not (st.snapshot or {}).get("results"):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Erst berechnen.")
+        content = await render_letter_pdf(session, request, st, part)
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'inline; filename="{OUTPUT_PARTS[part][1]}-{st.id}.pdf"',
+        },
+    )
+
+
+@router.post(
+    "/{statement_id}/outputs",
+    status_code=201,
+    summary="Anschreiben und § 35a-Nachweis ablegen (GA06-03, nur mit Freigabestufe G3)",
+)
+async def file_outputs(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Files the letter and the § 35a proof of the approved statement as generated documents
+    linked to the statement run (context ``owner_statement``), the legal entity and the
+    property. Internal drafts, nothing is sent."""
+    from mhvp.billing import outputs
+    from mhvp.documents.blobs import BlobStore
+
+    await ensure_release_gate_open(
+        ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        st = await _statement(session, statement_id)
+        if StatementStatus(st.status.value) not in lifecycle.APPROVED_OR_LATER:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Ablage nur nach interner Freigabe.")
+        blobs = BlobStore(request.app.state.settings)
+        filed = []
+        for part, (label, stem, origin) in OUTPUT_PARTS.items():
+            pdf = await render_letter_pdf(session, request, st, part)
+            document = await outputs.file_output(
+                session,
+                blobs,
+                principal,
+                pdf=pdf,
+                title=f"{label} {st.period_from:%d.%m.%Y} bis {st.period_to:%d.%m.%Y} (Entwurf)",
+                filename=f"{stem}-{st.period_from.isoformat()}-{st.period_to.isoformat()}.pdf",
+                links=[("legal_entity", st.legal_entity_id), ("property", st.property_id)],
+                context_type="owner_statement",
+                context_id=st.id,
+                origin=origin,
+            )
+            filed.append({"part": part, "document_id": document.id})
+        return {
+            "statement_id": st.id,
+            "items": filed,
+            "text_status": owner_pdf.TEXT_NOT_RELEASED,
+        }
+
+
+@router.get("/{statement_id}/outputs", summary="Abgelegte Ausgaben der Eigentümerabrechnung")
+async def list_outputs(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.billing import outputs
+
+    async with tenant_tx(request, principal) as session:
+        st = await _statement(session, statement_id)
+        return {
+            "statement_id": st.id,
+            "items": await outputs.list_outputs(session, "owner_statement", st.id),
+        }

@@ -5,6 +5,7 @@ import { LiquidityReport, type LiquiditySnapshot } from "@/components/accounting
 import { ReportsExplorer, type ExplorerAccount } from "@/components/accounting/ReportsExplorer";
 import { PaymentsByDebtor, type PaymentsByDebtorRow } from "@/components/accounting/ReportsPaymentsByDebtor";
 import { RevenueReport, type RevenueRow } from "@/components/accounting/ReportsRevenue";
+import { SubledgerCheck, type SubledgerRow } from "@/components/accounting/SubledgerCheck";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
@@ -43,7 +44,7 @@ export default async function LedgerReportsPage({
     );
   }
 
-  const [liquidity, paymentsByDebtor, revenue, auditExports, accounts] = await Promise.all([
+  const [liquidity, paymentsByDebtor, revenue, auditExports, accounts, checks] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/liquidity", {
       params: { path: { ledger_id: id }, query: { as_of: asOf } },
     }),
@@ -55,6 +56,9 @@ export default async function LedgerReportsPage({
     }),
     api.GET("/api/v1/accounting/audit-exports", { params: { query: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: id } } }),
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/checks", {
+      params: { path: { ledger_id: id }, query: { as_of: asOf } },
+    }),
   ]);
 
   return (
@@ -142,6 +146,20 @@ export default async function LedgerReportsPage({
           defaultStart={start}
           defaultEnd={end}
         />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className={ui.h2}>{t("reports.subledger.title")}</h2>
+        {!checks.data ? (
+          <p role="alert" className={ui.alert}>
+            {problemMessage(checks.error as Problem | undefined, checks.response.status)}
+          </p>
+        ) : (
+          <SubledgerCheck
+            asOf={asOf}
+            rows={((checks.data as { subledger?: SubledgerRow[] }).subledger ?? []) as SubledgerRow[]}
+          />
+        )}
       </section>
 
       <section className="flex flex-col gap-2">

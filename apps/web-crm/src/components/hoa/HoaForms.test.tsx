@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { HoaSteps, MajorityRules, MeetingPanel, PlanApplyPreview } from "./HoaForms";
+import { HoaCreate, HoaSteps, MajorityRules, MeetingPanel, PlanApplyPreview } from "./HoaForms";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
@@ -156,5 +156,25 @@ describe("MajorityRules", () => {
       />,
     );
     expect(screen.getByText(/mehr als 66,67 %, mindestens 50 % aller MEA/)).toBeInTheDocument();
+  });
+});
+
+describe("HoaCreate meeting", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("requires the original meeting for a repeat and sends origin_meeting_id (GA03-01)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ id: RES }, 201));
+    const { container } = renderIntl(
+      <HoaCreate kind="meeting" legalEntityId={LE} basePath="/weg/x" originMeetings={[{ id: ST, label: "10.12.2026 14:00 · eingeladen" }]} />,
+    );
+    await userEvent.type(container.querySelector('input[type="datetime-local"]') as HTMLInputElement, "2026-12-10T14:00");
+    await userEvent.selectOptions(screen.getByTestId("meeting-kind-select"), "repeat");
+    await userEvent.click(screen.getByRole("button", { name: /Versammlung/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ursprungsversammlung");
+    expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.selectOptions(screen.getByTestId("meeting-origin-select"), ST);
+    await userEvent.click(screen.getByRole("button", { name: /Versammlung/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({ kind: "repeat", origin_meeting_id: ST, legal_entity_id: LE });
   });
 });

@@ -13,9 +13,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.core.auth import oidc_clients
@@ -29,6 +29,7 @@ from mhvp.core.auth.principal import (
 )
 from mhvp.core.db.tenancy import platform_transaction
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.logging import get_logger
 from mhvp.core.number_format import (
     DEFAULT_FORMATS,
@@ -41,7 +42,14 @@ from mhvp.core.number_format import (
     preview,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.platform.models import OidcClient, Tenant, TenantDomain, TenantSettings, TenantStatus
+from mhvp.platform.models import (
+    OidcClient,
+    PlatformAuditEvent,
+    Tenant,
+    TenantDomain,
+    TenantSettings,
+    TenantStatus,
+)
 
 router = APIRouter(tags=["Mandant"])
 _log = get_logger(__name__)
@@ -203,6 +211,89 @@ async def preview_number_format(
     return {"preview": preview(fmt, datetime.now(UTC).date())}
 
 
+# Platform audit (AB13) ---------------------------------------------------------------------
+
+
+def _audit(
+    session: Any,
+    principal: Principal,
+    action: str,
+    target_type: str,
+    target_id: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    """Persist a platform action in the append-only ``platform_audit_event`` (no secrets)."""
+    session.add(
+        PlatformAuditEvent(
+            actor_user_id=principal.user_id,
+            action=action,
+            target_type=target_type,
+            target_id=target_id,
+            payload=payload or {},
+        )
+    )
+
+
+class PlatformAuditEventOut(BaseModel):
+    id: uuid.UUID
+    occurred_at: datetime
+    actor_user_id: uuid.UUID | None
+    action: str
+    target_type: str
+    target_id: str
+    payload: dict[str, Any]
+
+
+class PlatformAuditPage(BaseModel):
+    items: list[PlatformAuditEventOut]
+    total: int
+    limit: int
+    offset: int
+
+
+@router.get(
+    "/platform/audit-events",
+    summary="Plattformaudit auflisten",
+    dependencies=[Depends(strict_query)],
+)
+async def list_platform_audit_events(
+    request: Request,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    action: str | None = Query(None, max_length=100),
+    _: Principal = Depends(require_platform_admin),
+) -> PlatformAuditPage:
+    async with platform_transaction(sessions(request)) as session:
+        stmt = select(PlatformAuditEvent)
+        count = select(func.count()).select_from(PlatformAuditEvent)
+        if action:
+            stmt = stmt.where(PlatformAuditEvent.action == action)
+            count = count.where(PlatformAuditEvent.action == action)
+        rows = await session.scalars(
+            stmt.order_by(PlatformAuditEvent.occurred_at.desc(), PlatformAuditEvent.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        total = await session.scalar(count) or 0
+        return PlatformAuditPage(
+            items=[
+                PlatformAuditEventOut(
+                    id=r.id,
+                    occurred_at=r.occurred_at,
+                    actor_user_id=r.actor_user_id,
+                    action=r.action,
+                    target_type=r.target_type,
+                    target_id=r.target_id,
+                    payload=r.payload,
+                )
+                for r in rows
+            ],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+
 # Customer domains and tenant status (GA01-10) ----------------------------------------------
 
 
@@ -235,7 +326,11 @@ def _domain_out(request: Request, row: TenantDomain) -> TenantDomainOut:
     )
 
 
-@router.get("/platform/tenants/{tenant_id}/domains", summary="Kundendomains des Mandanten")
+@router.get(
+    "/platform/tenants/{tenant_id}/domains",
+    summary="Kundendomains des Mandanten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_tenant_domains(
     tenant_id: uuid.UUID, request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[TenantDomainOut]:
@@ -282,6 +377,14 @@ async def add_tenant_domain(
             host=host,
             purpose=body.purpose,
         )
+        _audit(
+            session,
+            principal,
+            "tenant_domain_added",
+            "tenant",
+            str(tenant_id),
+            {"host": host, "purpose": body.purpose},
+        )
         return _domain_out(request, row)
 
 
@@ -312,6 +415,9 @@ async def delete_tenant_domain(
             tenant_id=str(tenant_id),
             host=host,
         )
+        _audit(
+            session, principal, "tenant_domain_removed", "tenant", str(tenant_id), {"host": host}
+        )
 
 
 @router.patch("/platform/tenants/{tenant_id}", summary="Mandantenstatus ändern (sperren)")
@@ -332,6 +438,14 @@ async def patch_tenant_status(
             actor_user_id=str(principal.user_id),
             tenant_id=str(tenant_id),
             changes=diff({"status": before}, {"status": body.status}),
+        )
+        _audit(
+            session,
+            principal,
+            "tenant_status_changed",
+            "tenant",
+            str(tenant_id),
+            {"from": before, "to": body.status},
         )
         return {"id": str(tenant.id), "slug": tenant.slug, "status": body.status}
 
@@ -376,7 +490,9 @@ def _oidc_problem(exc: oidc_clients.OidcClientError) -> ProblemError:
     return ProblemError(code, detail=str(exc))
 
 
-@router.get("/platform/oidc-clients", summary="OIDC-Clients auflisten")
+@router.get(
+    "/platform/oidc-clients", summary="OIDC-Clients auflisten", dependencies=[Depends(strict_query)]
+)
 async def list_oidc_clients(
     request: Request, _: Principal = Depends(require_platform_admin)
 ) -> list[OidcClientOut]:
@@ -407,6 +523,14 @@ async def create_oidc_client(
         _log.warning(
             "oidc_client_created", actor_user_id=str(principal.user_id), client_id=body.client_id
         )
+        _audit(
+            session,
+            principal,
+            "oidc_client_created",
+            "oidc_client",
+            body.client_id,
+            {"name": body.name, "redirect_uris": body.redirect_uris, "public": body.public},
+        )
         return OidcClientSecretOut(**_client_out(row).model_dump(), client_secret=secret)
 
 
@@ -426,6 +550,7 @@ async def rotate_oidc_client_secret(
         _log.warning(
             "oidc_client_secret_rotated", actor_user_id=str(principal.user_id), client_id=client_id
         )
+        _audit(session, principal, "oidc_client_secret_rotated", "oidc_client", client_id)
         return OidcClientSecretOut(**_client_out(row).model_dump(), client_secret=secret)
 
 
@@ -446,4 +571,5 @@ async def set_oidc_client_active(
         _log.warning(
             f"oidc_client_{action}d", actor_user_id=str(principal.user_id), client_id=client_id
         )
+        _audit(session, principal, f"oidc_client_{action}d", "oidc_client", client_id)
         return _client_out(row)

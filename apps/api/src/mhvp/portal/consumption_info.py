@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing import consumption_info
 from mhvp.billing.models import ConsumptionInfo
 from mhvp.core.auth.principal import tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import TenantSettings
 from mhvp.portal import access
@@ -55,7 +56,11 @@ def _in_scope(row: ConsumptionInfo, scope: dict[uuid.UUID, list[tuple[date, date
     )
 
 
-@router.get("/consumption-info", summary="Eigene Verbrauchsinformationen (Monate)")
+@router.get(
+    "/consumption-info",
+    summary="Eigene Verbrauchsinformationen (Monate)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_own(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     principal, account = ctx
     async with tenant_tx(request, principal) as session:

@@ -11,3 +11,5 @@
 | Sprache | Cookie `mhvp_locale`, sonst Accept-Language, sonst Deutsch; weitere Sprache nur durch Datei `messages/<code>.json` und Eintrag in `src/lib/locale.ts` (Test prüft Schlüsselgleichheit gegen Deutsch) |
 | Formularelemente | 20 Typen: 12 Eingabetypen der Vorversion, fünf neue Eingabetypen (address, location, signature, consent, amount) und drei Anzeigetypen (heading, info, divider). Die Typenliste ist aus den Portalfunktionen des Abschnitts 14 abgeleitet (A-AA14-01) |
 | Change reason | Lückenliste 01.10.2026, Befunde GA03-05, GA11-01, GA11-02, GA11-04, GA11-05 |
+
+Ergänzung AB12 (01.10.2026): Die Sprachwahl wird am Portalkonto gespeichert (`portal_account.locale`, Migration 0331) und bei der Anmeldung übernommen; der Cookie `mhvp_locale` hat Vorrang für nicht angemeldete Besucher. Die Pflege der Zeitfenster und Klassenfreigaben erfolgt in der CRM-Seite Dienstleister im Portal über die bestehende API. Ob Klassenfreigaben unter G5 fallen, ist offen (AB12-01), es ist kein Gate gesetzt.

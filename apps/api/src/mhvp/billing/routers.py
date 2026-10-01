@@ -21,6 +21,7 @@ from mhvp.billing.models import (
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_today
@@ -146,6 +147,7 @@ async def _out(session: AsyncSession, st: Statement) -> dict[str, Any]:
             "id": snap.id,
             "hash": snap.hash,
             "rule_version": snap.rule_version,
+            "rule_register": snap.inputs.get("rule_register"),
             **snap.results,
         }
         if snap
@@ -216,7 +218,11 @@ async def add_item(
         return {"id": item.id}
 
 
-@router.get("/{statement_id}/occupants", summary="Nutzer und Leerstand im Zeitraum")
+@router.get(
+    "/{statement_id}/occupants",
+    summary="Nutzer und Leerstand im Zeitraum",
+    dependencies=[Depends(strict_query)],
+)
 async def list_occupants(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -401,7 +407,7 @@ async def get(
         }
 
 
-@router.get("", summary="Betriebskostenabrechnungen")
+@router.get("", summary="Betriebskostenabrechnungen", dependencies=[Depends(strict_query)])
 async def list_statements(
     request: Request,
     ledger_id: uuid.UUID | None = None,

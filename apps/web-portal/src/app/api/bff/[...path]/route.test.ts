@@ -13,6 +13,16 @@ const ORIGIN = { origin: "http://portal.localhost", host: "portal.localhost" };
 describe("portal bff", () => {
   beforeEach(() => serverFetch.mockReset());
 
+  it("relays the language choice of the account (GA11-01)", async () => {
+    serverFetch.mockImplementation(async () => new Response(null, { status: 204 }));
+    const res = await PATCH(
+      new Request("http://portal.localhost/x", { method: "PATCH", headers: ORIGIN, body: JSON.stringify({ locale: "en" }) }),
+      ctx("portal/me/locale"),
+    );
+    expect(res.status).toBe(204);
+    expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/portal/me/locale");
+  });
+
   it("relays the granted portal handover operations", async () => {
     serverFetch.mockImplementation(
       async () =>

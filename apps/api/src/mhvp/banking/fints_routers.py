@@ -35,6 +35,7 @@ from mhvp.contacts.validation import normalise_iban
 from mhvp.core import crypto
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import BankAccountKind, LegalEntity, Property, PropertyBankAccount
 from mhvp.workspace.services import local_today
@@ -361,7 +362,11 @@ async def config(request: Request, principal: TenantPrincipal = Depends(READ)) -
     return FinTsConfigOut(configured=bool(request.app.state.settings.fints_product_id))
 
 
-@router.get("/institutes", summary="Institutssuche (BLZ, BIC, IBAN oder Name)")
+@router.get(
+    "/institutes",
+    summary="Institutssuche (BLZ, BIC, IBAN oder Name)",
+    dependencies=[Depends(strict_query)],
+)
 async def institutes(
     q: str = Query(min_length=2, max_length=60),
     principal: TenantPrincipal = Depends(READ),
@@ -461,7 +466,11 @@ async def restart_connection(
     return out
 
 
-@router.get("/connections", summary="FinTS-Bankverbindungen mit Konten (ohne Zugangsdaten)")
+@router.get(
+    "/connections",
+    summary="FinTS-Bankverbindungen mit Konten (ohne Zugangsdaten)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_connections(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[FinTsConnectionOut]:

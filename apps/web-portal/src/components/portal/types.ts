@@ -429,6 +429,8 @@ export type PortalMeeting = {
   mode_label: string;
   scheduled_at: string;
   location: string | null;
+  public_description?: string | null;
+  ends_at?: string | null;
   status: string;
   invited_at: string | null;
   notice: string | null;

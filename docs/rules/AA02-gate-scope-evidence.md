@@ -13,3 +13,16 @@
   18.0 und ADR 0003 Punkt 5. Mindestumfang je Stufe offen (AA02-01).
 - Abnahmefall: kein Fall in Anhang D; Tests `tests/integration/test_aa02_gate_scope_evidence.py`.
 - Änderungsgrund: Lückenliste 01.10.2026, GA14-02 bis GA14-04.
+
+## Ergänzung AB02 (Welle 13)
+
+- Regel 4: Routen, die ein Objekt kennen, reichen den Kontext an `is_open_for` durch
+  (`ensure_release_gate_open_for`): Kontenrahmen führendes System und Sofortbuchung des
+  Ausgleichsvorschlags (G1, Objekt und Rechtsträger des Buchungskreises), Zahlungsdatei
+  herunterladen und einreichen (G2, Objekt des Bankkontos). Unbegrenzte Freigaben öffnen
+  weiterhin alles, begrenzte nur das passende Objekt oder den passenden Rechtsträger; ein
+  unbekanntes Objekt wird ohne Kontext geprüft (403 vor 404). Die Granularität bleibt offen
+  (AA02-02).
+- Abnahmefall: kein Fall in Anhang D; Tests `tests/unit/test_ab02_gate_context.py`,
+  `tests/integration/test_ab02_gate_context_platform.py`.
+- Änderungsgrund: Lückenliste 01.10.2026, GA14-02 Rest.

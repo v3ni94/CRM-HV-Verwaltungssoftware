@@ -31,3 +31,9 @@
   `tests/integration/test_m17_operating_costs.py::test_a07_*`,
   `tests/unit/test_aa11_owner_statement_info_sheet.py`.
 - Änderungsgrund: Lückenliste 01.10.2026, Paket AA11; Migration 0313.
+
+## Änderung AB07 (01.10.2026)
+
+- GA06-02: Informationsblatt als Dokument ablegen (`POST /statements/{id}/info-sheet`, G3), Verknüpfung zum Abrechnungslauf über `generated_document` (Kontext `statement`), Liste `GET /statements/{id}/outputs`, Vorschau und Ablage im CRM. Belegeinsicht und Einwendungen tragen die Kennzeichnung "Text nicht freigegeben" bis AA11-01 entschieden ist.
+- GA06-03: Eigentümerabrechnung Miete/SEV mit Vorschau von Anschreiben und eigenem § 35a-Nachweis (`GET /billing/owner-statements/{id}/preview/{letter|s35a}`), Ablage beider Dokumente nach interner Freigabe (`POST .../outputs`, G3, Kontext `owner_statement`). Der steuerliche Hinweis ist Platzhalter "Text nicht freigegeben" (AA11-02); ohne freigegebene Quelle (Mietverwaltung) werden keine Beträge ausgewiesen.
+- Quellenstatus: Fachliche Umsetzung (7.6 A06, A07), keine Rechtsformulierung. Abnahmefall: tests/integration/test_ab07_outputs.py.

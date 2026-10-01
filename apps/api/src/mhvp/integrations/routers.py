@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.accounting.models import Invoice
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, require_release_gate
 from mhvp.documents.blobs import BlobStore
@@ -197,7 +198,7 @@ async def check_connection(
         )
 
 
-@router.get("/runs", summary="Letzte Läufe")
+@router.get("/runs", summary="Letzte Läufe", dependencies=[Depends(strict_query)])
 async def list_runs(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[s.LexofficeRunOut]:

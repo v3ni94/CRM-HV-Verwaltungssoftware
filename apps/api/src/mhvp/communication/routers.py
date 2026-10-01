@@ -35,7 +35,7 @@ from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_tran
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
-from mhvp.core.listparams import ListParams, ListSpec, sparse
+from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.integrations.lexoffice_ext import invoice_copy as lexoffice_invoice_copy
 from mhvp.platform.services import gate_superadmin_bypass_enabled
@@ -486,7 +486,9 @@ async def _live_mailbox(
     return row
 
 
-@router.get("/mailboxes", summary="Postfächer (ohne Zugangsdaten)")
+@router.get(
+    "/mailboxes", summary="Postfächer (ohne Zugangsdaten)", dependencies=[Depends(strict_query)]
+)
 async def list_mailboxes(
     request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> list[dict[str, Any]]:
@@ -503,13 +505,19 @@ async def patch_mailbox(
     mailbox_id: uuid.UUID,
     body: MailboxPatchIn,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(ADMIN),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _live_mailbox(session, mailbox_id, lock=True)
+        check_if_match(if_match, row.updated_at)  # GA04-06
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
         await session.flush()
+        await session.flush()
+        await session.refresh(row, ["updated_at"])
+        response.headers["ETag"] = etag_of(row.updated_at)
         return _mailbox_out(row, (await _mailbox_users(session)).get(row.id))
 
 
@@ -1164,6 +1172,7 @@ async def get_message(
 @router.get(
     "/messages/{message_id}/sync-events",
     summary="Abgleichereignisse der Mail mit Gmail (Rückkanal M20-08)",
+    dependencies=[Depends(strict_query)],
 )
 async def message_sync_events(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1273,7 +1282,11 @@ async def reconcile_mailbox_state(
     return {"queued": True}
 
 
-@router.get("/messages/{message_id}/thread", summary="Alle Nachrichten des Vorgangs")
+@router.get(
+    "/messages/{message_id}/thread",
+    summary="Alle Nachrichten des Vorgangs",
+    dependencies=[Depends(strict_query)],
+)
 async def message_thread(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -2095,7 +2108,11 @@ def _assert_own_deputy_or_admin(principal: TenantPrincipal, absent_user_id: uuid
     )
 
 
-@router.get("/mail-approval/deputies", summary="Vertretungen (M20-04a)")
+@router.get(
+    "/mail-approval/deputies",
+    summary="Vertretungen (M20-04a)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_mail_approval_deputies(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[MailApprovalDeputyOut]:
@@ -2261,6 +2278,11 @@ async def _record_sent(
         row.gmail_message_id = gmail_message_id
     row.send_error = None
     row.status, row.sent_at = "sent", datetime.now(UTC)
+    from mhvp.communication.receipts import mark_delivered
+
+    mark_delivered(row, row.sent_at)  # transport accepted the mail (indication, GA04-09)
+    if gmail_message_id is not None and row.provider_message_id is None:
+        row.provider_message_id = gmail_message_id
     await session.flush()
     if row.ticket_id:
         session.add(
@@ -2851,7 +2873,7 @@ async def correct_preparation(
         return {"knowledge_entry_id": entry.id}
 
 
-@router.get("/playbooks", summary="Playbooks")
+@router.get("/playbooks", summary="Playbooks", dependencies=[Depends(strict_query)])
 async def list_playbooks(
     request: Request,
     status: str | None = None,

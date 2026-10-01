@@ -1420,6 +1420,23 @@
  },
  {
   "kind": "page",
+  "title": "Dienstleister im Portal",
+  "source": "Einstellungen",
+  "href": "/einstellungen/dienstleister-portal",
+  "keywords": [
+   "dienstleister",
+   "verfügbarkeit",
+   "zeitfenster",
+   "klassenfreigabe",
+   "unterlagenklasse"
+  ],
+  "permission": [
+   "contacts:update"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Automatisierung",
   "source": "Einstellungen",
   "href": "/einstellungen/automatisierung",
@@ -3751,6 +3768,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Freigabepunkt § 13b UStG (AB10)",
+  "source": "Handbuch: Belegeingang",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist ein Beleg als Reverse Charge gekennzeichnet, zeigt die Eingangsrechnung einen eigenen Hinweis. Der Steuerberater bestätigt die Normzuordnung; es gibt keine automatische Buchung oder Steuerfolge.",
+  "file": "docs/handbuch/belegeingang.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck und Freigabestufen",
   "source": "Handbuch: Buchhaltung",
   "href": "/buchhaltung",
@@ -3947,6 +3974,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Journal hat jeder gebuchte Satz die Schaltfläche Vermerke. Dort lassen sich ergänzende Hinweise erfassen, etwa ein nachgereichter Beleg. Ein Vermerk ändert den Buchungsinhalt nicht. Wer einen Vermerk ändern möchte, wählt Neue Version; die frühere Fassung bleibt durchgestrichen",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Honorarfelder, Rechnungsplan und Standard-Bankregel (AB09)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Verwalterhonorar, weitere Angaben. Im Formular Verwalterhonorar (Buchhaltung, Verwalterhonorar) steht unter \"Weitere Honorarangaben\": Verwalterkontakt (Suche, nur Name), Kündigungsdatum, Fälligkeitsregel (fester Tag im Monat, letzter Tag, fester Tag im Folgemonat), Tag, Erlöskont",
   "file": "docs/handbuch/buchhaltung.md"
  },
  {
@@ -4737,6 +4774,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Plattformadministratoren pflegen unter Plattform, Domains die Hostnamen eines Mandanten (Zweck Portal, CRM oder API) mit Hinweis auf den CNAME-Eintrag und sperren oder entsperren den Mandanten. Unter Plattform, OIDC-Clients werden Clients der Anmeldung für Bestandstools angelegt,",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Plattformaudit",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Plattformadministratoren sehen die festgeschriebenen Plattformaktionen (Domain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert) über GET /api/v1/platform/audit-events (Parameter limit, offset, action). Die Einträge s",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -6331,6 +6378,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Freigabestufen verwalten (Plattform)",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Plattform, Freigabestufen G1 bis G5 sehen Plattformadministratoren je Mandant den Stand jeder Stufe (offen, begrenzt offen, geschlossen) und alle Anträge mit Nachweisdokument, öffnender Person und Zeitpunkt sowie Widerruf mit Kommentar. Im angemeldeten Mandanten lässt sich ",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,
@@ -6607,6 +6664,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Unterlagenklasse freigeben: Für einen Portalzugang kann die Verwaltung die Dokumente einer Klasse (zum Beispiel Abrechnungsbelege) eines Rechtsträgers freigeben, mit Rolle und Gültigkeit (POST /api/v1/portal-admin/accounts/{id}/document-class-grants). Sichtbar sind nur Dokument",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sprache und Dienstleister im Portal (AB12)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Sprache wählen Sie im Portal oben rechts und auf der Anmeldeseite. Angemeldete Personen haben die Wahl am Portalkonto gespeichert; bei der nächsten Anmeldung gilt diese Sprache auch auf einem anderen Gerät. Wer nicht angemeldet ist, behält die im Browser gewählte Sprache. Ein",
   "file": "docs/handbuch/portal.md"
  },
  {

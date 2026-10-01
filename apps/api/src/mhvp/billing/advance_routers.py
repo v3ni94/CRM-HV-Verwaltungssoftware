@@ -18,6 +18,7 @@ from mhvp.billing import advance_rule as rule
 from mhvp.billing.models import Statement, StatementSnapshot
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/billing/advance-rule", tags=["Abrechnung"])
@@ -87,7 +88,9 @@ async def _statement(session: AsyncSession, statement_id: uuid.UUID) -> Statemen
 
 
 @statement_router.get(
-    "/{statement_id}/advance-proposals", summary="Vorschläge neuer Vorauszahlungen (Entwurf)"
+    "/{statement_id}/advance-proposals",
+    summary="Vorschläge neuer Vorauszahlungen (Entwurf)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_proposals(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

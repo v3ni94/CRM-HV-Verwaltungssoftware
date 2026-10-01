@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa import meeting_rules
 from mhvp.hoa.majority import SUBJECT_PATTERN, check_resolution
@@ -1528,7 +1529,11 @@ async def patch_audit_item(
         return _item_out(row)
 
 
-@router.get("/audit-items/{item_id}/history", summary="Änderungshistorie der Prüfposition (PÜ08)")
+@router.get(
+    "/audit-items/{item_id}/history",
+    summary="Änderungshistorie der Prüfposition (PÜ08)",
+    dependencies=[Depends(strict_query)],
+)
 async def audit_item_history(
     item_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1773,7 +1778,7 @@ async def outdate_audit_items(session: AsyncSession, statement_id: uuid.UUID) ->
     )
 
 
-@router.get("/meetings", summary="Versammlungen einer GdWE")
+@router.get("/meetings", summary="Versammlungen einer GdWE", dependencies=[Depends(strict_query)])
 async def list_meetings(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1828,6 +1833,12 @@ async def get_meeting(
                 if basis
                 else None
             ),
+            # GA07-01: permanent notice, the lock itself stays behind the tenant switch
+            "virtual_basis_term_notice": (
+                meeting_rules.basis_term_notice(basis.decided_on, meeting.virtual_basis_valid_until)
+                if basis
+                else None
+            ),
             "agenda": [
                 {
                     "id": i.id,
@@ -1849,7 +1860,9 @@ async def get_meeting(
 
 
 @router.get(
-    "/meetings/{meeting_id}/members", summary="Stimmberechtigte mit Anwesenheit und Stimmen"
+    "/meetings/{meeting_id}/members",
+    summary="Stimmberechtigte mit Anwesenheit und Stimmen",
+    dependencies=[Depends(strict_query)],
 )
 async def meeting_members(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1906,6 +1919,7 @@ async def meeting_members(
 @router.get(
     "/meetings/{meeting_id}/invitation-recipients",
     summary="Empfänger der Einladung (Parteimitglieder und Bevollmächtigte nach Zustellregel)",
+    dependencies=[Depends(strict_query)],
 )
 async def invitation_recipients(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -2047,7 +2061,9 @@ async def create_rule(
         return {"id": row.id, **body.model_dump()}
 
 
-@router.get("/majority-rules", summary="Mehrheitsregeln einer GdWE")
+@router.get(
+    "/majority-rules", summary="Mehrheitsregeln einer GdWE", dependencies=[Depends(strict_query)]
+)
 async def list_rules(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

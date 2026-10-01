@@ -192,9 +192,15 @@ All write endpoints require `tenant_settings.metering_module_enabled` (403 `MHVP
 * The document store has no malware scanner; `check_upload` (size, MIME allow list, content
   sniffing) is the existing check that is applied.
 
-## HeiWaKo A record writer (GA09-01)
+## HeiWaKo A, L and M record writers (GA09-01)
 
 `heiwako.write_a_records` serialises `ARecord` objects to the `DTA310_*.DAT` layout (128 bytes,
 ISO 8859-15, CR LF) using only the fields documented in the module docstring (Q14). Round trip
 test in `tests/unit/test_m40_metering_heiwako.py`. Not wired into any transmission; whether the
 providers expect a master data delivery in this format is open (`docs/OPEN_QUESTIONS.md` AA16-01).
+
+`write_l_records` and `write_m_records` (AB14) write the 2048 byte records of `DTM310_*.DAT` from
+exactly the positions the reader evaluates. Not written because not evidenced in the repo: L fields
+after position 165, M allocation lines 4 to 6, the provider and recipient blocks (fields 42 to 66,
+provider account data) and record types B and K. Round trip and byte identity tests in
+`tests/unit/test_m40_metering_heiwako.py`.

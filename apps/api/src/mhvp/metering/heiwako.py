@@ -50,6 +50,8 @@ __all__ = [
     "detect_file_kind",
     "parse_file",
     "write_a_records",
+    "write_l_records",
+    "write_m_records",
 ]
 
 ENCODING = "iso-8859-15"
@@ -634,3 +636,146 @@ def write_a_records(
         buf[-1] = "A"
         lines.append("".join(buf))
     return "".join(f"{line}\r\n" for line in lines).encode(encoding)
+
+
+# Writers for the property record L and the user record M (GA09-01) -------------------------
+
+
+def _put_num(
+    buf: list[str], start: int, end: int, value: Decimal | int | None, *, decimals: int = 0
+) -> None:
+    """Right aligned, zero filled, minus sign first; ``None`` stays blank (never zero)."""
+    if value is None:
+        return
+    width = end - start + 1
+    scaled = int((Decimal(value) * (Decimal(10) ** decimals)).to_integral_exact())
+    digits = str(abs(scaled))
+    text = "-" + digits.rjust(width - 1, "0") if scaled < 0 else digits.rjust(width, "0")
+    if len(text) > width:
+        raise ValueError(f"Wert {value} passt nicht in Feld {start}-{end}")
+    buf[start - 1 : end] = list(text)
+
+
+def _put_date(buf: list[str], start: int, value: date | None) -> None:
+    if value is None:
+        return
+    if not 1970 <= value.year <= 2069:
+        raise ValueError(f"Jahr {value.year} ist mit zweistelligem Jahr nicht darstellbar")
+    buf[start - 1 : start + 5] = list(value.strftime("%d%m%y"))
+
+
+def _put_names(buf: list[str], start: int, names: Sequence[str | None]) -> None:
+    for offset, name in zip((0, 35, 70, 105), names, strict=False):
+        _put_field(buf, start + offset, start + offset + 34, name)
+
+
+def _put_header(buf: list[str], header: _Header, record_type: str, version: str) -> None:
+    _put_field(buf, 1, 1, record_type)
+    _put_field(buf, 2, 6, version)
+    _put_field(buf, 7, 16, header.customer_number, numeric=True)
+    _put_field(buf, 17, 18, header.provider_key)
+    if header.provider_property_number is not None:
+        unit = header.provider_unit_number or "0000"
+        _put_field(buf, 19, 31, header.provider_property_number.rjust(9, "0") + unit.rjust(4, "0"))
+
+
+def _finish(lines: list[str], encoding: str) -> bytes:
+    return "".join(f"{line}\r\n" for line in lines).encode(encoding)
+
+
+def write_l_records(
+    records: Sequence[LRecord], *, version: str = "03.10", encoding: str = ENCODING
+) -> bytes:
+    """Serialise ``L`` records (2048 bytes, last byte ``L``, CR LF) for ``DTM310_*.DAT``.
+    Written are exactly the positions the reader ``_parse_l`` evaluates (fields 1 to 18 and the
+    five flags kept in ``extra``). Not written because not documented in this repository:
+    the CO2 fields beyond position 165 and everything after it (AA16-01). Not wired into any
+    transmission."""
+    lines: list[str] = []
+    for rec in records:
+        buf = [" "] * RECORD_LENGTHS["L"]
+        _put_header(buf, rec.header, "L", version)
+        _put_num(buf, 32, 32, rec.vat_flag)
+        _put_field(buf, 33, 67, rec.street)
+        _put_field(buf, 68, 70, rec.country)
+        _put_field(buf, 71, 80, rec.postal_code)
+        _put_field(buf, 81, 115, rec.city)
+        _put_date(buf, 116, rec.period_from)
+        _put_date(buf, 122, rec.period_to)
+        _put_field(buf, 128, 142, rec.object_number)
+        _put_num(buf, 143, 143, rec.risk_allocation_flag)
+        _put_num(buf, 144, 146, rec.risk_allocation_percent, decimals=2)
+        _put_num(buf, 147, 147, rec.wage_share_flag)
+        _put_field(buf, 148, 150, rec.currency)
+        _put_num(buf, 151, 151, rec.weg_flag)
+        _put_num(buf, 152, 158, rec.total_area, decimals=2)
+        for key, (start, end) in _L_EXTRA.items():
+            _put_field(buf, start, end, rec.extra.get(key))
+        buf[-1] = "L"
+        lines.append("".join(buf))
+    return _finish(lines, encoding)
+
+
+_L_EXTRA = {
+    "non_residential_flag": (159, 159),
+    "section9_flag_1": (160, 160),
+    "section9_flag_2": (161, 161),
+    "co2_landlord_percent": (162, 164),
+    "heat_connection_after_2023_flag": (165, 165),
+}
+
+
+def write_m_records(
+    records: Sequence[MRecord], *, version: str = "03.10", encoding: str = ENCODING
+) -> bytes:
+    """Serialise ``M`` records (2048 bytes, last byte ``M``, CR LF) for ``DTM310_*.DAT``.
+    Written are the positions the reader ``_parse_m`` evaluates as typed fields (user, owner,
+    occupancy, shares, prepayments, allocations 1 to 3, flags 67 to 70). The provider and
+    recipient blocks kept in ``extra`` (account data of the provider) are deliberately not
+    written. Further allocation lines (fields 36 to 41 beyond three keys) and all positions
+    not documented here stay blank (AA16-01). Not wired into any transmission."""
+    lines: list[str] = []
+    for rec in records:
+        buf = [" "] * RECORD_LENGTHS["M"]
+        _put_header(buf, rec.header, "M", version)
+        _put_field(buf, 32, 51, rec.client_ref)
+        _put_num(buf, 52, 52, rec.address_flag)
+        _put_names(buf, 53, rec.user_names)
+        _put_field(buf, 193, 227, rec.user_street)
+        _put_field(buf, 228, 230, rec.user_country)
+        _put_field(buf, 231, 240, rec.user_postal_code)
+        _put_field(buf, 241, 275, rec.user_city)
+        _put_names(buf, 276, rec.owner_names)
+        _put_field(buf, 416, 450, rec.owner_street)
+        _put_field(buf, 451, 453, rec.owner_country)
+        _put_field(buf, 454, 463, rec.owner_postal_code)
+        _put_field(buf, 464, 498, rec.owner_city)
+        _put_date(buf, 499, rec.occupancy_from)
+        _put_date(buf, 505, rec.occupancy_to)
+        _put_num(buf, 511, 511, rec.vat_flag)
+        _put_num(buf, 512, 512, rec.risk_allocation_flag)
+        amounts = (
+            rec.heating_shares,
+            rec.heating_prepayment_gross,
+            rec.heating_prepayment_net,
+            rec.hot_water_shares,
+            rec.hot_water_prepayment_gross,
+            rec.hot_water_prepayment_net,
+            rec.cold_water_shares,
+            rec.cold_water_prepayment_gross,
+            rec.cold_water_prepayment_net,
+        )
+        for index, amount in enumerate(amounts):
+            start = 513 + 10 * index
+            _put_num(buf, start, start + 9, amount, decimals=2)
+        for index, (key, share) in enumerate(rec.allocations[:3]):
+            start = 603 + 13 * index
+            _put_num(buf, start, start + 2, key)
+            _put_num(buf, start + 3, start + 12, share, decimals=2)
+        _put_num(buf, 1167, 1167, rec.vacancy_flag)
+        _put_num(buf, 1168, 1168, rec.change_fee_flag)
+        _put_num(buf, 1169, 1171, rec.heating_shares_key)
+        _put_num(buf, 1172, 1174, rec.hot_water_shares_key)
+        buf[-1] = "M"
+        lines.append("".join(buf))
+    return _finish(lines, encoding)

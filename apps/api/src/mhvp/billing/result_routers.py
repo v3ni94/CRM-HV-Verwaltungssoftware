@@ -29,6 +29,7 @@ from mhvp.billing.status import StatementStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_date
@@ -249,7 +250,11 @@ def _result_out(
     }
 
 
-@router.get("/{statement_id}/results", summary="Ergebnis je Vertrag mit Aufstellung und Zugang")
+@router.get(
+    "/{statement_id}/results",
+    summary="Ergebnis je Vertrag mit Aufstellung und Zugang",
+    dependencies=[Depends(strict_query)],
+)
 async def list_results(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -402,7 +407,11 @@ def _inspection_out(row: StatementInspection) -> dict[str, Any]:
     }
 
 
-@router.get("/{statement_id}/inspections", summary="Belegeinsicht: Anfragen der Mieter")
+@router.get(
+    "/{statement_id}/inspections",
+    summary="Belegeinsicht: Anfragen der Mieter",
+    dependencies=[Depends(strict_query)],
+)
 async def list_inspections(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

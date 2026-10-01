@@ -20,6 +20,7 @@ from mhvp.accounting.models import DatevAccountMapping, Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 
 router = APIRouter(prefix="/accounting/datev-mappings", tags=["Buchhaltung"])
@@ -152,7 +153,7 @@ def _duplicate() -> ProblemError:
     )
 
 
-@router.get("", summary="DATEV-Kontenzuordnungen")
+@router.get("", summary="DATEV-Kontenzuordnungen", dependencies=[Depends(strict_query)])
 async def list_mappings(
     request: Request,
     ledger_id: uuid.UUID | None = Query(default=None),

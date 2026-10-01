@@ -51,6 +51,20 @@ describe("MeetingDetailsForm", () => {
   });
 });
 
+describe("MeetingDetailsForm templates", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("selects templates from a list and sends the id", async () => {
+    const T = "0192abcd-0000-7000-8000-000000000099";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ id: M }));
+    renderIntl(<MeetingDetailsForm meetingId={M} data={data} closed={false} templates={[{ id: T, name: "Einladung WEG" }]} />);
+    await userEvent.selectOptions(screen.getByTestId("meeting-invitation_template_id"), T);
+    await userEvent.click(screen.getByRole("button", { name: "Angaben speichern" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toMatchObject({ invitation_template_id: T, proxy_template_id: null });
+  });
+});
+
 describe("AgendaResultForm", () => {
   afterEach(() => vi.restoreAllMocks());
 

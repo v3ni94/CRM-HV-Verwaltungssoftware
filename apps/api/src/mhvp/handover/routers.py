@@ -23,6 +23,7 @@ from sqlalchemy import func, or_, select
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.documents import letters
 from mhvp.documents import services as documents
@@ -1711,7 +1712,11 @@ async def _draft_invitation_mail(
     return draft.id
 
 
-@router.get("/protocols/{protocol_id}/helper-access", summary="Gehilfenzugänge auflisten")
+@router.get(
+    "/protocols/{protocol_id}/helper-access",
+    summary="Gehilfenzugänge auflisten",
+    dependencies=[Depends(strict_query)],
+)
 async def list_helper_access(
     protocol_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:

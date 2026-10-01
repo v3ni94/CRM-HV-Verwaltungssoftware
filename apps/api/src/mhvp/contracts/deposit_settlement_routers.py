@@ -29,6 +29,7 @@ from mhvp.contracts.models import (
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_property_allowed, session_allowed_property_ids
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents import letters
@@ -274,7 +275,11 @@ async def _deposit(session: Any, deposit_id: uuid.UUID) -> Deposit:
 # Reference rates -------------------------------------------------------------------------
 
 
-@router.get("/deposit-interest-rates", summary="Referenzzinssatz je Jahr")
+@router.get(
+    "/deposit-interest-rates",
+    summary="Referenzzinssatz je Jahr",
+    dependencies=[Depends(strict_query)],
+)
 async def list_reference_rates(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ReferenceRateOut]:
@@ -420,7 +425,11 @@ async def create_settlement(
         return _row_out(row)
 
 
-@router.get("/deposits/{deposit_id}/settlements", summary="Kautionsabrechnungen (Entwürfe)")
+@router.get(
+    "/deposits/{deposit_id}/settlements",
+    summary="Kautionsabrechnungen (Entwürfe)",
+    dependencies=[Depends(strict_query)],
+)
 async def list_settlements(
     deposit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[DepositSettlementOut]:
@@ -637,7 +646,9 @@ def _ensure_open(deposit: Deposit) -> None:
 
 
 @router.get(
-    "/deposits/{deposit_id}/interest-rates", summary="Zinssatzverlauf der Kaution (Anlageform)"
+    "/deposits/{deposit_id}/interest-rates",
+    summary="Zinssatzverlauf der Kaution (Anlageform)",
+    dependencies=[Depends(strict_query)],
 )
 async def list_deposit_rates(
     deposit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -826,7 +837,11 @@ async def create_interest_draft(
         return DepositInterestDraftOut.model_validate(row)
 
 
-@router.get("/deposits/{deposit_id}/interest-drafts", summary="Zinsgutschrift Entwürfe der Kaution")
+@router.get(
+    "/deposits/{deposit_id}/interest-drafts",
+    summary="Zinsgutschrift Entwürfe der Kaution",
+    dependencies=[Depends(strict_query)],
+)
 async def list_interest_drafts(
     deposit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[DepositInterestDraftOut]:

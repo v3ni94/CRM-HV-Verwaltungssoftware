@@ -24,6 +24,7 @@ from mhvp.accounting.rent_invoice_models import RentInvoice, RentInvoiceKind, Re
 from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate
 from mhvp.documents import letters
@@ -135,12 +136,17 @@ async def _render_and_store(
 @router.get(
     "/accounting/rent-invoices/fields",
     summary="Pflichtangaben einer Mietrechnung (Feldliste, zu prüfen durch Steuerberater)",
+    dependencies=[Depends(strict_query)],
 )
 async def mandatory_fields(principal: TenantPrincipal = Depends(READ)) -> list[MandatoryFieldOut]:
     return [MandatoryFieldOut(field=f, description=d) for f, d in ri.MANDATORY_FIELDS]
 
 
-@router.get("/contracts/{contract_id}/rent-invoices", summary="Mietrechnungen des Vertrags")
+@router.get(
+    "/contracts/{contract_id}/rent-invoices",
+    summary="Mietrechnungen des Vertrags",
+    dependencies=[Depends(strict_query)],
+)
 async def list_rent_invoices(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[RentInvoiceOut]:

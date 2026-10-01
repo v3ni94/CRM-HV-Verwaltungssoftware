@@ -435,3 +435,15 @@ Beschluss-Sammlung zeigt Ort, Eintragungszeit und gerichtliche Vermerke; "gelös
 "gegenstandslos" sind Vermerke, der Eintrag bleibt erhalten. In den Versammlungseinstellungen
 schalten Sie optional die Sperre bei einer Geltungsdauer des Grundlagenbeschlusses über drei
 Jahre ein; ohne Schalter erscheint nur ein Hinweis (rechtlich zu prüfen).
+
+### Wiederholungs- und Fortsetzungsversammlung anlegen
+
+Beim Anlegen einer Versammlung die Art Wiederholungsversammlung oder Fortsetzung wählen und die Ursprungsversammlung derselben Gemeinschaft auswählen (Pflichtangabe). Vorlagen für Einladung, Vollmacht und Stimmzettel wählen Sie in der Versammlung unter Art, Dauer, Vorlagen und Beschreibung aus einer Liste. Die öffentliche Beschreibung sehen Eigentümer im Portal, die interne Beschreibung nicht. Liegt das Gültigkeitsende des zulassenden Beschlusses mehr als drei Jahre nach dem Beschlussdatum, zeigt die Versammlung dauerhaft einen Hinweis. Eine Sperre besteht nur, wenn der Mandantenschalter aktiv ist (Standard aus).
+
+### Vermögensbericht per Brief versenden
+
+In der Ansicht des ausgegebenen Vermögensberichts zeigt das Bereitstellungsprotokoll je Einheit die Portalabrufe und die Briefe. Die Schaltfläche "Bericht per Brief versenden" bereitet für alle Eigentümer ohne Portalabruf einen Brief vor; mit dem Haken "Auch an Eigentümer mit Portalabruf versenden" erhalten alle Eigentümer einen Brief. Der Zustellweg folgt dem Kontakt, sonst dem Mandantenstandard. Briefe gehen über den Versand (Postauftrag, E-Mail-Entwurf oder Portal) und verlassen das Haus erst nach den dortigen Freigaben. Die Funktion setzt Freigabestufe G4 voraus.
+
+### Sonderfälle des Eigentümerwechsels
+
+Ersterwerb, Zwangsversteigerung, Erbfall, Schenkung, sonstiger Erwerb und Sonderrechtsnachfolge im Abrechnungsjahr sperren das Abrechnungspaket, bis eine erste Person die Freigabe beantragt und eine zweite Person sie erteilt hat. Der Zuordnungsvorschlag ist ein Prüfhinweis, keine Rechtsregel.

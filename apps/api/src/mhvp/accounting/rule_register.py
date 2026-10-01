@@ -92,7 +92,25 @@ def snapshot_reference(row: RuleVersion | None) -> dict[str, object] | None:
     """What the snapshot keeps of the register entry (rule id, version, status)."""
     if row is None:
         return None
-    return {"rule_id": row.rule_id, "version": row.version, "status": row.status}
+    return {
+        "id": str(row.id) if row.id is not None else None,
+        "rule_id": row.rule_id,
+        "version": row.version,
+        "status": row.status,
+        "effective_from": row.effective_from.isoformat(),
+    }
+
+
+def due_checkpoints(rows: Sequence[RuleVersion], today: date) -> list[RuleVersion]:
+    """Check point entries (group Prüfpunkt) whose date is reached; hint only (GA08-02)."""
+    due = [
+        r
+        for r in rows
+        if CHECKPOINT_GROUP in (r.case_groups or [])
+        and r.status != "withdrawn"
+        and r.effective_from <= today
+    ]
+    return sorted(due, key=lambda r: (r.effective_from, r.rule_id, r.version))
 
 
 async def seed_checkpoints(

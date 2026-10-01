@@ -343,3 +343,13 @@ within the month is not prorated; the item stays manual (`OWNERSHIP_CHANGE`), se
 * `GET/POST /accounting/ledgers/{id}/entries/{id}/notes`: versioned, append only notes on
   posted entries (`journal_entry_note`, migration 0303, errors `MHVP-ACC-0009`, `-0010`).
 * Rule `docs/rules/AA01-pruefbericht-vermerke-jobgates.md`.
+* AB01: the audit export ZIP carries `nebenbuchabgleich.csv` (subledger reconciliation per
+  debtor and creditor as of the period end); the CRM reports page shows it as of the chosen
+  date (`SubledgerCheck`). Runtime gate proof of `GATED_ROUTES`:
+  `tests/integration/test_ab01_gate_runtime.py`.
+
+- AB10: `due_checkpoints` and `GET /rule-versions/due-checkpoints` report reached check points (group Prüfpunkt) as a hint only (GA08-02).
+
+## AB09: Plankennzeichen im Lauf
+
+`POST /accounting/recurring-invoices/{id}/generate` liefert zusätzlich `auto_post_requested` und `auto_post_state` (`creditor_routers.auto_post_state`). Der Lauf bucht nie; G1 wird über den Resolver der Anwendung geprüft, der Automatikschalter über `tenant_settings.auto_posting_enabled`.

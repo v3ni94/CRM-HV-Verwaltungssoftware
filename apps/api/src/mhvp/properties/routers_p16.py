@@ -17,6 +17,7 @@ from mhvp.contacts.models import ContactBankAccount
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import diff, emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties import schemas as s
 from mhvp.properties import services as svc
@@ -158,6 +159,7 @@ async def patch_provider(
 @router.get(
     "/units/{unit_id}/vat-options",
     summary="Historie der Umsatzsteueroptionen einer Einheit",
+    dependencies=[Depends(strict_query)],
 )
 async def list_vat_options(
     unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

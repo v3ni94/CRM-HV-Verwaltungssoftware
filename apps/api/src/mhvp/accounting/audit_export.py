@@ -1064,6 +1064,36 @@ async def collect(
             "settlements": len(settlements),
         },
     }
+    # GA05-03 follow up (AB01): sub ledger reconciliation per debtor and creditor account as
+    # of the period end; a difference is listed for review, it is no finding by itself.
+    from mhvp.accounting.services import subledger_reconciliation
+
+    nebenbuch = Table(
+        "nebenbuchabgleich",
+        [
+            "Stichtag",
+            "Konto-ID",
+            "Kontonummer",
+            "Bezeichnung",
+            "Art",
+            "Saldo Hauptbuch",
+            "Offene Posten",
+            "Differenz",
+        ],
+        [
+            [
+                end,
+                row["account_id"],
+                row["number"],
+                row["name"],
+                row["category"],
+                Decimal(row["ledger_balance"]),
+                Decimal(row["open_items_remaining"]),
+                Decimal(row["difference"]),
+            ]
+            for row in await subledger_reconciliation(session, ledger, end)
+        ],
+    )
     return ExportBundle(
         meta=meta,
         tables=[
@@ -1082,6 +1112,7 @@ async def collect(
             schluessel,
             schluesselwerte,
             belege,
+            nebenbuch,
             *automatik,
         ],
         receipts=receipts,

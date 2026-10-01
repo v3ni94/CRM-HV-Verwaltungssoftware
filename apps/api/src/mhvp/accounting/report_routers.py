@@ -26,6 +26,7 @@ from mhvp.accounting.schemas import AccountOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed, property_column_guard
 from mhvp.core.events import emit
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
 
@@ -469,7 +470,11 @@ async def _rule_version(session: AsyncSession, version_id: uuid.UUID) -> RuleVer
     return row
 
 
-@router.get("/rule-versions", summary="Regelversionen mit Wirksamkeitsdatum")
+@router.get(
+    "/rule-versions",
+    summary="Regelversionen mit Wirksamkeitsdatum",
+    dependencies=[Depends(strict_query)],
+)
 async def list_rule_versions(
     request: Request,
     rule_id: str | None = Query(default=None, max_length=60),
@@ -482,6 +487,25 @@ async def list_rule_versions(
         if rule_id:
             query = query.where(RuleVersion.rule_id == rule_id)
         return [RuleVersionOut.model_validate(r) for r in await session.scalars(query)]
+
+
+@router.get(
+    "/rule-versions/due-checkpoints",
+    summary="Fällige Prüfpunkte als Hinweis",
+    dependencies=[Depends(strict_query)],
+)
+async def due_rule_checkpoints(
+    request: Request,
+    on: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[RuleVersionOut]:
+    """GA08-02: dated check points (group Prüfpunkt) that are due; hint only, no lock."""
+    from mhvp.accounting import rule_register
+
+    async with tenant_tx(request, principal) as session:
+        rows = (await session.scalars(select(RuleVersion))).all()
+        due = rule_register.due_checkpoints(rows, on or local_today())
+        return [RuleVersionOut.model_validate(r) for r in due]
 
 
 @router.get("/rule-versions/effective", summary="Wirksame Regelversion zu einem Datum")

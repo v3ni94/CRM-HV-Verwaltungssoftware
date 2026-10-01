@@ -23,6 +23,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.ids import uuid7
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents.blobs import BlobStore
@@ -225,7 +226,7 @@ async def preview(
         }
 
 
-@router.get("", summary="Lastschriftläufe")
+@router.get("", summary="Lastschriftläufe", dependencies=[Depends(strict_query)])
 async def list_runs(
     request: Request,
     status: str | None = Query(
@@ -373,7 +374,11 @@ async def download_file(
         )
 
 
-@router.get("/{run_id}/downloads", summary="Download- und Einreichungsprotokoll")
+@router.get(
+    "/{run_id}/downloads",
+    summary="Download- und Einreichungsprotokoll",
+    dependencies=[Depends(strict_query)],
+)
 async def downloads(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -420,7 +425,9 @@ async def pre_notifications(
         )
 
 
-@router.get("/{run_id}/orders", summary="Lastschriften eines Laufs")
+@router.get(
+    "/{run_id}/orders", summary="Lastschriften eines Laufs", dependencies=[Depends(strict_query)]
+)
 async def list_orders(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[DirectDebitOrderOut]:
