@@ -436,3 +436,9 @@ Hinweis für Portalkonten: Reine Portalkonten (Eigentümer, Mieter, Dienstleiste
 ## Einmalige Umstellung der Selbstauskunft-Links (Betreiber)
 
 Nach dem Update ruft ein Plattform-Administrator einmal `POST /api/v1/platform/maintenance/self-disclosure-token-hash` auf (oder startet den Celery-Task `mhvp.letting.hash_self_disclosure_tokens`). Alte Links im Klartext werden auf SHA-256 umgestellt, bereits versandte Links bleiben gültig, der Aufruf ist wiederholbar und ändert dann nichts mehr.
+
+## Objektübernahme: Standardteam und Zuständiger der Aufgaben
+
+Für die Aufgaben, die aus der Checkliste der Objektübernahme entstehen, kann der Mandant ein Standardteam und einen Zuständigen festlegen (Schnittstelle `/onboarding/takeover-ticket-defaults`, Recht Mandanteneinstellungen). Beide Angaben sind optional, ohne Angabe werden die Aufgaben nicht zugewiesen. Die Einstellung gilt für Aufgaben, die danach angelegt werden. Ob bei Mietobjekten mit mehreren Eigentümern ein Sammelkonto je Eigentümer angelegt wird, ist noch nicht entschieden, es wird kein Sammelkonto angelegt.
+
+Die Kontenzuordnung der Honorarbuchung prüft die Kontoart: Forderungskonto Aktiv, Erlöskonto Ertrag, Umsatzsteuerkonto Passiv. Andere Konten werden abgelehnt.

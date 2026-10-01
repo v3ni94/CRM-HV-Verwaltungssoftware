@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import services as svc
 from mhvp.accounting.models import (
+    AccountType,
     AdminFeeInvoice,
     AdminFeePostingConfig,
     EntryKind,
@@ -114,7 +115,22 @@ async def put_posting_config(
             ids.add(body.manager_vat_account_id)
         if len(ids) != (3 if body.manager_vat_account_id else 2):
             raise ProblemError(ErrorCodes.VALIDATION, detail="Die Konten müssen verschieden sein.")
-        await svc._accounts(session, ledger, ids)
+        accounts = await svc._accounts(session, ledger, ids)
+        # U01: account kind against the chart (receivable asset, revenue income, VAT liability).
+        expected = [
+            (body.manager_receivable_account_id, AccountType.ASSET, "Forderungskonto"),
+            (body.manager_revenue_account_id, AccountType.INCOME, "Erlöskonto"),
+            (body.manager_vat_account_id, AccountType.LIABILITY, "Umsatzsteuerkonto"),
+        ]
+        for account_id, kind, label in expected:
+            if account_id is not None and accounts[account_id].type is not kind:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=(
+                        f"{label} {accounts[account_id].number} hat die Kontoart "
+                        f"{accounts[account_id].type.value}, erwartet {kind.value}."
+                    ),
+                )
         payer = {body.payer_expense_account_number, body.payer_payable_account_number}
         if body.payer_vat_account_number is not None:
             payer.add(body.payer_vat_account_number)

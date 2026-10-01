@@ -212,7 +212,10 @@ async def create_tickets(
     """One ticket per open or requested point that has none yet (M7-01, R03). Points that are
     received or not applicable, and points that already carry a ticket, are skipped, so a
     second call creates nothing. The tickets are internal (not released for portal users)."""
+    from mhvp.ai import takeover_defaults
+    from mhvp.tickets.models import Ticket
     from mhvp.tickets.routers import TicketIn, create_ticket_in_session
+    from mhvp.tickets.status import assign_ticket
 
     if "tickets:create" not in principal.permissions:
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="missing ['tickets:create']")
@@ -233,6 +236,7 @@ async def create_tickets(
         order = {c: i for i, c in enumerate(TAKEOVER_CATEGORIES)}
         created: list[TakeoverTicketOut] = []
         skipped: list[str] = []
+        defaults = await takeover_defaults.load(session)  # V06-01, empty means no assignment
         for row in sorted(rows, key=lambda r: order[r.category]):
             if body.categories is not None and row.category not in body.categories:
                 continue
@@ -255,6 +259,19 @@ async def create_tickets(
             )
             row.ticket_id = ticket["id"]
             row.updated_by = principal.user_id
+            if defaults.team_id or defaults.assignee_user_id:
+                new_ticket = await session.get(Ticket, ticket["id"])
+                if new_ticket is not None:
+                    if defaults.team_id and new_ticket.team_id is None:
+                        new_ticket.team_id = defaults.team_id
+                    if defaults.assignee_user_id:
+                        await assign_ticket(
+                            session,
+                            new_ticket,
+                            defaults.assignee_user_id,
+                            principal.user_id,
+                            reason="Standard Objektübernahme",
+                        )
             await session.flush()
             await emit(
                 session,

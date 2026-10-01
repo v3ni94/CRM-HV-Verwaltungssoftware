@@ -18,6 +18,8 @@ const KNOWN_KINDS = new Set([
   "created",
   "status",
   "assigned",
+  "priority_changed",
+  "team_changed",
   "reopened",
   "mail_received",
   "merged_from",
@@ -57,6 +59,10 @@ export function TicketHistory({ events }: { events: TicketEventRow[] }) {
     const key = String(value ?? "");
     return ["new", "in_progress", "waiting", "done", "closed", "rejected"].includes(key) ? t(`statuses.${key}`) : key;
   };
+  const priorityLabel = (value: unknown) => {
+    const key = String(value ?? "");
+    return ["low", "normal", "high", "urgent", "immediate"].includes(key) ? t(`priorities.${key}`) : key;
+  };
   const details = (e: TicketEventRow): string => {
     const d = e.data ?? {};
     switch (e.kind) {
@@ -75,6 +81,15 @@ export function TicketHistory({ events }: { events: TicketEventRow[] }) {
         return t("events.reopenSkipped", { days: String(d.window_days ?? "") });
       case "reverted":
         return t("events.reverted");
+      case "priority_changed": {
+        const bulk = d.bulk ? ` (${t("events.bulk")})` : "";
+        return `${priorityLabel(d.from)} → ${priorityLabel(d.to)}${bulk}`;
+      }
+      case "team_changed": {
+        const bulk = d.bulk ? ` (${t("events.bulk")})` : "";
+        const name = (v: unknown, id: unknown) => (v ? String(v) : id ? String(id) : t("events.unassignedTeam"));
+        return `${name(d.from_name, d.from)} → ${name(d.to_name, d.to)}${bulk}`;
+      }
       case "assigned": {
         const who = e.assignee_name ?? String(d.to ?? d.user_id ?? "");
         return d.reason ? `${who} (${String(d.reason)})` : who;

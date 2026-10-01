@@ -30,7 +30,7 @@ export type DocumentCategory = {
   retention_profile_id: string | null;
 };
 
-const START_RULES = ["end_of_year_created", "end_of_year_last_entry", "contract_end", "statement_issued", "purpose_end"] as const;
+const START_RULES = ["end_of_year_created", "end_of_year_last_entry", "contract_end", "statement_issued", "purpose_end", "resolution"] as const;
 
 type Draft = { retention_years: string; retention_months: string; permanent: boolean; start_rule: string; legal_basis: string };
 

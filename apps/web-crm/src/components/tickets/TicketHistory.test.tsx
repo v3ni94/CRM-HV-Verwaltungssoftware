@@ -37,6 +37,20 @@ describe("TicketHistory", () => {
     expect(items[1]).toContain("Folgevorgang angelegt: #500");
   });
 
+  it("shows priority and team changes with from, to and the bulk marker", () => {
+    renderIntl(
+      <TicketHistory
+        events={[
+          { id: "p1", kind: "priority_changed", data: { from: "normal", to: "urgent", bulk: true }, at: "2026-09-30T08:00:00Z", user_name: "Timo" },
+          { id: "p2", kind: "team_changed", data: { from: null, to: "t-1", to_name: "Technik" }, at: "2026-09-30T08:00:01Z" },
+        ]}
+      />,
+    );
+    const items = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(items[0]).toContain("Priorität geändert: normal → dringend (Massenaktion) · von Timo");
+    expect(items[1]).toContain("Team geändert: kein Team → Technik");
+  });
+
   it("renders an empty hint without events", () => {
     renderIntl(<TicketHistory events={[]} />);
     expect(screen.getByText("Kein Verlauf.")).toBeInTheDocument();

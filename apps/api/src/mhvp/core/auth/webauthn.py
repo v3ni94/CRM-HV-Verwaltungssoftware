@@ -26,6 +26,8 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
+import re
 import secrets
 import struct
 import uuid
@@ -38,6 +40,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
 
 from mhvp.core.config import Settings
 from mhvp.core.problems import ErrorCodes, ProblemError
+
+logger = logging.getLogger(__name__)
 
 UNAVAILABLE_REASON = (
     "Passkeys (WebAuthn) sind nicht freigeschaltet. Bitte TOTP als zweiten Faktor verwenden."
@@ -62,8 +66,12 @@ def ensure_available(settings: Settings) -> None:
         raise ProblemError(ErrorCodes.WEBAUTHN_UNAVAILABLE, detail=UNAVAILABLE_REASON)
 
 
-def invalid(developer_message: str) -> ProblemError:
-    return ProblemError(ErrorCodes.WEBAUTHN_INVALID, developer_message=developer_message)
+def invalid(reason: str) -> ProblemError:
+    """W01 (review 01.10.2026): the precise reason is logged server side only. The response
+    carries the generic code text so that a client cannot use the answer as an oracle for
+    which check failed (credential known, signature, counter, origin)."""
+    logger.info("webauthn check failed: %s", reason)
+    return ProblemError(ErrorCodes.WEBAUTHN_INVALID)
 
 
 # --- encoding helpers ------------------------------------------------------------------------
@@ -73,7 +81,17 @@ def b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
+_B64URL = re.compile(r"[A-Za-z0-9_-]*={0,2}")
+
+
 def b64url_decode(value: str) -> bytes:
+    """Strict base64url (RFC 4648 section 5): characters outside the URL safe alphabet are
+    refused instead of being silently dropped."""
+    if not isinstance(value, str) or not _B64URL.fullmatch(value):
+        raise invalid("Invalid base64url value.")
+    value = value.rstrip("=")
+    if len(value) % 4 == 1:
+        raise invalid("Invalid base64url length.")
     try:
         return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
     except (ValueError, TypeError):
@@ -87,7 +105,8 @@ class CborError(ValueError):
 def cbor_decode(data: bytes) -> tuple[Any, int]:
     """Minimal CBOR decoder (RFC 8949) for attestation objects and COSE keys: unsigned and
     negative integers, byte and text strings, arrays, maps, simple values false/true/null.
-    Indefinite lengths, tags and floats are refused. Returns (value, bytes consumed)."""
+    Indefinite lengths, tags, floats, non minimal length encodings and duplicate map keys
+    are refused. Returns (value, bytes consumed)."""
     return _cbor_item(data, 0, depth=0)
 
 
@@ -100,7 +119,10 @@ def _cbor_length(data: bytes, pos: int, info: int) -> tuple[int, int]:
     size = sizes[info]
     if pos + size > len(data):
         raise CborError("truncated")
-    return int.from_bytes(data[pos : pos + size], "big"), pos + size
+    value = int.from_bytes(data[pos : pos + size], "big")
+    if value < (24 if size == 1 else 1 << (4 * size)):
+        raise CborError("non minimal length encoding")
+    return value, pos + size
 
 
 def _cbor_item(data: bytes, pos: int, *, depth: int) -> tuple[Any, int]:
@@ -138,6 +160,8 @@ def _cbor_item(data: bytes, pos: int, *, depth: int) -> tuple[Any, int]:
             key, pos = _cbor_item(data, pos, depth=depth + 1)
             if isinstance(key, (list, dict)):
                 raise CborError("unsupported map key")
+            if key in result:
+                raise CborError("duplicate map key")
             value, pos = _cbor_item(data, pos, depth=depth + 1)
             result[key] = value
         return result, pos
@@ -165,12 +189,33 @@ class AuthenticatorData:
         return bool(self.flags & FLAG_UV)
 
 
-def parse_authenticator_data(data: bytes) -> AuthenticatorData:
+def _check_extensions(data: bytes, pos: int, flags: int) -> None:
+    """Without the ED flag no byte may follow; with it exactly one CBOR map must follow."""
+    if not flags & FLAG_ED:
+        if pos != len(data):
+            raise invalid("Trailing bytes in authenticatorData.")
+        return
+    try:
+        ext, used = cbor_decode(data[pos:])
+    except (CborError, UnicodeDecodeError):
+        raise invalid("Extension data not decodable.") from None
+    if not isinstance(ext, dict) or pos + used != len(data):
+        raise invalid("Extension data invalid.")
+
+
+def parse_authenticator_data(
+    data: bytes, *, expect_attested: bool | None = None
+) -> AuthenticatorData:
+    """``expect_attested``: True for registration (AT required), False for assertions (AT
+    refused), None leaves it open."""
     if len(data) < 37:
         raise invalid("authenticatorData too short.")
     rp_id_hash, flags = data[:32], data[32]
     (sign_count,) = struct.unpack(">I", data[33:37])
+    if expect_attested is not None and bool(flags & FLAG_AT) != expect_attested:
+        raise invalid("Attested credential data flag unexpected.")
     if not flags & FLAG_AT:
+        _check_extensions(data, 37, flags)
         return AuthenticatorData(rp_id_hash, flags, sign_count)
     if len(data) < 55:
         raise invalid("Attested credential data truncated.")
@@ -184,8 +229,7 @@ def parse_authenticator_data(data: bytes) -> AuthenticatorData:
     except (CborError, UnicodeDecodeError):
         raise invalid("COSE key not decodable.") from None
     cose = data[cred_end : cred_end + used]
-    if cred_end + used != len(data) and not flags & FLAG_ED:
-        raise invalid("Trailing bytes in authenticatorData.")
+    _check_extensions(data, cred_end + used, flags)
     return AuthenticatorData(rp_id_hash, flags, sign_count, aaguid, data[55:cred_end], cose)
 
 
@@ -315,16 +359,19 @@ def verify_registration(
         challenge=challenge,
         origins=list(settings.webauthn_origins),
     )
+    raw_attestation = b64url_decode(attestation_object)
     try:
-        attestation, _ = cbor_decode(b64url_decode(attestation_object))
+        attestation, used = cbor_decode(raw_attestation)
     except (CborError, UnicodeDecodeError):
         raise invalid("attestationObject not decodable.") from None
+    if used != len(raw_attestation):
+        raise invalid("Trailing bytes after attestationObject.")
     if not isinstance(attestation, dict) or not isinstance(attestation.get("authData"), bytes):
         raise invalid("attestationObject without authData.")
     if attestation.get("fmt") != "none":
         # Only attestation "none" is requested; other formats are not evaluated (P14-02).
         raise invalid("Only attestation format none is accepted.")
-    auth = parse_authenticator_data(attestation["authData"])
+    auth = parse_authenticator_data(attestation["authData"], expect_attested=True)
     if not secrets.compare_digest(auth.rp_id_hash, rp_id_hash(settings)):
         raise invalid("RP ID hash mismatch.")
     if not auth.user_present:
@@ -365,7 +412,7 @@ def verify_assertion(
         origins=list(settings.webauthn_origins),
     )
     raw_auth = b64url_decode(authenticator_data)
-    auth = parse_authenticator_data(raw_auth)
+    auth = parse_authenticator_data(raw_auth, expect_attested=False)
     if not secrets.compare_digest(auth.rp_id_hash, rp_id_hash(settings)):
         raise invalid("RP ID hash mismatch.")
     if not auth.user_present:

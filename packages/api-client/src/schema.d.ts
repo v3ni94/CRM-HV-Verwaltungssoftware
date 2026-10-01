@@ -17043,6 +17043,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding/takeover-ticket-defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Standardteam und Zuständiger der Übernahme-Tickets */
+        get: operations["get_takeover_ticket_defaults_api_v1_onboarding_takeover_ticket_defaults_get"];
+        /**
+         * Standardteam und Zuständigen der Übernahme-Tickets setzen
+         * @description V06-01: applies to tickets created from the takeover checklist after the change
+         *     (existing tickets stay unchanged). Both values empty means no assignment.
+         */
+        put: operations["put_takeover_ticket_defaults_api_v1_onboarding_takeover_ticket_defaults_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/parties": {
         parameters: {
             query?: never;
@@ -38746,6 +38768,23 @@ export interface components {
             link_threshold: string;
             /** Suggest Threshold */
             suggest_threshold: string;
+        };
+        /**
+         * OnboardingTakeoverTicketDefaultsIn
+         * @description Empty values mean: tickets of the takeover checklist get no team or no assignee.
+         */
+        OnboardingTakeoverTicketDefaultsIn: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+        };
+        /** OnboardingTakeoverTicketDefaultsOut */
+        OnboardingTakeoverTicketDefaultsOut: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** OpenImmoApplyIn */
         OpenImmoApplyIn: {
@@ -83466,6 +83505,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardingMatchBatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_takeover_ticket_defaults_api_v1_onboarding_takeover_ticket_defaults_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingTakeoverTicketDefaultsOut"];
+                };
+            };
+        };
+    };
+    put_takeover_ticket_defaults_api_v1_onboarding_takeover_ticket_defaults_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingTakeoverTicketDefaultsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingTakeoverTicketDefaultsOut"];
                 };
             };
             /** @description Validation Error */

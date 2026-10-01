@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { DocumentPicker } from "@/components/documents/DocumentPicker";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -62,15 +63,12 @@ export function MeetingClose({
         </p>
       ) : (
         <div className="mt-2 flex flex-wrap items-end gap-2">
-          <label className="flex flex-col text-sm">
-            {t("documentId")}
-            <input
-              className={ui.input}
-              value={documentId}
-              disabled={status === "closing"}
-              onChange={(e) => setDocumentId(e.target.value)}
-            />
-          </label>
+          <DocumentPicker
+            label={t("pickerLabel")}
+            value={documentId}
+            disabled={status === "closing"}
+            onChange={(id) => setDocumentId(id)}
+          />
           {status === "held" ? (
             <button
               type="button"

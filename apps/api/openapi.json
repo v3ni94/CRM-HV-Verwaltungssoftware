@@ -44580,6 +44580,67 @@
         "title": "OnboardingMatchSettingOut",
         "type": "object"
       },
+      "OnboardingTakeoverTicketDefaultsIn": {
+        "description": "Empty values mean: tickets of the takeover checklist get no team or no assignee.",
+        "properties": {
+          "assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee User Id"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          }
+        },
+        "title": "OnboardingTakeoverTicketDefaultsIn",
+        "type": "object"
+      },
+      "OnboardingTakeoverTicketDefaultsOut": {
+        "properties": {
+          "assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee User Id"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          }
+        },
+        "title": "OnboardingTakeoverTicketDefaultsOut",
+        "type": "object"
+      },
       "OpenImmoApplyIn": {
         "additionalProperties": false,
         "properties": {
@@ -126586,6 +126647,67 @@
           }
         },
         "summary": "Personenabgleich für viele Personen als Vorschau (schreibt nichts)",
+        "tags": [
+          "KI Onboarding"
+        ]
+      }
+    },
+    "/api/v1/onboarding/takeover-ticket-defaults": {
+      "get": {
+        "operationId": "get_takeover_ticket_defaults_api_v1_onboarding_takeover_ticket_defaults_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingTakeoverTicketDefaultsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Standardteam und Zuständiger der Übernahme-Tickets",
+        "tags": [
+          "KI Onboarding"
+        ]
+      },
+      "put": {
+        "description": "V06-01: applies to tickets created from the takeover checklist after the change\n(existing tickets stay unchanged). Both values empty means no assignment.",
+        "operationId": "put_takeover_ticket_defaults_api_v1_onboarding_takeover_ticket_defaults_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingTakeoverTicketDefaultsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingTakeoverTicketDefaultsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Standardteam und Zuständigen der Übernahme-Tickets setzen",
         "tags": [
           "KI Onboarding"
         ]

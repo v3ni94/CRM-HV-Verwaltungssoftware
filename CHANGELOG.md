@@ -5,6 +5,23 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.54.0 (01.10.2026) Welle 8 der Lückenliste: Passkey-Prüfung, Ticket-Ereignisse, Oberflächenreste, Messung, Abnahmeprotokoll, Entscheidungsliste
+
+- Übersicht: Welle 8 der Lückenliste vom 30.09.2026 mit 6 Paketen, keine Migration. Schwerpunkte: Sicherheitsprüfung der Passkey-Implementierung mit sieben Behebungen (docs/reviews/WEBAUTHN-2026-10-01.md, Freigabe bleibt Betreiberentscheidung), Ticket-Ereignisse bei Einzel- und Sammelaktionen, Dokumentauswahl beim Protokollabschluss und Beschlussauswahl bei der Aufbewahrung, Messung der Portal-Belegsuche, Kontoartprüfung der Honorar-Kontenzuordnung und Standardzuweisung der Übernahme-Tickets, Abnahmeprotokoll der Wellen 4 bis 7 (docs/acceptance) und Entscheidungsliste für den Vorstand (docs/plans/ENTSCHEIDUNGEN-2026-10-01.md, 44 Fragen mit Empfehlung und Alternativen).
+- Auth: WebAuthn-Prüfung gehärtet (strenges base64url, CBOR ohne doppelte Schlüssel und nicht minimale Längen, keine Restbytes, AT-Flag nur bei Registrierung, Erweiterungsdaten als CBOR-Map geprüft).
+- Auth: Passwortlose Passkey-Anmeldung prüft den userHandle gegen den Inhaber des Credentials.
+- Auth: Fehlerursachen der Passkey-Prüfung werden nur serverseitig protokolliert, die Antwort bleibt allgemein; inaktive Konten antworten wie unbekannte Credentials.
+- Docs: Sicherheitsprüfung WebAuthn vom 01.10.2026 mit Freigabeempfehlung ergänzt.
+- Tickets: Änderungen von Priorität und Team (Einzel- und Sammelaktion) werden als Ereignisse im Ticketverlauf mit altem und neuem Wert protokolliert.
+- CRM Weg: Protokollabschluss waehlt das unterschriebene Protokoll per Dokumentsuche statt ID-Eingabe.
+- CRM Dokumente: Karte Aufbewahrung und Sperren erhaelt ein Auswahlfeld Beschluss fuer die Startregel Beschluss, die Startregel ist in den Profilen waehlbar.
+- CRM Weg: Versammlungsstatus gestoert ist uebersetzt (de, en).
+- Tests: Messtest der Portal-Belegsuche prüft Indexnutzung per EXPLAIN (Mandantenindex unter RLS, Trigramm-Indizes ohne RLS-Schranke) und dokumentiert den Messwert im Runbook Leistungsmessung.
+- Buchhaltung: Die Kontenzuordnung der Honorarbuchung prueft die Kontoart der Verwalterkonten (Forderung Aktiv, Erloes Ertrag, Umsatzsteuer Passiv) und lehnt Abweichungen mit 422 ab.
+- KI Onboarding: Standardteam und Zustaendiger der Aufgaben aus der Objektuebernahme sind als Mandanteneinstellung festlegbar (leer = ohne Zuweisung), neue Aufgaben der Checkliste werden danach zugewiesen.
+- Dokumentation: Abnahmeprotokoll der Wellen 4 bis 7 mit ausgeführten und nicht ausgeführten Tests, Teilergebnissen und offenen Punkten je Paket ergänzt.
+- Dokumentation: Entscheidungsliste für den Vorstand vom 01.10.2026 mit allen offenen Fragen der Wellen 4 bis 7, gruppiert nach Gate, mit Empfehlung und drei Alternativen je Frage ergänzt.
+
 ## 1.53.0 (01.10.2026) Welle 7 der Lückenliste: Prüfbefunde, Passkeys, Aufbewahrung, Protokollabschluss, Onboarding, Build und Playwright
 
 - Übersicht: Welle 7 der Lückenliste vom 30.09.2026 mit 12 Paketen (Befunde der Prüfung U15, technische Reste der Welle 6, Verifikation von Build und Playwright), Migrationen 0300 bis 0302. Schwerpunkte: Hash-Prüfung bei der Freigabe des KI-Antwortentwurfs, Objektprüfung der Rechnungsverknüpfungen, Sperre des Rücklagen-Anfangsbestands, serverseitige Passkey-Sperre für Portalkonten, Umstellung alter Selbstauskunft-Token, Startregel Beschluss und Sperrstatus im CRM, Einladung erneuern, Aufbewahrung der Exportarchive, Protokollabschluss der Versammlung im Vier-Augen-Prinzip, Onboarding bei mehreren Eigentümern, Seed-Kontenrahmen mit Schlüsselverteilung, Prüfung der Welle 6 mit neun Befunden, Build beider Web-Apps fehlerfrei, Playwright CRM (56 Specs) und Portal (24 Specs) gegen das Backend grün mit behobenen Produktfehlern. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (V01-01, V05-01, V06-01, V10-01).

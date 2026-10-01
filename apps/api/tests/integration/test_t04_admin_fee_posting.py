@@ -169,7 +169,11 @@ def test_fee_posting_drafts(clients: tuple[TestClient, TestClient], world: World
         a for a in _ok(c.get(f"{A}/ledgers/{manager_ledger}/accounts", headers=h)) if a["active"]
     ]
     payer_numbers = sorted(n for n, a in payer_acc.items() if a["active"])[:2]
-    receivable, revenue, vat = (a["id"] for a in manager_acc[:3])
+    by_type = {
+        kind: [a for a in manager_acc if a["type"] == kind]
+        for kind in ("asset", "income", "liability", "expense")
+    }
+    receivable, revenue, vat = (by_type[k][0]["id"] for k in ("asset", "income", "liability"))
     config = {
         "manager_ledger_id": manager_ledger,
         "manager_receivable_account_id": receivable,
@@ -184,6 +188,16 @@ def test_fee_posting_drafts(clients: tuple[TestClient, TestClient], world: World
         c.put(cfg_url, json={**config, "payer_expense_account_number": "12"}, headers=h).status_code
         == 422
     )
+    expense_id = by_type["expense"][0]["id"]
+    # U01: account kinds are checked against the chart of accounts (422).
+    for field, bad in (
+        ("manager_receivable_account_id", expense_id),
+        ("manager_revenue_account_id", expense_id),
+        ("manager_vat_account_id", expense_id),
+    ):
+        kind = c.put(cfg_url, json={**config, field: bad}, headers=h)
+        assert kind.status_code == 422, field
+        assert "Kontoart" in str(kind.json()), kind.json()
     wrong = c.put(cfg_url, json={**config, "manager_ledger_id": payer_ledger}, headers=h)
     assert wrong.status_code == 422
     assert wrong.json()["code"] == "MHVP-ACC-0004"

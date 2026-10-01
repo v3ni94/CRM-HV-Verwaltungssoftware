@@ -1,5 +1,6 @@
 """Onboarding helpers (10.2 step 4, M7-02): person match preview and tenant thresholds."""
 
+import uuid
 from decimal import Decimal
 from typing import Any
 
@@ -7,10 +8,12 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 
-from mhvp.ai import person_match
+from mhvp.ai import person_match, takeover_defaults
 from mhvp.ai.models import OnboardingMatchSetting
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.platform.models import TenantSettings
 
 router = APIRouter(tags=["KI Onboarding"])
 READ = require_permission("ai:read")
@@ -166,4 +169,71 @@ async def put_match_settings(
         )
         return OnboardingMatchSettingOut(
             link_threshold=row.link_threshold, suggest_threshold=row.suggest_threshold
+        )
+
+
+class OnboardingTakeoverTicketDefaultsIn(BaseModel):
+    """Empty values mean: tickets of the takeover checklist get no team or no assignee."""
+
+    team_id: uuid.UUID | None = None
+    assignee_user_id: uuid.UUID | None = None
+
+
+class OnboardingTakeoverTicketDefaultsOut(OnboardingTakeoverTicketDefaultsIn):
+    pass
+
+
+@router.get(
+    "/onboarding/takeover-ticket-defaults",
+    summary="Standardteam und Zuständiger der Übernahme-Tickets",
+)
+async def get_takeover_ticket_defaults(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> OnboardingTakeoverTicketDefaultsOut:
+    async with tenant_tx(request, principal) as session:
+        values = await takeover_defaults.load(session)
+    return OnboardingTakeoverTicketDefaultsOut(
+        team_id=values.team_id, assignee_user_id=values.assignee_user_id
+    )
+
+
+@router.put(
+    "/onboarding/takeover-ticket-defaults",
+    summary="Standardteam und Zuständigen der Übernahme-Tickets setzen",
+)
+async def put_takeover_ticket_defaults(
+    body: OnboardingTakeoverTicketDefaultsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> OnboardingTakeoverTicketDefaultsOut:
+    """V06-01: applies to tickets created from the takeover checklist after the change
+    (existing tickets stay unchanged). Both values empty means no assignment."""
+    async with tenant_tx(request, principal) as session:
+        await takeover_defaults.validate(
+            session, principal.tenant_id, body.team_id, body.assignee_user_id
+        )
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        values = await takeover_defaults.save(
+            session,
+            row,
+            takeover_defaults.TakeoverTicketDefaults(body.team_id, body.assignee_user_id),
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="onboarding_takeover_ticket_defaults.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "team_id": str(values.team_id) if values.team_id else None,
+                "assignee_user_id": str(values.assignee_user_id)
+                if values.assignee_user_id
+                else None,
+            },
+        )
+        return OnboardingTakeoverTicketDefaultsOut(
+            team_id=values.team_id, assignee_user_id=values.assignee_user_id
         )

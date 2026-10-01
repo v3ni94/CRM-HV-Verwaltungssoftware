@@ -420,3 +420,7 @@ Im Ticket erscheint zur letzten eingegangenen Mail dieselbe Kompaktansicht wie i
 ## Sammelaktionen in der Ticketliste (Priorität, Team, Bearbeiter)
 
 Tickets in der Liste markieren, in der unteren Leiste Status anwenden oder "Bearbeiter zuweisen" öffnen, dort Bearbeiter, Team und Priorität wählen (einzeln oder kombiniert) und anwenden. Danach erscheint ein Bericht "Geändert: x von y" mit den nicht geänderten Tickets und dem Grund. Ohne Freigaberecht sind höchstens 10 Tickets je Aufruf möglich.
+
+## Verlauf bei Priorität und Team
+
+Ändern Sie Priorität oder Team eines Tickets, einzeln oder per Sammelaktion, erscheint im Ticketverlauf ein Eintrag mit altem und neuem Wert, dem Bearbeiter und bei der Sammelaktion dem Hinweis Massenaktion. Gleiche Werte erzeugen keinen Eintrag.

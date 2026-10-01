@@ -38,7 +38,7 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"s16-{RUN}", name=f"S16 A {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"s16b-{RUN}", name=f"S16 B {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
-        for name, tenant in (("s16one", a), ("s16two", a), ("s16pwl", b)):
+        for name, tenant in (("s16one", a), ("s16two", a), ("s16pwl", b), ("w01lock", a)):
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -192,3 +192,46 @@ def test_passwordless_sign_in(client: TestClient, world: World) -> None:
     )
     assert ok.status_code == 200, ok.text
     assert ok.json()["tenant_id"] == str(world.tenant_b)
+
+
+def test_w01_review_negative_paths(client: TestClient, world: World) -> None:
+    """W01 (review 01.10.2026): user handle binding, foreign credential id, manipulated
+    authenticator data, generic error text and lockout after repeated failed assertions."""
+    from mhvp.core.auth import passwords, webauthn
+
+    fake = FakeAuthenticator(RP, ORIGIN)
+    h = bearer(login_password_only(client, world, "w01lock"))
+    _register(client, h, fake, passwordless=True)
+
+    # A user handle of another account is refused.
+    opts = _options(client, None)
+    body = fake.get(opts["public_key"]) | {"challenge_id": opts["challenge_id"]}
+    body["response"]["user_handle"] = webauthn.b64url_encode(world.users["s16one"].bytes)
+    bad = client.post(f"{A}/login/webauthn/verify", json=body)
+    assert bad.status_code == 401
+    # Generic answer: the failed check is not revealed to the client.
+    assert "handle" not in bad.text.lower()
+    assert bad.json()["code"] == "MHVP-AUTH-0013"
+
+    # A credential id that was never registered.
+    opts = _options(client, None)
+    unknown = FakeAuthenticator(RP, ORIGIN).get(opts["public_key"])
+    unknown |= {"challenge_id": opts["challenge_id"]}
+    assert client.post(f"{A}/login/webauthn/verify", json=unknown).status_code == 401
+
+    # The own user handle is accepted.
+    opts = _options(client, None)
+    body = fake.get(opts["public_key"]) | {"challenge_id": opts["challenge_id"]}
+    body["response"]["user_handle"] = webauthn.b64url_encode(world.users["w01lock"].bytes)
+    assert client.post(f"{A}/login/webauthn/verify", json=body).status_code == 200
+
+    # Repeated manipulated signatures lock the account; afterwards even a valid one fails.
+    for _ in range(passwords.MAX_FAILED_LOGINS):
+        opts = _options(client, None)
+        tampered = fake.get(opts["public_key"], tamper=True)
+        tampered |= {"challenge_id": opts["challenge_id"]}
+        assert client.post(f"{A}/login/webauthn/verify", json=tampered).status_code == 401
+    opts = _options(client, None)
+    good = fake.get(opts["public_key"]) | {"challenge_id": opts["challenge_id"]}
+    locked = client.post(f"{A}/login/webauthn/verify", json=good)
+    assert locked.status_code != 200

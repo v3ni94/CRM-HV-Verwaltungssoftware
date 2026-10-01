@@ -149,3 +149,56 @@ def test_bulk_validation_permission_and_tenant_separation(client: TestClient, wo
     )
     assert report["failed"] == 1
     assert _ok(client.get(f"/api/v1/tickets/{ids[0]}", headers=admin))["priority"] != "high"
+
+
+def _events(client: TestClient, headers: dict[str, str], tid: str, kind: str) -> list[Any]:
+    detail = _ok(client.get(f"/api/v1/tickets/{tid}", headers=headers))
+    return [e for e in detail["events"] if e["kind"] == kind]
+
+
+def test_priority_and_team_changes_write_ticket_events(client: TestClient, world: World) -> None:
+    """V11-09: PATCH and bulk action log priority and team changes in the ticket history."""
+    admin = bearer(login(client, world, "u6admin"))
+    single, bulk_a = _tickets(client, admin, 2)
+    team = _ok(client.post("/api/v1/teams", json={"name": f"EV {RUN}"}, headers=admin), 201)
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{single}",
+            json={"priority": "urgent", "team_id": team["id"]},
+            headers=admin,
+        )
+    )
+    prio = _events(client, admin, single, "priority_changed")
+    assert len(prio) == 1
+    assert prio[0]["data"] == {"from": "normal", "to": "urgent"}
+    assert prio[0]["user_name"]
+    tev = _events(client, admin, single, "team_changed")
+    assert tev[0]["data"]["to"] == team["id"]
+    assert tev[0]["data"]["to_name"] == f"EV {RUN}"
+    assert tev[0]["data"]["from"] is None
+    # unchanged values write no further event
+    _ok(client.patch(f"/api/v1/tickets/{single}", json={"priority": "urgent"}, headers=admin))
+    assert len(_events(client, admin, single, "priority_changed")) == 1
+    # bulk action: priority, team, assignee, status each leave an event marked as bulk
+    me = str(world.users["u6admin"])
+    _ok(
+        client.post(
+            "/api/v1/tickets/bulk",
+            json={
+                "ids": [bulk_a],
+                "priority": "high",
+                "team_id": team["id"],
+                "assignee_user_id": me,
+                "status": "in_progress",
+            },
+            headers=admin,
+        )
+    )
+    assert _events(client, admin, bulk_a, "priority_changed")[0]["data"] == {
+        "from": "normal",
+        "to": "high",
+        "bulk": True,
+    }
+    assert _events(client, admin, bulk_a, "team_changed")[0]["data"]["bulk"] is True
+    assert _events(client, admin, bulk_a, "assigned")[0]["data"]["reason"] == "sammelaktion"
+    assert _events(client, admin, bulk_a, "status")[0]["data"]["bulk"] is True

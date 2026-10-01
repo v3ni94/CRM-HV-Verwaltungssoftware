@@ -828,9 +828,14 @@ async def webauthn_login_verify(
         if bound_user is None and not row.passwordless:
             raise webauthn.invalid("Credential not released for passwordless sign in.")
         passwordless_user_id = row.user_id if bound_user is None else None
+        handle = body.response.user_handle
+        if handle and webauthn.b64url_decode(handle) != row.user_id.bytes:
+            # WebAuthn 7.2 step 6: a returned user handle must belong to the credential owner.
+            raise webauthn.invalid("User handle does not match the credential owner.")
         user = await session.get(User, row.user_id)
         if user is None or not user.active:
-            raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+            # W01: same answer as an unknown credential (no account state enumeration).
+            raise webauthn.invalid("Credential owner inactive.")
         if user.locked_until is not None and user.locked_until > now:
             raise ProblemError(ErrorCodes.ACCOUNT_LOCKED)
         try:

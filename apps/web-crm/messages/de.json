@@ -3107,6 +3107,7 @@
       "invited": "eingeladen",
       "held": "eröffnet",
       "closing": "Abschluss beantragt",
+      "disrupted": "gestört",
       "closed": "geschlossen"
     },
     "announced": "Beschluss Nr. {number}: {status}",
@@ -3189,6 +3190,7 @@
       "title": "Protokollabschluss",
       "notice": "Abschluss im Vier-Augen-Prinzip: eine Person beantragt mit dem unterschriebenen Protokoll, eine zweite Person bestätigt. Danach sind Tagesordnung, Anwesenheit und Beschlussfassung gesperrt.",
       "periodNote": "Eine Frist für Erstellung oder Versand des Protokolls ist im Einzelfall zu prüfen. Das System berechnet und sperrt keine Protokollfrist.",
+      "pickerLabel": "Unterschriebenes Protokoll",
       "documentId": "Dokument-ID des unterschriebenen Protokolls",
       "request": "Abschluss beantragen",
       "confirm": "Abschluss bestätigen (zweite Person)",
@@ -3772,6 +3774,9 @@
       "empty": "Kein Verlauf.",
       "by": "von {name}",
       "bulk": "Massenaktion",
+      "priority_changed": "Priorität geändert",
+      "team_changed": "Team geändert",
+      "unassignedTeam": "kein Team",
       "created": "angelegt",
       "status": "Status",
       "assigned": "zugewiesen an",
@@ -9330,6 +9335,17 @@
       "hint": "Standard: aus, das CRM lädt dann über die API hoch. Einschalten nur, wenn der Objektspeicher vom Browser aus erreichbar ist und CORS für PUT von der CRM-Adresse erlaubt (siehe Runbook Objektspeicher). Schlägt der direkte Upload fehl, nutzt das CRM automatisch den Upload über die API."
     }
   },
+  "DocumentPicker": {
+    "search": "Dokumente suchen (mindestens 2 Zeichen)",
+    "searchBtn": "Suchen",
+    "none": "Keine Treffer.",
+    "chosen": "Gewählt: {title}",
+    "chosenId": "Gewähltes Dokument {id}",
+    "clear": "Auswahl aufheben",
+    "error": "Die Dokumente konnten nicht geladen werden.",
+    "pick": "Auswählen",
+    "uploadHint": "Das unterschriebene Protokoll zuerst im Dokumentenbereich hochladen, dann hier auswählen."
+  },
   "RetentionStatus": {
     "title": "Aufbewahrung und Sperren",
     "loading": "Wird geladen",
@@ -9337,6 +9353,13 @@
     "until": "Aufbewahrung bis",
     "untilNone": "nicht berechnet",
     "resolution": "Fristbeginn nach Beschluss",
+    "resolutionPick": "Beschluss für den Fristbeginn",
+    "resolutionNone": "Kein Beschluss gewählt",
+    "resolutionSave": "Beschluss speichern",
+    "resolutionSaved": "Beschluss gespeichert.",
+    "resolutionHint": "Die Startregel Beschluss braucht einen Beschluss, sonst bleibt das Dokument gesperrt.",
+    "resolutionError": "Die Beschlüsse konnten nicht geladen werden.",
+    "resolutionOption": "Nr. {number} vom {date}: {subject}",
     "resolutionRef": "Bezug auf Beschluss {id}",
     "manualHold": "Manuelle Löschungssperre",
     "procedureHold": "Automatische Sperre durch offenes Verfahren",
@@ -11517,7 +11540,8 @@
       "end_of_year_last_entry": "Jahresende der letzten Eintragung",
       "contract_end": "Jahresende des Vertragsendes",
       "statement_issued": "Jahresende der Abrechnungserstellung",
-      "purpose_end": "Zweckende (tagesgenau)"
+      "purpose_end": "Zweckende (tagesgenau)",
+      "resolution": "Beschluss der Eigentümer (Jahresende des Beschlussjahres)"
     }
   },
   "DeletionProposals": {

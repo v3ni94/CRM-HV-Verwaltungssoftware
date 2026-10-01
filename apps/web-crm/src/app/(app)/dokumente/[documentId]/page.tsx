@@ -82,7 +82,10 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
           <p className="mt-1 text-sm">{(data.links ?? []).length ? (data.links ?? []).map((l) => `${l.entity_type} (${l.role})`).join(", ") : t("linksNone")}</p>
         </div>
       </div>
-      <RetentionStatusCard documentId={documentId} />
+      <RetentionStatusCard
+        documentId={documentId}
+        legalEntityId={(data.links ?? []).find((l) => l.entity_type === "legal_entity")?.entity_id ?? null}
+      />
       {filing?.routed ? (
         <div className={ui.card} data-testid="document-filing">
           <p className={ui.subtitle}>{t("filing.title")}</p>

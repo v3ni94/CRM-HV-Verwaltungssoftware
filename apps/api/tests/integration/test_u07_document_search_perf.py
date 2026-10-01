@@ -62,12 +62,35 @@ def test_receipt_search_with_5000_documents(database: Database) -> None:
     timings = []
     with engine.connect() as conn:
         conn.execute(sa.text("SELECT set_config('app.tenant_id', :t, false)"), {"t": str(tenant)})
-        # With 5.000 rows the planner may prefer a sequential scan; the index must be usable.
-        conn.execute(sa.text("SET enable_seqscan = off"))
+        # Under RLS the LIKE filter (textlike and lower are not leakproof) cannot become an index
+        # condition: the tenant index narrows, the filter runs on the tenant's rows. Verified here.
         plan = "\n".join(
             r[0]
             for r in conn.execute(sa.text("EXPLAIN " + sql.text), {"t": tenant, "p": "%beleg 42%"})
         )
+        # Without the RLS barrier the trigram indexes are usable (temp table copies the indexes).
+        conn.execute(sa.text("CREATE TEMP TABLE document_probe (LIKE document INCLUDING ALL)"))
+        conn.execute(
+            sa.text(
+                "INSERT INTO document_probe (id, tenant_id, title, filename, mime_type, size, sha256, "
+                "storage, storage_ref, text_status, source, visibility) SELECT id, tenant_id, title, "
+                "filename, mime_type, size, sha256, storage, storage_ref, text_status, source, "
+                "visibility FROM document"
+            )
+        )
+        conn.execute(sa.text("ANALYZE document_probe"))
+        conn.execute(sa.text("SET enable_seqscan = off"))
+        probe = "\n".join(
+            r[0]
+            for r in conn.execute(
+                sa.text(
+                    "EXPLAIN SELECT id FROM document_probe WHERE lower(title) LIKE :p "
+                    "OR lower(filename) LIKE :p"
+                ),
+                {"p": "%beleg 42%"},
+            )
+        )
+        conn.execute(sa.text("SET enable_seqscan = on"))
         for _ in range(30):
             started = time.perf_counter()
             conn.execute(sql, {"t": tenant, "p": "%beleg 42%"}).all()
@@ -76,5 +99,8 @@ def test_receipt_search_with_5000_documents(database: Database) -> None:
         f"PERF portal_receipt_search docs={DOCS} median={statistics.median(timings) * 1000:.1f}ms "
         f"max={max(timings) * 1000:.1f}ms"
     )
-    assert "trgm" in plan, plan
+    assert "ix_document_tenant_created_at" in plan, plan
+    assert "Seq Scan" not in plan, plan
+    assert "BitmapOr" in probe, probe
+    assert "Seq Scan" not in probe, probe
     assert max(timings) < 0.3

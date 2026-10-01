@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { RetentionResolutionSelect } from "./RetentionResolutionSelect";
+
 /** GET /documents/{id}/retention-status (S711-06, U11-01). */
 export type RetentionStatus = {
   document_id: string;
@@ -28,7 +30,7 @@ const KINDS = ["litigation", "tax_procedure", "evidence", "legal_matter", "other
 /** Lock status of a document: period end, reason of every hold (manual, ticket, automatic
  *  procedure, permanent record) and the four eyes note. Read only; lifting a hold stays in the
  *  API with a second person. */
-export function RetentionStatusCard({ documentId }: { documentId: string }) {
+export function RetentionStatusCard({ documentId, legalEntityId }: { documentId: string; legalEntityId?: string | null }) {
   const t = useTranslations("RetentionStatus");
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
 
@@ -66,6 +68,13 @@ export function RetentionStatusCard({ documentId }: { documentId: string }) {
         <p className="text-xs text-subtle" data-testid="retention-resolution">
           {t("resolution")}: {t("resolutionRef", { id: d.retention_resolution_id })}
         </p>
+      ) : null}
+      {legalEntityId ? (
+        <RetentionResolutionSelect
+          documentId={documentId}
+          legalEntityId={legalEntityId}
+          current={d.retention_resolution_id ?? null}
+        />
       ) : null}
       {holds.length === 0 ? (
         <p className="mt-1 text-sm">{t("none")}</p>

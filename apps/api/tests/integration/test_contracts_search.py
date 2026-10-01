@@ -147,7 +147,11 @@ def test_contract_list_context_and_search(client: TestClient, world: World) -> N
     assert _ids(client, h, "812") == {ownership}
     assert _ids(client, h, "rheinpromenade") >= {tenancy, ownership}
     assert _ids(client, h, "WE 02") >= {ownership}
-    assert tenancy not in _ids(client, h, "WE 02")
+    # Words match in any order and in every field: when the run id itself contains "02"
+    # (surname ``Kowalczyk<RUN>``), the tenancy legitimately matches too, so the negative
+    # check only holds for run ids without that digit pair.
+    if "02" not in RUN:
+        assert tenancy not in _ids(client, h, "WE 02")
     assert _ids(client, h, "keintreffer%_") == set()
     # Existing filters still combine with the search.
     assert _ids(client, h, "rheinpromenade", kind="tenancy") >= {tenancy}

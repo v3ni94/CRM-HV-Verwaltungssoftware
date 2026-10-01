@@ -484,6 +484,47 @@ async def _event(
     )
 
 
+async def _record_field_change(
+    session: AsyncSession,
+    ticket: Ticket,
+    field: Literal["priority", "team"],
+    new_value: Priority | uuid.UUID,
+    user: uuid.UUID | None,
+    *,
+    bulk: bool = False,
+) -> None:
+    """Ticket event ``priority_changed`` / ``team_changed`` (V11-09); no event if unchanged.
+    Team events carry the team names next to the ids so the history needs no lookup."""
+    if field == "priority":
+        if not isinstance(new_value, Priority):
+            raise TypeError("priority expected")
+        old_p = ticket.priority
+        if old_p is new_value:
+            return
+        data: dict[str, Any] = {"from": old_p.value, "to": new_value.value}
+        ticket.priority = new_value
+    else:
+        old_t = ticket.team_id
+        if old_t == new_value:
+            return
+        names = {}
+        for team_id in (old_t, new_value):
+            team = await session.get(Team, team_id) if team_id else None
+            names[team_id] = team.name if team else None
+        data = {
+            "from": str(old_t) if old_t else None,
+            "to": str(new_value),
+            "from_name": names[old_t],
+            "to_name": names[new_value],
+        }
+        if not isinstance(new_value, uuid.UUID):
+            raise TypeError("team id expected")
+        ticket.team_id = new_value
+    if bulk:
+        data["bulk"] = True
+    await _event(session, ticket, f"{field}_changed", user, data)
+
+
 @router.post("/teams", status_code=201, summary="Team anlegen")
 async def create_team(
     body: TeamIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -2384,9 +2425,11 @@ async def patch_ticket(
         ):
             learned.append("assignee_user_id")
         if body.priority:
-            ticket.priority = body.priority
+            await _record_field_change(
+                session, ticket, "priority", body.priority, principal.user_id
+            )
         if body.team_id:
-            ticket.team_id = body.team_id
+            await _record_field_change(session, ticket, "team", body.team_id, principal.user_id)
         if body.time_spent_minutes is not None:
             ticket.time_spent_minutes = body.time_spent_minutes
         if body.topic is not None:
@@ -2672,9 +2715,13 @@ async def bulk_tickets(
                 raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
             _assert_not_merged(ticket)
             if body.priority is not None:
-                ticket.priority = body.priority
+                await _record_field_change(
+                    session, ticket, "priority", body.priority, principal.user_id, bulk=True
+                )
             if body.team_id is not None:
-                ticket.team_id = body.team_id
+                await _record_field_change(
+                    session, ticket, "team", body.team_id, principal.user_id, bulk=True
+                )
             if body.assignee_user_id is not None:
                 await assign_ticket(
                     session,

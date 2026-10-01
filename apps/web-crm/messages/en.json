@@ -3107,6 +3107,7 @@
       "invited": "invited",
       "held": "opened",
       "closing": "closing requested",
+      "disrupted": "disrupted",
       "closed": "closed"
     },
     "announced": "Resolution no. {number}: {status}",
@@ -3189,6 +3190,7 @@
       "title": "Closing of the minutes",
       "notice": "Four eyes closing: one person requests with the signed minutes, a second person confirms. Afterwards agenda, attendance and resolutions are locked.",
       "periodNote": "A period for drafting or sending the minutes has to be checked case by case. The system neither computes nor enforces a minutes period.",
+      "pickerLabel": "Signed minutes",
       "documentId": "Document ID of the signed minutes",
       "request": "Request closing",
       "confirm": "Confirm closing (second person)",
@@ -3772,6 +3774,9 @@
       "empty": "No history.",
       "by": "by {name}",
       "bulk": "bulk action",
+      "priority_changed": "priority changed",
+      "team_changed": "team changed",
+      "unassignedTeam": "no team",
       "created": "created",
       "status": "Status",
       "assigned": "assigned to",
@@ -9330,6 +9335,17 @@
       "hint": "Default: off, the CRM then uploads through the API. Switch on only if the object storage is reachable from the browser and allows CORS for PUT from the CRM address (see object storage runbook). If the direct upload fails, the CRM falls back to the API upload."
     }
   },
+  "DocumentPicker": {
+    "search": "Search documents (at least 2 characters)",
+    "searchBtn": "Search",
+    "none": "No results.",
+    "chosen": "Selected: {title}",
+    "chosenId": "Selected document {id}",
+    "clear": "Clear selection",
+    "error": "The documents could not be loaded.",
+    "pick": "Select",
+    "uploadHint": "Upload the signed minutes in the documents area first, then select them here."
+  },
   "RetentionStatus": {
     "title": "Retention and holds",
     "loading": "Loading",
@@ -9337,6 +9353,13 @@
     "until": "Retention until",
     "untilNone": "not computed",
     "resolution": "Period starts with resolution",
+    "resolutionPick": "Resolution for the period start",
+    "resolutionNone": "No resolution selected",
+    "resolutionSave": "Save resolution",
+    "resolutionSaved": "Resolution saved.",
+    "resolutionHint": "The start rule resolution needs a resolution, otherwise the document stays locked.",
+    "resolutionError": "The resolutions could not be loaded.",
+    "resolutionOption": "No. {number} of {date}: {subject}",
     "resolutionRef": "Reference to resolution {id}",
     "manualHold": "Manual deletion hold",
     "procedureHold": "Automatic hold by an open procedure",
@@ -11517,7 +11540,8 @@
       "end_of_year_last_entry": "End of the year of the last entry",
       "contract_end": "End of the year of the contract end",
       "statement_issued": "End of the year the statement was issued",
-      "purpose_end": "Purpose end (day exact)"
+      "purpose_end": "Purpose end (day exact)",
+      "resolution": "Owners' resolution (year end of the resolution year)"
     }
   },
   "DeletionProposals": {

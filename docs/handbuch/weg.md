@@ -407,3 +407,7 @@ Beim Anlegen und Ändern einer Rücklage (WEG, Rücklagen) wählt der Bearbeiter
 ## Rücklage: Sperre des Anfangsbestands (Stand 01.10.2026)
 
 Sobald die Abrechnung des Anfangsjahres berechnet oder freigegeben ist, lassen sich Anfangsbestand und Anfangsjahr einer Rücklage nicht mehr ändern. Korrekturen erfassen Sie als neue Bewegung. Ein beendetes Bankkonto oder ein inaktives Buchungskonto lehnt das System auch dann ab, wenn es nicht über das Formular gewählt wurde.
+
+## Protokollabschluss: Dokument auswählen
+
+Beim Protokollabschluss wird das unterschriebene Protokoll nicht mehr als ID eingetippt. Über die Suche (mindestens 2 Zeichen) wird ein vorhandenes Dokument gewählt. Ein neues Protokoll wird zuvor im Dokumentenbereich hochgeladen. Beim Bestätigen durch die zweite Person ist die Auswahl gesperrt. Der Status einer Versammlung kann auch "gestört" lauten; dann sind Abschluss und Beschlussfassung nicht möglich.

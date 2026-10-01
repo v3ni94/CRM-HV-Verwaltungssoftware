@@ -172,6 +172,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^onboarding\/person-match-batch$/ },
   { method: "GET", pattern: /^onboarding\/match-settings$/ },
   { method: "PUT", pattern: /^onboarding\/match-settings$/ },
+  { method: "GET", pattern: /^onboarding\/takeover-ticket-defaults$/ },
+  { method: "PUT", pattern: /^onboarding\/takeover-ticket-defaults$/ },
   { method: "GET", pattern: new RegExp(`^units/${ID}/vat-options$`) },
   // Paket Q05 (Welle 3): CRM-Oberflächen für Parteien, USt-Optionshistorie, Belegungsliste,
   // Gebäudeauswahl am Ticket und Teamverwaltung (Endpunkte bestehen, nur die Freigabe fehlte).
@@ -264,6 +266,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^documents/${ID}$`) },
   // Aufbewahrungs- und Sperrstatus je Dokument (U11-01): Lesen, Anzeige im Dokumentdetail.
   { method: "GET", pattern: new RegExp(`^documents/${ID}/retention-status$`) },
+  // Dokumentauswahl (V05) und Beschlussauswahl für die Startregel Beschluss (V03): nur Lesen.
+  { method: "GET", pattern: /^documents$/ },
+  { method: "GET", pattern: /^hoa\/resolutions$/ },
   // Datenschutz (P17, Abschnitt 16): Register, Löschprofile, Löschanträge, Verzeichnis-Entwurf.
   { method: "GET", pattern: /^privacy\/(register|processing-records|deletion-profiles|erasure-requests)$/ },
   { method: "POST", pattern: /^privacy\/(register|erasure-requests)$/ },

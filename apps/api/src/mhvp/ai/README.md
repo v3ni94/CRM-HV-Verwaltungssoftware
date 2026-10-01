@@ -389,3 +389,7 @@ CRM: `EntityDecisions` in `OnboardingExtras.tsx`, eingebunden in `PropertyPropos
 ### Aufgabe reply_draft (T12, M20-02)
 
 `AiTask.REPLY_DRAFT` (Migration 0296) mit Schema `tasks.ReplyDraftResult` und Prompt `prompts/reply_draft/v1.md`; `draft_reply` bleibt der Playbook-Entwurf. Aufruf und Freigabe in `mhvp.communication` (`suggest.reply_task_for_message`, `POST /mail/messages/{id}/reply-ai`); maskiert (`MASKED_TASKS`), nur Vorschlag. Regel: `docs/rules/T12.md`.
+
+### V06-01 (W05): Standardteam und Zuständiger der Übernahme-Tickets
+
+`mhvp.ai.takeover_defaults` liest und schreibt `team_id` und `assignee_user_id` unter dem Schlüssel `takeover_tickets` im JSON-Dokument `TenantSettings.objektakte_classification` (keine Migration). `GET/PUT /onboarding/takeover-ticket-defaults` (Rechte `tenant_settings:read` und `tenant_settings:update`); Team und Zuständiger müssen zum Mandanten gehören (422), leer bedeutet ohne Zuweisung. `POST /properties/{id}/takeover-checklist/tickets` setzt Team und Zuständigen (über `assign_ticket`) bei neu angelegten Tickets. Ein Sammelkonto je Eigentümer wird nicht angelegt (Entscheidungspunkt V06-02).

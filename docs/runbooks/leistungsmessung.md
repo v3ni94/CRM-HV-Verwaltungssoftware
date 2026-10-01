@@ -82,3 +82,11 @@ PERF statement_output units=100 total_pdf=0.1s unit_pdfs=1.5s unit_pages=100 all
 Beide Vorgaben sind eingehalten (Lauf 48,3 s gegen 120 s, Ausgabe 1,7 s gegen 60 s). Es wurde kein Engpass
 über 2 Minuten festgestellt, daher keine Index- oder Abfrageänderung. Die Buchung (43,3 s) ist der
 größere Anteil und der erste Kandidat, falls die Staging-Messung höhere Werte zeigt.
+
+## Welle 8, Paket W04: Portal-Belegsuche (U07, M25-06)
+
+Aufruf: `MHVP_PERF=1 uv run pytest tests/integration/test_u07_document_search_perf.py -s --no-cov` gegen die vollständige Migrationskette.
+
+Messwert 01.10.2026 (Entwicklungsumgebung, 4 Kerne, geteilt, nicht repräsentativ): `PERF portal_receipt_search docs=5000 median=3.6ms max=9.5ms` (Schwelle 300 ms).
+
+Befund zur Indexnutzung (EXPLAIN im Test): Unter Row Level Security nutzt die Abfrage den Mandantenindex `ix_document_tenant_created_at`, nicht die Trigramm-Indizes. Ursache: `lower()` und `LIKE` sind in PostgreSQL nicht als leakproof markiert, daher dürfen sie bei aktiver Mandantenrichtlinie nicht als Indexbedingung vorgezogen werden. Ohne diese Schranke (Probe auf einer temporären Kopie mit denselben Indizes) wählt der Planer einen BitmapOr über beide Trigramm-Indizes, sie sind also korrekt definiert. Die Abfrage lässt sich ohne Schemaänderung nicht anpassen; bei 5.000 Belegen je Mandant genügt der Mandantenindex mit Filter. Ob bei deutlich größeren Beständen eine Anpassung nötig wird (zum Beispiel leakproof-Wrapperfunktion, Betreiberentscheidung mit Superuser-Rechten), ist mit Staging-Daten zu klären.

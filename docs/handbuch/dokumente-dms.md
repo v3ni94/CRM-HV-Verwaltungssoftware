@@ -190,3 +190,7 @@ Voraussetzung: Recht Dokumente lesen, für die Freigabe Dokumente freigeben, fü
 * Im Dokumentdetail zeigt die Karte "Aufbewahrung und Sperren" das Fristende, jede Sperre mit Grund (manuell, am Vorgang, automatisch bei Rechtsstreit oder Insolvenz, WEG-Dauerunterlage), die Sperrart und den Grund, warum das Dokument nicht gelöscht wird. Bei einer manuellen Sperre erscheint der Hinweis, dass nur eine zweite Person sie aufhebt.
 * Eine bestehende Sperre lässt sich nicht überschreiben. Zuerst hebt eine zweite Person sie auf, danach kann eine neue Sperre mit anderer Sperrart gesetzt werden.
 * Gilt für das Profil die Startregel "Beschluss", ordnen Sie dem Dokument den Beschluss zu (Feld `retention_resolution_id` über die Dokumentänderung). Das Beschlussdatum bestimmt den Fristbeginn; ohne Beschluss bleibt das Dokument gesperrt.
+
+## Aufbewahrung: Beschluss für den Fristbeginn wählen
+
+Ist ein Dokument mit einem Rechtsträger verknüpft, zeigt die Karte "Aufbewahrung und Sperren" ein Auswahlfeld mit den Beschlüssen aus der Beschluss-Sammlung. Für die Startregel "Beschluss der Eigentümer" ist die Auswahl Voraussetzung, sonst bleibt das Dokument gesperrt. Die Frist berechnet das System; die Auswahl ändert keine Rechtslage und ist zu prüfen.

@@ -83,6 +83,11 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   `MHVP_WEBAUTHN_ORIGINS` are set. Endpoints `/auth/webauthn/register/{options,verify}`,
   `/auth/login/webauthn/{options,verify}` (second factor with `mfa_token`, passwordless
   without), list and revoke; errors `MHVP-AUTH-0012` (off) and `MHVP-AUTH-0013` (check failed).
+  Review W01 (01.10.2026, `docs/reviews/WEBAUTHN-2026-10-01.md`): strict base64url, CBOR
+  without duplicate keys or non minimal lengths, no trailing bytes after the attestation object,
+  AT flag required at registration and refused in assertions, ED extensions must be exactly
+  one CBOR map, `userHandle` must match the credential owner, failure reason only logged
+  (response carries the generic `MHVP-AUTH-0013` text), inactive owner answers like unknown.
 - `auth/portal_roles.py`: named portal roles and the derivation rule of 3.4 (S16-10).
 - CSRF and field encryption evidence: `docs/security/S16-csrf-and-field-encryption.md`.
 

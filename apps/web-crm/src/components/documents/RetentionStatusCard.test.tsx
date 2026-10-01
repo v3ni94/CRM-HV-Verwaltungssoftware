@@ -60,3 +60,25 @@ describe("RetentionStatusCard", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
   });
 });
+
+describe("RetentionStatusCard resolution select", () => {
+  const fm = vi.fn<typeof fetch>();
+  beforeEach(() => {
+    fm.mockReset();
+    vi.stubGlobal("fetch", fm);
+  });
+
+  it("shows the resolution select only with a legal entity", async () => {
+    fm.mockResolvedValueOnce(jsonResponse(BASE));
+    renderIntl(<RetentionStatusCard documentId={DOC} />);
+    await waitFor(() => expect(screen.getByTestId("retention-status")).toBeInTheDocument());
+    expect(screen.queryByTestId("retention-resolution-select")).toBeNull();
+  });
+
+  it("shows the resolution select for a document linked to a legal entity", async () => {
+    fm.mockResolvedValueOnce(jsonResponse(BASE));
+    fm.mockResolvedValueOnce(jsonResponse([]));
+    renderIntl(<RetentionStatusCard documentId={DOC} legalEntityId="e1" />);
+    await waitFor(() => expect(screen.getByTestId("retention-resolution-select")).toBeInTheDocument());
+  });
+});

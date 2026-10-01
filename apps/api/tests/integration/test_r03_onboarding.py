@@ -411,3 +411,66 @@ def test_multiple_owners_account_needs_entity_choice(
     after = _ok(client.get(f"/api/v1/imports/{applied['id']}", headers=admin), 200)
     assert after["summary"]["entity_decisions"] == []
     assert client.post(url, json=body, headers=admin).status_code == 409
+
+
+def test_takeover_ticket_defaults(client: TestClient, world: World) -> None:
+    """V06-01: default team and assignee of the takeover tickets (empty means no assignment)."""
+    admin = bearer(login(client, world, "r03admin"))
+    clerk = bearer(login(client, world, "r03reader"))
+    other = bearer(login(client, world, "r03other"))
+    url = "/api/v1/onboarding/takeover-ticket-defaults"
+    assert _ok(client.get(url, headers=admin), 200) == {"team_id": None, "assignee_user_id": None}
+    assert client.put(url, json={}, headers=clerk).status_code == 403
+    team = _ok(
+        client.post(
+            "/api/v1/teams", json={"name": "Übernahme", "member_user_ids": []}, headers=admin
+        ),
+        201,
+    )
+    foreign_team = _ok(
+        client.post("/api/v1/teams", json={"name": "Fremd", "member_user_ids": []}, headers=other),
+        201,
+    )
+    assert client.put(url, json={"team_id": foreign_team["id"]}, headers=admin).status_code == 422
+    stranger = str(world.users["r03other"])
+    assert client.put(url, json={"assignee_user_id": stranger}, headers=admin).status_code == 422
+    assert client.put(url, json={"assignee_user_id": "x"}, headers=admin).status_code == 422
+    assignee = str(world.users["r03admin"])
+    saved = _ok(
+        client.put(url, json={"team_id": team["id"], "assignee_user_id": assignee}, headers=admin),
+        200,
+    )
+    assert saved == {"team_id": team["id"], "assignee_user_id": assignee}
+    assert _ok(client.get(url, headers=other), 200) == {"team_id": None, "assignee_user_id": None}
+
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "742",
+                "name": "Objekt 742",
+                "management_type": "hoa",
+                "street": "Testweg",
+                "house_number": "3",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            },
+            headers=admin,
+        )
+    )
+    check = f"/api/v1/properties/{prop['id']}/takeover-checklist"
+    _ok(client.post(check, headers=admin), 200)
+    made = _ok(client.post(f"{check}/tickets", json={"categories": ["meters"]}, headers=admin))
+    ticket = _ok(
+        client.get(f"/api/v1/tickets/{made['created'][0]['ticket_id']}", headers=admin), 200
+    )
+    assert ticket["team_id"] == team["id"]
+    assert ticket["assignee_user_id"] == assignee
+    # Empty again: later tickets carry no assignment.
+    _ok(client.put(url, json={}, headers=admin), 200)
+    later = _ok(client.post(f"{check}/tickets", json={"categories": ["insurance"]}, headers=admin))
+    ticket = _ok(
+        client.get(f"/api/v1/tickets/{later['created'][0]['ticket_id']}", headers=admin), 200
+    )
+    assert ticket["team_id"] is None
+    assert ticket["assignee_user_id"] is None

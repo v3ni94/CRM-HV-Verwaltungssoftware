@@ -23,18 +23,21 @@ describe("MeetingClose", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () => jsonResponse({ status: "closing" }));
+    fetchMock.mockImplementationOnce(async () =>
+      jsonResponse({ items: [{ id: "doc-1", title: "Protokoll 2026", filename: "p.pdf", created_at: "2026-09-01T10:00:00Z" }] }),
+    );
     renderIntl(<MeetingClose {...base} status="held" />);
     expect(screen.getByText("Abschluss beantragen")).toBeDisabled();
-    await userEvent.type(
-      screen.getByLabelText("Dokument-ID des unterschriebenen Protokolls"),
-      "doc-1",
-    );
+    await userEvent.type(screen.getByLabelText("Dokumente suchen (mindestens 2 Zeichen)"), "Protokoll");
+    await userEvent.click(screen.getByText("Suchen"));
+    await userEvent.click(await screen.findByText("Auswählen"));
     await userEvent.click(screen.getByText("Abschluss beantragen"));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/bff/documents?q=Protokoll");
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
       `/api/bff/hoa/meetings/${MEETING}/close`,
     );
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
       minutes_document_id: "doc-1",
     });
     expect(
