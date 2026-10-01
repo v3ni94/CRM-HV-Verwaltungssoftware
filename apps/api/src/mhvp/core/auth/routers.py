@@ -11,9 +11,17 @@ from sqlalchemy import func, select, update
 from mhvp.core.auth import passwords, service, tokens, webauthn
 from mhvp.core.auth.principal import Principal, get_principal, sessions
 from mhvp.core.config import Settings
-from mhvp.core.db.tenancy import platform_transaction
+from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.platform.models import RefreshToken, User, WebAuthnCredential
+from mhvp.platform.models import (
+    Membership,
+    MembershipRole,
+    MembershipStatus,
+    RefreshToken,
+    Role,
+    User,
+    WebAuthnCredential,
+)
 
 router = APIRouter(prefix="/auth", tags=["Anmeldung"])
 
@@ -592,6 +600,40 @@ def _redis(request: Request) -> Any:
     return request.app.state.resources.redis
 
 
+async def _is_portal_only_user(request: Request, user_id: uuid.UUID) -> bool:
+    """U04-02: marker of a pure portal account. True when the user has active memberships and
+    every one of them carries only the role ``portal_user`` (portal accounts are created
+    with exactly that role, CRM staff hold other roles). No membership: not portal only."""
+    factory = sessions(request)
+    async with platform_transaction(factory) as session:
+        memberships = (
+            await session.execute(
+                select(Membership.id, Membership.tenant_id).where(
+                    Membership.user_id == user_id, Membership.status == MembershipStatus.ACTIVE
+                )
+            )
+        ).all()
+    if not memberships:
+        return False
+    for membership_id, tenant_id in memberships:
+        async with tenant_transaction(factory, tenant_id) as session:
+            codes = set(
+                await session.scalars(
+                    select(Role.code)
+                    .join(MembershipRole, MembershipRole.role_id == Role.id)
+                    .where(MembershipRole.membership_id == membership_id)
+                )
+            )
+        if codes != {"portal_user"}:
+            return False
+    return True
+
+
+async def _refuse_passwordless_for_portal(request: Request, user_id: uuid.UUID) -> None:
+    if await _is_portal_only_user(request, user_id):
+        raise ProblemError(ErrorCodes.WEBAUTHN_PASSWORDLESS_FORBIDDEN)
+
+
 @router.post(
     "/webauthn/register/options",
     summary="Passkey registrieren: Optionen (S16-01)",
@@ -609,6 +651,8 @@ async def webauthn_register_options(
     settings = request.app.state.settings
     webauthn.ensure_available(settings)
     passwordless = bool(body and body.passwordless)
+    if passwordless:
+        await _refuse_passwordless_for_portal(request, principal.user_id)
     async with platform_transaction(sessions(request)) as session:
         user = await session.get(User, principal.user_id)
         if user is None or not user.active:
@@ -668,6 +712,8 @@ async def webauthn_register_verify(
     if challenge.get("user_id") != str(principal.user_id):
         raise webauthn.invalid("Challenge issued to another user.")
     passwordless = bool(challenge.get("passwordless"))
+    if passwordless:
+        await _refuse_passwordless_for_portal(request, principal.user_id)
     registered = webauthn.verify_registration(
         settings,
         challenge=challenge["challenge_bytes"],
@@ -781,6 +827,7 @@ async def webauthn_login_verify(
             raise webauthn.invalid("Credential unknown, revoked or of another user.")
         if bound_user is None and not row.passwordless:
             raise webauthn.invalid("Credential not released for passwordless sign in.")
+        passwordless_user_id = row.user_id if bound_user is None else None
         user = await session.get(User, row.user_id)
         if user is None or not user.active:
             raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
@@ -808,6 +855,8 @@ async def webauthn_login_verify(
         user_id = user.id
     if failure is not None:
         raise failure
+    if passwordless_user_id is not None:
+        await _refuse_passwordless_for_portal(request, passwordless_user_id)
     issued = await service.issue_session(
         sessions(request),
         settings,

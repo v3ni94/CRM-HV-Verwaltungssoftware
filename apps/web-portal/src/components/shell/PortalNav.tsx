@@ -67,7 +67,7 @@ export function PortalNav({
                 href={link.href}
                 aria-current={current ? "page" : undefined}
                 onClick={() => setOpen(false)}
-                className={`inline-flex min-h-11 w-full items-center rounded-md px-2 hover:text-fg hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus md:min-h-9 md:w-auto md:px-0 ${
+                className={`inline-flex min-h-11 w-full items-center rounded-md px-2 hover:text-fg hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus md:min-h-9 md:pointer-coarse:min-h-11 md:w-auto md:px-0 ${
                   current ? "bg-surface-2 font-medium text-fg md:bg-transparent md:border-b-2 md:border-gold md:rounded-none" : "text-muted"
                 }`}
               >

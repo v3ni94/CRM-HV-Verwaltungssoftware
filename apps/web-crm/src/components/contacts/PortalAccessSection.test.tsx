@@ -144,4 +144,32 @@ describe("PortalAccessSection", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body))).toEqual({ magic_link_2fa: true });
     await waitFor(() => expect(screen.getByRole("checkbox")).toBeChecked());
   });
+
+  it("offers renewing only for a lapsed invitation and shows the new code once", async () => {
+    const lapsed: PortalAccount = { ...ACCOUNT, invitation_expires_at: "2026-01-10T08:00:00Z" };
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([lapsed]))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { id: "acc", user_id: "usr", grants: 1, invitation_token: "neu.code", invitation_url: null, reissued: true },
+          201,
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse([{ ...lapsed, invitation_expires_at: "2099-01-01T00:00:00Z" }]));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    await userEvent.click(await screen.findByTestId("contact-portal-renew"));
+    await waitFor(() => expect(screen.getByTestId("contact-invitation")).toBeInTheDocument());
+    const call = fetchMock.mock.calls[1];
+    expect(String(call?.[0])).toBe("/api/bff/portal-admin/accounts");
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ contact_id: CONTACT, email: "erika@example.test" });
+    expect(screen.getByText("neu.code")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId("contact-portal-renew")).toBeNull());
+  });
+
+  it("hides the renew button for a valid invitation and without permission", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([{ ...ACCOUNT, invitation_expires_at: "2099-01-01T00:00:00Z" }]));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    await screen.findByTestId("contact-portal-account");
+    expect(screen.queryByTestId("contact-portal-renew")).toBeNull();
+  });
 });

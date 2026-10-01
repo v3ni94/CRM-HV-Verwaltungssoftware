@@ -81,7 +81,8 @@ test.describe("CRM data pages on phone and tablet @backend @mobile", () => {
     await expect(page).toHaveURL(/#kommentare$/);
     await expectNoHorizontalOverflow(page);
 
-    await page.goto("/tickets");
+    // Default sort is urgency; earlier specs seed more than one page of tickets, so sort by arrival.
+    await page.goto("/tickets?sort=created_desc");
     await expect(page).toHaveURL(/\/tickets/);
     if (testInfo.project.name === "phone") {
       const card = page.getByTestId("ticket-card").filter({ hasText: `Mobil ${run}` });

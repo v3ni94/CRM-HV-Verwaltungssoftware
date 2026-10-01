@@ -1,7 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
+import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 export type BankAccountDraft = { kind: string; iban: string; holder: string; bank_name: string; is_default: boolean };
@@ -220,6 +222,121 @@ export function OnboardingExtras({ state, onChange }: { state: ExtrasState; onCh
           <span className="block text-xs text-muted">{t("linkDocumentsHint")}</span>
         </span>
       </label>
+    </fieldset>
+  );
+}
+
+export type EntityCandidate = { id: string; name: string; kind: string };
+export type EntityDecision =
+  | { kind: "bank_account"; index: number; holder: string; account_kind: string; candidates: EntityCandidate[] }
+  | { kind: "debtor_accounts"; candidates: EntityCandidate[] };
+
+/** Decision points of the apply (R03-02) from the import summary; empty when none are open. */
+export function entityDecisions(summary: Record<string, unknown> | undefined): EntityDecision[] {
+  const raw = summary?.entity_decisions;
+  return Array.isArray(raw) ? (raw as EntityDecision[]) : [];
+}
+
+/** Request of the follow-up call: one legal entity per bank account, chosen debtor entities. */
+export function resolvePayload(
+  decisions: EntityDecision[],
+  accounts: BankAccountDraft[],
+  chosen: Record<string, string>,
+  debtorIds: string[],
+  asOf: string,
+): Record<string, unknown> {
+  const banks = decisions.flatMap((d) => {
+    if (d.kind !== "bank_account") return [];
+    const draft = accounts[d.index];
+    const entity = chosen[String(d.index)];
+    return draft && entity ? [{ index: d.index, account: { kind: draft.kind, iban: draft.iban.replace(/\s+/g, "").toUpperCase(), holder: draft.holder.trim(), bank_name: draft.bank_name.trim() || null, is_default: draft.is_default, legal_entity_id: entity } }] : [];
+  });
+  return {
+    bank_accounts: banks.map((b) => b.account),
+    resolved_indexes: banks.map((b) => b.index),
+    debtor_legal_entity_ids: debtorIds,
+    as_of: asOf,
+  };
+}
+
+/** Choice of the legal entity per account (R03-02): shown after the apply when several legal
+ *  entities match; the accounts are created by the follow-up call, never guessed. */
+export function EntityDecisions({
+  runId,
+  decisions,
+  accounts,
+  asOf,
+  onResolved,
+}: {
+  runId: string;
+  decisions: EntityDecision[];
+  accounts: BankAccountDraft[];
+  asOf: string;
+  onResolved: (message: string) => void;
+}) {
+  const t = useTranslations("OnboardingExtras");
+  const [chosen, setChosen] = useState<Record<string, string>>({});
+  const [debtorIds, setDebtorIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (decisions.length === 0) return null;
+  const complete = decisions.every((d) => d.kind !== "bank_account" || chosen[String(d.index)]);
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ created_bank_accounts: number; debtor_entities: number }>(`/api/bff/ai/import-runs/${runId}/resolve-entities`, {
+      method: "POST",
+      body: JSON.stringify(resolvePayload(decisions, accounts, chosen, debtorIds, asOf)),
+    });
+    setBusy(false);
+    if (res.ok) onResolved(t("decisionDone", { banks: res.data.created_bank_accounts, debtors: res.data.debtor_entities }));
+    else setError(res.message);
+  };
+  return (
+    <fieldset className="flex flex-col gap-3" data-testid="entity-decisions">
+      <legend className="text-sm font-medium">{t("decisionTitle")}</legend>
+      <p className="text-xs text-muted">{t("decisionHint")}</p>
+      {decisions.map((d, i) =>
+        d.kind === "bank_account" ? (
+          <div key={`b${d.index}`}>
+            <label htmlFor={`entity-${d.index}`} className={ui.label}>
+              {t("decisionBank", { holder: d.holder, kind: t(`bankKinds.${d.account_kind as (typeof BANK_KINDS)[number]}`) })}
+            </label>
+            <select id={`entity-${d.index}`} className={ui.input} value={chosen[String(d.index)] ?? ""} onChange={(e) => setChosen({ ...chosen, [String(d.index)]: e.target.value })}>
+              <option value="">{t("decisionChoose")}</option>
+              {d.candidates.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div key={`d${i}`}>
+            <p className="text-sm">{t("decisionDebtor")}</p>
+            {d.candidates.map((c) => (
+              <label key={c.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={debtorIds.includes(c.id)}
+                  onChange={(e) => setDebtorIds(e.target.checked ? [...debtorIds, c.id] : debtorIds.filter((x) => x !== c.id))}
+                />
+                {c.name}
+              </label>
+            ))}
+          </div>
+        ),
+      )}
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+      <div>
+        <button type="button" className={ui.button} disabled={busy || !complete || !asOf} data-testid="entity-apply" onClick={() => void submit()}>
+          {t("decisionApply")}
+        </button>
+      </div>
     </fieldset>
   );
 }

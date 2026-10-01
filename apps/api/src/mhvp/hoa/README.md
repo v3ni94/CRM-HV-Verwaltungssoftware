@@ -148,3 +148,18 @@ reserve block of the calculated Hausgeldabrechnung and the reserve master data (
 
 
 CRM (U03, 01.10.2026): Das Rücklagenformular bietet Bankkonto (nur Rechtsträger der Gemeinschaft) und Buchungskonto als Auswahl; die Hausgeldabrechnungsansicht zeigt die Entwicklung je Rücklage und Jahr (`GET /hoa/reserves/{id}/development`). Keine API-Änderung.
+
+## Closing of the minutes (R07-01, wave 7, V05)
+
+`POST /hoa/meetings/{id}/close` (status `held` only, `minutes_document_id` required) sets
+status `closing` and locks agenda, attendance, votes, announcements, disruptions and the
+deadline patch (409). A second person confirms with `POST .../close/confirm` and the same
+document: status `closed`, event `meeting.closed` (webhook catalogue). `POST .../close/withdraw`
+returns an open request to `held`. No statutory minutes period is computed (open question
+V05-01); the response carries a hint text only. Migration 0302, rule `docs/rules/R07-01-meeting-close.md`.
+
+## Reserve opening lock and reference checks (U15-03, V11-06, wave 7, V01)
+
+Opening balance and year are frozen once a statement of the opening year is calculated or
+beyond (409 `MHVP-HOA-0005`); ended bank accounts and inactive ledger accounts are refused
+with 422. Rule M24-W5 addendum.

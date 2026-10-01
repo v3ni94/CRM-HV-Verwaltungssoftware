@@ -151,6 +151,17 @@ auf dem Briefbogen des Mandanten und legt es als Entwurfsdokument an der Versamm
 und ersetzt nicht das unterschriebene Protokoll; dieses bleibt getrennt verknüpft und wird
 nie überschrieben.
 
+### Protokollabschluss
+
+Nach der Versammlung (Status eröffnet) trägt eine Person unter Protokollabschluss die
+Dokument-ID des unterschriebenen Protokolls ein und wählt Abschluss beantragen (Recht
+Buchhaltung freigeben). Ab dann sind Tagesordnung, Anwesenheit, Stimmabgabe, Verkündung und
+Beschlussfrist gesperrt. Eine zweite Person bestätigt mit Abschluss bestätigen; dieselbe
+Person kann nicht bestätigen. Danach ist die Versammlung geschlossen und das Ereignis
+meeting.closed wird an abonnierte Webhooks geliefert. Ein offener Antrag kann mit Antrag
+zurückziehen aufgehoben werden. Eine Frist für das Protokoll berechnet die Plattform nicht;
+sie zeigt nur einen Hinweis (offene Frage R07-01).
+
 ### Beschlussfrist virtueller Versammlungen
 
 Bei einer virtuellen Versammlung kann unter Beschlussfrist der virtuellen Versammlung ein
@@ -392,3 +403,7 @@ Auf der Seite WEG, Rücklagen legt der Bearbeiter je Jahr eine Rücklagenabrechn
 ## Rücklagen: Kontoauswahl und Entwicklung in der Abrechnung
 
 Beim Anlegen und Ändern einer Rücklage (WEG, Rücklagen) wählt der Bearbeiter das Bankkonto und das Buchungskonto aus Auswahllisten. Angeboten werden nur Bankkonten des Rechtsträgers der Gemeinschaft und die aktiven Konten des Buchungskreises; die API prüft beides erneut. Die Auswahl bucht nichts. In der Hausgeldabrechnung (WEG, Abrechnung) zeigt der Abschnitt "Entwicklung je Rücklage und Jahr" Anfang, Zuführung, Entnahmen, Steuern, Gebühren, Zinsen und Ende bis zum Abrechnungsjahr. Die Eigentümer- und die Rücklagenabrechnung zeigen den Statusverlauf als Liste, ohne Eintrag mit dem Hinweis "Noch kein Statuswechsel."
+
+## Rücklage: Sperre des Anfangsbestands (Stand 01.10.2026)
+
+Sobald die Abrechnung des Anfangsjahres berechnet oder freigegeben ist, lassen sich Anfangsbestand und Anfangsjahr einer Rücklage nicht mehr ändern. Korrekturen erfassen Sie als neue Bewegung. Ein beendetes Bankkonto oder ein inaktives Buchungskonto lehnt das System auch dann ab, wenn es nicht über das Formular gewählt wurde.

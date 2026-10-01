@@ -488,3 +488,8 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
 ### Antwortentwurf als eigene KI-Aufgabe (T12)
 
 `POST /mail/messages/{id}/reply-ai` und `/reply-ai/approve`: Ergebnis unter `suggestion.reply_ai` (ungeprüft bis zur Freigabe, Freigabe hält Benutzer und Zeit fest), Kompaktansicht `reply.source = reply_task`. Nie ein Versand. Regel: `docs/rules/T12.md`.
+
+## Reply draft approval with hash (U15-01, wave 7, V01)
+
+`/reply-ai/approve` requires `draft_hash` (SHA-256 of the stored draft without approval
+fields, `compact.reply_draft_hash`); mismatch 409 `MHVP-COMM-0010`. Rule T12.

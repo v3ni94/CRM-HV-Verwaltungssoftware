@@ -254,8 +254,10 @@ async def create_representation(
         if await session.get(Contact, body.principal_contact_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kontakt nicht gefunden.")
         await ensure_contact_visible(session, body.principal_contact_id)  # U15, M2-02
-        if await session.get(Document, body.document_id) is None:
-            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vollmacht nicht gefunden.")
+        # V11-08: existence and visibility in the member's legal entity and property scope.
+        from mhvp.documents.routers import _get as get_visible_document
+
+        await get_visible_document(session, Document, body.document_id)
         row = PortalRepresentation(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,

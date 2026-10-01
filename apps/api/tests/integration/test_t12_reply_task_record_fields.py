@@ -203,7 +203,7 @@ def test_record_field_action_closed_list() -> None:
 
 
 def test_reply_draft_task_approval_permissions_and_tenant(
-    client: TestClient, world: World, fake: FakeProvider
+    client: TestClient, world: World, fake: FakeProvider, migrator_engine: Any
 ) -> None:
     admin = bearer(login(client, world, "t12admin"))
     reader = bearer(login(client, world, "t12reader"))
@@ -214,7 +214,8 @@ def test_reply_draft_task_approval_permissions_and_tenant(
     # No released provider: skipped, nothing stored, compact keeps the template.
     skipped = _ok(client.post(url, headers=admin))
     assert skipped["status"] in {"skipped", "failed"}
-    assert client.post(f"{url}/approve", headers=admin).status_code == 404
+    zero = {"draft_hash": "0" * 64}
+    assert client.post(f"{url}/approve", headers=admin, json=zero).status_code == 404
     assert (
         _ok(client.get(f"{M}/messages/{msg['id']}/compact", headers=admin))["reply"]["source"]
         == "template"
@@ -222,7 +223,7 @@ def test_reply_draft_task_approval_permissions_and_tenant(
 
     # Permissions, tenant separation, validation.
     assert client.post(url, headers=reader).status_code == 403
-    assert client.post(f"{url}/approve", headers=reader).status_code == 403
+    assert client.post(f"{url}/approve", headers=reader, json=zero).status_code == 403
     assert client.post(url, headers=other).status_code == 404
     assert client.post(f"{M}/messages/not-a-uuid/reply-ai", headers=admin).status_code == 422
 
@@ -245,11 +246,20 @@ def test_reply_draft_task_approval_permissions_and_tenant(
     assert compact["reply"]["approved"] is False
     assert compact["reply"]["draft"]["open_questions"] == ["Termin abstimmen"]
 
-    approved = _ok(client.post(f"{url}/approve", headers=admin))
+    seen = compact["reply"]["draft_hash"]
+    assert seen == done["draft_hash"]
+    # U15-01: missing or malformed hash is 422, a hash of another draft is 409.
+    assert client.post(f"{url}/approve", headers=admin).status_code == 422
+    assert client.post(f"{url}/approve", headers=admin, json={"draft_hash": "x"}).status_code == 422
+    stale = client.post(f"{url}/approve", headers=admin, json=zero)
+    assert stale.status_code == 409
+    assert stale.json()["code"] == "MHVP-COMM-0010"
+    approved = _ok(client.post(f"{url}/approve", headers=admin, json={"draft_hash": seen}))
     assert approved["approved"] is True
     assert approved["approved_by"] == str(world.users["t12admin"])
     first_time = approved["approved_at"]
-    assert _ok(client.post(f"{url}/approve", headers=admin))["approved_at"] == first_time
+    again = client.post(f"{url}/approve", headers=admin, json={"draft_hash": seen})
+    assert _ok(again)["approved_at"] == first_time
     assert (
         _ok(client.get(f"{M}/messages/{msg['id']}/compact", headers=admin))["reply"]["approved"]
         is True
@@ -257,6 +267,24 @@ def test_reply_draft_task_approval_permissions_and_tenant(
     # A new draft resets the approval; the mail is never sent by this path.
     fake.queue.append(DRAFT)
     assert _ok(client.post(url, headers=admin))["approved"] is False
+    # U15-01: a parallel regeneration with other content (simulated in the store) makes the
+    # hash the approver has seen stale: 409.
+    from sqlalchemy import text
+
+    with migrator_engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        conn.execute(
+            text(
+                "UPDATE message SET suggestion = jsonb_set(suggestion, '{reply_ai,body}',"
+                " to_jsonb('Anderer Entwurf'::text)) WHERE id = :i"
+            ),
+            {"i": msg["id"]},
+        )
+    assert (
+        client.post(f"{url}/approve", headers=admin, json={"draft_hash": seen}).status_code == 409
+    )
     assert _ok(client.get(f"{M}/messages/{msg['id']}", headers=admin))["status"] != "sent"
 
 

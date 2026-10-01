@@ -13,3 +13,13 @@
 Verweise: `docs/integrations/bank-csv.md` (Endpunkte, Formatliste, Details),
 `apps/api/src/mhvp/banking/README.md` (Abschnitt Bank specific CSV import), Migration 0168
 (`bank_csv_mapping`).
+
+## Nachtrag V11 (01.10.2026, Prüfung Welle 6)
+
+| Feld | Inhalt |
+| --- | --- |
+| Geltungsbereich | `banking/csv_formats.py`, Vorschau und Import |
+| Regel | Beträge mit mehr als zwei Nachkommastellen, Exponent, NaN oder Unendlich sind Zeilenfehler (z. B. "1.234" ist im deutschen Export 1.234,00 EUR und wird nicht geraten). Zeilen mit abweichendem Auftragskonto oder abweichender Währung sind Zeilenfehler. Weicht das Auftragskonto der Datei vom gewählten Konto ab, ist der Import gesperrt. |
+| Quellenstatus (Anhang C) | Produktschutz, keine Rechtsnorm (Trennung der Bankmittel je Rechtsträger, 6.9.1, E01) |
+| Abnahmefall | `tests/unit/test_csv_formats.py::test_v11_*` |
+| Änderungsgrund | Prüfbericht `docs/reviews/REVIEW-W6-2026-10-01.md` |

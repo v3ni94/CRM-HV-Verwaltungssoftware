@@ -90,7 +90,10 @@ def test_template_rows_follow_annex_a1_pattern() -> None:
         )
     # M10-02 (26.09.2026): cost accounts with a preset are drafts too, all other A.1 rows not.
     for row in A1_ACCOUNTS:
-        if row["category"] == "cost" and row["allocation_category"] != "none":
+        # V10 / U07-01: 028100 carries the statement kind Hausgeld as a draft as well.
+        if row["number"] == "028100" or (
+            row["category"] == "cost" and row["allocation_category"] != "none"
+        ):
             assert (row["review_status"], row["review_note"]) == (REVIEW_DRAFT, DRAFT_NOTE)
         else:
             assert row["review_status"] == "none"

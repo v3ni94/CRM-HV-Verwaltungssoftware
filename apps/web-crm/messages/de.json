@@ -400,6 +400,9 @@
       "lastLogin": "Letzte Anmeldung {date}",
       "letterButton": "Einladungsbrief (PDF)",
       "letterBusy": "Wird erzeugt...",
+      "renewButton": "Einladung erneuern",
+      "renewBusy": "Wird erneuert...",
+      "expiredHint": "Die Einladung ist abgelaufen und wurde nicht angenommen. Sie kann mit neuem Code und neuer Frist erneut ausgestellt werden.",
       "letterError": "Einladungsbrief konnte nicht erzeugt werden.",
       "twoFactorEmail": "Zweiter Faktor per E-Mail-Code beim Anmeldelink"
     },
@@ -3103,6 +3106,7 @@
       "planned": "geplant",
       "invited": "eingeladen",
       "held": "eröffnet",
+      "closing": "Abschluss beantragt",
       "closed": "geschlossen"
     },
     "announced": "Beschluss Nr. {number}: {status}",
@@ -3180,6 +3184,17 @@
       "moreThan": "mehr als {p} %",
       "atLeast": "mindestens {p} %",
       "meaMin": "mindestens {p} % aller MEA"
+    },
+    "meetingClose": {
+      "title": "Protokollabschluss",
+      "notice": "Abschluss im Vier-Augen-Prinzip: eine Person beantragt mit dem unterschriebenen Protokoll, eine zweite Person bestätigt. Danach sind Tagesordnung, Anwesenheit und Beschlussfassung gesperrt.",
+      "periodNote": "Eine Frist für Erstellung oder Versand des Protokolls ist im Einzelfall zu prüfen. Das System berechnet und sperrt keine Protokollfrist.",
+      "documentId": "Dokument-ID des unterschriebenen Protokolls",
+      "request": "Abschluss beantragen",
+      "confirm": "Abschluss bestätigen (zweite Person)",
+      "withdraw": "Antrag zurückziehen",
+      "requested": "Abschluss beantragt am {date}.",
+      "closed": "Protokoll abgeschlossen am {date}."
     },
     "protocol": {
       "title": "Protokollentwurf",
@@ -9315,6 +9330,31 @@
       "hint": "Standard: aus, das CRM lädt dann über die API hoch. Einschalten nur, wenn der Objektspeicher vom Browser aus erreichbar ist und CORS für PUT von der CRM-Adresse erlaubt (siehe Runbook Objektspeicher). Schlägt der direkte Upload fehl, nutzt das CRM automatisch den Upload über die API."
     }
   },
+  "RetentionStatus": {
+    "title": "Aufbewahrung und Sperren",
+    "loading": "Wird geladen",
+    "unavailable": "Der Aufbewahrungsstatus konnte nicht geladen werden.",
+    "until": "Aufbewahrung bis",
+    "untilNone": "nicht berechnet",
+    "resolution": "Fristbeginn nach Beschluss",
+    "resolutionRef": "Bezug auf Beschluss {id}",
+    "manualHold": "Manuelle Löschungssperre",
+    "procedureHold": "Automatische Sperre durch offenes Verfahren",
+    "ticketHold": "Sperre am Vorgang",
+    "permanent": "WEG-Dauerunterlage",
+    "holdKind": "Sperrgrund: {kind}",
+    "kind": {
+      "litigation": "Rechtsstreit",
+      "tax_procedure": "Steuerverfahren",
+      "evidence": "Beweissicherung",
+      "legal_matter": "Rechtssache",
+      "other": "Sonstiges"
+    },
+    "none": "Keine Sperre",
+    "deletable": "Das Dokument ist nach den hinterlegten Regeln löschbar.",
+    "blocked": "Löschung gesperrt: {reason}",
+    "fourEyes": "Eine manuelle Sperre hebt nur eine zweite Person mit dem Recht Freigabe auf (Vier-Augen-Prinzip). Die Sperre am Vorgang und die automatische Sperre bei Rechtsstreit oder Insolvenz entfallen mit der Aufhebung am Vorgang bzw. in der Buchhaltung."
+  },
   "DocumentDetail": {
     "area": "Dokumente",
     "created": "Bereitgestellt am",
@@ -14069,6 +14109,14 @@
       "developmentHint": "Anfang gleich Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Information für Abrechnung und Vermögensbericht, keine Buchung."
   },
   "OnboardingExtras": {
+    "decisionTitle": "Rechtsträger auswählen",
+    "decisionHint": "Für diese Konten passen mehrere Rechtsträger. Es wurde nichts angelegt. Wählen Sie je Konto den Rechtsträger, danach werden die Konten angelegt.",
+    "decisionBank": "Bankkonto {holder} ({kind})",
+    "decisionDebtor": "Debitorenkonten für folgende Rechtsträger anlegen",
+    "decisionChoose": "Rechtsträger wählen",
+    "decisionApply": "Konten anlegen",
+    "decisionDone": "Konten angelegt: {banks} Bankkonten, {debtors} Rechtsträger mit Debitorenkonten.",
+    "decisionMissing": "Es fehlen Angaben zum Konto (IBAN, Kontoinhaber) oder das Datum Gültig ab.",
     "title": "Weitere Angaben zum Objekt (optional)",
     "hint": "Diese Angaben stammen nicht aus dem Vorschlag, sondern werden hier eingegeben und mit der Bestätigung gemeinsam angelegt. Bei Fehlern wird nichts angelegt.",
     "banksTitle": "Bankkonten",
@@ -14175,6 +14223,16 @@
     "logoUploaded": "Logo hochgeladen, bitte speichern.",
     "logoType": "Nur PNG oder JPEG sind erlaubt."
   },
+  "ExportRetention": {
+    "title": "Aufbewahrung der Exportarchive",
+    "description": "Legt fest, wie lange Mandantenexport-Archive im Objektspeicher liegen. Nach Ablauf löscht ein täglicher Lauf das Archiv und setzt den Export auf abgelaufen. Der Eintrag mit Größe und Prüfsumme bleibt als Nachweis erhalten.",
+    "label": "Aufbewahrung in Tagen",
+    "hint": "Leer bedeutet keine automatische Löschung. Erlaubt 1 bis 3650. Die Frist läuft ab Fertigstellung des Exports; eine spätere Änderung gilt auch für bereits fertige Archive ohne Ablaufdatum. Jede Änderung wird protokolliert. Die Aufbewahrungsdauer ist mit dem Datenschutz abzustimmen.",
+    "save": "Aufbewahrung speichern",
+    "saved": "Gespeichert.",
+    "invalid": "Bitte eine ganze Zahl zwischen 1 und 3650 eingeben oder das Feld leeren.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+  },
   "TenantExportJobs": {
     "title": "Vollständiger Mandantenexport",
     "description": "Exportiert alle Daten des Mandanten (Rechtsträger, Objekte, Einheiten, Kontakte, Verträge, Buchungen, offene Posten, Bankkonten und Umsätze, Tickets, Dokumente mit Metadaten) als JSON je Tabelle zusammen mit den Dokumentdateien als ZIP. Der Export läuft im Hintergrund. Nur der Mandantenadministrator kann ihn starten und herunterladen, jeder Start und Abruf wird protokolliert. Das Archiv enthält personenbezogene Daten und ist sorgfältig zu behandeln.",
@@ -14189,6 +14247,8 @@
     "statusRunning": "Läuft",
     "statusReady": "Fertig",
     "statusFailed": "Fehlgeschlagen",
+    "statusExpired": "Abgelaufen, Archiv gelöscht",
+    "expiresAt": "Archiv bis {date} abrufbar.",
     "download": "Herunterladen",
     "documentsFailed": "{count} Dokumentdateien konnten nicht gepackt werden, siehe manifest.json.",
     "readOnly": "Der Export erfordert die Rolle Mandantenadministrator."

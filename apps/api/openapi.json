@@ -22120,6 +22120,18 @@
             ],
             "title": "Retention Profile Id"
           },
+          "retention_resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Resolution Id"
+          },
           "retention_until": {
             "anyOf": [
               {
@@ -22262,6 +22274,19 @@
               }
             ],
             "title": "Retention Profile Id"
+          },
+          "retention_resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Beschluss, dessen Datum den Fristbeginn bestimmt (Startregel resolution)",
+            "title": "Retention Resolution Id"
           },
           "retention_until": {
             "anyOf": [
@@ -22447,6 +22472,11 @@
             "title": "Document Id",
             "type": "string"
           },
+          "hold_set_by_four_eyes_required": {
+            "default": false,
+            "title": "Hold Set By Four Eyes Required",
+            "type": "boolean"
+          },
           "permanent_record": {
             "title": "Permanent Record",
             "type": "boolean"
@@ -22483,6 +22513,18 @@
               }
             ],
             "title": "Retention Hold Reason"
+          },
+          "retention_resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Resolution Id"
           },
           "retention_until": {
             "anyOf": [
@@ -33463,6 +33505,18 @@
             ],
             "title": "Retention Profile Id"
           },
+          "retention_resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Resolution Id"
+          },
           "retention_until": {
             "anyOf": [
               {
@@ -38402,6 +38456,21 @@
         "title": "MailRejectIn",
         "type": "object"
       },
+      "MailReplyDraftApproveIn": {
+        "additionalProperties": false,
+        "properties": {
+          "draft_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Draft Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "draft_hash"
+        ],
+        "title": "MailReplyDraftApproveIn",
+        "type": "object"
+      },
       "MailReplyDraftIn": {
         "additionalProperties": false,
         "properties": {
@@ -40069,6 +40138,36 @@
           }
         },
         "title": "MeasurePatch",
+        "type": "object"
+      },
+      "MeetingCloseConfirmIn": {
+        "additionalProperties": false,
+        "properties": {
+          "minutes_document_id": {
+            "format": "uuid",
+            "title": "Minutes Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "minutes_document_id"
+        ],
+        "title": "MeetingCloseConfirmIn",
+        "type": "object"
+      },
+      "MeetingCloseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "minutes_document_id": {
+            "format": "uuid",
+            "title": "Minutes Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "minutes_document_id"
+        ],
+        "title": "MeetingCloseIn",
         "type": "object"
       },
       "MeetingConsentIn": {
@@ -44042,6 +44141,19 @@
             "title": "Kind",
             "type": "string"
           },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rechtsträger des Kontos (R03-02); nötig, wenn mehrere Rechtsträger passen, sonst wird das Konto nicht angelegt, sondern als Entscheidungspunkt ausgewiesen",
+            "title": "Legal Entity Id"
+          },
           "valid_from": {
             "anyOf": [
               {
@@ -44062,6 +44174,81 @@
           "holder"
         ],
         "title": "OnboardingBankAccountChoice",
+        "type": "object"
+      },
+      "OnboardingEntityResolveIn": {
+        "additionalProperties": false,
+        "description": "Selection of the legal entity per account after the apply (R03-02).",
+        "properties": {
+          "as_of": {
+            "description": "Gültig ab für Konten ohne eigenes Datum",
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bank_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingBankAccountChoice"
+            },
+            "maxItems": 20,
+            "title": "Bank Accounts",
+            "type": "array"
+          },
+          "debtor_legal_entity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Debtor Legal Entity Ids",
+            "type": "array"
+          },
+          "resolved_indexes": {
+            "description": "Index je Konto im Entscheidungspunkt, parallel zu bank_accounts",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 20,
+            "title": "Resolved Indexes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "OnboardingEntityResolveIn",
+        "type": "object"
+      },
+      "OnboardingEntityResolveOut": {
+        "properties": {
+          "created_bank_accounts": {
+            "title": "Created Bank Accounts",
+            "type": "integer"
+          },
+          "debtor_entities": {
+            "title": "Debtor Entities",
+            "type": "integer"
+          },
+          "import_run_id": {
+            "format": "uuid",
+            "title": "Import Run Id",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "import_run_id",
+          "created_bank_accounts",
+          "debtor_entities",
+          "notes"
+        ],
+        "title": "OnboardingEntityResolveOut",
         "type": "object"
       },
       "OnboardingIn": {
@@ -47129,6 +47316,19 @@
         "title": "PlatformSettingsPatch",
         "type": "object"
       },
+      "PlatformTokenHashOut": {
+        "properties": {
+          "converted": {
+            "title": "Converted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "converted"
+        ],
+        "title": "PlatformTokenHashOut",
+        "type": "object"
+      },
       "PlaybookIn": {
         "additionalProperties": false,
         "properties": {
@@ -49957,6 +50157,23 @@
             "description": "Debitorenkonten der Verträge ins Kontenbuch übernehmen; fehlt der Buchungskreis, wird er aus der Kontenvorlage (Entwurf) angelegt. Es wird nichts gebucht.",
             "title": "Create Debtor Accounts",
             "type": "boolean"
+          },
+          "debtor_legal_entity_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rechtsträger, für die Debitorenkonten angelegt werden (R03-02); ohne Angabe nur bei genau einem Rechtsträger mit Verträgen, sonst Entscheidungspunkt",
+            "title": "Debtor Legal Entity Ids"
           },
           "document_ids": {
             "description": "weitere Dokumente (Ablage) zum Objekt",
@@ -57291,7 +57508,8 @@
           "end_of_year_last_entry",
           "contract_end",
           "statement_issued",
-          "purpose_end"
+          "purpose_end",
+          "resolution"
         ],
         "title": "RetentionStart",
         "type": "string"
@@ -63490,6 +63708,17 @@
             "title": "Consumption Info Template Verified",
             "type": "boolean"
           },
+          "export_retention_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Retention Days"
+          },
           "gmail_close_assigned_tickets": {
             "default": false,
             "title": "Gmail Close Assigned Tickets",
@@ -63718,6 +63947,11 @@
               }
             ]
           },
+          "clear_export_retention_days": {
+            "default": false,
+            "title": "Clear Export Retention Days",
+            "type": "boolean"
+          },
           "clear_inspection_package_default_days": {
             "default": false,
             "title": "Clear Inspection Package Default Days",
@@ -63765,6 +63999,19 @@
               }
             ],
             "title": "Consumption Info Template Verified"
+          },
+          "export_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Retention Days"
           },
           "gmail_close_assigned_tickets": {
             "anyOf": [
@@ -82067,6 +82314,60 @@
           }
         },
         "summary": "Importlauf: Rolle nachträglich setzen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/import-runs/{import_id}/resolve-entities": {
+      "post": {
+        "description": "R03-02: accounts with several matching legal entities are created only after the\nreviewer chose the entity per account; nothing is guessed.",
+        "operationId": "resolve_import_entities_api_v1_ai_import_runs__import_id__resolve_entities_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingEntityResolveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingEntityResolveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importlauf: Rechtsträger je Konto wählen und Konten anlegen",
         "tags": [
           "KI-Assistent"
         ]
@@ -105216,6 +105517,164 @@
         ]
       }
     },
+    "/api/v1/hoa/meetings/{meeting_id}/close": {
+      "post": {
+        "description": "First step of the four eyes closing: links the signed minutes and locks the meeting\n(status closing). A second person confirms with ``/close/confirm``.",
+        "operationId": "request_close_api_v1_hoa_meetings__meeting_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingCloseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request Close Api V1 Hoa Meetings  Meeting Id  Close Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokollabschluss beantragen (R07-01)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/close/confirm": {
+      "post": {
+        "description": "Second step: a different person confirms the same minutes document; status closed,\nevent ``meeting.closed`` (webhook).",
+        "operationId": "confirm_close_api_v1_hoa_meetings__meeting_id__close_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingCloseConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Confirm Close Api V1 Hoa Meetings  Meeting Id  Close Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokollabschluss bestätigen (R07-01)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/close/withdraw": {
+      "post": {
+        "description": "Withdraws an open closing request (for example wrong document); a closed meeting stays\nclosed.",
+        "operationId": "withdraw_close_api_v1_hoa_meetings__meeting_id__close_withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Withdraw Close Api V1 Hoa Meetings  Meeting Id  Close Withdraw Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abschlussantrag zurückziehen (R07-01)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/meetings/{meeting_id}/dial-in": {
       "put": {
         "operationId": "put_dial_in_api_v1_hoa_meetings__meeting_id__dial_in_put",
@@ -120462,7 +120921,7 @@
     },
     "/api/v1/mail/messages/{message_id}/reply-ai/approve": {
       "post": {
-        "description": "Human approval of the stored reply draft (four eyes with the later send path stay\nuntouched). Records user and time; a new draft resets the approval.",
+        "description": "Human approval of the stored reply draft (four eyes with the later send path stay\nuntouched). Records user and time; a new draft resets the approval. The body carries\nthe ``draft_hash`` of the draft the approver has seen (U15-01); a mismatch is 409.",
         "operationId": "approve_reply_draft_api_v1_mail_messages__message_id__reply_ai_approve_post",
         "parameters": [
           {
@@ -120476,6 +120935,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailReplyDraftApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -126534,6 +127003,28 @@
         "summary": "Lizenz beenden (Gültigkeit setzen)",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/maintenance/self-disclosure-token-hash": {
+      "post": {
+        "description": "Manual trigger of the idempotent data migration (no schema change).",
+        "operationId": "hash_self_disclosure_tokens_endpoint_api_v1_platform_maintenance_self_disclosure_token_hash_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformTokenHashOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Selbstauskunft-Token der Altzeilen auf SHA-256 umstellen (S16-03-01)",
+        "tags": [
+          "Plattform"
         ]
       }
     },

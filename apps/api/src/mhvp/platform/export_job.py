@@ -13,7 +13,7 @@ import shutil
 import tempfile
 import uuid
 import zipfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -35,6 +35,7 @@ JOB_QUEUED = "queued"
 JOB_RUNNING = "running"
 JOB_READY = "ready"
 JOB_FAILED = "failed"
+JOB_EXPIRED = "expired"
 BATCH = 500
 
 
@@ -274,7 +275,7 @@ def tenant_export_key(tenant_id: uuid.UUID, job_id: uuid.UUID) -> str:
 async def run_tenant_export_job(settings: Settings, job_id: uuid.UUID, tenant_id: uuid.UUID) -> str:
     from mhvp.core.events import emit
     from mhvp.core.storage import create_s3_client
-    from mhvp.platform.models import TenantExportJob
+    from mhvp.platform.models import TenantExportJob, TenantSettings
 
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
@@ -313,6 +314,9 @@ async def run_tenant_export_job(settings: Settings, job_id: uuid.UUID, tenant_id
                 row.sha256 = digest.hexdigest()
                 row.manifest = manifest
                 row.finished_at = datetime.now(UTC)
+                # T01-01: retention of the tenant, empty means no automatic deletion.
+                days = await session.scalar(select(TenantSettings.export_retention_days))
+                row.expires_at = row.finished_at + timedelta(days=days) if days else None
                 await emit(
                     session,
                     tenant_id=tenant_id,
@@ -350,3 +354,85 @@ def tenant_export_admin_job(job_id: str, tenant_id: str) -> str:
     return asyncio.run(
         run_tenant_export_job(get_settings(), uuid.UUID(job_id), uuid.UUID(tenant_id))
     )
+
+
+# ---------------------------------------------------------------------------------------
+# Retention of the archives (T01-01)
+# ---------------------------------------------------------------------------------------
+
+
+async def purge_expired_exports_once(
+    settings: Settings, now: datetime | None = None, client: Any | None = None
+) -> dict[str, int]:
+    """Deletes expired tenant export archives from the object store and marks the job as
+    ``expired`` (the row, size, checksum and download counters stay as evidence). Expired means
+    ``expires_at`` passed, or no expiry set and ``finished_at`` plus the current
+    ``export_retention_days`` of the tenant passed. Tenants without a retention are untouched.
+    A failed object delete leaves the job ``ready`` for the next run."""
+    from mhvp.core.db.tenancy import platform_transaction
+    from mhvp.core.events import emit
+    from mhvp.core.storage import create_s3_client
+    from mhvp.platform.models import Tenant, TenantExportJob, TenantSettings, TenantStatus
+
+    moment = now or datetime.now(UTC)
+    s3 = client if client is not None else create_s3_client(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    expired = 0
+    failed = 0
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                days = await session.scalar(select(TenantSettings.export_retention_days))
+                rows = (
+                    await session.scalars(
+                        select(TenantExportJob)
+                        .where(
+                            TenantExportJob.status == JOB_READY,
+                            TenantExportJob.object_key.is_not(None),
+                        )
+                        .with_for_update()
+                    )
+                ).all()
+                for row in rows:
+                    limit = row.expires_at
+                    if limit is None and days and row.finished_at is not None:
+                        limit = row.finished_at + timedelta(days=days)
+                    if limit is None or limit > moment:
+                        continue
+                    key = row.object_key or ""
+                    try:
+                        s3.delete_object(Bucket=settings.s3_bucket, Key=key)
+                    except Exception as exc:  # retry next run, never mark as deleted
+                        log.error("export archive delete failed: %s", type(exc).__name__)
+                        failed += 1
+                        continue
+                    row.status = JOB_EXPIRED
+                    row.object_key = None
+                    row.expired_at = moment
+                    expired += 1
+                    await emit(
+                        session,
+                        tenant_id=tenant_id,
+                        type="tenant_export.expired",
+                        entity_type="tenant_export_job",
+                        entity_id=row.id,
+                        actor_user_id=None,
+                        payload={"sha256": row.sha256, "size": row.size},
+                    )
+    finally:
+        await engine.dispose()
+    return {"expired": expired, "failed": failed}
+
+
+@shared_task(name="mhvp.platform.purge_expired_exports")
+def purge_expired_exports() -> dict[str, int]:
+    import asyncio
+
+    return asyncio.run(purge_expired_exports_once(get_settings()))

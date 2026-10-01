@@ -207,3 +207,115 @@ def test_reserve_position_development_and_separation(client: TestClient, world: 
         ).status_code
         == 404
     )
+
+
+def test_opening_locked_after_statement_of_opening_year(
+    client: TestClient, world: World, migrator_engine: Any
+) -> None:
+    """U15-03: a draft statement of the opening year leaves the opening editable; once it is
+    calculated, opening balance and year answer 409 MHVP-HOA-0005, other fields stay free."""
+    from sqlalchemy import text
+
+    h = bearer(login(client, world, "t09admin"))
+    w = _hoa_ledger(client, h, "793")
+    reserve = _ok(
+        client.post(
+            f"{H}/reserves",
+            json={
+                "ledger_id": w["ledger"],
+                "name": "Fassade",
+                "opening_balance": "5000.00",
+                "opening_year": 2025,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    url = f"{H}/reserves/{reserve['id']}"
+    st = _ok(
+        client.post(f"{H}/statements", json={"ledger_id": w["ledger"], "year": 2025}, headers=h),
+        201,
+    )
+    assert (
+        _ok(client.patch(url, json={"opening_balance": "5100.00"}, headers=h))["opening_balance"]
+        == "5100.00"
+    )
+    with migrator_engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        conn.execute(
+            text("UPDATE hoa_statement SET status = 'calculated' WHERE id = :i"), {"i": st["id"]}
+        )
+    for change in ({"opening_balance": "6000.00"}, {"opening_year": 2024}):
+        resp = client.patch(url, json=change, headers=h)
+        assert resp.status_code == 409, resp.text
+        assert resp.json()["code"] == "MHVP-HOA-0005"
+    # Moving the opening into another settled year is refused as well.
+    reserve2 = _ok(
+        client.post(
+            f"{H}/reserves",
+            json={
+                "ledger_id": w["ledger"],
+                "name": "Aufzug",
+                "opening_balance": "0.00",
+                "opening_year": 2026,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    resp = client.patch(f"{H}/reserves/{reserve2['id']}", json={"opening_year": 2025}, headers=h)
+    assert resp.status_code == 409
+    # Unchanged values and other fields stay editable.
+    ok = _ok(
+        client.patch(url, json={"name": "Fassade Nord", "opening_balance": "5100.00"}, headers=h)
+    )
+    assert (ok["name"], ok["opening_balance"]) == ("Fassade Nord", "5100.00")
+    # Read only 403, other tenant 404.
+    r = bearer(login(client, world, "t09reader"))
+    assert client.patch(url, json={"opening_balance": "1.00"}, headers=r).status_code == 403
+    o = bearer(login(client, world, "t09other"))
+    assert client.patch(url, json={"opening_balance": "1.00"}, headers=o).status_code == 404
+
+
+def test_reserve_refuses_ended_bank_and_inactive_account(
+    client: TestClient, world: World, migrator_engine: Any
+) -> None:
+    """V11-06: an ended bank account or an inactive ledger account is refused with 422 on
+    create and on patch; the form filter alone is no protection."""
+    from sqlalchemy import text
+
+    h = bearer(login(client, world, "t09admin"))
+    w = _hoa_ledger(client, h, "794")
+    ended = _ok(
+        client.post(
+            f"/api/v1/properties/{w['property']}/bank-accounts",
+            json={
+                "legal_entity_id": w["hoa"],
+                "kind": "hoa",
+                "iban": "DE02120300000000202051",
+                "holder": "WEG 794",
+                "valid_from": "2020-01-01",
+                "valid_to": "2021-12-31",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    inactive = w["acc"]["001201"]
+    with migrator_engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        conn.execute(
+            text("UPDATE ledger_account SET active = false WHERE id = :i"), {"i": inactive}
+        )
+    base = {"ledger_id": w["ledger"], "name": "Heizung", "opening_balance": "0.00"}
+    for extra in ({"bank_account_id": ended}, {"account_id": inactive}):
+        resp = client.post(f"{H}/reserves", json={**base, **extra}, headers=h)
+        assert resp.status_code == 422, resp.text
+    reserve = _ok(client.post(f"{H}/reserves", json=base, headers=h), 201)
+    for extra in ({"bank_account_id": ended}, {"account_id": inactive}):
+        resp = client.patch(f"{H}/reserves/{reserve['id']}", json=extra, headers=h)
+        assert resp.status_code == 422, resp.text

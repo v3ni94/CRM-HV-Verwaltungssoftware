@@ -90,8 +90,9 @@ export function HeatingImportPanel({ permissions }: { permissions: string[] }) {
   useEffect(() => {
     if (!canRead) return;
     void (async () => {
-      const res = await bff<PropertyRow[]>("/api/bff/properties");
-      if (res.ok) setProperties(res.data);
+      // GET /properties answers a page ({items}); older answers were a plain list.
+      const res = await bff<PropertyRow[] | { items: PropertyRow[] }>("/api/bff/properties?page_size=200");
+      if (res.ok) setProperties(Array.isArray(res.data) ? res.data : (res.data.items ?? []));
       else setError(res.message);
     })();
   }, [canRead]);

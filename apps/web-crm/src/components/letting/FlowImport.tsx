@@ -62,8 +62,9 @@ export function FlowImport() {
 
   async function loadProperties() {
     if (properties.length > 0) return properties;
-    const res = await bff<Property[]>("/api/bff/properties");
-    const list = res.ok ? res.data : [];
+    // GET /properties answers a page ({items}); older answers were a plain list.
+    const res = await bff<Property[] | { items: Property[] }>("/api/bff/properties?page_size=200");
+    const list = res.ok ? (Array.isArray(res.data) ? res.data : (res.data.items ?? [])) : [];
     setProperties(list);
     return list;
   }

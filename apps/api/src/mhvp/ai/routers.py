@@ -1643,6 +1643,52 @@ async def apply_import_role(
         return s.ApplyRoleOut(import_run_id=row.id, role=body.role, contacts_changed=changed)
 
 
+@router.post(
+    "/ai/import-runs/{import_id}/resolve-entities",
+    summary="Importlauf: Rechtsträger je Konto wählen und Konten anlegen",
+)
+async def resolve_import_entities(
+    import_id: uuid.UUID,
+    body: s.OnboardingEntityResolveIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> s.OnboardingEntityResolveOut:
+    """R03-02: accounts with several matching legal entities are created only after the
+    reviewer chose the entity per account; nothing is guessed."""
+    extra: set[str] = set()
+    if body.bank_accounts:
+        extra.add("properties:update")
+    if body.debtor_legal_entity_ids:
+        extra.add("accounting:create")
+    if extra - set(principal.permissions):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN,
+            developer_message=f"missing {sorted(extra - set(principal.permissions))}",
+        )
+    if len(body.resolved_indexes) != len(body.bank_accounts):
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Index je Bankkonto fehlt.")
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, ImportRun, import_id)
+        result = await imports.resolve_entities(session, row, principal, body)
+        remaining = [
+            d
+            for d in (row.summary or {}).get("entity_decisions", [])
+            if not (
+                (d["kind"] == "debtor_accounts" and body.debtor_legal_entity_ids)
+                or (d["kind"] == "bank_account" and d["index"] in body.resolved_indexes)
+            )
+        ]
+        row.summary = {**(row.summary or {}), "entity_decisions": remaining}
+        await _event(
+            session,
+            principal,
+            "import_run.entities_resolved",
+            row.id,
+            **{"banks": result["created_bank_accounts"], "debtors": result["debtor_entities"]},
+        )
+        return s.OnboardingEntityResolveOut(import_run_id=row.id, **result)
+
+
 # Knowledge base (Welle 3 item 14): manually curated per tenant and optionally per property,
 # plus entries learned from mail preparation corrections (mhvp.communication.preparation). Read
 # only context for AI runs; never written by AI on its own (rule 0.1.6).

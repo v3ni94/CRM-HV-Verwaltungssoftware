@@ -311,6 +311,11 @@ def _meeting_out(m: Meeting, *, weeks: int | None = None) -> dict[str, Any]:
         "invitation_short_notice": m.invitation_short_notice,
         "invitation_short_notice_reason": m.invitation_short_notice_reason,
         "has_dial_in": bool(m.dial_in_url or m.dial_in_access),
+        # R07-01
+        "close_requested_by": m.close_requested_by,
+        "close_requested_at": m.close_requested_at,
+        "closed_by": m.closed_by,
+        "closed_at": m.closed_at,
     }
 
 
@@ -356,6 +361,7 @@ async def patch_meeting(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _get(session, Meeting, meeting_id)
+        _ensure_not_closed(row)
         fields = body.model_dump(exclude_unset=True)
         deadline = fields.get("resolution_deadline_at", row.resolution_deadline_at)
         source = fields.get("resolution_deadline_source", row.resolution_deadline_source)
@@ -513,6 +519,7 @@ async def disruption(
     open, votes and announcements are refused; a documented resumption reopens the meeting."""
     async with tenant_tx(request, principal) as session:
         meeting = await _get(session, Meeting, meeting_id)
+        _ensure_not_closed(meeting)
         if meeting.mode == "presence":
             raise ProblemError(
                 ErrorCodes.VALIDATION,
@@ -561,7 +568,18 @@ async def _disruptions(session: AsyncSession, meeting_id: uuid.UUID) -> list[dic
     ]
 
 
+def _ensure_not_closed(meeting: Meeting) -> None:
+    """R07-01: after the closing request (status closing) and the closing (status closed) the
+    recorded meeting is locked; changes answer 409."""
+    if meeting.status in CLOSING_STATUSES:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Protokoll im Abschluss oder abgeschlossen: keine Änderung mehr möglich.",
+        )
+
+
 def _ensure_not_disrupted(meeting: Meeting) -> None:
+    _ensure_not_closed(meeting)
     if meeting.status == "disrupted":
         raise ProblemError(
             ErrorCodes.CONFLICT,
@@ -1833,3 +1851,137 @@ async def list_rules(
             }
             for r in rows.all()
         ]
+
+
+# Closing of the minutes (R07-01) -----------------------------------------------------------
+
+CLOSING_STATUSES = frozenset({"closing", "closed"})
+# No statutory period is computed or enforced here (open question R07-01); the hint is shown
+# with the closing and locks nothing.
+MINUTES_PERIOD_NOTE = (
+    "Hinweis: Eine Frist zur Erstellung oder Versendung des Protokolls ergibt sich aus "
+    "Gesetz, Gemeinschaftsordnung oder Verwaltervertrag und ist im Einzelfall zu prüfen. "
+    "Das System berechnet und sperrt keine Protokollfrist."
+)
+
+
+class MeetingCloseIn(MeetingBaseIn):
+    minutes_document_id: uuid.UUID
+
+
+class MeetingCloseConfirmIn(MeetingBaseIn):
+    minutes_document_id: uuid.UUID
+
+
+async def _minutes_document(session: AsyncSession, document_id: uuid.UUID) -> None:
+    from mhvp.documents.models import Document
+
+    if await session.get(Document, document_id) is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Protokolldokument nicht gefunden.")
+
+
+@router.post("/meetings/{meeting_id}/close", summary="Protokollabschluss beantragen (R07-01)")
+async def request_close(
+    meeting_id: uuid.UUID,
+    body: MeetingCloseIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """First step of the four eyes closing: links the signed minutes and locks the meeting
+    (status closing). A second person confirms with ``/close/confirm``."""
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.status in CLOSING_STATUSES:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Abschluss bereits beantragt.")
+        if meeting.status != "held":
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Abschluss nur für eine durchgeführte Versammlung ohne offene Störung.",
+            )
+        await _minutes_document(session, body.minutes_document_id)
+        meeting.minutes_document_id = body.minutes_document_id
+        meeting.status = "closing"
+        meeting.close_requested_by = principal.user_id
+        meeting.close_requested_at = datetime.now(UTC)
+        meeting.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa.meeting.close_requested",
+            entity_type="owners_meeting",
+            entity_id=meeting.id,
+            actor_user_id=principal.user_id,
+            changes={"minutes_document_id": str(body.minutes_document_id)},
+        )
+        await session.flush()
+        return _meeting_out(meeting) | {"note": MINUTES_PERIOD_NOTE}
+
+
+@router.post(
+    "/meetings/{meeting_id}/close/confirm", summary="Protokollabschluss bestätigen (R07-01)"
+)
+async def confirm_close(
+    meeting_id: uuid.UUID,
+    body: MeetingCloseConfirmIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Second step: a different person confirms the same minutes document; status closed,
+    event ``meeting.closed`` (webhook)."""
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.status != "closing":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Kein offener Abschlussantrag.")
+        if meeting.close_requested_by == principal.user_id:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Vier-Augen-Prinzip: Bestätigung durch eine zweite Person.",
+            )
+        if body.minutes_document_id != meeting.minutes_document_id:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Protokolldokument weicht vom Antrag ab."
+            )
+        meeting.status = "closed"
+        meeting.closed_by = principal.user_id
+        meeting.closed_at = datetime.now(UTC)
+        meeting.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="meeting.closed",
+            entity_type="owners_meeting",
+            entity_id=meeting.id,
+            actor_user_id=principal.user_id,
+            payload={"minutes_document_id": str(meeting.minutes_document_id)},
+        )
+        await session.flush()
+        return _meeting_out(meeting) | {"note": MINUTES_PERIOD_NOTE}
+
+
+@router.post(
+    "/meetings/{meeting_id}/close/withdraw", summary="Abschlussantrag zurückziehen (R07-01)"
+)
+async def withdraw_close(
+    meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    """Withdraws an open closing request (for example wrong document); a closed meeting stays
+    closed."""
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.status != "closing":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Kein offener Abschlussantrag.")
+        meeting.status = "held"
+        meeting.close_requested_by = None
+        meeting.close_requested_at = None
+        meeting.minutes_document_id = None
+        meeting.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa.meeting.close_withdrawn",
+            entity_type="owners_meeting",
+            entity_id=meeting.id,
+            actor_user_id=principal.user_id,
+        )
+        await session.flush()
+        return _meeting_out(meeting)

@@ -1640,18 +1640,43 @@ async def _ensure_invoice_property_allowed(session: AsyncSession, inv: Invoice) 
 
 
 async def _check_factual_links(session: AsyncSession, body: InvoiceIn) -> None:
-    """M14-02: linked work order, resolution and plan item must exist in this tenant (RLS)."""
-    from mhvp.hoa.models import PlanItem, Resolution
+    """M14-02: linked work order, resolution and plan item must exist in this tenant (RLS).
+    U15-02: each link must also belong to the object of the invoice ledger: the work order
+    to its property, the resolution to its community (legal entity), the plan item and the
+    invoice plan to its ledger. Otherwise 422 ``MHVP-ACC-0008``."""
+    from mhvp.hoa.models import EconomicPlan, PlanItem, Resolution
     from mhvp.tickets.models import WorkOrder
 
+    ledger = await session.get(Ledger, body.ledger_id)
     for value, model, label in (
         (body.work_order_id, WorkOrder, "Auftrag"),
         (body.resolution_id, Resolution, "Beschluss"),
         (body.plan_item_id, PlanItem, "Wirtschaftsplanposition"),
         (body.recurring_plan_id, RecurringInvoicePlan, "Rechnungsplan"),
     ):
-        if value is not None and await session.get(model, value) is None:
+        if value is None:
+            continue
+        row = await session.get(model, value)
+        if row is None:
             raise ProblemError(ErrorCodes.VALIDATION, detail=f"{label} nicht gefunden.")
+        if ledger is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Buchungskreis nicht gefunden.")
+        if isinstance(row, WorkOrder):
+            same = ledger.property_id is not None and row.property_id == ledger.property_id
+        elif isinstance(row, Resolution):
+            same = row.legal_entity_id == ledger.legal_entity_id
+        elif isinstance(row, PlanItem):
+            plan = await session.get(EconomicPlan, row.plan_id)
+            same = plan is not None and plan.ledger_id == ledger.id
+        elif isinstance(row, RecurringInvoicePlan):
+            same = row.ledger_id == ledger.id
+        else:  # pragma: no cover - the tuple above lists every model
+            same = False
+        if not same:
+            raise ProblemError(
+                ErrorCodes.ACC_INVOICE_LINK_FOREIGN_OBJECT,
+                detail=f"{label} gehört nicht zum Objekt der Rechnung.",
+            )
 
 
 class InvoiceFactualFindingOut(BaseModel):

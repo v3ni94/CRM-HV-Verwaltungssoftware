@@ -262,6 +262,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^portal-admin/sepa-mandate-proposals/${ID}/decide$`) },
   // Freigabeflag je Dokument (M21-03): Sichtbarkeit intern, Eigentümer, Mieter, Dienstleister, Beirat.
   { method: "PATCH", pattern: new RegExp(`^documents/${ID}$`) },
+  // Aufbewahrungs- und Sperrstatus je Dokument (U11-01): Lesen, Anzeige im Dokumentdetail.
+  { method: "GET", pattern: new RegExp(`^documents/${ID}/retention-status$`) },
   // Datenschutz (P17, Abschnitt 16): Register, Löschprofile, Löschanträge, Verzeichnis-Entwurf.
   { method: "GET", pattern: /^privacy\/(register|processing-records|deletion-profiles|erasure-requests)$/ },
   { method: "POST", pattern: /^privacy\/(register|erasure-requests)$/ },
@@ -346,6 +348,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
   { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/apply-role$`) },
+  { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/resolve-entities$`) },
   // Immoware24 import assistant (M8, 13.1).
   { method: "GET", pattern: /^imports\/immoware24\/(fields|mappings|overview)$/ },
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
@@ -700,6 +703,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/close(/confirm|/withdraw)?$`) },
   // Mehrheitsregeln je Beschlussgegenstand (M25-01): Prüfung nur als Anzeige, keine Statusänderung.
   { method: "GET", pattern: /^hoa\/majority-rules\/subject-rules$/ },
   { method: "POST", pattern: /^hoa\/majority-rules\/subject-rules$/ },

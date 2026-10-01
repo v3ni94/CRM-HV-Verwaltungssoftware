@@ -13,6 +13,7 @@ stays in accounting behind G1 (rule M24-01).
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -67,6 +68,9 @@ async def check_reserve_refs(
         account = await session.get(LedgerAccount, account_id)
         if account is None or account.ledger_id != ledger.id:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Konto aus anderem Buchungskreis.")
+        # V11-06: an inactive ledger account is refused on the server, not only in the form.
+        if not account.active:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Buchungskonto ist inaktiv.")
     if bank_account_id is not None:
         bank = await session.get(PropertyBankAccount, bank_account_id)
         if bank is None or bank.legal_entity_id != ledger.legal_entity_id:
@@ -74,6 +78,9 @@ async def check_reserve_refs(
                 ErrorCodes.VALIDATION,
                 detail="Bankkonto gehört nicht zum Rechtsträger der Gemeinschaft.",
             )
+        # V11-06: an ended bank account (valid_to before today) is refused.
+        if bank.valid_to is not None and bank.valid_to < datetime.now(UTC).date():
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Bankkonto ist beendet.")
 
 
 def reserve_out(r: HoaReserve, legal_entity_id: uuid.UUID | None = None) -> dict[str, Any]:
@@ -266,6 +273,38 @@ async def get_reserve(
         return reserve_out(reserve, ledger.legal_entity_id)
 
 
+async def _ensure_opening_unlocked(
+    session: AsyncSession, reserve: HoaReserve, changes: dict[str, Any]
+) -> None:
+    """U15-03: once a statement of the opening year (old or new) is calculated or further,
+    opening balance and opening year are frozen; corrections only by a new movement."""
+    touched = [
+        key
+        for key in ("opening_balance", "opening_year")
+        if key in changes and changes[key] != getattr(reserve, key)
+    ]
+    if not touched:
+        return
+    years = {y for y in (reserve.opening_year, changes.get("opening_year")) if y is not None}
+    if not years:
+        return
+    hit = await session.scalar(
+        select(HoaStatement.id)
+        .where(
+            HoaStatement.ledger_id == reserve.ledger_id,
+            HoaStatement.year.in_(years),
+            HoaStatement.status != StatementStatus.DRAFT,
+        )
+        .limit(1)
+    )
+    if hit is not None:
+        raise ProblemError(
+            ErrorCodes.HOA_RESERVE_OPENING_LOCKED,
+            detail="Abrechnung des Anfangsjahres ist berechnet oder freigegeben; "
+            "Korrektur nur per neuer Bewegung.",
+        )
+
+
 @router.patch("/reserves/{reserve_id}", summary="Zweckgebundene Rücklage ändern (M24-01)")
 async def patch_reserve(
     reserve_id: uuid.UUID,
@@ -290,6 +329,7 @@ async def patch_reserve(
             account_id=changes.get("account_id"),
             bank_account_id=changes.get("bank_account_id"),
         )
+        await _ensure_opening_unlocked(session, reserve, changes)
         for key, value in changes.items():
             setattr(reserve, key, value)
         reserve.updated_by = principal.user_id

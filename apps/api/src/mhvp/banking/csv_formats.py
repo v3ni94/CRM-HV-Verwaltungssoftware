@@ -400,6 +400,16 @@ def parse_amount(raw: str) -> Decimal:
         value = Decimal(text)
     except InvalidOperation:
         raise ValueError(f"Betrag {raw!r} nicht lesbar") from None
+    # V11 review: Decimal also accepts NaN, Infinity and exponents; a value with more than two
+    # decimal places is ambiguous ("1.234" is 1234 in a German export) and is never guessed.
+    exponent = value.as_tuple().exponent
+    if (
+        not value.is_finite()
+        or not isinstance(exponent, int)
+        or exponent < -2
+        or "e" in text.lower()
+    ):
+        raise ValueError(f"Betrag {raw!r} nicht eindeutig lesbar")
     return -value if negative else value
 
 
@@ -459,6 +469,7 @@ def build_transactions(
     transactions: list[RawTransaction] = []
     errors: list[RowError] = []
     own_iban: str | None = None
+    first_currency: str | None = None
     for line_no, row in enumerate(reader, start=header_idx + 2):
         row = {_norm(k): v for k, v in row.items() if k}
         if not any(v and v.strip() for v in row.values()):
@@ -477,9 +488,19 @@ def build_transactions(
             purpose_parts += [_get(row, f) or "" for f in mapping.purpose_extra]
             purpose = " ".join(p for p in purpose_parts if p).strip() or None
             currency = (_get(row, mapping.currency) or "EUR").upper()
+            if first_currency is None:
+                first_currency = currency
+            elif currency != first_currency:
+                # V11 review: one statement has one currency; mixed rows are never summed.
+                raise ValueError(f"Währung {currency} weicht von {first_currency} ab")
             iban = _get(row, mapping.own_iban)
-            if iban and own_iban is None:
-                own_iban = iban.replace(" ", "")
+            if iban:
+                iban = iban.replace(" ", "").upper()
+                if own_iban is None:
+                    own_iban = iban
+                elif iban != own_iban:
+                    # V11 review: rows of another own account never go into this statement.
+                    raise ValueError(f"Auftragskonto {iban} weicht von {own_iban} ab")
             transactions.append(
                 RawTransaction(
                     bank_reference=_get(row, mapping.bank_reference)
@@ -531,6 +552,18 @@ def preview(
     label = "Generisches Mapping" if mapping_override else fmt.label  # type: ignore[union-attr]
     confidence = "zu_pruefen" if mapping_override else fmt.confidence  # type: ignore[union-attr]
     transactions, errors, own_iban = build_transactions(text, delimiter, header_idx, mapping)
+    if own_iban_override and own_iban and own_iban_override.replace(" ", "").upper() != own_iban:
+        # V11 review: the selected account must be the account of the file, otherwise the
+        # turnovers would be booked into the bank funds of another legal entity.
+        errors.append(
+            RowError(
+                line=header_idx + 1,
+                message=(
+                    f"Auftragskonto der Datei ({own_iban}) weicht vom gewählten Konto "
+                    f"({own_iban_override.replace(' ', '').upper()}) ab"
+                ),
+            )
+        )
     iban = own_iban_override or own_iban
     statement = RawStatement(
         statement_ref="",

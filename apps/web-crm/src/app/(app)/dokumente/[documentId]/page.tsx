@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { DocumentRedactions, type Redaction } from "@/components/documents/DocumentRedactions";
+import { RetentionStatusCard } from "@/components/documents/RetentionStatusCard";
 import { DocumentVisibilityEditor } from "@/components/documents/DocumentVisibilityEditor";
 import { PortalReadReceipts, type PortalReadReceiptsOut } from "@/components/documents/PortalReadReceipts";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -81,6 +82,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
           <p className="mt-1 text-sm">{(data.links ?? []).length ? (data.links ?? []).map((l) => `${l.entity_type} (${l.role})`).join(", ") : t("linksNone")}</p>
         </div>
       </div>
+      <RetentionStatusCard documentId={documentId} />
       {filing?.routed ? (
         <div className={ui.card} data-testid="document-filing">
           <p className={ui.subtitle}>{t("filing.title")}</p>

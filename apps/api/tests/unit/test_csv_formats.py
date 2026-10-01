@@ -176,3 +176,42 @@ def test_immoware24_bad_amount_is_row_error() -> None:
     data = IMMOWARE24_SAMPLE.replace("400,00", "abc")
     result = csv_formats.preview(data.encode())
     assert len(result.errors) == 1
+
+
+# --- V11 review (01.10.2026): money flow checks -------------------------------------------
+
+
+def test_v11_ambiguous_or_non_finite_amounts_are_rejected() -> None:
+    for raw in ("1.234", "NaN", "Infinity", "1E+3", "12,345"):
+        with pytest.raises(ValueError, match="nicht"):
+            csv_formats.parse_amount(raw)
+    assert csv_formats.parse_amount("1.234,5") == Decimal("1234.5")
+
+
+def test_v11_selected_account_must_match_file_account() -> None:
+    result = csv_formats.preview(
+        IMMOWARE24_SAMPLE.encode(), own_iban_override="DE89370400440532013000"
+    )
+    assert any("weicht vom gewählten Konto" in e.message for e in result.errors)
+    same = csv_formats.preview(
+        IMMOWARE24_SAMPLE.encode(), own_iban_override="de02 1203 0000 0000 2020 51"
+    )
+    assert not same.errors
+
+
+def test_v11_rows_of_another_own_account_are_row_errors() -> None:
+    data = IMMOWARE24_SAMPLE.replace(
+        "-123,45;DE02120300000000202051", "-123,45;DE89370400440532013000"
+    )
+    result = csv_formats.preview(data.encode())
+    assert result.row_count == 1
+    assert len(result.errors) == 1
+    assert "Auftragskonto" in result.errors[0].message
+
+
+def test_v11_mixed_currency_is_row_error() -> None:
+    mapping = ColumnMapping(booking_date="buchungstag", amount="betrag", currency="waehrung")
+    text = "Buchungstag;Betrag;Waehrung\n05.01.2026;1,00;EUR\n06.01.2026;2,00;USD\n"
+    result = csv_formats.preview(text.encode(), mapping_override=mapping, own_iban_override="DE00")
+    assert result.row_count == 1
+    assert "Währung" in result.errors[0].message

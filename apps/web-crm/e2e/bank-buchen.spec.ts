@@ -16,8 +16,17 @@ test.describe("bank booking dialog against the API @backend", () => {
     const token = await apiToken();
     const call = api(token);
     const run = Date.now().toString(36);
-    const bankIban = "DE02120300000000202051";
-    const payerIban = "DE89370400440532013000";
+    // Unique valid IBANs per run (ISO 7064 mod 97): the database outlives a run, and an account
+    // with the same IBAN from an earlier run would take the statement import.
+    const mkIban = (bankCode: string, salt: number) => {
+      const account = String((Date.now() * 7 + salt) % 10_000_000_000).padStart(10, "0");
+      const bban = `${bankCode}${account}`;
+      let rem = 0;
+      for (const ch of `${bban}131400`) rem = (rem * 10 + Number(ch)) % 97;
+      return `DE${String(98 - rem).padStart(2, "0")}${bban}`;
+    };
+    const bankIban = mkIban("12030000", 1);
+    const payerIban = mkIban("37040044", 2);
 
     const property = async <T,>(name: string): Promise<T> => {
       for (let i = 0; i < 30; i++) {
@@ -57,7 +66,7 @@ test.describe("bank booking dialog against the API @backend", () => {
     const ledger = (await call<{ id: string }>("POST", "/accounting/ledgers", { legal_entity_id: hoa, template_id: template.id }, 201)).id;
     const accounts = await call<{ id: string; number: string; category: string; unit_id: string | null }[]>("GET", `/accounting/ledgers/${ledger}/accounts`);
     await call("POST", `/accounting/ledgers/${ledger}/accounts`, { number: "001210", name: "WEG-Bank", category: "bank", type: "asset", property_bank_account_id: bankAccount.id }, 201);
-    await call("POST", `/accounting/ledgers/${ledger}/accounts`, { number: "042000", name: "Hausmeister E2E", category: "cost", type: "expense" }, 201);
+    await call("POST", `/accounting/ledgers/${ledger}/accounts`, { number: "049990", name: "Hausmeister E2E", category: "cost", type: "expense" }, 201);
     const debtor = accounts.find((a) => a.category === "debtor" && a.unit_id === unit.id)!;
     const revenue = accounts.find((a) => a.number === "060100")!;
     const draft = await call<{ id: string }>(
@@ -108,7 +117,7 @@ test.describe("bank booking dialog against the API @backend", () => {
     const dialog = page.getByTestId("booking-dialog");
     await expect(dialog.getByText("Ausgang")).toBeVisible();
     await dialog.getByLabel("Konto suchen (Nummer oder Name)").fill("Hausmeister");
-    await dialog.getByRole("button", { name: "042000 Hausmeister E2E" }).click();
+    await dialog.getByRole("button", { name: "049990 Hausmeister E2E" }).click();
     await dialog.getByLabel("Buchungstext").fill(`Hausmeister ${run}`);
     await dialog.getByRole("button", { name: "Buchen", exact: true }).click();
     await expect(dialog.getByTestId("confirm-box")).toContainText("79,90 EUR");
@@ -130,6 +139,9 @@ test.describe("bank booking dialog against the API @backend", () => {
     await dialog.getByRole("button", { name: "Buchen", exact: true }).click();
     await dialog.getByRole("button", { name: "Buchung bestätigen" }).click();
     await expect(page.getByTestId("list-notice")).toContainText("Gebucht als");
+    // The notice of the first booking is still shown; the row leaving the "new" list proves
+    // that the second booking has gone through before the API is read.
+    await expect(incoming).toHaveCount(0);
     const transactions = await call<{ bank_reference: string; status: string }[]>("GET", `/banking/transactions?bank_account_id=${bankAccount.id}`);
     expect(transactions.map((t) => t.status)).toEqual(["booked", "booked"]);
 

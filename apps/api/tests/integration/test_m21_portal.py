@@ -494,6 +494,26 @@ def test_portal_access_matrix(client: TestClient, world: World) -> None:
         ).status_code
         == 404
     )
+    # V11-05: a document that is no own portal upload of the provider is refused as not found.
+    crm_doc = _ok(
+        client.post(
+            "/api/v1/documents",
+            files={"file": ("fremd.pdf", b"%PDF-1.4 fremd", "application/pdf")},
+            headers=h,
+        ),
+        201,
+    )
+    foreign_doc = client.post(
+        f"{P}/work-orders/{order['id']}/invoice",
+        json={
+            "number": "G-FREMD",
+            "invoice_date": "2026-10-03",
+            "gross": "350.00",
+            "document_id": crm_doc["id"],
+        },
+        headers=pv,
+    )
+    assert foreign_doc.status_code == 404, foreign_doc.text
     sub = _ok(
         client.post(
             f"{P}/work-orders/{order['id']}/invoice",

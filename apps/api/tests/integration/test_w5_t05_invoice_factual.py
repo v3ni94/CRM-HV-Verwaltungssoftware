@@ -393,3 +393,97 @@ def test_recurring_plan_rhythm(client: TestClient, world: World) -> None:
     )
     codes = _codes(_ok(client.get(f"{A}/invoices/{odd['id']}/factual-check", headers=h)))
     assert {"recurring_amount", "recurring_twice"} <= codes, (codes, odd["gross"])
+
+
+def test_links_must_belong_to_invoice_object(
+    client: TestClient, world: World, migrator_engine: Engine
+) -> None:
+    """U15-02: work order, resolution, plan item and invoice plan of another property or
+    ledger in the same tenant are rejected with 422 MHVP-ACC-0008 (create and update)."""
+    h = bearer(login(client, world, "t5admin"))
+    own = _setup(client, h, world, "855")
+    foreign = _setup(client, h, world, "856")
+    t = str(world.tenant_a)
+    order = _work_order(migrator_engine, world.tenant_a, foreign, quote="1000.00")
+    res = str(uuid.uuid4())
+    _sql(
+        migrator_engine,
+        t,
+        "INSERT INTO resolution (id, tenant_id, legal_entity_id, number, decided_on, subject,"
+        " wording, status, kind, votes) VALUES (:id, :t, :le, 8, '2026-01-01', 'Dach',"
+        " 'Dach', 'valid', 'meeting', '{}')",
+        id=res,
+        t=t,
+        le=foreign["hoa"],
+    )
+    key = _sql(
+        migrator_engine,
+        t,
+        "INSERT INTO allocation_key (id, tenant_id, property_id, code, name, unit_of_measure,"
+        " kind, sort_order, is_template_derived) VALUES (:id, :t, :p, 'V1', 'V1', 'qm',"
+        " 'static', 0, false) RETURNING id",
+        id=str(uuid.uuid4()),
+        t=t,
+        p=foreign["property"],
+    )
+    plan, item = str(uuid.uuid4()), str(uuid.uuid4())
+    _sql(
+        migrator_engine,
+        t,
+        "INSERT INTO economic_plan (id, tenant_id, ledger_id, year, valid_from, status, version)"
+        " VALUES (:id, :t, :l, 2026, '2026-01-01', 'draft', 1)",
+        id=plan,
+        t=t,
+        l=foreign["ledger"],
+    )
+    _sql(
+        migrator_engine,
+        t,
+        "INSERT INTO economic_plan_item (id, tenant_id, plan_id, label, component, amount,"
+        " allocation_key_id, account_id) VALUES (:id, :t, :p, 'Instandhaltung', 'hoa_fee',"
+        " 2000.00, :k, :a)",
+        id=item,
+        t=t,
+        p=plan,
+        k=str(key[0][0]),
+        a=foreign["acc"]["040100"],
+    )
+    rplan = _ok(
+        client.post(
+            f"{A}/recurring-invoices",
+            json={
+                "ledger_id": foreign["ledger"],
+                "provider_contact_id": foreign["provider"],
+                "account_id": foreign["acc"]["040100"],
+                "gross": "119.00",
+                "interval_months": 1,
+                "start_date": "2026-02-01",
+                "text": "Wartung",
+                "vat_percent": "19",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    links = {
+        "work_order_id": order,
+        "resolution_id": res,
+        "plan_item_id": item,
+        "recurring_plan_id": rplan,
+    }
+    for field, value in links.items():
+        resp = client.post(f"{A}/invoices", json=_invoice(own, **{field: value}), headers=h)
+        assert resp.status_code == 422, (field, resp.text)
+        assert resp.json()["code"] == "MHVP-ACC-0008", field
+        # The same links fit the foreign object itself.
+        _ok(client.post(f"{A}/invoices", json=_invoice(foreign, **{field: value}), headers=h), 201)
+    # Update path: an own invoice cannot be re-linked to a foreign order.
+    inv = _ok(client.post(f"{A}/invoices", json=_invoice(own), headers=h), 201)
+    resp = client.put(
+        f"{A}/invoices/{inv['id']}", json=_invoice(own, work_order_id=order), headers=h
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "MHVP-ACC-0008"
+    # Read only: 403 before any link check.
+    reader = bearer(login(client, world, "t5reader"))
+    assert client.post(f"{A}/invoices", json=_invoice(own), headers=reader).status_code == 403

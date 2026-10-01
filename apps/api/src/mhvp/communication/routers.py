@@ -2632,16 +2632,31 @@ async def create_reply_draft(
             suggestion["reply_ai"] = {k: v for k, v in result.items() if k != "status"}
             row.suggestion = suggestion
             await session.flush()
+            from mhvp.communication.compact import reply_draft_hash
+
+            result["draft_hash"] = reply_draft_hash(suggestion["reply_ai"])
         return result
+
+
+class MailReplyDraftApproveIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    draft_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 @router.post("/messages/{message_id}/reply-ai/approve", summary="Antwortentwurf freigeben")
 async def approve_reply_draft(
-    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    message_id: uuid.UUID,
+    body: MailReplyDraftApproveIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     """Human approval of the stored reply draft (four eyes with the later send path stay
-    untouched). Records user and time; a new draft resets the approval."""
+    untouched). Records user and time; a new draft resets the approval. The body carries
+    the ``draft_hash`` of the draft the approver has seen (U15-01); a mismatch is 409."""
     from datetime import UTC, datetime
+
+    from mhvp.communication.compact import reply_draft_hash
 
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
@@ -2649,10 +2664,14 @@ async def approve_reply_draft(
         draft = suggestion.get("reply_ai")
         if not isinstance(draft, dict):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kein Antwortentwurf.")
+        current_hash = reply_draft_hash(draft)
+        if body.draft_hash != current_hash:
+            raise ProblemError(ErrorCodes.REPLY_DRAFT_CHANGED)
         if draft.get("approved"):
-            return dict(draft)
+            return {**draft, "draft_hash": current_hash}
         draft = {
             **draft,
+            "draft_hash": current_hash,
             "approved": True,
             "approved_at": datetime.now(UTC).isoformat(),
             "approved_by": str(principal.user_id),

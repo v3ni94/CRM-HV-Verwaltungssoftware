@@ -45,3 +45,7 @@ Gates: no money flows; sending to portals or FLOWFACT is not implemented (M28 st
 * M5-08: `rent_increase_case.ai_check_id` (Migration 0281, Verweis auf `ai_proposal`), `PUT /letting/rent-increases/{id}/ai-check`.
 * M26-06: CRM Interessentenabgleich an der Einheit; CRM Seite `/vermietung/mietspiegel`.
 * R09 (Q14-02): `create_rent_increase` and `adopt-rent-index` call `rent_increase_check.auto_queue` after the transaction (switch `ai_automation.rent_increase_check`, released provider, unchanged input queues nothing); the case itself never changes, errors of the AI never block it.
+
+### Datenmigration Selbstauskunft-Token (S16-03-01)
+
+`tasks.hash_self_disclosure_tokens_once` stellt Altzeilen mit Klartext-Token auf `sha256:<hex>` um (idempotent, ohne Schemaänderung, alle Mandanten). Auslösung manuell: Celery-Task `mhvp.letting.hash_self_disclosure_tokens` oder `POST /api/v1/platform/maintenance/self-disclosure-token-hash` (Plattform-Administrator). Kein Beat-Eintrag.

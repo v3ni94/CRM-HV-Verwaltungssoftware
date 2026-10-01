@@ -79,3 +79,11 @@ zusätzlich im CRM verfügbar gemacht.
 ## Prüfbericht und Journalvorschlag (Historie)
 
 Unter den Altdaten gibt es einen Prüfbericht, der die Einzelposten je Gruppe mit der Eröffnungsbilanz vergleicht, sowie je historischem Bankumsatz eine Kandidatenliste möglicher Journalbuchungen nach Datum und Betrag. Beide zeigen nur an: Es wird nichts korrigiert und nichts automatisch zugeordnet. Die Rücknahme eines Imports entfernt auch die übernommenen Historienzeilen, soweit sie nicht nachträglich bearbeitet wurden. Die globale Suche findet zusätzlich Zählernummern, Rechnungsnummern und Mieter über die Objektadresse.
+
+## Rechtsträger je Konto wählen (Objekt aus KI-Vorschlag)
+
+Passen bei einem Bankkonto oder bei den Debitorenkonten mehrere Rechtsträger, zum Beispiel bei
+einer Mietimmobilie mit mehreren Eigentümern, legt die Übernahme das Konto nicht selbst an.
+Nach dem Bestätigen erscheint der Abschnitt "Rechtsträger auswählen": Wählen Sie je Konto den
+Rechtsträger (bei Debitorenkonten die Rechtsträger per Häkchen) und klicken Sie auf "Konten
+anlegen". Erst dann entstehen die Konten, die Rücknahme des Importlaufs umfasst sie.

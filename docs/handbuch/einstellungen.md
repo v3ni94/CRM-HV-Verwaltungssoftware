@@ -428,3 +428,11 @@ Unter Einstellungen, Benachrichtigungen wählen Sie je Art, ob die E-Mail sofort
 ## Vollständiger Mandantenexport
 
 Unter Einstellungen, Mandant starten Sie als Mandantenadministrator mit Export starten einen Gesamtexport aller Mandantendaten (JSON je Tabelle plus Dokumentdateien als ZIP). Der Export läuft im Hintergrund, mit Aktualisieren sehen Sie den Status. Ist er fertig, laden Sie das ZIP herunter. Start und Abruf werden protokolliert. Das Archiv enthält personenbezogene Daten und ist sicher aufzubewahren, siehe docs/rules/P14-06.md.
+
+Aufbewahrung der Exportarchive: Direkt darunter legen Sie unter Aufbewahrung der Exportarchive die Dauer in Tagen fest (1 bis 3650). Leer bedeutet, dass kein Archiv automatisch gelöscht wird (Standard). Ist eine Dauer gesetzt, löscht ein täglicher Lauf (03:50 Uhr) abgelaufene Archive aus dem Objektspeicher und setzt den Export auf Abgelaufen, Archiv gelöscht. Der Eintrag mit Größe, Prüfsumme und Abrufzähler bleibt als Nachweis, ein Abruf des gelöschten Archivs ist nicht mehr möglich (Antwort 409). Die Frist läuft ab Fertigstellung; eine spätere Änderung wirkt auch auf fertige Archive ohne Ablaufdatum. Jede Änderung und jede Löschung wird protokolliert. Die Dauer ist mit dem Datenschutz abzustimmen (offen, OPEN_QUESTIONS T01-01).
+
+Hinweis für Portalkonten: Reine Portalkonten (Eigentümer, Mieter, Dienstleister) können einen Passkey nur als zweiten Faktor nutzen. Passwortlose Registrierung und Anmeldung lehnt die API mit dem Fehlercode MHVP-AUTH-0014 ab.
+
+## Einmalige Umstellung der Selbstauskunft-Links (Betreiber)
+
+Nach dem Update ruft ein Plattform-Administrator einmal `POST /api/v1/platform/maintenance/self-disclosure-token-hash` auf (oder startet den Celery-Task `mhvp.letting.hash_self_disclosure_tokens`). Alte Links im Klartext werden auf SHA-256 umgestellt, bereits versandte Links bleiben gültig, der Aufruf ist wiederholbar und ändert dann nichts mehr.

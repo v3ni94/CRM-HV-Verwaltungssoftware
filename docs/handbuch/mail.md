@@ -257,3 +257,7 @@ Unter Einstellungen, KI stehen zwei Schalter, beide standardmäßig aus: Neue od
 ## Antwortentwurf mit KI
 
 In der Kompaktansicht erzeugt "Antwortentwurf (KI)" einen Entwurf nach dem Tonfall und den Regeln des Postfachs. Der Entwurf erscheint mit Hinweisen zu Tonfall, Platzhaltern und offenen Fragen und gilt erst nach "Entwurf freigeben" als geprüft. Ohne freigegebenen KI-Anbieter entsteht kein Entwurf. Versendet wird nichts automatisch; die Mail geht wie bisher über den Entwurf und die Freigabe im Postfach.
+
+## Freigabe des Antwortentwurfs (Stand 01.10.2026)
+
+Die Freigabe gilt genau für den angezeigten Entwurf. Wurde der Entwurf zwischenzeitlich neu erzeugt, meldet das System einen Konflikt; laden Sie die Ansicht neu und prüfen Sie den aktuellen Entwurf.

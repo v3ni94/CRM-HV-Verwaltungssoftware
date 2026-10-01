@@ -131,8 +131,8 @@ test.describe("portal start page per role @backend", () => {
     await expect(page).toHaveURL(/\/start$/);
     const toggle = page.getByRole("button", { name: "Menü öffnen" });
     if (await toggle.isVisible()) await toggle.click();
-    await expect(page.getByRole("link", { name: "Übergabe" })).toBeVisible();
-    await page.getByRole("link", { name: "Übergabe" }).click();
+    await expect(page.getByRole("link", { name: "Übergabe", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Übergabe", exact: true }).click();
     await expect(page).toHaveURL(/\/uebergabe$/);
     await page.getByRole("link", { name: /UP-/ }).first().click();
     await expect(page.getByTestId("handover-fill")).toBeVisible();

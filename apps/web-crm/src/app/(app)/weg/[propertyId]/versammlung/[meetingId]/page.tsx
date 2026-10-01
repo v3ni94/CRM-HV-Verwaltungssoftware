@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { MeetingClose } from "@/components/hoa/MeetingClose";
 import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
 import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
 import { MeetingFormPanel, type AttendanceRow, type MeetingFormData } from "@/components/hoa/MeetingFormPanel";
@@ -61,6 +62,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         rules={rules as MajorityRule[]}
       />
       <MajorityRules legalEntityId={entity} rules={rules as MajorityRule[]} />
+      <MeetingClose
+        meetingId={meetingId}
+        status={String(data.status)}
+        minutesDocumentId={(data as { minutes_document_id?: string | null }).minutes_document_id ?? null}
+        closeRequestedAt={(data as { close_requested_at?: string | null }).close_requested_at ?? null}
+        closedAt={(data as { closed_at?: string | null }).closed_at ?? null}
+      />
       <ProtocolDraft
         meetingId={meetingId}
         draftDocumentId={(data as { minutes_draft_document_id?: string | null }).minutes_draft_document_id ?? null}

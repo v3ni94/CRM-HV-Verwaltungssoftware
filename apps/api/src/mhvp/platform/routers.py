@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -133,6 +134,24 @@ def _not_found() -> ProblemError:
 
 
 # Platform ------------------------------------------------------------------------------
+
+
+class PlatformTokenHashOut(BaseModel):
+    converted: int
+
+
+@platform_router.post(
+    "/maintenance/self-disclosure-token-hash",
+    summary="Selbstauskunft-Token der Altzeilen auf SHA-256 umstellen (S16-03-01)",
+)
+async def hash_self_disclosure_tokens_endpoint(
+    request: Request, _: Principal = Depends(require_platform_admin)
+) -> PlatformTokenHashOut:
+    """Manual trigger of the idempotent data migration (no schema change)."""
+    from mhvp.letting.tasks import hash_self_disclosure_tokens_once
+
+    result = await hash_self_disclosure_tokens_once(request.app.state.settings)
+    return PlatformTokenHashOut(converted=result["converted"])
 
 
 @platform_router.get("/tenants", summary="Mandanten auflisten")
@@ -392,6 +411,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         ticket_reopen_window_days=row.ticket_reopen_window_days,
         portal_second_factor=row.portal_second_factor,
         inspection_package_default_days=row.inspection_package_default_days,
+        export_retention_days=row.export_retention_days,
         ai_learning_examples_enabled=row.ai_learning_examples_enabled,
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
         learning_bookkeeper_enabled=row.learning_bookkeeper_enabled,
@@ -484,6 +504,7 @@ async def patch_settings(
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "portal_second_factor": row.portal_second_factor,
             "inspection_package_default_days": row.inspection_package_default_days,
+            "export_retention_days": row.export_retention_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
@@ -516,6 +537,11 @@ async def patch_settings(
         elif body.inspection_package_default_days is not None:
             # P08-04: Standardfrist der Einsichtspakete, Änderung protokolliert.
             row.inspection_package_default_days = body.inspection_package_default_days
+        if body.clear_export_retention_days:
+            row.export_retention_days = None
+        elif body.export_retention_days is not None:
+            # T01-01: Aufbewahrung der Exportarchive, Änderung protokolliert.
+            row.export_retention_days = body.export_retention_days
         if body.portal_second_factor is not None:
             # B20: Anmeldestrenge des Kundenportals je Mandant, Änderung protokolliert.
             row.portal_second_factor = body.portal_second_factor
@@ -580,6 +606,7 @@ async def patch_settings(
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "portal_second_factor": row.portal_second_factor,
             "inspection_package_default_days": row.inspection_package_default_days,
+            "export_retention_days": row.export_retention_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,

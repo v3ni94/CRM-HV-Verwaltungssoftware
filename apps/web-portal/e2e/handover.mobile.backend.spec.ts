@@ -39,7 +39,7 @@ test.describe("Portal handover on phone and tablet @backend @mobile", () => {
       await expectTouchTarget(toggle);
       await toggle.click();
     }
-    const entry = page.getByRole("link", { name: "Übergabe" });
+    const entry = page.getByRole("link", { name: "Übergabe", exact: true });
     await expect(entry).toBeVisible();
     await expectTouchTarget(entry);
     await entry.click();

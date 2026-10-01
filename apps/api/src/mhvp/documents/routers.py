@@ -591,6 +591,10 @@ async def patch_document(
             await _get(session, DocumentCategory, changes["category_id"])
         if changes.get("retention_profile_id"):
             await _get(session, RetentionProfile, changes["retention_profile_id"])
+        if changes.get("retention_resolution_id"):
+            from mhvp.hoa.models import Resolution
+
+            await _get(session, Resolution, changes["retention_resolution_id"])
         before_roles = set(document.visibility or []) - {"internal"}
         for key, value in changes.items():
             setattr(document, key, value)
@@ -602,7 +606,9 @@ async def patch_document(
                 profile = await session.get(RetentionProfile, document.retention_profile_id)
             elif "category_id" in changes:
                 profile = await retention.profile_for_category(session, document.category_id)
-            elif "retention_base_on" in changes and document.retention_profile_id:
+            elif (
+                "retention_base_on" in changes or "retention_resolution_id" in changes
+            ) and document.retention_profile_id:
                 profile = await session.get(RetentionProfile, document.retention_profile_id)
             if profile is not None:
                 await retention.assign_profile(session, document, profile)
@@ -676,6 +682,16 @@ async def set_hold(
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
+        if document.retention_hold_reason is not None:
+            # V11-07: an active hold is never overwritten (reason, kind and the person counted
+            # for the four eyes check stay); it is lifted first by a second person.
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=(
+                    "Es besteht bereits eine Löschungssperre; "
+                    "sie wird zuerst von einer zweiten Person aufgehoben."
+                ),
+            )
         document.retention_hold_reason = body.reason
         document.retention_hold_kind = body.kind or "other"
         await _event(
@@ -737,6 +753,8 @@ async def retention_status(
             ticket_hold=await retention.ticket_hold(session, document.id),
             permanent_record=document.permanent_record,
             deletion_blocker=await svc.deletion_blocker(session, document, today),
+            retention_resolution_id=document.retention_resolution_id,
+            hold_set_by_four_eyes_required=document.retention_hold_reason is not None,
         )
 
 

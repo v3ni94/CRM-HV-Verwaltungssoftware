@@ -74,7 +74,10 @@ def test_cost_account_allocation_total_100(client: TestClient, world: World) -> 
     bank = _of(rows, "bank")[0]["id"]
     k1, k2 = _keys(client, h, _property_of(client, h, ledger))
     url = f"{A}/ledgers/{ledger}/accounts/{cost}/allocations"
-    assert _ok(client.get(url, headers=h))["items"] == []
+    # V10: the chart template presets one key at 100 % where the key exists in the property
+    # (seed only fills empty allocations); without a matching key the list is empty.
+    preset = _ok(client.get(url, headers=h))["items"]
+    assert preset == [] or (len(preset) == 1 and preset[0]["share_percent"] == "100.00000000")
     bad = client.put(
         url,
         json={

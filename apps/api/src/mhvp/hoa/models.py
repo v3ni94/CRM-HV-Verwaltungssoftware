@@ -269,6 +269,13 @@ class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False, server_default="false"
     )
     invitation_short_notice_reason: Mapped[str | None] = mapped_column(Text)
+    # R07-01: closing of the minutes with four eyes. The first person requests the closing
+    # with the signed minutes document; a second person confirms (status closed). After the
+    # closing, agenda, attendance, votes and announcements are locked (409).
+    close_requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    close_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgendaItem(IdMixin, TenantMixin, Base):

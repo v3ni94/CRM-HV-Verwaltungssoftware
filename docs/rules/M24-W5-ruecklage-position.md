@@ -12,3 +12,14 @@ keine Forderung angelegt. Die Abrechnung bleibt hinter G4, Buchungen bleiben hin
 | Abnahmefall | Anhang D D19 bleibt unverändert. Erwartete Werte von Hand: Rücklage "Dach" mit Anfangsbestand 10.000,00 EUR zu Beginn 2024, 2024 ohne Plan und Abrechnung: Ende 10.000,00. Entwurf 2025 mit Entnahme 1.500,00, Gebühr 5,00 und Zinsen 20,00: Anfang 10.000,00, Ende 8.515,00; nach Entfernen der Gebühr 8.520,00. Formel 10.000,00 + 2.400,00 - 1.500,00 - 5,28 - 12,00 + 21,10 = 10.903,82. Tests `apps/api/tests/integration/test_t09_hoa_reserves.py`, `apps/api/tests/unit/test_t09_reserve_develop.py` |
 | Umsetzung | (1) Stammdaten: Name, Zweck, Buchungskonto des Buchungskreises, Bankkonto nur des Rechtsträgers des Buchungskreises (sonst 422), Beschluss, aktiv, Anfangsbestand ab Jahr. Der Rechtsträger ergibt sich aus dem Buchungskreis (genau ein Buchungskreis je Rechtsträger, 6.9.1) und wird ausgegeben, nicht doppelt gespeichert. (2) Entwicklung je Jahr: Ende gleich Anfang plus Zuführung minus Entnahmen, Steuern und Gebühren plus Zinsen; Anfang gleich Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Zuführung aus der jüngsten berechneten Abrechnung (gezahlt, wenn die Sollstellung an die Rücklage gebunden ist, sonst Soll), ohne Abrechnung aus dem beschlossenen Plan (Soll) mit den im Entwurf erfassten Bewegungen. (3) Abrechnungssnapshot: je Position zusätzlich `opening`, `closing_planned`, `closing_paid`. (4) Vermögensbericht: Block `reserve.positions` mit der Entwicklung bis zum Jahr des Stichtags. (5) Mittelverwendung: Liste je Abrechnung mit Belegstatus, Entfernen nur im Entwurf. Die Rücklagenbindung aus 0278 bleibt unverändert |
 | Änderungsgrund | Lückenliste 30.09.2026, Befund M24-01: Bankkonto, Anfangsbestand und die Entwicklung je Jahr und Position fehlten |
+
+## Nachtrag 01.10.2026 (Welle 7, V01: U15-03 und V11-06)
+
+| Feld | Inhalt |
+| --- | --- |
+| ID | M24-W5-a (Befunde U15-03, V11-06) |
+| Geltung | `PATCH /hoa/reserves/{id}` und `POST /hoa/reserves` |
+| Quellenstatus | Produktschutz (Nachvollziehbarkeit nach 0.1.7), keine Rechtsregel |
+| Regel | Liegt für das bisherige oder das neue Anfangsjahr eine Abrechnung der Gemeinschaft im Status berechnet oder weiter vor, sind `opening_balance` und `opening_year` gesperrt (409 `MHVP-HOA-0005`); eine Korrektur erfolgt nur per neuer Bewegung. Unveränderte Werte und andere Felder bleiben änderbar. Ein beendetes Bankkonto (`valid_to` vor heute) und ein inaktives Buchungskonto werden serverseitig mit 422 (`MHVP-CORE-0004` Validierung) abgelehnt |
+| Abnahmefall | Tests `test_opening_locked_after_statement_of_opening_year`, `test_reserve_refuses_ended_bank_and_inactive_account` in `apps/api/tests/integration/test_t09_hoa_reserves.py` |
+| Änderungsgrund | Review W45 (U15-03): die Entwicklungsansicht änderte sich nach Abrechnung rückwirkend; Befund V11-06: nur das CRM-Formular filterte |

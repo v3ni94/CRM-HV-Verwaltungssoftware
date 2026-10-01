@@ -326,6 +326,13 @@ class OnboardingBankAccountChoice(_In):
     holder: str = Field(min_length=2, max_length=200)
     is_default: bool = False
     valid_from: date | None = Field(default=None, description="ohne Angabe: Gültig ab des Objekts")
+    legal_entity_id: uuid.UUID | None = Field(
+        default=None,
+        description=(
+            "Rechtsträger des Kontos (R03-02); nötig, wenn mehrere Rechtsträger passen, sonst "
+            "wird das Konto nicht angelegt, sondern als Entscheidungspunkt ausgewiesen"
+        ),
+    )
 
     @field_validator("iban")
     @classmethod
@@ -370,6 +377,14 @@ class PropertyChoice(_In):
         description=(
             "Debitorenkonten der Verträge ins Kontenbuch übernehmen; fehlt der Buchungskreis, "
             "wird er aus der Kontenvorlage (Entwurf) angelegt. Es wird nichts gebucht."
+        ),
+    )
+    debtor_legal_entity_ids: list[uuid.UUID] | None = Field(
+        default=None,
+        max_length=50,
+        description=(
+            "Rechtsträger, für die Debitorenkonten angelegt werden (R03-02); ohne Angabe nur bei "
+            "genau einem Rechtsträger mit Verträgen, sonst Entscheidungspunkt"
         ),
     )
     link_source_documents: bool = Field(
@@ -575,3 +590,23 @@ class EmbeddingReindexIn(_In):
     # full: drop every stored vector of the tenant first (model change); otherwise only missing
     # or changed sources are embedded.
     full: bool = False
+
+
+class OnboardingEntityResolveIn(_In):
+    """Selection of the legal entity per account after the apply (R03-02)."""
+
+    bank_accounts: list[OnboardingBankAccountChoice] = Field(default_factory=list, max_length=20)
+    resolved_indexes: list[int] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Index je Konto im Entscheidungspunkt, parallel zu bank_accounts",
+    )
+    debtor_legal_entity_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    as_of: date = Field(description="Gültig ab für Konten ohne eigenes Datum")
+
+
+class OnboardingEntityResolveOut(_Out):
+    import_run_id: uuid.UUID
+    created_bank_accounts: int
+    debtor_entities: int
+    notes: list[str]

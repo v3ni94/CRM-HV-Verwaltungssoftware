@@ -206,8 +206,63 @@ async def create_ledger(
             )
         )
     await session.flush()
+    await _apply_template_splits(session, ledger, template)
     await sync_debtor_accounts(session, ledger)
     return ledger
+
+
+async def _apply_template_splits(
+    session: AsyncSession, ledger: Ledger, template: ChartTemplate | None
+) -> int:
+    """Adopt the template key distribution (U07-01) for cost accounts of a new ledger.
+
+    Only keys that already exist in the property of the ledger are used; a split with a missing
+    key is skipped as a whole (shares must stay at 100 %). Nothing is guessed or created.
+    """
+    from mhvp.accounting.models import LedgerAccountAllocation
+    from mhvp.properties.models import AllocationKey
+
+    if template is None or ledger.property_id is None:
+        return 0
+    key_rows = await session.execute(
+        select(AllocationKey.code, AllocationKey.id).where(
+            AllocationKey.property_id == ledger.property_id
+        )
+    )
+    keys = dict(key_rows.tuples().all())
+    splits = {
+        str(r["number"]): r["allocation_split"]
+        for r in template.accounts
+        if r.get("allocation_split")
+    }
+    if not keys or not splits:
+        return 0
+    accounts = (
+        await session.scalars(
+            select(LedgerAccount).where(
+                LedgerAccount.ledger_id == ledger.id,
+                LedgerAccount.number.in_(splits),
+                LedgerAccount.category == AccountCategory.COST,
+            )
+        )
+    ).all()
+    applied = 0
+    for account in accounts:
+        split = splits[account.number]
+        if any(item["key_code"] not in keys for item in split):
+            continue
+        for item in split:
+            session.add(
+                LedgerAccountAllocation(
+                    tenant_id=account.tenant_id,
+                    ledger_account_id=account.id,
+                    allocation_key_id=keys[item["key_code"]],
+                    share_percent=Decimal(item["share_percent"]),
+                )
+            )
+        applied += 1
+    await session.flush()
+    return applied
 
 
 # Entries ------------------------------------------------------------------------------

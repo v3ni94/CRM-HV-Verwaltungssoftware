@@ -111,7 +111,7 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
         ref={hintRef}
         role="tooltip"
         data-flip={flip ? "right" : undefined}
-        className={`absolute top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-raised p-2 text-left text-xs font-normal text-fg shadow-lg ${flip ? "right-0" : "left-0"} ${open ? "" : "sr-only"}`}
+        className={`absolute top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-raised p-2 text-left text-xs font-normal text-fg shadow-lg ${flip ? "right-0" : "left-0"} ${open ? "" : "sr-only w-px! max-w-px!"}`}
       >
         {hint}
       </span>

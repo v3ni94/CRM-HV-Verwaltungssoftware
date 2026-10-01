@@ -378,6 +378,14 @@ zugeordnet wurde. Zusatzrechte: `properties:update` (Konten, Schlüssel), `accou
 liefert den Abgleich für bis zu 500 Personen als Vorschau (Tabelle im Import-Dialog).
 Regel: `docs/rules/R03-onboarding-uebernahme.md`.
 
+R03-02 (Rechtsträger je Konto): `OnboardingBankAccountChoice.legal_entity_id` und
+`PropertyChoice.debtor_legal_entity_ids`. Passen mehrere Rechtsträger (mehrere Eigentümer einer
+Mietverwaltung) und fehlt die Wahl, legt `apply_property` das Konto nicht an und gibt
+`summary.entity_decisions` zurück (Kandidaten, keine IBAN). `POST
+/ai/import-runs/{id}/resolve-entities` (`imports.resolve_entities`) legt die Konten nach der
+Auswahl an, protokolliert sie im selben Importlauf und leert die erledigten Entscheidungspunkte.
+CRM: `EntityDecisions` in `OnboardingExtras.tsx`, eingebunden in `PropertyProposal`.
+
 ### Aufgabe reply_draft (T12, M20-02)
 
 `AiTask.REPLY_DRAFT` (Migration 0296) mit Schema `tasks.ReplyDraftResult` und Prompt `prompts/reply_draft/v1.md`; `draft_reply` bleibt der Playbook-Entwurf. Aufruf und Freigabe in `mhvp.communication` (`suggest.reply_task_for_message`, `POST /mail/messages/{id}/reply-ai`); maskiert (`MASKED_TASKS`), nur Vorschlag. Regel: `docs/rules/T12.md`.

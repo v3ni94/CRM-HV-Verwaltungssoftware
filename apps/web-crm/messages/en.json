@@ -400,6 +400,9 @@
       "lastLogin": "Last login {date}",
       "letterButton": "Invitation letter (PDF)",
       "letterBusy": "Generating...",
+      "renewButton": "Renew invitation",
+      "renewBusy": "Renewing...",
+      "expiredHint": "The invitation has expired and was not accepted. It can be issued again with a new code and a new expiry.",
       "letterError": "Could not generate the invitation letter.",
       "twoFactorEmail": "E-mail code as a second factor for the magic link"
     },
@@ -3103,6 +3106,7 @@
       "planned": "planned",
       "invited": "invited",
       "held": "opened",
+      "closing": "closing requested",
       "closed": "closed"
     },
     "announced": "Resolution no. {number}: {status}",
@@ -3180,6 +3184,17 @@
       "moreThan": "more than {p} %",
       "atLeast": "at least {p} %",
       "meaMin": "at least {p} % of all MEA"
+    },
+    "meetingClose": {
+      "title": "Closing of the minutes",
+      "notice": "Four eyes closing: one person requests with the signed minutes, a second person confirms. Afterwards agenda, attendance and resolutions are locked.",
+      "periodNote": "A period for drafting or sending the minutes has to be checked case by case. The system neither computes nor enforces a minutes period.",
+      "documentId": "Document ID of the signed minutes",
+      "request": "Request closing",
+      "confirm": "Confirm closing (second person)",
+      "withdraw": "Withdraw request",
+      "requested": "Closing requested on {date}.",
+      "closed": "Minutes closed on {date}."
     },
     "protocol": {
       "title": "Minutes draft",
@@ -9315,6 +9330,31 @@
       "hint": "Default: off, the CRM then uploads through the API. Switch on only if the object storage is reachable from the browser and allows CORS for PUT from the CRM address (see object storage runbook). If the direct upload fails, the CRM falls back to the API upload."
     }
   },
+  "RetentionStatus": {
+    "title": "Retention and holds",
+    "loading": "Loading",
+    "unavailable": "The retention status could not be loaded.",
+    "until": "Retention until",
+    "untilNone": "not computed",
+    "resolution": "Period starts with resolution",
+    "resolutionRef": "Reference to resolution {id}",
+    "manualHold": "Manual deletion hold",
+    "procedureHold": "Automatic hold by an open procedure",
+    "ticketHold": "Hold on the ticket",
+    "permanent": "Permanent HOA record",
+    "holdKind": "Reason for the hold: {kind}",
+    "kind": {
+      "litigation": "Litigation",
+      "tax_procedure": "Tax procedure",
+      "evidence": "Preservation of evidence",
+      "legal_matter": "Legal matter",
+      "other": "Other"
+    },
+    "none": "No hold",
+    "deletable": "The document may be deleted under the configured rules.",
+    "blocked": "Deletion blocked: {reason}",
+    "fourEyes": "Only a second person with the approve permission can lift a manual hold (four eyes). The hold on a ticket and the automatic hold for litigation or insolvency end when lifted on the ticket or in accounting."
+  },
   "DocumentDetail": {
     "area": "Documents",
     "created": "Provided on",
@@ -14069,6 +14109,14 @@
       "developmentHint": "Opening equals the prior year's closing, in the first year the entered opening balance. Information for statement and asset report, no posting."
   },
   "OnboardingExtras": {
+    "decisionTitle": "Choose legal entity",
+    "decisionHint": "Several legal entities match these accounts. Nothing was created. Choose the legal entity per account, then the accounts are created.",
+    "decisionBank": "Bank account {holder} ({kind})",
+    "decisionDebtor": "Create debtor accounts for these legal entities",
+    "decisionChoose": "Choose legal entity",
+    "decisionApply": "Create accounts",
+    "decisionDone": "Accounts created: {banks} bank accounts, {debtors} legal entities with debtor accounts.",
+    "decisionMissing": "Account details (IBAN, holder) or the valid from date are missing.",
     "title": "Further property details (optional)",
     "hint": "These details do not come from the proposal. They are entered here and created together with the confirmation. On an error nothing is created.",
     "banksTitle": "Bank accounts",
@@ -14175,6 +14223,16 @@
     "logoUploaded": "Logo uploaded, please save.",
     "logoType": "Only PNG or JPEG are allowed."
   },
+  "ExportRetention": {
+    "title": "Retention of export archives",
+    "description": "Sets how long tenant export archives stay in the object store. After that a daily job deletes the archive and marks the export as expired. The entry with size and checksum stays as evidence.",
+    "label": "Retention in days",
+    "hint": "Empty means no automatic deletion. Allowed 1 to 3650. The period starts when the export is finished; a later change also applies to finished archives without an expiry date. Every change is logged. Agree the retention period with data protection.",
+    "save": "Save retention",
+    "saved": "Saved.",
+    "invalid": "Enter a whole number between 1 and 3650 or clear the field.",
+    "readOnly": "Changing this requires the permission to change tenant settings."
+  },
   "TenantExportJobs": {
     "title": "Full tenant export",
     "description": "Exports all tenant data (legal entities, properties, units, contacts, contracts, postings, open items, bank accounts and transactions, tickets, documents with metadata) as JSON per table together with the document files as a ZIP. The export runs in the background. Only the tenant administrator can start and download it, every start and download is logged. The archive contains personal data and must be handled with care.",
@@ -14189,6 +14247,8 @@
     "statusRunning": "Running",
     "statusReady": "Ready",
     "statusFailed": "Failed",
+    "statusExpired": "Expired, archive deleted",
+    "expiresAt": "Archive available until {date}.",
     "download": "Download",
     "documentsFailed": "{count} document files could not be packed, see manifest.json.",
     "readOnly": "The export requires the tenant administrator role."

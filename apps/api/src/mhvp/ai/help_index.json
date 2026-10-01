@@ -3994,6 +3994,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Rechtsträger je Konto wählen (Objekt aus KI-Vorschlag)",
+  "source": "Handbuch: Datenübernahmen",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Passen bei einem Bankkonto oder bei den Debitorenkonten mehrere Rechtsträger, zum Beispiel bei einer Mietimmobilie mit mehreren Eigentümern, legt die Übernahme das Konto nicht selbst an. Nach dem Bestätigen erscheint der Abschnitt \"Rechtsträger auswählen\": Wählen Sie je Konto den",
+  "file": "docs/handbuch/datenuebernahmen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Ablauf",
   "source": "Handbuch: DATEV-Importtest mit der Steuerberatung",
   "href": null,
@@ -4200,6 +4210,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Hat die Buchhaltung auf einem offenen Posten eines Vertrags eine Mahnsperre mit Grund Prozess oder Insolvenz gesetzt, sind alle mit diesem Vertrag verknüpften Dokumente automatisch gegen Löschung gesperrt. Die Sperre endet, sobald die Mahnsperre aufgehoben ist. Eine Löschungssper",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Aufbewahrung, Sperren und Fristbeginn nach Beschluss (V03)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Dokumentdetail zeigt die Karte \"Aufbewahrung und Sperren\" das Fristende, jede Sperre mit Grund (manuell, am Vorgang, automatisch bei Rechtsstreit oder Insolvenz, WEG-Dauerunterlage), die Sperrart und den Grund, warum das Dokument nicht gelöscht wird. Bei einer manuellen Sperre",
   "file": "docs/handbuch/dokumente-dms.md"
  },
  {
@@ -4560,6 +4580,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, Mandant starten Sie als Mandantenadministrator mit Export starten einen Gesamtexport aller Mandantendaten (JSON je Tabelle plus Dokumentdateien als ZIP). Der Export läuft im Hintergrund, mit Aktualisieren sehen Sie den Status. Ist er fertig, laden Sie das ZIP",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Einmalige Umstellung der Selbstauskunft-Links (Betreiber)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nach dem Update ruft ein Plattform-Administrator einmal POST /api/v1/platform/maintenance/self-disclosure-token-hash auf (oder startet den Celery-Task mhvp.letting.hashselfdisclosuretokens). Alte Links im Klartext werden auf SHA-256 umgestellt, bereits versandte Links bleiben gül",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -5674,6 +5704,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Freigabe des Antwortentwurfs (Stand 01.10.2026)",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Freigabe gilt genau für den angezeigten Entwurf. Wurde der Entwurf zwischenzeitlich neu erzeugt, meldet das System einen Konflikt; laden Sie die Ansicht neu und prüfen Sie den aktuellen Entwurf.",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Makler",
   "href": "/makler",
@@ -6380,6 +6420,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Konten mit einer Vollmacht sehen im Portal den Menüpunkt \"Vertretung\" und im Ansichtswechsel die Rolle \"Vertreter\". Die Seite zeigt den Vertretenen, den Gültigkeitszeitraum und die Restlaufzeit. Die Vollmacht legt die Verwaltung am Kontakt an, mit Vollmachtsdokument und Zeitraum.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Einladung erneuern (V03)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist die Einladung eines Kontakts abgelaufen und nicht angenommen, zeigt der Abschnitt \"Portalzugang\" am Kontakt die Schaltfläche \"Einladung erneuern\". Sie stellt für dasselbe Konto einen neuen Code mit neuer Frist aus; der Code erscheint einmalig als Code, Link und QR-Code. Aktiv",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -7330,6 +7380,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Anlegen und Ändern einer Rücklage (WEG, Rücklagen) wählt der Bearbeiter das Bankkonto und das Buchungskonto aus Auswahllisten. Angeboten werden nur Bankkonten des Rechtsträgers der Gemeinschaft und die aktiven Konten des Buchungskreises; die API prüft beides erneut. Die Ausw",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklage: Sperre des Anfangsbestands (Stand 01.10.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Sobald die Abrechnung des Anfangsjahres berechnet oder freigegeben ist, lassen sich Anfangsbestand und Anfangsjahr einer Rücklage nicht mehr ändern. Korrekturen erfassen Sie als neue Bewegung. Ein beendetes Bankkonto oder ein inaktives Buchungskonto lehnt das System auch dann ab,",
   "file": "docs/handbuch/weg.md"
  }
 ]

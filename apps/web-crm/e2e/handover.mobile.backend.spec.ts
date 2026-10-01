@@ -13,6 +13,9 @@ import { expectCoarsePointer, expectHeaderOneRow, expectNoHorizontalOverflow, ex
 const PHOTO = path.resolve(process.cwd(), "e2e/fixtures/photo.jpg");
 
 async function drawSignature(page: Page, canvas: ReturnType<Page["locator"]>) {
+  // On a phone the form above the canvas can push it below the fold; page.mouse works in
+  // viewport coordinates, so bring it into view first.
+  await canvas.scrollIntoViewIfNeeded();
   const box = await canvas.boundingBox();
   if (!box) throw new Error("signature canvas has no box");
   const x0 = box.x + box.width * 0.2;
@@ -87,7 +90,7 @@ test.describe("CRM shell and handover on phone and tablet @backend @mobile", () 
     const run = Date.now().toString(36);
     const p = await call<{ id: string }>("POST", "/handover/protocols", { kind: "rental" }, 201);
     await call("PATCH", `/handover/protocols/${p.id}`, { street: `Handyweg ${run}`, house_number: "3", postal_code: "40789", city: "Monheim am Rhein", handover_date: "2026-09-29" }, 200);
-    await call("POST", `/handover/protocols/${p.id}/participants`, { role: "tenant", first_name: "Mara", last_name: `Muster ${run}` }, 201);
+    await call("POST", `/handover/protocols/${p.id}/participants`, { role: "moving_in", first_name: "Mara", last_name: `Muster ${run}` }, 201);
     const bff = new RegExp(`/api/bff/handover/protocols/${p.id}$`);
 
     await uiLogin(page, `/makler/uebergabe/${p.id}`);
@@ -137,8 +140,11 @@ test.describe("CRM shell and handover on phone and tablet @backend @mobile", () 
     await expect(page.getByTestId("photo-capture")).toHaveAttribute("capture", "environment");
     await page.getByTestId("photo-pick").setInputFiles(PHOTO);
     const thumbnail = page.waitForResponse((r) => r.url().includes("/thumbnail") && r.request().method() === "GET");
+    // The form closes right after a successful upload, so the "done" badge of upload-status is
+    // gone before it can be asserted reliably; the upload response itself is the evidence.
+    const upload = page.waitForResponse((r) => /\/handover\/protocols\/[^/]+\/documents$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
     await defectForm.getByRole("button", { name: "Speichern" }).click();
-    await expect(page.getByTestId("upload-status").locator("[data-state=done]")).toHaveCount(1, { timeout: 30_000 });
+    expect((await upload).status()).toBe(201);
     const thumb = await thumbnail;
     expect(thumb.status()).toBe(200);
     expect(thumb.headers()["cache-control"]).toContain("no-store");
@@ -195,7 +201,9 @@ test.describe("CRM shell and handover on phone and tablet @backend @mobile", () 
     await page.reload();
     await expect(page.getByTestId("handover-summary")).toBeVisible();
     await expect(page.getByTestId("handover-summary").locator("input, textarea, select")).toHaveCount(0);
-    await expect(page.getByTestId("handover-editor").locator("input:not([type=hidden]), textarea")).toHaveCount(0);
+    // The only field of the read view is the reason for a new version (M30-09, change after
+    // signature); every other input stays gone.
+    await expect(page.getByTestId("handover-editor").locator('input:not([type=hidden]):not(#reason), textarea')).toHaveCount(0);
     const pdf = page.getByTestId("summary-pdf");
     await expect(pdf).toHaveAttribute("href", `/api/handover-files/handover/protocols/${p.id}/pdf`);
     await expect(pdf).not.toHaveAttribute("target", /.+/);

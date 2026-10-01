@@ -184,3 +184,9 @@ Voraussetzung: Recht Dokumente lesen, für die Freigabe Dokumente freigeben, fü
 * Hat die Buchhaltung auf einem offenen Posten eines Vertrags eine Mahnsperre mit Grund Prozess oder Insolvenz gesetzt, sind alle mit diesem Vertrag verknüpften Dokumente automatisch gegen Löschung gesperrt. Die Sperre endet, sobald die Mahnsperre aufgehoben ist.
 * Eine Löschungssperre am Dokument oder am Vorgang hebt nur eine zweite Person auf, nicht die Person, die sie gesetzt hat.
 * Den aktuellen Stand zeigt die API `GET /documents/{id}/retention-status` (Sperren, WEG-Dauerunterlage, Grund, warum nicht gelöscht wird).
+
+## Aufbewahrung, Sperren und Fristbeginn nach Beschluss (V03)
+
+* Im Dokumentdetail zeigt die Karte "Aufbewahrung und Sperren" das Fristende, jede Sperre mit Grund (manuell, am Vorgang, automatisch bei Rechtsstreit oder Insolvenz, WEG-Dauerunterlage), die Sperrart und den Grund, warum das Dokument nicht gelöscht wird. Bei einer manuellen Sperre erscheint der Hinweis, dass nur eine zweite Person sie aufhebt.
+* Eine bestehende Sperre lässt sich nicht überschreiben. Zuerst hebt eine zweite Person sie auf, danach kann eine neue Sperre mit anderer Sperrart gesetzt werden.
+* Gilt für das Profil die Startregel "Beschluss", ordnen Sie dem Dokument den Beschluss zu (Feld `retention_resolution_id` über die Dokumentänderung). Das Beschlussdatum bestimmt den Fristbeginn; ohne Beschluss bleibt das Dokument gesperrt.

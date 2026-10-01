@@ -39,6 +39,11 @@ REVIEW_DRAFT = "entwurf"
 DRAFT_NOTE = "Freigabe durch Steuerberatung offen"
 
 
+def split_for(key: str | None) -> list[dict[str, str]]:
+    """Single key distribution at 100 % for a proposed key code, empty without key."""
+    return [{"key_code": key, "share_percent": "100"}] if key else []
+
+
 def _a(
     number: str,
     name: str,
@@ -69,6 +74,10 @@ def _a(
         # cost type the proposal refers to; both are review information, not applied to ledgers.
         "allocation_key_code": key,
         "betrkv_reference": betrkv,
+        # U07-01 / V10: distribution over allocation keys (annex A.2 codes with percent shares,
+        # sum 100). Only unambiguous accounts carry one key at 100 %; no split between keys is
+        # invented (for example the heating cost split is a property decision).
+        "allocation_split": split_for(key),
     }
 
 
@@ -193,7 +202,18 @@ A1_ACCOUNTS: list[dict[str, Any]] = [
     _a("009999", "Durchlaufposten WEG", "transit", "asset", HOA),
     _a("026000", "Vorsteuerrückerstattungen", "tax", "income", ALL),
     _a("027000", "Durchlaufposten Skonti", "transit", "asset", ALL),
-    _a("028100", "Zinseinnahmen WEG-Konto", "revenue", "income", HOA),
+    # U07-01: the name pairs 028100 (WEG-Konto) with 028101 (Erhaltungsrücklage), so the kind
+    # of statement is unambiguous: Hausgeld. Draft until the release (V8).
+    _a(
+        "028100",
+        "Zinseinnahmen WEG-Konto",
+        "revenue",
+        "income",
+        HOA,
+        "hoa_fee",
+        review_status=REVIEW_DRAFT,
+        note=DRAFT_NOTE,
+    ),
     _a("028101", "Zinseinnahmen Erhaltungsrücklage", "revenue", "income", HOA, "reserve"),
     _a("029100", "Entnahme Erhaltungsrücklage", "technical", "income", HOA, "reserve"),
     _a("030000", "Zuführung Erhaltungsrücklage", "technical", "expense", HOA, "reserve"),
@@ -232,11 +252,11 @@ def merge_missing(
 # Fields the M10-02 preset may fill on an existing template row while they are still unset.
 PRESET_FIELDS = ("allocation_category", "statement_kind", "allocation_key_code")
 # Review information only: filled when unset, but does not make the row a draft by itself.
-INFO_FIELDS = ("betrkv_reference",)
+INFO_FIELDS = ("betrkv_reference", "allocation_split")
 
 
 def _unset(value: Any) -> bool:
-    return value is None or value == "none"
+    return value is None or value == "none" or value == []
 
 
 def fill_unset(

@@ -118,6 +118,12 @@ class ErrorCodes:
         "Passkey-Prüfung fehlgeschlagen",
         "WebAuthn challenge, origin, RP ID, signature or sign counter check failed (S16-01).",
     )
+    WEBAUTHN_PASSWORDLESS_FORBIDDEN = ErrorCode(
+        "MHVP-AUTH-0014",
+        403,
+        "Passwortlose Anmeldung für Portalkonten nicht zulässig",
+        "Portal only accounts may use passkeys only as second factor (U04-02).",
+    )
     RESOURCE_NOT_FOUND = ErrorCode(
         "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."
     )
@@ -296,6 +302,15 @@ class ErrorCodes:
             "The admin fee revenue posting needs a tenant posting configuration (manager "
             "ledger and accounts, payer account numbers) and a debtor ledger; without it no "
             "draft is created (M13-07, E01)."
+        ),
+    )
+    ACC_INVOICE_LINK_FOREIGN_OBJECT = ErrorCode(
+        "MHVP-ACC-0008",
+        422,
+        "Verknüpfung gehört zu einem anderen Objekt",
+        (
+            "A link of the factual review (work order, resolution, plan item, invoice plan) "
+            "belongs to another property, community or ledger than the invoice (U15-02)."
         ),
     )
     AI_POSTING_NOT_RELEASED = ErrorCode(
@@ -1151,6 +1166,15 @@ class ErrorCodes:
             "and its ticket was not closed by it; there is nothing to revert."
         ),
     )
+    REPLY_DRAFT_CHANGED = ErrorCode(
+        "MHVP-COMM-0010",
+        409,
+        "Antwortentwurf wurde zwischenzeitlich geändert",
+        (
+            "The draft_hash sent with the approval does not match the stored reply draft "
+            "(regenerated in parallel); reload and review the current draft."
+        ),
+    )
     # Lern-Workflow, rule proposals (rule M9-11, mhvp.automation.learning).
     RULE_PROPOSAL_NOT_OPEN = ErrorCode(
         "MHVP-AUTO-0001",
@@ -1201,6 +1225,15 @@ class ErrorCodes:
         (
             "A positive, final or legally binding resolution of the same community that admits "
             "virtual meetings, with a validity end on or after the meeting day (M25-03)."
+        ),
+    )
+    HOA_RESERVE_OPENING_LOCKED = ErrorCode(
+        "MHVP-HOA-0005",
+        409,
+        "Anfangsbestand der Rücklage ist gesperrt",
+        (
+            "A statement of the opening year is calculated or approved; opening balance and "
+            "opening year stay unchanged, corrections go through a new movement (U15-03)."
         ),
     )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).

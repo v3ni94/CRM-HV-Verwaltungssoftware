@@ -85,6 +85,7 @@ class DocumentOut(_Out):
     retention_profile_id: uuid.UUID | None
     retention_until: date | None
     retention_base_on: date | None = None
+    retention_resolution_id: uuid.UUID | None = None
     retention_hold_reason: str | None
     retention_hold_kind: str | None = None
     permanent_record: bool = False
@@ -121,6 +122,10 @@ class DocumentPatch(_In):
     retention_until: date | None = None
     retention_base_on: date | None = Field(
         default=None, description="Fristbeginn: Vertragsende, letzte Eintragung, Zweckende"
+    )
+    retention_resolution_id: uuid.UUID | None = Field(
+        default=None,
+        description="Beschluss, dessen Datum den Fristbeginn bestimmt (Startregel resolution)",
     )
     # S711-06: WEG permanent record (S05); clearing it needs documents:approve.
     permanent_record: bool | None = None
@@ -194,6 +199,8 @@ class DocumentRetentionStatusOut(BaseModel):
     ticket_hold: str | None
     permanent_record: bool
     deletion_blocker: str | None
+    retention_resolution_id: uuid.UUID | None = None
+    hold_set_by_four_eyes_required: bool = False
 
 
 class TicketHoldOut(_Out):

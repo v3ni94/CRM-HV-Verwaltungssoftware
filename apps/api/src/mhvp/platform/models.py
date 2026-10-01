@@ -377,6 +377,10 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
             "gmail_reconcile_grace_seconds BETWEEN 60 AND 3600",
             name="gmail_reconcile_grace_seconds_range",
         ),
+        CheckConstraint(
+            "export_retention_days IS NULL OR export_retention_days BETWEEN 1 AND 3650",
+            name="export_retention_days_range",
+        ),
     )
 
     # B20: second factor in the customer portal. ``account_choice`` (default, operator decision
@@ -483,6 +487,10 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # Migration 0287): NULL bedeutet ohne Ablauf. Gilt nur, wenn beim Erzeugen des Pakets keine
     # Frist angegeben ist; die Frist je Paket bleibt überschreibbar.
     inspection_package_default_days: Mapped[int | None] = mapped_column(Integer)
+    # T01-01, migration 0301: retention of tenant export archives in days; NULL (default) means
+    # no automatic deletion. Applied when an archive becomes ready (expires_at of the job) and
+    # by the daily purge to ready archives without an expiry.
+    export_retention_days: Mapped[int | None] = mapped_column(Integer)
     # Lernbeispiele aus Ticketabschlüssen (ADR 0010, M7-04, Regel M19-07, Migration 0134):
     # bei false wird beim Abschluss kein ``AiExample`` (Aufgabe ``ticket_resolution``)
     # gespeichert. Standard aus (Regel 0.1.3: Datenschutzregel offen); der Betreiber schaltet
@@ -752,7 +760,7 @@ class TenantExportJob(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "tenant_export_job"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('queued', 'running', 'ready', 'failed')",
+            "status IN ('queued', 'running', 'ready', 'failed', 'expired')",
             name="tenant_export_job_status",
         ),
         Index("ix_tenant_export_job_tenant", "tenant_id", "created_at"),
@@ -771,3 +779,7 @@ class TenantExportJob(IdMixin, TimestampMixin, TenantMixin, Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     downloads: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # T01-01, migration 0301: end of retention of the archive in the object store (set when the
+    # archive is ready and the tenant has ``export_retention_days``); NULL keeps it.
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

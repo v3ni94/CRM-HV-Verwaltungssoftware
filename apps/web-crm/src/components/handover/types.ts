@@ -1,5 +1,7 @@
 /** Übergabeprotokoll (M30): shapes of the /api/v1/handover responses used by the screens. */
 
+import { formatDecimal } from "@/lib/format";
+
 export type Kind = "rental" | "sale" | "general";
 export type Status =
   | "draft"
@@ -346,6 +348,12 @@ export const PHOTO_SECTIONS: Section[] = [
   "items",
 ];
 
+/** Meter reading in German notation (the API answers "1234.500"): up to three decimals, no
+ *  trailing zeros. Decimal string handling, no float. */
+function meterValue(value: string): string {
+  return formatDecimal(value, 3).replace(/(,\d*?)0+$/, "$1").replace(/,$/, "");
+}
+
 export function itemTitle(
   section: Section,
   item: Item,
@@ -365,7 +373,7 @@ export function itemTitle(
       return [
         s("custom_type") || s("meter_type"),
         s("number") && `Nr. ${s("number")}`,
-        s("value") && `${s("value")} ${s("unit")}`,
+        s("value") && `${meterValue(s("value"))} ${s("unit")}`,
       ]
         .filter(Boolean)
         .join(", ");

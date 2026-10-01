@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { PropertyParty } from "@/lib/ai";
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { EMPTY_EXTRAS, extrasPayload, extrasProblems, OnboardingExtras, parseKeyValues, type ExtrasState } from "./OnboardingExtras";
+import { EMPTY_EXTRAS, EntityDecisions, entityDecisions, extrasPayload, extrasProblems, OnboardingExtras, parseKeyValues, resolvePayload, type ExtrasState } from "./OnboardingExtras";
 import { PersonMatchTable } from "./PersonMatchTable";
 
 function Harness({ onState }: { onState: (s: ExtrasState) => void }) {
@@ -96,5 +96,37 @@ describe("PersonMatchTable", () => {
     renderIntl(<PersonMatchTable parties={PARTIES} />);
     await userEvent.click(screen.getByTestId("person-match-load"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+});
+
+describe("entity decisions (R03-02)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const decisions = entityDecisions({
+    entity_decisions: [{ kind: "bank_account", index: 0, holder: "Eigner", account_kind: "rent", candidates: [{ id: "e1", name: "Anna", kind: "rental_owner" }, { id: "e2", name: "Bernd", kind: "rental_owner" }] }],
+  });
+  const accounts = [{ kind: "rent", iban: "de02 1203 0000 0000 2020 51", holder: "Eigner", bank_name: "", is_default: false }];
+
+  it("builds the request with the chosen entity per account", () => {
+    expect(entityDecisions(undefined)).toEqual([]);
+    expect(resolvePayload(decisions, accounts, { "0": "e2" }, [], "2020-01-01")).toEqual({
+      bank_accounts: [{ kind: "rent", iban: "DE02120300000000202051", holder: "Eigner", bank_name: null, is_default: false, legal_entity_id: "e2" }],
+      resolved_indexes: [0],
+      debtor_legal_entity_ids: [],
+      as_of: "2020-01-01",
+    });
+  });
+
+  it("enables the button only after a choice and posts the follow-up call", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ created_bank_accounts: 1, debtor_entities: 0 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const done = vi.fn();
+    renderIntl(<EntityDecisions runId="r1" decisions={decisions} accounts={accounts} asOf="2020-01-01" onResolved={done} />);
+    const button = screen.getByTestId("entity-apply");
+    expect(button).toBeDisabled();
+    await userEvent.selectOptions(screen.getByRole("combobox"), "e1");
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+    await waitFor(() => expect(done).toHaveBeenCalled());
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/bff/ai/import-runs/r1/resolve-entities");
   });
 });

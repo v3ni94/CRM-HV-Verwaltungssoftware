@@ -48,6 +48,8 @@ def _out(row: TenantExportJob) -> dict[str, Any]:
         "error": row.error,
         "downloads": row.downloads,
         "last_downloaded_at": row.last_downloaded_at,
+        "expires_at": row.expires_at,
+        "expired_at": row.expired_at,
         "entities": manifest.get("entities"),
         "documents_written": documents.get("written"),
         "documents_failed": len(documents.get("errors") or []) if documents else None,
@@ -119,6 +121,11 @@ async def download_export_job(
         row = await session.get(TenantExportJob, job_id, with_for_update=True)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if row.status == export_job.JOB_EXPIRED:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Das Exportarchiv wurde nach Ablauf der Aufbewahrung gelöscht.",
+            )
         if row.status != export_job.JOB_READY or not row.object_key:
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail=f"Der Export ist nicht fertig ({row.status})."

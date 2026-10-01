@@ -3,6 +3,7 @@ bank accounts, allocation keys of every kind, debtor accounts and document links
 property onboarding (one transaction, undo)."""
 
 import asyncio
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -31,13 +32,21 @@ pytestmark = pytest.mark.integration
 IBAN = "DE02120300000000202051"
 
 
+class _R03World(World):
+    """Own e-mail namespace: the helpers of test_m7_ai log in as ``m7admin`` and ``m7second``,
+    whose addresses must not collide with the world of test_m7_ai in the same process."""
+
+    def email(self, name: str) -> str:
+        return f"r03-{super().email(name)}"
+
+
 async def _world_with_reader(settings: Any) -> World:
     # Own tenants and users: ``_world`` of test_m7_ai is not reusable in the same process
     # (slugs and e-mail addresses are derived from the module constant RUN).
     from mhvp.core import crypto
     from mhvp.core.db.engine import create_app_engine, create_session_factory
     from mhvp.platform import services
-    from tests.integration.test_m2_platform import PASSWORD, RUN, World
+    from tests.integration.test_m2_platform import PASSWORD, RUN
 
     crypto.set_master_key(b"k" * 32)
     engine = create_app_engine(settings)
@@ -45,10 +54,12 @@ async def _world_with_reader(settings: Any) -> World:
         factory = create_session_factory(engine)
         a, _ = await services.provision_tenant(factory, slug=f"r03-{RUN}", name=f"R03 {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"r03b-{RUN}", name=f"R03 B {RUN}")
-        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        world = _R03World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
             ("r03admin", a, "tenant_admin"),
             ("r03other", b, "tenant_admin"),
+            ("m7admin", a, "tenant_admin"),
+            ("m7second", a, "tenant_admin"),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -327,3 +338,76 @@ def test_person_match_batch_preview(client: TestClient, world: World) -> None:
     assert client.post(url, json={"persons": persons}, headers=other).status_code == 403
     separated = _ok(client.post(url, json={"persons": persons[:1]}, headers=foreign), 200)
     assert separated["results"][0]["candidates"] == []
+
+
+def test_multiple_owners_account_needs_entity_choice(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """R03-02: with several matching legal entities nothing is created automatically; the
+    decision point carries the candidates and the apply after the choice creates the account."""
+    admin = _setup_provider(client, world)
+    doc = _upload(client, admin, "eigentuemer.txt", b"Mietobjekt zwei Eigentuemer", "text/plain")
+    fake.queue.append(
+        {
+            "property": {
+                "number": None,
+                "name": "Mietobjekt Zwei",
+                "management_type": "rental",
+                "street": "Testweg",
+                "house_number": "2",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            },
+            "buildings": ["Haus A"],
+            "units": [_unit(number="01", building="Haus A"), _unit(number="02", building="Haus A")],
+            "parties": [
+                _party(unit_number="01", last_name="Eigner", start_date="2020-01-01"),
+                _party(unit_number="02", last_name="Besitzer", start_date="2020-01-01"),
+            ],
+            "questions": [],
+        }
+    )
+    run = _chat(client, admin, "extract_property", "Objekt anlegen", [doc])
+    assert run["status"] == "succeeded", run
+    number = str(100 + int(uuid.uuid4().hex[:6], 16) % 900)
+    rent = {"kind": "rent", "iban": IBAN, "holder": "Eigner und Besitzer"}
+    applied = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{run['proposal_id']}/apply",
+            json={"property": {"number": number, "as_of": "2020-01-01", "bank_accounts": [rent]}},
+            headers=admin,
+        )
+    )
+    summary = applied["summary"]
+    assert any("Auswahl nötig" in n for n in summary["notes"])
+    decisions = summary["entity_decisions"]
+    assert len(decisions) == 1
+    assert decisions[0]["kind"] == "bank_account"
+    assert "iban" not in str(decisions).lower()
+    candidates = decisions[0]["candidates"]
+    assert len(candidates) == 2
+    prop_id = summary["property_id"]
+    assert _ok(client.get(f"/api/v1/properties/{prop_id}/bank-accounts", headers=admin), 200) == []
+
+    url = f"/api/v1/ai/import-runs/{applied['id']}/resolve-entities"
+    body = {"bank_accounts": [{**rent, "legal_entity_id": candidates[0]["id"]}]}
+    body["resolved_indexes"] = [0]
+    body["as_of"] = "2020-01-01"
+    clerk = bearer(login(client, world, "r03reader"))
+    other = bearer(login(client, world, "r03other"))
+    assert client.post(url, json=body, headers=clerk).status_code == 403
+    assert client.post(url, json=body, headers=other).status_code == 404
+    bad = {
+        **body,
+        "bank_accounts": [{**rent, "legal_entity_id": "00000000-0000-4000-8000-000000000000"}],
+    }
+    assert client.post(url, json=bad, headers=admin).status_code == 422
+    assert client.post(url, json={**body, "resolved_indexes": []}, headers=admin).status_code == 422
+    done = _ok(client.post(url, json=body, headers=admin), 200)
+    assert done["created_bank_accounts"] == 1
+    accounts = _ok(client.get(f"/api/v1/properties/{prop_id}/bank-accounts", headers=admin), 200)
+    assert len(accounts) == 1
+    assert accounts[0]["legal_entity_id"] == candidates[0]["id"]
+    after = _ok(client.get(f"/api/v1/imports/{applied['id']}", headers=admin), 200)
+    assert after["summary"]["entity_decisions"] == []
+    assert client.post(url, json=body, headers=admin).status_code == 409

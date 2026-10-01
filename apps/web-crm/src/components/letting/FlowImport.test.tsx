@@ -63,7 +63,7 @@ describe("FlowImport", () => {
   it("uploads a dump and renders the preview table", async () => {
     fetchMock.mockImplementation(async (path: string) => {
       if (path === "/api/bff/letting/flow-import/preview") return jsonResponse(previewRun, 201);
-      if (path === "/api/bff/properties") return jsonResponse([{ id: PROPERTY_ID, number: "042", name: "Maklerhaus" }]);
+      if (path === "/api/bff/properties?page_size=200") return jsonResponse({ items: [{ id: PROPERTY_ID, number: "042", name: "Maklerhaus" }] });
       if (path.startsWith("/api/bff/properties/")) return jsonResponse([{ id: UNIT_ID, number: "01", label: null }]);
       throw new Error(`unexpected fetch: ${path}`);
     });
@@ -85,7 +85,7 @@ describe("FlowImport", () => {
   it("sends the chosen action and unit override on apply", async () => {
     fetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       if (path === "/api/bff/letting/flow-import/preview") return jsonResponse(previewRun, 201);
-      if (path === "/api/bff/properties") return jsonResponse([{ id: PROPERTY_ID, number: "042", name: "Maklerhaus" }]);
+      if (path === "/api/bff/properties?page_size=200") return jsonResponse({ items: [{ id: PROPERTY_ID, number: "042", name: "Maklerhaus" }] });
       if (path.startsWith("/api/bff/properties/")) return jsonResponse([{ id: UNIT_ID, number: "01", label: null }]);
       if (path === `/api/bff/letting/flow-import/${RUN_ID}/apply`) {
         const body = JSON.parse(String(init?.body));

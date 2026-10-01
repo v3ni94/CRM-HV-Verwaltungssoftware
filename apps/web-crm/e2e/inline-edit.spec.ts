@@ -72,6 +72,10 @@ test.describe("Inline editing against the API @backend", () => {
     expect(b.energy_certificate_class).toBe("C");
 
     // Conflict: a change from elsewhere bumps the version; the next inline save shows the hint.
+    // Wait until the router refresh after the energy certificate save has delivered the current
+    // version to the page; otherwise it could land after the external change and mask the conflict.
+    const current = await call<{ version: number }>("GET", `/buildings/${building.id}`);
+    await expect(page.getByTestId("energy-certificate")).toHaveAttribute("data-version", String(current.version), { timeout: 15_000 });
     await call("PATCH", `/buildings/${building.id}`, { floors: 3 });
     await buildingSection.getByLabel("Geschosse").fill("5");
     await buildingSection.getByLabel("Geschosse").press("Enter");

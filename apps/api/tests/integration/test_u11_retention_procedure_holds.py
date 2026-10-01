@@ -149,6 +149,13 @@ def test_hold_is_lifted_only_by_a_second_person(gated: TestClient, world: World)
     assert gated.post(url, json={"reason": "Beweis"}, headers=reader).status_code == 403
     assert gated.post(url, json={"reason": "Beweis"}, headers=other).status_code == 404
     _ok(gated.post(url, json={"reason": "Beweissicherung", "kind": "evidence"}, headers=h))
+    # V11-07: an active hold is not overwritten, neither by the setter nor by another user.
+    for who in (h, second):
+        again = gated.post(url, json={"reason": "andere Sperrart", "kind": "other"}, headers=who)
+        assert again.status_code == 409
+    kept = _ok(gated.get(f"/api/v1/documents/{doc['id']}", headers=h))
+    assert kept["retention_hold_reason"] == "Beweissicherung"
+    assert kept["retention_hold_kind"] == "evidence"
     own = gated.request("DELETE", url, json={"reason": "erledigt"}, headers=h)
     assert own.status_code == 403
     assert "zweite Person" in own.json()["detail"]
@@ -165,3 +172,69 @@ def test_hold_is_lifted_only_by_a_second_person(gated: TestClient, world: World)
     _ok(gated.post(turl, json={"reason": "Rechtsstreit"}, headers=h))
     assert gated.request("DELETE", turl, json={"reason": "beendet"}, headers=h).status_code == 403
     _ok(gated.request("DELETE", turl, json={"reason": "beendet"}, headers=second))
+
+
+def test_resolution_start_rule_takes_the_decision_date(gated: TestClient, world: World) -> None:
+    """U11-01: start rule ``resolution``: the period starts with the year end of the decision
+    date of the referenced resolution; without it the document stays locked."""
+    h = bearer(login(gated, world, "u11admin"))
+    second = bearer(login(gated, world, "u11second"))
+    reader = bearer(login(gated, world, "u11read"))
+    other = bearer(login(gated, world, "u11other"))
+    _prop, _ledger, hoa = _hoa_property_without_account(gated, h, "813", "Beschlusshaus")
+    resolution = _ok(
+        gated.post(
+            "/api/v1/hoa/resolutions",
+            json={
+                "legal_entity_id": hoa,
+                "decided_on": "2024-05-17",
+                "subject": "Dachsanierung",
+                "wording": "Die Dachsanierung wird beschlossen.",
+                "status": "positive",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    profile = _ok(
+        gated.post(
+            "/api/v1/retention-profiles",
+            json={
+                "document_class": f"u11_beschluss_{RUN}",
+                "legal_basis": "Testprofil ohne Rechtsquelle",
+                "retention_years": 3,
+                "start_rule": "resolution",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(gated.post(f"/api/v1/retention-profiles/{profile['id']}/release", headers=second), 200)
+    doc = _doc(gated, h, "Beschlussanlage", [])
+    url = f"/api/v1/documents/{doc['id']}"
+    # Profile without a resolution reference: period open, locked with the missing start.
+    _ok(gated.patch(url, json={"retention_profile_id": profile["id"]}, headers=h), 200)
+    status = _ok(gated.get(f"{url}/retention-status", headers=h))
+    assert status["retention_until"] is None
+    assert "Fristbeginn fehlt" in status["deletion_blocker"]
+    # Validation, permission, tenant separation.
+    bad = gated.patch(url, json={"retention_resolution_id": "not-a-uuid"}, headers=h)
+    assert bad.status_code == 422
+    unknown = gated.patch(
+        url, json={"retention_resolution_id": "01920000-0000-7000-8000-0000000000aa"}, headers=h
+    )
+    assert unknown.status_code == 404
+    body = {"retention_resolution_id": resolution["id"]}
+    assert gated.patch(url, json=body, headers=reader).status_code == 403
+    assert gated.patch(url, json=body, headers=other).status_code == 404
+    patched = _ok(gated.patch(url, json=body, headers=h), 200)
+    assert patched["retention_resolution_id"] == resolution["id"]
+    assert patched["retention_base_on"] == "2024-05-17"
+    assert patched["retention_until"] == "2027-12-31"  # 31.12.2024 plus 3 years
+    status = _ok(gated.get(f"{url}/retention-status", headers=reader))
+    assert status["retention_resolution_id"] == resolution["id"]
+    assert "Aufbewahrungsfrist ist nicht abgelaufen" in status["deletion_blocker"]
+    # A hold shows the four eyes requirement.
+    _ok(gated.post(f"{url}/hold", json={"reason": "Anfechtung", "kind": "litigation"}, headers=h))
+    held = _ok(gated.get(f"{url}/retention-status", headers=h))
+    assert held["hold_set_by_four_eyes_required"] is True

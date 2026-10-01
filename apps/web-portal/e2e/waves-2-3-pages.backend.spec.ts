@@ -76,9 +76,12 @@ test.describe("portal pages of waves 2 and 3 @backend", () => {
     // Role switch (M21-05): owner and tenant role, narrowing to tenant hides the owner pages.
     const switcher = page.getByLabel("Ansicht");
     await expect(switcher).toBeVisible();
-    await switcher.selectOption("tenant_resident");
-    // router.refresh() re-renders the layout asynchronously, so allow more than the default time.
-    await expect(switcher).toHaveValue("tenant_resident", { timeout: 15_000 });
+    // The select can be used before hydration finishes (the change is then lost), so retry the
+    // selection until the value sticks. router.refresh() re-renders the layout asynchronously.
+    await expect(async () => {
+      await switcher.selectOption("tenant_resident");
+      await expect(switcher).toHaveValue("tenant_resident", { timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
     await expect(page.getByRole("navigation").getByRole("link", { name: "Hausgeldkonto", exact: true })).toHaveCount(0, { timeout: 15_000 });
     await switcher.selectOption("");
     await expect(page.getByRole("navigation").getByRole("link", { name: "Hausgeldkonto", exact: true })).toBeVisible({ timeout: 15_000 });

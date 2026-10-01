@@ -62,6 +62,7 @@ export function PortalAccessSection({
   const [error, setError] = useState<string | null>(null);
   const [letterBusy, setLetterBusy] = useState(false);
   const [securityBusy, setSecurityBusy] = useState(false);
+  const [renewBusy, setRenewBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await bff<PortalAccount[]>(
@@ -125,6 +126,25 @@ export function PortalAccessSection({
     }
   }
 
+  /** T13-01: lapsed, never accepted invitation: same endpoint, the API issues a new code and a
+   *  new expiry for the existing account (reissued) instead of answering 409. */
+  async function renew() {
+    if (!account) return;
+    setRenewBusy(true);
+    setError(null);
+    const res = await bff<Invited>("/api/bff/portal-admin/accounts", {
+      method: "POST",
+      body: JSON.stringify({ contact_id: contactId, email: account.email, display_name: displayName }),
+    });
+    setRenewBusy(false);
+    if (res.ok) {
+      setInvited(res.data);
+      await load();
+      return;
+    }
+    setError(res.message);
+  }
+
   async function toggleTwoFactor(next: boolean) {
     if (!account) return;
     setSecurityBusy(true);
@@ -143,6 +163,11 @@ export function PortalAccessSection({
 
   const account = loaded.state === "ready" ? (loaded.accounts[0] ?? null) : null;
   const hasAccount = account !== null || exists;
+  const expired =
+    account !== null &&
+    account.status === "invited" &&
+    account.invitation_expires_at !== null &&
+    new Date(account.invitation_expires_at).getTime() <= Date.now();
   const status =
     loaded.state === "loading"
       ? t("status.loading")
@@ -195,6 +220,17 @@ export function PortalAccessSection({
           >
             {letterBusy ? t("letterBusy") : t("letterButton")}
           </button>
+          {expired ? (
+            <button
+              type="button"
+              className={ui.button}
+              disabled={renewBusy}
+              onClick={() => void renew()}
+              data-testid="contact-portal-renew"
+            >
+              {renewBusy ? t("renewBusy") : t("renewButton")}
+            </button>
+          ) : null}
           <label className="flex items-center gap-2 text-xs text-subtle">
             <input
               type="checkbox"
@@ -206,6 +242,7 @@ export function PortalAccessSection({
           </label>
         </div>
       ) : null}
+      {expired && canInvite ? <p className={ui.help}>{t("expiredHint")}</p> : null}
       {!canInvite ? (
         <p className={ui.help}>{t("noPermission")}</p>
       ) : invited || hasAccount || loaded.state === "loading" ? null : (

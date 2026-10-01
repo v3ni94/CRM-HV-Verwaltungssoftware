@@ -306,3 +306,10 @@ paths outside the assignment. Rule docs/rules/M2-02-objektzuordnung.md.
 ## Objektzuordnung (T14, R08-01)
 
 Bankregeln und Regelvorschläge (eigenes Objekt, sonst Objekt des Rechtsträgers), Sync-Protokoll (`GET /banking/runs`) und Klärungsliste (über das Bankkonto des Umsatzes) folgen `Membership.property_ids` (`property_scope.rule_property_filter`, `ensure_rule_visible`, `transaction_account_filter`); fremde Regeln per Id 404. `PUT/DELETE /banking/accounts/{id}/assignments` verlangen ein zugeordnetes Zielobjekt. `account_selection.list_accounts(account_filter=...)` filtert vor dem Limit. Test: `tests/integration/test_t14_property_scope_rest.py`.
+
+### V11 review (01.10.2026)
+
+`parse_amount` refuses ambiguous amounts (more than two decimals, exponent, NaN, infinity);
+`build_transactions` reports rows of another own account or another currency as row errors;
+`preview` reports a mismatch between the selected account and the file's own account, which
+blocks `POST /imports/csv`. Rule: `docs/rules/M11-02-csv-import.md` (Nachtrag V11).

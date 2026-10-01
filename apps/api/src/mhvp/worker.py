@@ -179,6 +179,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.documents.deletion_proposals",
                 "schedule": crontab(day_of_month=2, hour=4, minute=20),
             },
+            # T01-01: delete expired tenant export archives (retention per tenant, default off).
+            "platform-purge-expired-exports": {
+                "task": "mhvp.platform.purge_expired_exports",
+                "schedule": crontab(hour=3, minute=50),
+                "options": {"queue": "io"},
+            },
             "letting-purge-prospects": {
                 "task": "mhvp.letting.purge_prospects",
                 "schedule": crontab(hour=3, minute=30),

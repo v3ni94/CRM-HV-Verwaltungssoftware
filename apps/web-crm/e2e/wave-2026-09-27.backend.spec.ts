@@ -34,7 +34,12 @@ test.describe("Wave 27.09.2026 core paths @backend", () => {
     await expect(page.getByRole("button", { name: "Menü ausklappen", exact: true })).toHaveAttribute("aria-pressed", "true");
 
     // Leave the browser state clean for later specs in the same worker.
+    // The rail cycles through three modes (auto, collapsed, expanded, auto): the second click
+    // expands, the third returns to auto, where the toggle offers "Menü einklappen" again.
     await page.getByRole("button", { name: "Menü ausklappen", exact: true }).click();
+    const autoToggle = page.getByRole("button", { name: "Menü automatisch", exact: true });
+    await expect(autoToggle).toHaveAttribute("aria-pressed", "false");
+    await autoToggle.click();
     await expect(page.getByRole("button", { name: "Menü einklappen", exact: true })).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -93,8 +98,13 @@ test.describe("Wave 27.09.2026 core paths @backend", () => {
     // The FinTS card (components/banking/FinTsConnections) lives on /bank; /einstellungen/bank
     // holds the finAPI credentials and links to it.
     await uiLogin(page, "/einstellungen/bank");
+    // The card shows the connect button until /banking/fints/config has answered; the answer is
+    // awaited so that the branch below does not race with the button disappearing.
+    const fintsConfig = page.waitForResponse((r) => r.url().includes("/banking/fints/config") && r.request().method() === "GET");
     await page.getByRole("link", { name: "Bankverbindung einrichten (FinTS, PIN/TAN)" }).click();
     await expect(page).toHaveURL(/\/bank$/);
+    await fintsConfig;
+    await page.waitForTimeout(500);
     const connect = page.getByRole("button", { name: "Bank verbinden", exact: true });
     const notConfigured = page.getByTestId("fints-not-configured");
     await expect(connect.or(notConfigured)).toBeVisible({ timeout: 15_000 });

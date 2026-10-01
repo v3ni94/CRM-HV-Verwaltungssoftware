@@ -2457,6 +2457,9 @@ async def submit_invoice(
             )
         from mhvp.accounting.models import Invoice
 
+        # V11-05: the invoice document must be an own portal upload of this provider.
+        await _own_uploads(session, account, [body.document_id])
+
         number = body.number.strip()
         extra = _invoice_breakdown(body)
         booked = await session.scalar(

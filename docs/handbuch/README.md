@@ -1,6 +1,6 @@
 # Handbuch
 
-Stand: 01.10.2026, Version 1.49.0 (Kapitelindex am 01.10.2026 gegen alle CRM-Seiten und Kapiteldateien geprüft und ergänzt). Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
+Stand: 01.10.2026, Version 1.52.0 (Kapitelindex am 01.10.2026 gegen alle CRM-Seiten und Kapiteldateien geprüft und ergänzt; Welle-6-Abschnitte am 30.09.2026 eingearbeitet). Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
 26.09.2026 (Tickets mit Mailverlauf und TNR#, Automatisierung, Portal, WEG, Kommunikation,
 Dienstleisterverträge, IBAN-Freigabe, Energieausweis, Belegeingang, Einstellungen); Abschnitte
 zu 1.23.0 bis 1.25.0 ergänzt am 26.09.2026 (Erledigte ausblenden, Statusauswahl nach Rolle,
@@ -10,6 +10,9 @@ Gmail-Archivierung, Listenimport mit Zuordnung, Rolle aus der Chatanweisung). Ab
 Freigabemodus, Sollstellungsregeln, FinTS, Heizkosten, BetrKV-Katalog, Vorschussregel,
 Vermögensbericht, Umlaufbeschluss, Mahnwesen, Aufbewahrung, Postausgang, lexoffice,
 Magic-Link-Anmeldung, Mandantenübersicht, Objekt deaktivieren, Kautionsabrechnung als PDF).
+Abschnitt "Welle 6 vom 01.10.2026" unten ergänzt (Passkeys als zweiter Faktor, Vollmacht und Vertreterrolle,
+Ticketsammelaktionen mit Priorität und Team, Rücklagenformular mit Kontoauswahl, Statusverlauf der Abrechnung,
+Portal-Rechnungseinreichung mit IBAN-Abgleich, Import-Rücknahme für Zahlungspläne und Mandate).
 Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5,
 Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
 
@@ -193,6 +196,17 @@ und Freigabestufen im verlinkten Kapitel und in docs/rules):
 - **Objektakte-Export** ([Verwalterwechsel](anleitung-verwalterwechsel.md), Abgabe): ZIP mit
   Dokumenten, Stammdatenblättern, offenen Posten und Übergabeprotokoll für den Nachfolger,
   mit Datenschutzhinweis und protokolliertem Abruf.
+
+## Welle 6 vom 01.10.2026
+
+Erweiterungen und Verbesserungen seit Version 1.49.0:
+
+- **Anmeldung, Passkeys** ([Einstellungen](einstellungen.md)): WebAuthn-Passkeys als zweiter Faktor neben TOTP mit einmaliger Challenge und streng steigendem Signaturzähler; optional passwortlose Anmeldung im CRM (nur mit Benutzerverifikation).
+- **Portal, Vollmacht und Vertreterrolle** ([Portal](portal.md)): Konten mit gültiger Vollmacht sehen im Portal den Menüpunkt Vertretung mit Zeitraum und Restlaufzeit; der Zugriff ist lesend und endet mit Ablauf oder Widerruf.
+- **Tickets, Sammelaktionen** ([Tickets](tickets.md)): Sammelaktion in der Ticketliste ändert neben dem Status auch Bearbeiter, Team und Priorität mit Teilerfolgsbericht; Sammelzuweisung über die Schnittstelle POST /tickets/bulk.
+- **WEG, Rücklagenformular** ([WEG](weg.md)): Anlegen und Ändern einer Rücklage mit Auswahl von Bankkonto des Rechtsträgers und Buchungskonto; Entwicklung je Rücklage und Jahr als eigener Block in der Hausgeldabrechnung; Statusverlauf mit Überschrift und Leerzustand.
+- **Portal, Rechnungseinreichung** ([Portal](portal.md)): Die Rechnungseinreichung des Dienstleisters nimmt optional Netto, USt-Satz und IBAN an; der Belegentwurf zeigt Befunde zum IBAN-Abgleich mit dem Kreditorenstamm und zu Duplikaten im Rechnungsbuch.
+- **Import, Prüfbericht und Rücknahme** ([Importe](importe.md)): Der Prüfbericht vergleicht Kautionen und Darlehen mit der Eröffnungsbilanz; die Rücknahme eines SEPA-Imports entfernt Zahlungsplan und Mandat, sofern unverwendet, und öffnet beendete Vorgängerpläne wieder.
 
 ## Anmelden und Mandant wählen
 

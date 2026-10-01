@@ -235,6 +235,8 @@ async def _sepa(
             Contract.kind == ContractKind(v["kind"]),
             Contract.party_id == party.id,
             Contract.start_date <= valid_from,
+            # V11 review: a schedule never starts after the end of the contract.
+            (Contract.end_date.is_(None)) | (Contract.end_date >= valid_from),
         )
         .order_by(Contract.start_date.desc())
         .limit(1)
@@ -1147,10 +1149,14 @@ async def remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) 
                 PaymentSchedule.valid_to == schedule.valid_from - timedelta(days=1),
             )
         )
+        contract = await session.get(Contract, schedule.contract_id)
         await session.delete(schedule)
         await session.flush()
         if previous is not None:
-            previous.valid_to = None
+            # V11 review: reopen only up to the end of the contract; an ended contract never
+            # gets an open schedule back (it would create receivables after the end).
+            end = contract.end_date if contract is not None else None
+            previous.valid_to = end if end is not None and end >= previous.valid_from else None
     elif entity_type == "sepa_mandate":
         contracts = (
             await session.scalars(select(Contract).where(Contract.sepa_mandate_id == entity_id))

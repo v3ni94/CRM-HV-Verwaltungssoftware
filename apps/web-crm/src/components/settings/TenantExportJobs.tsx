@@ -10,7 +10,8 @@ import { ui } from "@/lib/ui";
 
 type ExportJob = {
   id: string;
-  status: "queued" | "running" | "ready" | "failed";
+  status: "queued" | "running" | "ready" | "failed" | "expired";
+  expires_at?: string | null;
   created_at: string;
   size: number | null;
   error: string | null;
@@ -111,6 +112,12 @@ export function TenantExportJobs({ canStart }: { canStart: boolean }) {
                       {t(
                         `status${job.status.charAt(0).toUpperCase()}${job.status.slice(1)}` as "statusReady",
                       )}
+                      {job.status === "ready" && job.expires_at ? (
+                        <span className={ui.help}>
+                          {" "}
+                          {t("expiresAt", { date: formatDateTime(job.expires_at) })}
+                        </span>
+                      ) : null}
                       {job.error ? (
                         <span className={ui.help}> {job.error}</span>
                       ) : null}

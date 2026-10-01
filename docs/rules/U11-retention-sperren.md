@@ -16,7 +16,10 @@
 3. Vier Augen: Eine manuelle Sperre am Dokument oder am Vorgang hebt nur eine andere Person auf als die, die sie zuletzt gesetzt hat (Ereignis `document.hold_set` bzw. `ticket.hold_set`). Sonst Fehler `MHVP-GATE-0002` (403).
 4. Status: `GET /documents/{id}/retention-status` zeigt manuelle Sperre, Sperrart, automatische Verfahrenssperre, Vorgangssperre, WEG-Dauerunterlage und den aktuellen Löschhinderungsgrund.
 
+5. Keine Überschreibung (V11-07): `POST /documents/{id}/hold` bei bestehender aktiver Sperre antwortet 409 (`CONFLICT`); Grund, Sperrart und die für Vier Augen zählende Person bleiben erhalten. Eine Änderung der Sperrart setzt die Aufhebung durch eine zweite Person und eine neue Sperre voraus.
+6. Startregel Beschluss (U11-01, Migration 0300): Wert `resolution` der Aufzählung `retention_start`; das Dokument verweist über `retention_resolution_id` auf einen Beschluss (WEG), dessen Beschlussdatum nach `retention_base_on` übernommen wird. Die Frist beginnt mit dem 31.12. des Beschlussjahres (Jahresende, verkürzt nie, gekennzeichnete Annahme wie bei den anderen Basen) zuzüglich der Profilfrist. Ohne Bezug bleibt das Dokument gesperrt ("Fristbeginn fehlt"). Fristwerte der Profile bleiben Entwurf. Quellenstatus Anhang C: Produktschutz, keine Rechtsquelle. Abnahmefall: Test `test_resolution_start_rule_takes_the_decision_date`. Änderungsgrund: U11-01-Rest.
+7. Anzeige im CRM (Dokumentdetail): Karte "Aufbewahrung und Sperren" mit Fristende, Beschlussbezug, Sperrgrund, Sperrart, Löschhinderungsgrund und Vier-Augen-Hinweis (`hold_set_by_four_eyes_required` ist wahr, solange eine manuelle Sperre besteht).
+
 ## Nicht geregelt (offen)
 
-* Fristbeginn "Beschluss" als eigene Startregel braucht einen neuen Wert der Aufzählung `retention_start` (Schema); bis dahin wird das Beschlussdatum als `retention_base_on` mit Startregel `statement_issued` oder `contract_end` erfasst (Jahresende, verkürzt nie). Siehe OPEN_QUESTIONS U11-01.
 * Steuerliche Verfahren (Außenprüfung, Einspruch) haben kein Datenmodell; Sperre bis dahin manuell mit Sperrart `tax_procedure`.

@@ -51,8 +51,20 @@ async function nextCode(secret: string, lastStep: number): Promise<string> {
   return totp.generate();
 }
 
+// The login endpoint is rate limited (429); one worker runs all specs, so the token is reused
+// for a few minutes instead of logging in once per test.
+let cachedToken: { value: string; at: number } | null = null;
+const TOKEN_TTL_MS = 4 * 60_000;
+
 /** Admin API token for the seeded tenant, completing TOTP setup on first use. */
 export async function adminToken(): Promise<string> {
+  if (cachedToken && Date.now() - cachedToken.at < TOKEN_TTL_MS) return cachedToken.value;
+  const value = await loginAdmin();
+  cachedToken = { value, at: Date.now() };
+  return value;
+}
+
+async function loginAdmin(): Promise<string> {
   const login = await fetch(`${apiBase}/api/v1/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },

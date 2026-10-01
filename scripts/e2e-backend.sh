@@ -45,6 +45,7 @@ export MHVP_LOG_FORMAT="${MHVP_LOG_FORMAT:-console}"
 # (page loads, 55 seeded tickets in the wave spec); the production default of 600/min per user
 # would answer 429 in later specs. Operator configuration, not a legal rule (core/ratelimit.py).
 export MHVP_RATE_LIMIT_PER_MINUTE_USER="${MHVP_RATE_LIMIT_PER_MINUTE_USER:-6000}"
+export MHVP_RATE_LIMIT_PER_MINUTE_ANONYMOUS="${MHVP_RATE_LIMIT_PER_MINUTE_ANONYMOUS:-6000}"
 
 cd "$API_DIR"
 

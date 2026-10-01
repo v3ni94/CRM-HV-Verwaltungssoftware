@@ -83,3 +83,11 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * Mandantenexport durch den Mandantenadministrator (T01, M2-01): `mhvp.platform.export_routers`
   (`/tenant/export-jobs`), Tabelle `tenant_export_job`, Job `mhvp.platform.tenant_export_job`,
   Regel `P14-06`. Der Vier-Augen-Weg der Plattformverwaltung bleibt daneben bestehen.
+* Aufbewahrung der Exportarchive (V04, T01-01): `tenant_settings.export_retention_days`
+  (Standard leer, keine automatische Löschung), `tenant_export_job.expires_at`, Beat-Job
+  `mhvp.platform.purge_expired_exports` (`purge_expired_exports_once`), Status `expired`,
+  Ereignis `tenant_export.expired`, Migration 0301.
+
+### Wartungsendpunkt (S16-03-01)
+
+`POST /api/v1/platform/maintenance/self-disclosure-token-hash` (nur Plattform-Administrator) führt die Umstellung der Selbstauskunft-Token aus, siehe `letting/README.md`.

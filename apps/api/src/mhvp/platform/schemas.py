@@ -126,6 +126,8 @@ class TenantSettingsOut(BaseModel):
     # P08-04, M25-07: Standardfrist der Bereitstellung von Einsichtspaketen in Tagen,
     # None ohne Ablauf.
     inspection_package_default_days: int | None = None
+    # T01-01: Aufbewahrung der Mandantenexport-Archive in Tagen, leer = keine automatische Löschung.
+    export_retention_days: int | None = None
     # ADR 0010, M7-04: Lernbeispiele aus Ticketabschlüssen speichern (Standard aus).
     ai_learning_examples_enabled: bool = False
     # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung der Lernbeispiele in Monaten (Standard 24).
@@ -224,6 +226,9 @@ class TenantSettingsPatch(BaseModel):
     # wird sie geleert (ohne Ablauf).
     inspection_package_default_days: int | None = Field(default=None, ge=1, le=365)
     clear_inspection_package_default_days: bool = False
+    # T01-01: Aufbewahrung der Exportarchive in Tagen (1 bis 3650); clear_ leert sie.
+    export_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    clear_export_retention_days: bool = False
     ai_learning_examples_enabled: bool | None = None
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)

@@ -3233,6 +3233,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/import-runs/{import_id}/resolve-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importlauf: Rechtsträger je Konto wählen und Konten anlegen
+         * @description R03-02: accounts with several matching legal entities are created only after the
+         *     reviewer chose the entity per account; nothing is guessed.
+         */
+        post: operations["resolve_import_entities_api_v1_ai_import_runs__import_id__resolve_entities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/invoice-intake-auto": {
         parameters: {
             query?: never;
@@ -10299,6 +10320,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/meetings/{meeting_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Protokollabschluss beantragen (R07-01)
+         * @description First step of the four eyes closing: links the signed minutes and locks the meeting
+         *     (status closing). A second person confirms with ``/close/confirm``.
+         */
+        post: operations["request_close_api_v1_hoa_meetings__meeting_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/close/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Protokollabschluss bestätigen (R07-01)
+         * @description Second step: a different person confirms the same minutes document; status closed,
+         *     event ``meeting.closed`` (webhook).
+         */
+        post: operations["confirm_close_api_v1_hoa_meetings__meeting_id__close_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/close/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abschlussantrag zurückziehen (R07-01)
+         * @description Withdraws an open closing request (for example wrong document); a closed meeting stays
+         *     closed.
+         */
+        post: operations["withdraw_close_api_v1_hoa_meetings__meeting_id__close_withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/meetings/{meeting_id}/dial-in": {
         parameters: {
             query?: never;
@@ -15258,7 +15342,8 @@ export interface paths {
         /**
          * Antwortentwurf freigeben
          * @description Human approval of the stored reply draft (four eyes with the later send path stay
-         *     untouched). Records user and time; a new draft resets the approval.
+         *     untouched). Records user and time; a new draft resets the approval. The body carries
+         *     the ``draft_hash`` of the draft the approver has seen (U15-01); a mismatch is 409.
          */
         post: operations["approve_reply_draft_api_v1_mail_messages__message_id__reply_ai_approve_post"];
         delete?: never;
@@ -17048,6 +17133,26 @@ export interface paths {
          * @description Ends a licence via ``valid_until``; licences are never deleted (billing trail).
          */
         post: operations["end_license_api_v1_platform_licenses__license_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/maintenance/self-disclosure-token-hash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Selbstauskunft-Token der Altzeilen auf SHA-256 umstellen (S16-03-01)
+         * @description Manual trigger of the idempotent data migration (no schema change).
+         */
+        post: operations["hash_self_disclosure_tokens_endpoint_api_v1_platform_maintenance_self_disclosure_token_hash_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31486,6 +31591,8 @@ export interface components {
             retention_hold_reason: string | null;
             /** Retention Profile Id */
             retention_profile_id: string | null;
+            /** Retention Resolution Id */
+            retention_resolution_id?: string | null;
             /** Retention Until */
             retention_until: string | null;
             /** Sha256 */
@@ -31524,6 +31631,11 @@ export interface components {
             retention_base_on?: string | null;
             /** Retention Profile Id */
             retention_profile_id?: string | null;
+            /**
+             * Retention Resolution Id
+             * @description Beschluss, dessen Datum den Fristbeginn bestimmt (Startregel resolution)
+             */
+            retention_resolution_id?: string | null;
             /** Retention Until */
             retention_until?: string | null;
             /** Title */
@@ -31585,6 +31697,11 @@ export interface components {
              * Format: uuid
              */
             document_id: string;
+            /**
+             * Hold Set By Four Eyes Required
+             * @default false
+             */
+            hold_set_by_four_eyes_required: boolean;
             /** Permanent Record */
             permanent_record: boolean;
             /** Procedure Hold */
@@ -31593,6 +31710,8 @@ export interface components {
             retention_hold_kind: string | null;
             /** Retention Hold Reason */
             retention_hold_reason: string | null;
+            /** Retention Resolution Id */
+            retention_resolution_id?: string | null;
             /** Retention Until */
             retention_until: string | null;
             /** Ticket Hold */
@@ -35037,6 +35156,8 @@ export interface components {
             retention_hold_reason: string | null;
             /** Retention Profile Id */
             retention_profile_id: string | null;
+            /** Retention Resolution Id */
+            retention_resolution_id?: string | null;
             /** Retention Until */
             retention_until: string | null;
             /** Sha256 */
@@ -36521,6 +36642,11 @@ export interface components {
             /** Note */
             note: string;
         };
+        /** MailReplyDraftApproveIn */
+        MailReplyDraftApproveIn: {
+            /** Draft Hash */
+            draft_hash: string;
+        };
         /** MailReplyDraftIn */
         MailReplyDraftIn: {
             /** Body */
@@ -37061,6 +37187,22 @@ export interface components {
             resolution_id?: string | null;
             /** Status */
             status?: string | null;
+        };
+        /** MeetingCloseConfirmIn */
+        MeetingCloseConfirmIn: {
+            /**
+             * Minutes Document Id
+             * Format: uuid
+             */
+            minutes_document_id: string;
+        };
+        /** MeetingCloseIn */
+        MeetingCloseIn: {
+            /**
+             * Minutes Document Id
+             * Format: uuid
+             */
+            minutes_document_id: string;
         };
         /**
          * MeetingConsentIn
@@ -38465,10 +38607,50 @@ export interface components {
              */
             kind: "rent" | "hoa" | "reserve" | "deposit" | "hoa_fee" | "other";
             /**
+             * Legal Entity Id
+             * @description Rechtsträger des Kontos (R03-02); nötig, wenn mehrere Rechtsträger passen, sonst wird das Konto nicht angelegt, sondern als Entscheidungspunkt ausgewiesen
+             */
+            legal_entity_id?: string | null;
+            /**
              * Valid From
              * @description ohne Angabe: Gültig ab des Objekts
              */
             valid_from?: string | null;
+        };
+        /**
+         * OnboardingEntityResolveIn
+         * @description Selection of the legal entity per account after the apply (R03-02).
+         */
+        OnboardingEntityResolveIn: {
+            /**
+             * As Of
+             * Format: date
+             * @description Gültig ab für Konten ohne eigenes Datum
+             */
+            as_of: string;
+            /** Bank Accounts */
+            bank_accounts?: components["schemas"]["OnboardingBankAccountChoice"][];
+            /** Debtor Legal Entity Ids */
+            debtor_legal_entity_ids?: string[];
+            /**
+             * Resolved Indexes
+             * @description Index je Konto im Entscheidungspunkt, parallel zu bank_accounts
+             */
+            resolved_indexes?: number[];
+        };
+        /** OnboardingEntityResolveOut */
+        OnboardingEntityResolveOut: {
+            /** Created Bank Accounts */
+            created_bank_accounts: number;
+            /** Debtor Entities */
+            debtor_entities: number;
+            /**
+             * Import Run Id
+             * Format: uuid
+             */
+            import_run_id: string;
+            /** Notes */
+            notes: string[];
         };
         /** OnboardingIn */
         OnboardingIn: {
@@ -39591,6 +39773,11 @@ export interface components {
             /** Gate Superadmin Bypass */
             gate_superadmin_bypass?: boolean | null;
         };
+        /** PlatformTokenHashOut */
+        PlatformTokenHashOut: {
+            /** Converted */
+            converted: number;
+        };
         /** PlaybookIn */
         PlaybookIn: {
             /** Category */
@@ -40517,6 +40704,11 @@ export interface components {
              * @default false
              */
             create_debtor_accounts: boolean;
+            /**
+             * Debtor Legal Entity Ids
+             * @description Rechtsträger, für die Debitorenkonten angelegt werden (R03-02); ohne Angabe nur bei genau einem Rechtsträger mit Verträgen, sonst Entscheidungspunkt
+             */
+            debtor_legal_entity_ids?: string[] | null;
             /**
              * Document Ids
              * @description weitere Dokumente (Ablage) zum Objekt
@@ -42786,7 +42978,7 @@ export interface components {
          * RetentionStart
          * @enum {string}
          */
-        RetentionStart: "end_of_year_created" | "end_of_year_last_entry" | "contract_end" | "statement_issued" | "purpose_end";
+        RetentionStart: "end_of_year_created" | "end_of_year_last_entry" | "contract_end" | "statement_issued" | "purpose_end" | "resolution";
         /**
          * ReversalReason
          * @description Reason code of a reversal (B03, ADR 0014). The free text ``reversal_reason`` stays
@@ -44838,6 +45030,8 @@ export interface components {
              * @default false
              */
             consumption_info_template_verified: boolean;
+            /** Export Retention Days */
+            export_retention_days?: number | null;
             /**
              * Gmail Close Assigned Tickets
              * @default false
@@ -44955,6 +45149,11 @@ export interface components {
             bank_rule_recurring_threshold?: number | null;
             branding?: components["schemas"]["Branding"] | null;
             /**
+             * Clear Export Retention Days
+             * @default false
+             */
+            clear_export_retention_days: boolean;
+            /**
              * Clear Inspection Package Default Days
              * @default false
              */
@@ -44966,6 +45165,8 @@ export interface components {
             consumption_info_notifications_enabled?: boolean | null;
             /** Consumption Info Template Verified */
             consumption_info_template_verified?: boolean | null;
+            /** Export Retention Days */
+            export_retention_days?: number | null;
             /** Gmail Close Assigned Tickets */
             gmail_close_assigned_tickets?: boolean | null;
             /** Gmail Done Closes Ticket */
@@ -54165,6 +54366,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplyRoleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_import_entities_api_v1_ai_import_runs__import_id__resolve_entities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingEntityResolveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingEntityResolveOut"];
                 };
             };
             /** @description Validation Error */
@@ -69261,6 +69497,113 @@ export interface operations {
             };
         };
     };
+    request_close_api_v1_hoa_meetings__meeting_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingCloseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_close_api_v1_hoa_meetings__meeting_id__close_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingCloseConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_close_api_v1_hoa_meetings__meeting_id__close_withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_dial_in_api_v1_hoa_meetings__meeting_id__dial_in_put: {
         parameters: {
             query?: never;
@@ -79528,7 +79871,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailReplyDraftApproveIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -83429,6 +83776,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hash_self_disclosure_tokens_endpoint_api_v1_platform_maintenance_self_disclosure_token_hash_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTokenHashOut"];
                 };
             };
         };

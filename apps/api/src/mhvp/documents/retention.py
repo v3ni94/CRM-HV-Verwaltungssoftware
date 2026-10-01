@@ -14,6 +14,9 @@ Period start (``RetentionStart``), a labelled assumption (docs/ASSUMPTIONS.md):
 * ``end_of_year_last_entry``, ``contract_end``, ``statement_issued``: 31.12. of the year of
   ``Document.retention_base_on`` (last entry, contract end, issue date), plus the period. The
   year end is used for all three because it never shortens the period.
+* ``resolution`` (U11-01): 31.12. of the year of the linked resolution's decision date, plus
+  the period; the date is copied from ``Resolution.decided_on`` into ``retention_base_on``
+  when ``retention_resolution_id`` is set. Without a reference the document stays locked.
 * ``purpose_end``: ``retention_base_on`` plus the period, day exact (portal and applicant data
   are deleted as soon as the purpose ended, no year end extension).
 * ``permanent``: no date, never deleted.
@@ -66,6 +69,7 @@ _YEAR_END_RULES = frozenset(
         RetentionStart.END_OF_YEAR_LAST_ENTRY,
         RetentionStart.CONTRACT_END,
         RetentionStart.STATEMENT_ISSUED,
+        RetentionStart.RESOLUTION,
     }
 )
 
@@ -106,6 +110,19 @@ def needs_base_date(profile: RetentionProfile) -> bool:
     return not profile.permanent and profile.start_rule is not RetentionStart.END_OF_YEAR_CREATED
 
 
+async def sync_resolution_base(session: AsyncSession, document: Document) -> None:
+    """Copies the decision date of the referenced resolution into ``retention_base_on``."""
+    if document.retention_resolution_id is None:
+        return
+    from mhvp.hoa.models import Resolution  # local: import order
+
+    decided_on = await session.scalar(
+        select(Resolution.decided_on).where(Resolution.id == document.retention_resolution_id)
+    )
+    if decided_on is not None:
+        document.retention_base_on = decided_on
+
+
 async def assign_profile(
     session: AsyncSession, document: Document, profile: RetentionProfile | None
 ) -> None:
@@ -115,6 +132,7 @@ async def assign_profile(
         document.retention_until = None
         return
     document.retention_profile_id = profile.id
+    await sync_resolution_base(session, document)
     document.retention_until = compute_retention_until(
         profile, created_on=document.created_at.date(), base_on=document.retention_base_on
     )

@@ -307,3 +307,13 @@ Keine API-Änderung. Neue CRM-Komponenten: `AdminFeeRun` (Honorarlauf mit Vorsch
   /accounting/invoice-check-settings` (read: accounting:read, write: tenant_settings:update);
   tolerances in percent, default 0. Never changes a review status. Rule
   `docs/rules/PU02-sachliche-pruefung.md`.
+
+## V10 Seed: Schlüsselverteilung je Konto
+
+Vorlagenzeilen tragen `allocation_split` (Schlüsselcode und Prozentanteil, Summe 100) für Kostenkonten mit eindeutigem Schlüssel aus M10-02; 028100 hat die Art der Abrechnung Hausgeld (Entwurf). Seed idempotent, gepflegte Werte bleiben. Neue Buchungskreise übernehmen die Verteilung, wenn die Schlüssel im Objekt existieren. Regel: `docs/rules/V10-seed-kontenrahmen-verteilung.md`.
+
+## Factual review links per object (U15-02, wave 7, V01)
+
+`_check_factual_links` also checks that work order, resolution, plan item and invoice plan
+belong to the property, legal entity or ledger of the invoice; otherwise 422
+`MHVP-ACC-0008`. Rule M14-02.

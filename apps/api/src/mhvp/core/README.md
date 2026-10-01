@@ -154,3 +154,7 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
 auf jede Logzeile, auf `payload` und `changes` in `events.emit` (Domain Events, Audit-Log) und auf
 geloggte Pfade mit Token (`/self-disclosure/…`, `/calendar-feed/…`). Prüfbericht:
 `docs/reviews/SECRETS-2026-10-01.md`.
+
+### Passkeys und Portalkonten (U04-02)
+
+Passwortlose Passkey-Registrierung und -Anmeldung sind für reine Portalkonten (alle aktiven Mitgliedschaften nur mit Rolle `portal_user`) serverseitig gesperrt: 403 `MHVP-AUTH-0014`. Passkey als zweiter Faktor bleibt möglich. Prüfung in `core/auth/routers.py` (`_is_portal_only_user`), Regel `docs/rules/S16-01-passkeys.md`.

@@ -9,7 +9,7 @@ import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { ImportResult } from "./ImportResult";
-import { EMPTY_EXTRAS, extrasPayload, extrasProblems, OnboardingExtras, type ExtrasState } from "./OnboardingExtras";
+import { EMPTY_EXTRAS, EntityDecisions, entityDecisions, extrasPayload, extrasProblems, OnboardingExtras, type ExtrasState } from "./OnboardingExtras";
 import { PersonMatchTable } from "./PersonMatchTable";
 
 const MANAGEMENT = ["rental", "hoa", "hoa_with_sev"] as const;
@@ -28,6 +28,7 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
   const [result, setResult] = useState<ImportRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [resolved, setResolved] = useState<string | null>(null);
   const [decision, setDecision] = useState(proposal.decision);
 
   const { map, invalid } = vatMap(vat);
@@ -74,7 +75,23 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
     } else setError(res.message);
   };
 
-  if (result) return <ImportResult importRun={result} />;
+  if (result) {
+    return (
+      <div className="flex flex-col gap-3">
+        {resolved ? <p className={ui.notice}>{resolved}</p> : null}
+        {!resolved ? (
+          <EntityDecisions
+            runId={result.id}
+            decisions={entityDecisions(result.summary)}
+            accounts={extras.bankAccounts}
+            asOf={asOf}
+            onResolved={setResolved}
+          />
+        ) : null}
+        <ImportResult importRun={result} />
+      </div>
+    );
+  }
 
   const p = preview.property;
   const address = [[p.street, p.house_number].filter(Boolean).join(" "), [p.postal_code, p.city].filter(Boolean).join(" ")]

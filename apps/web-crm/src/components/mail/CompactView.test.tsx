@@ -68,13 +68,14 @@ describe("CompactView", () => {
       if (url.endsWith("/compact")) {
         return jsonResponse(
           calls.length > 1
-            ? { ...DATA, reply: { source: "reply_task", text: "KI Text", approved, draft: { tone: "sachlich", style_tone: "sachlich", placeholders: [], unknown_placeholders: [], open_questions: ["Termin"] } } }
+            ? { ...DATA, reply: { source: "reply_task", text: "KI Text", approved, draft_hash: "a".repeat(64), draft: { tone: "sachlich", style_tone: "sachlich", placeholders: [], unknown_placeholders: [], open_questions: ["Termin"] } } }
             : DATA,
           200,
         );
       }
       if (url.endsWith("/reply-ai")) return jsonResponse({ status: "ready" }, 200);
       if (url.endsWith("/reply-ai/approve")) {
+        expect(JSON.parse(String(init?.body))).toEqual({ draft_hash: "a".repeat(64) });
         approved = true;
         return jsonResponse({ approved: true }, 200);
       }

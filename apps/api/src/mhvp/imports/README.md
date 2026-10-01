@@ -200,3 +200,10 @@ Hauptentität in den Recorder ein. Rücknahme: `w5_reports.referenced` und `w5_r
 - Undo of `sepa_overview` and `document_index` runs: `payment_schedule` (main entity),
   `sepa_mandate` and each new `document_link` (extras via `ctx["extra_created"]`) are recorded;
   `w3_reports.referenced` and `w3_reports.remove` are dispatched by `mhvp.ai.imports`.
+
+### V11 review (01.10.2026)
+
+The SEPA overview only matches a contract that has not ended before the row's valid-from
+date. Undoing an imported payment schedule reopens the previous schedule only up to the
+contract end (`contract.end_date`), never open ended on an ended contract. Test:
+`tests/integration/test_v11_review_import_undo.py`.

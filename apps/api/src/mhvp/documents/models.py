@@ -73,6 +73,9 @@ class RetentionStart(StrEnum):
     CONTRACT_END = "contract_end"
     STATEMENT_ISSUED = "statement_issued"
     PURPOSE_END = "purpose_end"  # portal and applicant data: after the purpose ended (M6-04)
+    # U11-01: the period starts with the year of the owners' resolution (date of the linked
+    # resolution, ``Document.retention_resolution_id``); year end rule like the other bases.
+    RESOLUTION = "resolution"
 
 
 class MirrorStatus(StrEnum):
@@ -230,6 +233,11 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
     # last entry, statement issued, purpose end); without it the period cannot be computed
     # and the document stays locked (M6-04, migration 0175).
     retention_base_on: Mapped[date | None] = mapped_column(Date)
+    # U11-01: resolution that starts the period under the start rule ``resolution``; its
+    # decision date is copied into ``retention_base_on`` when the reference is set.
+    retention_resolution_id: Mapped[uuid.UUID | None] = _fk(
+        "resolution.id", nullable=True, ondelete="SET NULL"
+    )
     retention_hold_reason: Mapped[str | None] = mapped_column(Text)
     # S711-06: kind of the hold (litigation, tax_procedure, evidence, legal_matter, other) and
     # the WEG permanent record flag (S05): a permanent record never expires by a standard

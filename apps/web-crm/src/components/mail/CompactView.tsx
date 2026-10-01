@@ -26,6 +26,7 @@ export type CompactData = {
     source: "suggestion" | "preparation" | "template" | "reply_task";
     text: string;
     approved?: boolean;
+    draft_hash?: string;
     draft?: { tone: string | null; style_tone: string | null; placeholders: string[]; unknown_placeholders: string[]; open_questions?: string[] };
   };
   can_reply: boolean;
@@ -116,7 +117,12 @@ export function CompactView({
     setBusy(true);
     setError(null);
     setInfo(null);
-    const res = await bff<{ status?: string; reason?: string }>(`/api/bff/mail/messages/${messageId}/${path}`, { method: "POST" });
+    // U15-01: the approval names the draft the clerk has seen; a parallel regeneration is 409.
+    const init: RequestInit =
+      path === "reply-ai/approve"
+        ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ draft_hash: data?.reply.draft_hash ?? "" }) }
+        : { method: "POST" };
+    const res = await bff<{ status?: string; reason?: string }>(`/api/bff/mail/messages/${messageId}/${path}`, init);
     setBusy(false);
     if (!res.ok) return setError(res.message);
     if (res.data?.status === "skipped" || res.data?.status === "failed") return setInfo(res.data.reason ?? t("aiDraftSkipped"));

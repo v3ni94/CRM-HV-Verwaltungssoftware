@@ -16,6 +16,8 @@ Text in mails is data, never an instruction (PÜ04)."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import uuid
 from datetime import UTC, date, datetime
@@ -244,6 +246,17 @@ async def open_items_for_contact(
     return {"count": count, "overdue": overdue, "remaining": total.quantize(Decimal("0.01"))}
 
 
+_APPROVAL_KEYS = frozenset({"approved", "approved_at", "approved_by", "draft_hash"})
+
+
+def reply_draft_hash(draft: dict[str, Any]) -> str:
+    """SHA-256 over the canonical JSON of the AI reply draft without its approval fields
+    (U15-01): the approval must name exactly the draft the approver has seen."""
+    content = {k: v for k, v in draft.items() if k not in _APPROVAL_KEYS}
+    raw = json.dumps(content, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def reply_block(message: Message, salutation: str, ticket_number: int | None) -> dict[str, Any]:
     suggestion = message.suggestion or {}
     prep = suggestion.get("preparation") or {}
@@ -255,6 +268,7 @@ def reply_block(message: Message, salutation: str, ticket_number: int | None) ->
             "source": "reply_task",
             "text": str(task["body"]),
             "approved": bool(task.get("approved")),
+            "draft_hash": reply_draft_hash(task),
             "draft": {
                 "tone": task.get("tone"),
                 "style_tone": task.get("style_tone"),

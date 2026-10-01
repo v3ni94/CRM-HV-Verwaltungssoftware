@@ -73,7 +73,8 @@ test.describe("workflows against the API @backend", () => {
     await page.getByLabel("Aussteller suchen").fill(`Dachdecker ${run}`);
     await page.locator("main").getByRole("button", { name: "Suchen" }).click();
     await page.getByRole("combobox", { name: "Aussteller", exact: true }).selectOption({ label: `Dachdecker ${run} GmbH` });
-    await page.getByLabel("Rechnungsnummer").fill(`D-${run}`);
+    // The list filter above also carries the label "Rechnungsnummer" (input name="q").
+    await page.getByLabel("Rechnungsnummer").and(page.locator('input:not([name="q"])')).fill(`D-${run}`);
     await page.getByLabel("Rechnungsdatum").fill("2026-09-01");
     await page.getByLabel("Leistung ab").fill("2026-08-01");
     await page.getByLabel("Netto").fill("1000");

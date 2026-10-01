@@ -329,3 +329,7 @@ Unter Einstellungen, Mandant, Abschnitt "Portal der Mandanten" laden Sie das Log
 ## Vertretung im Portal
 
 Konten mit einer Vollmacht sehen im Portal den Menüpunkt "Vertretung" und im Ansichtswechsel die Rolle "Vertreter". Die Seite zeigt den Vertretenen, den Gültigkeitszeitraum und die Restlaufzeit. Die Vollmacht legt die Verwaltung am Kontakt an, mit Vollmachtsdokument und Zeitraum. Der Zugriff ist lesend und endet mit dem Ablauf oder dem Widerruf; abgelaufene Vollmachten bleiben als "Abgelaufen" sichtbar, gewähren aber nichts mehr.
+
+## Einladung erneuern (V03)
+
+Ist die Einladung eines Kontakts abgelaufen und nicht angenommen, zeigt der Abschnitt "Portalzugang" am Kontakt die Schaltfläche "Einladung erneuern". Sie stellt für dasselbe Konto einen neuen Code mit neuer Frist aus; der Code erscheint einmalig als Code, Link und QR-Code. Aktive, gesperrte und noch gültige Einladungen lassen sich nicht erneuern.

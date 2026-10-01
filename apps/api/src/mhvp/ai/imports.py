@@ -906,8 +906,13 @@ async def apply_property(
                 ),
             )
     await session.flush()
-    await _apply_onboarding_extras(session, run, principal, prop, units, choice, recorder, notes)
-    return {"property_id": str(prop.id), "units": len(units), "notes": notes}
+    decisions = await _apply_onboarding_extras(
+        session, run, principal, prop, units, choice, recorder, notes
+    )
+    result: dict[str, Any] = {"property_id": str(prop.id), "units": len(units), "notes": notes}
+    if decisions:
+        result["entity_decisions"] = decisions
+    return result
 
 
 async def _apply_onboarding_extras(
@@ -919,15 +924,28 @@ async def _apply_onboarding_extras(
     choice: Any,
     recorder: "Recorder",
     notes: list[str],
-) -> None:
+) -> list[dict[str, Any]]:
     """Bank accounts, allocation keys of every kind, debtor accounts and document links of the
     onboarding (10.2 step 5, R03). Every value was entered or confirmed by the reviewer; the
     steps run in the transaction of the apply, so a refused step rolls everything back."""
     await _apply_allocation_keys(session, principal, prop, units, choice, notes)
-    await _apply_bank_accounts(session, principal, prop, choice, recorder, notes)
+    decisions: list[dict[str, Any]] = []
+    await _apply_bank_accounts(session, principal, prop, choice, recorder, notes, decisions)
     if choice.create_debtor_accounts:
-        await _apply_debtor_accounts(session, principal, prop, recorder, notes)
+        await _apply_debtor_accounts(
+            session,
+            principal,
+            prop,
+            recorder,
+            notes,
+            decisions,
+            selected=choice.debtor_legal_entity_ids,
+        )
     await _link_documents(session, run, principal, prop, choice, recorder, notes)
+    if decisions:
+        # R03-02: the summary carries the decision points (no IBAN), see resolve_entities.
+        notes.append("Rechtsträger je Konto auswählen, dann werden die Konten angelegt.")
+    return decisions
 
 
 async def _apply_allocation_keys(
@@ -1030,38 +1048,64 @@ async def _apply_bank_accounts(
     choice: Any,
     recorder: "Recorder",
     notes: list[str],
-) -> None:
+    decisions: list[dict[str, Any]] | None = None,
+) -> int:
     from mhvp.core import crypto
     from mhvp.properties import services as property_services
     from mhvp.properties.models import BankAccountKind, LegalEntity, PropertyBankAccount
     from mhvp.properties.routers import _set_default_account
 
-    for item in choice.bank_accounts:
+    decisions = decisions if decisions is not None else []
+    created = 0
+    for index, item in enumerate(choice.bank_accounts):
         kind = BankAccountKind(item.kind)
         if item.is_default and kind is BankAccountKind.DEPOSIT:
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Ein Kautionskonto kann nicht Standardkonto sein."
             )
-        entities = (
-            await session.scalars(
-                select(LegalEntity)
-                .where(
-                    LegalEntity.property_id == prop.id,
-                    LegalEntity.kind.in_(property_services.ACCOUNT_OWNERS[kind]),
+        entities = list(
+            (
+                await session.scalars(
+                    select(LegalEntity)
+                    .where(
+                        LegalEntity.property_id == prop.id,
+                        LegalEntity.kind.in_(property_services.ACCOUNT_OWNERS[kind]),
+                    )
+                    .order_by(LegalEntity.created_at)
                 )
-                .order_by(LegalEntity.created_at)
-            )
-        ).all()
+            ).all()
+        )
+        if item.legal_entity_id is not None:
+            chosen = [e for e in entities if e.id == item.legal_entity_id]
+            if not chosen:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"Rechtsträger für Bankkonto {item.holder} passt nicht zur Kontoart.",
+                )
+            entities = chosen
         if len(entities) != 1:
             notes.append(
                 f"Bankkonto {item.holder} ({item.kind}): "
                 + (
                     "kein passender Rechtsträger vorhanden"
                     if not entities
-                    else "mehrere passende Rechtsträger, Zuordnung nötig"
+                    else "mehrere passende Rechtsträger, Auswahl nötig"
                 )
                 + ", bitte am Objekt anlegen."
             )
+            if entities:
+                decisions.append(
+                    {
+                        "kind": "bank_account",
+                        "index": index,
+                        "holder": item.holder,
+                        "account_kind": item.kind,
+                        "candidates": [
+                            {"id": str(e.id), "name": e.name, "kind": e.kind.value}
+                            for e in entities
+                        ],
+                    }
+                )
             continue
         fingerprint = crypto.fingerprint(item.iban)
         duplicate = await session.scalar(
@@ -1093,14 +1137,22 @@ async def _apply_bank_accounts(
         session.add(account)
         await session.flush()
         recorder.add("property_bank_account", account.id)
+        created += 1
         if item.is_default:
             await _set_default_account(session, account)
     await session.flush()
+    return created
 
 
 async def _apply_debtor_accounts(
-    session: AsyncSession, principal: Any, prop: Any, recorder: "Recorder", notes: list[str]
-) -> None:
+    session: AsyncSession,
+    principal: Any,
+    prop: Any,
+    recorder: "Recorder",
+    notes: list[str],
+    decisions: list[dict[str, Any]] | None = None,
+    selected: list[uuid.UUID] | None = None,
+) -> int:
     """Debtor accounts of the contracts as ledger accounts (7.2, 6.9.2). An existing ledger of the
     legal entity adopts the reserved numbers; without one the ledger is created from the draft
     chart template A.1 (fiscal year as the API default). Nothing is posted: postings stay
@@ -1119,7 +1171,38 @@ async def _apply_debtor_accounts(
     )
     if not entity_ids:
         notes.append("Debitorenkonten: keine Verträge, daher keine Konten zu übernehmen.")
-        return
+        return 0
+    if selected is not None:
+        unknown = set(selected) - set(entity_ids)
+        if unknown:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Rechtsträger gehört nicht zu den Verträgen des Objekts.",
+            )
+        entity_ids = [e for e in entity_ids if e in set(selected)]
+    elif len(entity_ids) > 1:
+        # R03-02: several legal entities with contracts: the reviewer chooses, nothing is created.
+        names = {
+            e.id: e
+            for e in (
+                await session.scalars(select(LegalEntity).where(LegalEntity.id.in_(entity_ids)))
+            ).all()
+        }
+        notes.append(
+            "Debitorenkonten: mehrere Rechtsträger mit Verträgen, Auswahl nötig, nichts angelegt."
+        )
+        if decisions is not None:
+            decisions.append(
+                {
+                    "kind": "debtor_accounts",
+                    "candidates": [
+                        {"id": str(i), "name": names[i].name, "kind": names[i].kind.value}
+                        for i in entity_ids
+                    ],
+                }
+            )
+        return 0
+    done = 0
     template = None
     for entity_id in entity_ids:
         ledger = await session.scalar(select(Ledger).where(Ledger.legal_entity_id == entity_id))
@@ -1140,6 +1223,7 @@ async def _apply_debtor_accounts(
                 f"Buchungskreis {ledger.name} aus der Kontenvorlage (Entwurf) angelegt, "
                 "Debitorenkonten übernommen."
             )
+            done += 1
             continue
         before = set(
             await session.scalars(
@@ -1155,6 +1239,60 @@ async def _apply_debtor_accounts(
         for account_id in created:
             if account_id not in before:
                 recorder.add("ledger_account", account_id)
+        done += 1
+    return done
+
+
+async def resolve_entities(
+    session: AsyncSession, run: ImportRun, principal: Any, body: Any
+) -> dict[str, Any]:
+    """R03-02: creates the accounts that the apply left open once the reviewer has chosen the
+    legal entity per account. Same checks as the apply; items are appended to the run so the
+    undo covers them."""
+    from mhvp.properties.models import Property
+
+    property_id = (run.summary or {}).get("property_id")
+    if not property_id or not (run.summary or {}).get("entity_decisions"):
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Keine offene Auswahl im Importlauf.")
+    if run.status is not ImportStatus.APPLIED:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Importlauf ist nicht mehr aktiv.")
+    prop = await session.get(Property, uuid.UUID(property_id))
+    if prop is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    for item in body.bank_accounts:
+        if item.legal_entity_id is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Rechtsträger je Konto fehlt.")
+    recorder = Recorder(session, run)
+    recorder.sequence = (
+        await session.scalar(
+            select(func.coalesce(func.max(ImportRunItem.sequence), 0)).where(
+                ImportRunItem.import_run_id == run.id
+            )
+        )
+        or 0
+    )
+    notes: list[str] = []
+    choice = _ResolveChoice(body.bank_accounts, body.as_of)
+    banks = await _apply_bank_accounts(session, principal, prop, choice, recorder, notes)
+    debtors = 0
+    if body.debtor_legal_entity_ids:
+        debtors = await _apply_debtor_accounts(
+            session,
+            principal,
+            prop,
+            recorder,
+            notes,
+            selected=list(body.debtor_legal_entity_ids),
+        )
+    await session.flush()
+    return {"created_bank_accounts": banks, "debtor_entities": debtors, "notes": notes}
+
+
+class _ResolveChoice:
+    """Minimal stand-in of PropertyChoice for the account helpers."""
+
+    def __init__(self, bank_accounts: list[Any], as_of: date) -> None:
+        self.bank_accounts, self.as_of = bank_accounts, as_of
 
 
 async def _link_documents(
