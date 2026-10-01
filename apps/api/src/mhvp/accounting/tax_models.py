@@ -86,6 +86,11 @@ class AccountingTaxSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     approval_limits: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
+    # AC01-02: sub ledger check hides written off items and items of reversed entries from the
+    # difference (counted separately); display only, nothing is posted. Default on.
+    subledger_exclude_written_off: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
 
 
 class PropertyTaxProfile(IdMixin, TimestampMixin, TenantMixin, Base):

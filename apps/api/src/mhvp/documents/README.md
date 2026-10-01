@@ -213,3 +213,28 @@ targets; a document that exists again (restore) is never deleted by the follow u
 deletion after a restore resets the mirror steps to open (`mirror_deletion.request`). Backups
 are not edited (runbook `backup.md`). Rule: `docs/rules/AC07-auskunft-loeschung.md`; open:
 AC07-02, AC07-03.
+
+## AE16: Textbausteine mit Freigabe (AA11-01, AA11-02)
+
+Tabelle `legal_text_block` (Migration 0372), Router `text_block_routers.py` unter `/document-text-blocks`, Lesezugriff `text_blocks.approved_texts`. Status draft, submitted, approved, retired; Freigabe nur durch eine zweite Person (documents:approve). Das Informationsblatt und die Eigentümerausgaben (billing) setzen nur freigegebene Texte ein, sonst "Text nicht freigegeben". Regel docs/rules/AE16-01.md.
+
+## AE29: Rechtstexte des Portals als Textbausteine
+
+`TEXT_BLOCK_CODES` enthält zusätzlich `impressum`, `datenschutz` und `nutzungsbedingungen` (Portal, M21-04). Lebenszyklus und Vier-Augen-Freigabe sind unverändert; `approve_block` ruft `mhvp.platform.legal_texts.follow_terms_version` auf (wirkt nur beim Code `nutzungsbedingungen` und nur im Mandantenschalter follow_text). Öffentlicher Abruf und Abgleich mit der Einwilligungsrichtlinie: siehe `mhvp/platform/README.md`.
+
+## AE33: document trash (AC07-03)
+
+`trash.py`: tenant switch `document_trash_setting` (off by default, period 30 days as a
+proposal, open question AE33-01). `retention.dispose` is the single door of a lawful deletion
+(`DELETE /documents/{id}` and the proposal execution): switch off means `delete_now` as before,
+switch on means `trash.move_to_trash` (`document.deleted_at`, `deleted_by`, `purge_at`, event
+`document.trashed`). A trashed document is hidden from every ORM query by the session filter at
+the end of `models.py` (`include_trashed` execution option or the `trash.trashed_visible`
+context opts in). `GET /documents/trash`, `POST /documents/trash/{id}/restore` and `.../purge`
+(reason required, `document.restored`, `document.deleted` with `from_trash`), `GET` and `PUT
+/documents/trash-settings`; the daily task `mhvp.documents.trash_purge` deletes what is due.
+Every final deletion runs `services.deletion_blocker` again, a hold keeps the document in the
+trash (refusal logged once per reason). The deletion checklist has the target `trash` and the
+overall status `in_trash`; the journal export carries `document.trashed` and
+`document.restored`, and the replay applies the last statement per document (`trashed`,
+`restored`). Backups are not edited. Rule: `docs/rules/AE33-papierkorb-auskunft.md`.

@@ -132,3 +132,23 @@ Rule: `docs/rules/S69-01-statement-status-model.md`.
 - `outputs.py`: files a generated PDF and links it to the run via `generated_document` (context `statement` or `owner_statement`); `list_outputs` for the CRM.
 - `POST /statements/{id}/info-sheet` (G3) and `GET /statements/{id}/outputs`; `GET /billing/owner-statements/{id}/preview/{letter|s35a}`, `POST|GET /billing/owner-statements/{id}/outputs` (G3, after internal approval).
 - Legally relevant paragraphs are placeholders marked `Text nicht freigegeben` (`info_sheet.TEXT_PENDING`, `owner_statement_pdf.TAX_TEXT_PENDING`) until AA11-01 and AA11-02 are decided.
+
+## AE19 Heizkosten: Vergleich extern gegen eigen (Welle 16)
+
+`heating_compare.py` vergleicht externe Heizkostenbeträge je Nutzer mit der eigenen Berechnung (`GET /statements/{id}/heating/comparison`, `.../comparison/report` als CSV). Nur lesend, Toleranzen als Parameter (Standard 0,50 EUR, 1,0 Prozent). Regel: docs/rules/M17-02-heizkosten.md. Prüfpunkte (AB10-01) siehe docs/rules/AB10-01-pruefpunkte.md.
+
+## AE16: Textbausteine in Ausgaben
+
+`info_sheet.build` und `owner_statement_pdf.build_letter`/`build_s35a_sheet` erhalten freigegebene Textbausteine (`documents/text_blocks.py`); fehlt die Freigabe, bleibt der Platzhalter "Text nicht freigegeben". Die Ablage-Antworten tragen `texts_status` je Code.
+
+## AE17 Prüfbericht der Umlagegrundlagen (Welle 16)
+
+`allocation_basis.py` prüft je Kostenposition (Katalogart über `ledger_account.operating_cost_type`) und Mietvertrag der Periode, ob eine `allocation_agreement` den Mietzeitraum deckt. `GET /statements/{id}/allocation-basis-report`; Schalter `GET/PUT /billing/allocation-basis-setting` (Standard an) sperrt Statuswechsel nach issued, due, posted und das Informationsblatt mit MHVP-BILL-0015. Regel `docs/rules/AE17-01.md`.
+
+## AE18 Abrechnungsfrist § 556 Abs. 3 BGB (Welle 16, M17-04)
+
+`deadline.py` zeigt je Vertrag das Fristende (nur Orientierung, zu verifizieren), den Zugang und einen Zugangsvorschlag aus dem Versand (`Dispatch`, nur lesend, wird nie automatisch gespeichert). `GET /statements/{id}/deadlines`. Schalter je Mandant (`statement_deadline_setting`, `GET/PUT /billing/deadline-settings`): `policy` `block_claims` (Standard, Bestandsverhalten) oder `notice` (nur Hinweis); `watch_enabled` (Standard aus) schaltet den täglichen Beat `mhvp.billing.deadline_watch` (Job `billing-deadline-watch`) ein, der den Ersteller der Abrechnung 60 und 30 Tage vor Fristende (einstellbar) benachrichtigt. Migration 0374.
+
+## Open advances at statement issue (AE15, D24, AC10-01)
+
+Tenant switch `statement_advance_rule.open_advance_mode` (migration 0371): `info_only` (default, unchanged behaviour), `offset_reversal` (variant 1: balance against paid, open advance items offset by a draft entry with settlement plan, created with the result drafts behind G3), `balance_against_due` (variant 2: balance against due, open items stay). `services.open_advance_treatment` is pure NUMERIC arithmetic; the snapshot carries the variant, `net_claim`, `offset_items` and `calculation_steps`, the letter discloses the calculation (`letters.open_advance_lines`). Rule: docs/rules/AC10-d24.md.

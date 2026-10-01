@@ -18,6 +18,8 @@
  * anchor, per the task instructions.
  */
 
+import { BUSINESS_RULES } from "./business-rules";
+
 export type SettingsSearchEntry = {
   /** Stable id, used as the React key and for the "existing page" file system test. */
   id: string;
@@ -34,6 +36,78 @@ export type SettingsSearchEntry = {
 };
 
 const ROOT = "Einstellungen";
+
+const RULES_PAGE = "/einstellungen/fachliche-regeln";
+
+/** Search title and synonyms of each switch on the page "Fachliche Regeln" (AE39); the anchor is
+ *  the id of the rule row, the permission is taken from the rule registry. The five further
+ *  acquisition rules share the entry of the first one. */
+const RULE_SEARCH: Record<string, [title: string, keywords: string[]]> = {
+  "rent-invoice-numbering": ["Nummer für Mietrechnungsentwürfe", ["entwurfsnummer", "rechnungsnummer", "gutschrift", "mietrechnung", "g1", "nummernkreis"]],
+  "subledger-exclude-written-off": ["Nebenbuchprüfung, ausgebuchte Posten", ["nebenbuch", "ausgebucht", "storniert", "nebenbuchabgleich", "differenz"]],
+  "period-lock-mode": ["Periodensperre, Umfang", ["periodensperre", "sperre", "buchungskreis", "objekt", "zeitraum"]],
+  "period-lock-auto": ["Periodensperre beim Abschluss setzen", ["abschluss", "abrechnung", "automatisch sperren"]],
+  "period-lock-reopen": ["Periodensperre aufheben zulassen", ["aufhebung", "wieder öffnen", "vier augen"]],
+  "chart-four-eyes": ["Kontenrahmen, Freigabe durch zwei Personen", ["kontenrahmen", "vier augen", "freigabe", "zweite person"]],
+  "chart-coverage": ["Kontenrahmen, Abrechnungsart und Mehrschlüssel", ["abrechnungsart", "heizung", "mehrschlüssel", "verteilung", "prüfbericht", "konten ohne zuordnung"]],
+  "interest-tax": ["Steuerabzug auf Habenzinsen", ["kapitalertragsteuer", "solidaritätszuschlag", "kirchensteuer", "zinsen", "steuerkonten"]],
+  "rule-checkpoints": ["Prüfpunkte Heizkostenverordnung", ["heizkostenv", "nachrüstfrist", "übergangsfrist", "vorfrist", "prüfpunkt"]],
+  "advance-open-mode": ["Offene Vorauszahlungen bei Erteilung der Abrechnung", ["vorauszahlung", "vorschuss", "betriebskostenabrechnung", "d24", "verrechnung"]],
+  "allocation-basis-block": ["Prüfbericht Umlagegrundlagen blockiert Ausgabe", ["umlagevereinbarung", "umlagefähigkeit", "klausel", "prüfbericht"]],
+  "deadline-policy": ["Abrechnungsfrist, Verhalten nach Ablauf", ["abrechnungsfrist", "556", "nachforderung", "fristende", "ausschlussfrist"]],
+  "deadline-watch": ["Abrechnungsfrist, Warnung", ["frist warnung", "benachrichtigung", "fristende"]],
+  "deadline-warn-first": ["Abrechnungsfrist, erste Warnung in Tagen", ["warntage", "60 tage"]],
+  "deadline-warn-second": ["Abrechnungsfrist, zweite Warnung in Tagen", ["warntage", "30 tage"]],
+  "text-blocks": ["Textbausteine mit Freigabe (Fachliche Regeln)", ["textbaustein", "informationsblatt", "35a", "freigabe"]],
+  "opening-lock-mode": ["Anfangsbestand der Rücklage, Sperre", ["anfangsbestand", "rücklage", "sperre", "protokolliert", "v01-01"]],
+  "reserve-plan-tax": ["Steuerliche Einordnung der Rücklagenzuführung", ["rücklagenplan", "steuerliche einordnung", "platzhalter"]],
+  "reserve-payment-mode": ["Zahlungen je Zweckrücklage", ["zweckrücklage", "planverhältnis", "aufteilung", "rücklagenzahlung"]],
+  "plan-change-mode": ["Unterjährige Planänderung", ["wirtschaftsplan", "differenz", "nachforderung", "gutschrift", "nächste rate", "planänderung"]],
+  "acquisition-purchase": ["Zuordnung bei Eigentümerwechsel je Erwerbsart", ["erwerbsart", "eigentümerwechsel", "erbfall", "zwangsversteigerung", "schenkung", "ersterwerb", "kauf", "abrechnungsspitze"]],
+  "virtual-meetings": ["Virtuelle Versammlung zulassen", ["virtuelle versammlung", "online", "hybrid", "v13"]],
+  "virtual-basis-term-lock": ["Grundlagenbeschluss, Höchstdauer als Sperre", ["drei jahre", "grundlagenbeschluss", "virtuell"]],
+  "virtual-basis-transition-date": ["Stichtag der Übergangsregel virtuelle Versammlung", ["übergangsregel", "stichtag", "48"]],
+  "online-meeting": ["Online-Versammlung im Portal", ["online teilnahme", "abstimmung portal", "eigentümerversammlung"]],
+  "proxy-conflict-mode": ["Vollmacht gegen eigene Stimme", ["vollmacht", "stimme", "konflikt", "online abstimmung"]],
+  "owner-rental-income": ["Mieterträge im Eigentümerportal", ["mieterträge", "kapitalanleger", "sondereigentumsverwaltung", "datenschutz"]],
+  "owner-ticket-scope": ["Tickets im Eigentümerportal", ["ticketumfang", "eigentümer tickets", "objekt tickets"]],
+  "provider-rating-display": ["Bewertungen von Dienstleistern", ["dienstleister bewertung", "rating", "auftragsbewertung"]],
+  "terms-version-mode": ["Fassung der Nutzungsbedingungen", ["nutzungsbedingungen", "einwilligungsrichtlinie", "fassung", "nb"]],
+  "automation-switch": ["Buchungsautomatik (Schalter)", ["automatik", "auto posting", "bankumsätze", "vier augen", "g1"]],
+  "portal-chat-bot": ["Portal-Assistent (Chat-Bot)", ["chat bot", "assistent", "portal fragen", "ki antwort", "dokumente fragen"]],
+  "portal-chat-privacy": ["Portal-Assistent, Datenschutzhinweis", ["datenschutz feature", "kenntnisnahme", "chat", "hinweis"]],
+  "ebics-enabled": ["EBICS-Anbindung", ["ebics", "kontoauszug abruf", "c53", "teilnehmer", "bankanbindung"]],
+  "ebics-signature-key-mode": ["EBICS, Ablage des Signaturschlüssels", ["signaturschlüssel", "extern", "chipkarte", "server schlüssel", "ebics"]],
+  "legal-basis-email-delivery": ["Rechtsgrundlage E-Mail-Zustellung", ["einwilligung", "berechtigtes interesse", "vertrag", "dsgvo", "e-mail versand"]],
+  "legal-basis-data-sharing": ["Rechtsgrundlage Datenweitergabe", ["einwilligung", "berechtigtes interesse", "weitergabe", "dsgvo"]],
+  "legal-basis-marketing": ["Rechtsgrundlage Werbung", ["werbung", "marketing", "einwilligung", "berechtigtes interesse", "widerspruch"]],
+  "legal-basis-portal-terms": ["Rechtsgrundlage Nutzungsbedingungen Portal", ["nutzungsbedingungen", "annahme", "einwilligung", "vertrag"]],
+  "mfa-crm-mode": ["Zweiter Faktor für CRM-Benutzer", ["totp", "zwei faktor", "2fa", "mfa", "authenticator", "pflicht"]],
+  "mfa-portal-required": ["Zweiter Faktor im Portal", ["totp", "portal anmeldung", "2fa", "mfa"]],
+  "access-export-third-party": ["Auskunftsexport, andere Personen", ["auskunft", "art 15", "dsgvo", "dritte", "name oder rolle"]],
+  "access-export-internal-notes": ["Auskunftsexport, interne Vermerke", ["auskunft", "interne notizen", "dsgvo", "vermerke"]],
+  "document-trash-enabled": ["Dokument-Papierkorb", ["papierkorb", "wiederherstellen", "gelöschte dokumente", "löschfrist"]],
+  "document-trash-days": ["Dokument-Papierkorb, Frist in Tagen", ["papierkorb frist", "30 tage", "aufbewahrung gelöscht"]],
+  "credit-payable-mode": ["Guthaben aus Abrechnungen, Verbindlichkeitsposten", ["guthaben", "verbindlichkeit", "auszahlung ohne rechnung", "umbuchung", "kreditor", "nebenbuch", "zahlungsauftrag"]],
+  "credit-payable-four-eyes": ["Guthaben-Auszahlung, Freigabe durch zwei Personen", ["guthaben", "vier augen", "freigabe", "auszahlung"]],
+  "g1-checklist": ["G1 Öffnungsliste (Fachliche Regeln)", ["g1", "öffnungsliste", "checkliste", "nachweis"]],
+};
+
+const businessRuleEntries: SettingsSearchEntry[] = BUSINESS_RULES.flatMap((rule) => {
+  const meta = RULE_SEARCH[rule.id];
+  if (!meta) return [];
+  const [title, keywords] = meta;
+  return [
+    {
+      id: `fachliche-regeln-${rule.id}`,
+      title,
+      breadcrumb: [ROOT, "Fachliche Regeln", title],
+      href: `${RULES_PAGE}#${rule.id}`,
+      keywords: [...keywords, "fachliche regel", "schalter", "entscheidung offen"],
+      permission: [...rule.permission],
+    },
+  ];
+});
 
 export const settingsSearchIndex: SettingsSearchEntry[] = [
   // --- Benutzer und Rollen -------------------------------------------------------------
@@ -666,6 +740,32 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tickets:read"],
   },
 
+  {
+    id: "portal-rechtstexte",
+    title: "Rechtstexte des Portals",
+    breadcrumb: [ROOT, "Rechtstexte des Portals"],
+    href: "/einstellungen/portal-rechtstexte",
+    keywords: ["impressum", "datenschutzerklärung", "nutzungsbedingungen", "portal", "rechtstext", "white label", "fassung", "einwilligung"],
+    permission: ["documents:read"],
+  },
+  {
+    id: "textbausteine",
+    title: "Textbausteine",
+    breadcrumb: [ROOT, "Textbausteine"],
+    href: "/einstellungen/textbausteine",
+    keywords: ["textbaustein", "informationsblatt", "35a", "freigabe", "anschreiben"],
+    permission: ["documents:read"],
+  },
+  {
+    id: "fachliche-regeln",
+    title: "Fachliche Regeln",
+    breadcrumb: [ROOT, "Fachliche Regeln"],
+    href: RULES_PAGE,
+    keywords: ["schalter", "entscheidung offen", "offene fragen", "standard", "varianten", "mandantenschalter", "open_questions", "regel"],
+    permission: ["tenant_settings:read", "accounting:read"],
+  },
+  ...businessRuleEntries,
+
   // --- Buchhaltung -----------------------------------------------------------------------
   {
     id: "buchhaltung-datev",
@@ -713,6 +813,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     breadcrumb: [ROOT, "Buchhaltung", "Kontenrahmen"],
     href: "/einstellungen/buchhaltung/kontenrahmen",
     keywords: ["kontenrahmen", "freigabe g1", "versionsverlauf konten", "kontenplan"],
+    permission: ["accounting:read"],
+  },
+  {
+    id: "buchhaltung-periodensperren",
+    title: "Buchhaltung, Periodensperren",
+    breadcrumb: [ROOT, "Buchhaltung", "Periodensperren"],
+    href: "/einstellungen/buchhaltung/periodensperren",
+    keywords: ["periodensperre", "festschreibung", "objekt", "zeitraum", "abschluss abrechnung", "aufhebung"],
     permission: ["accounting:read"],
   },
   {

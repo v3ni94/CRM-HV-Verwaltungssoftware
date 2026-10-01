@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { EntryActions } from "@/components/accounting/EntryActions";
+import { InterestTaxConfig } from "@/components/accounting/InterestTaxConfig";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
@@ -128,6 +129,12 @@ export default async function LedgerPage({
           <JournalEntryForm
             ledgerId={id}
             today={today}
+            accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name, category: a.category, active: a.active }))}
+          />
+        ) : null}
+        {canCreate ? (
+          <InterestTaxConfig
+            ledgerId={id}
             accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name, category: a.category, active: a.active }))}
           />
         ) : null}

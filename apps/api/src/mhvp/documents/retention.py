@@ -380,6 +380,8 @@ class Deleted:
     document_id: uuid.UUID
     sha256: str
     jobs: list[mirror_deletion.MirrorDeletionJob]
+    # AE33: moved to the trash instead of removed; the final deletion follows (trash.purge).
+    trashed: bool = False
 
 
 async def delete_now(
@@ -435,6 +437,36 @@ async def delete_now(
     result = Deleted(document_id=document.id, sha256=document.sha256, jobs=jobs)
     await session.delete(document)
     return result
+
+
+async def dispose(
+    session: AsyncSession,
+    blobs: BlobStore,
+    document: Document,
+    *,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    extra: dict[str, Any] | None = None,
+) -> Deleted:
+    """Lawful deletion of a document (checked by the caller). With the tenant switch for the
+    trash on (AE33, AC07-03) the document moves to the trash and the final deletion follows
+    after the period; without it the deletion is final as before (``delete_now``)."""
+    from mhvp.documents import trash  # local: trash imports this module
+
+    enabled, days = await trash.current(session)
+    if not enabled:
+        return await delete_now(
+            session, blobs, document, tenant_id=tenant_id, actor_user_id=actor_user_id, extra=extra
+        )
+    await trash.move_to_trash(
+        session,
+        document,
+        tenant_id=tenant_id,
+        actor_user_id=actor_user_id,
+        days=days,
+        extra=extra,
+    )
+    return Deleted(document_id=document.id, sha256=document.sha256, jobs=[], trashed=True)
 
 
 # Proposals -------------------------------------------------------------------------------
@@ -652,7 +684,7 @@ async def execute(
                 payload={"reason": blocker, "proposal_id": str(proposal.id)},
             )
             continue
-        deleted = await delete_now(
+        deleted = await dispose(
             session,
             blobs,
             document,

@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify check-s3
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify check-s3 kosit-fetch kosit-test kosit-validate
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -102,3 +102,14 @@ backup-verify: ## Restore newest backup into a throwaway database and check it
 
 check-s3: ## Connectivity, bucket and put/get/delete round trip against MHVP_S3_* (ENV_FILE=.env.prod)
 	scripts/check-s3.sh $(if $(ENV_FILE),--env-file $(ENV_FILE),)
+
+KOSIT_DIR ?= $(CURDIR)/.cache/kosit
+
+kosit-fetch: ## Download the pinned KoSIT validator and XRechnung configuration (scripts/kosit.lock) into KOSIT_DIR
+	MHVP_KOSIT_DIR=$(KOSIT_DIR) scripts/kosit_fetch.sh
+
+kosit-test: kosit-fetch ## Check generator XRechnung files with the pinned KoSIT validator (needs Java 11+)
+	cd apps/api && MHVP_KOSIT_DIR=$(KOSIT_DIR) uv run pytest tests/unit/test_aa02_kosit_validator.py -q -rs --no-cov
+
+kosit-validate: kosit-fetch ## Validate own XRechnung files: make kosit-validate FILES="a.xml b.xml"
+	MHVP_KOSIT_DIR=$(KOSIT_DIR) scripts/kosit_validate.sh $(FILES)

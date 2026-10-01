@@ -73,7 +73,9 @@ function PasswordLoginForm({ next, onMagicLink }: { next?: string; onMagicLink: 
     const params = new URLSearchParams();
     if (next) params.set("next", next);
     const query = params.toString();
-    router.push(`/anmelden/zweiter-faktor${query ? `?${query}` : ""}`);
+    // M2-04: the management requires a second factor that this account has not set up yet.
+    const step = result.data.status === "mfa_setup_required" ? "zweiter-faktor-einrichten" : "zweiter-faktor";
+    router.push(`/anmelden/${step}${query ? `?${query}` : ""}`);
   }
 
   return (

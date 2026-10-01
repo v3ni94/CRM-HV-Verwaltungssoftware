@@ -64,6 +64,9 @@ MTOK = Decimal(1_000_000)
 CHARS_PER_TOKEN = Decimal("3.5")
 CHUNKED_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS, AiTask.EXTRACT_PROPERTY})
 
+# AE28: ``input_ref["audience"]`` of runs started by the portal assistant (mhvp.ai.portal_answer).
+PORTAL_AUDIENCE = "portal"
+
 # M34 Nachtrag 27.09.2026 (9.1 Datenschutz): tasks whose output does not need a raw IBAN,
 # e-mail address or phone number get ``mask_identifiers`` applied to the assembled document
 # text before it reaches the provider (names stay, e.g. for a salutation, per 9.1 "Textentwürfe
@@ -299,24 +302,32 @@ async def retrieve(
         )
         if found is not None:
             return found
-    return await retrieve_keyword(session, question, limit)
+    return await retrieve_keyword(session, question, limit, only_ids=only_ids)
 
 
 async def retrieve_keyword(
-    session: AsyncSession, question: str, limit: int = RETRIEVE_LIMIT
+    session: AsyncSession,
+    question: str,
+    limit: int = RETRIEVE_LIMIT,
+    *,
+    only_ids: list[uuid.UUID] | None = None,
 ) -> list[Document]:
-    """Full text retrieval over documents the tenant holds (RLS); the fallback of ``retrieve``."""
+    """Full text retrieval over documents the tenant holds (RLS); the fallback of ``retrieve``.
+    ``only_ids`` (portal scope, AE28) filters before the limit, so foreign top hits can never
+    push the permitted documents out of the result; an empty list reads nothing."""
     words = set(re.findall(r"[\wÄÖÜäöüß]{3,}", question))
-    if not words:
+    if not words or (only_ids is not None and not only_ids):
         return []
     # Any word may match (OR); ranking puts documents with more matches first.
     ts = func.to_tsquery("german", " | ".join(sorted(words)))
+    query = select(Document).where(
+        Document.search_vector.op("@@")(ts), Document.ocr_text.is_not(None)
+    )
+    if only_ids is not None:
+        query = query.where(Document.id.in_(only_ids))
     rows = (
         await session.scalars(
-            select(Document)
-            .where(Document.search_vector.op("@@")(ts), Document.ocr_text.is_not(None))
-            .order_by(func.ts_rank(Document.search_vector, ts).desc())
-            .limit(limit)
+            query.order_by(func.ts_rank(Document.search_vector, ts).desc()).limit(limit)
         )
     ).all()
     return list(rows)
@@ -534,6 +545,22 @@ async def build_input(
     from mhvp.workspace.services import local_today
 
     scope = await document_scope_for_user(session, run.created_by, local_today())
+    portal_audience = ref.get("audience") == PORTAL_AUDIENCE
+    if portal_audience:
+        # AE28 (M7-06): questions of the portal assistant. The scope comes from the access
+        # grants of the account named on the run and is never ``None`` (no staff exemption, no
+        # CRM permission path); the focus list of the run can only narrow it.
+        from mhvp.portal.assistant_scope import audience_scope, narrow
+
+        raw_account = ref.get("portal_account_id")
+        try:
+            portal_account = uuid.UUID(str(raw_account)) if raw_account else None
+        except ValueError:
+            portal_account = None
+        scope = narrow(
+            await audience_scope(session, portal_account, local_today()),
+            ref.get("portal_focus_ids"),
+        )
     if scope is not None and any(d not in scope for d in document_ids):
         raise GatewayBlockedError("Mindestens ein angehängtes Dokument ist nicht freigegeben.")
 
@@ -591,7 +618,8 @@ async def build_input(
         # by count and characters, the used ids stay on the run for proof and feedback.
         parts = AnswerParts(
             history=await conversation_history_lines(session, run),
-            knowledge=await knowledge_context(session, run, question),
+            # The tenant's internal knowledge base never feeds a portal answer (AE28, AE28-01).
+            knowledge="" if portal_audience else await knowledge_context(session, run, question),
             lookup=ref.get("lookup"),
             documents=docs,
             instruction=None if separate else instruction,
@@ -1816,8 +1844,11 @@ async def execute(
             run.provider, run.model = previous.provider, previous.model
             run.input_ref = {**run.input_ref, "deduplicated_from": str(previous.id)}
             return run
-        shots = await examples(session, task)
-        shots = await similar_examples(session, task, item.text, run, shots)
+        if run.input_ref.get("audience") == PORTAL_AUDIENCE:
+            shots = []  # AE28: staff confirmed examples never reach an external reader's run
+        else:
+            shots = await examples(session, task)
+            shots = await similar_examples(session, task, item.text, run, shots)
         if task is AiTask.PROPOSE_POSTING:
             # M8-05: comparable entries of the migrated journal as read only few shot examples.
             shots = [*shots, *await journal_examples(session, item.text)]

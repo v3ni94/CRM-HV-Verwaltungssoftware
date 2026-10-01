@@ -109,8 +109,9 @@ Betreiberentscheidung 9 a vom 30.09.2026, Regel M2-05) und
 verwaltet den zweiten Faktor: Zweiten Faktor einrichten zeigt einen QR-Code und den Schlüssel
 für die Authenticator-App; erst nach Bestätigen mit einem gültigen Code ist der zweite Faktor
 aktiv, danach fragt die Anmeldung nach dem Passwort zusätzlich den Code ab. Zweiten Faktor
-ausschalten verlangt das aktuelle Passwort und entfernt alle gemerkten Geräte. Der zweite
-Faktor ist für niemanden Pflicht, auch nicht für Administratoren.
+ausschalten verlangt das aktuelle Passwort und entfernt alle gemerkten Geräte. Ob der zweite
+Faktor Pflicht ist, legt die Richtlinie des Mandanten fest (Abschnitt Zweiter Faktor je Rolle);
+unter der Pflicht lässt er sich nicht ausschalten, solange kein Passkey eingerichtet ist.
 
 Gemerkte Geräte: Wer beim Code-Schritt Dieses Gerät 90 Tage merken wählt, wird auf diesem
 Gerät 90 Tage lang ohne Code angemeldet. Die Liste zeigt Gerät (Browserkennung) und Ablauf;
@@ -124,6 +125,27 @@ Unter Rollen und Rechte werden Rechte je Rolle vergeben; Systemrollen lassen sic
 ändern. Die Matrix Portalrechte je Rolle bestimmt zusätzlich, welche Portalfunktionen der
 Mitarbeiterzugang einer Rolle im Portal sieht (siehe Kapitel Portal). Nur Benutzer mit
 dem Recht Mandanteneinstellungen ändern dürfen diese Matrix speichern.
+
+## Zweiter Faktor je Rolle
+
+Unter Einstellungen, Rollen und Rechte legt der Abschnitt Zweiter Faktor je Rolle fest, wer
+sich mit einem zweiten Faktor (TOTP-App oder Passkey) anmelden muss (Regel M2-04):
+
+- Freiwillig (Standard): jeder Benutzer entscheidet selbst, ob er einen zweiten Faktor
+  einrichtet (Betreiberentscheidung M2-01). Ohne gespeicherte Richtlinie gilt diese Variante,
+  niemand wird zur Einrichtung gezwungen.
+- Pflicht für alle CRM-Rollen: jede Rolle außer dem Portalzugang. Das ist eine Wahl des
+  Mandanten.
+- Pflicht nur für ausgewählte Rollen: Pflicht nur für die angekreuzten Rollen.
+- Auch für Portalzugänge vorschreiben: erstreckt die Pflicht auf Mieter, Eigentümer und
+  Dienstleister im Portal (Standard aus).
+
+Wählt der Mandant eine Pflicht, wirkt sie bei der nächsten Anmeldung, niemand wird ausgesperrt: Wer noch keinen
+zweiten Faktor hat, sieht nach dem Passwort die Seite Zweiten Faktor einrichten mit QR-Code
+und Schlüssel, bestätigt mit dem ersten Code aus der App und ist danach angemeldet. Laufende
+Sitzungen bleiben bestehen. Lesen verlangt das Recht Mandanteneinstellungen lesen, Speichern
+das Recht Mandanteneinstellungen ändern. Ist der Faktor Pflicht, zeigt Meine Daten einen
+Hinweis statt Zweiten Faktor ausschalten.
 
 ## Löschen nur Administrator
 
@@ -341,6 +363,26 @@ trifft eine zweite Person unter Plattform, Freigabestufen (Vier-Augen-Prinzip); 
 freigegebenen Kontenrahmen wird die Genehmigung mit `MHVP-GATE-0004` abgelehnt. Die Seite
 öffnet die Stufe nie selbst.
 
+Seit Welle 16 (AE03) nimmt jeder Prüfpunkt zusätzlich eine verantwortliche Person (Mitglied
+des Mandanten) und einen Nachweis auf, entweder als Dokument aus dem DMS oder als Verweis
+(Pfad, Aktenzeichen, Fundstelle). Ein bestandener Punkt ohne Nachweis wird mit „Nachweis
+fehlt“ markiert; die Seite zählt Punkte ohne verantwortliche Person und ohne Nachweis und
+verweist auf die Gate-Checkliste `docs/plans/GATE-CHECKLISTEN.md`, Abschnitt G1.
+
+## Buchhaltung, Automatikstufen: Automatikschalter und Vergleichslauf
+
+Der Automatikschalter des Mandanten lässt sich in der Oberfläche nur einschalten, wenn die
+Freigabestufe G1 offen ist: eine Person mit den Rechten Buchhaltung freigeben und
+Mandanteneinstellungen ändern stellt einen Antrag mit Grund, eine zweite Person gibt ihn frei
+oder lehnt ihn ab. Erst die Freigabe schaltet die Automatik ein; der Lauf prüft Stufen, Regeln
+und Gate weiterhin selbst. Solange G1 geschlossen ist, bleibt der Antrag gesperrt.
+
+Der Vergleichslauf zeigt aus dem Entscheidungsspeicher je abgeschlossener Entscheidung, ob der
+beste Vorschlag der Automatik der manuellen Buchung entsprochen hätte (Übereinstimmung,
+anderer Vorschlag, geändert gebucht, ohne Vorschlag, abgelehnt, automatisch gebucht,
+storniert), gesamt und je Fallklasse. Der Bericht bucht nichts und ist kein
+Sicherheitsnachweis.
+
 Unter Buchhaltung, DATEV steht zusätzlich die formale Prüfung des Buchungsstapels
 (Prüfbericht je Export, Testdatei für den Importtest, Prüfung beliebiger Dateien); siehe
 [DATEV-Importtest](datev-importtest.md).
@@ -468,3 +510,114 @@ Plattformadministratoren pflegen unter Plattform, Domains die Hostnamen eines Ma
 ## Plattformaudit
 
 Plattformadministratoren sehen die festgeschriebenen Plattformaktionen (Domain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert) über `GET /api/v1/platform/audit-events` (Parameter `limit`, `offset`, `action`). Die Einträge sind nicht änderbar und enthalten keine Secrets. Die Oberfläche dafür ist die Seite Plattform, Plattformaudit (siehe Handbuch Plattform, Abschnitt Audit).
+
+## Textbausteine (Informationsblatt, Anschreiben, § 35a)
+
+Unter Einstellungen, Textbausteine pflegen Sie die Texte, die auf dem Informationsblatt zur Betriebskostenabrechnung, im Eigentümeranschreiben und im Nachweis § 35a EStG erscheinen. Ein Text wird als Entwurf angelegt, zur Freigabe eingereicht und von einer zweiten Person mit dem Recht Dokumente freigeben freigegeben. Ausgegeben wird nur der freigegebene Text; ohne Freigabe erscheint der Hinweis "Text nicht freigegeben". Die Software liefert keine Rechtstexte, den Wortlaut stimmen Sie mit Rechtsanwalt oder Steuerberater ab.
+
+## Rechtstexte des Portals (Impressum, Datenschutz, Nutzungsbedingungen)
+
+Unter Einstellungen, Rechtstexte des Portals pflegen Sie Impressum, Datenschutzerklärung und Nutzungsbedingungen des Portals Ihres Mandanten. Die Pflege entspricht den Textbausteinen: Entwurf anlegen, zur Freigabe einreichen, Freigabe durch eine zweite Person mit dem Recht Dokumente freigeben. Im Portal erscheint nur die freigegebene Fassung, verlinkt im Fuß der Seite und auf der Anmeldeseite (Seite Rechtliches, auch ohne Anmeldung erreichbar). Solange kein Text freigegeben ist, zeigt das Portal den Hinweis "Text nicht freigegeben" oder den externen Link, den Sie unter Mandant bei der Markenanpassung für Impressum und Datenschutz hinterlegt haben. Die Software liefert keine Rechtstexte, den Wortlaut stimmen Sie mit Ihrer Rechtsberatung ab.
+
+Die Ampel oben zeigt den Freigabestand je Text. Darunter sehen Sie die Fassung der Nutzungsbedingungen in der Einwilligungsrichtlinie (zum Beispiel NB-2, also Versionsnummer des freigegebenen Textes) und ob sie dem freigegebenen Text entspricht. Mit dem Recht Kontakte freigeben können Sie die Fassung ausdrücklich übernehmen oder den Schalter "Dem freigegebenen Text folgen" setzen. Beides verpflichtet die Portalkonten, die neue Fassung anzunehmen; der Standard ist die Pflege von Hand. Die Änderung wird protokolliert.
+
+## Fachliche Regeln (alle Schalter für offene Entscheidungen)
+
+Unter Einstellungen, Fachliche Regeln (`/einstellungen/fachliche-regeln`) finden Sie alle Mandantenschalter, mit denen die Plattform fachlich offene Entscheidungen abbildet, an einer Stelle. Die Seite sehen Sie mit dem Recht Mandanteneinstellungen lesen oder Buchhaltung lesen. Jede Zeile zeigt die Bezeichnung des Schalters, die Kurzbeschreibung, den aktuellen Wert, den Standard, alle Varianten und das Kennzeichen "Entscheidung offen" mit der Nummer der offenen Frage in `docs/OPEN_QUESTIONS.md`. Der Link "Fachmaske öffnen" führt zur Maske, in der der Schalter fachlich wirkt (zum Beispiel die Periodensperren oder die Rechtstexte des Portals). Die Suche in den Einstellungen findet jeden Schalter über seine Bezeichnung.
+
+Der Standard ist immer die konservative Variante: Sie bucht nichts, versendet nichts und löscht nichts, und sie ändert keine Berechnung. Die Software entscheidet keine Rechts- oder Steuerfrage. Welche Variante gilt, entscheidet der Betreiber (Geschäftsführung) nach Prüfung durch Rechtsanwalt oder Steuerberater. Die Freigabestufen G1 bis G5 bleiben von den Schaltern unberührt: Auch eine geänderte Variante umgeht kein Gate: Buchen und rechtlich maßgebliche Ausgaben bleiben hinter der jeweiligen Stufe. Die Frage in `docs/OPEN_QUESTIONS.md` bleibt offen, bis der Betreiber entschieden hat.
+
+**Wert ändern.** Wählen Sie unter "Ändern" die Variante (oder tragen Sie Datum oder Zahl ein) und klicken Sie auf "Speichern". Weicht der neue Wert vom Standard ab, fragt die Seite zuerst nach: Mit "Änderung bestätigen" schreiben Sie den Wert, mit "Abbrechen" bleibt alles unverändert. Die Rückkehr zum Standard speichert ohne Rückfrage. Die Änderung wirkt sofort für den ganzen Mandanten. Das Ändern verlangt das in der Tabelle genannte Recht; ohne dieses Recht sehen Sie nur den Wert und den Hinweis auf das fehlende Recht. Verlangt der Schalter eine Begründung, erscheint dafür ein eigenes Feld: bei der Freigabe durch zwei Personen im Kontenrahmen (gilt für die neueste Version und nur, solange sie nicht freigegeben ist) und bei einer Rechtsgrundlage der Einwilligungen, die von der Einwilligung abweicht (mindestens 10 Zeichen). Nur Anzeige ist die Buchungsautomatik, weil das Einschalten einen eigenen Ablauf braucht (Antrag bei offenem G1 und Freigabe durch eine zweite Person auf der Seite Buchhaltung, Automatikstufen). Steht beim aktuellen Wert "nicht lesbar", war die Schnittstelle für Ihren Benutzer nicht erreichbar; es wird dann nichts zum Ändern angeboten.
+
+Die Schalter im Überblick (Stand Welle 16):
+
+**Buchhaltung**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Nummer für Mietrechnungsentwürfe | Entwurfsnummer ENTWURF-JJJJ-NNNNNN | Entwurfsnummer ENTWURF-JJJJ-NNNNNN; Reguläre Rechnungsnummer MR auch im Entwurf; Ausgabe bei geschlossenem G1 ablehnen | AC03-01 | hier (Recht Verträge ändern) |
+| Nebenbuchprüfung blendet ausgebuchte Posten aus | Ein | Ein; Aus | AC01-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Periodensperre: Umfang | Nur Sperre des Buchungskreises | Nur Sperre des Buchungskreises; Sperre je Objekt und Zeitraum | P06-02, AA08-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Periodensperre beim Abschluss einer Abrechnung setzen | Aus | Ein; Aus | P06-02, AA08-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Aufhebung einer Periodensperre zulassen | Aus | Ein; Aus | P06-02, AA08-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Kontenrahmen: Freigabe durch zwei Personen | Ein | Ein; Aus | M10-01 | hier (Recht Buchhaltung freigeben, mit Begründung) |
+| Kontenrahmen: Abrechnungsart und Mehrschlüsselverteilung | Vorschläge bleiben offen, bis der Kontenrahmen freigegeben ist | keine Auswahl | P07-04, P07-05 | nur in der Fachmaske |
+| Steuerabzug auf Habenzinsen | Keine Steuerkonten, Abzüge 0,00 EUR | keine Auswahl | P01-01 | nur in der Fachmaske |
+| Prüfpunkte für Fristen der Heizkostenverordnung | Keine Einträge | keine Auswahl | AB10-01 | nur in der Fachmaske |
+
+**Abrechnung Miete**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Offene Vorauszahlungen bei Erteilung der Abrechnung | Nur Information, Saldo gegen gezahlte Vorauszahlungen | Nur Information, Saldo gegen gezahlte Vorauszahlungen; Offene Posten per Storno gegen die Abrechnung verrechnen; Saldo gegen fällige Vorauszahlungen | AC10-01, M17-03, P06-01 | hier (Recht Buchhaltung ändern) |
+| Prüfbericht der Umlagegrundlagen blockiert die Ausgabe | Ein | Ein; Aus | M17-01 | hier (Recht Buchhaltung ändern) |
+| Verhalten nach Ablauf der Abrechnungsfrist | Nachforderungen sperren | Nachforderungen sperren; Nur Hinweis | M17-04 | hier (Recht Buchhaltung freigeben) |
+| Warnung vor Ablauf der Abrechnungsfrist | Aus | Ein; Aus | M17-04 | hier (Recht Buchhaltung freigeben) |
+| Erste Warnung, Tage vor dem Fristende | 60 Tage | Zahl von 1 bis 365 | M17-04 | hier (Recht Buchhaltung freigeben) |
+| Zweite Warnung, Tage vor dem Fristende | 30 Tage | Zahl von 1 bis 365 | M17-04 | hier (Recht Buchhaltung freigeben) |
+| Textbausteine mit Freigabe | Kein Text freigegeben | keine Auswahl | AA11-01, AA11-02 | nur in der Fachmaske |
+
+**WEG**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Anfangsbestand einer Rücklage nach berechneter Abrechnung | Gesperrt | Gesperrt; Änderung mit Protokoll; Änderung mit Freigabe durch eine zweite Person | V01-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Steuerliche Einordnung der Rücklagenzuführung | Nicht freigegeben | keine Auswahl | AE07-01 | nur in der Fachmaske |
+| Zahlungen je Zweckrücklage | Nur gebundene Zahlungen | Nur gebundene Zahlungen; Aufteilungsvorschlag nach Planverhältnis | P07-02, P07-04 | hier (Recht Mandanteneinstellungen ändern) |
+| Unterjährige Planänderung | Nur Hinweis | Nur Hinweis; Differenz sofort fällig; Verrechnung mit der nächsten Rate | M12-L2, P07-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Zuordnung bei Eigentümerwechsel: Kauf | Manuelle Freigabe | Manuelle Freigabe; Zuordnung nach Fälligkeit; Zuordnung nach Abrechnungsbeschluss | AA07-01, P01 | hier (Recht Buchhaltung freigeben) |
+| Zuordnung bei Eigentümerwechsel: Ersterwerb | Manuelle Freigabe | Manuelle Freigabe; Zuordnung nach Fälligkeit; Zuordnung nach Abrechnungsbeschluss | AA07-01, P01 | hier (Recht Buchhaltung freigeben) |
+| Zuordnung bei Eigentümerwechsel: Erbfall | Manuelle Freigabe | Manuelle Freigabe; Zuordnung nach Fälligkeit; Zuordnung nach Abrechnungsbeschluss | AA07-01, P01 | hier (Recht Buchhaltung freigeben) |
+| Zuordnung bei Eigentümerwechsel: Zwangsversteigerung | Manuelle Freigabe | Manuelle Freigabe; Zuordnung nach Fälligkeit; Zuordnung nach Abrechnungsbeschluss | AA07-01, P01 | hier (Recht Buchhaltung freigeben) |
+| Zuordnung bei Eigentümerwechsel: Schenkung | Manuelle Freigabe | Manuelle Freigabe; Zuordnung nach Fälligkeit; Zuordnung nach Abrechnungsbeschluss | AA07-01, P01 | hier (Recht Buchhaltung freigeben) |
+| Zuordnung bei Eigentümerwechsel: sonstiger Erwerb | Manuelle Freigabe | Manuelle Freigabe; Zuordnung nach Fälligkeit; Zuordnung nach Abrechnungsbeschluss | AA07-01, P01 | hier (Recht Buchhaltung freigeben) |
+| Virtuelle Versammlung zulassen | Aus | Ein; Aus | V13, AA06-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Grundlagenbeschluss: Höchstdauer als Sperre | Aus | Ein; Aus | AA06-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Stichtag der Übergangsregel | kein Datum | Datum oder leer | AA06-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Online-Versammlung im Portal | Aus | Ein; Aus | AD06-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Vollmacht gegen eigene Stimme | Konflikt als Prüfhinweis markieren | Konflikt als Prüfhinweis markieren; Zuerst abgegebene Stimme zählt; Vollmacht hat Vorrang; Eigene Stimme hat Vorrang | AD06-02 | hier (Recht Mandanteneinstellungen ändern) |
+
+**Portal**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Mieterträge im Eigentümerportal | Aus | Ein; Aus | P13-01, Q10-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Tickets im Eigentümerportal | Nur freigegebene Tickets | Keine Tickets; Nur freigegebene Tickets; Alle Tickets zum Objekt | P13-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Bewertungen von Dienstleistern | Aus, nur intern | Aus, nur intern; Anzeige nur für die Verwaltung | AA14-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Portal-Assistent (Chat-Bot) | Aus | Ein; Aus | AE28-01, AE28-03 | hier (Recht Mandanteneinstellungen ändern) |
+| Portal-Assistent: Datenschutzhinweis | Aus | Ein; Aus | AE28-01, AE28-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Fassung der Nutzungsbedingungen | Pflege von Hand | Pflege von Hand; Dem freigegebenen Text folgen | AE29-01, AC06-03 | hier (Recht Kontakte freigeben) |
+
+**Sicherheit und Datenschutz**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Rechtsgrundlage: E-Mail-Zustellung | Einwilligung | Einwilligung; Vertrag; Berechtigtes Interesse | AE34-01, AC06-01 | hier (Recht Kontakte freigeben, mit Begründung) |
+| Rechtsgrundlage: Datenweitergabe | Einwilligung | Einwilligung; Vertrag; Berechtigtes Interesse | AE34-01, AC06-01 | hier (Recht Kontakte freigeben, mit Begründung) |
+| Rechtsgrundlage: Werbung | Einwilligung | Einwilligung; Berechtigtes Interesse | AE34-02, AC06-01 | hier (Recht Kontakte freigeben, mit Begründung) |
+| Rechtsgrundlage: Nutzungsbedingungen des Portals | Einwilligung | Einwilligung; Vertrag | AE34-01, AC06-03 | hier (Recht Kontakte freigeben, mit Begründung) |
+| Zweiter Faktor für CRM-Benutzer | Freiwillig | Freiwillig; Pflicht für alle CRM-Rollen; Pflicht für gewählte Rollen | AE27-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Zweiter Faktor im Portal | Aus | Ein; Aus | AE27-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Auskunftsexport: andere Personen | Nur die Rolle | Nur die Rolle; Mit Namen | AC07-01, AE33-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Auskunftsexport: interne Vermerke | Aus | Ein; Aus | AC07-01, AE33-02 | hier (Recht Mandanteneinstellungen ändern) |
+| Dokument-Papierkorb | Aus | Ein; Aus | AC07-03, AE33-01 | hier (Recht Mandanteneinstellungen ändern) |
+| Dokument-Papierkorb: Frist in Tagen | 30 Tage | Zahl von 1 bis 365 | AC07-03, AE33-01 | hier (Recht Mandanteneinstellungen ändern) |
+
+**Bank und Automatik**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Buchungsautomatik | Aus | Ein; Aus | BK2-03, M12-09 | nur in der Fachmaske |
+| Guthaben aus Abrechnungen als Verbindlichkeitsposten | Aus, keine Verbindlichkeitsposten | Aus, keine Verbindlichkeitsposten; Posten zur gebuchten Gutschrift im Nebenbuch; Umbuchungsentwurf auf das Kreditorenkonto | AE22-01, Q01-01, P04-04 | hier (Recht Mandanteneinstellungen ändern) |
+| Verbindlichkeitsposten: Freigabe durch zwei Personen | Ein | Ein; Aus | AE22-01, Q01-01 | hier (Recht Mandanteneinstellungen ändern) |
+| EBICS-Anbindung | Aus | Ein; Aus | AE23-01 | hier (Recht Mandanteneinstellungen ändern) |
+| EBICS: Ablage des Signaturschlüssels | Extern (Standard) | Extern (Standard); Serverseitig, verschlüsselt abgelegt | AE23-05 | hier (Recht Mandanteneinstellungen ändern) |
+| G1 Öffnungsliste | Freigabestufe G1 bleibt geschlossen | keine Auswahl | M12-09 | nur in der Fachmaske |
+
+**Plattform**
+
+| Schalter | Standard | Varianten | Offene Frage | Änderung |
+| --- | --- | --- | --- | --- |
+| Abnahmeregister | Kein Sollwert gilt ohne Freigabe durch eine zweite Person | keine Auswahl | V16, AE01-01 | nur in der Fachmaske |
+
+Nicht auf dieser Seite stehen Einstellungen, die keine fachlich offene Entscheidung betreffen, und Werte, die je Datensatz gelten (zum Beispiel die Steuerkonten für Zinsabzüge je Buchungskreis, der Zugangsnachweis je Abrechnung oder die Prüfpunkte der Heizkostenverordnung selbst); dafür führt der Link zur Fachmaske.

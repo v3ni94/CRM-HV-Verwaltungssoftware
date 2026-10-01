@@ -1,9 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { AccessExportSettings, type AccessExportSettingsData } from "@/components/contacts/AccessExportSettings";
 import { PrivacyAdmin } from "@/components/privacy/PrivacyAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,14 @@ export default async function PrivacyPage() {
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("privacy:read")) notFound();
+  // AE33 (AC07-01): Umfang der Auskunft; nur mit Leserecht auf die Mandanteneinstellungen.
+  const scopeRes = permissions.includes("tenant_settings:read") ? await serverFetch("/api/v1/contact-access-export-settings") : null;
+  const scope = scopeRes?.ok ? ((await scopeRes.json()) as AccessExportSettingsData) : null;
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/einstellungen", label: t("breadcrumb") }]} title={t("title")} description={t("intro")} />
       <PrivacyAdmin canManage={permissions.includes("privacy:manage")} canApprove={permissions.includes("privacy:approve")} />
+      {scope ? <AccessExportSettings initial={scope} canEdit={permissions.includes("tenant_settings:update")} /> : null}
     </div>
   );
 }

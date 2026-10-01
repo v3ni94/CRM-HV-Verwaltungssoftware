@@ -249,6 +249,24 @@ def check_amounts(payment_type: str, net: Decimal, vat_percent: Decimal, gross: 
         raise invalid(f"Brutto passt nicht zu Netto und Steuersatz (erwartet {expected}).")
 
 
+async def check_payment_reserve(
+    session: AsyncSession, contract: Contract, reserve_id: uuid.UUID | None
+) -> None:
+    """AE08 (P07-02): the earmarked reserve of a payment component must be an active reserve
+    of the GdWE ledger of the contract's property. Binding only; nothing is posted."""
+    if reserve_id is None:
+        return
+    from mhvp.accounting.models import Ledger
+    from mhvp.hoa.models import HoaReserve
+
+    reserve = await session.get(HoaReserve, reserve_id)
+    ledger = await session.get(Ledger, reserve.ledger_id) if reserve is not None else None
+    if reserve is None or ledger is None or ledger.property_id != contract.property_id:
+        raise invalid("Die Rücklage gehört nicht zur Gemeinschaft dieses Vertrags.")
+    if not reserve.active:
+        raise invalid("Die Rücklage ist nicht aktiv.")
+
+
 async def add_payment(session: AsyncSession, contract: Contract, row: ContractPayment) -> None:
     """Close an open payment of the same type on the day before the new one (history kept)."""
     if row.valid_from < contract.start_date or (

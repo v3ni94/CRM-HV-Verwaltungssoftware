@@ -121,6 +121,34 @@ Die Aktion Webhook senden in der Automatisierung (Kapitel Automatisierung) ruft 
 Regellauf genau einmal ohne Wiederholung auf. Für Fremdsysteme, die jede Meldung sicher
 erhalten müssen, sind die Abonnements dieses Kapitels vorgesehen.
 
+## Eingehender Webhook für klassifizierte Mails (Bestandsprogramm)
+
+### Zweck
+
+Ein Fremdsystem, zum Beispiel das Bestandsprogramm "Mail optimierung", kann Mails, die es
+bereits klassifiziert hat, signiert an die Plattform senden. Die Mail wird wie jede andere
+eingehende Mail zugeordnet und erhält ein Ticket, außer sie ist die Antwort in einem
+bestehenden Verlauf. Die Annahme bucht, versendet und löscht nichts. Die Klassifikation des
+Fremdsystems ist ein Vorschlag und erscheint an der Nachricht neben der eigenen. Der
+vollständige Vertrag steht in `docs/integrations/inbound-mail-webhook.md`.
+
+### Einrichten (Administrator, bisher nur über die Schnittstelle)
+
+1. Quelle anlegen: `POST /api/v1/mail/inbound/sources` mit Namen, optional Postfach und dem
+   Schalter "Ticket anlegen" (Standard an). Das Geheimnis erscheint genau einmal; es wird
+   nirgends sonst angezeigt.
+2. API-Schlüssel ausstellen über die Schnittstelle (`POST /api/v1/tenant/api-keys`, Recht
+   `api_keys:create`; im CRM gibt es dafür noch keine Seite) mit dem einzigen Geltungsbereich
+   `mail_inbound:ingest`.
+3. Schlüssel, Quellkennung und Geheimnis an den Betreiber des Fremdsystems geben, getrennt
+   voneinander und nicht per E-Mail im Klartext.
+4. Geheimnis vermutlich bekannt geworden: `POST .../sources/{id}/rotate-secret`; das alte
+   Geheimnis gilt sofort nicht mehr. Quelle pausieren: `PATCH .../sources/{id}` mit
+   `active = false`.
+
+Das Empfangsprotokoll (`GET .../sources/{id}/events`) zeigt je Ereignis die verknüpfte Nachricht
+und das Ticket, ob die Nachricht neu war und wie oft das Ereignis erneut gesendet wurde.
+
 ## Häufige Fehler
 
 - **Telefonanlage erhält 401**: Signatur, Zeitstempel (höchstens fünf Minuten Abweichung),
@@ -130,6 +158,10 @@ erhalten müssen, sind die Abonnements dieses Kapitels vorgesehen.
   Netzwerkadressen.
 - **Zustellung steht auf fehlgeschlagen**: Empfänger hat sechs Versuche nicht mit 2xx
   beantwortet; Erneut zustellen nach Behebung beim Empfänger.
+- **Webhook für klassifizierte Mails antwortet 401**: Signatur, Zeitstempel (höchstens fünf
+  Minuten Abweichung) oder API-Schlüssel stimmen nicht; nach einer Erneuerung des Geheimnisses
+  muss das Fremdsystem das neue verwenden. 409: dieselbe Ereignis-ID wurde mit anderem Inhalt
+  gesendet, oder die Quelle ist deaktiviert. 404: Quelle gehört einem anderen Mandanten.
 
 ## Zustellung je Zustellweg, Serienbrief und Kommunikationshistorie
 

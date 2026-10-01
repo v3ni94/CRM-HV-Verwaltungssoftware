@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { bff } from "@/lib/bff";
+import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Finding = { area: string; code: string; message: string };
@@ -12,6 +13,23 @@ type FactualCheck = {
   suggested_reviewer_user_id: string | null;
   price_tolerance_percent: string;
   quantity_tolerance_percent: string;
+  budget?: {
+    label: string;
+    year: number;
+    planned: string;
+    booked_before: string;
+    invoice: string;
+    remaining: string;
+    exceeded: boolean;
+  } | null;
+  resolution?: {
+    number: number;
+    decided_on: string;
+    status: string;
+    subject: string;
+    effective: boolean;
+    subject_matches_plan: boolean | null;
+  } | null;
 };
 
 const AREAS = ["order", "contract", "resolution", "budget", "recurring", "price", "quantity", "responsibility"];
@@ -61,6 +79,36 @@ export function InvoiceFactualPanel({ invoiceId, managerName }: { invoiceId: str
               ))}
             </ul>
           )}
+          {check.budget ? (
+            <div className={ui.tableScroll}>
+            <table className="mt-2 text-sm" data-testid="invoice-budget-table">
+              <caption className="text-left font-medium">
+                {t("budget.title", { label: check.budget.label, year: check.budget.year })}
+              </caption>
+              <tbody>
+                {(["planned", "booked_before", "invoice", "remaining"] as const).map((k) => (
+                  <tr key={k}>
+                    <th scope="row" className="pr-4 text-left font-normal">
+                      {t(`budget.${k}`)}
+                    </th>
+                    <td className="text-right">{formatEur(check.budget![k])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          ) : null}
+          {check.budget?.exceeded ? <p className="text-sm">{t("budget.exceeded")}</p> : null}
+          {check.resolution ? (
+            <p className="mt-2 text-sm" data-testid="invoice-resolution-coverage">
+              {t("resolutionCoverage", {
+                number: check.resolution.number,
+                date: formatDate(check.resolution.decided_on),
+                subject: check.resolution.subject,
+              })}{" "}
+              {check.resolution.effective ? t("resolutionEffective") : t("resolutionNotEffective")}
+            </p>
+          ) : null}
           <p className="mt-2 text-sm">
             {check.suggested_reviewer_user_id
               ? `${t("reviewer")}: ${managerName ?? check.suggested_reviewer_user_id}`

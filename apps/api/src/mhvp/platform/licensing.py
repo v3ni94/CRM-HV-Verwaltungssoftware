@@ -7,6 +7,7 @@ an operator decision (M27-01). Readiness never opens a gate; G5 stays a per tena
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 from celery import shared_task
@@ -262,8 +263,14 @@ async def create_license(
     if body.valid_until is not None and body.valid_until < body.valid_from:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Gültigkeit ungültig.")
     async with platform_transaction(sessions(request)) as session:
-        if await session.get(Tenant, body.tenant_id) is None:
+        licensed = await session.get(Tenant, body.tenant_id)
+        if licensed is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if licensed.is_demo:  # AE36: demo tenants take no part in platform billing
+            raise ProblemError(
+                ErrorCodes.DEMO_TENANT_EXCLUDED,
+                detail="Eine Lizenz ist für einen Demo-Mandanten ausgeschlossen (AE36).",
+            )
         # Explicit price, else the price list entry valid at the start (agreed price). Without
         # both the licence follows the pricing structure (M27-04, price NULL).
         price = body.price_per_unit
@@ -385,9 +392,12 @@ async def count_usage(
     memberships; AI cost and storage: sums of the month and the stock at counting time."""
     from mhvp.ai.models import AiTaskRun
     from mhvp.documents.models import Document
+    from mhvp.platform.demo import ensure_not_demo
     from mhvp.platform.models import Membership, MembershipStatus
     from mhvp.properties.models import Unit
 
+    async with platform_transaction(factory) as session:
+        await ensure_not_demo(session, tenant_id, "Die Nutzungszählung")
     start = month.replace(day=1)
     end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
     async with tenant_transaction(factory, tenant_id) as session:
@@ -537,7 +547,12 @@ async def readiness(
                 )
             )
         ).all()
-    counter = await count_usage(factory, tenant_id, day)
+    # AE36: a demo tenant is not counted (no usage row, no billing); the page shows zeros.
+    counter: Any = (
+        SimpleNamespace(units=0, users=0)
+        if tenant.is_demo
+        else await count_usage(factory, tenant_id, day)
+    )
     from mhvp.platform.market_readiness import evidence_checklist, missing_g5_evidence
 
     async with tenant_transaction(factory, tenant_id) as session:
@@ -564,6 +579,7 @@ async def readiness(
         "gates": gates,
         "g5_evidence": g5_items,
         "g5_ready": g5_ready,
+        "demo": tenant.is_demo,
         "note": "G5-Nachweise (M27-02) öffnen kein Gate; Freigabe nur über den Antrag G5.",
     }
 
@@ -582,8 +598,13 @@ async def usage_all_once(settings: Any, month: date | None = None) -> dict[str, 
     counted = 0
     try:
         async with platform_transaction(factory) as session:
+            # AE36: demo tenants are not counted (rule AE36-DEMO).
             ids = list(
-                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+                await session.scalars(
+                    select(Tenant.id).where(
+                        Tenant.status == TenantStatus.ACTIVE, Tenant.is_demo.is_(False)
+                    )
+                )
             )
         for tenant_id in ids:
             await count_usage(factory, tenant_id, month or datetime.now(UTC).date())

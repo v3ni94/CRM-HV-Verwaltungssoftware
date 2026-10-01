@@ -786,8 +786,14 @@ async def request_export(
         raise ProblemError(ErrorCodes.FORBIDDEN)
     factory = sessions(request)
     async with platform_transaction(factory) as session:
-        if await session.get(Tenant, tenant_id) is None:
+        exporting = await session.get(Tenant, tenant_id)
+        if exporting is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if exporting.is_demo:  # AE36: demo tenants take no part in exports
+            raise ProblemError(
+                ErrorCodes.DEMO_TENANT_EXCLUDED,
+                detail="Ein Mandantenexport ist für einen Demo-Mandanten ausgeschlossen (AE36).",
+            )
     async with tenant_transaction(factory, tenant_id) as session:
         row = TenantExportRequest(
             tenant_id=tenant_id,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { DemoFlagToggle } from "@/components/platform/DemoFlagToggle";
 import { TenantAdmin } from "@/components/platform/TenantAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -15,6 +16,7 @@ type Readiness = {
   usage: { units: number; users: number; unit_quota: number };
   gates: Record<string, boolean>;
   g5_evidence: { item: string; done: boolean }[];
+  demo?: boolean;
 };
 
 /** Platform view (M27): read only. Prices and licences are maintained via the API by platform
@@ -26,6 +28,8 @@ export default async function PlatformPage() {
   const tg = await getTranslations("PlatformGates");
   const ta = await getTranslations("AC02");
   const tb = await getTranslations("AD10");
+  const tae = await getTranslations("AE01");
+  const tdemo = await getTranslations("AE36");
   const api = serverApi();
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
@@ -68,6 +72,9 @@ export default async function PlatformPage() {
         <Link className="underline" href="/plattform/audit">
           {ta("link")}
         </Link>
+        <Link className="underline" href="/plattform/abnahme">
+          {tae("link")}
+        </Link>
         <Link className="underline" href="/plattform/betrieb">
           {tb("link")}
         </Link>
@@ -78,7 +85,17 @@ export default async function PlatformPage() {
       <TenantAdmin initialTenants={tenants.data ?? []} />
       {rows.map(({ tenant, readiness }) => (
         <section key={tenant.id} className={ui.card}>
-          <h2 className={ui.h2}>{tenant.name}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className={ui.h2}>
+              {tenant.name}{" "}
+              {readiness?.demo ? (
+                <span className={ui.badgeGold} title={tdemo("demoHint")}>
+                  {tdemo("demoBadge")}
+                </span>
+              ) : null}
+            </h2>
+            <DemoFlagToggle tenantId={tenant.id} isDemo={Boolean(readiness?.demo)} />
+          </div>
           {readiness ? (
             <div className="mt-2 grid gap-3 text-sm sm:grid-cols-3">
               <div>

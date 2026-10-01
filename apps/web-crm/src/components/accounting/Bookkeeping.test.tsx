@@ -103,3 +103,31 @@ describe("AccountAllocationEditor", () => {
     expect(screen.getByText("Verteilung speichern")).toBeDisabled();
   });
 });
+
+describe("JournalEntryForm interest withholdings (AE05)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const withRevenue = [
+    ...accounts,
+    { id: "r1", number: "028101", name: "Zinseinnahmen", category: "revenue", active: true },
+  ];
+
+  it("sends withholdings from the bank document and shows the net credit", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ id: "e2" }, 201));
+    renderIntl(<JournalEntryForm ledgerId={L} accounts={withRevenue} today="2026-03-31" />);
+    await userEvent.selectOptions(screen.getByLabelText("Vorgang"), "interest");
+    await userEvent.type(screen.getByLabelText("Buchungstext"), "Habenzinsen");
+    await userEvent.selectOptions(screen.getByLabelText("Bank- oder Rücklagenkonto"), "b1");
+    await userEvent.selectOptions(screen.getByLabelText("Zinskonto"), "r1");
+    await userEvent.type(screen.getByLabelText("Betrag in EUR"), "100,00");
+    await userEvent.type(screen.getByLabelText("Kapitalertragsteuer laut Bankbeleg"), "25,00");
+    await userEvent.type(screen.getByLabelText("Solidaritätszuschlag laut Bankbeleg"), "1,37");
+    expect(screen.getByTestId("interest-net")).toHaveTextContent("73,63");
+    await userEvent.click(screen.getByText("Entwurf speichern"));
+    expect(await screen.findByRole("status")).toBeInTheDocument();
+    const [url, init] = fetchSpy.mock.calls[0]!;
+    expect(url).toBe(`/api/bff/accounting/ledgers/${L}/entries/interest`);
+    const body = JSON.parse(String(init?.body));
+    expect(body).toMatchObject({ amount: "100.00", capital_gains_tax: "25.00", solidarity_tax: "1.37" });
+    expect(body).not.toHaveProperty("church_tax");
+  });
+});

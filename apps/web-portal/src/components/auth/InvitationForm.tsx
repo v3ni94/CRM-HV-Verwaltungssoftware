@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -22,6 +22,22 @@ export function InvitationForm({ code }: { code?: string }) {
   // version; the form then asks for the acceptance and sends it with the next attempt.
   const [termsVersion, setTermsVersion] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // AD03-01 / AE34: the invitation code starts with the tenant id (32 hex characters); with it
+  // the published terms version is read from the public endpoint before the form is sent, so
+  // the acceptance is visible from the start. A miss changes nothing: the MHVP-CONT-0020 answer
+  // below remains the fallback.
+  const tenantId = /^([0-9a-f]{32})\./i.exec(token.trim())?.[1]?.toLowerCase() ?? null;
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    void bff<{ terms_version: string }>(`/api/session/terms?tenant=${tenantId}`).then((result) => {
+      if (!cancelled && result.ok && result.data.terms_version) setTermsVersion(result.data.terms_version);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -128,6 +144,7 @@ export function InvitationForm({ code }: { code?: string }) {
           <span>{t("termsAccept", { version: termsVersion })}</span>
         </label>
       ) : null}
+      {termsVersion ? <p className="text-xs text-muted">{t("termsEvidence")}</p> : null}
       <button type="submit" className={ui.primary} disabled={busy}>
         {busy ? t("submitting") : t("submit")}
       </button>

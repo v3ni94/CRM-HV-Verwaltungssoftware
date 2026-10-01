@@ -57,4 +57,13 @@ describe("LoginForm (portal)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Weiter" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/start"));
   });
+
+  it("continues to the second factor setup when the management requires it (M2-04)", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ status: "mfa_setup_required" }));
+    renderIntl(<LoginForm />);
+    await userEvent.type(screen.getByLabelText("E-Mail"), "erika@example.test");
+    await userEvent.type(screen.getByLabelText("Passwort"), "geheim123");
+    await userEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor-einrichten"));
+  });
 });

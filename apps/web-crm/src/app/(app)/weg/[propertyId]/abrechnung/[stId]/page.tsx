@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
 
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
+import { AcquisitionRules } from "@/components/hoa/AcquisitionRules";
 import { AcquisitionReleases, type AcquisitionItem } from "@/components/hoa/AcquisitionReleases";
 import { LoanAllocationForm, type LoanAllocationRow } from "@/components/hoa/AssetReportForms";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { ReservePayments } from "@/components/hoa/ReservePayments";
 import { ReserveYearsTable, type ReserveYearRow } from "@/components/hoa/ReserveYears";
 import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
@@ -96,6 +98,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
         </div>
       ) : null}
       <AcquisitionReleases statementId={stId} items={acquisitions.items} note={acquisitions.note} />
+      {acquisitions.items.length > 0 ? <AcquisitionRules /> : null}
       <div className="overflow-x-auto">
 <table className="mhvp-table">
         <tbody>
@@ -248,6 +251,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
             ))}
         </section>
       ) : null}
+      {reserveList.length ? <ReservePayments ledgerId={String(data.ledger_id)} year={Number(data.year)} /> : null}
     </div>
   );
 }

@@ -248,6 +248,10 @@ class PaymentIn(_In):
     reason: PaymentReason = PaymentReason.INITIAL
     document_id: uuid.UUID | None = None
     revenue_account_id: uuid.UUID | None = Field(default=None, description="Ertragskonto (M5-01)")
+    # AE08 (P07-02): earmarked reserve of a reserve component; one payment type per reserve.
+    reserve_id: uuid.UUID | None = Field(
+        default=None, description="Zweckrücklage der Rücklagenkomponente (P07-02)"
+    )
 
 
 class PaymentOut(_Out):

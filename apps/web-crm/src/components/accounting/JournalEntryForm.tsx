@@ -48,6 +48,8 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [direction, setDirection] = useState<"credit" | "debit">("credit");
+  // P01-01 (AE05): withholdings as stated on the bank document, no rate is computed here.
+  const [taxes, setTaxes] = useState({ capital_gains_tax: "", solidarity_tax: "", church_tax: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -87,6 +89,9 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
     } else {
       path += "/interest";
       body = { booking_date: bookingDate, text, bank_account_id: from, interest_account_id: to, amount: toDecimal(amount), direction };
+      if (direction === "credit") {
+        for (const [key, value] of Object.entries(taxes)) if (value.trim()) body[key] = toDecimal(value);
+      }
     }
     setBusy(true);
     const res = await bff<{ id: string }>(path, { method: "POST", body: JSON.stringify(body) });
@@ -98,6 +103,7 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
     setDone(t("entry.created"));
     setText("");
     setAmount("");
+    setTaxes({ capital_gains_tax: "", solidarity_tax: "", church_tax: "" });
     setLines([emptyLine(), emptyLine()]);
     router.refresh();
   };
@@ -192,6 +198,19 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
                 <option value="debit">{t("entry.directions.debit")}</option>
               </select>
             </label>
+          ) : null}
+          {mode === "interest" && direction === "credit"
+            ? (["capital_gains_tax", "solidarity_tax", "church_tax"] as const).map((key) => (
+                <label key={key} className="flex flex-col gap-1">
+                  <span className={ui.label}>{t(`entry.taxes.${key}`)}</span>
+                  <input inputMode="decimal" className={ui.input} value={taxes[key]} onChange={(e) => setTaxes((v) => ({ ...v, [key]: e.target.value }))} />
+                </label>
+              ))
+            : null}
+          {mode === "interest" && direction === "credit" ? (
+            <p className={`${ui.help} sm:col-span-3`} data-testid="interest-net">
+              {t("entry.interestNet", { amount: formatEur(((sumCents([amount]) - sumCents(Object.values(taxes))) / 100).toFixed(2)) })}
+            </p>
           ) : null}
           {mode === "interest" ? <p className={`${ui.help} sm:col-span-3`}>{t("entry.interestTaxNote")}</p> : null}
         </div>

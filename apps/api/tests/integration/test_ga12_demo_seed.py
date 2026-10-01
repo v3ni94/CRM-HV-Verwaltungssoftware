@@ -15,7 +15,8 @@ from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.main import create_app
 from mhvp.platform import demo_seed
 from mhvp.platform.models import Tenant
-from mhvp.properties.models import Property, Unit
+from mhvp.properties.models import Property, PropertyBankAccount, Unit
+from mhvp.workspace import scale
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import RUN, _settings
 
@@ -29,13 +30,17 @@ def test_unit_split_and_months_are_deterministic() -> None:
     assert len(months) == 12
     assert months[0] == date(2025, 11, 1)
     assert months[-1] == date(2026, 10, 1)
-    parsed = demo_seed.build_statements(list(demo_seed.TEST_IBANS), date(2026, 10, 1))
+    parsed = demo_seed.build_statements(list(demo_seed.own_ibans()), date(2026, 10, 1))
     transactions = [t for s in parsed.statements for t in s.transactions]
     assert len(transactions) == 200
     assert len({t.bank_reference for t in transactions}) == 200
     assert all(t.counterpart_iban and t.counterpart_iban.startswith("DE") for t in transactions)
-    # fictitious bank code only, never a real bank
-    assert all(t.counterpart_iban[4:12] == "10000000" for t in transactions)  # type: ignore[index]
+    # AE36: bank code 00000000 only (assigned to no institute), never a real bank or account
+    assert all(t.counterpart_iban[4:12] == "00000000" for t in transactions)  # type: ignore[index]
+    demo_seed.assert_synthetic_ibans(
+        [t.counterpart_iban for t in transactions if t.counterpart_iban]
+        + [s.iban for s in parsed.statements]
+    )
 
 
 def test_refused_without_switch_and_in_production(
@@ -75,8 +80,26 @@ def test_demo_tenant_has_expected_size_and_only_drafts(
         try:
             async with platform_transaction(factory) as session:
                 tenant_id = await session.scalar(select(Tenant.id).where(Tenant.slug == slug))
+                # AE36: the demo tenant carries the demo flag (excluded from billing and exports)
+                flag = await session.scalar(select(Tenant.is_demo).where(Tenant.id == tenant_id))
             assert tenant_id is not None
+            assert flag is True
+            # AE36: exact row counts of the scale monitoring against the known demo volume
+            stats = await scale.table_stats(factory, [tenant_id])
+            assert {k: v["rows"] for k, v in stats.items()} == {
+                "journal_entry": 36,
+                "journal_line": 72,
+                "bank_transaction": 200,
+            }
             async with tenant_transaction(factory, tenant_id) as session:
+                # AE36: every IBAN of the demo tenant is synthetic (no real account)
+                own = list(await session.scalars(select(PropertyBankAccount.iban)))
+                other = [
+                    i for i in await session.scalars(select(BankTransaction.counterpart_iban)) if i
+                ]
+                assert len(own) == 3
+                assert len(other) == 200
+                demo_seed.assert_synthetic_ibans([*own, *other])
                 out = {}
                 for key, model in (
                     ("properties", Property),

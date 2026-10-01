@@ -31,7 +31,7 @@ from mhvp.core.auth.scope import property_column_guard, session_allowed_property
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
-from mhvp.documents import letters
+from mhvp.documents import letters, text_blocks
 
 # M2-02/S16-02: owner statements outside the membership's property assignment answer 404.
 router = APIRouter(
@@ -273,8 +273,23 @@ async def transition(
             ]
             st.status = OwnerStatementStatus(target.value)
         st.updated_by = principal.user_id
+        lock_info: dict[str, Any] = {}
+        if target is StatementStatus.LOCKED:
+            from mhvp.accounting import period_lock
+
+            lock_info = await period_lock.lock_for_closed_statement(
+                session,
+                tenant_id=principal.tenant_id,
+                user_id=principal.user_id,
+                source="owner_statement",
+                statement_id=st.id,
+                ledger_id=st.ledger_id,
+                property_id=st.property_id,
+                period_from=st.period_from,
+                period_to=st.period_to,
+            )
         await session.flush()
-        return _out(st)
+        return {**_out(st), **lock_info}
 
 
 @router.patch(
@@ -390,9 +405,11 @@ async def render_letter_pdf(
         if prop
         else str(st.property_id)
     )
+    texts = await text_blocks.approved_texts(session, owner_pdf.TEXT_CODES)
     build = owner_pdf.build_s35a_sheet if part == "s35a" else owner_pdf.build_letter
     letter = build(
         st,
+        texts=texts,
         recipient_lines=[entity.name] if entity else [],
         property_line=property_line,
         letter_date=local_today(),
@@ -526,6 +543,7 @@ async def file_outputs(
         if StatementStatus(st.status.value) not in lifecycle.APPROVED_OR_LATER:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Ablage nur nach interner Freigabe.")
         blobs = BlobStore(request.app.state.settings)
+        released = await text_blocks.approved_texts(session, owner_pdf.TEXT_CODES)
         filed = []
         for part, (label, stem, origin) in OUTPUT_PARTS.items():
             pdf = await render_letter_pdf(session, request, st, part)
@@ -545,7 +563,10 @@ async def file_outputs(
         return {
             "statement_id": st.id,
             "items": filed,
-            "text_status": owner_pdf.TEXT_NOT_RELEASED,
+            "text_status": owner_pdf.TEXT_NOT_RELEASED
+            if len(released) < len(owner_pdf.TEXT_CODES)
+            else "freigegeben",
+            "texts_status": text_blocks.status_by_code(released, owner_pdf.TEXT_CODES),
         }
 
 

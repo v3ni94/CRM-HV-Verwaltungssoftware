@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { PortalFormElementTypes } from "@/components/settings/PortalFormElementTypes";
+import { PortalFormPreview } from "@/components/settings/PortalFormPreview";
 import { PortalFormSubmissions } from "@/components/settings/PortalFormSubmissions";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
@@ -181,6 +183,7 @@ function TemplateForm({
   const [deliveryEmail, setDeliveryEmail] = useState(initial?.delivery_email ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   async function submit() {
     if (!name.trim()) {
@@ -240,6 +243,12 @@ function TemplateForm({
         </select>
       </label>
       <FieldsEditor fields={fields} onChange={setFields} />
+      <div>
+        <button type="button" className={ui.buttonSm} aria-expanded={showPreview} onClick={() => setShowPreview((v) => !v)}>
+          {showPreview ? t("hidePreview") : t("showPreview")}
+        </button>
+      </div>
+      {showPreview ? <PortalFormPreview name={name} fields={fields} /> : null}
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("delivery")}</span>
         <select className={ui.input} value={delivery} onChange={(e) => setDelivery(e.target.value as "ticket" | "email")}>
@@ -281,6 +290,7 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
   const [templates, setTemplates] = useState(initialTemplates);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -314,6 +324,7 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
   return (
     <div className="flex flex-col gap-4">
       <p className={ui.notice}>{t("intro")}</p>
+      <PortalFormElementTypes />
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
@@ -373,6 +384,12 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
                   : tpl.fields.map((f) => `${f.label}${f.required ? " *" : ""}`).join(", ")}
               </p>
               <PortalFormSubmissions templateId={tpl.id} />
+              <div>
+                <button type="button" className={ui.buttonSm} aria-expanded={previewing === tpl.id} onClick={() => setPreviewing(previewing === tpl.id ? null : tpl.id)}>
+                  {previewing === tpl.id ? t("hidePreview") : t("showPreview")}
+                </button>
+              </div>
+              {previewing === tpl.id ? <PortalFormPreview name={tpl.name} fields={tpl.fields} /> : null}
               {canManage ? (
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className={ui.buttonSm} onClick={() => setEditing(tpl.id)}>

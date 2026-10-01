@@ -32,6 +32,12 @@
     "backToLogin": "Back to sign in",
     "rememberDevice": "Remember this device for 90 days",
     "noTenant": "Your access is not assigned to a tenant. Please contact your management.",
+    "mfaSetupTitle": "Set up a second factor",
+    "mfaSetupHint": "Your property manager requires a second factor for this account. Scan the QR code with an authenticator app or enter the key, then confirm with the first code. You are signed in afterwards.",
+    "mfaSetupQrAlt": "QR code for the authenticator app",
+    "mfaSetupSecret": "Key for manual entry",
+    "mfaSetupConfirm": "Set up and sign in",
+    "mfaRequiredHint": "Your property manager requires the second factor, so it cannot be switched off.",
     "magicLink": {
       "title": "Login link",
       "useInstead": "Use a login link by e-mail instead",
@@ -86,6 +92,7 @@
       "label": "Main navigation",
       "submissions": "Board submissions",
       "security": "Security",
+      "assistant": "Assistant",
       "handover": "Handover",
       "ownerStatements": "Annual statement"
     },
@@ -155,6 +162,37 @@
     "selectAll": "Select all",
     "select": "Select {title}",
     "bundleError": "The bundle download failed. Please try again."
+  },
+  "Assistant": {
+    "title": "Assistant for your documents",
+    "intro": "Ask questions about the documents released for you. The assistant reads only these documents and never the documents of others.",
+    "loading": "Loading",
+    "locked": "The assistant is not enabled for this property manager.",
+    "scopeLine": "The assistant may read {documents, plural, one {# document} other {# documents}} for you.",
+    "scopeEmpty": "No documents are released for your access that the assistant may read.",
+    "privacyTitle": "Privacy notice for AI answers",
+    "privacyNotReleased": "The privacy notice has not been released yet. Until then the assistant only shows matches in your documents.",
+    "privacyVersion": "Version {version}",
+    "privacyAcknowledge": "I have taken note of the notice",
+    "privacyAcknowledged": "Noted.",
+    "ackFirst": "Please take note of the privacy notice first.",
+    "unitField": "Unit",
+    "allUnits": "All my units",
+    "unitNumber": "Unit {number}",
+    "questionField": "Your question",
+    "questionRequired": "Please enter a question with at least three characters.",
+    "ask": "Ask question",
+    "asking": "Answering",
+    "answerTitle": "Answer",
+    "aiLabel": "AI answer, created automatically",
+    "searchLabel": "Matches in your documents",
+    "sources": "Sources",
+    "hits": "Matching documents",
+    "noHits": "No matching documents found.",
+    "openDocuments": "Go to documents",
+    "reportIssue": "Write a report to the property manager",
+    "history": "Previous questions",
+    "historyEmpty": "No questions asked yet."
   },
   "Tickets": {
     "title": "Reports",
@@ -733,6 +771,7 @@
     "proxyFile": "Proxy document (PDF or photo)",
     "proxySubmit": "Grant proxy",
     "proxyDone": "Proxy granted.",
+    "voteReview": "This unit already had a vote. Your vote is stored but not counted. The meeting chair reviews the conflict.",
     "error": "The action failed: {message}"
   },
   "Resolutions": {
@@ -942,7 +981,13 @@
     "submitted": "{name} has been submitted. You can find the case under Reports.",
     "requiredMissing": "Please fill in the field {label}.",
     "proposalNote": "The entries are sent to the management and reviewed there.",
-    "requiredHint": "Fields marked with * are required."
+    "requiredHint": "Fields marked with * are required.",
+    "hints": {
+      "address": "Street with house number, postal code and city, each on its own line.",
+      "location": "Describe the place briefly, for example cellar, staircase or apartment.",
+      "signature": "Please enter your full name. It does not replace a handwritten signature.",
+      "amount": "Amount in EUR with at most two decimal places, for example 1234.50."
+    }
   },
   "Invitation": {
     "title": "Accept invitation",
@@ -959,7 +1004,8 @@
     "toLogin": "To sign in",
     "termsNeeded": "Activation requires acceptance of the terms of use.",
     "termsAccept": "I have read the terms of use (version {version}) and accept them.",
-    "termsMissingVersion": "The version of the terms of use could not be determined. Please ask your property manager."
+    "termsMissingVersion": "The version of the terms of use could not be determined. Please ask your property manager.",
+    "termsEvidence": "As evidence, the time, the version and a pseudonymised identifier of your connection are stored."
   },
   "Terms": {
     "title": "Terms of use",
@@ -970,7 +1016,8 @@
     "submitting": "Please wait",
     "mustAccept": "Please confirm that you accept the terms of use.",
     "loadFailed": "The status of the terms of use could not be loaded.",
-    "alreadyAccepted": "The terms of use have been accepted."
+    "alreadyAccepted": "The terms of use have been accepted.",
+    "evidence": "As evidence, the time, the version and a pseudonymised identifier of your connection are stored."
   },
   "Security": {
     "passkeysTitle": "Passkeys (second factor)",
@@ -1101,7 +1148,22 @@
   "Branding": {
     "logoAlt": "Logo {name}",
     "imprint": "Legal notice",
-    "privacy": "Privacy policy"
+    "privacy": "Privacy policy",
+    "terms": "Terms of use"
+  },
+  "Legal": {
+    "title": {
+      "impressum": "Legal notice",
+      "datenschutz": "Privacy policy",
+      "nutzungsbedingungen": "Terms of use"
+    },
+    "version": "Version {version}",
+    "termsVersion": "Consent policy version: {label}",
+    "notReleased": "Text not released",
+    "notReleasedHint": "No text has been released for this portal yet. Please contact your property manager.",
+    "externalLink": "Open the text at the provider",
+    "loadFailed": "The text could not be loaded right now. Please try again later.",
+    "back": "Back"
   },
   "ProviderInfo": {
     "title": "Framework contracts and availability",

@@ -35,6 +35,8 @@ from mhvp.workspace.services import local_today
 router = APIRouter(tags=["Verträge"])
 READ = require_permission("contracts:read")
 UPDATE = require_permission("contracts:update")
+# Tenant wide numbering mode (AC03-01) is a tenant setting, not a contract change (AE40-02).
+SETTINGS_UPDATE = require_permission("tenant_settings:update")
 
 
 class RentInvoiceIn(BaseModel):
@@ -79,6 +81,17 @@ class RentInvoiceOut(BaseModel):
     cancelled_by_invoice_id: uuid.UUID | None
     document_id: uuid.UUID | None
     hinweis: str = Field(default="")
+
+
+class RentInvoiceNumberingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: str = Field(pattern="^(draft_numbers|regular_numbers|reject_when_g1_closed)$")
+
+
+class RentInvoiceNumberingOut(BaseModel):
+    mode: str
+    modes: list[str]
+    hinweis: str
 
 
 class MandatoryFieldOut(BaseModel):
@@ -142,6 +155,70 @@ async def mandatory_fields(principal: TenantPrincipal = Depends(READ)) -> list[M
     return [MandatoryFieldOut(field=f, description=d) for f, d in ri.MANDATORY_FIELDS]
 
 
+_NUMBERING_HINT = (
+    "Entwurfsnummern (ENTWURF-JJJJ-NNNNNN) verbrauchen die Rechnungsnummer MR nicht; "
+    "Einstufung offen (AC03-01), Entscheidung durch Betreiber und Steuerberatung."
+)
+
+
+async def _reject_if_closed(
+    request: Request, session: Any, tenant_id: uuid.UUID
+) -> tuple[str, bool]:
+    mode = await ri.numbering_mode(session)
+    draft = not await _g1_open(request, tenant_id)
+    if draft and mode == "reject_when_g1_closed":
+        raise ProblemError(ErrorCodes.RENT_INVOICE_G1_CLOSED)
+    return mode, draft
+
+
+@router.get(
+    "/accounting/rent-invoices/numbering-mode",
+    summary="Nummernmodus für Entwürfe von Mietrechnungen (AC03-01)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_numbering_mode(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> RentInvoiceNumberingOut:
+    async with tenant_tx(request, principal) as session:
+        mode = await ri.numbering_mode(session)
+    return RentInvoiceNumberingOut(
+        mode=mode, modes=list(ri.NUMBERING_MODES), hinweis=_NUMBERING_HINT
+    )
+
+
+@router.put(
+    "/accounting/rent-invoices/numbering-mode",
+    summary="Nummernmodus für Entwürfe von Mietrechnungen setzen (AC03-01)",
+)
+async def put_numbering_mode(
+    body: RentInvoiceNumberingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS_UPDATE),
+) -> RentInvoiceNumberingOut:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = ri.numbering_mode_of(row.sources)
+        row.sources = {**(row.sources or {}), ri.NUMBERING_SOURCE_KEY: body.mode}
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="tenant_settings.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"key": ri.NUMBERING_SOURCE_KEY, "before": before, "after": body.mode},
+        )
+    return RentInvoiceNumberingOut(
+        mode=body.mode, modes=list(ri.NUMBERING_MODES), hinweis=_NUMBERING_HINT
+    )
+
+
 @router.get(
     "/contracts/{contract_id}/rent-invoices",
     summary="Mietrechnungen des Vertrags",
@@ -177,9 +254,10 @@ async def create_rent_invoice(
     is posted or sent. Locked without VAT option, VAT split or tax identifier."""
     async with tenant_tx(request, principal) as session:
         contract = await _contract(session, contract_id)
-        draft = not await _g1_open(request, principal.tenant_id)
+        mode, draft = await _reject_if_closed(request, session, principal.tenant_id)
         row = await ri.issue(
             session,
+            mode=mode,
             contract=contract,
             period_start=body.period_start,
             period_end=body.period_end,
@@ -197,7 +275,12 @@ async def create_rent_invoice(
             entity_type="rent_invoice",
             entity_id=row.id,
             actor_user_id=principal.user_id,
-            payload={"number": row.number, "contract_id": str(contract.id), "draft": draft},
+            payload={
+                "number": row.number,
+                "contract_id": str(contract.id),
+                "draft": draft,
+                "numbering_mode": mode,
+            },
         )
         return _out(row)
 
@@ -216,9 +299,10 @@ async def create_credit_note(
     async with tenant_tx(request, principal) as session:
         contract = await _contract(session, contract_id)
         original = await _invoice(session, contract_id, invoice_id)
-        draft = not await _g1_open(request, principal.tenant_id)
+        mode, draft = await _reject_if_closed(request, session, principal.tenant_id)
         row = await ri.credit_note(
             session,
+            mode=mode,
             invoice=original,
             invoice_date=local_today(),
             draft=draft,

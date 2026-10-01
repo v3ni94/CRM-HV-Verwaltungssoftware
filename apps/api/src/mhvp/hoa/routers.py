@@ -152,6 +152,14 @@ class HoaStatementIn(HoaBaseIn):
     reserve_interest: Decimal = Decimal("0.00")
 
 
+class HoaNewVersionIn(HoaBaseIn):
+    """P02 (AE11): why the new version corrects its predecessor (optional)."""
+
+    reason: str | None = None
+    basis: str | None = Field(default=None, max_length=2000)
+    resolution_id: uuid.UUID | None = None
+
+
 class HoaCostIn(HoaBaseIn):
     label: str = Field(min_length=1, max_length=200)
     amount: Decimal = Field(gt=0)
@@ -271,6 +279,9 @@ def _st_out(s: HoaStatement) -> dict[str, Any]:
         "posted_entry_ids": s.posted_entry_ids,
         "reconciliation_notes": s.reconciliation_notes,
         "loan_allocation": s.loan_allocation,
+        "correction_reason": s.correction_reason,
+        "correction_basis": s.correction_basis,
+        "correction_resolution_id": s.correction_resolution_id,
     }
 
 
@@ -685,6 +696,7 @@ async def _plan_apply_preview(session: AsyncSession, plan: EconomicPlan) -> dict
     from mhvp.accounting.models import ItemStatus, ReceivableItem
     from mhvp.contacts.models import Party
     from mhvp.contracts.models import ContractPayment
+    from mhvp.hoa.plan_change import compute_differences, plan_change_mode
 
     rows: list[dict[str, Any]] = []
     posted_months = 0
@@ -766,6 +778,9 @@ async def _plan_apply_preview(session: AsyncSession, plan: EconomicPlan) -> dict
         "rows": rows,
         "counts": counts,
         "posted_months": posted_months,
+        # AE09: variant and difference of posted months (details: /differences)
+        "plan_change_mode": await plan_change_mode(session),
+        "differences_total": (await compute_differences(session, plan))["total"],
         "gates": {
             "payment_rows": "Stammdaten des Vertrags, keine Freigabestufe (wie Sollbeträge im CRM)",
             "posting": "Sollstellung liest die Zeilen erst mit G1 (Buchhaltung)",
@@ -1039,6 +1054,14 @@ async def calculate_statement(
             from mhvp.hoa.reserves import add_opening_closing
 
             await add_opening_closing(session, reserves, result["reserve"]["positions"], st.year)
+            # AE08 (P07-02): split of the unbound rest by plan ratio, proposal behind a switch.
+            from mhvp.hoa.reserve_split import add_proposal, split_mode
+
+            if await split_mode(session) == "plan_ratio_proposal":
+                add_proposal(
+                    result["reserve"]["positions"],
+                    Decimal(result["reserve"]["contributions_paid_unassigned"]),
+                )
         # M24-03: loans shown per unit only when the manager entered a loan with key and
         # basis; the shares are information and never change the result.
         if st.loan_allocation:
@@ -1311,11 +1334,24 @@ async def post_statement(
     summary="Neue Version (Beschluss bleibt an alter Version)",
 )
 async def new_version(
-    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    statement_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+    body: HoaNewVersionIn | None = None,
 ) -> dict[str, Any]:
+    from mhvp.hoa.correction import CORRECTION_REASONS
+
+    if body is not None and body.reason is not None and body.reason not in CORRECTION_REASONS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannter Korrekturgrund.")
     async with tenant_tx(request, principal) as session:
         old = await session.get(HoaStatement, statement_id)
         if old is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if (
+            body is not None
+            and body.resolution_id is not None
+            and await session.get(Resolution, body.resolution_id) is None
+        ):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         new = HoaStatement(
             tenant_id=old.tenant_id,
@@ -1327,6 +1363,11 @@ async def new_version(
             reserve_opening=old.reserve_opening,
             reserve_withdrawals=old.reserve_withdrawals,
             reserve_interest=old.reserve_interest,
+            reconciliation_notes=list(old.reconciliation_notes or []),
+            loan_allocation=list(old.loan_allocation or []),
+            correction_reason=body.reason if body else None,
+            correction_basis=body.basis if body else None,
+            correction_resolution_id=body.resolution_id if body else None,
         )
         session.add(new)
         await session.flush()
@@ -1345,6 +1386,11 @@ async def new_version(
                     allocation_key_id=item.allocation_key_id,
                     basis=item.basis,
                     account_id=item.account_id,
+                    journal_entry_id=item.journal_entry_id,
+                    document_id=item.document_id,
+                    labour_cost_35a=item.labour_cost_35a,
+                    basis_resolution_id=item.basis_resolution_id,
+                    basis_document_id=item.basis_document_id,
                 )
             )
         await session.flush()
@@ -1483,6 +1529,54 @@ async def diff_hoa_statement(
             "old": {"id": other.id, "version": other.version, "snapshot_hash": other.snapshot_hash},
             "new": {"id": st.id, "version": st.version, "snapshot_hash": st.snapshot_hash},
         } | _snapshot_diff(other.snapshot, st.snapshot)
+
+
+@router.get(
+    "/statements/{statement_id}/correction-report",
+    summary="Korrekturbericht je Eigentümer mit Heizkostenüberleitung (P02, D09)",
+    dependencies=[Depends(strict_query)],
+)
+async def hoa_correction_report(
+    statement_id: uuid.UUID,
+    against: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Display only. `against` is the older version. No posting, no claim, no dispatch."""
+    from mhvp.hoa import correction
+
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id)
+        other = await session.get(HoaStatement, against)
+        if st is None or other is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.ledger_id != other.ledger_id or st.year != other.year or st.id == other.id:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Vergleich nur zwischen zwei Versionen derselben Gemeinschaft und Periode.",
+            )
+        if not st.snapshot or not other.snapshot:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Beide Versionen müssen berechnet sein.")
+        return (
+            {
+                "statement_id": st.id,
+                "against_id": other.id,
+                "year": st.year,
+                "old": {"id": other.id, "version": other.version},
+                "new": {"id": st.id, "version": st.version},
+            }
+            | _snapshot_diff(other.snapshot, st.snapshot)
+            | correction.owner_diff(other.snapshot, st.snapshot)
+            | {
+                "heating": correction.heating_block(other.snapshot, st.snapshot),
+                "correction": {
+                    "reason": st.correction_reason,
+                    "basis": st.correction_basis,
+                    "resolution_id": st.correction_resolution_id,
+                    "legal_note": correction.LEGAL_NOTE,
+                },
+            }
+        )
 
 
 @router.get(

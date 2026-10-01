@@ -52,6 +52,30 @@ describe("AdvanceProposalsPanel", () => {
   });
 });
 
+describe("AdvanceProposalsPanel open advance switch (AE15)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("shows the default info_only and saves another variant via PUT", async () => {
+    const modes = ["info_only", "offset_reversal", "balance_against_due"];
+    const rule = { ...RULE, open_advance_mode: "info_only", open_advance_modes: modes };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse(rule))
+      .mockResolvedValueOnce(jsonResponse({ ...rule, open_advance_mode: "offset_reversal" }));
+    renderIntl(<AdvanceProposalsPanel id={ID} hasSnapshot snapshotHash="h1" />);
+    const select = await screen.findByTestId("open-advance-mode");
+    expect(select).toHaveValue("info_only");
+    expect(screen.getByText("Nur Information (Standard)")).toBeInTheDocument();
+    await userEvent.selectOptions(select, "offset_reversal");
+    expect(await screen.findByTestId("open-advance-mode")).toHaveValue("offset_reversal");
+    const [url, init] = fetchMock.mock.calls[2] ?? [];
+    expect(url).toBe("/api/bff/billing/advance-rule");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({ open_advance_mode: "offset_reversal" });
+  });
+});
+
 describe("AllocabilityHints", () => {
   afterEach(() => vi.restoreAllMocks());
 

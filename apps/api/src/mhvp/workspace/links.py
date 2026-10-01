@@ -35,6 +35,8 @@ CRM_LIST_ROUTES: dict[str, str] = {
     "bank_connection": "/bank",
     "proposal": "/assistent",
     "invoice": "/rechnungen",
+    # AE36: scale monitoring alarm for platform administrators (page Plattform, Betrieb).
+    "platform_scale": "/plattform/betrieb",
     # User created deadlines (rule WS-01) are listed on the deadline page.
     "deadline_entry": "/fristen",
 }

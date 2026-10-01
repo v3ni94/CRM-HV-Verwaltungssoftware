@@ -42,9 +42,11 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "mhvp.documents.mirror_deletion",
             "mhvp.documents.retention",
             "mhvp.documents.deletion_checklist",
+            "mhvp.documents.trash",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
             "mhvp.workspace.backup_verify",
+            "mhvp.workspace.scale",
             "mhvp.communication.tasks",
             "mhvp.communication.postal_tasks",
             "mhvp.banking.tasks",
@@ -54,6 +56,7 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "mhvp.contracts.tasks",
             "mhvp.platform.licensing",
             "mhvp.platform.export_job",
+            "mhvp.platform.availability_probe",
             "mhvp.sla.tasks",
             "mhvp.immoware.tasks",
             "mhvp.objektakte.tasks",
@@ -63,6 +66,7 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "mhvp.imports.tasks",
             "mhvp.metering.tasks",
             "mhvp.billing.consumption_info_tasks",
+            "mhvp.billing.deadline_tasks",
         ],
     )
     app.conf.update(
@@ -153,6 +157,14 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
                 "schedule": crontab(hour=2, minute=0),
                 "options": {"queue": "io"},
             },
+            # Weekly measurement of the partitioning triggers of ADR 0021 (AE36, AC09-01): Monday
+            # 03:10; stores one snapshot per ISO week, alarms platform administrators for a new
+            # trigger. Measures and reports only; nothing is rebuilt.
+            "ops-scale-snapshot": {
+                "task": "mhvp.ops.scale_snapshot",
+                "schedule": crontab(day_of_week=1, hour=3, minute=10),
+                "options": {"queue": "io"},
+            },
             # Maintenance reminders as in-app notifications (M9); idempotent per unread item.
             # Bank retrieval 06:00 (8.2); connectors without contract report "not configured".
             # Prospect records are deleted after their deletion date (M26).
@@ -189,6 +201,12 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "documents-deletion-follow-up": {
                 "task": "mhvp.documents.deletion_follow_up",
                 "schedule": crontab(hour=4, minute=50),
+            },
+            # AE33 (AC07-03): final deletion of trashed documents whose period ended; every
+            # retention check runs again, a hold keeps the document in the trash.
+            "documents-trash-purge": {
+                "task": "mhvp.documents.trash_purge",
+                "schedule": crontab(hour=5, minute=10),
             },
             # T01-01: delete expired tenant export archives (retention per tenant, default off).
             "platform-purge-expired-exports": {
@@ -247,6 +265,10 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             # Verbrauchsinformation (rule H03, 15.1 heating.consumption_info): monthly on the
             # 3rd at 05:40 as specified (S15-05), per tenant with the switch on (default off),
             # idempotent per unit and month.
+            "billing-deadline-watch": {
+                "task": "mhvp.billing.deadline_watch",
+                "schedule": crontab(hour=5, minute=25),
+            },
             "billing-consumption-info": {
                 "task": "mhvp.billing.consumption_info",
                 "schedule": crontab(day_of_month=3, hour=5, minute=40),
@@ -416,6 +438,26 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             },
         },
     )
+    # AE35 (GB16-02): own availability measurement. The minute check exists only while at least
+    # one health URL is configured; evaluation of the months and the retention purge of the
+    # minute points run daily either way (no network, so old points are still handled after the
+    # URLs were removed). Evaluation after 00:25 UTC, so the ended month is complete.
+    if settings.availability_probe_urls:
+        app.conf.beat_schedule["platform-availability-probe"] = {
+            "task": "mhvp.platform.availability_probe",
+            "schedule": 60.0,
+            "options": {"queue": "io", "expires": 55},
+        }
+    app.conf.beat_schedule["platform-availability-evaluate"] = {
+        "task": "mhvp.platform.availability_evaluate",
+        "schedule": crontab(hour=3, minute=25),
+        "options": {"queue": "io"},
+    }
+    app.conf.beat_schedule["platform-availability-purge"] = {
+        "task": "mhvp.platform.availability_purge",
+        "schedule": crontab(hour=3, minute=55),
+        "options": {"queue": "io"},
+    }
     return app
 
 

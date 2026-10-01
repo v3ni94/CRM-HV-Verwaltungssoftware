@@ -533,3 +533,66 @@ class PostalJobEvent(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=dict, server_default="{}"
     )
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class InboundMailSource(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Source of classified mails that deliver through the inbound webhook (M20-04, AE38,
+    migration 0394, docs/integrations/inbound-mail-webhook.md). ``secret`` signs every delivery
+    (HMAC-SHA256 over the raw body, shared with ``mhvp.core.webhooks.sign``); it is stored
+    encrypted and shown once on creation and on rotation. ``mailbox_id`` is the mailbox the
+    delivered mails are bound to, ``auto_ticket`` decides whether a mail that is no reply
+    creates a ticket (decided rule 25.09.2026: yes)."""
+
+    __tablename__ = "inbound_mail_source"
+    __table_args__ = (UniqueConstraint("tenant_id", "name"),)
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    secret: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    mailbox_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mailbox.id", ondelete="SET NULL")
+    )
+    auto_ticket: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    last_received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    secret_rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InboundMailEvent(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One received delivery per source and ``event_id`` (idempotency record). The unique
+    index is the claim that makes parallel and repeated deliveries safe; ``payload_sha256`` is
+    the hash of the canonical JSON, so the same ``event_id`` with another content is detected
+    (409) instead of overwritten. The mail content itself lives only in ``message``; deleting
+    the message leaves hash and counters (data minimisation)."""
+
+    __tablename__ = "inbound_mail_event"
+    __table_args__ = (
+        UniqueConstraint("source_id", "event_id"),
+        Index("ix_inbound_mail_event_source_created", "tenant_id", "source_id", "created_at"),
+    )
+
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("inbound_mail_source.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    event_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    payload_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("message.id", ondelete="SET NULL")
+    )
+    ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ticket.id", ondelete="SET NULL")
+    )
+    # False when the mail was already stored (same Message-ID, for example fetched by the
+    # Gmail sync): the event then links the existing message and creates nothing.
+    message_created: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    replay_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    last_replayed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

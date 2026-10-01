@@ -173,7 +173,10 @@ async def list_tenants(
 ) -> list[TenantOut]:
     async with platform_transaction(sessions(request)) as session:
         rows = (await session.scalars(select(Tenant).order_by(Tenant.name))).all()
-        return [TenantOut(id=t.id, slug=t.slug, name=t.name, status=t.status.value) for t in rows]
+        return [
+            TenantOut(id=t.id, slug=t.slug, name=t.name, status=t.status.value, is_demo=t.is_demo)
+            for t in rows
+        ]
 
 
 @platform_router.post("/tenants", status_code=201, summary="Mandanten anlegen")
@@ -181,11 +184,17 @@ async def create_tenant(
     body: TenantCreate, request: Request, principal: Principal = Depends(require_platform_admin)
 ) -> TenantOut:
     tenant_id, created = await provision_tenant(
-        sessions(request), slug=body.slug, name=body.name, actor_user_id=principal.user_id
+        sessions(request),
+        slug=body.slug,
+        name=body.name,
+        actor_user_id=principal.user_id,
+        is_demo=body.is_demo,
     )
     if not created:
         raise ProblemError(ErrorCodes.CONFLICT)
-    return TenantOut(id=tenant_id, slug=body.slug, name=body.name, status="active")
+    return TenantOut(
+        id=tenant_id, slug=body.slug, name=body.name, status="active", is_demo=body.is_demo
+    )
 
 
 @platform_router.post("/users", status_code=201, summary="Benutzer anlegen")
@@ -337,6 +346,12 @@ async def _decide(
             )
             if not bypass:
                 raise ProblemError(ErrorCodes.GATE_FOUR_EYES)
+        if approve:
+            # AE40 (AE36, AA15-01): a demo tenant is excluded from billing, exports and DATEV;
+            # an opened gate would let it work with real money flows outside those controls.
+            from mhvp.platform.demo import ensure_not_demo
+
+            await ensure_not_demo(session, tenant_id, "Die Öffnung einer Freigabestufe")
         if approve and item.gate == ReleaseGate.G1.value:
             # V8, M10-01/M10-02: productive bookkeeping needs a released chart of accounts.
             from mhvp.accounting import chart_release
@@ -938,12 +953,16 @@ async def branding(request: Request) -> BrandingOut:
             raise _not_found()
         light = await _logo_document(session, row.branding, "light")
         dark = await _logo_document(session, row.branding, "dark")
+        from mhvp.platform.legal_texts import released_codes
+
+        legal_released = await released_codes(session)
     return BrandingOut(
         tenant_id=tenant_id,
         name=tenant.name,
         branding=Branding.model_validate(row.branding),
         has_logo_light=light is not None,
         has_logo_dark=dark is not None,
+        legal_texts_released=legal_released,
     )
 
 

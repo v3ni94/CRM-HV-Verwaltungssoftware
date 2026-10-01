@@ -47,6 +47,9 @@ class FactualResult:
     findings: list[dict[str, str]] = field(default_factory=list)
     suggested_reviewer_user_id: uuid.UUID | None = None
     property_id: uuid.UUID | None = None
+    # P03-03 (AE14): structured budget comparison and resolution coverage, hints only.
+    budget: dict[str, Any] | None = None
+    resolution: dict[str, Any] | None = None
 
     def add(self, area: str, code: str, message: str) -> None:
         self.findings.append({"area": area, "code": code, "message": message})
@@ -187,6 +190,32 @@ async def resolution_findings(
         )
     if (invoice.service_from or invoice.invoice_date) < res.decided_on:
         out.add("resolution", "resolution_before", "Leistung beginnt vor dem Beschlussdatum")
+    plan_id = None
+    if invoice.plan_item_id is not None:
+        from mhvp.hoa.models import PlanItem
+
+        item = await session.get(PlanItem, invoice.plan_item_id)
+        plan_id = item.plan_id if item is not None else None
+    subject_match: bool | None = None
+    if res.subject_type == "economic_plan" and res.subject_id is not None and plan_id is not None:
+        subject_match = res.subject_id == plan_id
+        if not subject_match:
+            out.add(
+                "resolution",
+                "resolution_subject_mismatch",
+                f"Beschluss Nr. {res.number} betrifft einen anderen Wirtschaftsplan als die"
+                " verknüpfte Planposition",
+            )
+    out.resolution = {
+        "resolution_id": res.id,
+        "number": res.number,
+        "decided_on": res.decided_on,
+        "status": res.status,
+        "subject": res.subject,
+        "subject_type": res.subject_type,
+        "effective": res.status in EFFECTIVE_RESOLUTION,
+        "subject_matches_plan": subject_match,
+    }
 
 
 async def budget_findings(
@@ -239,6 +268,18 @@ async def budget_findings(
     limit = item.amount + (item.amount * tol.price_percent / 100).quantize(
         CENT, rounding=ROUND_HALF_UP
     )
+    booked_before = (Decimal(used or 0) - Decimal(credited or 0)).quantize(CENT)
+    out.budget = {
+        "plan_item_id": item.id,
+        "label": item.label,
+        "year": plan.year,
+        "planned": item.amount,
+        "booked_before": booked_before,
+        "invoice": own,
+        "remaining": (item.amount - booked_before - own).quantize(CENT),
+        "tolerance_limit": limit,
+        "exceeded": total > limit,
+    }
     if total > limit:
         out.add(
             "budget",
@@ -373,6 +414,16 @@ async def factual_check(session: AsyncSession, invoice: Invoice) -> FactualResul
     order = await order_findings(session, invoice, ledger, tol, out)
     await resolution_findings(session, invoice, ledger, out)
     await budget_findings(session, invoice, ledger, lines, tol, out)
+    if (
+        invoice.resolution_id is None
+        and order is not None
+        and getattr(order, "requires_board_approval", False)
+    ):
+        out.add(
+            "resolution",
+            "resolution_none_with_order",
+            "Auftrag verlangt eine Zustimmung, die Rechnung ist keinem Beschluss zugeordnet",
+        )
     await recurring_findings(session, invoice, tol, out)
     line_findings(lines, tol, out)
     await responsibility(session, invoice, ledger, order, out)
@@ -387,4 +438,6 @@ def result_payload(result: FactualResult, tol: Tolerances) -> dict[str, Any]:
         "price_tolerance_percent": tol.price_percent,
         "quantity_tolerance_percent": tol.quantity_percent,
         "automatic_release": False,
+        "budget": result.budget,
+        "resolution": result.resolution,
     }

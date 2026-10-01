@@ -58,6 +58,7 @@ Endpunkte (`/api/v1/banking/fints`, alle im OpenAPI-Export):
 | GET | `/institutes?q=` | `accounting:read` | Institutssuche (BLZ, BIC, IBAN, Namensfragment), max. 20 Treffer, `connectable` nur mit FinTS-URL |
 | POST | `/connections` | `banking:approve` | Verbindung anlegen (Institut, Anmeldename, PIN, optional TAN-Verfahren), startet Sitzung |
 | POST | `/connections/{id}/restart` | `banking:approve` | Neue Sitzung: PIN erneut eingeben, TAN-Verfahren wechseln, erneute Freigabe |
+| PATCH | `/connections/{id}` | `banking:approve` | FinTS-Adresse der Verbindung von Hand setzen (mit erneuter PIN) oder mit `fints_url: null` auf die Institutsliste zurücksetzen, startet keinen Dialog |
 | GET | `/connections` | `accounting:read` | Verbindungen mit Konten (nicht zugeordnete Konten nur mit `banking:approve`) |
 | GET | `/sessions/{id}` | `accounting:read` | Status, Challenge, TAN-Verfahren, Fehler |
 | POST | `/sessions/{id}/tan` | `banking:approve` | TAN senden oder decoupled-Freigabe abfragen |
@@ -96,10 +97,10 @@ Prüfhinweis, D05, `services.import_finapi_transactions`).
 | MHVP-BANK-0007 | 501 | Produktregistrierung fehlt (`MHVP_FINTS_PRODUCT_ID` leer) |
 | MHVP-BANK-0008 | 422 | Institut ohne FinTS-URL in der Liste |
 | MHVP-BANK-0009 | 502 | Bank hat Anmeldename oder PIN abgelehnt (9340, 9910, 9930, 9931, 9942) |
-| MHVP-BANK-0010 | 502 | Zugang gesperrt (3938, 9931) |
+| MHVP-BANK-0010 | 502 | Zugang gesperrt (3938, 9931), Meldung deutsch mit fünf Prüfschritten |
 | MHVP-BANK-0011 | 502 | TAN abgelehnt (9941 ff) |
 | MHVP-BANK-0012 | 409 | Erneute Freigabe nötig (9075, PSD2) |
-| MHVP-BANK-0013 | 503 | Bank nicht erreichbar |
+| MHVP-BANK-0013 | 503 | Bank nicht erreichbar (Verbindung, Zeitüberschreitung, SSL), Meldung nennt den Rechnernamen und vier Prüfschritte |
 | MHVP-BANK-0014 | 502 | Sonstige Ablehnung (9xxx) mit Banktext |
 | MHVP-BANK-0015 | 409 | Sitzung oder Verbindung im falschen Zustand (auch abgelaufene Sitzung nach 15 Minuten) |
 | MHVP-BANK-0016 | 409 | PIN nach Fehlversuch gesperrt, neue Eingabe nötig |
@@ -108,8 +109,8 @@ Prüfhinweis, D05, `services.import_finapi_transactions`).
 
 `apps/api/src/mhvp/banking/data/fints_institutes.txt`, je Zeile
 `BLZ=Name|Ort|BIC|Prüfziffer|HBCI-Domain|FinTS-URL|HBCI-Version|FinTS-Version|`. Die Liste
-wird extern gepflegt (Stand der Übernahme: 29.09.2026, Liste der Deutschen Kreditwirtschaft vom 20.08.2026 (Registrierungsmail vom 28.09.2026), 4062 Institute (davon 3548 aus der Liste 2026 aktualisiert), davon 3537 mit
-FinTS-URL). Die Aktualisierung ist eine Betriebsaufgabe: neue Datei einspielen, Tests
+wird extern gepflegt (Stand der Übernahme: 29.09.2026, Liste der Deutschen Kreditwirtschaft vom 20.08.2026 (Registrierungsmail vom 28.09.2026), 4062 Institute, davon 2721 mit
+FinTS-URL; die DK-Datei selbst führt 1738 Bankleitzahlen in 4788 Standortzeilen, davon 3537 mit URL). Die Aktualisierung ist eine Betriebsaufgabe: neue Datei einspielen (Skript unten), Tests
 laufen lassen, ausliefern. Die Bundesbank veröffentlicht die BLZ-Datei quartalsweise; die
 FinTS-URLs stammen aus der Liste der DK bzw. der jeweiligen Bank. Ein Institut ohne
 FinTS-URL ist nicht verbindbar (`MHVP-BANK-0008`).
@@ -124,6 +125,49 @@ Verbindung ab, beide Atruvia-Hosts antworten. Betreiberbefund: Heinsberger Volks
 Volksbank im Westen eG) ändern Bankleitzahl oder Anmeldename erst mit der technischen
 Fusion; bis zur nächsten DK-Liste gilt die Angabe der Bank, Umstellungshinweise der Bank
 beachten.
+
+### Institutsliste aktualisieren (Skript)
+
+Die DK stellt die Liste als Excel-Datei und als CSV bereit ("fints_institute ... Master",
+Semikolon, Windows-1252). Liegt nur die Excel-Datei vor, in Excel als CSV (Trennzeichen
+Semikolon) speichern. Dann im Repository:
+
+1. Trockenlauf: `python3 scripts/update_fints_institutes.py --dk-csv "<Datei>.csv"`.
+   Der Bericht nennt aktualisierte, neue und unveränderte Zeilen, die Zahl der Zeilen mit
+   Altadresse (GAD, Fiducia) und Warnungen (URL nicht https, doppelte Bankleitzahl mit
+   verschiedenen URLs).
+2. Bericht lesen. Das Skript verweigert das Schreiben, wenn die Datei weniger als 500
+   Institute enthält (falsche Datei) oder mehr als 10 Prozent der verbindbaren Zeilen ihre
+   URL verlören (`--force` nach Prüfung).
+3. Übernehmen: dieselbe Zeile mit `--apply`. Zuordnung nur über die Bankleitzahl; Name, Ort,
+   BIC und Prüfziffer bleiben, Domain, URL und Versionen kommen aus der DK-Zeile. Neue
+   Bankleitzahlen werden ergänzt. Eine URL, die die DK-Liste nicht mehr nennt, wird nicht
+   gelöscht, sondern im Bericht als `KEPT` aufgeführt (`--allow-clear` entfernt sie).
+   `--match-bic` überträgt Angaben zusätzlich auf Zeilen ohne eigene DK-Zeile mit exakt
+   gleicher BIC; standardmäßig aus, weil Sondergeschäftsstellen einer BIC oft keinen
+   FinTS-Zugang haben.
+4. Datumszeile oben in diesem Abschnitt anpassen, `apps/api/tests/unit/test_fints.py` und
+   `test_ae26_fints_institutes_script.py` laufen lassen, ausliefern. Bestehende Verbindungen
+   übernehmen die neue Adresse beim nächsten Dialog, sofern keine manuelle Adresse gesetzt ist.
+
+Der Lauf vom 01.10.2026 mit der Datei vom 20.08.2026 ergab keine Änderung (Stand der Liste
+deckt sich mit der DK-Datei); beim Lesen wurde ein Name mit falsch gelesenem Zeichen
+(U+0096 statt Gedankenstrich, BLZ 45451555) berichtigt.
+
+### FinTS-Adresse je Verbindung (Bankfusion)
+
+Bei Fusionen und Wechseln des Rechenzentrums folgt die Institutsliste mit Verzug. Unter
+Bank, FinTS-Verbindung zeigt die Karte "FinTS-Adresse der Bank" (verwendeter Rechnername und
+Herkunft: Institutsliste oder manuell). Mit "Adresse ändern" (bei Fehler `MHVP-BANK-0013`
+"FinTS-Adresse prüfen") wird die aktuelle Adresse der Bank eingetragen; die PIN ist dabei
+erneut einzugeben und ersetzt die gespeicherte. Es wird kein Anmeldeversuch gestartet; danach
+"Erneut freigeben" wählen. Reihenfolge der verwendeten Adresse: manuell, Eintrag der
+aktuellen Institutsliste, beim Anlegen gespeicherte Adresse. "Adresse der Institutsliste
+verwenden" nimmt die manuelle Adresse zurück. Zulässig sind nur `https://`-Adressen mit
+öffentlichem Rechnernamen (keine IP-Adresse, kein `localhost`, keine interne Domain, keine
+Zugangsdaten in der Adresse). Das ist eine namensbasierte Prüfung; die Ausgangsregeln des
+Servers (Firewall, Proxy) bleiben die zweite Schutzebene. Ändern sich bei der Fusion auch
+Bankleitzahl oder Anmeldename, ist die Verbindung mit den neuen Angaben neu anzulegen.
 
 ## Grenzen
 

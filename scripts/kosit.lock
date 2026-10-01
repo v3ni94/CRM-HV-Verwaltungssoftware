@@ -1,0 +1,22 @@
+# Pinned download sources of the KoSIT XRechnung validation (AC11-01, AA02-03, P05).
+# Read by scripts/kosit_fetch.sh (make kosit-fetch) and by the CI job xrechnung-kosit.
+# Format: KEY=VALUE, one per line, no quotes, no shell code (the file is parsed, not sourced).
+# The environment variables of the same name (CI repository variables) override a value,
+# so a new version can be tried without changing the repository.
+#
+# Provenance of the checksums (01.10.2026): both archives were downloaded a second time from
+# the official GitHub release assets over a TLS-verified connection and hashed with sha256sum.
+# The values equal the first download of 01.10.2026 (docs/runbooks/xrechnung-kosit.md). The
+# publisher does not publish a checksum file (the .sha256 sidecar URLs answer 404), so these
+# are hashes of the official release assets as downloaded, not publisher-signed values.
+# Compare them with the release page before relying on them for a release decision.
+#
+# Updating a pin: docs/runbooks/xrechnung-kosit.md section "Pins aktualisieren". A value of
+# PLACEHOLDER (or anything that is not 64 hex digits) makes the fetch stop with exit code 3.
+#
+# validator: github.com/itplr-kosit/validator, release v1.5.0, Apache License 2.0
+KOSIT_JAR_URL=https://github.com/itplr-kosit/validator/releases/download/v1.5.0/validator-1.5.0-distribution.zip
+KOSIT_JAR_SHA256=ac78fb3e89d6daa81770049b004bd1408cad81100b885dd1d8da2cd169bd679f
+# XRechnung configuration 3.0.2 of 31.10.2024: github.com/itplr-kosit/validator-configuration-xrechnung
+KOSIT_CFG_URL=https://github.com/itplr-kosit/validator-configuration-xrechnung/releases/download/release-2024-10-31/validator-configuration-xrechnung_3.0.2_2024-10-31.zip
+KOSIT_CFG_SHA256=8468086983fa57f08681ddd4e5b7ccafca46def76d02ec146eae254065c93334

@@ -61,6 +61,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/hoa-account$/ },
   // P13: Chat zur Meldung (M21-01), Eigentümerübersicht (M21-06, M21-07, SA-05), Einwilligung in
   // die lesende Support-Sicht (SA-02).
+  // AE28 (M7-06, SA-04): Assistent für die eigenen Unterlagen (Berechtigungsfilter in der API).
+  { method: "GET", pattern: /^portal\/assistant\/(status|scope|questions)$/ },
+  { method: "POST", pattern: /^portal\/assistant\/(questions|privacy-ack)$/ },
   { method: "GET", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info|allocation-properties|rental-income|statements|takeover-checklist)$/ },
@@ -127,6 +130,9 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     if (rejected) return rejected;
   }
   const headers = new Headers({ accept: "application/json" });
+  // AE34: client address chain for the acceptance evidence of the terms (keyed hash in the API).
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) headers.set("x-forwarded-for", forwarded.slice(0, 200));
   let body: string | ArrayBuffer | undefined;
   if (method === "POST" && MULTIPART.test(path)) {
     const type = request.headers.get("content-type") ?? "";

@@ -44,6 +44,24 @@ describe("MagicLinkConsume", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ tenant_id: "t-1", link_id: "l-1", code: "123456" });
   });
 
+  it("hands over to the TOTP setup when the tenant policy requires it (M2-04)", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ status: "mfa_setup_required" }));
+    renderIntl(<MagicLinkConsume token="tenant.secret" />);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor-einrichten"));
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("asks for TOTP after the e-mail code when the tenant policy requires it (M2-04)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ status: "code_required", link_id: "l-1", tenant_id: "t-1" }))
+      .mockResolvedValueOnce(jsonResponse({ status: "mfa_required" }));
+    renderIntl(<MagicLinkConsume token="tenant.secret" />);
+    await waitFor(() => expect(screen.getByLabelText("Code")).toBeInTheDocument());
+    await userEvent.type(screen.getByLabelText("Code"), "123456");
+    await userEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor"));
+  });
+
   it("shows an error for an invalid or expired link, without ever showing the token again", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ title: "ungültig", status: 401 }, 401));
     renderIntl(<MagicLinkConsume token="tenant.secret" />);

@@ -45,6 +45,11 @@ export function LoginForm({ next }: { next?: string }) {
       router.refresh();
       return;
     }
+    if (result.data.status === "mfa_setup_required") {
+      // M2-04: the tenant policy asks for a second factor; it is set up right here.
+      router.push(withNext("/anmelden/zweiter-faktor-einrichten", next));
+      return;
+    }
     router.push(withNext("/anmelden/zweiter-faktor", next));
   });
 

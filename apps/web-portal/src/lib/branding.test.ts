@@ -43,3 +43,27 @@ describe("portal branding", () => {
     expect(readableOn("#000000")).toBe("#FFFFFF");
   });
 });
+
+describe("legal text links (AE29)", () => {
+  it("takes only known released codes", () => {
+    const b = parseBranding({ branding: {}, legal_texts_released: ["datenschutz", "agb", "impressum"] });
+    expect(b.legalReleased).toEqual(["impressum", "datenschutz"]);
+    expect(parseBranding({ branding: {}, legal_texts_released: "impressum" }).legalReleased).toEqual([]);
+  });
+
+  it("prefers the released text, falls back to the https link, otherwise no link", async () => {
+    const { legalLinks } = await import("./branding");
+    expect(legalLinks(NEUTRAL_BRANDING)).toEqual([]);
+    const links = legalLinks({
+      ...NEUTRAL_BRANDING,
+      legalReleased: ["impressum", "nutzungsbedingungen"],
+      imprintUrl: "https://example.test/impressum",
+      privacyUrl: "https://example.test/datenschutz",
+    });
+    expect(links).toEqual([
+      { code: "impressum", href: "/rechtliches/impressum", external: false },
+      { code: "datenschutz", href: "https://example.test/datenschutz", external: true },
+      { code: "nutzungsbedingungen", href: "/rechtliches/nutzungsbedingungen", external: false },
+    ]);
+  });
+});

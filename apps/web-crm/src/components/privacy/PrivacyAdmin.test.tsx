@@ -63,4 +63,20 @@ describe("PrivacyAdmin", () => {
     expect(screen.getByText("Nicht geprüft.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Entwurf herunterladen" })).toBeInTheDocument();
   });
+
+  it("offers the PDF draft and opens the editor of a register entry", async () => {
+    const entry = {
+      id: "g1", kind: "sub_processor", name: "Google Gmail", role: null, purpose: null, data_categories: [], data_subjects: [], recipients: null,
+      third_country: false, third_country_status: "open", third_country_countries: null, third_country_note: null, avv_status: "none", avv_confirmed_on: null,
+      avv_document_id: null, retention_note: null, legal_review_status: "open", legal_reviewed_on: null, active: true, legal_basis: null, responsibilities: {},
+      responsibility_note: null, processor_ids: [], source_key: "gmail", source_detail: "Aus Mandantenkonfiguration erkannt (aktiv).",
+    };
+    route({ "config-sources": [], "privacy/register": [entry] });
+    renderIntl(<PrivacyAdmin canManage canApprove />);
+    const row = await screen.findByTestId("privacy-register-row");
+    expect(row).toHaveTextContent("Aus Konfiguration");
+    expect(screen.getByTestId("privacy-records-pdf")).toHaveAttribute("href", "/api/bff/privacy/processing-records/pdf");
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    expect(await screen.findByTestId("privacy-register-editor")).toBeInTheDocument();
+  });
 });

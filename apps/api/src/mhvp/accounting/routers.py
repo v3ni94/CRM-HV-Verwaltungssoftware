@@ -73,6 +73,9 @@ from mhvp.accounting.schemas import (
     AccountingCostTransferIn,
     AccountingCreditorSyncOut,
     AccountingInterestIn,
+    AccountingInterestTaxConfigIn,
+    AccountingInterestTaxConfigOut,
+    AccountingInterestTaxOut,
     AccountOut,
     AccountPatch,
     ChartTemplateOut,
@@ -206,6 +209,7 @@ def _lines(body: JournalEntryIn) -> list[svc.LineIn]:
             net_amount=line.net_amount,
             unit_id=line.unit_id,
             cost_center=line.cost_center,
+            property_id=line.property_id,
         )
         for line in body.lines
     ]
@@ -572,6 +576,17 @@ async def delete_entry(
         entry = await _entry(session, await _ledger(session, ledger_id), entry_id, lock=True)
         if entry.status is EntryStatus.POSTED:
             raise ProblemError(ErrorCodes.ACC_POSTED_IMMUTABLE)
+        # AE40: withholdings recorded with an interest draft (P01-01, AE05) belong to the draft;
+        # the foreign key is RESTRICT, so they go first (drafts are no postings, 0.1.7).
+        from sqlalchemy import delete as sa_delete
+
+        from mhvp.accounting.models import InterestTaxWithholding
+
+        await session.execute(
+            sa_delete(InterestTaxWithholding).where(
+                InterestTaxWithholding.journal_entry_id == entry.id
+            )
+        )
         await session.delete(entry)
 
 
@@ -597,11 +612,15 @@ async def journal(
         le=1000,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
+    property_id: uuid.UUID | None = Query(
+        default=None, description="Nur Sätze mit mindestens einer Zeile dieses Objekts (Q15-01)"
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[EntryOut]:
     """Journal des Buchungskreises. Paginierung wie ``GET /tickets``: die Antwort bleibt eine
     Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``;
-    ``offset`` bleibt für bestehende Aufrufer erhalten."""
+    ``offset`` bleibt für bestehende Aufrufer erhalten. ``property_id`` filtert auf Sätze mit
+    einer Zeile dieses Objekts (``journal_line.property_id``, Q15-01)."""
     async with tenant_tx(request, principal) as session:
         await _ledger(session, ledger_id)
         query = select(JournalEntry).where(JournalEntry.ledger_id == ledger_id)
@@ -611,6 +630,15 @@ async def journal(
             query = query.where(JournalEntry.booking_date >= start)
         if end:
             query = query.where(JournalEntry.booking_date <= end)
+        if property_id is not None:
+            query = query.where(
+                select(JournalLine.id)
+                .where(
+                    JournalLine.journal_entry_id == JournalEntry.id,
+                    JournalLine.property_id == property_id,
+                )
+                .exists()
+            )
         query = query.order_by(
             JournalEntry.fiscal_year.nulls_last(),
             JournalEntry.number.nulls_last(),
@@ -976,6 +1004,83 @@ async def create_interest(
         return await _out(session, entry)
 
 
+# P01-01 withholding taxes on credit interest (AE05) -------------------------------------
+
+
+def _tax_config_out(ledger_id: uuid.UUID, config: Any | None) -> AccountingInterestTaxConfigOut:
+    out = AccountingInterestTaxConfigOut(ledger_id=ledger_id)
+    if config is not None:
+        for field in ledger_ops.TAX_ACCOUNT_FIELDS:
+            setattr(out, field, getattr(config, field))
+    return out
+
+
+@router.get(
+    "/ledgers/{ledger_id}/interest-tax-config",
+    summary="Steuerkonten für Abzüge auf Habenzinsen",
+    dependencies=[Depends(strict_query)],
+)
+async def get_interest_tax_config(
+    ledger_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> AccountingInterestTaxConfigOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        return _tax_config_out(ledger.id, await ledger_ops.interest_tax_config(session, ledger))
+
+
+@router.put(
+    "/ledgers/{ledger_id}/interest-tax-config",
+    summary="Steuerkonten für Abzüge auf Habenzinsen festlegen",
+)
+async def put_interest_tax_config(
+    ledger_id: uuid.UUID,
+    body: AccountingInterestTaxConfigIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> AccountingInterestTaxConfigOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        config = await ledger_ops.set_interest_tax_config(
+            session,
+            ledger,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            values=body.model_dump(),
+        )
+        return _tax_config_out(ledger.id, config)
+
+
+@router.get(
+    "/ledgers/{ledger_id}/entries/{entry_id}/interest-tax",
+    summary="Steuerabzüge einer Zinsbuchung",
+    dependencies=[Depends(strict_query)],
+)
+async def get_interest_tax(
+    ledger_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> AccountingInterestTaxOut:
+    async with tenant_tx(request, principal) as session:
+        entry = await _get(session, JournalEntry, entry_id)
+        if entry.ledger_id != ledger_id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await ledger_ops.withholding_for(session, entry)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        withheld = row.capital_gains_tax + row.solidarity_tax + row.church_tax
+        return AccountingInterestTaxOut(
+            journal_entry_id=entry.id,
+            gross_amount=row.gross_amount,
+            capital_gains_tax=row.capital_gains_tax,
+            solidarity_tax=row.solidarity_tax,
+            church_tax=row.church_tax,
+            net_amount=row.gross_amount - withheld,
+        )
+
+
 # Reports ------------------------------------------------------------------------------
 
 
@@ -1146,23 +1251,51 @@ async def settlement_confirm(
         return await _out(session, entry)
 
 
-@router.get("/ledgers/{ledger_id}/checks", summary="Konsistenzprüfung B02, B07, B09")
+@router.get(
+    "/ledgers/{ledger_id}/checks",
+    summary="Konsistenzprüfung B02, B07, B09",
+    dependencies=[Depends(strict_query)],
+)
 async def checks(
     ledger_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(READ),
     as_of: date | None = None,
+    exclude_written_off: bool | None = None,
 ) -> dict[str, Any]:
     """``findings`` are hard violations (B02, B04 numbering, B07, B09); ``subledger`` lists
     per debtor and creditor account the open items against the ledger balance as of
-    ``as_of`` (GA05-03). A difference there is shown for review, it does not set ``ok``."""
+    ``as_of`` (GA05-03). A difference there is shown for review, it does not set ``ok``.
+    AC01-02: written off items and items of reversed entries are hidden by the tenant switch
+    (default) or ``exclude_written_off``; ``excluded`` counts them separately."""
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
         findings = await svc.checks(session, ledger)
-        subledger = await svc.subledger_reconciliation(session, ledger, as_of)
+        exclude = (
+            exclude_written_off
+            if exclude_written_off is not None
+            else await svc.subledger_exclude_switch(session)
+        )
+        subledger = await svc.subledger_reconciliation(session, ledger, as_of, exclude)
+        excluded = {
+            "written_off": {
+                "count": sum(r["excluded_written_off_count"] for r in subledger),
+                "amount": str(
+                    sum((Decimal(r["excluded_written_off"]) for r in subledger), Decimal(0))
+                ),
+            },
+            "reversed": {
+                "count": sum(r["excluded_reversed_count"] for r in subledger),
+                "amount": str(
+                    sum((Decimal(r["excluded_reversed"]) for r in subledger), Decimal(0))
+                ),
+            },
+        }
         return {
             "ok": not findings,
             "findings": findings,
+            "exclude_written_off": exclude,
+            "excluded": excluded,
             "subledger": subledger,
             "subledger_differences": [r for r in subledger if Decimal(r["difference"]) != 0],
         }
@@ -1871,6 +2004,29 @@ class InvoiceFactualFindingOut(BaseModel):
     message: str
 
 
+class InvoiceFactualBudgetOut(BaseModel):
+    plan_item_id: uuid.UUID
+    label: str
+    year: int
+    planned: Decimal
+    booked_before: Decimal
+    invoice: Decimal
+    remaining: Decimal
+    tolerance_limit: Decimal
+    exceeded: bool
+
+
+class InvoiceFactualResolutionOut(BaseModel):
+    resolution_id: uuid.UUID
+    number: int
+    decided_on: date
+    status: str
+    subject: str
+    subject_type: str | None = None
+    effective: bool
+    subject_matches_plan: bool | None = None
+
+
 class InvoiceFactualCheckOut(BaseModel):
     invoice_id: uuid.UUID
     version: int
@@ -1880,6 +2036,8 @@ class InvoiceFactualCheckOut(BaseModel):
     price_tolerance_percent: Decimal
     quantity_tolerance_percent: Decimal
     automatic_release: bool = False
+    budget: InvoiceFactualBudgetOut | None = None
+    resolution: InvoiceFactualResolutionOut | None = None
 
 
 class InvoiceCheckSettingIn(BaseModel):
@@ -3605,6 +3763,15 @@ async def revenue(
         return await reports.revenue(session, await _ledger(session, ledger_id), start, end)
 
 
+async def _ensure_not_demo_export(
+    session: AsyncSession, principal: TenantPrincipal, what: str
+) -> None:
+    """AE36 (rule AE36-DEMO): a demo tenant takes no part in journal and DATEV exports."""
+    from mhvp.platform.demo import ensure_not_demo
+
+    await ensure_not_demo(session, principal.tenant_id, what)
+
+
 @router.post(
     "/ledgers/{ledger_id}/exports/journal",
     status_code=201,
@@ -3618,6 +3785,7 @@ async def export_journal(
     principal: TenantPrincipal = Depends(EXPORT),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
+        await _ensure_not_demo_export(session, principal, "Der Journal-Export")  # AE36
         ledger = await _ledger(session, ledger_id)
         data, rows = await reports.journal_csv(session, ledger, start, end)
         run = ExportRun(
@@ -3663,6 +3831,7 @@ async def export_datev(
     from mhvp.platform.models import ChartOfAccountsKind, TenantBillingSettings
 
     async with tenant_tx(request, principal) as session:
+        await _ensure_not_demo_export(session, principal, "Der DATEV-Export")  # AE36
         ledger = await _ledger(session, ledger_id)
         settings = await session.scalar(
             select(TenantBillingSettings).where(
@@ -3817,3 +3986,7 @@ router.include_router(fee_documents.router)
 from mhvp.accounting import year_carryover  # noqa: E402
 
 router.include_router(year_carryover.router)
+# S13-03: ZUGFeRD / Factur-X hybrid of fee invoices (mhvp.accounting.zugferd).
+from mhvp.accounting import zugferd  # noqa: E402
+
+router.include_router(zugferd.router)

@@ -2,7 +2,10 @@
 rendered as PDF on the tenant letterhead (``mhvp.documents.letters``) and filed as a draft.
 
 The draft carries agenda, attendance with voting rights, the resolution text per item, the
-tally as recorded, the announcement (or its absence) and signature lines. It is a working
+tally as recorded, the announcement (or its absence) and signature lines. AE31 (AD06): for a
+hybrid or virtual meeting, or when portal data exist, it also carries the online part (portal
+confirmations, proxies, requests to speak, online votes per item, open vote conflicts and the
+checklist of recorded facts for the meeting form; no legal statement). It is a working
 draft only: no legal effect, no replacement of the signed minutes linked in
 ``Meeting.minutes_document_id``. Values come from the recorded meeting data; nothing is
 estimated or completed by the system (rule 0.1.3)."""
@@ -56,7 +59,9 @@ Anwesend oder vertreten: {{ anwesenheit.vertreten }} von {{ anwesenheit.gesamt }
 {{ anwesenheit.einheiten_vertreten }} von {{ anwesenheit.einheiten_gesamt }} Einheiten.
 Feststellung der Beschlussfähigkeit durch die Versammlungsleitung: ____________________
 
-{% for top in tagesordnung %}TOP {{ top.nummer }}: {{ top.titel }}
+{% if online.abschnitt %}{{ online.abschnitt }}
+
+{% endif %}{% for top in tagesordnung %}TOP {{ top.nummer }}: {{ top.titel }}
 
 Beschlusstext: {{ top.beschlusstext }}
 
@@ -64,7 +69,8 @@ Abstimmungsergebnis nach {{ top.prinzip }}:
 Ja {{ top.ja }}, Nein {{ top.nein }}, Enthaltung {{ top.enthaltung }}\
 {% if top.ausgeschlossen %}, vom Stimmrecht ausgeschlossen: {{ top.ausgeschlossen }}{% endif %}
 Mehrheitserfordernis: {{ top.mehrheit }}
-
+{% if top.online %}{{ top.online }}
+{% endif %}
 Verkündung: {{ top.verkuendung }}
 {% if top.ergebnis %}Ergebnis: {{ top.ergebnis }}
 {% endif %}{% if top.protokolltext %}
@@ -128,6 +134,155 @@ def _fmt_number(value: Any) -> str:
     return text.replace(".", ",")
 
 
+PROXY_STATE = {"active": "wirksam erfasst", "inactive": "außerhalb des Zeitraums"}
+SPEAKER_STATE = {"open": "offen", "done": "erledigt", "withdrawn": "zurückgezogen"}
+
+
+def _unit_label(labels: dict[uuid.UUID, tuple[str, str]], contract_id: uuid.UUID | None) -> str:
+    if contract_id is None:
+        return "Verwaltung"
+    return f"Einheit {labels.get(contract_id, (PLACEHOLDER, PLACEHOLDER))[0]}"
+
+
+async def online_context(
+    session: AsyncSession,
+    meeting: Meeting,
+    items: list[AgendaItem],
+    labels: dict[uuid.UUID, tuple[str, str]],
+) -> dict[str, Any]:
+    """Online part of the draft (AE31, AD06): section text, one text block per agenda item and
+    the review notes for the notice. Everything comes from recorded data; empty strings when a
+    presence meeting has no portal data, so the draft stays unchanged then."""
+    from sqlalchemy import or_
+
+    from mhvp.hoa import online_meeting, online_rules
+    from mhvp.hoa.models import MeetingProxy, MeetingSpeakerRequest, MeetingVoteConflict, Vote
+
+    day = meeting.scheduled_at.date()
+    item_ids = [i.id for i in items]
+    position = {i.id: i.position for i in items}
+    confirmed = (
+        await session.scalars(
+            select(Attendance)
+            .where(Attendance.meeting_id == meeting.id, Attendance.portal_confirmed_at.is_not(None))
+            .order_by(Attendance.portal_confirmed_at, Attendance.id)
+        )
+    ).all()
+    speakers = (
+        await session.scalars(
+            select(MeetingSpeakerRequest)
+            .where(MeetingSpeakerRequest.meeting_id == meeting.id)
+            .order_by(MeetingSpeakerRequest.requested_at, MeetingSpeakerRequest.id)
+        )
+    ).all()
+    online_votes = (
+        (
+            await session.scalars(
+                select(Vote).where(Vote.agenda_item_id.in_(item_ids), Vote.channel == "online")
+            )
+        ).all()
+        if item_ids
+        else []
+    )
+    conflicts = (
+        await session.scalars(
+            select(MeetingVoteConflict)
+            .where(MeetingVoteConflict.meeting_id == meeting.id)
+            .order_by(MeetingVoteConflict.attempted_at, MeetingVoteConflict.id)
+        )
+    ).all()
+    shown = meeting.mode != "presence" or bool(confirmed or speakers or online_votes or conflicts)
+    if not shown:
+        return {"abschnitt": "", "per_item": {}, "notices": []}
+
+    per_item: dict[uuid.UUID, str] = {}
+    for item in items:
+        votes = [v for v in online_votes if v.agenda_item_id == item.id]
+        lines: list[str] = []
+        if votes or meeting.mode != "presence":
+            by_proxy = sum(1 for v in votes if v.proxy_id is not None or v.cast_source == "proxy")
+            line = f"Online abgegebene Stimmen: {len(votes)}"
+            lines.append(line + (f", davon mit Vollmacht: {by_proxy}." if by_proxy else "."))
+        lines += [
+            "Prüfhinweis Stimmkonflikt. "
+            + online_rules.conflict_sentence(
+                unit=labels.get(c.contract_id, (PLACEHOLDER, PLACEHOLDER))[0],
+                first_source=c.first_source,
+                first_choice=c.first_choice,
+                second_source=c.second_source,
+                second_choice=c.second_choice,
+                status=c.status,
+                resolution=c.resolution,
+            )
+            for c in conflicts
+            if c.agenda_item_id == item.id
+        ]
+        per_item[item.id] = "\n".join(lines)
+
+    proxies = (
+        await session.scalars(
+            select(MeetingProxy)
+            .where(
+                MeetingProxy.legal_entity_id == meeting.legal_entity_id,
+                or_(MeetingProxy.meeting_id.is_(None), MeetingProxy.meeting_id == meeting.id),
+            )
+            .order_by(MeetingProxy.created_at, MeetingProxy.id)
+        )
+    ).all()
+    lines = ["Online-Teilnahme", ""]
+    lines.append(
+        f"Zusagen zur Online-Teilnahme im Eigentümerportal: {len(confirmed)}"
+        + (
+            " (" + ", ".join(_unit_label(labels, a.contract_id) for a in confirmed) + ")."
+            if confirmed
+            else "."
+        )
+    )
+    if proxies:
+        lines.append("Vollmachten über das Eigentümerportal, Stand am Versammlungstag:")
+        for p in proxies:
+            active = online_meeting.proxy_active(p, day, meeting.scheduled_at)
+            until = f" bis {_fmt_date(p.valid_to)}" if p.valid_to else ""
+            state = PROXY_STATE["active" if active else "inactive"]
+            if p.revoked_at is not None:
+                state = f"widerrufen am {_fmt_date(p.revoked_at.astimezone(_LOCAL))}"
+            target = _unit_label(labels, p.proxy_contract_id if p.proxy_kind == "owner" else None)
+            lines.append(
+                f"{_unit_label(labels, p.grantor_contract_id)} an {target}, "
+                f"gültig ab {_fmt_date(p.valid_from)}{until}, {state}."
+            )
+    else:
+        lines.append("Vollmachten über das Eigentümerportal: keine erfasst.")
+    if speakers:
+        lines.append("Wortmeldungen über das Eigentümerportal:")
+        for r in speakers:
+            when = r.requested_at.astimezone(_LOCAL)
+            top = f", TOP {position[r.agenda_item_id]}" if r.agenda_item_id in position else ""
+            owner = labels.get(r.contract_id, (PLACEHOLDER, PLACEHOLDER))
+            note = f": {r.note}" if r.note else ""
+            lines.append(
+                f"{when:%H:%M} Uhr, Einheit {owner[0]} ({owner[1]}){top}{note}, "
+                f"{SPEAKER_STATE.get(r.status, r.status)}."
+            )
+    else:
+        lines.append("Wortmeldungen über das Eigentümerportal: keine erfasst.")
+    check = await online_meeting.admissibility(session, meeting)
+    notices: list[str] = []
+    if check["applicable"]:
+        lines.append("")
+        lines.append(
+            "Prüfpunkte zur Versammlungsform (Übersicht der erfassten Angaben, keine "
+            "Rechtsauskunft; die Zulässigkeit ist rechtlich zu klären):"
+        )
+        lines += [f"{c['label']}: {c['detail']} ({c['state_label']})" for c in check["checks"]]
+        if not check["complete"]:
+            notices.append("Prüfpunkte zur Versammlungsform offen.")
+    open_conflicts = sum(1 for c in conflicts if c.status == "open")
+    if open_conflicts:
+        notices.append(f"Offene Stimmkonflikte (Vollmacht gegen eigene Stimme): {open_conflicts}.")
+    return {"abschnitt": "\n".join(lines), "per_item": per_item, "notices": notices}
+
+
 async def build_context(
     session: AsyncSession, meeting: Meeting
 ) -> tuple[dict[str, Any], list[str]]:
@@ -165,6 +320,7 @@ async def build_context(
         ).all()
     }
     rows: list[list[str]] = []
+    labels: dict[uuid.UUID, tuple[str, str]] = {}
     total = Decimal(0)
     represented = Decimal(0)
     units_represented = 0
@@ -173,6 +329,10 @@ async def build_context(
         unit = await session.get(Unit, contract.unit_id)
         party = await session.get(Party, contract.party_id)
         att = attendance.get(contract.id)
+        labels[contract.id] = (
+            unit.number if unit else PLACEHOLDER,
+            party.name if party else PLACEHOLDER,
+        )
         weight = await _weight(session, meeting.voting_principle, contract, property_id, day)
         if meeting.voting_principle == "head":
             # one vote per owner regardless of the number of units (§ 25 Abs. 2 WEG)
@@ -208,6 +368,7 @@ async def build_context(
     ).all()
     if not items:
         missing.append("Tagesordnung")
+    online = await online_context(session, meeting, list(items), labels)
     tops: list[dict[str, Any]] = []
     for item in items:
         tally = await _tally(session, item, meeting)
@@ -240,6 +401,8 @@ async def build_context(
                 # GA03-02
                 "ergebnis": ITEM_RESULT.get(item.result or ""),
                 "protokolltext": item.minutes_text,
+                # AE31: online votes of the item and review notes on vote conflicts
+                "online": online["per_item"].get(item.id, ""),
             }
         )
         if not item.proposal:
@@ -264,6 +427,7 @@ async def build_context(
         },
         "leitung": {"name": chair.display_name if chair else PLACEHOLDER},
         "tagesordnung": tops,
+        "online": {"abschnitt": online["abschnitt"], "notices": online["notices"]},
         "anwesenheit": {
             "vertreten": _fmt_number(represented),
             "gesamt": _fmt_number(total),
@@ -293,6 +457,8 @@ def compose(context: dict[str, Any], missing: list[str], today: date) -> Protoco
     notice = DRAFT_NOTICE
     if missing:
         notice += " Nicht erfasst: " + ", ".join(missing) + "."
+    for hint in context.get("online", {}).get("notices", []):
+        notice += " " + hint
     letter = letters.Letter(
         recipient_lines=[name, str(context["objekt"]["bezeichnung"])],
         subject=subject,

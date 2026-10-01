@@ -22,6 +22,7 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 router = APIRouter(prefix="/accounting/templates", tags=["Buchhaltung"])
 READ = require_permission("accounting:read")
 UPDATE = require_permission("accounting:update")
+APPROVE = require_permission("accounting:approve")
 
 
 async def _template(session: AsyncSession, template_id: uuid.UUID) -> ChartTemplate:
@@ -84,6 +85,37 @@ async def update_accounts(
             session, template, body, tenant_id=principal.tenant_id, user_id=principal.user_id
         )
         return ChartTemplateOut.model_validate(template)
+
+
+@router.put(
+    "/{template_id}/four-eyes",
+    summary="Vier-Augen-Freigabe des Kontenrahmens schalten (mit Begründung)",
+)
+async def set_four_eyes(
+    template_id: uuid.UUID,
+    body: svc.ChartFourEyesIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> ChartTemplateOut:
+    async with tenant_tx(request, principal) as session:
+        template = await _template(session, template_id)
+        template = await svc.set_four_eyes(
+            session, template, body, tenant_id=principal.tenant_id, user_id=principal.user_id
+        )
+        return ChartTemplateOut.model_validate(template)
+
+
+@router.get(
+    "/{template_id}/coverage-report",
+    summary="Prüfbericht: Konten ohne Abrechnungsart, Verteilung oder mit offenem Vorschlag",
+    dependencies=[Depends(strict_query)],
+)
+async def coverage_report(
+    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> svc.ChartCoverageOut:
+    async with tenant_tx(request, principal) as session:
+        template = await _template(session, template_id)
+        return svc.coverage_report(template)
 
 
 @router.get(

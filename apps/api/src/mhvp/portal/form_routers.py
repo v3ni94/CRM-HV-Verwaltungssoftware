@@ -70,6 +70,14 @@ class FormSubmissionIn(_In):
     unit_id: uuid.UUID | None = None
 
 
+class PortalFormPreviewIn(_In):
+    """AE30: sample input for the dry run of a form (nothing is saved)."""
+
+    name: str = Field(default="Vorschau", min_length=1, max_length=200)
+    fields: list[FormFieldIn] = Field(default_factory=list, max_length=forms.MAX_FIELDS)
+    values: dict[str, Any] = Field(default_factory=dict)
+
+
 def _out(t: PortalFormTemplate, *, admin_view: bool) -> dict[str, Any]:
     row: dict[str, Any] = {
         "id": t.id,
@@ -107,6 +115,33 @@ async def list_templates(
             )
         )
         return [_out(t, admin_view=True) for t in rows.all()]
+
+
+@admin.get(
+    "/forms/element-types",
+    summary="Elementtypen des Formularbaukastens (20 Typen mit Prüfregel)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_element_types(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """AE30 (AA14-01): the binding list of the element types with the accepted value and the
+    check rule in words. The source status says that the comparison with the list of the former
+    portal is still open."""
+    return forms.element_types()
+
+
+@admin.post(
+    "/forms/preview",
+    summary="Vorschau eines Formulars (Trockenlauf mit Beispielwerten, speichert nichts)",
+)
+async def preview_form(
+    body: PortalFormPreviewIn, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """AE30: checks the field definitions (422 on a defect) and sample values with the same
+    rules the portal applies, and returns the ticket text a submission would produce. No
+    ticket, no submission, no mail."""
+    return forms.preview(body.name, [f.model_dump() for f in body.fields], body.values)
 
 
 @admin.post("/forms", status_code=201, summary="Formularvorlage anlegen")

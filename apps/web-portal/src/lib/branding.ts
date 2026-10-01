@@ -18,7 +18,12 @@ export type PortalBranding = {
   privacyUrl: string | null;
   hasLogoLight: boolean;
   hasLogoDark: boolean;
+  /** Codes of the legal texts the tenant has released (AE29, only known codes). */
+  legalReleased: LegalCode[];
 };
+
+export const LEGAL_CODES = ["impressum", "datenschutz", "nutzungsbedingungen"] as const;
+export type LegalCode = (typeof LEGAL_CODES)[number];
 
 export const NEUTRAL_BRANDING: PortalBranding = {
   name: null,
@@ -28,6 +33,7 @@ export const NEUTRAL_BRANDING: PortalBranding = {
   privacyUrl: null,
   hasLogoLight: false,
   hasLogoDark: false,
+  legalReleased: [],
 };
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
@@ -52,7 +58,13 @@ function text(value: unknown, max: number): string | null {
 /** Maps the API answer to the validated branding; unknown shapes yield the neutral branding. */
 export function parseBranding(raw: unknown): PortalBranding {
   if (!raw || typeof raw !== "object") return NEUTRAL_BRANDING;
-  const data = raw as { name?: unknown; branding?: Record<string, unknown>; has_logo_light?: unknown; has_logo_dark?: unknown };
+  const data = raw as {
+    name?: unknown;
+    branding?: Record<string, unknown>;
+    has_logo_light?: unknown;
+    has_logo_dark?: unknown;
+    legal_texts_released?: unknown;
+  };
   const b = data.branding ?? {};
   return {
     name: text(b.portal_name, 80),
@@ -62,7 +74,28 @@ export function parseBranding(raw: unknown): PortalBranding {
     privacyUrl: httpsUrl(b.privacy_url),
     hasLogoLight: data.has_logo_light === true,
     hasLogoDark: data.has_logo_dark === true,
+    legalReleased: Array.isArray(data.legal_texts_released)
+      ? LEGAL_CODES.filter((code) => (data.legal_texts_released as unknown[]).includes(code))
+      : [],
   };
+}
+
+export type LegalLink = { code: LegalCode; href: string; external: boolean };
+
+/** Footer links to the legal texts (AE29): a released text of the tenant is shown on the portal
+ *  page /rechtliches/<code>; without a release the https link of the branding stands in, and
+ *  without either there is no link (nothing invented). */
+export function legalLinks(branding: PortalBranding): LegalLink[] {
+  const links: LegalLink[] = [];
+  for (const code of LEGAL_CODES) {
+    if (branding.legalReleased.includes(code)) {
+      links.push({ code, href: `/rechtliches/${code}`, external: false });
+      continue;
+    }
+    const url = code === "impressum" ? branding.imprintUrl : code === "datenschutz" ? branding.privacyUrl : null;
+    if (url) links.push({ code, href: url, external: true });
+  }
+  return links;
 }
 
 function luminance(color: string): number {

@@ -285,6 +285,10 @@ async def transition(
         )
     async with tenant_tx(request, principal) as session:
         st = await _statement(session, statement_id)
+        if body.target in (StatementStatus.ISSUED, StatementStatus.DUE, StatementStatus.POSTED):
+            from mhvp.billing import allocation_basis
+
+            await allocation_basis.ensure_complete(session, st)
         if (
             body.target is StatementStatus.INTERNALLY_APPROVED
             and st.created_by == principal.user_id
@@ -301,7 +305,14 @@ async def transition(
             snap = await session.get(StatementSnapshot, st.snapshot_id)
             if snap is None:
                 raise ProblemError(ErrorCodes.CONFLICT, detail="Kein Ergebnis-Snapshot.")
-            services.check_issue(st, snap, body.delivered_at)
+            from mhvp.billing import deadline as deadline_policy
+
+            services.check_issue(
+                st,
+                snap,
+                body.delivered_at,
+                await deadline_policy.policy(session, principal.tenant_id),
+            )
             st.delivered_at = body.delivered_at
         if body.target is StatementStatus.POSTED:
             await results.check_result_entries_posted(session, st)
@@ -322,8 +333,49 @@ async def transition(
                 actor_user_id=principal.user_id,
                 payload={"kind": "rental", "status": body.target.value},
             )
+        lock_info: dict[str, Any] = {}
+        if body.target is StatementStatus.LOCKED:
+            from mhvp.accounting import period_lock
+
+            lock_info = await period_lock.lock_for_closed_statement(
+                session,
+                tenant_id=principal.tenant_id,
+                user_id=principal.user_id,
+                source="statement",
+                statement_id=st.id,
+                ledger_id=st.ledger_id,
+                property_id=st.property_id,
+                period_from=st.period_from,
+                period_to=st.period_to,
+            )
         await session.flush()
-        return await _out(session, st)
+        return {**await _out(session, st), **lock_info}
+
+
+@router.get("/{statement_id}/period-lock", summary="Periodensperre der Abrechnung (P06-02)")
+async def statement_period_lock(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from sqlalchemy import select
+
+    from mhvp.accounting import period_lock
+    from mhvp.accounting.models import PeriodLock
+
+    async with tenant_tx(request, principal) as session:
+        st = await _statement(session, statement_id)
+        rows = (
+            await session.scalars(
+                select(PeriodLock).where(
+                    PeriodLock.statement_id == st.id, PeriodLock.source == "statement"
+                )
+            )
+        ).all()
+        setting = period_lock.setting_out(await period_lock.get_setting(session))
+        return {
+            "locks": [period_lock.to_out(r).model_dump(mode="json") for r in rows],
+            "auto_lock_on_close": setting.auto_lock_on_close,
+            "lock_mode": setting.lock_mode,
+        }
 
 
 @router.post("/{statement_id}/new-version", status_code=201, summary="Neue Version mit Bezug")

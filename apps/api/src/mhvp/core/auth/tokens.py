@@ -18,6 +18,11 @@ ALGORITHM = "ES256"
 ACCESS_AUDIENCE = "mhvp-api"
 MFA_AUDIENCE = "mhvp-mfa"
 MFA_TTL = timedelta(minutes=5)
+# M2-04 (wave 16): enrolment step of a user who falls under the tenant's second factor policy
+# but has none yet. Own audience: a setup token never passes as an MFA step token and vice
+# versa. Longer than MFA_TTL because installing an authenticator app takes a moment.
+MFA_SETUP_AUDIENCE = "mhvp-mfa-setup"
+MFA_SETUP_TTL = timedelta(minutes=15)
 
 
 class TokenError(Exception):
@@ -133,22 +138,69 @@ def decode_access_token(settings: Settings, token: str) -> AccessClaims:
         raise TokenError("invalid token claims") from exc
 
 
-def issue_mfa_token(settings: Settings, user_id: uuid.UUID, *, now: datetime | None = None) -> str:
+def issue_mfa_token(
+    settings: Settings,
+    user_id: uuid.UUID,
+    *,
+    now: datetime | None = None,
+    tenant_id: uuid.UUID | None = None,
+) -> str:
     now = now or datetime.now(UTC)
-    return _encode(
-        settings,
-        {
-            "iss": settings.jwt_issuer,
-            "aud": MFA_AUDIENCE,
-            "sub": str(user_id),
-            "iat": int(now.timestamp()),
-            "exp": int((now + MFA_TTL).timestamp()),
-        },
-    )
+    claims: dict[str, Any] = {
+        "iss": settings.jwt_issuer,
+        "aud": MFA_AUDIENCE,
+        "sub": str(user_id),
+        "iat": int(now.timestamp()),
+        "exp": int((now + MFA_TTL).timestamp()),
+    }
+    # M2-04: a magic link login that hands over to TOTP keeps its tenant here.
+    if tenant_id is not None:
+        claims["tid"] = str(tenant_id)
+    return _encode(settings, claims)
 
 
 def decode_mfa_token(settings: Settings, token: str) -> uuid.UUID:
     return uuid.UUID(_decode(settings, token, MFA_AUDIENCE)["sub"])
+
+
+def mfa_token_tenant(settings: Settings, token: str) -> uuid.UUID | None:
+    """Tenant named in an MFA step token (magic link hand over), None otherwise or invalid."""
+    try:
+        tid = _decode(settings, token, MFA_AUDIENCE).get("tid")
+        return uuid.UUID(tid) if tid else None
+    except (TokenError, ValueError, TypeError):
+        return None
+
+
+def issue_mfa_setup_token(
+    settings: Settings,
+    user_id: uuid.UUID,
+    *,
+    tenant_id: uuid.UUID | None = None,
+    now: datetime | None = None,
+) -> str:
+    """Setup step token (M2-04): allows exactly the TOTP enrolment of this user, nothing else.
+    ``tenant_id`` carries the tenant of a magic link login so the session lands there."""
+    now = now or datetime.now(UTC)
+    claims: dict[str, Any] = {
+        "iss": settings.jwt_issuer,
+        "aud": MFA_SETUP_AUDIENCE,
+        "sub": str(user_id),
+        "iat": int(now.timestamp()),
+        "exp": int((now + MFA_SETUP_TTL).timestamp()),
+    }
+    if tenant_id is not None:
+        claims["tid"] = str(tenant_id)
+    return _encode(settings, claims)
+
+
+def decode_mfa_setup_token(settings: Settings, token: str) -> tuple[uuid.UUID, uuid.UUID | None]:
+    claims = _decode(settings, token, MFA_SETUP_AUDIENCE)
+    try:
+        tid = claims.get("tid")
+        return uuid.UUID(claims["sub"]), uuid.UUID(tid) if tid else None
+    except (KeyError, ValueError, TypeError) as exc:
+        raise TokenError("invalid token claims") from exc
 
 
 def issue_id_token(

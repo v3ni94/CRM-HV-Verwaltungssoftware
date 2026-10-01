@@ -40,4 +40,16 @@ describe("PortalManagement", () => {
     renderIntl(<PortalManagement initialFeatures={OFF} canManage={false} statistics={null} />);
     for (const box of screen.getAllByRole("checkbox")) expect(box).toBeDisabled();
   });
+
+  it("sets the owner ticket scope and keeps rental income off by default (AE13)", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ ...OFF, owner_rental_income_enabled: false, owner_ticket_scope: "none" }));
+    renderIntl(<PortalManagement initialFeatures={OFF} canManage statistics={null} />);
+    expect(screen.getByRole("checkbox", { name: /Mieterträge/ })).not.toBeChecked();
+    await user.selectOptions(screen.getByRole("combobox", { name: /Meldungen im Eigentümerportal/ }), "none");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(String(fetchMock.mock.calls.at(0)?.[1]?.body))).toEqual({ owner_ticket_scope: "none" });
+  });
 });

@@ -6,6 +6,8 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { ChartCoveragePanel } from "./ChartCoveragePanel";
+
 /** Shapes of /api/v1/accounting/templates (M10-01/M10-02 release workflow, V8). */
 export type ChartTemplate = {
   id: string;
@@ -21,6 +23,7 @@ export type ChartTemplate = {
   release_comment: string | null;
   release_document_id: string | null;
   supersedes_id: string | null;
+  four_eyes_required?: boolean | null;
   accounts: Record<string, unknown>[];
 };
 
@@ -179,6 +182,8 @@ export function ChartReleaseAdmin({
                 {t("exportPdf")}
               </a>
             </div>
+
+            <ChartCoveragePanel template={latest} canManage={canManage} canApprove={canApprove} onChanged={reload} />
 
             <h3 className={`${ui.h3} mt-4`}>{t("history")}</h3>
             {versions.length <= 1 ? (

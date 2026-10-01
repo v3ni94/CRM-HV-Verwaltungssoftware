@@ -18,6 +18,7 @@ from mhvp.documents import letters
 
 # GA06-02: marking of every legally relevant paragraph until AA11-01 is decided.
 TEXT_NOT_RELEASED = "Text nicht freigegeben"
+TEXT_CODES = ("info_sheet_inspection", "info_sheet_objection")  # AE16 text blocks
 TEXT_PENDING = f"{TEXT_NOT_RELEASED}: Textbaustein des Betreibers ausstehend (AA11-01)"
 
 

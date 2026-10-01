@@ -143,7 +143,9 @@ async def _releases(session: AsyncSession, statement_id: uuid.UUID) -> dict[uuid
     return {r.contract_id: r for r in rows.all()}
 
 
-def _item(contract: Any, number: str, release: Any) -> dict[str, Any]:
+def _item(
+    contract: Any, number: str, release: Any, variant: str = "manual_release"
+) -> dict[str, Any]:
     kind = contract.acquisition_kind.value if contract.acquisition_kind else None
     status = "open"
     if release is not None:
@@ -159,6 +161,7 @@ def _item(contract: Any, number: str, release: Any) -> dict[str, Any]:
         "title_transfer_date": contract.title_transfer_date,
         "allocation_proposal": proposal_for(kind, contract.special_succession_liability),
         "status": status,
+        "allocation_variant": variant,
         "requested_by": release.requested_by if release else None,
         "requested_at": release.requested_at if release else None,
         "released_by": release.released_by if release else None,
@@ -209,7 +212,12 @@ async def list_acquisitions(
     async with tenant_tx(request, principal) as session:
         st = await _statement(session, statement_id)
         releases = await _releases(session, st.id)
-        items = [_item(c, n, releases.get(c.id)) for c, n in await special_contracts(session, st)]
+        from mhvp.hoa.acquisition_rule import resolve_variant
+
+        items = []
+        for c, n in await special_contracts(session, st):
+            kind = c.acquisition_kind.value if c.acquisition_kind else None
+            items.append(_item(c, n, releases.get(c.id), await resolve_variant(session, kind)))
         return {"items": items, "note": PROPOSAL_NOTE}
 
 

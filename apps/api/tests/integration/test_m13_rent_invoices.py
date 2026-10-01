@@ -276,7 +276,7 @@ def test_rent_invoices_numbering_locks_credit_note_and_tenant_separation(
 
     # June from the posted item: draft (G1 closed), gapless number, precomputed amounts.
     first = _ok(_invoice(closed, h, shop["id"], "2026-06-01", "2026-06-30"), 201)
-    assert first["number"] == "MR-2026-000001"
+    assert first["number"] == "ENTWURF-2026-000001"
     assert (first["kind"], first["status"], first["draft"]) == ("invoice", "issued", True)
     assert (first["net_total"], first["vat_total"], first["gross_total"]) == (
         "1000.00",
@@ -292,11 +292,11 @@ def test_rent_invoices_numbering_locks_credit_note_and_tenant_separation(
 
     # July from the ready preview item; still numbered in sequence.
     second = _ok(_invoice(closed, h, shop["id"], "2026-07-01", "2026-07-31"), 201)
-    assert second["number"] == "MR-2026-000002"
+    assert second["number"] == "ENTWURF-2026-000002"
 
     # Standing invoice over both months: one line per month, summed totals.
     standing = _ok(_invoice(closed, h, shop["id"], "2026-06-01", "2026-07-31", standing=True), 201)
-    assert (standing["kind"], standing["number"]) == ("standing", "MR-2026-000003")
+    assert (standing["kind"], standing["number"]) == ("standing", "ENTWURF-2026-000003")
     assert len(standing["lines"]) == 2
     assert (standing["net_total"], standing["vat_total"], standing["gross_total"]) == (
         "2000.00",
@@ -319,7 +319,7 @@ def test_rent_invoices_numbering_locks_credit_note_and_tenant_separation(
         ),
         201,
     )
-    assert (released["draft"], released["number"]) == (False, "MR-2026-000004")
+    assert (released["draft"], released["number"]) == (False, "MR-2026-000001")
 
     # Cancellation only by credit note: the invoice stays, negated amounts, new number.
     note = _ok(
@@ -330,7 +330,7 @@ def test_rent_invoices_numbering_locks_credit_note_and_tenant_separation(
     )
     assert (note["kind"], note["number"], note["cancels_invoice_id"]) == (
         "credit_note",
-        "MR-2026-000005",
+        "ENTWURF-2026-000004",
         first["id"],
     )
     assert (note["net_total"], note["vat_total"], note["gross_total"]) == (
@@ -367,7 +367,7 @@ def test_rent_invoices_numbering_locks_credit_note_and_tenant_separation(
     shop3 = _tenancy(closed, h, prop3["id"], "01", vat_option="commercial_full_vat")
     _run(closed, h, "2026-06-01", "contract", shop3["id"])
     other_entity = _ok(_invoice(closed, h, shop3["id"], "2026-06-01", "2026-06-30"), 201)
-    assert other_entity["number"] == "MR-2026-000001"
+    assert other_entity["number"] == "ENTWURF-2026-000001"
     assert other_entity["legal_entity_id"] == entity3
 
     # Tenant separation: the other tenant sees neither list nor PDF.
@@ -382,3 +382,32 @@ def test_rent_invoices_numbering_locks_credit_note_and_tenant_separation(
         ).status_code
         == 404
     )
+
+    # AC03-01: switch for draft numbers. Default draft_numbers; regular_numbers consumes MR-;
+    # reject_when_g1_closed refuses without consuming a number; G1 open keeps the MR- series.
+    mode_url = f"{A}/rent-invoices/numbering-mode"
+    assert _ok(closed.get(mode_url, headers=h))["mode"] == "draft_numbers"
+    assert _ok(closed.get(mode_url, headers=other))["mode"] == "draft_numbers"
+    assert closed.get(mode_url, params={"x": "1"}, headers=h).status_code == 422
+    assert closed.put(mode_url, json={"mode": "bogus"}, headers=h).status_code == 422
+    assert closed.put(mode_url, json={"mode": "regular_numbers"}, headers=other).status_code == 200
+    assert _ok(closed.get(mode_url, headers=h))["mode"] == "draft_numbers"  # tenant separation
+    _ok(closed.put(mode_url, json={"mode": "regular_numbers"}, headers=h))
+    regular = _ok(_invoice(closed, h, shop3["id"], "2026-06-01", "2026-06-30"), 201)
+    assert regular["number"] == "MR-2026-000001"
+    assert regular["draft"] is True
+    assert regular["legal_entity_id"] == entity3
+    _ok(closed.put(mode_url, json={"mode": "reject_when_g1_closed"}, headers=h))
+    _problem(_invoice(closed, h, shop3["id"], "2026-06-01", "2026-06-30"), "MHVP-BILL-0360")
+    released3 = _ok(
+        open_.post(
+            f"/api/v1/contracts/{shop3['id']}/rent-invoices",
+            json={"period_start": "2026-06-01", "period_end": "2026-06-30"},
+            headers=h,
+        ),
+        201,
+    )
+    assert (released3["draft"], released3["number"]) == (False, "MR-2026-000002")
+    _ok(closed.put(mode_url, json={"mode": "draft_numbers"}, headers=h))
+    again = _ok(_invoice(closed, h, shop3["id"], "2026-06-01", "2026-06-30"), 201)
+    assert again["number"] == "ENTWURF-2026-000002"

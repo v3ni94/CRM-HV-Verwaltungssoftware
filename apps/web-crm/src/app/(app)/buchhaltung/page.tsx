@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 import { RuleCheckpointsDue } from "@/components/accounting/RuleCheckpointsDue";
+import { RuleCheckpointsManage } from "@/components/accounting/RuleCheckpointsManage";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -32,6 +33,7 @@ export default async function LedgersPage() {
         {t("ownerStatementsLink")}
       </Link>
       <RuleCheckpointsDue />
+      <RuleCheckpointsManage />
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

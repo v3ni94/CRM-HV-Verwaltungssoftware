@@ -14,6 +14,7 @@ import csv
 import io
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -136,6 +137,18 @@ async def release(
             raise ProblemError(
                 ErrorCodes.RESOURCE_NOT_FOUND, detail="Dokument des Steuerberaters nicht gefunden."
             )
+    if (
+        template.four_eyes_required is not False
+        and user_id is not None
+        and template.review_requested_by == user_id
+    ):
+        raise ProblemError(
+            ErrorCodes.ACC_CHART_FOUR_EYES,
+            detail=(
+                "Diese Version wurde von Ihnen zur Prüfung gegeben. Die Freigabe muss eine "
+                "zweite Person erteilen (Vier-Augen-Prinzip, Schalter am Kontenrahmen)."
+            ),
+        )
     template.status = STATUS_RELEASED
     template.released = True
     template.released_by = user_id
@@ -173,6 +186,7 @@ async def new_version(
         accounts=[dict(row) for row in template.accounts],
         status=STATUS_DRAFT,
         supersedes_id=template.id,
+        four_eyes_required=template.four_eyes_required is not False,
     )
     session.add(created)
     await session.flush()
@@ -202,6 +216,8 @@ async def update_accounts(
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Kontonummern müssen gefüllt und eindeutig sein."
         )
+    for row in body.accounts:
+        validate_split(row)
     template.accounts = [dict(row) for row in body.accounts]
     if body.name:
         template.name = body.name
@@ -215,6 +231,145 @@ async def update_accounts(
     )
     await session.flush()
     return template
+
+
+def validate_split(row: dict[str, Any]) -> None:
+    """Multi key distribution of a template account (SA-08, P07-04): codes filled and unique,
+    shares decimal between 0 and 100, sum exactly 100 (empty list allowed)."""
+    split = row.get("allocation_split") or []
+    number = row.get("number")
+    if not isinstance(split, list):
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"Konto {number}: Verteilung ungültig.")
+    if not split:
+        return
+    codes: list[str] = []
+    total = Decimal("0")
+    for part in split:
+        code = str((part or {}).get("key_code") or "").strip() if isinstance(part, dict) else ""
+        try:
+            share = Decimal(str(part.get("share_percent")))
+        except (InvalidOperation, AttributeError):
+            share = Decimal("-1")
+        if not code or not share.is_finite() or share <= 0 or share > 100:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=f"Konto {number}: Schlüssel und Anteil (größer 0, höchstens 100) angeben.",
+            )
+        codes.append(code)
+        total += share
+    if len(codes) != len(set(codes)):
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail=f"Konto {number}: Schlüssel doppelt in der Verteilung."
+        )
+    if total != Decimal("100"):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=f"Konto {number}: Anteile ergeben {total} statt 100 Prozent.",
+        )
+
+
+class ChartFourEyesIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    required: bool
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+async def set_four_eyes(
+    session: AsyncSession,
+    template: ChartTemplate,
+    body: ChartFourEyesIn,
+    *,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+) -> ChartTemplate:
+    if template.status == STATUS_RELEASED:
+        raise _not_draft(template)
+    old = template.four_eyes_required is not False
+    template.four_eyes_required = body.required
+    await _emit(
+        session,
+        template,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        type="chart_template.four_eyes_changed",
+        extra={"old": old, "new": body.required, "reason": body.reason},
+    )
+    await session.flush()
+    return template
+
+
+class ChartCoverageAccount(BaseModel):
+    number: str
+    name: str
+    issues: list[str]
+    proposed_statement_kind: str | None = None
+
+
+class ChartCoverageOut(BaseModel):
+    template_id: uuid.UUID
+    version: int
+    status: str
+    accounts_total: int
+    without_statement_kind: int
+    without_allocation: int
+    open_proposals: int
+    statement_kinds_without_account: list[str]
+    accounts: list[ChartCoverageAccount]
+
+
+def coverage_report(template: ChartTemplate) -> ChartCoverageOut:
+    """Prüfbericht (SA-08, P07-05): accounts without statement kind, cost accounts without
+    a valid key distribution, open statement kind proposals, kinds without any account."""
+    from mhvp.accounting.defaults import PROPOSAL_OPEN, STATEMENT_KINDS_PROPOSABLE
+
+    rows: list[ChartCoverageAccount] = []
+    no_kind = no_alloc = open_prop = 0
+    used: set[str] = set()
+    for row in template.accounts:
+        issues: list[str] = []
+        kind = row.get("statement_kind") or "none"
+        proposed = row.get("proposed_statement_kind")
+        if kind != "none":
+            used.add(str(kind))
+        if proposed:
+            used.add(str(proposed))
+        if kind == "none":
+            issues.append("ohne_abrechnungsart")
+            no_kind += 1
+        if row.get("category") == "cost" and str(row.get("allocation_category", "none")).startswith(
+            "allocable"
+        ):
+            try:
+                validate_split(row)
+                ok = bool(row.get("allocation_split"))
+            except ProblemError:
+                ok = False
+            if not ok:
+                issues.append("ohne_gueltige_verteilung")
+                no_alloc += 1
+        if proposed and row.get("proposal_status") == PROPOSAL_OPEN:
+            issues.append("vorschlag_offen")
+            open_prop += 1
+        if issues:
+            rows.append(
+                ChartCoverageAccount(
+                    number=str(row.get("number", "")),
+                    name=str(row.get("name", "")),
+                    issues=issues,
+                    proposed_statement_kind=proposed,
+                )
+            )
+    return ChartCoverageOut(
+        template_id=template.id,
+        version=template.version,
+        status=template.status,
+        accounts_total=len(template.accounts),
+        without_statement_kind=no_kind,
+        without_allocation=no_alloc,
+        open_proposals=open_prop,
+        statement_kinds_without_account=[k for k in STATEMENT_KINDS_PROPOSABLE if k not in used],
+        accounts=rows,
+    )
 
 
 async def history(session: AsyncSession, code: str) -> list[ChartTemplate]:

@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { AssistantLogPanel } from "@/components/settings/AssistantLogPanel";
+import { ProviderRatingsPanel } from "@/components/settings/ProviderRatingsPanel";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -10,6 +12,13 @@ export type PortalFeatures = {
   chat_enabled: boolean;
   chat_ai_prequalification_enabled: boolean;
   support_login_enabled: boolean;
+  owner_rental_income_enabled?: boolean;
+  /** AE28 (M7-06, SA-04): Assistent für die eigenen Unterlagen und Datenschutz-Feature, beide aus. */
+  chat_bot_enabled?: boolean;
+  privacy_feature_enabled?: boolean;
+  owner_ticket_scope?: "none" | "released" | "property";
+  /** AA14-02: Bewertungen der Dienstleister, off (Standard) oder staff (nur Verwaltung). */
+  provider_rating_display?: "off" | "staff";
 };
 export type PortalStatistics = {
   period_days: number;
@@ -20,7 +29,23 @@ export type PortalStatistics = {
   portal_tickets: number;
 };
 
-const KEYS: (keyof PortalFeatures)[] = ["chat_enabled", "chat_ai_prequalification_enabled", "support_login_enabled"];
+type BoolKey =
+  | "chat_enabled"
+  | "chat_ai_prequalification_enabled"
+  | "support_login_enabled"
+  | "owner_rental_income_enabled"
+  | "chat_bot_enabled"
+  | "privacy_feature_enabled";
+const KEYS: BoolKey[] = [
+  "chat_enabled",
+  "chat_ai_prequalification_enabled",
+  "support_login_enabled",
+  "owner_rental_income_enabled",
+  "chat_bot_enabled",
+  "privacy_feature_enabled",
+];
+const SCOPES = ["none", "released", "property"] as const;
+const RATING_MODES = ["off", "staff"] as const;
 
 /** Portalfunktionen und Statistik je Mandant (M21-08, SA-01): Schalter sind standardmäßig aus;
  *  die KI-Vorqualifizierung braucht zusätzlich den freigegebenen KI-Anbieter mit AVV, die
@@ -40,7 +65,7 @@ export function PortalManagement({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function toggle(key: keyof PortalFeatures, value: boolean) {
+  async function toggle(key: keyof PortalFeatures, value: boolean | string) {
     setBusy(true);
     setError(null);
     const res = await bff<PortalFeatures>("/api/bff/portal-admin/features", {
@@ -68,7 +93,7 @@ export function PortalManagement({
           <label key={key} className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
-              checked={features[key]}
+              checked={Boolean(features[key])}
               disabled={busy || !canManage || (key === "chat_ai_prequalification_enabled" && !features.chat_enabled)}
               onChange={(e) => toggle(key, e.target.checked)}
             />
@@ -78,7 +103,40 @@ export function PortalManagement({
             </span>
           </label>
         ))}
+        <label className="flex flex-col gap-1 text-sm">
+          <span>{t("ticketScope")}</span>
+          <select
+            className={ui.input}
+            value={features.owner_ticket_scope ?? "released"}
+            disabled={busy || !canManage}
+            onChange={(e) => toggle("owner_ticket_scope", e.target.value)}
+          >
+            {SCOPES.map((s) => (
+              <option key={s} value={s}>
+                {t(`ticketScopes.${s}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span>{t("ratingDisplay")}</span>
+          <select
+            className={ui.input}
+            value={features.provider_rating_display ?? "off"}
+            disabled={busy || !canManage}
+            onChange={(e) => toggle("provider_rating_display", e.target.value)}
+          >
+            {RATING_MODES.map((m) => (
+              <option key={m} value={m}>
+                {t(`ratingModes.${m}`)}
+              </option>
+            ))}
+          </select>
+          <span className={ui.help}>{t("ratingHelp")}</span>
+        </label>
       </div>
+      {features.provider_rating_display === "staff" ? <ProviderRatingsPanel /> : null}
+      {features.chat_bot_enabled && canManage ? <AssistantLogPanel /> : null}
       {statistics ? (
         <div className={`${ui.card} flex flex-col gap-1 text-sm`} data-testid="portal-statistics">
           <h3 className="text-base font-semibold">{t("statistics", { days: statistics.period_days })}</h3>

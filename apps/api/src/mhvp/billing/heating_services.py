@@ -452,3 +452,39 @@ async def consumption_info(
 
 def _serial(value: Decimal | None) -> str | None:
     return None if value is None else str(value)
+
+
+async def comparison(
+    session: AsyncSession,
+    statement: Statement,
+    row: StatementHeating,
+    *,
+    tolerance_abs: Decimal,
+    tolerance_percent: Decimal,
+) -> dict[str, Any]:
+    """External heating items (all except the fed own item) against the last own result.
+    Read only (AB10-01 / M17-02)."""
+    from mhvp.billing import heating_compare
+    from mhvp.billing.models import StatementCostItem
+
+    items = (
+        await session.scalars(
+            select(StatementCostItem).where(
+                StatementCostItem.statement_id == statement.id,
+                StatementCostItem.heating.is_(True),
+            )
+        )
+    ).all()
+    external = [
+        heating_compare.ExternalItem(i.label, dict(i.external_amounts or {}))
+        for i in items
+        if i.id != row.applied_item_id and i.external_amounts
+    ]
+    occupants = await build_occupants(session, statement, row) if row.result else []
+    return heating_compare.compare(
+        result=row.result,
+        key_to_unit={o.key: o.unit_id for o in occupants},
+        external=external,
+        tolerance_abs=tolerance_abs,
+        tolerance_percent=tolerance_percent,
+    )

@@ -6,6 +6,9 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { PrivacyConfigSources } from "./PrivacyConfigSources";
+import { PrivacyRegisterEditor, type RegisterEntryFull } from "./PrivacyRegisterEditor";
+
 export type DeletionProfile = {
   id: string;
   data_type: string;
@@ -34,6 +37,9 @@ export type RegisterEntry = {
   third_country: boolean;
   legal_review_status: string;
   active: boolean;
+  // AE32 (S711-10): Pflegefelder, vollständig in RegisterEntryFull.
+  third_country_status?: string;
+  source_key?: string | null;
 };
 type RecordsDraft = { title: string; status: string; review_notice: string; markdown: string };
 type ContactHit = { id: string; display_name: string };
@@ -50,9 +56,11 @@ const AVV = ["none", "requested", "confirmed", "not_required"] as const;
  */
 export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; canApprove: boolean }) {
   const t = useTranslations("PrivacyAdmin");
+  const tr = useTranslations("PrivacyRegister");
+  const [editing, setEditing] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<DeletionProfile[] | null>(null);
   const [requests, setRequests] = useState<ErasureRequest[] | null>(null);
-  const [register, setRegister] = useState<RegisterEntry[] | null>(null);
+  const [register, setRegister] = useState<RegisterEntryFull[] | null>(null);
   const [draft, setDraft] = useState<RecordsDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,7 +74,7 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
     const [p, r, g] = await Promise.all([
       bff<DeletionProfile[]>("/api/bff/privacy/deletion-profiles"),
       bff<ErasureRequest[]>("/api/bff/privacy/erasure-requests"),
-      bff<RegisterEntry[]>("/api/bff/privacy/register"),
+      bff<RegisterEntryFull[]>("/api/bff/privacy/register"),
     ]);
     if (p.ok) setProfiles(p.data ?? []);
     else setError(p.message);
@@ -365,6 +373,8 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
         ) : null}
       </section>
 
+      <PrivacyConfigSources canManage={canManage} onSynced={load} />
+
       <section className={`${ui.card} flex flex-col gap-3`} aria-labelledby="privacy-register-title">
         <h2 id="privacy-register-title" className={ui.h2}>
           {t("register.title")}
@@ -382,7 +392,10 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
                   <th>{t("register.name")}</th>
                   <th>{t("register.kind")}</th>
                   <th>{t("register.avv")}</th>
+                  <th>{tr("columns.thirdCountry")}</th>
+                  <th>{tr("columns.origin")}</th>
                   <th>{t("register.review")}</th>
+                  {canManage ? <th>{t("actions")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -391,13 +404,39 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
                     <td>{r.name}</td>
                     <td>{t(`kind.${r.kind}`)}</td>
                     <td>{t(`avv.${r.avv_status}`)}</td>
+                    <td>{tr(`thirdCountry.${r.third_country_status || "open"}`)}</td>
+                    <td>{r.source_key ? tr("columns.originConfig") : tr("columns.originManual")}</td>
                     <td>{r.legal_review_status === "reviewed" ? t("register.reviewed") : t("register.reviewOpen")}</td>
+                    {canManage ? (
+                      <td>
+                        <button type="button" className={ui.buttonSm} onClick={() => setEditing(r.id)}>
+                          {tr("columns.edit")}
+                        </button>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        {(() => {
+          const current = editing ? register?.find((r) => r.id === editing) : undefined;
+          if (!canManage || !current) return null;
+          const processors = (register ?? []).filter((r) => r.kind === "processor" || r.kind === "sub_processor").map((r) => ({ id: r.id, name: r.name }));
+          return (
+            <PrivacyRegisterEditor
+              key={current.id}
+              entry={current}
+              processors={processors}
+              onCancel={() => setEditing(null)}
+              onSaved={async () => {
+                setEditing(null);
+                await load();
+              }}
+            />
+          );
+        })()}
         {canManage ? (
           <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => void createRegister(e)} aria-label={t("register.formLabel")}>
             <label className="flex flex-col gap-1">
@@ -451,6 +490,9 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
               {t("records.download")}
             </button>
           ) : null}
+          <a className={ui.button} href="/api/bff/privacy/processing-records/pdf" download data-testid="privacy-records-pdf">
+            {tr("records.pdf")}
+          </a>
         </div>
         {draft ? (
           <>

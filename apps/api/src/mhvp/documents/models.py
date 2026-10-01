@@ -19,10 +19,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
 )
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, ORMExecuteState, Session, mapped_column, with_loader_criteria
 
 from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
@@ -190,6 +191,14 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
             sa_text("lower(filename) gin_trgm_ops"),
             postgresql_using="gin",
         ),
+        # AE33 (AC07-03): trash; both columns are set together or not at all.
+        CheckConstraint("(deleted_at IS NULL) = (purge_at IS NULL)", name="trash_pair"),
+        Index(
+            "ix_document_trash_purge_at",
+            "tenant_id",
+            "purge_at",
+            postgresql_where=sa_text("deleted_at IS NOT NULL"),
+        ),
         Index("ix_document_tenant_sha256", "tenant_id", "sha256"),
         Index("ix_document_tenant_created_at", "tenant_id", "created_at"),
         Index(
@@ -261,6 +270,13 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
     # of its own, only import provenance. Restored 25.09.2026, see the note on
     # `DocumentCategory.source_system` above.
     source_meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # AE33 (AC07-03): trash. ``deleted_at`` set means the document is in the trash: the session
+    # filter at the end of this module hides it from every query (``mhvp.documents.trash``),
+    # the original stays in the object store until ``purge_at`` passes and every retention
+    # check holds again. Both timestamps are set together (check ``trash_pair``).
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    purge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DocumentLink(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -387,6 +403,54 @@ class DocumentTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
 
+TEXT_BLOCK_CODES: dict[str, str] = {
+    "info_sheet_inspection": "Informationsblatt: Belegeinsicht",
+    "info_sheet_objection": "Informationsblatt: Einwendungen",
+    "owner_letter_tax_note": "Eigentümeranschreiben: steuerlicher Hinweis",
+    "owner_s35a_note": "Nachweis § 35a EStG: Erläuterung",
+    "portal_chat_privacy_notice": "Portal-Assistent: Datenschutzhinweis zur KI-Antwort",
+    # AE29 / M21-04: legal texts of the portal per tenant (same release workflow, shown in the
+    # portal footer only when approved; mhvp.platform.legal_texts).
+    "impressum": "Portal: Impressum",
+    "datenschutz": "Portal: Datenschutzerklärung",
+    "nutzungsbedingungen": "Portal: Nutzungsbedingungen",
+}
+TEXT_BLOCK_STATUSES = ("draft", "submitted", "approved", "retired")
+
+
+class LegalTextBlock(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AA11-01/02: operator text block with release workflow (draft, submitted, approved with a
+    second person). Only approved texts are printed; no legal text is shipped by the software."""
+
+    __tablename__ = "legal_text_block"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "code", "version", name="uq_legal_text_block_version"),
+        CheckConstraint(
+            "status IN ('draft', 'submitted', 'approved', 'retired')",
+            name="ck_legal_text_block_status",
+        ),
+        Index(
+            "uq_legal_text_block_approved",
+            "tenant_id",
+            "code",
+            unique=True,
+            postgresql_where=sa_text("status = 'approved'"),
+        ),
+    )
+
+    code: Mapped[str] = mapped_column(String(63), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    source_note: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="draft")
+    submitted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reject_reason: Mapped[str | None] = mapped_column(String(500))
+
+
 TEMPLATE_CONTEXT_TYPES = (
     "contact",
     "contract",
@@ -511,3 +575,40 @@ class DocumentRedaction(IdMixin, TimestampMixin, TenantMixin, Base):
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     released_visibility: Mapped[list[str] | None] = mapped_column(ARRAY(String(16)))
+
+
+class DocumentTrashSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One row per tenant (AE33, AC07-03). The trash is off by default: a lawful deletion then
+    stays final as before. The period is a proposal (6.9.5 names 30 days for the rolling
+    backup, not for a trash); whether and how long personal data stay in a trash is an open
+    decision (OPEN_QUESTIONS AE33-01)."""
+
+    __tablename__ = "document_trash_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_document_trash_setting_tenant_id"),
+        CheckConstraint("retention_days BETWEEN 1 AND 365", name="retention_days_range"),
+    )
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_text("false")
+    )
+    retention_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _hide_trashed_documents(state: ORMExecuteState) -> None:
+    """AE33: a document in the trash does not exist for any ORM query (list, search, links,
+    letters, exports). The trash views and the purge opt in with the execution option
+    ``include_trashed`` or the session flag set by ``mhvp.documents.trash.trashed_visible``."""
+    if (
+        not state.is_select
+        or state.is_column_load
+        or state.execution_options.get("include_trashed", False)
+        or state.session.info.get("include_trashed", False)
+    ):
+        return
+    state.statement = state.statement.options(
+        with_loader_criteria(Document, lambda cls: cls.deleted_at.is_(None), include_aliases=True)
+    )

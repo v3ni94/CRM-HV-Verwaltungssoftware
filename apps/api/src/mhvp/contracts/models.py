@@ -433,3 +433,35 @@ class DepositMovement(IdMixin, TimestampMixin, TenantMixin, Base):
     reason: Mapped[str | None] = mapped_column(Text)
     # Set by the ledger from M10; until then movements are records, not postings.
     posting_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class AllocationAgreement(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Agreement that a cost position (BetrKV catalogue type) is passed on to a tenancy, with the
+    clause reference and the proof document (M17-01, AE17). The platform never infers it from
+    account names; the legal validity of the clause stays a human review."""
+
+    __tablename__ = "allocation_agreement"
+    __table_args__ = (
+        CheckConstraint("valid_to IS NULL OR valid_to >= valid_from", name="period_order"),
+        CheckConstraint("status IN ('agreed', 'excluded')", name="status_values"),
+        CheckConstraint(
+            "status = 'excluded' OR (clause_reference IS NOT NULL AND clause_reference <> '')",
+            name="clause_required",
+        ),
+        ExcludeConstraint(
+            ("contract_id", "="),
+            ("operating_cost_type", "="),
+            (text("daterange(valid_from, valid_to, '[]')"), "&&"),
+            name="ex_allocation_agreement_period",
+            using="gist",
+        ),
+    )
+
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", ondelete="CASCADE")
+    operating_cost_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="agreed")
+    clause_reference: Mapped[str | None] = mapped_column(Text)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(Text)

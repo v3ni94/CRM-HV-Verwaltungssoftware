@@ -31,7 +31,12 @@ export default async function SecurityPage() {
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("intro")}</p>
-      <SecuritySettings totpEnabled={me.data?.totp_enabled ?? false} initialDevices={devices.data ?? []} passkeysAvailable={passkeysAvailable} />
+      <SecuritySettings
+        totpEnabled={me.data?.totp_enabled ?? false}
+        initialDevices={devices.data ?? []}
+        passkeysAvailable={passkeysAvailable}
+        mfaRequired={(me.data as { mfa_required?: boolean } | undefined)?.mfa_required ?? false}
+      />
       {consent?.available ? <SupportConsent initial={consent} /> : null}
     </div>
   );

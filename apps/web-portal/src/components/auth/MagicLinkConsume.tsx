@@ -8,7 +8,18 @@ import { bff } from "@/lib/bff";
 import { adoptAccountLocale } from "@/lib/locale-sync";
 import { ui } from "@/lib/ui";
 
-type ConsumeResult = { status: "ok" } | { status: "code_required"; link_id: string; tenant_id: string };
+type ConsumeResult =
+  | { status: "ok" }
+  | { status: "code_required"; link_id: string; tenant_id: string }
+  // M2-04: the tenant policy requires TOTP (or its setup); the BFF keeps the step token.
+  | { status: "mfa_required" | "mfa_setup_required" };
+
+/** M2-04: next login step after the link or the e-mail code, null when the session is issued. */
+function stepPath(status: string): string | null {
+  if (status === "mfa_required") return "/anmelden/zweiter-faktor";
+  if (status === "mfa_setup_required") return "/anmelden/zweiter-faktor-einrichten";
+  return null;
+}
 
 type State =
   | { step: "consuming" }
@@ -50,6 +61,13 @@ export function MagicLinkConsume({ token }: { token?: string }) {
         router.refresh();
         return;
       }
+      const consumedStep = stepPath(result.data.status);
+      if (consumedStep) {
+        setState({ step: "done" });
+        router.push(consumedStep);
+        return;
+      }
+      if (result.data.status !== "code_required") return;
       setState({ step: "code", linkId: result.data.link_id, tenantId: result.data.tenant_id });
     })();
     // token is read once on mount; the link must not be redeemed a second time on a rerender.
@@ -70,6 +88,11 @@ export function MagicLinkConsume({ token }: { token?: string }) {
       return;
     }
     setState({ step: "done" });
+    const codeStep = stepPath(result.data.status);
+    if (codeStep) {
+      router.push(codeStep);
+      return;
+    }
     await adoptAccountLocale();
     router.push("/start");
     router.refresh();

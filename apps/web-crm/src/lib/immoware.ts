@@ -100,3 +100,117 @@ export function cleanMapping(
   }
   return { columns: cols, value_maps: maps };
 }
+
+/* AE37 (Q08-01): header heuristic, stored assignments, validation report, export status.
+   Typed by hand until the API client is regenerated (make openapi). */
+
+export type HeaderCandidate = {
+  row: number;
+  score: number;
+  filled: number;
+  text_cells: number;
+  matched_terms: string[];
+  duplicates: string[];
+  reason: string;
+};
+/** POST /imports/immoware24/header-detection */
+export type HeaderDetection = {
+  header_row: number | null;
+  headers: string[];
+  sheet: string | null;
+  sheets: string[];
+  rows_scanned: number;
+  candidates: HeaderCandidate[];
+};
+
+export type ProposalStatus = "stored" | "sure" | "check" | "none";
+export type FieldProposal = {
+  name: string;
+  label: string;
+  required: boolean;
+  header: string | null;
+  score: number;
+  basis: string | null;
+  basis_label: string | null;
+  status: ProposalStatus;
+  note: string | null;
+  alternatives: { header: string; score: number; basis: string }[];
+};
+/** GET /imports/immoware24/files/{id}/column-proposal */
+export type ColumnProposal = {
+  report_type: ReportType;
+  headers: string[];
+  columns: Record<string, string>;
+  fields: FieldProposal[];
+  unassigned_headers: string[];
+  ignored_headers: string[];
+  missing_required: string[];
+  stored_used: number;
+};
+
+export type RequiredStatus = "ok" | "partly_empty" | "empty" | "missing" | "not_in_file";
+export type CheckSampleRow = {
+  row_number: number;
+  raw: Record<string, unknown>;
+  values: Record<string, unknown>;
+  errors: string[];
+};
+/** POST /imports/immoware24/files/{id}/check (read only validation report). */
+export type ColumnCheck = {
+  report_type: ReportType;
+  rows: number;
+  valid: number;
+  invalid: number;
+  staged_only: boolean;
+  required: { name: string; label: string; header: string | null; status: RequiredStatus; empty: number }[];
+  fields: { name: string; label: string; header: string | null; filled: number; empty: number; errors: number; examples: string[] }[];
+  not_in_file: string[];
+  assigned_twice: string[];
+  unassigned_headers: string[];
+  sample_rows: CheckSampleRow[];
+  error_rows: CheckSampleRow[];
+  ready: boolean;
+};
+
+/** GET/PUT /imports/immoware24/column-assignments */
+export type ColumnAssignment = {
+  id: string;
+  report_type: ReportType;
+  header: string;
+  header_key: string;
+  target_field: string | null;
+  use_count: number;
+  last_used_at: string | null;
+  updated_at: string;
+};
+
+export type RequirementStatus = "file_missing" | "mapping_open" | "mapping_stored" | "applied";
+/** GET /imports/immoware24/export-requirements */
+export type ExportRequirement = {
+  report_type: ReportType;
+  source: string;
+  required_fields: string[];
+  optional_fields: string[];
+  stored_assignments: number;
+  required_covered: string[];
+  files: number;
+  last_file_at: string | null;
+  last_headers: number | null;
+  applied: boolean;
+  status: RequirementStatus;
+};
+
+/** Proposed columns limited to headers of the file (a stale proposal never adds others). */
+export function proposedColumns(proposal: ColumnProposal, headers: string[]): Record<string, string> {
+  return Object.fromEntries(Object.entries(proposal.columns).filter(([, h]) => headers.includes(h)));
+}
+
+/** Assignments to remember: every chosen column of the mapping (header -> target field);
+ *  a header chosen for two fields is remembered for the first one only. */
+export function assignmentsFrom(columns: Record<string, string>): { header: string; target_field: string }[] {
+  const byHeader = new Map<string, string>();
+  for (const [field, header] of Object.entries(columns)) {
+    if (header && !byHeader.has(header)) byHeader.set(header, field);
+  }
+  return [...byHeader].map(([header, field]) => ({ header, target_field: field }));
+}

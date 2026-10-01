@@ -99,6 +99,12 @@ async def allocation_properties(
         return {"items": items, "note": ALLOCATION_NOTE}
 
 
+INCOME_LOCKED = (
+    "Die Anzeige der Mieterträge ist für diesen Mandanten nicht freigegeben. "
+    "Bitte wenden Sie sich an die Verwaltung."
+)
+
+
 @router.get("/rental-income", summary="Vereinbarte Mieterträge je Objekt (Kapitalanleger)")
 async def rental_income(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, Any]:
     from mhvp.contracts.models import Contract, ContractKind, ContractPayment
@@ -108,6 +114,11 @@ async def rental_income(request: Request, ctx: Portal = Depends(portal_user)) ->
     today = local_today()
     async with tenant_tx(request, principal) as session:
         _, ownership = await _owner_scope(session, account, today)
+        from mhvp.portal import features as portal_features
+
+        # AE13: the investor view is a tenant switch, off by default (Q10-02 data protection).
+        if not (await portal_features.get_or_default(session)).owner_rental_income_enabled:
+            return {"items": [], "currency": "EUR", "note": INCOME_LOCKED, "enabled": False}
         units: set[uuid.UUID] = set()
         if ownership:
             units = set(
@@ -168,7 +179,7 @@ async def rental_income(request: Request, ctx: Portal = Depends(portal_user)) ->
                 )
                 entry["total_gross"] += gross
         items = [{**v, "total_gross": str(v["total_gross"])} for v in per_property.values()]
-        return {"items": items, "currency": "EUR", "note": INCOME_NOTE}
+        return {"items": items, "currency": "EUR", "note": INCOME_NOTE, "enabled": True}
 
 
 TAKEOVER_NOTE = (

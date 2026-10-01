@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 
 import { formatEur } from "@/lib/format";
@@ -8,6 +9,9 @@ export type StatementDiff = {
   new: { id: string; version: number };
   total_costs: DiffTriple;
   units: { unit_number: string; in_old: boolean; in_new: boolean; cost_share: DiffTriple; advances_resolved: DiffTriple; result: DiffTriple; arrears: DiffTriple }[];
+  owners?: { owner: string; units: string[]; cost_share: DiffTriple; advances_resolved: DiffTriple; result: DiffTriple }[];
+  heating?: { old: Record<string, string>; new: Record<string, string>; difference: Record<string, string> };
+  correction?: { reason: string | null; basis: string | null; legal_note: string };
   positions: { label: string; in_old: boolean; in_new: boolean; amount: DiffTriple; split: Record<string, DiffTriple> }[];
 };
 
@@ -67,6 +71,44 @@ export function StatementVersionDiff({ diff }: { diff: StatementDiff }) {
           </tbody>
         </table>
       </div>
+      {diff.owners && diff.owners.length > 0 ? (
+        <div className="flex flex-col gap-2" data-testid="correction-owners">
+          <h3 className="text-sm font-medium">{t("perOwner")}</h3>
+          <div className="overflow-x-auto">
+            <table className="mhvp-table">
+              {head}
+              <tbody>
+                {diff.owners.map((o) => (
+                  <Fragment key={o.owner}>
+                    <Row label={`${o.units.join(", ")}: ${t("costShare")}`} triple={o.cost_share} />
+                    <Row label={`${o.units.join(", ")}: ${t("result")}`} triple={o.result} />
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+      {diff.heating ? (
+        <div className="flex flex-col gap-2" data-testid="correction-heating">
+          <h3 className="text-sm font-medium">{t("heating")}</h3>
+          <div className="overflow-x-auto">
+          <table className="mhvp-table">
+            {head}
+            <tbody>
+              {(["cash_outflows", "cost_distributed", "heating_accrual", "unexplained"] as const).map((k) => (
+                <Row
+                  key={k}
+                  label={t(`heatingRows.${k}`)}
+                  triple={{ old: diff.heating!.old[k] ?? "0.00", new: diff.heating!.new[k] ?? "0.00", difference: diff.heating!.difference[k] ?? "0.00" }}
+                />
+              ))}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      ) : null}
+      {diff.correction ? <p className="text-sm text-muted">{diff.correction.legal_note}</p> : null}
     </section>
   );
 }

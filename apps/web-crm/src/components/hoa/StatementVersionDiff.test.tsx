@@ -34,4 +34,29 @@ describe("StatementVersionDiff", () => {
     expect(screen.getByText("Einheit 01: Kostenanteil")).toBeInTheDocument();
     expect(screen.getByText("Einheit 02: Spitze / Anpassung")).toBeInTheDocument();
   });
+
+  it("shows the correction report per owner and the heating bridge (P02, D09)", () => {
+    renderIntl(
+      <StatementVersionDiff
+        diff={{
+          old: { id: "a", version: 1 },
+          new: { id: "b", version: 2 },
+          total_costs: tr("8000.00", "8000.00", "0.00"),
+          units: [],
+          positions: [],
+          owners: [{ owner: "p1", units: ["01"], cost_share: tr("3000.00", "3272.73", "272.73"), advances_resolved: tr("2800.00", "2800.00", "0.00"), result: tr("200.00", "472.73", "272.73") }],
+          heating: {
+            old: { cash_outflows: "10000.00", cost_distributed: "8000.00", heating_accrual: "0.00", unexplained: "-2000.00" },
+            new: { cash_outflows: "10000.00", cost_distributed: "8000.00", heating_accrual: "-2000.00", unexplained: "0.00" },
+            difference: { cash_outflows: "0.00", cost_distributed: "0.00", heating_accrual: "-2000.00", unexplained: "2000.00" },
+          },
+          correction: { reason: "other", basis: null, legal_note: "Rechtsfolge der Korrektur offen (P02)." },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("correction-owners")).toHaveTextContent("3.272,73");
+    expect(screen.getByTestId("correction-heating")).toHaveTextContent("Unerklärte Differenz");
+    expect(screen.getByTestId("correction-heating")).toHaveTextContent("10.000,00");
+    expect(screen.getByText("Rechtsfolge der Korrektur offen (P02).")).toBeInTheDocument();
+  });
 });

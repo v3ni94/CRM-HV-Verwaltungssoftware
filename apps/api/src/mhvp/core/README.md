@@ -185,3 +185,20 @@ geloggte Pfade mit Token (`/self-disclosure/…`, `/calendar-feed/…`). Prüfbe
 ### Passkeys und Portalkonten (U04-02)
 
 Passwortlose Passkey-Registrierung und -Anmeldung sind für reine Portalkonten (alle aktiven Mitgliedschaften nur mit Rolle `portal_user`) serverseitig gesperrt: 403 `MHVP-AUTH-0014`. Passkey als zweiter Faktor bleibt möglich. Prüfung in `core/auth/routers.py` (`_is_portal_only_user`), Regel `docs/rules/S16-01-passkeys.md`.
+
+## Second factor policy per role (AE27, M2-04, rule docs/rules/M2-04.md)
+
+`auth/mfa_policy.py` holds the tenant policy (`auth_mfa_policy`, migration 0383, RLS): CRM mode
+`voluntary` (default, also without a row: operator decision M2-01), `all_staff` (every role
+except `portal_user`) or `roles` (listed codes) as tenant choices, plus `portal_required`
+(default false). `requires_second_factor` is the pure rule; `user_requires_second_factor`
+evaluates every active membership (strictest wins).
+`/auth/login` answers `mfa_setup_required` with a setup token (`tokens.issue_mfa_setup_token`,
+audience `mhvp-mfa-setup`, 15 minutes) when a covered user has no factor; `/auth/mfa/setup/start`
+and `/auth/mfa/setup/confirm` enrol TOTP and issue the session. A setup token is never an MFA
+token and is refused once the user has any factor. `/auth/totp/disable` and revoking the last
+passkey answer `MHVP-AUTH-0015` while the policy covers the user. `GET/PUT /auth/mfa-policy`
+need `tenant_settings:read`/`update`; changes emit `auth.mfa_policy_changed`. `MeOut.mfa_required`
+evaluates the current tenant only (UI hint). `policy_step` hands magic link logins over to TOTP
+or its setup (`mhvp.portal.magic_link`). Platform admins without membership are not covered
+(AE27-02). Tests that need the obligation set the policy explicitly (`test_ae27_mfa_policy`).

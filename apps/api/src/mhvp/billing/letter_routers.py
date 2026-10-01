@@ -21,6 +21,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ReleaseGateResolver, ensure_release_gate_open
+from mhvp.documents import text_blocks
 from mhvp.workspace.services import local_today
 
 # M2-02/S16-02: statements outside the membership's property assignment answer 404.
@@ -122,6 +123,7 @@ async def _info_sheet_pdf(session: AsyncSession, request: Request, st: Statement
     st, snap = await _statement_with_snapshot(session, st.id)
     head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
     prop = await session.get(Property, st.property_id)
+    texts = await text_blocks.approved_texts(session, info_sheet.TEXT_CODES)
     sheet = info_sheet.build(
         period_from=st.period_from,
         period_to=st.period_to,
@@ -130,6 +132,10 @@ async def _info_sheet_pdf(session: AsyncSession, request: Request, st: Statement
         snapshot_hash=snap.hash,
         version=st.version,
         letter_date=local_today(),
+        texts={
+            "inspection": texts.get("info_sheet_inspection", ""),
+            "objection": texts.get("info_sheet_objection", ""),
+        },
     )
     return doc_letters.render_pdf(head, sheet)
 
@@ -169,7 +175,7 @@ async def info_sheet_file(
     """Files the info sheet of the current snapshot as a generated document linked to the
     statement run (context ``statement``) and the property. Output of the statement, so G3 is
     required; the legally relevant paragraphs stay marked "Text nicht freigegeben" (AA11-01)."""
-    from mhvp.billing import outputs
+    from mhvp.billing import allocation_basis, outputs
     from mhvp.documents.blobs import BlobStore
 
     await ensure_release_gate_open(
@@ -177,7 +183,9 @@ async def info_sheet_file(
     )
     async with tenant_tx(request, principal) as session:
         st, snap = await _statement_with_snapshot(session, statement_id)
+        await allocation_basis.ensure_complete(session, st)
         pdf = await _info_sheet_pdf(session, request, st)
+        released = await text_blocks.approved_texts(session, info_sheet.TEXT_CODES)
         document = await outputs.file_output(
             session,
             BlobStore(request.app.state.settings),
@@ -194,7 +202,10 @@ async def info_sheet_file(
             "statement_id": st.id,
             "document_id": document.id,
             "snapshot_hash": snap.hash,
-            "text_status": info_sheet.TEXT_NOT_RELEASED,
+            "text_status": info_sheet.TEXT_NOT_RELEASED
+            if len(released) < len(info_sheet.TEXT_CODES)
+            else "freigegeben",
+            "texts_status": text_blocks.status_by_code(released, info_sheet.TEXT_CODES),
         }
 
 

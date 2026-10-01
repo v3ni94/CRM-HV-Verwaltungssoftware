@@ -167,6 +167,7 @@ def test_invitation_period_dial_in_portal_and_virtual_lock(
     settings = _ok(c.get(f"{H}/meeting-settings", headers=h))
     assert settings == {"invitation_weeks": 3, "virtual_meetings_enabled": False} | {
         "virtual_basis_term_lock_enabled": False,  # GA07-01, default off
+        "virtual_basis_transition_date": None,  # AE12, entered by the operator
         "note": settings["note"],
     }
     assert (

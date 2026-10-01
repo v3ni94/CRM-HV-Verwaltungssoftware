@@ -340,6 +340,29 @@ async def owner_at(session: AsyncSession, unit_id: uuid.UUID, day: date) -> Any:
     )
 
 
+async def allocation_owner(
+    session: AsyncSession,
+    unit_id: uuid.UUID,
+    *,
+    default_day: date,
+    due_day: date | None = None,
+    resolution_day: date | None = None,
+) -> Any:
+    """Proposed debtor with the tenant rule per acquisition kind (AE10, AA07-01). With the
+    default ``manual_release`` (or without a rule) this is exactly ``owner_at(default_day)``."""
+    from mhvp.hoa.acquisition_rule import pick_day, resolve_variant
+
+    base = await owner_at(session, unit_id, default_day)
+    if base is None:
+        return None
+    kind = base.acquisition_kind.value if base.acquisition_kind else None
+    variant = await resolve_variant(session, kind)
+    day = pick_day(variant, default_day=default_day, due_day=due_day, resolution_day=resolution_day)
+    if day == default_day:
+        return base
+    return await owner_at(session, unit_id, day) or base
+
+
 async def ownership_periods(
     session: AsyncSession, unit_id: uuid.UUID, start: date, end: date
 ) -> list[dict[str, Any]]:

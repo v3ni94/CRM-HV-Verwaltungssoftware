@@ -8,8 +8,16 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select, update
 
-from mhvp.core.auth import passwords, service, tokens, webauthn
-from mhvp.core.auth.principal import Principal, get_principal, sessions
+from mhvp.core.auth import mfa_policy, passwords, service, tokens, webauthn
+from mhvp.core.auth.permissions import SYSTEM_ROLES
+from mhvp.core.auth.principal import (
+    Principal,
+    TenantPrincipal,
+    get_principal,
+    require_permission,
+    sessions,
+    tenant_tx,
+)
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.listparams import strict_query
@@ -38,7 +46,7 @@ class LoginRequest(BaseModel):
 
 
 class LoginStep(BaseModel):
-    status: str = Field(description="ok oder mfa_required")
+    status: str = Field(description="ok, mfa_required oder mfa_setup_required")
     mfa_token: str | None = None
     # Present only when status == "ok" (password alone was enough, or a trusted device stood
     # in for TOTP): the session is already issued, exactly like TokenResponse below.
@@ -50,6 +58,9 @@ class LoginStep(BaseModel):
     tenants: list["TenantOut"] = Field(default_factory=list)
     # Second factors the user can answer with when status == "mfa_required" (S16-01).
     mfa_methods: list[str] = Field(default_factory=list)
+    # M2-04: status == "mfa_setup_required" (the tenant policy demands a second factor, the
+    # user has none yet): token for /auth/mfa/setup/start and /auth/mfa/setup/confirm only.
+    mfa_setup_token: str | None = None
 
 
 class MfaSetup(BaseModel):
@@ -71,6 +82,43 @@ class TotpConfirmRequest(BaseModel):
 
 class TotpDisableRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=256)
+
+
+class AuthMfaSetupStartRequest(BaseModel):
+    """M2-04: enrolment inside the login flow, authorised by the setup token only."""
+
+    mfa_setup_token: str = Field(min_length=10, max_length=4096)
+
+
+class AuthMfaSetupConfirmRequest(BaseModel):
+    mfa_setup_token: str = Field(min_length=10, max_length=4096)
+    code: str = Field(min_length=6, max_length=8)
+    tenant_id: uuid.UUID | None = None
+    remember_device: bool = False
+
+
+class AuthMfaPolicyOut(BaseModel):
+    """Second factor policy of the tenant (M2-04, docs/rules/M2-04.md). Without a stored row the
+    default applies: ``voluntary`` (operator decision M2-01), portal not required."""
+
+    crm_mode: str
+    crm_role_codes: list[str]
+    portal_required: bool
+    # False while the tenant runs on the default (no stored row, ``voluntary``).
+    stored: bool
+    # Role codes of the tenant (system and custom) for the role list, portal role excluded.
+    available_role_codes: list[str]
+
+
+class AuthMfaPolicyUpdate(BaseModel):
+    """Replaces the policy. ``voluntary`` is the default without a policy (M2-01); ``all_staff``
+    and ``roles`` are tenant choices that make the second factor mandatory."""
+
+    model_config = {"extra": "forbid"}
+
+    crm_mode: Literal["all_staff", "roles", "voluntary"]
+    crm_role_codes: list[str] = Field(default_factory=list, max_length=100)
+    portal_required: bool
 
 
 class TenantOut(BaseModel):
@@ -194,8 +242,11 @@ class MeOut(BaseModel):
     # The single superadmin (ADR 0011): only true together with is_platform_admin.
     is_superadmin: bool = False
     platform_access_reason: str | None
-    # Second factor switched on by the user (Einstellungen, Sicherheit); never mandatory.
+    # Second factor switched on by the user (Einstellungen, Sicherheit).
     totp_enabled: bool = False
+    # M2-04: the tenant policy demands a second factor for this user (TOTP cannot be switched
+    # off then; without a factor the next login asks for the setup).
+    mfa_required: bool = False
     # UI preferences (operator 27.09.2026, migration 0182), served with getMe so the main
     # navigation renders its stored state without a flash of the wrong layout.
     ui_preferences: dict[str, Any] = Field(default_factory=dict)
@@ -263,17 +314,27 @@ def _mfa_user(settings: Settings, token: str) -> uuid.UUID:
 
 @router.post("/login", summary="Anmeldung Schritt 1: E-Mail und Passwort")
 async def login(body: LoginRequest, request: Request) -> LoginStep:
-    """TOTP is never mandatory (operator 26.09.2026, M2-01): the session is issued right here
-    unless the user enabled the second factor under Einstellungen, Sicherheit. A trusted
-    device ("Dieses Gerät 90 Tage merken") stands in for the second factor."""
+    """The session is issued right here unless the user has a second factor (enabled under
+    Einstellungen, Sicherheit) or the tenant's second factor policy covers the user (M2-04;
+    the default is voluntary, so only a tenant that chose the obligation). A trusted device
+    ("Dieses Gerät 90 Tage merken") stands in for the second factor. A user under the policy
+    without any factor gets ``mfa_setup_required`` and sets up TOTP in the login flow
+    (transition, no lockout)."""
     settings = _settings(request)
     user_id, totp_enabled = await service.check_password(
         sessions(request), body.email, body.password
     )
-    methods = ["totp"] if totp_enabled else []
-    if webauthn.is_available(settings) and await _has_passkey(request, user_id):
-        methods.append("webauthn")
+    methods = await _second_factor_methods(request, settings, user_id, totp_enabled)
     second_factor = bool(methods)
+    if not second_factor and await mfa_policy.user_requires_second_factor(
+        sessions(request), user_id
+    ):
+        return LoginStep(
+            status="mfa_setup_required",
+            mfa_setup_token=tokens.issue_mfa_setup_token(
+                settings, user_id, tenant_id=body.tenant_id
+            ),
+        )
     trusted = (
         second_factor
         and body.device_token is not None
@@ -300,6 +361,83 @@ async def login(body: LoginRequest, request: Request) -> LoginStep:
     )
 
 
+async def _second_factor_methods(
+    request: Request, settings: Settings, user_id: uuid.UUID, totp_enabled: bool
+) -> list[str]:
+    methods = ["totp"] if totp_enabled else []
+    if webauthn.is_available(settings) and await _has_passkey(request, user_id):
+        methods.append("webauthn")
+    return methods
+
+
+def _setup_user(settings: Settings, token: str) -> tuple[uuid.UUID, uuid.UUID | None]:
+    try:
+        return tokens.decode_mfa_setup_token(settings, token)
+    except (tokens.TokenError, ValueError, KeyError):
+        raise ProblemError(ErrorCodes.NOT_AUTHENTICATED) from None
+
+
+async def _refuse_setup_with_factor(
+    request: Request, settings: Settings, user_id: uuid.UUID
+) -> None:
+    """The setup step exists only for users without any second factor: a user who has one
+    (TOTP or a usable passkey) must answer with it, never enrol a new one with the password."""
+    async with platform_transaction(sessions(request)) as session:
+        user = await session.get(User, user_id)
+        if user is None or not user.active:
+            raise ProblemError(ErrorCodes.NOT_AUTHENTICATED)
+        totp_enabled = user.totp_enabled
+    if await _second_factor_methods(request, settings, user_id, totp_enabled):
+        raise ProblemError(ErrorCodes.NOT_AUTHENTICATED)
+
+
+@router.post(
+    "/mfa/setup/start",
+    summary="Anmeldung: zweiten Faktor einrichten, Schlüssel erzeugen (M2-04)",
+)
+async def mfa_setup_start(body: AuthMfaSetupStartRequest, request: Request) -> MfaSetup:
+    """Only with the setup token from ``/auth/login`` (status ``mfa_setup_required``). Creates
+    a pending TOTP secret; it becomes effective with ``/auth/mfa/setup/confirm``."""
+    settings = _settings(request)
+    user_id, _tenant = _setup_user(settings, body.mfa_setup_token)
+    await _refuse_setup_with_factor(request, settings, user_id)
+    secret, uri = await service.start_totp_setup(sessions(request), user_id)
+    return MfaSetup(secret=secret, otpauth_uri=uri)
+
+
+@router.post(
+    "/mfa/setup/confirm",
+    summary="Anmeldung: zweiten Faktor bestätigen und Sitzung ausstellen (M2-04)",
+)
+async def mfa_setup_confirm(body: AuthMfaSetupConfirmRequest, request: Request) -> TokenResponse:
+    """Confirms the pending secret with a matching code (wrong codes count towards the
+    lockout), switches TOTP on and issues the session, like ``/auth/mfa/verify``."""
+    settings = _settings(request)
+    user_id, token_tenant = _setup_user(settings, body.mfa_setup_token)
+    await _refuse_setup_with_factor(request, settings, user_id)
+    await service.enable_totp(sessions(request), user_id, body.code)
+    tenant_id = body.tenant_id or token_tenant
+    issued = await service.issue_session(
+        sessions(request),
+        settings,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    await service.record_login(sessions(request), user_id)
+    device_token = None
+    if body.remember_device:
+        device_token = tokens.new_opaque_secret()
+        await service.store_trusted_device(
+            sessions(request),
+            user_id=user_id,
+            tenant_id=tenant_id,
+            raw_token=device_token,
+            user_agent=request.headers.get("user-agent"),
+        )
+    return _out(issued, device_token=device_token)
+
+
 @router.post("/totp/setup", summary="Zweiten Faktor (TOTP) einrichten: Schlüssel erzeugen")
 async def totp_setup(request: Request, principal: Principal = Depends(get_principal)) -> MfaSetup:
     """Einstellungen, Sicherheit: creates a pending secret for the signed in user. It becomes
@@ -324,9 +462,15 @@ async def totp_confirm(
 async def totp_disable(
     body: TotpDisableRequest, request: Request, principal: Principal = Depends(get_principal)
 ) -> Response:
-    """Requires the current password; every remembered device is revoked as well."""
+    """Requires the current password; every remembered device is revoked as well. Refused
+    while the tenant policy covers the user and TOTP is the only second factor (M2-04)."""
     if principal.user_id is None:
         raise ProblemError(ErrorCodes.FORBIDDEN)
+    settings = request.app.state.settings
+    if not (
+        webauthn.is_available(settings) and await _has_passkey(request, principal.user_id)
+    ) and await mfa_policy.user_requires_second_factor(sessions(request), principal.user_id):
+        raise ProblemError(ErrorCodes.MFA_REQUIRED_BY_POLICY)
     await service.disable_totp(sessions(request), principal.user_id, body.current_password)
     return Response(status_code=204)
 
@@ -336,11 +480,13 @@ async def mfa_verify(body: MfaVerifyRequest, request: Request) -> TokenResponse:
     settings = _settings(request)
     user_id = _mfa_user(settings, body.mfa_token)
     await service.verify_totp(sessions(request), user_id, body.code)
+    # M2-04: a magic link login handing over to TOTP names its tenant in the step token.
+    tenant_id = body.tenant_id or tokens.mfa_token_tenant(settings, body.mfa_token)
     issued = await service.issue_session(
         sessions(request),
         settings,
         user_id=user_id,
-        tenant_id=body.tenant_id,
+        tenant_id=tenant_id,
         user_agent=request.headers.get("user-agent"),
     )
     device_token = None
@@ -349,7 +495,7 @@ async def mfa_verify(body: MfaVerifyRequest, request: Request) -> TokenResponse:
         await service.store_trusted_device(
             sessions(request),
             user_id=user_id,
-            tenant_id=body.tenant_id,
+            tenant_id=tenant_id,
             raw_token=device_token,
             user_agent=request.headers.get("user-agent"),
         )
@@ -599,7 +745,24 @@ async def revoke_webauthn_credential(
         )
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        row.revoked_at = datetime.now(UTC)
+        user = await session.get(User, principal.user_id)
+        others = len((await session.scalars(_webauthn_active(principal.user_id))).all()) - 1
+        last_factor = not (user is not None and user.totp_enabled) and others <= 0
+    # M2-04: the last second factor of a user under the tenant policy stays.
+    if last_factor and await mfa_policy.user_requires_second_factor(
+        sessions(request), principal.user_id
+    ):
+        raise ProblemError(ErrorCodes.MFA_REQUIRED_BY_POLICY)
+    async with platform_transaction(sessions(request)) as session:
+        await session.execute(
+            update(WebAuthnCredential)
+            .where(
+                WebAuthnCredential.id == credential_id,
+                WebAuthnCredential.user_id == principal.user_id,
+                WebAuthnCredential.revoked_at.is_(None),
+            )
+            .values(revoked_at=datetime.now(UTC))
+        )
     return Response(status_code=204)
 
 
@@ -909,6 +1072,82 @@ async def webauthn_login_verify(
     return _out(issued, device_token=device_token)
 
 
+async def _mfa_required_here(request: Request, principal: Principal) -> bool:
+    """M2-04 hint for the UI: does the policy of the current tenant cover this membership?
+    (The login and the switch off checks evaluate every membership of the user.)"""
+    if principal.user_id is None or principal.tenant_id is None or principal.api_key_id:
+        return False
+    if principal.platform_access_reason:
+        return False  # platform access without membership (5.1)
+    async with tenant_transaction(sessions(request), principal.tenant_id) as session:
+        policy = await mfa_policy.load_policy(session)
+    return mfa_policy.requires_second_factor(policy, list(principal.roles))
+
+
+def _policy_out(policy: mfa_policy.MfaPolicy, role_codes: list[str]) -> AuthMfaPolicyOut:
+    return AuthMfaPolicyOut(
+        crm_mode=policy.crm_mode,
+        crm_role_codes=list(policy.crm_role_codes),
+        portal_required=policy.portal_required,
+        stored=policy.stored,
+        available_role_codes=role_codes,
+    )
+
+
+async def _tenant_role_codes(session: Any) -> list[str]:
+    codes = set(await session.scalars(select(Role.code)))
+    codes |= {r.code for r in SYSTEM_ROLES}
+    return sorted(codes - {mfa_policy.PORTAL_ROLE_CODE})
+
+
+@router.get(
+    "/mfa-policy",
+    summary="Richtlinie zweiter Faktor des Mandanten (M2-04)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_mfa_policy(
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:read")),
+) -> AuthMfaPolicyOut:
+    async with tenant_tx(request, principal) as session:
+        policy = await mfa_policy.load_policy(session)
+        codes = await _tenant_role_codes(session)
+    return _policy_out(policy, codes)
+
+
+@router.put("/mfa-policy", summary="Richtlinie zweiter Faktor des Mandanten ändern (M2-04)")
+async def put_mfa_policy(
+    body: AuthMfaPolicyUpdate,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> AuthMfaPolicyOut:
+    """Takes effect at each user's next login (running sessions stay). Mode ``roles`` needs at
+    least one known role code; the portal role is governed by ``portal_required`` only."""
+    async with tenant_tx(request, principal) as session:
+        known = await _tenant_role_codes(session)
+        codes = sorted({c.strip() for c in body.crm_role_codes if c.strip()})
+        unknown = [c for c in codes if c not in known]
+        if unknown:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=f"Unbekannte Rolle: {', '.join(unknown)}.",
+            )
+        if body.crm_mode == "roles" and not codes:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Für die Pflicht je Rolle mindestens eine Rolle auswählen.",
+            )
+        policy = await mfa_policy.store_policy(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            crm_mode=body.crm_mode,
+            crm_role_codes=codes if body.crm_mode == "roles" else [],
+            portal_required=body.portal_required,
+        )
+    return _policy_out(policy, known)
+
+
 @router.get("/me", summary="Aktueller Benutzer und Berechtigungen")
 async def me(request: Request, principal: Principal = Depends(get_principal)) -> MeOut:
     email = name = None
@@ -932,6 +1171,7 @@ async def me(request: Request, principal: Principal = Depends(get_principal)) ->
         is_superadmin=principal.is_superadmin,
         platform_access_reason=principal.platform_access_reason,
         totp_enabled=totp_enabled,
+        mfa_required=await _mfa_required_here(request, principal),
         ui_preferences=ui_preferences,
     )
 
@@ -971,5 +1211,6 @@ async def update_my_preferences(
         is_superadmin=principal.is_superadmin,
         platform_access_reason=principal.platform_access_reason,
         totp_enabled=totp_enabled,
+        mfa_required=await _mfa_required_here(request, principal),
         ui_preferences=ui_preferences,
     )

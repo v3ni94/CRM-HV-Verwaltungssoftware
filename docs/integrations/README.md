@@ -6,6 +6,7 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 | --- | --- | --- |
 | Müller FLOW | `docs/integrations/mueller-flow.md` | `docs/integrations/dossier-flow.md` erstellt 27.09.2026 (nur Angaben aus dem Master-Prompt, Quelltext von FLOW liegt nicht vor, Lücken als [zu ergänzen durch Betreiber]) |
 | Immoware Hub Integrationsplattform | `docs/integrations/immoware-hub.md` | erstellt 25.09.2026, Empfehlung ablösen |
+| Immoware24-Exporte (Migration 13.1) | `docs/integrations/immoware24-exporte.md` | Anforderungsliste erstellt 01.10.2026 (AE37): Zielfelder je Berichtsart, Exportangaben und Spaltenüberschriften vom Betreiber auszufüllen |
 | Mail optimierung | `docs/integrations/mail-optimierung.md` | erstellt 25.09.2026, Empfehlung übernehmen als Reiter Mail |
 | Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | `docs/integrations/dossier-uebergabeprotokoll.md` erstellt 27.09.2026 (Zielbild bereits als Modul `handover`/M30 umgesetzt, Bestandsprojekt selbst noch nicht erhoben) |
 | Objektakte | `docs/integrations/objektakte.md` | Schnittstellenvertrag M29 Stufe 3/4 erstellt 26.09.2026 (lesende API, Webhooks); `docs/integrations/dossier-objektakte.md` erstellt 27.09.2026 im Anhang-B-Format |
@@ -18,6 +19,9 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 | Postdienst (Brief- und Postversand, LetterXpress LXP API v3, Postausgangsliste) | `docs/integrations/postdienst.md` | erstellt 27.09.2026 (M23-01, Adapter nach öffentlicher Dokumentation, Freigabe je Mandant Standard aus) |
 | FinTS/HBCI PIN/TAN (direkte Bankanbindung, Institutsliste extern gepflegt) | `docs/integrations/fints.md` | erstellt 27.09.2026 (M11-01 Nachtrag, DK-Produktregistrierung offen M11-42) |
 | EBICS (Einreichung von Zahlungsdateien, Gerüst ohne Client) | `docs/integrations/ebics.md` | erstellt 27.09.2026 (V2, M15-01; Vertrag, Initialisierung und Bibliotheksentscheidung offen) |
+| Eingehender Webhook für klassifizierte Mails (Bestandsprogramm als Quelle, signiert, idempotent) | `docs/integrations/inbound-mail-webhook.md` | erstellt 01.10.2026 (M20-04, AE38; Entscheidung Übernahme oder Webhook-Quelle offen, AE38-01) |
+| Vorlage für Dossiers nach Anhang B | `docs/integrations/DOSSIER-VORLAGE.md` | erstellt 01.10.2026 (AA16-03) |
+| Checkliste je Bestandstool (Stand der Dossiers, Läufe, Wissensdatenbank, Entscheidungen) | `docs/integrations/CHECKLISTE-BESTANDSTOOLS.md` | erstellt 01.10.2026 (AA16-03) |
 
 Die Dateinamen sind ein Vorschlag nach dem Muster `docs/integrations/<tool>.md`. Mit Vorliegen aller Dossiers entsteht Version 2.1 des Master-Prompts (Abschnitt 19.3).
 
@@ -32,7 +36,7 @@ markiert. Der Nachweis des Wissensdatenbank-Eintrags je Dossier steht aus (Frage
 | --- | --- | --- | --- | --- |
 | Müller FLOW | Prozess und Automatisierung der HVM | keine dokumentiert; Zielbild sind Regeln in `mhvp.automation` | Dossier Entwurf (`dossier-flow.md`) | Anhang-B-Lauf, Prozessliste, Datenmodell (V1, AA16-03) |
 | Immoware Hub | Lesespiegel der Immoware24-Exporte, Objektsuche, KI | Drop-Ordner mit Begleitdatei, keine API | Empfehlung ablösen (`immoware-hub.md`), Stilllegung `docs/runbooks/hub-abschaltung.md` | Bestätigung Parser-Abgleich (AA16-02) |
-| Mail optimierung | gemeinsames Postfach mit Vorgängen, SLA, Freigaben | Modul `mhvp.communication` und `mhvp.tickets` | Empfehlung übernehmen (`mail-optimierung.md`) | Aktionspläne, weitere Gesellschaften, `mail.muellerhv.de` Weiterleitung |
+| Mail optimierung | gemeinsames Postfach mit Vorgängen, SLA, Freigaben | Modul `mhvp.communication` und `mhvp.tickets`; eingehender Webhook für klassifizierte Mails (`inbound-mail-webhook.md`) | Empfehlung übernehmen (`mail-optimierung.md`) | Aktionspläne, weitere Gesellschaften, `mail.muellerhv.de` Weiterleitung |
 | Übergabeprotokoll | Wohnungsübergaben | Modul `handover` (M30), Importer `uprotokoll_import` | übernommen, Dossier Entwurf (`dossier-uebergabeprotokoll.md`) | Kompatibilität des Exportformats, Stilllegung nach Übernahme der Altprotokolle |
 | Objektakte | Objektordner, Dokumentablage | lesende API und Webhooks (`objektakte.md`) | Vertrag M29 Stufe 3 und 4, Dossier (`dossier-objektakte.md`) | interner Aufbau, Kontakt-ID wirkt dort noch nicht, Löschung folgt eigenen Regeln |
 | smart-einzug | Lastschrifteinzug, gekoppelt an lexoffice | ausgehende Webhooks `contact.updated`, `contact.mandate_iban_changed`, `invoice.issued` (`smart-einzug.md`, `webhooks.md`) | Sendeseite umgesetzt und getestet (Test `test_ga09_smart_einzug_contact_updated.py`), Empfangsseite unbekannt | Empfangsschnittstelle, Signaturprüfung durch smart-einzug, VPS-Betrieb |

@@ -1,7 +1,8 @@
 """Portal forms (14, M21-01, A56): configurable form templates per tenant and their submissions.
 
 A template names the form, its ticket category, the audience (tenant, owner, all) and the
-fields (20 element types, see INPUT_TYPES and DISPLAY_TYPES; required or optional). A
+fields (20 element types, see ELEMENT_SPECS: value format and check rule per type; required or
+optional). A
 submission from the portal is a Vorgang: it creates a ticket in the template's category, the
 values become structured text in the public description, uploaded files become document
 links (attachments). The raw values stay on the submission row so the ticket text can be
@@ -11,6 +12,7 @@ proposals handled by the office.
 
 import re
 import uuid
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -55,12 +57,159 @@ DELIVERIES = ("ticket", "email")
 MAX_HELP = 1000
 MAX_FIELDS = 40
 MAX_TEXT = 4000
+MAX_TEXT_LINE = 500  # text: one line
+MAX_OPTIONS = 50
+MAX_OPTION_LENGTH = 200
+MAX_ADDRESS_PARTS = 5
+MAX_ADDRESS_PART = 120
+MIN_LOCATION, MAX_LOCATION = 2, 300
+MAX_SIGNATURE = 120
 MAX_FILES_PER_FIELD = 10
 _KEY = re.compile(r"^[a-z0-9_]{1,60}$")
 _NUMBER = re.compile(r"^-?\d{1,12}([.,]\d{1,4})?$")
 _TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 _EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,}$")
 _PHONE = re.compile(r"^\+?[0-9 ()/\-]{5,30}$")
+
+
+# AE30 (AA14-01): the binding list of the 20 element types of the form builder. One entry per
+# type with the accepted value and the check rule in words (shown in the CRM builder and by
+# GET /portal-admin/forms/element-types). The list of the former portal (Portal24) is not
+# available: the types are derived from the portal functions of section 14, the comparison
+# stays open (docs/OPEN_QUESTIONS.md AA14-01). Adjusting a type means changing this table, the
+# check in ``_check_scalar`` and the test per type.
+ELEMENT_SOURCE_STATUS = (
+    "abgeleitet aus den Portalfunktionen (Abschnitt 14), Abgleich mit der Typenliste des "
+    "Altportals offen (AA14-01)"
+)
+
+
+@dataclass(frozen=True)
+class ElementSpec:
+    type: str
+    kind: str  # "input" (carries a value) or "display" (heading, info text, divider)
+    value_format: str
+    rule: str
+    options: bool = False
+    required_allowed: bool = True
+
+
+ELEMENT_SPECS: tuple[ElementSpec, ...] = (
+    ElementSpec(
+        "text", "input", "Text, eine Zeile", "Höchstens 500 Zeichen, keine Zeilenumbrüche."
+    ),
+    ElementSpec("textarea", "input", "Text, mehrzeilig", "Höchstens 4.000 Zeichen."),
+    ElementSpec(
+        "number", "input", "Zahl", "Bis zu 12 Vorkomma- und 4 Nachkommastellen, Komma oder Punkt."
+    ),
+    ElementSpec("date", "input", "Datum", "Gültiges Datum im Format JJJJ-MM-TT."),
+    ElementSpec("time", "input", "Uhrzeit", "Gültige Uhrzeit im Format HH:MM."),
+    ElementSpec(
+        "select",
+        "input",
+        "Eine Auswahl",
+        "Genau eine der hinterlegten Optionen.",
+        options=True,
+    ),
+    ElementSpec(
+        "radio",
+        "input",
+        "Eine Auswahl, alle Optionen sichtbar",
+        "Genau eine der hinterlegten Optionen.",
+        options=True,
+    ),
+    ElementSpec(
+        "multiselect",
+        "input",
+        "Mehrere Auswahlen",
+        "Eine oder mehrere der hinterlegten Optionen, Doppelte werden zusammengefasst.",
+        options=True,
+    ),
+    ElementSpec(
+        "checkbox",
+        "input",
+        "Ja oder Nein",
+        "Angekreuzt oder nicht; als Pflichtfeld muss es angekreuzt sein.",
+    ),
+    ElementSpec("email", "input", "E-Mail-Adresse", "Eine gültige E-Mail-Adresse."),
+    ElementSpec(
+        "phone", "input", "Telefonnummer", "5 bis 30 Zeichen: Ziffern, Leerzeichen, + ( ) / -."
+    ),
+    ElementSpec(
+        "file",
+        "input",
+        "Anhänge",
+        "Höchstens 10 eigene Uploads des Portalnutzers.",
+    ),
+    ElementSpec(
+        "address",
+        "input",
+        "Anschrift",
+        "2 bis 5 Zeilen oder durch Komma getrennte Teile (Straße und Hausnummer, "
+        "Postleitzahl und Ort), je Teil 2 bis 120 Zeichen, mindestens eine Ziffer.",
+    ),
+    ElementSpec(
+        "location",
+        "input",
+        "Standort oder Ort",
+        "Eine Zeile mit 2 bis 300 Zeichen, zum Beispiel Keller, Treppenhaus oder Wohnung.",
+    ),
+    ElementSpec(
+        "signature",
+        "input",
+        "Unterschrift als Name",
+        "Name als Text mit mindestens 2 Buchstaben, höchstens 120 Zeichen. "
+        "Keine rechtsverbindliche Unterschrift.",
+    ),
+    ElementSpec(
+        "consent",
+        "input",
+        "Einwilligung",
+        "Angekreuzt oder nicht; als Pflichtfeld muss es angekreuzt sein. "
+        "Der Text der Einwilligung steht in der Bezeichnung.",
+    ),
+    ElementSpec(
+        "amount",
+        "input",
+        "Betrag in EUR",
+        "Positive Zahl mit höchstens zwei Nachkommastellen, Komma oder Punkt. "
+        "Anzeige als 1.234,56 EUR.",
+    ),
+    ElementSpec(
+        "heading",
+        "display",
+        "Überschrift",
+        "Zeigt die Bezeichnung als Überschrift; kein Wert.",
+        required_allowed=False,
+    ),
+    ElementSpec(
+        "info",
+        "display",
+        "Hinweistext",
+        "Zeigt Bezeichnung und Hilfetext; kein Wert.",
+        required_allowed=False,
+    ),
+    ElementSpec(
+        "divider", "display", "Trennlinie", "Trennt Abschnitte; kein Wert.", required_allowed=False
+    ),
+)
+SPECS_BY_TYPE: dict[str, ElementSpec] = {spec.type: spec for spec in ELEMENT_SPECS}
+
+
+def element_types() -> list[dict[str, Any]]:
+    """The 20 element types with value format and check rule (AE30, AA14-01)."""
+    return [
+        {
+            "type": spec.type,
+            "kind": spec.kind,
+            "value_format": spec.value_format,
+            "rule": spec.rule,
+            "needs_options": spec.options,
+            "required_allowed": spec.required_allowed,
+            "source_status": ELEMENT_SOURCE_STATUS,
+        }
+        for spec in ELEMENT_SPECS
+    ]
 
 
 def _fe(field: str, message: str) -> FieldError:
@@ -157,10 +306,22 @@ def normalise_fields(fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if help_text is not None and len(help_text) > MAX_HELP:
             errors.append(_fe(f"{loc}.help", "Hilfetext zu lang."))
         if ftype in CHOICE_TYPES:
-            if not isinstance(options, list) or not options:
+            cleaned = (
+                list(dict.fromkeys(str(o).strip() for o in options if str(o).strip()))
+                if isinstance(options, list)
+                else []
+            )
+            if not cleaned:
                 errors.append(_fe(f"{loc}.options", "Auswahl ohne Optionen."))
-            else:
-                options = [str(o).strip() for o in options if str(o).strip()]
+            elif len(cleaned) > MAX_OPTIONS:
+                errors.append(_fe(f"{loc}.options", f"Höchstens {MAX_OPTIONS} Optionen."))
+            elif any(len(o) > MAX_OPTION_LENGTH for o in cleaned):
+                errors.append(
+                    _fe(
+                        f"{loc}.options", f"Eine Option ist länger als {MAX_OPTION_LENGTH} Zeichen."
+                    )
+                )
+            options = cleaned
         else:
             options = None
         out.append(
@@ -176,6 +337,99 @@ def normalise_fields(fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if errors:
         raise ProblemError(ErrorCodes.VALIDATION, errors=errors)
     return out
+
+
+def _address_parts(text: str) -> list[str]:
+    """Lines of an address; a single line is split at commas (street, postal code and city)."""
+    lines = [p.strip() for p in text.replace("\r", "").split("\n") if p.strip()]
+    if len(lines) == 1:
+        lines = [p.strip() for p in lines[0].split(",") if p.strip()]
+    return lines
+
+
+def _check_scalar(ftype: str, text: str, field: dict[str, Any]) -> str | None:
+    """AE30 (AA14-01): check of one single value by element type; the message or None.
+
+    One rule per type, see ``ELEMENT_SPECS``. Checks the shape only; whether the content is
+    true is for the office (a submission is a proposal, nothing is booked from it)."""
+    single_line = ftype not in ("textarea", "address")
+    if single_line and ("\n" in text or "\r" in text):
+        return "Nur eine Zeile erlaubt."
+    limit = MAX_TEXT_LINE if ftype == "text" else MAX_TEXT
+    if len(text) > limit:
+        return "Text zu lang."
+    if ftype == "number":
+        return None if _NUMBER.match(text) else "Keine gültige Zahl."
+    if ftype == "amount":
+        return (
+            None
+            if _AMOUNT.match(text)
+            else "Kein gültiger Betrag (höchstens zwei Nachkommastellen)."
+        )
+    if ftype == "signature":
+        letters = sum(1 for c in text if c.isalpha())
+        if letters < MIN_SIGNATURE:
+            return "Unterschrift (Name) fehlt."
+        return None if len(text) <= MAX_SIGNATURE else "Unterschrift zu lang."
+    if ftype == "location":
+        if len(text) < MIN_LOCATION:
+            return "Standort zu kurz."
+        return None if len(text) <= MAX_LOCATION else "Standort zu lang."
+    if ftype == "address":
+        parts = _address_parts(text)
+        if len(parts) < 2 or not any(c.isdigit() for c in text):
+            return "Anschrift unvollständig (Straße mit Hausnummer, Postleitzahl und Ort)."
+        if len(parts) > MAX_ADDRESS_PARTS or any(
+            len(p) < 2 or len(p) > MAX_ADDRESS_PART for p in parts
+        ):
+            return "Anschrift ungültig (höchstens fünf Zeilen mit je 2 bis 120 Zeichen)."
+        return None
+    if ftype == "date":
+        try:
+            date.fromisoformat(text)
+        except ValueError:
+            return "Kein gültiges Datum (JJJJ-MM-TT)."
+        return None
+    if ftype == "time":
+        return None if _TIME.match(text) else "Keine gültige Uhrzeit (HH:MM)."
+    if ftype == "email":
+        return None if _EMAIL.match(text) else "Keine gültige E-Mail-Adresse."
+    if ftype == "phone":
+        return None if _PHONE.match(text) else "Keine gültige Telefonnummer."
+    if ftype in ("select", "radio") and text not in (field.get("options") or []):
+        return "Keine zulässige Auswahl."
+    return None
+
+
+def _normalise_scalar(ftype: str, text: str) -> str:
+    if ftype == "amount":
+        return text.replace(",", ".")
+    if ftype == "address":
+        return "\n".join(_address_parts(text))
+    if ftype == "signature":
+        return " ".join(text.split())
+    return text
+
+
+def preview(name: str, raw_fields: list[dict[str, Any]], values: dict[str, Any]) -> dict[str, Any]:
+    """AE30: dry run of a form for the builder preview. Normalises the field definitions (422
+    on a defect), checks sample values with the rules of the portal and renders the ticket
+    text. Nothing is saved, no ticket and no mail result from it."""
+    fields = normalise_fields(raw_fields)
+    errors: list[dict[str, str]] = []
+    rendered: str | None = None
+    cleaned: dict[str, Any] | None = None
+    # Files are not uploaded in a preview: a required file field is not checked for presence.
+    checked = [{**f, "required": False} if f["type"] == "file" else f for f in fields]
+    try:
+        cleaned = validate_values(checked, values)
+    except ProblemError as exc:
+        errors = [{"field": e.field, "message": e.message} for e in (exc.errors or [])]
+        if not errors:
+            errors = [{"field": "values", "message": exc.detail or "Werte ungültig."}]
+    if cleaned is not None:
+        rendered = render_values(PortalFormTemplate(name=name, fields=fields), cleaned, {})
+    return {"fields": fields, "valid": not errors, "errors": errors, "rendered": rendered}
 
 
 def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dict[str, Any]:
@@ -236,29 +490,15 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
             errors.append(_fe(loc, "Wert ungültig."))
             continue
         text = str(raw).strip()
-        if len(text) > MAX_TEXT:
-            errors.append(_fe(loc, "Text zu lang."))
-        elif ftype == "number" and not _NUMBER.match(text):
-            errors.append(_fe(loc, "Keine gültige Zahl."))
-        elif ftype == "amount" and not _AMOUNT.match(text):
-            errors.append(_fe(loc, "Kein gültiger Betrag (höchstens zwei Nachkommastellen)."))
-        elif ftype == "signature" and len(text) < MIN_SIGNATURE:
-            errors.append(_fe(loc, "Unterschrift (Name) fehlt."))
-        elif ftype == "date":
-            try:
-                date.fromisoformat(text)
-            except ValueError:
-                errors.append(_fe(loc, "Kein gültiges Datum (JJJJ-MM-TT)."))
-        elif ftype == "time" and not _TIME.match(text):
-            errors.append(_fe(loc, "Keine gültige Uhrzeit (HH:MM)."))
-        elif ftype == "email" and not _EMAIL.match(text):
-            errors.append(_fe(loc, "Keine gültige E-Mail-Adresse."))
-        elif ftype == "phone" and not _PHONE.match(text):
-            errors.append(_fe(loc, "Keine gültige Telefonnummer."))
-        elif ftype in ("select", "radio") and text not in (f.get("options") or []):
-            errors.append(_fe(loc, "Keine zulässige Auswahl."))
-        if not any(e.field == loc for e in errors):
-            out[key] = text.replace(",", ".") if ftype == "amount" else text
+        if not text:
+            if required:
+                errors.append(_fe(loc, "Pflichtfeld."))
+            continue
+        message = _check_scalar(ftype, text, f)
+        if message is not None:
+            errors.append(_fe(loc, message))
+        else:
+            out[key] = _normalise_scalar(ftype, text)
     if errors:
         raise ProblemError(ErrorCodes.VALIDATION, errors=errors)
     return out
@@ -288,6 +528,8 @@ def render_values(
             shown = f"{d:%d.%m.%Y}"
         elif f["type"] == "number":
             shown = str(raw).replace(".", ",")
+        elif f["type"] == "address":
+            shown = ", ".join(str(raw).split("\n"))
         elif f["type"] == "amount":
             whole, _, cents = str(raw).partition(".")
             shown = f"{int(whole):,}".replace(",", ".") + "," + (cents + "00")[:2] + " EUR"

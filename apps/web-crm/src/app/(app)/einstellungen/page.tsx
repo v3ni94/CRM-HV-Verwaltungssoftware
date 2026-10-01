@@ -60,6 +60,12 @@ export default async function SettingsPage() {
       show: can("tickets:read"),
     },
     {
+      href: "/einstellungen/portal-rechtstexte",
+      title: t("portalLegalTexts.title"),
+      description: t("portalLegalTexts.description"),
+      show: can("documents:read"),
+    },
+    {
       href: "/einstellungen/dienstleister-portal",
       title: t("portalProviders.title"),
       description: t("portalProviders.description"),
@@ -94,6 +100,24 @@ export default async function SettingsPage() {
       title: t("chartRelease.title"),
       description: t("chartRelease.description"),
       show: can("accounting:read"),
+    },
+    {
+      href: "/einstellungen/buchhaltung/periodensperren",
+      title: t("periodLocks.title"),
+      description: t("periodLocks.description"),
+      show: can("accounting:read"),
+    },
+    {
+      href: "/einstellungen/fachliche-regeln",
+      title: t("businessRules.title"),
+      description: t("businessRules.description"),
+      show: can("tenant_settings:read") || can("accounting:read"),
+    },
+    {
+      href: "/einstellungen/textbausteine",
+      title: t("textBlocks.title"),
+      description: t("textBlocks.description"),
+      show: can("documents:read"),
     },
     {
       href: "/einstellungen/buchhaltung/g1-oeffnung",

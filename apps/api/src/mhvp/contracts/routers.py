@@ -1192,6 +1192,7 @@ async def add_payment(
         await check_ledger_account(
             session, body.revenue_account_id, contract.property_id, "Das Ertragskonto"
         )
+        await svc.check_payment_reserve(session, contract, body.reserve_id)
         row = ContractPayment(
             tenant_id=principal.tenant_id, contract_id=contract.id, **body.model_dump()
         )

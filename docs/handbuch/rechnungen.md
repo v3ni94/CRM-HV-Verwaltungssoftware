@@ -182,3 +182,11 @@ Beim Erfassen einer Rechnung können unter "Weitere Angaben zur Prüfung am Bele
 ## E-Rechnung: Prüfergebnis im Belegeingang
 
 Im Belegeingang zeigt der Block "E-Rechnung: Prüfergebnis" Profil, Prüfer, Version, Ergebnis und Meldungen. Die interne formale Prüfung ist kein amtlicher Validator. Ein Reverse Charge Kennzeichen führt zum Hinweis auf einen möglichen Fall des § 13b UStG als gesonderten Freigabepunkt; die Einordnung nimmt der Steuerberater vor.
+
+## Budgetabgleich und Beschlussdeckung
+
+Ist eine Rechnung einer Wirtschaftsplanposition zugeordnet, zeigt die sachliche Prüfung Planansatz, bisher zugeordnete Rechnungen, diese Rechnung und den Rest. Ist ein Beschluss verknüpft, erscheinen Nummer, Datum, Gegenstand und ein Hinweis, ob der Beschluss als wirksam erfasst ist. Alle Angaben sind Hinweise, Freigabe und Prüfschritte bleiben manuell.
+
+## Nummern von Mietrechnungs-Entwürfen
+
+Solange die Freigabestufe G1 geschlossen ist, sind Mietrechnungen und Gutschriften Entwürfe mit Wasserzeichen. Standardmäßig tragen sie eine Entwurfsnummer (ENTWURF-JJJJ-NNNNNN) und verbrauchen die fortlaufende Rechnungsnummer MR nicht. Die reguläre Nummer wird erst bei Ausgabe mit offenem G1 vergeben, ein Entwurf wird nicht umnummeriert. Im Vertrag unter Mietrechnungen kann der Nummernmodus gewählt werden: Entwurfsnummer (Standard), reguläre Nummer auch im Entwurf oder Ablehnung der Ausgabe bei geschlossenem G1. Die Einstufung ist mit Steuerberatung zu klären (OPEN_QUESTIONS AC03-01).

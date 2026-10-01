@@ -93,6 +93,18 @@ class RestartIn(_In):
     tan_mechanism: str | None = Field(default=None, max_length=3)
 
 
+class FinTsConnectionUrlIn(_In):
+    """Manual FinTS address of one connection (bank merger, new data centre). ``fints_url`` is
+    required: an address sets it, ``null`` returns to the address of the institute list. The
+    PIN must be entered again together with an address (it replaces the stored one), so that the
+    PIN is never sent to a new address without a deliberate entry. The address is checked in the
+    endpoint, so the German reason reaches the user (field validators only report a generic
+    message)."""
+
+    fints_url: str | None = Field(max_length=fints_mod.MANUAL_URL_MAX + 100)
+    pin: str | None = Field(default=None, min_length=1, max_length=64)
+
+
 class TanIn(_In):
     """TAN for `awaiting_tan`; omitted for a decoupled poll (`awaiting_decoupled`)."""
 
@@ -161,6 +173,10 @@ class FinTsConnectionOut(BaseModel):
     bank_name: str
     blz: str
     bic: str | None
+    # address a dialog uses now, the manual entry (if any) and the entry of the institute list
+    fints_url: str
+    fints_url_manual: str | None
+    fints_url_list: str | None
     status: ConnectionStatus
     tan_mechanism: str | None
     tan_mechanisms: list[TanMechanismOut]
@@ -266,6 +282,9 @@ async def _connection_out(
         bank_name=conn.bank_name,
         blz=fc.blz,
         bic=conn.bic,
+        fints_url=fints_mod.resolve_fints_url(fc.blz, fc.fints_url, fc.fints_url_manual),
+        fints_url_manual=fc.fints_url_manual,
+        fints_url_list=fints_mod.list_fints_url(fc.blz),
         status=conn.status,
         tan_mechanism=fc.tan_mechanism,
         tan_mechanisms=_mechanisms_out(fc.tan_mechanisms),
@@ -464,6 +483,70 @@ async def restart_connection(
         tenant_id, session_id = principal.tenant_id, fs.id
     _queue_step(tenant_id, session_id)
     return out
+
+
+@router.patch(
+    "/connections/{fints_connection_id}",
+    summary="FinTS-Adresse der Bank je Verbindung setzen oder zurücksetzen",
+)
+async def set_connection_url(
+    fints_connection_id: uuid.UUID,
+    body: FinTsConnectionUrlIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(BANKING_APPROVE),
+) -> FinTsConnectionOut:
+    """Manual FinTS address for one connection, e.g. after a bank merger when the institute
+    list still names the old server. The address is validated (https, public host name),
+    the PIN is entered again with it and replaces the stored one, the cached bank parameters of
+    the old server are dropped. No dialog is started here (a failed login can lock the access):
+    the next step is "Erneut freigeben". ``null`` returns to the address of the institute
+    list."""
+    manual_url: str | None = None
+    if body.fints_url is not None:
+        try:
+            manual_url = fints_mod.validate_manual_fints_url(body.fints_url)
+        except ValueError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
+        if not body.pin:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    "Zur FinTS-Adresse muss die PIN erneut eingegeben werden, damit sie nicht "
+                    "ohne Zutun an eine neue Adresse gesendet wird."
+                ),
+            )
+    async with tenant_tx(request, principal) as session:
+        fc, conn = await _load(session, fints_connection_id, lock=True)
+        if conn.status == ConnectionStatus.DISABLED:
+            raise ProblemError(ErrorCodes.FINTS_STATE, detail="Verbindung ist getrennt.")
+        await _ensure_no_open_session(session, fc)
+        before = fints_mod.resolve_fints_url(fc.blz, fc.fints_url, fc.fints_url_manual)
+        fc.fints_url_manual = manual_url
+        after = fints_mod.resolve_fints_url(fc.blz, fc.fints_url, fc.fints_url_manual)
+        if manual_url is not None:
+            fc.pin = body.pin
+            fc.pin_blocked = False
+        if after != before:
+            # parameters, system id and TAN registration belong to the old server
+            fc.client_data = None
+            fc.last_error = None
+            fc.last_error_code = None
+        fc.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="fints_connection.url_changed",
+            entity_type="bank_connection",
+            entity_id=conn.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "from_host": fints_mod.fints_host(before),
+                "to_host": fints_mod.fints_host(after),
+                "manual": manual_url is not None,
+            },
+        )
+        await session.flush()
+        return await _connection_out(session, fc, conn, principal)
 
 
 @router.get(

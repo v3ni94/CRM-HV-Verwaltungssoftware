@@ -1,0 +1,11 @@
+# Q15-01 Objekt der Buchungszeile (journal_line.property_id)
+
+- ID: Q15-01
+- Geltungsbereich: jede Buchungszeile (`journal_line`) aller Buchungskreise; Schreiben über `write_draft` (API `POST/PUT /accounting/ledgers/{id}/entries`, Sollstellungen, Honorarlauf, Bankbuchung, Storno, Importe) und jede andere Schreibstelle über die Datenbankregel; Berichte USt je Objekt (M18-06), Monatsmatrix, Einnahmen und Ausgaben, Journal, Driftbericht.
+- Quellenstatus Anhang C: keine Rechtsnorm als Quelle. Fachliche Umsetzung (Objektbezug für Berichte und Periodensperre je Objekt) und Produktschutz (Datenbankregel). Keine steuerliche Einordnung: die USt je Objekt bleibt ein Entwurf ohne Abzugsregel.
+- Regel: Das Objekt einer Zeile ist in dieser Reihenfolge (1) die Angabe der Zeile, (2) das Objekt ihrer Einheit, (3) das Objekt des Vertrags des Buchungssatzes. Eine Angabe, die nicht zum Objekt der Einheit passt, wird abgelehnt (422). Unbekannte Einheit oder unbekanntes Objekt: 422. Zeilen ohne alle drei Quellen bleiben ohne Objekt. Kein Objekt aus Buchungskreis, Kostenstelle oder Text.
+- Datenbank: Zeilen mit Einheit tragen immer ein Objekt (`ck_journal_line_property_with_unit`); der Trigger `journal_line_property` füllt es aus der Einheit und lehnt ein abweichendes Objekt ab.
+- Gebuchte Zeilen: das Objekt wird nach der Buchung nicht geändert. Ein Storno übernimmt das Objekt der Originalzeile; eine Berichtigung erfolgt per Storno und neuer Buchung. Die einmalige Befüllung bestehender Zeilen in Migration 0377 setzt nur die neue, leere Spalte aus Einheit und Vertrag (ADR 0023).
+- Drift: `GET /accounting/ledgers/{id}/reports/line-property-drift` (Lesen) zeigt `unit_mismatch` als Befund (auch in `GET /ledgers/{id}/checks`) sowie `contract_unfilled`, `contract_mismatch` und `ledger_mismatch` als Hinweise; der Bericht ändert nichts.
+- Abnahmefall: Test `test_line_property_derivation_reports_and_drift` (erwartet: USt Objekt A 19,00 EUR, Objekt B 9,50 EUR, Summe 28,50 EUR gleich USt-Übersicht; Monatsmatrix Objekt A 119,00 EUR, Objekt B 59,50 EUR; Storno behält Objekt A; ein Hinweis `ledger_mismatch`, kein Befund). Kein Anhang-D-Fall.
+- Änderungsgrund: Prioritätenliste des Betreibers vom 01.10.2026, Punkt 21 (Welle 16, AE21); bisher folgte das Objekt nur der Einheit (Q15, M18-06).

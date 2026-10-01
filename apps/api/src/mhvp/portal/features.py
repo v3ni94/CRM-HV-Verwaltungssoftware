@@ -14,7 +14,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.portal.models import PortalAccount, PortalFeatureSetting, PortalRepresentation
 from mhvp.workspace.services import local_today
 
-FEATURES = ("chat_enabled", "chat_ai_prequalification_enabled", "support_login_enabled")
+FEATURES = (
+    "chat_enabled",
+    "chat_ai_prequalification_enabled",
+    "support_login_enabled",
+    "owner_rental_income_enabled",
+    "chat_bot_enabled",
+    "privacy_feature_enabled",
+)
+OWNER_TICKET_SCOPES = ("none", "released", "property")
+# AE30 (AA14-02): off keeps the ratings of service providers internal (default), staff shows
+# them aggregated to the management only. Publication to providers or third parties is not
+# offered (data protection, decision AA14-02 open).
+PROVIDER_RATING_MODES = ("off", "staff")
 
 
 async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
@@ -23,12 +35,29 @@ async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
     if row is not None:
         return row
     return PortalFeatureSetting(
-        chat_enabled=False, chat_ai_prequalification_enabled=False, support_login_enabled=False
+        chat_enabled=False,
+        chat_ai_prequalification_enabled=False,
+        support_login_enabled=False,
+        owner_rental_income_enabled=False,
+        chat_bot_enabled=False,
+        privacy_feature_enabled=False,
+        owner_ticket_scope="released",
+        provider_rating_display="off",
     )
 
 
-def feature_dict(row: PortalFeatureSetting) -> dict[str, bool]:
-    return {name: bool(getattr(row, name)) for name in FEATURES}
+def feature_dict(row: PortalFeatureSetting) -> dict[str, Any]:
+    out: dict[str, Any] = {name: bool(getattr(row, name)) for name in FEATURES}
+    out["owner_ticket_scope"] = row.owner_ticket_scope or "released"
+    return out
+
+
+def admin_feature_dict(row: PortalFeatureSetting) -> dict[str, Any]:
+    """Switches for the portal administration: ``feature_dict`` plus the management only
+    switches that the portal itself must not see (AE30)."""
+    out = feature_dict(row)
+    out["provider_rating_display"] = row.provider_rating_display or "off"
+    return out
 
 
 def _active(rep: PortalRepresentation, today: date) -> bool:

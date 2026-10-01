@@ -7,7 +7,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
@@ -376,3 +376,54 @@ async def put_rule_table(
 from mhvp.billing.heating_import_routers import router as _import_router  # noqa: E402
 
 router.include_router(_import_router)
+
+
+@router.get(
+    f"{H}/comparison",
+    summary="Heizkosten: externe Beträge gegen eigene Berechnung je Nutzer",
+    dependencies=[Depends(strict_query)],
+)
+async def heating_comparison(
+    statement_id: uuid.UUID,
+    request: Request,
+    tolerance_abs: Decimal = Query(default=Decimal("0.50"), ge=0, le=100000, decimal_places=2),
+    tolerance_percent: Decimal = Query(default=Decimal("1.0"), ge=0, le=100, decimal_places=2),
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(Statement, statement_id)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await heating_services.get_or_create(session, st, principal.user_id)
+        return await heating_services.comparison(
+            session, st, row, tolerance_abs=tolerance_abs, tolerance_percent=tolerance_percent
+        )
+
+
+@router.get(
+    f"{H}/comparison/report",
+    summary="Heizkosten: Abweichungsbericht als CSV",
+    dependencies=[Depends(strict_query)],
+)
+async def heating_comparison_report(
+    statement_id: uuid.UUID,
+    request: Request,
+    tolerance_abs: Decimal = Query(default=Decimal("0.50"), ge=0, le=100000, decimal_places=2),
+    tolerance_percent: Decimal = Query(default=Decimal("1.0"), ge=0, le=100, decimal_places=2),
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    from mhvp.billing import heating_compare
+
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(Statement, statement_id)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await heating_services.get_or_create(session, st, principal.user_id)
+        data = await heating_services.comparison(
+            session, st, row, tolerance_abs=tolerance_abs, tolerance_percent=tolerance_percent
+        )
+    return Response(
+        content=heating_compare.report_csv(data),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="heizkosten-abweichungen.csv"'},
+    )

@@ -2,9 +2,12 @@ import { getTranslations } from "next-intl/server";
 
 import { AdvanceProposalsPanel } from "@/components/billing/AdvanceProposalsPanel";
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
+import { AllocationBasisReport } from "@/components/billing/AllocationBasisReport";
 import { AllocabilityHints, type AllocabilityHint } from "@/components/billing/AllocabilityHints";
+import { DeadlineOverviewPanel } from "@/components/billing/DeadlineOverviewPanel";
 import { DeadlineExceptionPanel, type DeadlineException } from "@/components/billing/DeadlineExceptionPanel";
 import { HeatingPanel } from "@/components/billing/HeatingPanel";
+import { HeatingComparisonPanel } from "@/components/billing/HeatingComparisonPanel";
 import { RuleRegisterNote } from "@/components/billing/RuleRegisterNote";
 import { StatementLettersPanel } from "@/components/billing/StatementLettersPanel";
 import { StatementOutputsPanel } from "@/components/billing/StatementOutputsPanel";
@@ -77,6 +80,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         keys={((keys.data ?? []) as { id: string; code: string; name: string }[]).map((k) => ({ id: k.id, code: k.code, name: k.name }))}
       />
       <HeatingPanel id={id} status={String(data.status)} />
+      <HeatingComparisonPanel id={id} />
       {snap?.results ? (
         <>
           <h2 className={ui.h2}>{t("results")}</h2>
@@ -86,9 +90,11 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       ) : null}
+      {snap ? <DeadlineOverviewPanel id={id} canEdit /> : null}
       <DeadlineExceptionPanel id={id} status={String(data.status)} initial={data as unknown as DeadlineException} />
       <StatementLettersPanel id={id} status={String(data.status)} hasSnapshot={Boolean(snap)} />
       <StatementOutputsPanel base={`/api/bff/statements/${id}`} previews={[{ key: "infoSheet", path: "info-sheet/preview", method: "POST" }]} filePath="info-sheet" enabled={Boolean(snap)} />
+      <AllocationBasisReport id={id} />
       <AllocabilityHints id={id} initial={snap?.allocability_hints ?? null} />
       <AdvanceProposalsPanel id={id} hasSnapshot={Boolean(snap)} snapshotHash={snap?.hash ?? null} />
       <AiPlausibilityCard kind="statements" id={id} snapshotHash={snap?.hash ?? null} />

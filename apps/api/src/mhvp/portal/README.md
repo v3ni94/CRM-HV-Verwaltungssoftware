@@ -204,3 +204,58 @@ Rule: `docs/rules/AA08-abrechnungszeitraum-status.md`.
 ### AC04: Rechtsträgerauswahl für die Dienstleister-Seite
 
 `GET /portal-admin/legal-entities` (Recht `tenant_settings:read`, nur `id` und `name`, RLS auf den eigenen Mandanten, unbekannte Query-Parameter 422) ersetzt für die CRM-Seite `/einstellungen/dienstleister-portal` den Pfad `/tenant/legal-entities`, der `members:read` verlangt. Tests: `tests/integration/test_ab12_portal_locale.py::test_ac04_legal_entity_choices_need_only_settings_read`.
+
+## AE13 (Welle 16): Eigentümerschalter
+
+`PortalFeatureSetting.owner_rental_income_enabled` (Standard aus) sperrt `/portal/owner/rental-income`; `owner_ticket_scope` (`none`, `released` Standard, `property`) steuert `/portal/owner/tickets`. Beide über `PATCH /portal-admin/features`, Migration 0369. Eigener Anteil an Wirtschaftsplan und Sonderumlage mit SEPA und Geltung kommt weiter aus `/portal/owner/payment-resolutions` (Snapshot, keine Neuberechnung).
+
+## Public terms lookup and acceptance evidence (AE34, AD03-01)
+
+`public_terms.py`: `GET /portal/public/terms?tenant=` without sign in. Tenant by slug, tenant id
+or portal host (`X-Portal-Host`, `Host`); returns only `terms_version` of the published
+version. Unknown, malformed, suspended and not publishing tenants and foreign hosts answer the
+same 404 (no tenant enumeration); the anonymous request limit per client address applies,
+unknown query parameters answer 422, `Cache-Control: no-store`. The acceptance
+(`_accept_portal_terms`, activation and `POST /portal/terms/accept`) stores time, accepted
+version and a keyed hash of the client address (`crypto.fingerprint`, tenant scope; address from
+`X-Forwarded-For` only with `rate_limit_trust_forwarded_for`). Rule: `docs/rules/AE34-01.md`.
+
+## Formularbaukasten final und Bewertungen von Dienstleistern (AE30, AA14-01, AA14-02)
+
+- `forms.py`: Typregister `ELEMENT_SPECS` (20 Typen, Art, Wertformat, Prüfregel in Worten, Quellenstatus), Prüfung je Typ in `_check_scalar` (Anschrift 2 bis 5 Zeilen mit Ziffer, Standort, Unterschrift, Text eine Zeile), Optionen höchstens 50 ohne Doppelte, Leerwerte zählen als nicht ausgefüllt. `preview()` ist der Trockenlauf (Felder normalisieren, Werte prüfen, Ticket-Text rendern, nichts speichern).
+- `form_routers.py`: `GET /portal-admin/forms/element-types` und `POST /portal-admin/forms/preview` (Recht `tickets:read`).
+- `provider_info.py`: `GET /portal-admin/provider-ratings` (Recht `tickets:read`, Objektzuordnung beachtet). Bei `portal_feature_setting.provider_rating_display = off` (Standard, Migration 0386) ohne Daten, bei `staff` Anzahl, Durchschnitt und Verteilung der Sterne je Dienstleister, nie Freitext. Der Schalter steht in `GET/PATCH /portal-admin/features` (`features.admin_feature_dict`), nicht in `GET /portal/me`. Dienstleister sehen die Bewertung auf keinem Portalweg.
+- Regel: `docs/rules/AE30-01.md`. Offen: AA14-01 (Typenliste Altportal), AA14-02 (Anzeige gegenüber Dienstleistern), siehe `docs/OPEN_QUESTIONS.md` AE30-01, AE30-02.
+
+## Portal assistant (AE28, M7-06, SA-04)
+
+Questions of tenants and owners about the documents released for them; separate from the ticket
+chat (`chat.py`, a message channel with the management). Rule: `docs/rules/AE28-01.md`.
+
+- `assistant_scope.py`: the permission filter, one source: the access matrix `access_grant`
+  (`access.visible_document_ids`). `build_scope(unit_id, document_id)`: foreign unit or document
+  answers 404, an account without grants has an empty scope (no read, no provider call), the
+  focus only narrows. `audience_scope` is used by the AI gateway and is never `None`.
+- `assistant.py`: `GET /portal/assistant/status|scope|questions`, `POST /portal/assistant/questions`
+  and `privacy-ack`, `GET /portal-admin/assistant/log` (right `tenant_settings:update`, property
+  assignment respected). Off until `PortalFeatureSetting.chat_bot_enabled` (403
+  `MHVP-PORTAL-0001`). Without AI the answer lists full text hits inside the scope. The AI answer
+  needs `privacy_feature_enabled`, an approved text block `portal_chat_privacy_notice`
+  (`legal_text_block`, four eyes), the acknowledgement of that version (`PortalChatPrivacyAck`)
+  and the open gateway gate. Every question is logged masked (`PortalChatLog`); at most 20
+  questions per account and hour.
+- `mhvp.ai.portal_answer`: run `answer_question` with `input_ref.audience = "portal"` and prompt
+  `portal_v1` (masked question, no lookup, no tools, no knowledge base, no few shot examples, hash
+  with account and scope), sources checked against the scope afterwards, `action` discarded.
+- Migration 0384: switches `chat_bot_enabled`, `privacy_feature_enabled`; tables
+  `portal_chat_privacy_ack` and `portal_chat_log` (RLS). Web: `apps/web-portal` page `/assistent`.
+
+## Second factor policy in the portal (AE27, M2-04, M21-09)
+
+The magic link login (`magic_link.consume_link`, `verify_code_step`) ends with
+`mfa_required` or `mfa_setup_required` (`MagicLinkOut.mfa_token` / `mfa_setup_token`, tenant
+in the step token) when the tenant policy covers the account (`mhvp.core.auth.mfa_policy`,
+portal accounts only with `portal_required`). `verify_code` keeps returning a session for
+existing callers and refuses with `MHVP-AUTH-0015` when a further step is due. The QR
+invitation (A56, M21-01: CRM view with `qrcode`, letter PDF with `segno`, `/einladung?code=`)
+is unchanged; the portal shows the TOTP setup with a QR code at `/anmelden/zweiter-faktor-einrichten`.

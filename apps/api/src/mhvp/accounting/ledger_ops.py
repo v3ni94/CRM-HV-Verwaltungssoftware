@@ -5,8 +5,10 @@
 * Creditor accounts per service provider relation (7.2, 070000 to 079999).
 * Dedicated drafts for cost transfer (``EntryKind.COST_TRANSFER``) and interest
   (``EntryKind.INTEREST``) (7.3). Both only create drafts; posting uses the regular posting
-  path (B03 to B09). No tax rule for interest (withholding tax) is applied here: the gross
-  amount is booked as entered, the tax treatment stays an open question (OPEN_QUESTIONS).
+  path (B03 to B09). No tax rate for interest is applied here: withholdings (Kapitalertrag
+  steuer, Solidaritätszuschlag, Kirchensteuer) are taken as amounts from the bank document
+  and booked on the tax accounts configured per ledger (P01-01, AE05); the tax treatment
+  itself stays an open question (OPEN_QUESTIONS P01-01).
 """
 
 import uuid
@@ -22,10 +24,12 @@ from mhvp.accounting.models import (
     AccountCategory,
     EntryKind,
     EntrySource,
+    InterestTaxWithholding,
     JournalEntry,
     Ledger,
     LedgerAccount,
     LedgerAccountAllocation,
+    LedgerInterestTaxConfig,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -244,12 +248,16 @@ async def interest_draft(
     text: str,
     reference: str | None = None,
     document_id: uuid.UUID | None = None,
+    capital_gains_tax: Decimal | None = None,
+    solidarity_tax: Decimal | None = None,
+    church_tax: Decimal | None = None,
 ) -> JournalEntry:
     """Zinsbuchung between a bank (or reserve) account and an interest account (7.3).
 
     ``credit``: interest received, bank debit against a revenue account; ``debit``: interest
-    charged, cost account debit against the bank. Gross amount as entered, no withholding
-    tax logic (open question, no invented tax rule)."""
+    charged, cost account debit against the bank. Withholdings on credit interest (P01-01)
+    are amounts from the bank document: bank debit net, each tax account debit, interest
+    revenue credit gross. No rate is computed (open question, no invented tax rule)."""
     bank = await ledger_account(session, ledger, bank_account_id)
     interest = await ledger_account(session, ledger, interest_account_id)
     if bank.category not in (AccountCategory.BANK, AccountCategory.RESERVE):
@@ -274,9 +282,32 @@ async def interest_draft(
         document_id=document_id,
     )
     zero = Decimal("0")
+    taxes = {
+        "capital_gains_tax": capital_gains_tax or zero,
+        "solidarity_tax": solidarity_tax or zero,
+        "church_tax": church_tax or zero,
+    }
+    withheld = sum(taxes.values(), zero)
+    tax_lines: list[svc.LineIn] = []
+    if withheld > zero:
+        if direction != "credit":
+            raise _invalid("Steuerabzüge gibt es nur bei Habenzinsen.")
+        if withheld >= amount:
+            raise _invalid("Die Steuerabzüge müssen kleiner als der Bruttozins sein.")
+        config = await interest_tax_config(session, ledger)
+        for field, value in taxes.items():
+            if value <= zero:
+                continue
+            account_id = getattr(config, f"{field}_account_id") if config else None
+            if account_id is None:
+                raise ProblemError(ErrorCodes.ACC_INTEREST_TAX_NOT_CONFIGURED)
+            tax_account = await ledger_account(session, ledger, account_id)
+            _active(tax_account, "Das Steuerkonto")
+            tax_lines.append(svc.LineIn(tax_account.id, value, zero, text=text))
     if direction == "credit":
         lines = [
-            svc.LineIn(bank.id, amount, zero, text=text),
+            svc.LineIn(bank.id, amount - withheld, zero, text=text),
+            *tax_lines,
             svc.LineIn(interest.id, zero, amount, text=text),
         ]
     else:
@@ -285,4 +316,79 @@ async def interest_draft(
             svc.LineIn(bank.id, zero, amount, text=text),
         ]
     await svc.write_draft(session, ledger, entry, lines, [])
+    if withheld > zero:
+        session.add(
+            InterestTaxWithholding(
+                tenant_id=tenant_id,
+                created_by=user_id,
+                journal_entry_id=entry.id,
+                ledger_id=ledger.id,
+                bank_account_id=bank.id,
+                gross_amount=amount,
+                **taxes,
+            )
+        )
+        await session.flush()
     return entry
+
+
+# P01-01 withholding tax accounts (AE05) ------------------------------------------------
+
+TAX_ACCOUNT_FIELDS = (
+    "capital_gains_tax_account_id",
+    "solidarity_tax_account_id",
+    "church_tax_account_id",
+)
+
+
+async def interest_tax_config(
+    session: AsyncSession, ledger: Ledger
+) -> LedgerInterestTaxConfig | None:
+    row: LedgerInterestTaxConfig | None = await session.scalar(
+        select(LedgerInterestTaxConfig).where(LedgerInterestTaxConfig.ledger_id == ledger.id)
+    )
+    return row
+
+
+async def set_interest_tax_config(
+    session: AsyncSession,
+    ledger: Ledger,
+    *,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    values: dict[str, uuid.UUID | None],
+) -> LedgerInterestTaxConfig:
+    """Tax accounts must belong to this ledger, be active and not be bank, reserve or
+    revenue accounts (a withholding is a claim or prepaid tax, never revenue)."""
+    for field in TAX_ACCOUNT_FIELDS:
+        account_id = values.get(field)
+        if account_id is None:
+            continue
+        account = await ledger_account(session, ledger, account_id)
+        _active(account, "Das Steuerkonto")
+        if account.category in (
+            AccountCategory.BANK,
+            AccountCategory.CASH,
+            AccountCategory.RESERVE,
+            AccountCategory.REVENUE,
+        ):
+            raise _invalid("Als Steuerkonto ist kein Geld-, Rücklagen- oder Erlöskonto zulässig.")
+    config = await interest_tax_config(session, ledger)
+    if config is None:
+        config = LedgerInterestTaxConfig(tenant_id=tenant_id, ledger_id=ledger.id)
+        config.created_by = user_id
+        session.add(config)
+    for field in TAX_ACCOUNT_FIELDS:
+        setattr(config, field, values.get(field))
+    config.updated_by = user_id
+    await session.flush()
+    return config
+
+
+async def withholding_for(
+    session: AsyncSession, entry: JournalEntry
+) -> InterestTaxWithholding | None:
+    row: InterestTaxWithholding | None = await session.scalar(
+        select(InterestTaxWithholding).where(InterestTaxWithholding.journal_entry_id == entry.id)
+    )
+    return row

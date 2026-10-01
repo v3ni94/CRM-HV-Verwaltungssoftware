@@ -74,10 +74,29 @@ ACCOUNTING_REVIEW = "accounting:review"
 PRIVACY_PERMISSIONS: frozenset[str] = frozenset(
     {"privacy:read", "privacy:manage", "privacy:approve"}
 )
+# Fachliche Abnahme (V16, AE01, docs/rules/AE01-ACCEPTANCE.md): Register unabhängiger
+# Sollwerte je Anhang-D-Fall. ``manage`` erfasst Entwürfe, ``approve`` gibt Sollwerte frei und
+# trägt Abnahmeergebnisse ein. ``approve`` gehört bewusst nicht zu ``_ADMIN`` (Produktschutz):
+# nur die ausdrücklich zugewiesene Rolle der fachkundigen Abnahmeperson hält es.
+ACCEPTANCE_READ = "acceptance:read"
+ACCEPTANCE_MANAGE = "acceptance:manage"
+ACCEPTANCE_APPROVE = "acceptance:approve"
+ACCEPTANCE_PERMISSIONS: frozenset[str] = frozenset(
+    {ACCEPTANCE_READ, ACCEPTANCE_MANAGE, ACCEPTANCE_APPROVE}
+)
+# Eingehender Webhook klassifizierter Mails (M20-04, AE38, docs/rules/M20-04-inbound.md): eigenes
+# Recht, das nur ein API-Schlüssel mit genau diesem Geltungsbereich nutzt (kein Benutzerrecht
+# der Standardrollen). Gespeichert wie jedes andere Recht als Ressource/Aktion; Administrator
+# rollen halten es über ``_ADMIN`` und können Schlüssel damit ausstellen (Teilmenge der eigenen
+# Rechte).
+MAIL_INBOUND_INGEST = "mail_inbound:ingest"
+MAIL_INBOUND_PERMISSIONS: frozenset[str] = frozenset({MAIL_INBOUND_INGEST})
 ALL_PERMISSIONS: frozenset[str] = (
     frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
     | METERING_PERMISSIONS
     | PRIVACY_PERMISSIONS
+    | ACCEPTANCE_PERMISSIONS
+    | MAIL_INBOUND_PERMISSIONS
     | {ACCOUNTING_REVIEW}
 )
 
@@ -99,7 +118,7 @@ class SystemRole:
 
 
 # Annex A.4 role templates. Domain permissions are added per milestone (M3 contacts, ...).
-_ADMIN = ALL_PERMISSIONS - {"release_gates:approve"}
+_ADMIN = ALL_PERMISSIONS - {"release_gates:approve", ACCEPTANCE_APPROVE}
 _SETTINGS_R = frozenset({"tenant_settings:read"})
 
 
@@ -157,7 +176,12 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _rw("hoa")
         | _METERING_CLERK,
     ),
-    SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
+    SystemRole("read_only", "Nur Lesezugriff", READ_ALL | {ACCEPTANCE_READ}),
+    SystemRole(
+        "acceptance_expert",
+        "Fachkundige Abnahmeperson",
+        READ_ALL | {ACCEPTANCE_READ, ACCEPTANCE_APPROVE},
+    ),
     SystemRole(
         "read_only_master_data",
         "Nur Lesezugriff Stammdaten",

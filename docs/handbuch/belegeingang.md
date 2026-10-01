@@ -195,3 +195,7 @@ freigegeben ist. Erforderlich sind die Rechte Kontakte bearbeiten und Buchhaltun
 ## Freigabepunkt § 13b UStG (AB10)
 
 Ist ein Beleg als Reverse Charge gekennzeichnet, zeigt die Eingangsrechnung einen eigenen Hinweis. Der Steuerberater bestätigt die Normzuordnung; es gibt keine automatische Buchung oder Steuerfolge.
+
+## ZUGFeRD-Profil und Container (Welle 16)
+
+Bei einer ZUGFeRD- oder Factur-X-Rechnung zeigt das Prüfergebnis zusätzlich das Profil (MINIMUM, BASIC WL, BASIC, EN 16931, EXTENDED, XRECHNUNG) und Hinweise zum Container, etwa eine fehlende PDF/A-Kennzeichnung, ein abweichendes Profil in den Metadaten oder einen Anhang ohne Kennzeichnung der Beziehung. Die Hinweise ändern die formale Lesung nicht. Bei den Profilen MINIMUM und BASIC WL fehlen Pflichtangaben der EN 16931; der Rechnungsinhalt ist dann anhand des PDF zu prüfen. ZUGFeRD 1.0 wird nicht gelesen.

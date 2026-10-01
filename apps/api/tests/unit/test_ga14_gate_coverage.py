@@ -78,6 +78,10 @@ REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(
     {
         ("PATCH", "/api/v1/banking/payment-orders/{order_id}"),
         ("POST", "/api/v1/accounting/admin-fee-invoices/{invoice_id}/release"),
+        # Wave 16: approval flows without money movement (register, period lock, text blocks).
+        ("POST", "/api/v1/accounting/acceptance/expected/{expected_id}/submit"),
+        ("POST", "/api/v1/accounting/period-locks/{lock_id}/release"),
+        ("POST", "/api/v1/document-text-blocks/{block_id}/submit"),
         ("POST", "/api/v1/accounting/direct-debits"),
         ("POST", "/api/v1/accounting/direct-debits/preview"),
         ("POST", "/api/v1/accounting/direct-debits/{run_id}/approve"),

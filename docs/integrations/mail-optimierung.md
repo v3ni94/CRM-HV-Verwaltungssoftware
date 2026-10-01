@@ -123,3 +123,14 @@ Datenmigration: keine, das Mailprogramm ist nicht produktiv im Einsatz. Übernom
 8. Aufwand grob 25 bis 40 Arbeitstage, zu verifizieren.
 9. Keine Datenmigration nötig.
 10. Erreichbar zusätzlich unter `mail.mueller-holding.ag`.
+
+## Ergänzung 01.10.2026 (AE38, M20-04): Anbindung als Webhook-Quelle technisch vorbereitet
+
+Die Empfehlung bleibt die Übernahme als Modul. Für den Parallelbetrieb oder den Fall, dass das
+Bestandsprogramm als Quelle weiterläuft, nimmt die Plattform klassifizierte Mails über einen
+signierten, idempotenten Webhook an (`docs/integrations/inbound-mail-webhook.md`, Regel
+`docs/rules/M20-04-inbound.md`). Das Bestandsprogramm hat laut Abschnitt 4 keine eigene
+REST-API und keinen dokumentierten ausgehenden Webhook; der Versand an die Plattform setzt eine
+Erweiterung dort voraus [zu ergänzen durch Betreiber: Aufwand und Entscheidung]. Die
+Klassifikation des Bestandsprogramms wird nur als Vorschlag gespeichert. Entscheidungsfrage:
+AE38-01 in `docs/OPEN_QUESTIONS.md`. Stand je Tool: `CHECKLISTE-BESTANDSTOOLS.md`.

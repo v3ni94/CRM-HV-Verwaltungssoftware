@@ -76,11 +76,16 @@ async def report_monthly_matrix(
     request: Request,
     categories: list[AccountCategory] | None = Query(default=None),
     eur_only: bool = False,
+    property_id: uuid.UUID | None = Query(
+        default=None, description="Nur Buchungszeilen dieses Objekts (Q15-01)"
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
-        return await report_views.monthly_matrix(session, ledger, start, end, categories, eur_only)
+        return await report_views.monthly_matrix(
+            session, ledger, start, end, categories, eur_only, property_id
+        )
 
 
 @router.get("/ledgers/{ledger_id}/reports/target-actual", summary="Soll/Ist der Forderungen")
@@ -154,11 +159,42 @@ async def report_income_expense(
     end: date,
     request: Request,
     eur_only: bool = False,
+    property_id: uuid.UUID | None = Query(
+        default=None, description="Nur Buchungszeilen dieses Objekts (Q15-01)"
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
-        return await report_views.income_expense(session, ledger, start, end, eur_only)
+        return await report_views.income_expense(session, ledger, start, end, eur_only, property_id)
+
+
+@router.get(
+    "/ledgers/{ledger_id}/reports/line-property-drift",
+    summary="Objekt der Buchungszeilen gegen Einheit, Vertrag und Buchungskreis (Q15-01)",
+    dependencies=[Depends(strict_query)],
+)
+async def report_line_property_drift(
+    ledger_id: uuid.UUID,
+    request: Request,
+    start: date | None = None,
+    end: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Lines whose stored object differs from its sources. ``unit_mismatch`` is a hard
+    finding (also in ``GET /ledgers/{id}/checks``); contract and ledger differences are hints.
+    Read only: nothing is changed, posted lines are corrected by reversal and new posting."""
+    if start is not None and end is not None:
+        _period(start, end)
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        from mhvp.accounting import line_property
+
+        result = await line_property.drift(session, ledger, start, end)
+        header = await report_views.report_header(
+            session, ledger, report="line_property_drift", start=start, end=end
+        )
+        return {"header": header, **result}
 
 
 @router.get("/ledgers/{ledger_id}/reports/revenue", summary="Erträge mit Kopfangaben")
@@ -642,3 +678,127 @@ async def withdraw_rule_version(
             payload={"rule_id": row.rule_id, "version": row.version},
         )
         return RuleVersionOut.model_validate(row)
+
+
+class AE19CheckpointIn(BaseModel):
+    """AB10-01: a check point entered by hand (date, title, source); no preset deadlines."""
+
+    model_config = ConfigDict(extra="forbid")
+    title: str = Field(min_length=1, max_length=200)
+    effective_from: date
+    source: str = Field(default="", max_length=200)
+    note: str = Field(default="", max_length=500)
+
+
+class AE19CheckpointPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    effective_from: date | None = None
+    source: str | None = Field(default=None, max_length=200)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class AE19CheckpointOut(RuleVersionOut):
+    state: str
+    days_until: int
+
+
+def _ae19_out(row: RuleVersion, today: date, lead_days: int) -> AE19CheckpointOut:
+    from mhvp.accounting import rule_register
+
+    base = RuleVersionOut.model_validate(row).model_dump()
+    return AE19CheckpointOut(
+        **base,
+        state=rule_register.checkpoint_state(row, today, lead_days),
+        days_until=(row.effective_from - today).days,
+    )
+
+
+@router.get(
+    "/rule-versions/checkpoints",
+    summary="Prüfpunkte mit Vorfrist und Status",
+    dependencies=[Depends(strict_query)],
+)
+async def list_rule_checkpoints(
+    request: Request,
+    state: Literal["open", "upcoming", "due", "done", "withdrawn"] | None = None,
+    lead_days: int = Query(default=30, ge=0, le=730),
+    on: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[AE19CheckpointOut]:
+    """AB10-01: all check points (group Prüfpunkt), hint only; ``upcoming`` lies inside the
+    lead time, ``due`` has reached its date."""
+    from mhvp.accounting import rule_register
+
+    today = on or local_today()
+    async with tenant_tx(request, principal) as session:
+        rows = (await session.scalars(select(RuleVersion))).all()
+        mine = [r for r in rows if rule_register.CHECKPOINT_GROUP in (r.case_groups or [])]
+        mine.sort(key=lambda r: (r.effective_from, r.rule_id, r.version))
+        out = [_ae19_out(r, today, lead_days) for r in mine]
+        return [o for o in out if state is None or o.state == state]
+
+
+@router.post("/rule-versions/checkpoints", status_code=201, summary="Prüfpunkt erfassen")
+async def create_rule_checkpoint(
+    body: AE19CheckpointIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> AE19CheckpointOut:
+    from mhvp.accounting import rule_register
+
+    async with tenant_tx(request, principal) as session:
+        row = RuleVersion(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            rule_id=f"PP-{uuid.uuid4().hex[:10]}",
+            version=1,
+            title=body.title,
+            effective_from=body.effective_from,
+            case_groups=[rule_register.CHECKPOINT_GROUP],
+            source_status=body.source,
+            change_reason=body.note,
+            status="draft",
+        )
+        session.add(row)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="rule_version.created",
+            entity_type="rule_version",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"rule_id": row.rule_id, "version": row.version},
+        )
+        return _ae19_out(row, local_today(), 30)
+
+
+@router.patch("/rule-versions/checkpoints/{version_id}", summary="Prüfpunkt ändern")
+async def patch_rule_checkpoint(
+    version_id: uuid.UUID,
+    body: AE19CheckpointPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> AE19CheckpointOut:
+    from mhvp.accounting import rule_register
+
+    async with tenant_tx(request, principal) as session:
+        row = await _rule_version(session, version_id)
+        if rule_register.CHECKPOINT_GROUP not in (row.case_groups or []):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if row.status != "draft":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur ein offener Prüfpunkt ist änderbar."
+            )
+        if body.title is not None:
+            row.title = body.title
+        if body.effective_from is not None:
+            row.effective_from = body.effective_from
+        if body.source is not None:
+            row.source_status = body.source
+        if body.note is not None:
+            row.change_reason = body.note
+        row.updated_by = principal.user_id
+        await session.flush()
+        return _ae19_out(row, local_today(), 30)

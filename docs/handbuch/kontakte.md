@@ -227,3 +227,14 @@ Im Reiter Einwilligungen erfassen Sie Art, Datum und Quelle. Jede Art wirkt auf 
 - data_sharing: Vor der Weitergabe von Kontaktdaten an Dienstleister wird die Einwilligung geprüft.
 
 Ein Widerruf wirkt sofort. Die Regeln je Mandant (zum Beispiel E-Mail auch bei vertraglicher Vereinbarung) setzt die Geschäftsführung über die Schnittstelle consent-policy, erst nach rechtlicher Klärung (offene Fragen AC06-01 bis AC06-03).
+
+### Rechtsgrundlage je Verarbeitung und Widerspruch (AE34)
+
+Für E-Mail-Zustellung, Weitergabe an Dienstleister, Werbung und Portal-Nutzungsbedingungen kann die Geschäftsführung die Rechtsgrundlage je Mandant festhalten (Schnittstelle consent-legal-basis, Recht Kontakte freigeben): Einwilligung (Standard), Vertrag oder berechtigtes Interesse. Jede andere Grundlage als die Einwilligung braucht eine Begründung, zum Beispiel die Vertragsklausel oder das Datum der Interessenabwägung. Die Software legt keine Grundlage fest und prüft nicht, ob sie rechtlich trägt; das klärt die Rechtsberatung (offene Fragen AC06-01 bis AC06-03). "Zurücksetzen" stellt den Standard wieder her.
+
+- Einwilligung: wie bisher, ohne gültige Einwilligung wird nichts zugestellt, weitergegeben oder beworben.
+- Vertrag: E-Mail-Zustellung ohne Einwilligung je Empfänger. Die Weitergabe an Dienstleister gilt nur beim Auftrag, nicht beim Webhook.
+- Berechtigtes Interesse: die Verarbeitung läuft, solange der Kontakt nicht widersprochen hat. Einen Widerspruch erfassen Sie in der Kontaktakte (Art und Quelle, optional Eingang). Er sperrt die Verarbeitung für diesen Kontakt, bis er zurückgenommen wird. Auch eine widerrufene Einwilligung der gleichen Art sperrt.
+- Werbung kann nie auf Vertrag gestützt werden.
+
+Die Annahme der Portal-Nutzungsbedingungen wird mit Zeitpunkt, Fassung und einem Hash der Verbindungsadresse nachgewiesen. In der Kontaktakte sehen Sie Fassung und den Hinweis, dass ein Nachweis gespeichert ist; die Adresse selbst wird nicht gespeichert.

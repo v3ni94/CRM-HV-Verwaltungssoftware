@@ -215,3 +215,20 @@ contract end (`contract.end_date`), never open ended on an ended contract. Test:
 - Abgleichberichte werden über `reconciliation.scope_report` auf zugeordnete Objekte gefiltert;
   neue Berichte speichern dazu `property_id` je Objekt.
 - Historische Bankverknüpfungen folgen dem Bankkonto des Umsatzes.
+
+## Column detection and stored assignments (AE37, Welle 16, Q08-01)
+
+- `column_detection.py` (deterministic, no AI, no network): `read_head` reads the first 30 rows
+  of any CSV or XLSX file with the staging reader rules, `detect_header_row` scores candidate
+  header rows, `propose_columns` proposes one header per target field (stored assignment 100,
+  label 95, field name 90, general term 85, part word 70, similarity up to 80, halved when the
+  sample values do not parse as number or date), `check_report` builds the validation report of
+  a mapping on the staged rows without storing anything.
+- `ImportColumnAssignment` (`import_column_assignment`, migration 0393, RLS): confirmed header to
+  target field per tenant, report type and normalised header; `target_field` NULL means ignored.
+- Endpoints under `/imports/immoware24`: `POST /header-detection` (`ai:create`),
+  `GET /files/{id}/column-proposal`, `POST /files/{id}/check`, `GET /column-assignments`,
+  `GET /export-requirements` (`ai:read`), `PUT /column-assignments`,
+  `DELETE /column-assignments/{id}` (`ai:create`).
+- No Immoware24 export format is assumed; the requirement list for the operator is
+  `docs/integrations/immoware24-exporte.md`. Rule `docs/rules/Q08-01-spaltenerkennung.md`.

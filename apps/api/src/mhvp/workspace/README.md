@@ -194,3 +194,10 @@ mailboxes); no N+1. Tests: `tests/integration/test_workspace_ticket_analytics.py
 ## Inhaltsmodus der Benachrichtigungsmails (U15-04)
 
 Der Mandantenschalter `notification_mail_content` (`voll` Standard, `hinweis`) liegt im JSON `tenant_settings.sources`. `send_pending_mails` liest ihn je Lauf (`mail_content_mode`); im Modus `hinweis` enthält die Sammelmail nur Anzahl und CRM-Link, keinen Titel und keinen Text. Regel `docs/rules/U15-04.md`.
+
+## Skalierungsmessung der Partitionierungsauslöser (AE36, Welle 16, AC09-01)
+
+* `scale.py`: Kennzahlen zu den Auslösern aus ADR 0021. `ListLatencyMiddleware` (reine ASGI-Middleware in `main.py`) legt für die Journalliste und die Bankumsatzliste nur Zeitpunkt und Dauer in Redis ab (`mhvp:ops:latency:<Liste>`, höchstens 2.000 Stichproben, 14 Tage Lebensdauer); `table_stats` liest Zeilen und Größe (exakt bis 1.000.000 Zeilen, darüber `pg_class`); `evaluate` ist eine reine Funktion (Auslöser nach Schwellen und Verlauf); `snapshot_once` speichert die Wochenmessung und alarmiert neue Auslöser (Plattformaudit `scale.trigger_reached`, Glocke an Plattformadministratoren, Art `platform_scale_trigger`, Ziel `platform_scale` auf `/plattform/betrieb`); Celery-Aufgabe `mhvp.ops.scale_snapshot`, Beat `ops-scale-snapshot` (montags 03:10).
+* `scale_routers.py`: `GET /platform/ops/scale`, `PATCH /platform/ops/scale/settings`, `POST /platform/ops/scale/snapshot` (nur Plattformadministratoren, Änderungen im Plattformaudit).
+* `ops.py`: `/platform/ops/metrics` ergänzt um Gauges `<Tabelle>_rows`, `<Tabelle>_bytes`, `<Liste>_p95_ms`, `tenants_productive`, `tenants_demo` und die Alarme `scale_trigger_partition_review`, `scale_trigger_measure_again`; die Summen und `tenants_active` lassen Demo-Mandanten weg.
+* Regel `docs/rules/AE36-SCALE.md`, Runbook `docs/runbooks/leistungsmessung.md` (Abschnitt AE36). Tests: `tests/unit/test_ae36_scale.py`, `tests/integration/test_ae36_demo_scale.py`.

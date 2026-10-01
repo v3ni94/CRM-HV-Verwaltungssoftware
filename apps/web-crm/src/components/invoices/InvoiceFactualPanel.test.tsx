@@ -54,4 +54,39 @@ describe("InvoiceFactualPanel", () => {
     renderIntl(<InvoiceFactualPanel invoiceId={INVOICE_ID} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("accounting:read");
   });
+
+  it("shows the budget comparison and the resolution coverage", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({
+        findings: [],
+        suggested_reviewer_user_id: null,
+        price_tolerance_percent: "0",
+        quantity_tolerance_percent: "0",
+        budget: {
+          label: "Instandhaltung",
+          year: 2026,
+          planned: "2000.00",
+          booked_before: "952.00",
+          invoice: "1190.00",
+          remaining: "-142.00",
+          exceeded: true,
+        },
+        resolution: {
+          number: 3,
+          decided_on: "2025-11-01",
+          status: "positive",
+          subject: "Wirtschaftsplan",
+          effective: true,
+          subject_matches_plan: false,
+        },
+      }),
+    );
+    renderIntl(<InvoiceFactualPanel invoiceId={INVOICE_ID} />);
+    const table = await screen.findByTestId("invoice-budget-table");
+    expect(table).toHaveTextContent("Budgetabgleich Instandhaltung (2026)");
+    expect(table).toHaveTextContent("952,00");
+    expect(table).toHaveTextContent("-142,00");
+    expect(screen.getByText(/überschritten \(Hinweis\)/)).toBeInTheDocument();
+    expect(screen.getByTestId("invoice-resolution-coverage")).toHaveTextContent("Beschluss Nr. 3 vom 01.11.2025");
+  });
 });

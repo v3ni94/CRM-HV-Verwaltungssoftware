@@ -10,6 +10,15 @@ aus 18.0; der erforderliche Prüfumfang je Stufe ist offen (AA02-01). G1 nutzt w
 
 Alle Stufen bleiben geschlossen. Diese Liste öffnet nichts.
 
+## G1 Produktive Buchführung
+
+Die Prüfpunkte der Öffnungsliste M12-09 stehen in `apps/api/src/mhvp/accounting/g1_opening.py`
+und unter Einstellungen, Buchhaltung, G1 Öffnung (`GET /api/v1/accounting/g1-opening`). Je
+Punkt: Status, Datum, bestätigende Person, verantwortliche Person und Nachweis (Dokument oder
+Verweis, Welle 16, AE03). Der Automatikschalter lässt sich erst nach offener G1 mit Antrag
+und Freigabe durch eine zweite Person einschalten (`/api/v1/banking/automation/switch-requests`);
+der Vergleichslauf (`GET /api/v1/banking/automation/comparison`) ist Nachweis, kein Beweis.
+
 ## G2 Zahlungsveranlassung
 
 | Code | Prüfpunkt | Nachweis |

@@ -277,6 +277,14 @@ def test_owner_statement_and_info_sheet_outputs(
     h1 = bearer(login(closed, world, "ab07first"))
     h2 = bearer(login(closed, world, "ab07second"))
     hr = bearer(login(closed, world, "ab07reader"))
+    # The M17-01 allocation basis lock (AE17, default on) is covered by its own tests; this
+    # world records no allocation agreements, so it is switched off for this tenant only.
+    assert (
+        closed.put(
+            "/api/v1/billing/allocation-basis-setting", json={"block_output": False}, headers=h1
+        ).status_code
+        == 200
+    )
     ho = bearer(login(closed, world, "ab07other"))
     _ok(closed.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h1))
     w = _rental_world(closed, h1, "983")

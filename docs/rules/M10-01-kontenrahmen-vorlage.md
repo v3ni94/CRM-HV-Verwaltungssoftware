@@ -56,3 +56,12 @@
   protokolliert die Entscheidung, es trifft sie nicht.
 - Tests: `apps/api/tests/integration/test_m18_datev_check_chart_release.py` (Workflow,
   Sperre, neue Version, Gate ohne Freigabe geschlossen, Mandantentrennung).
+
+## Nachtrag 01.10.2026 (Welle 16, AE02)
+
+- ID: M10-01 (mit SA-08, P07-04, P07-05). Geltungsbereich: Kontenrahmen-Vorlage je Mandant.
+- Vier-Augen-Freigabe (Produktschutz, keine Rechtspflicht): Wer eine Version zur Prüfung gibt, kann sie nicht selbst freigeben (`MHVP-ACC-0015`). Schalter `four_eyes_required` je Version, Standard an, Abschalten nur mit `accounting:approve` und Begründung (Ereignis `chart_template.four_eyes_changed`), neue Versionen übernehmen den Schalter.
+- Mehrschlüsselverteilung je Konto (`allocation_split`): Schlüssel eindeutig, Anteile größer 0 bis 100, Summe genau 100 Prozent (Decimal), sonst 422.
+- Abrechnungsart `heating`: als Vorschlag `proposed_statement_kind` mit `proposal_status = vorschlag_freigabe_offen` an den Heizkostenkonten und 060500; `statement_kind` bleibt unverändert bis zur Übernahme im Entwurf. `special_levy`: kein Konto in Anhang A.1, keine Nummer erfunden, der Prüfbericht weist die Lücke aus.
+- Prüfbericht `GET /accounting/templates/{id}/coverage-report`.
+- Quellenstatus: Anhang C, keine Rechtsgrundlage; Freigabe V8 bleibt offen. Abnahmefall: keiner in Anhang D, Test `test_ae02_chart_four_eyes.py`. Änderungsgrund: Prioritätenliste 01.10.2026 Punkt 2.

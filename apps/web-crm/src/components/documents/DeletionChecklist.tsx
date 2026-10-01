@@ -7,7 +7,12 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 type Item = { target: string; status: string; detail: string | null };
-type Checklist = { document_id: string; status: "done" | "open" | "held"; items: Item[] };
+type Checklist = {
+  document_id: string;
+  status: "done" | "open" | "held" | "in_trash";
+  items: Item[];
+  purge_at?: string | null;
+};
 
 /** Löschcheckliste je Ziel mit Nachlauf (AC07, GA08-08). Backups werden nur genannt, nicht
  * bearbeitet; ein wiederhergestelltes Dokument unter Sperre bleibt erhalten. */

@@ -50,3 +50,8 @@ checked by hand (`docs/acceptance/M31-geraetepruefung.md`).
   (`src/i18n/request.ts`). Language names come from `Intl.DisplayNames`.
 - Maintenance banner (GB16-01): `src/components/shell/MaintenanceBanner.tsx` reads the public feed
   `GET /api/v1/platform/maintenance/current` (cached 30 seconds, no banner on failure).
+- Legal texts of the tenant (AE29, M21-04): public page `/rechtliches/<impressum|datenschutz|nutzungsbedingungen>`
+  (middleware public, `src/lib/legal-texts.ts` reads `GET /api/v1/tenant/legal-texts/{code}` by portal host,
+  `LegalTextView` renders the approved text as plain text or the marker "Text nicht freigegeben").
+  Footer and sign-in links (`legalLinks` in `src/lib/branding.ts`): released text first, else the https link of
+  the branding, else none. The branding answer carries `legal_texts_released`.

@@ -119,6 +119,42 @@ class TenantLetter:
     pdf: bytes = field(default=b"", repr=False)
 
 
+def open_advance_lines(row: dict[str, Any]) -> list[str]:
+    """Disclosed calculation for advances still open (AE15, D24): the tenant switch decides
+    the variant; nothing is shown when no advance of the period is open."""
+    if Decimal(row.get("advances_open") or "0") == 0 or "open_advance_mode" not in row:
+        return []
+    mode = row["open_advance_mode"]
+    costs = Decimal(row["costs"])
+    due = Decimal(row["advances_due"])
+    paid = Decimal(row["advances_paid"])
+    open_now = Decimal(row["advances_open"])
+    balance = Decimal(row["balance"])
+    out = [f"Rechenweg (offene Vorauszahlungen im Zeitraum {fmt_eur(open_now)}):"]
+    if mode == "balance_against_due":
+        out += [
+            f"{fmt_eur(costs)} Kostenanteil abzüglich {fmt_eur(due)} Vorauszahlungen laut "
+            f"Vertrag ergibt {fmt_eur(balance)}.",
+            f"Die offenen Vorauszahlungen von {fmt_eur(open_now)} bleiben daneben bestehen; "
+            f"Gesamtsicht {fmt_eur(balance + open_now)}.",
+        ]
+    elif mode == "offset_reversal":
+        out += [
+            f"{fmt_eur(costs)} Kostenanteil abzüglich {fmt_eur(paid)} geleisteter "
+            f"Vorauszahlungen ergibt {fmt_eur(balance)}.",
+            f"Die offenen Vorauszahlungen von {fmt_eur(open_now)} werden mit dieser "
+            "Abrechnung verrechnet und nicht gesondert gefordert.",
+        ]
+    else:
+        out += [
+            f"{fmt_eur(costs)} Kostenanteil abzüglich {fmt_eur(paid)} geleisteter "
+            f"Vorauszahlungen ergibt {fmt_eur(balance)}.",
+            f"Hinweis: offene Vorauszahlungen von {fmt_eur(open_now)} bestehen daneben als "
+            "offene Posten; ihre Behandlung ist noch nicht freigegeben (Entwurf).",
+        ]
+    return out
+
+
 def _body(
     *,
     greeting: str,
@@ -134,6 +170,7 @@ def _body(
     proposal: Decimal | None,
     proposal_note: str | None,
     cost_lines: list[dict[str, Any]] | None = None,
+    open_advance_lines: list[str] | None = None,
 ) -> str:
     lines = [
         html.escape(greeting),
@@ -166,6 +203,8 @@ def _body(
                 f"Ihr Anteil {fmt_eur(Decimal(line['share']))}"
             )
         lines.append("\n".join(html.escape(row) for row in rows))
+    if open_advance_lines:
+        lines.append("\n".join(html.escape(row) for row in open_advance_lines))
     kind = result_kind(balance)
     if kind == "nachzahlung":
         lines.append(
@@ -329,6 +368,7 @@ async def _tenant_letter(
         proposal=proposal,
         proposal_note=proposal_note,
         cost_lines=tenant_lines(snapshot, contract.id),
+        open_advance_lines=open_advance_lines(row),
     )
     info = [
         ("Status", DRAFT_LABEL),

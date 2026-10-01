@@ -18,6 +18,7 @@ from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform import export_job
+from mhvp.platform.demo import ensure_not_demo
 from mhvp.platform.models import TenantExportJob
 
 router = APIRouter(prefix="/tenant/export-jobs", tags=["Mandant"])
@@ -63,6 +64,8 @@ async def create_export_job(
 ) -> dict[str, Any]:
     _require_tenant_admin(principal)
     async with tenant_tx(request, principal) as session:
+        # AE36: a demo tenant takes no part in exports (rule AE36-DEMO).
+        await ensure_not_demo(session, principal.tenant_id, "Der Mandantenexport")
         active = await session.scalar(
             select(TenantExportJob.id).where(
                 TenantExportJob.status.in_([export_job.JOB_QUEUED, export_job.JOB_RUNNING])

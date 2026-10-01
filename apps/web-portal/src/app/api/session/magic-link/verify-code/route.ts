@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { TokenResponse } from "@/lib/session";
 import { writeTokens } from "@/lib/session";
 
-import { guardedJson, postJson, relayProblem, secureOf, str, unreachable } from "../../_shared";
+import { guardedJson, postJson, relayProblem, secureOf, stepResponse, str, unreachable } from "../../_shared";
 
 /** M21-01: verifies the e-mail code second factor of the magic link login and, on success,
  *  writes the session cookies exactly like the password login. */
@@ -21,6 +21,9 @@ export async function POST(request: Request): Promise<Response> {
       request.headers.get("user-agent") ?? "",
     );
     if (!data || status >= 400) return relayProblem(status, data);
+    // M2-04: after the e-mail code the tenant policy may still ask for TOTP or its setup.
+    const step = stepResponse(data, secureOf(request));
+    if (step) return step;
     const result = NextResponse.json({ status: "ok" });
     writeTokens(result.cookies, data as unknown as TokenResponse, secureOf(request));
     return result;

@@ -174,3 +174,7 @@ for the collection after G2. New columns in migration 0265: `contract.custom_fie
 ## R10 Kautionsverzinsung (B15)
 
 `deposit_settlement.py` / `deposit_settlement_routers.py`: Zinssatzverlauf je Kautionskonto (`deposit_interest_rate`, `GET/PUT/DELETE /deposits/{id}/interest-rates[/{valid_from}]`), Jahresgutschrift als Entwurf (`deposit_interest_draft`, `POST/GET /deposits/{id}/interest-drafts`, `POST /deposit-interest-drafts/run|{id}/confirm|{id}/discard`) und Zinsart `deposit_rates` der Kautionsabrechnung (`interest_by_rate_history`). Bestätigung erfasst nur eine Zinsbewegung, keine Buchung. Migration 0288. Regel: `docs/rules/R10.md`.
+
+## AE17 Umlagevereinbarungen
+
+`allocation_routers.py`: `allocation_agreement` je Mietvertrag und Betriebskostenart mit Klauselbezug, Dokument und Gültigkeit (keine Überlappung), CRUD unter `/contracts/{id}/allocation-agreements`, Massenerfassung `POST /properties/{id}/allocation-agreements/bulk` (Vorschau als Standard, kein Überschreiben). Regel `docs/rules/AE17-01.md`.

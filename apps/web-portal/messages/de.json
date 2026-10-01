@@ -32,6 +32,12 @@
     "backToLogin": "Zurück zur Anmeldung",
     "rememberDevice": "Dieses Gerät 90 Tage merken",
     "noTenant": "Für Ihren Zugang ist kein Mandant freigeschaltet. Bitte wenden Sie sich an Ihre Verwaltung.",
+    "mfaSetupTitle": "Zweiten Faktor einrichten",
+    "mfaSetupHint": "Ihre Verwaltung schreibt für den Zugang einen zweiten Faktor vor. Scannen Sie den QR-Code mit einer Authenticator-App oder geben Sie den Schlüssel ein und bestätigen Sie mit dem ersten Code. Danach sind Sie angemeldet.",
+    "mfaSetupQrAlt": "QR-Code für die Authenticator-App",
+    "mfaSetupSecret": "Schlüssel zur manuellen Eingabe",
+    "mfaSetupConfirm": "Einrichten und anmelden",
+    "mfaRequiredHint": "Ihre Verwaltung schreibt den zweiten Faktor vor. Er kann deshalb nicht abgeschaltet werden.",
     "magicLink": {
       "title": "Anmeldelink",
       "useInstead": "Stattdessen Anmeldelink per E-Mail",
@@ -86,6 +92,7 @@
       "label": "Hauptnavigation",
       "submissions": "Beiratsvorlagen",
       "security": "Sicherheit",
+      "assistant": "Assistent",
       "handover": "Übergabe",
       "ownerStatements": "Hausgeldabrechnung"
     },
@@ -155,6 +162,37 @@
     "selectAll": "Alle auswählen",
     "select": "{title} auswählen",
     "bundleError": "Der Sammel-Download ist fehlgeschlagen. Bitte erneut versuchen."
+  },
+  "Assistant": {
+    "title": "Assistent für Ihre Unterlagen",
+    "intro": "Stellen Sie Fragen zu den Unterlagen, die für Sie freigegeben sind. Der Assistent liest nur diese Unterlagen und nie die Unterlagen anderer.",
+    "loading": "Wird geladen",
+    "locked": "Der Assistent ist für diese Verwaltung nicht freigeschaltet.",
+    "scopeLine": "Der Assistent darf {documents, plural, one {# Unterlage} other {# Unterlagen}} für Sie lesen.",
+    "scopeEmpty": "Für Ihren Zugang sind keine Unterlagen freigegeben, die der Assistent lesen darf.",
+    "privacyTitle": "Datenschutzhinweis zur KI-Antwort",
+    "privacyNotReleased": "Der Datenschutzhinweis ist noch nicht freigegeben. Bis dahin zeigt der Assistent nur Treffer aus Ihren Unterlagen.",
+    "privacyVersion": "Fassung {version}",
+    "privacyAcknowledge": "Ich habe den Hinweis zur Kenntnis genommen",
+    "privacyAcknowledged": "Zur Kenntnis genommen.",
+    "ackFirst": "Bitte nehmen Sie zuerst den Datenschutzhinweis zur Kenntnis.",
+    "unitField": "Einheit",
+    "allUnits": "Alle meine Einheiten",
+    "unitNumber": "Einheit {number}",
+    "questionField": "Ihre Frage",
+    "questionRequired": "Bitte geben Sie eine Frage mit mindestens drei Zeichen ein.",
+    "ask": "Frage stellen",
+    "asking": "Wird beantwortet",
+    "answerTitle": "Antwort",
+    "aiLabel": "KI-Antwort, automatisch erstellt",
+    "searchLabel": "Treffer in Ihren Unterlagen",
+    "sources": "Quellen",
+    "hits": "Passende Unterlagen",
+    "noHits": "Keine passenden Unterlagen gefunden.",
+    "openDocuments": "Zu den Dokumenten",
+    "reportIssue": "Meldung an die Verwaltung schreiben",
+    "history": "Bisherige Fragen",
+    "historyEmpty": "Noch keine Fragen gestellt."
   },
   "Tickets": {
     "title": "Meldungen",
@@ -733,6 +771,7 @@
     "proxyFile": "Vollmachtsdokument (PDF oder Foto)",
     "proxySubmit": "Vollmacht erteilen",
     "proxyDone": "Vollmacht erteilt.",
+    "voteReview": "Für diese Einheit lag bereits eine Stimme vor. Ihre Stimme ist gespeichert, wird aber nicht gezählt. Die Versammlungsleitung prüft den Konflikt.",
     "error": "Die Aktion ist fehlgeschlagen: {message}"
   },
   "Resolutions": {
@@ -942,7 +981,13 @@
     "submitted": "{name} wurde übermittelt. Den Vorgang finden Sie unter Meldungen.",
     "requiredMissing": "Bitte das Feld {label} ausfüllen.",
     "proposalNote": "Die Angaben werden an die Verwaltung übermittelt und dort geprüft.",
-    "requiredHint": "Mit * gekennzeichnete Felder sind Pflichtfelder."
+    "requiredHint": "Mit * gekennzeichnete Felder sind Pflichtfelder.",
+    "hints": {
+      "address": "Straße mit Hausnummer, Postleitzahl und Ort, jeweils in einer eigenen Zeile.",
+      "location": "Den Ort kurz beschreiben, zum Beispiel Keller, Treppenhaus oder Wohnung.",
+      "signature": "Bitte den vollständigen Namen eintragen. Er ersetzt keine handschriftliche Unterschrift.",
+      "amount": "Betrag in EUR mit höchstens zwei Nachkommastellen, zum Beispiel 1234,50."
+    }
   },
   "Invitation": {
     "title": "Einladung annehmen",
@@ -959,7 +1004,8 @@
     "toLogin": "Zur Anmeldung",
     "termsNeeded": "Für die Aktivierung ist die Annahme der Nutzungsbedingungen erforderlich.",
     "termsAccept": "Ich habe die Nutzungsbedingungen (Fassung {version}) gelesen und nehme sie an.",
-    "termsMissingVersion": "Die Fassung der Nutzungsbedingungen konnte nicht ermittelt werden. Bitte beim Verwalter nachfragen."
+    "termsMissingVersion": "Die Fassung der Nutzungsbedingungen konnte nicht ermittelt werden. Bitte beim Verwalter nachfragen.",
+    "termsEvidence": "Als Nachweis werden Zeitpunkt, Fassung und eine pseudonymisierte Kennung Ihrer Verbindung gespeichert."
   },
   "Terms": {
     "title": "Nutzungsbedingungen",
@@ -970,7 +1016,8 @@
     "submitting": "Bitte warten",
     "mustAccept": "Bitte bestätigen Sie die Annahme der Nutzungsbedingungen.",
     "loadFailed": "Der Stand der Nutzungsbedingungen konnte nicht geladen werden.",
-    "alreadyAccepted": "Die Nutzungsbedingungen sind angenommen."
+    "alreadyAccepted": "Die Nutzungsbedingungen sind angenommen.",
+    "evidence": "Als Nachweis werden Zeitpunkt, Fassung und eine pseudonymisierte Kennung Ihrer Verbindung gespeichert."
   },
   "Security": {
     "passkeysTitle": "Passkeys (zweiter Faktor)",
@@ -1101,7 +1148,22 @@
   "Branding": {
     "logoAlt": "Logo {name}",
     "imprint": "Impressum",
-    "privacy": "Datenschutz"
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen"
+  },
+  "Legal": {
+    "title": {
+      "impressum": "Impressum",
+      "datenschutz": "Datenschutzerklärung",
+      "nutzungsbedingungen": "Nutzungsbedingungen"
+    },
+    "version": "Fassung {version}",
+    "termsVersion": "Version der Einwilligungsrichtlinie: {label}",
+    "notReleased": "Text nicht freigegeben",
+    "notReleasedHint": "Für dieses Portal wurde noch kein Text freigegeben. Bitte wenden Sie sich an Ihre Hausverwaltung.",
+    "externalLink": "Text beim Anbieter öffnen",
+    "loadFailed": "Der Text konnte gerade nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "back": "Zurück"
   },
   "ProviderInfo": {
     "title": "Rahmenverträge und Verfügbarkeit",

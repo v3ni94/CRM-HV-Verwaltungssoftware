@@ -68,6 +68,12 @@ class Tenant(IdMixin, TimestampMixin, Base):
     status: Mapped[TenantStatus] = mapped_column(
         _enum(TenantStatus, "tenant_status"), nullable=False, default=TenantStatus.ACTIVE
     )
+    # AE36 (AA15-01, migration 0392): demo tenant with invented data only. It is excluded from
+    # platform billing, usage counters, exports (tenant export, journal, DATEV, audit export)
+    # and from the operating statistics; see mhvp.platform.demo and docs/rules/AE36-DEMO.md.
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class TenantDomain(IdMixin, TimestampMixin, Base):
@@ -148,6 +154,13 @@ class PlatformSettings(IdMixin, TimestampMixin, Base):
     gate_superadmin_bypass: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # AE35 (GB16-02, open question AD10-02): whether announced maintenance windows count as
+    # downtime in the evaluation of the own availability measurement. Default false: checks
+    # inside a window are left out. Both figures are always shown; the switch only decides which
+    # one is rated against the target. Changes are written to the platform audit.
+    maintenance_counts_as_downtime: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
@@ -217,6 +230,77 @@ class AvailabilityMeasurement(IdMixin, TimestampMixin, Base):
     probe: Mapped[str] = mapped_column(String(20), nullable=False)
     uptime_percent: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
     source_note: Mapped[str] = mapped_column(String(200), nullable=False)
+
+
+class AvailabilityProbePoint(IdMixin, Base):
+    """One measuring point of the own availability check (AE35): result of one health request
+    per measuring point and minute. Platform table, no RLS (section 5.3), no personal data.
+    ``slot`` is the minute (UTC), so a repeated job run in the same minute stays idempotent.
+    Rows are deleted after the retention period, but only for months that have been evaluated
+    (``AvailabilityMonth.final``)."""
+
+    __tablename__ = "platform_availability_probe_point"
+    __table_args__ = (
+        UniqueConstraint("probe", "slot", name="uq_platform_availability_probe_point_probe_slot"),
+        CheckConstraint(
+            "probe IN ('api', 'crm', 'portal')", name="ck_platform_availability_probe_point_probe"
+        ),
+        Index("ix_platform_availability_probe_point_slot", "slot"),
+    )
+
+    probe: Mapped[str] = mapped_column(String(20), nullable=False)
+    slot: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ok: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    # Fixed short class of the failure (timeout, connect_error, http_status ...), never the text
+    # of an exception or the URL.
+    error_class: Mapped[str | None] = mapped_column(String(40))
+
+
+class AvailabilityMonth(IdMixin, TimestampMixin, Base):
+    """Monthly evaluation of the own measurement per measuring point (AE35). The row is
+    recomputed daily while the month runs (``final`` false) and frozen after the month ended
+    (``final`` true); only then the minute points of that month may be deleted. ``uptime_gross``
+    counts every check, ``uptime_net`` leaves out the checks inside announced maintenance
+    windows. ``expected_checks`` is the number of minutes of the month (or of the part that has
+    passed), so ``checks_total / expected_checks`` is the coverage."""
+
+    __tablename__ = "platform_availability_month"
+    __table_args__ = (
+        UniqueConstraint("month", "probe", name="uq_platform_availability_month_month_probe"),
+        CheckConstraint(
+            "probe IN ('api', 'crm', 'portal')", name="ck_platform_availability_month_probe"
+        ),
+        CheckConstraint(
+            "checks_ok >= 0 AND checks_ok <= checks_total AND checks_maintenance >= 0"
+            " AND checks_maintenance <= checks_total"
+            " AND checks_ok_maintenance >= 0 AND checks_ok_maintenance <= checks_maintenance"
+            " AND checks_ok_maintenance <= checks_ok AND expected_checks >= 0",
+            name="ck_platform_availability_month_counts",
+        ),
+        CheckConstraint(
+            "uptime_gross >= 0 AND uptime_gross <= 100"
+            " AND (uptime_net IS NULL OR (uptime_net >= 0 AND uptime_net <= 100))",
+            name="ck_platform_availability_month_percent",
+        ),
+    )
+
+    month: Mapped[date] = mapped_column(Date, nullable=False)
+    probe: Mapped[str] = mapped_column(String(20), nullable=False)
+    checks_total: Mapped[int] = mapped_column(Integer, nullable=False)
+    checks_ok: Mapped[int] = mapped_column(Integer, nullable=False)
+    checks_maintenance: Mapped[int] = mapped_column(Integer, nullable=False)
+    checks_ok_maintenance: Mapped[int] = mapped_column(Integer, nullable=False)
+    expected_checks: Mapped[int] = mapped_column(Integer, nullable=False)
+    uptime_gross: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    uptime_net: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    final: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class Membership(IdMixin, TimestampMixin, Base):
@@ -573,6 +657,11 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # no automatic deletion. Applied when an archive becomes ready (expires_at of the job) and
     # by the daily purge to ready archives without an expiry.
     export_retention_days: Mapped[int | None] = mapped_column(Integer)
+    # AE17 / M17-01, migration 0373: the report of missing allocation agreements blocks the
+    # output of a rental statement (default on, no row means on).
+    allocation_basis_block: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
     # Lernbeispiele aus Ticketabschlüssen (ADR 0010, M7-04, Regel M19-07, Migration 0134):
     # bei false wird beim Abschluss kein ``AiExample`` (Aufgabe ``ticket_resolution``)
     # gespeichert. Standard aus (Regel 0.1.3: Datenschutzregel offen); der Betreiber schaltet
@@ -691,6 +780,9 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     hoa_virtual_basis_term_lock_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # AE12 (migration 0368): transition date entered by the operator (no legal text, no effect
+    # on the lock); the notice only points to it. Null means not entered.
+    hoa_virtual_basis_transition_date: Mapped[date | None] = mapped_column(Date)
     # Rückkanal Gmail zu Plattform (rule M20-08, migration 0224, docs/rules/M20-08): mode
     # ``off`` (label changes are ignored), ``record_only`` (default: states and events are
     # recorded, nothing changes status) or ``done`` (a mail archived in Gmail by the

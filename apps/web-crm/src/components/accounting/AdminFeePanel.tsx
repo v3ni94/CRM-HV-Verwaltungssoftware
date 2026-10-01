@@ -49,8 +49,11 @@ type Invoice = {
   released_at?: string | null;
   payer_entry_id?: string | null;
   xrechnung_url: string | null;
+  zugferd_document_id?: string | null;
 };
 type Check = { structure_ok: boolean; findings: { code: string; message: string }[] };
+// S13-03: ZUGFeRD check = CII structure plus the own PDF/A pre-check (never "conform").
+type ZugferdCheck = Check & { profile: string; pdfa: { conformance: string; blockers: string[] } };
 
 const base = "/api/bff/accounting";
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -215,6 +218,19 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   };
   const store = (inv: Invoice) =>
     run(() => bff(`${base}/invoices/${inv.id}/xrechnung/document`, { method: "POST" }), t("stored"));
+
+  // S13-03: ZUGFeRD/Factur-X (PDF mit CII EN 16931); PDF/A-3 gekennzeichnet, aber nicht geprüft.
+  const checkZugferd = async (inv: Invoice) => {
+    setError(null);
+    const res = await bff<ZugferdCheck>(`${base}/admin-fee-invoices/${inv.id}/zugferd/check`);
+    if (!res.ok) return setError(res.message);
+    const structure = res.data.structure_ok
+      ? t("zugferdStructureOk")
+      : res.data.findings.map((f) => `${f.code}: ${f.message}`).join(" · ");
+    setInfo([`${t("zugferd")} ${res.data.profile}: ${structure}`, t("zugferdPdfaNotVerified"), ...res.data.pdfa.blockers].join(" · "));
+  };
+  const storeZugferd = (inv: Invoice) =>
+    run(() => bff(`${base}/admin-fee-invoices/${inv.id}/zugferd/document`, { method: "POST" }), t("zugferdStored"));
 
   const makePdf = async (inv: Invoice) => {
     setBusy(true);
@@ -466,6 +482,19 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                   ) : (
                     <button type="button" className={ui.buttonSm} onClick={() => void makePdf(inv)} disabled={busy}>
                       {t("pdf")}
+                    </button>
+                  )}
+                  <a className={ui.buttonSm} href={`${base}/admin-fee-invoices/${inv.id}/zugferd.pdf`}>
+                    {t("zugferd")}
+                  </a>
+                  <button type="button" className={ui.buttonSm} onClick={() => void checkZugferd(inv)}>
+                    {t("zugferdCheck")}
+                  </button>
+                  {inv.zugferd_document_id ? (
+                    <span className="text-xs">{t("zugferdFiled")}</span>
+                  ) : (
+                    <button type="button" className={ui.buttonSm} onClick={() => storeZugferd(inv)} disabled={busy}>
+                      {t("zugferdStore")}
                     </button>
                   )}
                   {inv.payer_entry_id ? (

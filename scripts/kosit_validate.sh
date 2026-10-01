@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Validates XRechnung files with the official KoSIT validator (A12, P05).
 #
-# The validator and the XRechnung configuration are not bundled with the repository and are
-# not downloaded here (no network access is assumed). Place them under MHVP_KOSIT_DIR:
+# The validator and the XRechnung configuration are not bundled with the repository. Fetch the
+# pinned versions with `make kosit-fetch` (scripts/kosit_fetch.sh, checksums in
+# scripts/kosit.lock; default directory .cache/kosit) or place them under MHVP_KOSIT_DIR:
 #   MHVP_KOSIT_DIR/validationtool-<version>-standalone.jar
 #     from https://github.com/itplr-kosit/validator/releases (tested: 1.5.0)
 #   MHVP_KOSIT_DIR/cfg/scenarios.xml plus resources/
@@ -16,7 +17,11 @@ if [ "$#" -lt 1 ]; then
   echo "usage: $0 <file.xml> [more.xml ...]" >&2
   exit 2
 fi
-: "${MHVP_KOSIT_DIR:?MHVP_KOSIT_DIR is not set (directory with the validator jar and cfg/)}"
+: "${MHVP_KOSIT_DIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.cache/kosit}"
+if [ ! -d "$MHVP_KOSIT_DIR" ]; then
+  echo "MHVP_KOSIT_DIR $MHVP_KOSIT_DIR does not exist (run make kosit-fetch or set MHVP_KOSIT_DIR)" >&2
+  exit 2
+fi
 jar="$(ls "$MHVP_KOSIT_DIR"/validationtool-*-standalone.jar 2>/dev/null | grep -v java8 | head -n 1 || true)"
 if [ -z "$jar" ]; then
   echo "no validationtool-*-standalone.jar in $MHVP_KOSIT_DIR" >&2

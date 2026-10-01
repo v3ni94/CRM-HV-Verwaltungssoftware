@@ -39,6 +39,17 @@ describe("LoginForm", () => {
     expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor?next=%2Fkontakte%2Fneu");
   });
 
+  it("continues to the second factor setup when the tenant policy demands it (M2-04)", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({ status: "mfa_setup_required" }));
+    renderIntl(<LoginForm next="/kontakte/neu" />);
+    await userEvent.type(screen.getByLabelText("E-Mail"), "admin@example.org");
+    await userEvent.type(screen.getByLabelText("Passwort"), "geheim");
+    await userEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor-einrichten?next=%2Fkontakte%2Fneu"),
+    );
+  });
+
   it("goes straight to the target when the password alone was enough", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ status: "ok", tenant_id: "t-1", tenants: [] }));
     renderIntl(<LoginForm next="/kontakte/neu" />);

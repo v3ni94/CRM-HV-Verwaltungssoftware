@@ -16,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.crypto import EncryptedText
@@ -201,7 +201,17 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     agreement) and the read only support view (additionally needs the user's consent)."""
 
     __tablename__ = "portal_feature_setting"
-    __table_args__ = (UniqueConstraint("tenant_id", name="ux_portal_feature_setting_tenant"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="ux_portal_feature_setting_tenant"),
+        CheckConstraint(
+            "owner_ticket_scope IN ('none', 'released', 'property')",
+            name="owner_ticket_scope",
+        ),
+        CheckConstraint(
+            "provider_rating_display IN ('off', 'staff')",
+            name="provider_rating_display",
+        ),
+    )
 
     chat_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
@@ -210,6 +220,30 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False, server_default="false"
     )
     support_login_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AE13 (P13-01, M21-06, migration 0369): rental income view for investors, off by default;
+    # ticket scope of the owner view: none, released (visible_for owner) or property.
+    owner_rental_income_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    owner_ticket_scope: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="released", server_default="released"
+    )
+    # AE30 (AA14-02, migration 0386): display of the ratings of service providers (rating of a
+    # completed work order). off (default): ratings stay internal at the work order; staff:
+    # aggregated stars per provider for the management in the portal administration, never
+    # shown to the provider or to third parties and never with the free text.
+    provider_rating_display: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="off", server_default="off"
+    )
+    # AE28 (M7-06, SA-04, migration 0384): AI assistant for questions about the documents the
+    # account may see (chat bot) and the privacy feature (released notice plus acknowledgement
+    # per account) that the AI answer needs; both off by default (Produktschutz).
+    chat_bot_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    privacy_feature_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
 
@@ -284,3 +318,55 @@ class ProviderAvailability(IdMixin, TimestampMixin, TenantMixin, Base):
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="available")
     note: Mapped[str | None] = mapped_column(String(300))
+
+
+class PortalChatPrivacyAck(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE28 (M7-06): acknowledgement of the released privacy notice for AI answers in the portal,
+    per account and text version. A new approved version needs a new acknowledgement. The row
+    proves only that the person took note; it is no consent decision and no legal basis."""
+
+    __tablename__ = "portal_chat_privacy_ack"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "account_id", "text_block_id", name="ux_portal_chat_privacy_ack_text"
+        ),
+    )
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    text_block_id: Mapped[uuid.UUID] = _fk("legal_text_block.id", ondelete="RESTRICT")
+    text_code: Mapped[str] = mapped_column(String(63), nullable=False)
+    text_version: Mapped[int] = mapped_column(nullable=False)
+    acknowledged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PortalChatLog(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE28 (M7-06): log of every question to the portal assistant. The question is stored with
+    IBAN, e-mail and phone masked (rule 0.1.13); the answer is the text shown to the person.
+    ``technical_reason`` names why the AI stage did not run and is shown to the management only.
+    Rows are never changed by the application; removal follows the retention decision (AE28-02)."""
+
+    __tablename__ = "portal_chat_log"
+    __table_args__ = (
+        Index("ix_portal_chat_log_account", "tenant_id", "account_id", "created_at"),
+        CheckConstraint("mode IN ('ai', 'search')", name="mode"),
+        CheckConstraint(
+            "status IN ('answered', 'not_answerable', 'failed', 'search_hits', 'no_sources')",
+            name="status",
+        ),
+    )
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    unit_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str | None] = mapped_column(Text)
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    reason_code: Mapped[str | None] = mapped_column(String(40))
+    technical_reason: Mapped[str | None] = mapped_column(String(500))
+    # [{"document_id": ..., "title": ...}] of the checked sources, no excerpt (data minimisation)
+    sources: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    scope_documents: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

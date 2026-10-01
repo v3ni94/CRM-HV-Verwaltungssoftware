@@ -118,6 +118,29 @@ token, hashing, revocation, platform table) stay.
    of the first addendum (random token, SHA-256 hash server side, bound to exactly one user,
    expiry, revocation by password reset) is unchanged.
 
+## Third addendum (01.10.2026): second factor per role as tenant policy (M2-04, AE27)
+
+Priority list of the operator, item 25 (wave 16): the obligation of section 3.4 ("TOTP
+Zweifaktor Pflicht für Verwaltungsrollen") becomes a tenant policy (`auth_mfa_policy`,
+migration 0383, rule docs/rules/M2-04.md) instead of a code constant. Modes: `voluntary`
+(default, also without a policy row: the second addendum, M2-01, every user decides alone),
+`all_staff` (mandatory for every role except `portal_user`) and `roles` (mandatory for the
+listed role codes). The obligation is a choice of the tenant. `portal_required` (default false)
+covers the portal role (section 14: optional).
+
+Coordinator decision 01.10.2026: the first draft made `all_staff` the default. That contradicts
+the operator decision M2-01 and would have forced every user to set up a factor at the next
+login. The default is `voluntary` (column default of `crm_mode` and fallback without a row);
+`all_staff` and `roles` stay selectable per tenant. The remaining question AE27-01 is whether a
+tenant should choose the obligation before productive operation (OPEN_QUESTIONS).
+
+Transition without lockout: when a tenant chooses the obligation, it applies at the next
+login. A covered user without a factor gets `mfa_setup_required` and a dedicated setup token
+(audience `mhvp-mfa-setup`, 15 minutes) and enrols TOTP inside the login flow; running sessions
+stay. A passkey counts as factor, trusted devices keep working. The policy only adds checks:
+under a chosen obligation the last factor of a covered user cannot be removed
+(`MHVP-AUTH-0015`), magic link logins hand over to TOTP.
+
 ## References
 
 MASTER-PROMPT 3.3, 3.4, 3.5, 5, 6.8, 6.9.4, 12, 18.0; ADR 0002, 0003.

@@ -141,3 +141,31 @@ journaled as `contact.access_export.*` domain events (no own table, migration 03
 prepared event stores the content hash only; review, release and download rebuild the export
 and refuse with MHVP-CONT-0032 when the data changed. The old `GET /contacts/{id}/export`
 returns 409. Rule: `docs/rules/AC07-auskunft-loeschung.md`; open: AC07-01.
+
+## Legal basis per processing and objection (AE34, AC06-01 to AC06-03)
+
+`consent_rules.py` keeps a register `tenant_settings.sources["consent_legal_basis"]` (separate
+from `consent_policy`) with the legal basis per purpose (`email_delivery`, `data_sharing`,
+`marketing`, `portal_terms`): `consent` (default), `contract`, `legitimate_interest`, each other
+basis with a justification. API: `GET /consent-legal-basis`, `PUT` and `DELETE
+/consent-legal-basis/{purpose}` (change needs `contacts:approve`, events
+`consent_legal_basis.updated` and `.reset`). `ConsentPolicy.basis_for(purpose)` is the single
+read path: register entry, else the legacy `consent_or_contract` switch (counts as `contract`),
+else `consent`. The decisions (`email_delivery_decision`, `data_sharing_decision`,
+`marketing_permitted`) follow it; under `legitimate_interest` an objection record
+(`POST /contacts/{id}/objections`, `consent.record_type = objection`, never a consent) or a
+revoked consent of the same kind blocks the contact. Migration 0390 adds `record_type`,
+`text_version` and `ip_hash` (keyed hash of the client address) to `consent`. Rule:
+`docs/rules/AE34-01.md`; open: AC06-01 to AC06-03, AE34-01 to AE34-03.
+
+## Access export scope as tenant switches (AE33, AC07-01)
+
+`contact_access_export_setting` (migration 0389, one row per tenant, no row means the defaults):
+`third_party_scope` `none` (default, other persons by role only) or `names` (name and role, never
+address, contact data, identifiers or bank data), `include_internal_notes` (default off; note
+field and contact notes without author). `GET` and `PUT /contact-access-export-settings`
+(`tenant_settings:read` and `tenant_settings:update`, event
+`contact_access_export_setting.updated`). The scope is frozen into the prepared event
+(`options`); review, release and download rebuild exactly that content, so the hash check holds
+when the switches change later. Events without `options` count as the defaults. Rule:
+`docs/rules/AE33-papierkorb-auskunft.md`; open: AC07-01.

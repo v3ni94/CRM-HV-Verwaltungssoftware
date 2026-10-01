@@ -73,4 +73,10 @@ describe("SecuritySettings", () => {
     expect(JSON.parse(String(disableCall[1]?.body))).toEqual({ current_password: "geheim" });
     expect(screen.getByRole("button", { name: "Zweiten Faktor einrichten" })).toBeInTheDocument();
   });
+
+  it("keeps a mandatory second factor on and explains why (M2-04)", () => {
+    renderIntl(<SecuritySettings totpEnabled={true} mfaRequired initialDevices={[]} />);
+    expect(screen.getByText(/schreibt den zweiten Faktor vor/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Aktuelles Passwort/)).not.toBeInTheDocument();
+  });
 });

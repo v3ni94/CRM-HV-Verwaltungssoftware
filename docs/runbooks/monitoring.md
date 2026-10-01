@@ -120,6 +120,13 @@ der Frist). Ein Uptime Kuma Monitor dafür:
 
 Alternativ als Schlüsselwort-Monitor mit Schlüsselwort `"alerts":[]`.
 
+Skalierungsauslöser (AE36, AC09-01, ADR 0021): `scale_trigger_partition_review` (mindestens ein
+Auslöser der Jahrespartitionierung erreicht) und `scale_trigger_measure_again` (Marke produktiver
+Mandanten für die Wiederholung der Messung) stehen ebenfalls unter `alerts`; derselbe Monitor
+meldet sie dem Betreiber per E-Mail. Zusätzlich gehen die Gauges `journal_entry_rows`,
+`journal_line_rows`, `bank_transaction_rows`, die zugehörigen `_bytes` und die `_p95_ms` der Listen
+im Prometheus-Format an die Kennzahlen. Details und Schwellen: `leistungsmessung.md`, Abschnitt AE36.
+
 Zugang der Überwachung (Betreiberentscheidung M9-04a vom 26.09.2026): Der Endpunkt nimmt
 neben der Sitzung eines Plattformadministrators einen API-Schlüssel an, der ausschließlich
 das Recht `platform:metrics:read` trägt. Ein solcher Schlüssel kann nichts anderes lesen und
@@ -191,6 +198,7 @@ mhvp-health`).
 | alle externen Monitore rot, interne grün | Traefik, DNS oder Zertifikat: `docker logs traefik`, Zertifikatsablauf |
 | Server Skripte rot | `journalctl -u mhvp-backup -n 50`, `journalctl -u mhvp-health -n 50`; Backup manuell mit `systemctl start mhvp-backup.service` nachholen, Runbook `backup.md` |
 | Zertifikat läuft ab | Traefik-Resolver prüfen, Port 80 erreichbar |
+| `scale_trigger_partition_review` in `alerts` | Seite Plattform, Betrieb, Skalierung öffnen: Welcher Auslöser ist erreicht (Zeilen, Größe, P95, Wiederherstellung)? Zuerst Stufe 1 aus ADR 0021 prüfen (Indizes, Statistik), dann Planung der Partitionierung mit Freigabe der Geschäftsführung. Kein Eingriff in Buchungsdaten ohne diese Freigabe |
 
 Jeder Alarm wird mit Datum, Ursache und Maßnahme im Betriebsprotokoll des Betreibers
 festgehalten (Abnahme M9).
@@ -265,4 +273,6 @@ ist noch nicht eingerichtet und wird in `docs/OPEN_QUESTIONS.md` nachgetragen.
 ## Verfügbarkeitsziel
 
 Das Ziel 99,5 Prozent je Monat, die Messpunkte, die Monatsauswertung und die Ankündigung von
-Wartungsfenstern stehen in `verfuegbarkeit.md` (Befunde GB16-01 und GB16-02).
+Wartungsfenstern stehen in `verfuegbarkeit.md` (Befunde GB16-01 und GB16-02). Die Eigenmessung der
+Plattform (Minutenprüfung der Health Adressen, Abschnitt 4 dort) ersetzt Uptime Kuma nicht: Kuma
+bleibt die unabhängige zweite Quelle auf anderer Infrastruktur.

@@ -321,6 +321,25 @@ Backup-Aufbewahrung. Backups sind Betriebsabsicherung und kein Archiv (7.11 S05)
 Aufbewahrungsdauer für personenbezogene Daten in Backups (heute Offsite 14 täglich, 8 wöchentlich,
 12 monatlich; 6.9.5 nennt 30 Tage rollierend) ist offen (OPEN_QUESTIONS AC07-03).
 
+### Papierkorb und Backups (AE33, AC07-03)
+
+Mit dem Mandantenschalter für den Papierkorb (Standard aus, `PUT /api/v1/documents/trash-settings`) bleibt
+ein zulässig gelöschtes Dokument bis zum Fristende (Vorschlag 30 Tage) mit Original und Spiegelkopien
+erhalten; `document.deleted` entsteht erst bei der endgültigen Löschung. Für Backups und Restore gilt:
+
+1. Das Backup ist unverändert nicht bearbeitet. Ein Dokument, das im Backup normal vorliegt und danach in den
+   Papierkorb kam, taucht nach dem Restore wieder normal auf. Das Löschjournal enthält dafür
+   `document.trashed` und `document.restored`; das Replay legt das Dokument erneut in den Papierkorb
+   (Ergebnis `trashed`) oder nimmt es heraus (`restored`), jeweils nur wenn der Eintrag die letzte Aussage
+   zum Dokument ist. Sperren und Hash gehen vor (`kept_hold`, `kept_blocked`, `kept_hash_mismatch`).
+2. Ein Dokument, das im Backup im Papierkorb liegt und danach endgültig gelöscht wurde, löscht das Replay
+   des Ereignisses `document.deleted` wie bisher (das Replay sieht auch Dokumente im Papierkorb).
+3. Der Papierkorb verlängert die Zeit, in der gelöschte Daten in der Datenbank stehen, um die eingestellte
+   Frist. Er verändert die Backup-Aufbewahrung nicht; deren Dauer bleibt offen (AC07-03). Wer mit dem
+   Papierkorb arbeitet, dokumentiert die Frist im Verzeichnis der Verarbeitungstätigkeiten.
+4. Tägliche Kontrolle: Auftrag `mhvp.documents.trash_purge` (05:10 UTC) meldet `checked`, `deleted`, `held`
+   und `errors`; `held` > 0 heißt, dass Sperren Dokumente im Papierkorb halten (Papierkorb ansehen).
+
 ## Prüfskript Offsite-Lauf (M9-06)
 
 `scripts/backup-offsite-check.sh` baut ein lokales Verzeichnis als Ersatz für den Bucket (oder nimmt mit `--dir` ein vorhandenes), füttert `backup-offsite.sh --dry-run --list` mit dem Schlüsselverzeichnis und prüft den Aufbewahrungsplan: neueste Tagesläufe bleiben erhalten, nichts Neueres als der älteste Tageslauf wird gelöscht, `--list` ohne `--dry-run` wird abgelehnt. Kein S3-Zugriff, keine Schlüssel. Ausgabe `backup-offsite-check: ... status=ok|failed`, Exit 0 bei Erfolg.

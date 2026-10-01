@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { COOKIE, MFA_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
+import { COOKIE, MFA_MAX_AGE, MFA_SETUP_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
 
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
 
@@ -47,6 +47,13 @@ export async function POST(request: Request): Promise<Response> {
       return result;
     }
     const result = NextResponse.json({ status: data.status });
+    if (data.status === "mfa_setup_required") {
+      // M2-04: the tenant policy asks for a second factor the user has not set up yet; the
+      // setup token (not in the generated schema yet) goes into its own httpOnly cookie.
+      const setupToken = (data as { mfa_setup_token?: string | null }).mfa_setup_token ?? "";
+      result.cookies.set(COOKIE.mfaSetup, setupToken, cookieOptions(secure, MFA_SETUP_MAX_AGE));
+      return result;
+    }
     result.cookies.set(COOKIE.mfa, data.mfa_token ?? "", cookieOptions(secure, MFA_MAX_AGE));
     return result;
   } catch {

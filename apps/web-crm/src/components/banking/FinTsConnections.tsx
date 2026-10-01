@@ -61,6 +61,10 @@ export type FinTsConnection = {
   bank_name: string;
   blz: string;
   bic: string | null;
+  /** Address a dialog uses now; the manual entry (if any) and the institute list entry. */
+  fints_url?: string;
+  fints_url_manual?: string | null;
+  fints_url_list?: string | null;
   status: string;
   tan_mechanism: string | null;
   tan_mechanisms: FinTsTanMechanism[];
@@ -74,6 +78,17 @@ export type FinTsConnection = {
   open_session_id: string | null;
   accounts: FinTsAccount[];
 };
+
+/** Codes whose message carries numbered check steps (locked access, bank not reachable). */
+const CHECK_STEP_CODES = ["MHVP-BANK-0010", "MHVP-BANK-0013"];
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
 
 const STATUS_VARIANT: Record<string, StatusPillVariant> = {
   not_configured: "neutral",
@@ -253,10 +268,13 @@ export function FinTsSessionPanel({
       ) : null}
       {session.status === "failed" ? (
         <p role="alert" className={ui.alert}>
-          {session.error_message ?? t("sessionFailed")}
-          {session.error_code ? <span className="ml-1 text-xs">({session.error_code})</span> : null}
+          <span className="block whitespace-pre-line">{session.error_message ?? t("sessionFailed")}</span>
+          {session.error_code ? <span className="text-xs">({session.error_code})</span> : null}
           {session.error_code === "MHVP-BANK-0009" || session.error_code === "MHVP-BANK-0016" ? (
             <span className="block text-xs">{t("pinLockHint")}</span>
+          ) : null}
+          {session.error_code && CHECK_STEP_CODES.includes(session.error_code) ? (
+            <span className="block text-xs">{t("handbookHint")}</span>
           ) : null}
         </p>
       ) : null}
@@ -558,6 +576,131 @@ function FinTsAccountTable({ connection, onChanged }: { connection: FinTsConnect
   );
 }
 
+/** FinTS-Adresse der Bank je Verbindung (Bankfusion, neues Rechenzentrum): zeigt die
+ *  verwendete Adresse und ihre Herkunft, erlaubt eine manuelle Adresse (mit erneuter PIN-Eingabe,
+ *  es wird kein Anmeldeversuch gestartet) und die Rückkehr zur Adresse der Institutsliste. */
+function FinTsAddress({
+  connection,
+  highlight,
+  onChanged,
+}: {
+  connection: FinTsConnection;
+  highlight: boolean;
+  onChanged: () => Promise<void> | void;
+}) {
+  const t = useTranslations("FinTs");
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const current = connection.fints_url;
+  if (!current) return null;
+  const manual = connection.fints_url_manual ?? null;
+
+  async function save(next: string | null) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const result = await bff<FinTsConnection>(`/api/bff/banking/fints/connections/${connection.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(next === null ? { fints_url: null } : { fints_url: next, pin }),
+    });
+    setBusy(false);
+    setPin("");
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setUrl("");
+    setOpen(false);
+    setMessage(next === null ? t("urlResetDone") : t("urlSaved"));
+    await onChanged();
+  }
+
+  return (
+    <div className="mt-2 text-xs" data-testid="fints-address">
+      <span className="font-medium">{t("urlTitle")}</span>
+      <span className="ml-1">
+        <span className={ui.mono} title={current}>{hostOf(current)}</span>
+        <span className="ml-1 text-muted">({manual ? t("urlSourceManual") : t("urlSourceList")})</span>
+      </span>
+      {!open ? (
+        <button
+          type="button"
+          className={`${ui.buttonSm} ml-2`}
+          disabled={busy || !!connection.open_session_id}
+          onClick={() => {
+            setOpen(true);
+            setMessage(null);
+          }}
+        >
+          {highlight ? t("urlCheck") : t("urlChange")}
+        </button>
+      ) : null}
+      {message ? <p className={`${ui.notice} mt-1`}>{message}</p> : null}
+      {error ? <p role="alert" className={`${ui.alert} mt-1`}>{error}</p> : null}
+      {open ? (
+        <form
+          aria-label={t("urlTitle")}
+          className="mt-2 flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save(url.trim());
+          }}
+        >
+          <p className={ui.help}>{t("urlHelp")}</p>
+          <label className="flex flex-col gap-1 text-sm">
+            {t("urlInput")}
+            <input
+              className={ui.input}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder={t("urlPlaceholder")}
+              autoComplete="off"
+              aria-label={t("urlInput")}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {t("urlPin")}
+            <input
+              className={ui.input}
+              type="password"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              autoComplete="current-password"
+              aria-label={t("urlPin")}
+            />
+          </label>
+          <div className={ui.formActions}>
+            <button type="submit" className={ui.primary} disabled={busy || !url.trim() || !pin}>
+              {t("urlSave")}
+            </button>
+            {manual ? (
+              <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => save(null)}>
+                {t("urlReset")}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={ui.buttonSm}
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                setError(null);
+                setPin("");
+              }}
+            >
+              {t("urlCancel")}
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
 /** "Bankverbindungen (FinTS)" auf /bank: Liste mit Stand, Aktualisieren, erneute Freigabe,
  *  Trennen und der Dialog "Bank verbinden". Nur lesend: keine Zahlungen (G2 geschlossen). */
 export function FinTsConnections() {
@@ -674,7 +817,10 @@ export function FinTsConnections() {
               </p>
               {c.pin_blocked ? (
                 <div className={`${ui.warning} mt-2 flex flex-col gap-2`}>
-                  <span>{t("pinBlocked")}</span>
+                  <span>{c.last_error_code === "MHVP-BANK-0010" ? t("lockedBlocked") : t("pinBlocked")}</span>
+                  {c.last_error_code && CHECK_STEP_CODES.includes(c.last_error_code) && c.last_error ? (
+                    <span className="whitespace-pre-line text-xs">{c.last_error}</span>
+                  ) : null}
                   <label className="flex flex-col gap-1 text-sm">
                     {t("pinAgain")}
                     <input
@@ -692,7 +838,17 @@ export function FinTsConnections() {
               ) : c.sca_due || c.status === "update_required" ? (
                 <p className={`${ui.warning} mt-2`}>{t("scaDue")}</p>
               ) : null}
-              {c.last_error && !c.pin_blocked ? <p className="mt-1 text-xs text-danger-fg">{c.last_error}</p> : null}
+              {c.last_error && !c.pin_blocked ? (
+                <p className="mt-1 whitespace-pre-line text-xs text-danger-fg" data-testid="fints-last-error">
+                  {c.last_error}
+                </p>
+              ) : null}
+              {c.last_error_code && CHECK_STEP_CODES.includes(c.last_error_code) ? (
+                <p className="mt-1 text-xs text-muted">{t("handbookHint")}</p>
+              ) : null}
+              {c.status !== "disabled" ? (
+                <FinTsAddress connection={c} highlight={c.last_error_code === "MHVP-BANK-0013"} onChanged={load} />
+              ) : null}
               {c.status !== "disabled" ? (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button type="button" className={ui.buttonSm} disabled={busy || c.pin_blocked || !!c.open_session_id} onClick={() => refresh(c)}>

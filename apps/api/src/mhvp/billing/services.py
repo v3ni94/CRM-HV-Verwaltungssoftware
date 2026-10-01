@@ -160,6 +160,115 @@ async def advances(
     return due, paid
 
 
+async def open_advance_items(
+    session: AsyncSession, statement: Statement, contract_id: uuid.UUID
+) -> list[dict[str, str]]:
+    """Advance receivables of the period still open today (D24, AE15): open item, remaining
+    amount and the counter account of the advance posting (the account an offset debits)."""
+    from mhvp.accounting import services as acc
+    from mhvp.accounting.models import (
+        AccountCategory,
+        ItemStatus,
+        JournalLine,
+        LedgerAccount,
+        OpenItem,
+        ReceivableItem,
+    )
+
+    items = (
+        await session.scalars(
+            select(ReceivableItem)
+            .where(
+                ReceivableItem.contract_id == contract_id,
+                ReceivableItem.status == ItemStatus.POSTED,
+                ReceivableItem.payment_type_code.in_(ADVANCE_CODES),
+                ReceivableItem.period_month.between(statement.period_from, statement.period_to),
+            )
+            .order_by(ReceivableItem.period_month)
+        )
+    ).all()
+    out: list[dict[str, str]] = []
+    for i in items:
+        oi = await session.scalar(
+            select(OpenItem).where(OpenItem.journal_entry_id == i.journal_entry_id)
+        )
+        if oi is None:
+            continue
+        rest = await acc.remaining(session, oi.id)
+        if rest <= 0:
+            continue
+        counter = await session.scalar(
+            select(JournalLine.account_id)
+            .join(LedgerAccount, LedgerAccount.id == JournalLine.account_id)
+            .where(
+                JournalLine.journal_entry_id == i.journal_entry_id,
+                JournalLine.credit > 0,
+                LedgerAccount.category != AccountCategory.DEBTOR,
+            )
+            .order_by(JournalLine.line_no)
+            .limit(1)
+        )
+        out.append(
+            {
+                "open_item_id": str(oi.id),
+                "period_month": i.period_month.isoformat(),
+                "remaining": str(rest),
+                "counter_account_id": str(counter) if counter else "",
+            }
+        )
+    return out
+
+
+def open_advance_treatment(
+    mode: str, share: Decimal, due: Decimal, paid: Decimal, open_items: list[dict[str, str]]
+) -> dict[str, Any]:
+    """Balance and disclosed calculation per variant of the open advance switch (AE15, D24).
+
+    * ``info_only`` (default, variant 3): balance = costs - paid; open items stay, the
+      combined view is shown as information only.
+    * ``offset_reversal`` (variant 1): balance = costs - paid; the open items of the period
+      are offset against the result (draft entries behind G3), afterwards nothing stays open.
+    * ``balance_against_due`` (variant 2): balance = costs - due; the open items stay with
+      their own legal ground, the combined view is balance + open.
+    Pure arithmetic in NUMERIC; no posting happens here.
+    """
+    open_total = sum((Decimal(i["remaining"]) for i in open_items), Decimal("0.00"))
+    against_paid = share - paid
+    against_due = share - due
+    if mode == "balance_against_due":
+        balance, open_after = against_due, open_total
+        steps = [
+            f"Kostenanteil {share} - Vorauszahlungen Soll {due} = Abrechnungssaldo {balance}",
+            f"Offene Vorauszahlungen bleiben bestehen: {open_total}",
+            f"Gesamtsicht {balance} + {open_total} = {balance + open_total}",
+        ]
+    elif mode == "offset_reversal":
+        balance, open_after = against_paid, Decimal("0.00")
+        steps = [
+            f"Kostenanteil {share} - gezahlte Vorauszahlungen {paid} = Abrechnungssaldo {balance}",
+            f"Offene Vorauszahlungen {open_total} werden gegen die Abrechnung verrechnet "
+            "(Storno mit Verweis auf die Abrechnung, erst nach Freigabe G3)",
+            f"Gesamtsicht {balance} + 0.00 = {balance}",
+        ]
+    else:
+        balance, open_after = against_paid, open_total
+        steps = [
+            f"Kostenanteil {share} - gezahlte Vorauszahlungen {paid} = Abrechnungssaldo {balance}",
+            f"Offene Vorauszahlungen {open_total} bleiben unverändert offen (nur Information, "
+            "Verfahren nicht freigegeben, AC10-01)",
+        ]
+    return {
+        "open_advance_mode": mode,
+        "balance": balance,
+        "balance_against_paid": str(against_paid),
+        "balance_against_due": str(against_due),
+        "open_advances_after_rule": str(open_after),
+        "net_claim": str(balance + open_after),
+        "offset_items": open_items if mode == "offset_reversal" else [],
+        "calculation_steps": steps,
+    }
+
+
 async def check_item(
     session: AsyncSession, statement: Statement, item: StatementCostItem, entity_kind: Any
 ) -> dict[str, Any]:
@@ -333,13 +442,23 @@ async def calculate(
     results = []
     vacancy = Decimal("0.00")
     period_deadline = calc.deadline(statement.period_to)
+    from mhvp.billing.advance_rule import open_advance_mode
+
+    mode = (await open_advance_mode(session)).value
     for o in occ:
         share = per_key[o["key"]]
         if o["contract_id"] is None:
             vacancy += share
             continue
         due, paid = await advances(session, statement, o["contract_id"])
-        balance = share - paid
+        treatment = open_advance_treatment(
+            mode,
+            share,
+            due,
+            paid,
+            await open_advance_items(session, statement, o["contract_id"]) if due != paid else [],
+        )
+        balance = treatment.pop("balance")
         results.append(
             {
                 "contract_id": str(o["contract_id"]),
@@ -354,6 +473,7 @@ async def calculate(
                 "late_claim_blocked": balance > 0
                 and today > period_deadline
                 and not statement.deadline_exception_effective,
+                **treatment,
             }
         )
     inputs: dict[str, Any] = {
@@ -406,7 +526,12 @@ async def calculate(
     return snap
 
 
-def check_issue(statement: Statement, snapshot: StatementSnapshot, delivered_at: date) -> None:
+def check_issue(
+    statement: Statement,
+    snapshot: StatementSnapshot,
+    delivered_at: date,
+    policy: str = "block_claims",
+) -> None:
     """Issuing needs the day the statement reached the tenant (A04, D23, M17-04).
 
     Creation or calculation is never the access: the access day cannot lie before the
@@ -430,7 +555,8 @@ def check_issue(statement: Statement, snapshot: StatementSnapshot, delivered_at:
         for r in snapshot.results["results"]
         if Decimal(r["balance"]) > 0 and (r["late_claim_blocked"] or delivered_at > period_deadline)
     ]
-    if late and not statement.deadline_exception_effective:
+    # M17-04: policy ``notice`` only reports late claims (tenant switch, default block_claims).
+    if late and policy == "block_claims" and not statement.deadline_exception_effective:
         raise ProblemError(
             ErrorCodes.CONFLICT,
             detail=(

@@ -62,6 +62,8 @@ class LineIn:
     net_amount: Decimal | None = None
     unit_id: uuid.UUID | None = None
     cost_center: str | None = None
+    # Object of the line (Q15-01): explicit here, otherwise derived in ``write_draft``.
+    property_id: uuid.UUID | None = None
 
 
 def fiscal_year(ledger: Ledger, day: date) -> int:
@@ -328,8 +330,11 @@ async def write_draft(
     if entry not in session:
         session.add(entry)
     await session.flush()
+    from mhvp.accounting import line_property
+
+    properties = await line_property.resolve(session, entry, lines)
     await session.execute(delete(JournalLine).where(JournalLine.journal_entry_id == entry.id))
-    for no, line in enumerate(lines, start=1):
+    for no, (line, property_id) in enumerate(zip(lines, properties, strict=True), start=1):
         session.add(
             JournalLine(
                 tenant_id=entry.tenant_id,
@@ -344,6 +349,7 @@ async def write_draft(
                 net_amount=line.net_amount,
                 unit_id=line.unit_id,
                 cost_center=line.cost_center,
+                property_id=property_id,
             )
         )
     await session.flush()
@@ -434,11 +440,12 @@ async def _apply_open_items(
     for line in lines:
         d, c = by_account.get(line.account_id, (ZERO, ZERO))
         by_account[line.account_id] = (d + line.debit, c + line.credit)
-    if entry.kind in OPEN_ITEM_KINDS:
+    reclass = entry.kind is EntryKind.CREDIT_RECLASS  # AE22: payable only, no receivable
+    if entry.kind in OPEN_ITEM_KINDS or reclass:
         for account_id, (debit, credit) in by_account.items():
             account = accounts[account_id]
             amount, kind = ZERO, None
-            if account.category is AccountCategory.DEBTOR and debit > credit:
+            if account.category is AccountCategory.DEBTOR and debit > credit and not reclass:
                 amount, kind = debit - credit, OpenItemKind.RECEIVABLE
             elif account.category is AccountCategory.CREDITOR and credit > debit:
                 amount, kind = credit - debit, OpenItemKind.PAYABLE
@@ -500,6 +507,9 @@ async def post(
     if entry.status is EntryStatus.POSTED:
         return entry  # repeated click: no second effect (B08)
     ensure_open_period(ledger, entry.booking_date)
+    from mhvp.accounting import period_lock
+
+    await period_lock.ensure_open_for_entry(session, ledger, entry.id, entry.booking_date)
     if entry.kind is EntryKind.OPENING_BALANCE and entry.approved_by is None:
         raise ProblemError(
             ErrorCodes.GATE_FOUR_EYES,
@@ -539,6 +549,9 @@ async def reverse(
             ErrorCodes.CONFLICT, detail="Der Satz ist bereits storniert oder selbst ein Storno."
         )
     ensure_open_period(ledger, booking_date)
+    from mhvp.accounting import period_lock
+
+    await period_lock.ensure_open_for_entry(session, ledger, entry.id, booking_date)
     if booking_date < entry.booking_date:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Das Stornodatum liegt vor der Buchung.")
     items = (
@@ -583,6 +596,7 @@ async def reverse(
             ln.net_amount,
             ln.unit_id,
             ln.cost_center,
+            ln.property_id,  # Q15-01: the reversal keeps the object of the original line
         )
         for ln in lines
     ]
@@ -902,6 +916,9 @@ async def checks(session: AsyncSession, ledger: Ledger) -> list[str]:
         findings.append(f"Summen Soll {d} und Haben {c} weichen ab")
     findings += await numbering_findings(session, ledger)
     findings += await subledger_findings(session, ledger)
+    from mhvp.accounting import line_property
+
+    findings += await line_property.findings(session, ledger)  # Q15-01 (AE21)
     return findings
 
 
@@ -976,40 +993,70 @@ async def subledger_findings(session: AsyncSession, ledger: Ledger) -> list[str]
     ]
 
 
+async def subledger_exclude_switch(session: AsyncSession) -> bool:
+    """AC01-02: tenant switch (default on) to hide written off items and items of reversed
+    entries from the sub ledger difference. Read only, no row is created."""
+    from mhvp.accounting.tax_models import AccountingTaxSettings
+
+    value = await session.scalar(select(AccountingTaxSettings.subledger_exclude_written_off))
+    return True if value is None else bool(value)
+
+
 async def subledger_reconciliation(
-    session: AsyncSession, ledger: Ledger, as_of: date | None = None
+    session: AsyncSession,
+    ledger: Ledger,
+    as_of: date | None = None,
+    exclude_written_off: bool = True,
 ) -> list[dict[str, Any]]:
     """B09 sentence 4 (GA05-03): per debtor and creditor account the remaining open items
     (receivable positive, payable negative, settlements aggregated per item) against the
     general ledger balance (debit minus credit) as of a date. A difference is shown, it is
     not automatically an error: unapplied payments and postings without open item are
-    legitimate and are listed for review."""
+    legitimate and are listed for review.
+
+    AC01-02: items written off and items of reversed entries are counted separately
+    (``excluded_written_off``, ``excluded_reversed``). With ``exclude_written_off`` they stay
+    out of ``open_items_remaining`` and ``difference``; otherwise they are included. Display
+    only, nothing is posted."""
     rows = await session.execute(
         text(
             """
             WITH s AS (SELECT open_item_id, sum(amount) AS settled FROM open_item_settlement
             WHERE (CAST(:as_of AS date) IS NULL OR date <= CAST(:as_of AS date))
             GROUP BY open_item_id),
-            oi AS (SELECT i.account_id, sum(CASE WHEN i.kind = 'receivable' THEN 1 ELSE -1
-            END * (i.amount - coalesce(s.settled, 0))) AS remaining FROM open_item i LEFT
-            JOIN s ON s.open_item_id = i.id WHERE i.ledger_id = :ledger AND (CAST(:as_of AS
-            date) IS NULL OR i.booking_date <= CAST(:as_of AS date)) GROUP BY i.account_id),
+            it AS (SELECT i.account_id, i.written_off,
+            EXISTS (SELECT 1 FROM journal_entry r WHERE r.reverses_id = i.journal_entry_id
+            AND r.status = 'posted' AND (CAST(:as_of AS date) IS NULL OR r.booking_date <=
+            CAST(:as_of AS date))) AS reversed,
+            CASE WHEN i.kind = 'receivable' THEN 1 ELSE -1 END * (i.amount -
+            coalesce(s.settled, 0)) AS rem FROM open_item i LEFT JOIN s ON s.open_item_id =
+            i.id WHERE i.ledger_id = :ledger AND (CAST(:as_of AS date) IS NULL OR
+            i.booking_date <= CAST(:as_of AS date))),
+            oi AS (SELECT account_id,
+            sum(CASE WHEN NOT reversed AND NOT written_off THEN rem ELSE 0 END) AS counted,
+            sum(CASE WHEN reversed THEN rem ELSE 0 END) AS rev,
+            sum(CASE WHEN written_off AND NOT reversed THEN rem ELSE 0 END) AS wo,
+            count(*) FILTER (WHERE reversed AND rem <> 0) AS n_rev,
+            count(*) FILTER (WHERE written_off AND NOT reversed AND rem <> 0) AS n_wo
+            FROM it GROUP BY account_id),
             gl AS (SELECT l.account_id, sum(l.debit - l.credit) AS bal FROM journal_line l
             JOIN journal_entry e ON e.id = l.journal_entry_id WHERE e.ledger_id = :ledger AND
             e.status = 'posted' AND (CAST(:as_of AS date) IS NULL OR e.booking_date <=
             CAST(:as_of AS date)) GROUP BY l.account_id)
             SELECT a.id, a.number, a.name, a.category::text, coalesce(gl.bal, 0),
-            coalesce(oi.remaining, 0) FROM ledger_account a LEFT JOIN gl ON gl.account_id =
-            a.id LEFT JOIN oi ON oi.account_id = a.id WHERE a.ledger_id = :ledger AND
-            a.category IN ('debtor', 'creditor') AND (gl.bal IS NOT NULL OR oi.remaining IS
-            NOT NULL) ORDER BY a.number
+            coalesce(oi.counted, 0), coalesce(oi.wo, 0), coalesce(oi.rev, 0),
+            coalesce(oi.n_wo, 0), coalesce(oi.n_rev, 0) FROM ledger_account a LEFT JOIN gl
+            ON gl.account_id = a.id LEFT JOIN oi ON oi.account_id = a.id WHERE a.ledger_id =
+            :ledger AND a.category IN ('debtor', 'creditor') AND (gl.bal IS NOT NULL OR
+            oi.account_id IS NOT NULL) ORDER BY a.number
             """
         ),
         {"ledger": ledger.id, "as_of": as_of},
     )
     out: list[dict[str, Any]] = []
-    for account_id, number, name, cat, bal, remaining in rows.all():
-        bal, remaining = Decimal(bal), Decimal(remaining)
+    for account_id, number, name, cat, bal, counted, wo, rev, n_wo, n_rev in rows.all():
+        bal, counted, wo, rev = Decimal(bal), Decimal(counted), Decimal(wo), Decimal(rev)
+        remaining = counted if exclude_written_off else counted + wo + rev
         out.append(
             {
                 "account_id": str(account_id),
@@ -1019,6 +1066,11 @@ async def subledger_reconciliation(
                 "ledger_balance": str(bal),
                 "open_items_remaining": str(remaining),
                 "difference": str(bal - remaining),
+                "excluded_written_off": str(wo),
+                "excluded_written_off_count": int(n_wo),
+                "excluded_reversed": str(rev),
+                "excluded_reversed_count": int(n_rev),
+                "excluded_applied": exclude_written_off,
             }
         )
     return out

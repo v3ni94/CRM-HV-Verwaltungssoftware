@@ -70,6 +70,8 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: "/aushaenge", label: t("nav.notices") },
         { href: "/meldungen", label: t("nav.tickets") },
         { href: "/formulare", label: t("nav.forms") },
+        // AE28: Assistent für die eigenen Unterlagen, nur bei eingeschaltetem Chat-Bot des Mandanten.
+        ...(me?.features?.chat_bot_enabled ? [{ href: "/assistent", label: t("nav.assistant") }] : []),
         { href: "/konto", label: t("nav.account") },
         { href: "/zaehlerstand", label: t("nav.meter") },
         { href: "/verbrauch", label: t("nav.consumption") },

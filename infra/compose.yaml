@@ -17,6 +17,13 @@ x-app-env: &app-env
   MHVP_PORTAL_LOCALES: ${MHVP_PORTAL_LOCALES:-de,en}
   # Lead time in hours for the maintenance banner (GB16-01).
   MHVP_MAINTENANCE_NOTICE_HOURS: ${MHVP_MAINTENANCE_NOTICE_HOURS:-48}
+  # Own availability measurement (AE35, GB16-02): health URLs checked every minute by the beat
+  # job; empty = measuring point off (all three empty: no minute job). Retention in days.
+  MHVP_AVAILABILITY_API_URL: ${MHVP_AVAILABILITY_API_URL:-}
+  MHVP_AVAILABILITY_CRM_URL: ${MHVP_AVAILABILITY_CRM_URL:-}
+  MHVP_AVAILABILITY_PORTAL_URL: ${MHVP_AVAILABILITY_PORTAL_URL:-}
+  MHVP_AVAILABILITY_TIMEOUT_SECONDS: ${MHVP_AVAILABILITY_TIMEOUT_SECONDS:-5}
+  MHVP_AVAILABILITY_RETENTION_DAYS: ${MHVP_AVAILABILITY_RETENTION_DAYS:-120}
   MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
   MHVP_BUILD: ${MHVP_BUILD:-}
   # Runtime role mhvp_app (ADR 0002). Passwords must be URL safe.

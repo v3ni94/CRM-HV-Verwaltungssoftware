@@ -22,12 +22,25 @@ from mhvp.documents.deletion_journal import (
     OUTCOME_ABSENT,
     OUTCOME_DELETED,
     OUTCOME_SKIPPED,
+    OUTCOME_TRASHED,
+    OUTCOME_UNTRASHED,
     OUTCOME_WOULD_DELETE,
+    OUTCOME_WOULD_TRASH,
+    OUTCOME_WOULD_UNTRASH,
     read_journal,
     replay_journal,
 )
 
-CLEAN = {OUTCOME_ABSENT, OUTCOME_DELETED, OUTCOME_SKIPPED, OUTCOME_WOULD_DELETE}
+CLEAN = {
+    OUTCOME_ABSENT,
+    OUTCOME_DELETED,
+    OUTCOME_SKIPPED,
+    OUTCOME_WOULD_DELETE,
+    OUTCOME_TRASHED,
+    OUTCOME_UNTRASHED,
+    OUTCOME_WOULD_TRASH,
+    OUTCOME_WOULD_UNTRASH,
+}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

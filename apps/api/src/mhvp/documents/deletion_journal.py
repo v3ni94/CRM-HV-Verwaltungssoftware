@@ -2,13 +2,19 @@
 
 A backup restored after a lawful deletion contains documents that were deleted in between.
 The journal is derived from the append-only domain events (``document.deleted``,
-``document.deletion_refused``, ``document.hold_set``, ``document.hold_cleared``) and exported
-before the restore; afterwards it is replayed against the restored database.
+``document.deletion_refused``, ``document.hold_set``, ``document.hold_cleared`` and, since
+AE33, ``document.trashed`` and ``document.restored``) and exported before the restore;
+afterwards it is replayed against the restored database.
 
 Replay rules (conservative by design, rule 0.1.3):
 
-* Only ``document.deleted`` entries are applied. Refusals and holds are carried along for the
+* ``document.deleted`` entries are applied. Refusals and holds are carried along for the
   record and never delete anything.
+* AE33: ``document.trashed`` and ``document.restored`` entries are applied only when they are
+  the last statement about the document in the journal (trashed: move the restored row to the
+  trash again with the recorded purge date; restored: take a row that the backup holds in the
+  trash out of it). A hold or any other blocker keeps the document where it is, exactly as for
+  a deletion, and the hash must match.
 * A document that is absent after the restore needs nothing.
 * A document under a deletion hold is never deleted (evidence stays), whatever the journal
   says; the same applies when :func:`mhvp.documents.services.deletion_blocker` names any
@@ -40,7 +46,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import DomainEvent, emit
-from mhvp.documents import mirror_deletion
+from mhvp.documents import mirror_deletion, trash
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentMirror, MirrorStatus
@@ -49,16 +55,25 @@ from mhvp.platform.models import Tenant
 JOURNAL_VERSION = 1
 DELETED = "document.deleted"
 REFUSED = "document.deletion_refused"
+TRASHED = "document.trashed"
+RESTORED = "document.restored"
 JOURNAL_EVENT_TYPES: tuple[str, ...] = (
     DELETED,
     REFUSED,
     "document.hold_set",
     "document.hold_cleared",
+    TRASHED,
+    RESTORED,
 )
+_LIFECYCLE = (DELETED, TRASHED, RESTORED)
 
 # Outcomes of one journal entry during replay.
 OUTCOME_DELETED = "deleted"  # applied (only with apply=True)
 OUTCOME_WOULD_DELETE = "would_delete"  # dry run
+OUTCOME_TRASHED = "trashed"  # AE33: moved to the trash again (only with apply=True)
+OUTCOME_WOULD_TRASH = "would_trash"  # dry run
+OUTCOME_UNTRASHED = "restored"  # AE33: taken out of the trash again (only with apply=True)
+OUTCOME_WOULD_UNTRASH = "would_restore"  # dry run
 OUTCOME_ABSENT = "absent"  # document not in the restored database
 OUTCOME_KEPT_HOLD = "kept_hold"  # deletion hold: evidence is never deleted
 OUTCOME_KEPT_BLOCKED = "kept_blocked"  # profile or retention period block the deletion
@@ -198,7 +213,8 @@ async def _replay_one(
     assert entry.document_id is not None  # noqa: S101 - checked by caller
     tenant_id = uuid.UUID(entry.tenant_id)
     document_id = uuid.UUID(entry.document_id)
-    document = await session.get(Document, document_id)
+    with trash.trashed_visible(session):
+        document = await session.get(Document, document_id)
     if document is None:
         return ReplayResult(entry.tenant_id, entry.event_id, entry.document_id, OUTCOME_ABSENT)
 
@@ -276,6 +292,83 @@ async def _replay_one(
     return ReplayResult(entry.tenant_id, entry.event_id, entry.document_id, OUTCOME_DELETED)
 
 
+async def _replay_lifecycle(
+    session: AsyncSession, entry: JournalEntry, *, apply: bool, today: date
+) -> ReplayResult:
+    """AE33: re-apply the last ``document.trashed`` or ``document.restored`` entry."""
+    assert entry.document_id is not None  # noqa: S101 - checked by caller
+    tenant_id = uuid.UUID(entry.tenant_id)
+    document_id = uuid.UUID(entry.document_id)
+
+    def result(outcome: str, reason: str | None = None) -> ReplayResult:
+        return ReplayResult(entry.tenant_id, entry.event_id, entry.document_id, outcome, reason)
+
+    with trash.trashed_visible(session):
+        document = await session.get(Document, document_id)
+        if document is None:
+            return result(OUTCOME_ABSENT)
+        in_trash = document.deleted_at is not None
+        if entry.type == RESTORED:
+            if not in_trash:
+                return result(OUTCOME_SKIPPED, "Dokument ist nicht im Papierkorb.")
+            if not apply:
+                return result(OUTCOME_WOULD_UNTRASH)
+            await trash.restore(
+                session,
+                document,
+                tenant_id=tenant_id,
+                actor_user_id=None,
+                reason="Wiederherstellung aus dem Löschjournal",
+                extra={"replay": True, "journal_event_id": entry.event_id},
+            )
+            return result(OUTCOME_UNTRASHED)
+        if in_trash:
+            return result(OUTCOME_SKIPPED, "Dokument ist bereits im Papierkorb.")
+        blocker = await svc.deletion_blocker(session, document, today)
+        reason: str | None = None
+        outcome = OUTCOME_KEPT_BLOCKED
+        if document.retention_hold_reason:
+            reason, outcome = (
+                f"Löschungssperre: {document.retention_hold_reason}",
+                OUTCOME_KEPT_HOLD,
+            )
+        elif blocker is not None:
+            reason = blocker
+        elif (recorded := entry.payload.get("sha256")) and recorded != document.sha256:
+            reason, outcome = (
+                "Der gespeicherte Inhalt weicht vom protokollierten Vorgang ab.",
+                OUTCOME_KEPT_HASH,
+            )
+        if reason is not None:
+            if apply:
+                await emit(
+                    session,
+                    tenant_id=tenant_id,
+                    type=REFUSED,
+                    entity_type="document",
+                    entity_id=document_id,
+                    actor_user_id=None,
+                    payload={"reason": reason, "replay": True, "journal_event_id": entry.event_id},
+                )
+            return result(outcome, reason)
+        if not apply:
+            return result(OUTCOME_WOULD_TRASH)
+        recorded_purge = entry.payload.get("purge_at")
+        days = int(entry.payload.get("retention_days") or trash.PROPOSED_DAYS)
+        await trash.move_to_trash(
+            session,
+            document,
+            tenant_id=tenant_id,
+            actor_user_id=None,
+            days=days,
+            extra={"replay": True, "journal_event_id": entry.event_id},
+        )
+        if recorded_purge:
+            document.purge_at = datetime.fromisoformat(str(recorded_purge))
+        await session.flush()
+        return result(OUTCOME_TRASHED)
+
+
 async def replay_journal(
     factory: async_sessionmaker[AsyncSession],
     journal: dict[str, Any],
@@ -292,10 +385,33 @@ async def replay_journal(
     today = today or datetime.now(UTC).date()
     report = ReplayReport(apply=apply)
     seen: set[tuple[str, str]] = set()
+    # AE33: the last lifecycle statement per document decides whether a trash entry applies.
+    last_lifecycle: dict[tuple[str, str], str] = {}
+    for raw in journal["entries"]:
+        first = _entry(raw) if isinstance(raw, dict) else None
+        if first is not None and first.document_id is not None and first.type in _LIFECYCLE:
+            last_lifecycle[(first.tenant_id, first.document_id)] = first.event_id
     for raw in journal["entries"]:
         entry = _entry(raw) if isinstance(raw, dict) else None
         if entry is None:
             report.results.append(ReplayResult("", "", None, OUTCOME_INVALID, "Eintrag unlesbar."))
+            continue
+        if entry.type in (TRASHED, RESTORED) and entry.document_id is not None:
+            if last_lifecycle.get((entry.tenant_id, entry.document_id)) != entry.event_id:
+                report.results.append(
+                    ReplayResult(
+                        entry.tenant_id,
+                        entry.event_id,
+                        entry.document_id,
+                        OUTCOME_SKIPPED,
+                        "Später wiederhergestellt, in den Papierkorb gelegt oder gelöscht.",
+                    )
+                )
+                continue
+            async with tenant_transaction(factory, uuid.UUID(entry.tenant_id)) as session:
+                report.results.append(
+                    await _replay_lifecycle(session, entry, apply=apply, today=today)
+                )
             continue
         if entry.type != DELETED or entry.document_id is None:
             report.results.append(

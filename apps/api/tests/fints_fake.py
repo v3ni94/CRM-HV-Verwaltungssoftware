@@ -59,6 +59,7 @@ class Scenario:
     tan_for_transactions: ClassVar[bool] = False
     reject_pin: ClassVar[bool] = False
     lock_account: ClassVar[bool] = False
+    unreachable: ClassVar[bool] = False
     matrix: ClassVar[bool] = False
     transactions: ClassVar[list[dict[str, Any]]] = []
     accounts: ClassVar[list[str]] = [IBAN_1, IBAN_2]
@@ -71,6 +72,7 @@ class Scenario:
     def reset(cls) -> None:
         cls.init_tan, cls.decoupled, cls.decoupled_polls_until_confirmed = True, False, 1
         cls.tan_for_transactions = cls.reject_pin = cls.lock_account = cls.matrix = False
+        cls.unreachable = False
         cls.transactions = [
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-1"),
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-2"),
@@ -117,7 +119,9 @@ class FakeClient:
         if not product_id:
             raise TypeError("product_id mandatory")
         self.blz, self.login, self.pin, self.url = blz, login, pin, url
-        Scenario.constructed.append({"blz": blz, "login": login, "from_data": from_data})
+        Scenario.constructed.append(
+            {"blz": blz, "login": login, "from_data": from_data, "url": url}
+        )
         self.selected_tan_medium: str | None = None
         self._mechanism: str | None = None
         self.init_tan_response: Any = None
@@ -156,6 +160,12 @@ class FakeClient:
 
     # --- dialog ---
     def _auth(self) -> None:
+        if Scenario.unreachable:
+            import requests
+
+            raise requests.exceptions.ConnectionError(
+                f"HTTPSConnectionPool(host={self.url!r}): Max retries exceeded"
+            )
         if Scenario.lock_account:
             raise FinTSClientTemporaryAuthError("Account is temporarily locked.")
         if Scenario.reject_pin or self.pin != GOOD_PIN:

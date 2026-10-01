@@ -37,6 +37,20 @@ describe("portal bff", () => {
     expect(serverFetch.mock.calls[1]![0]).toBe("/api/v1/portal/terms/accept");
   });
 
+  it("passes the client address chain on for the acceptance evidence (AE34)", async () => {
+    serverFetch.mockImplementation(async () => new Response(JSON.stringify({}), { status: 200 }));
+    await POST(
+      new Request("http://portal.localhost/x", {
+        method: "POST",
+        headers: { ...ORIGIN, "x-forwarded-for": "203.0.113.7" },
+        body: "{}",
+      }),
+      ctx("portal/terms/accept"),
+    );
+    const init = serverFetch.mock.calls[0]![1] as { headers: Headers };
+    expect(init.headers.get("x-forwarded-for")).toBe("203.0.113.7");
+  });
+
   it("relays the granted portal handover operations", async () => {
     serverFetch.mockImplementation(
       async () =>

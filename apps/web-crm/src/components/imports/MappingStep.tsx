@@ -6,15 +6,26 @@ import { useEffect, useMemo, useState } from "react";
 import { bff } from "@/lib/bff";
 import {
   API,
+  assignmentsFrom,
   cleanMapping,
   distinctValues,
   missingRequired,
+  proposedColumns,
+  type ColumnCheck,
+  type ColumnProposal,
+  type FieldProposal,
   type ImportField,
   type ImportMapping,
   type ImportSource,
   type StagingRow,
 } from "@/lib/immoware";
 import { ui } from "@/lib/ui";
+
+import { ColumnCheckReport } from "./ColumnCheckReport";
+
+function isProposal(data: unknown): data is ColumnProposal {
+  return !!data && !Array.isArray(data) && typeof (data as ColumnProposal).columns === "object" && Array.isArray((data as ColumnProposal).fields);
+}
 
 type Props = {
   source: ImportSource;
@@ -34,16 +45,30 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
   const [rows, setRows] = useState<StagingRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // AE37: header heuristic (proposal only), remembered assignments, validation report.
+  const tDetect = useTranslations("Immoware24.detect");
+  const [proposal, setProposal] = useState<ColumnProposal | null>(null);
+  const [remember, setRemember] = useState(true);
+  const [check, setCheck] = useState<ColumnCheck | null>(null);
 
   useEffect(() => {
     let active = true;
     void bff<StagingRow[]>(`${API}/files/${source.id}/rows?limit=200`).then((res) => {
       if (active && res.ok) setRows(res.data);
     });
+    void bff<ColumnProposal>(`${API}/files/${source.id}/column-proposal`).then((res) => {
+      if (!active || !res.ok || !isProposal(res.data)) return;
+      const data = res.data;
+      setProposal(data);
+      // Prefill only an untouched form; the user confirms by saving the template.
+      setColumns((c) => (Object.keys(c).length ? c : proposedColumns(data, source.headers)));
+    });
     return () => {
       active = false;
     };
-  }, [source.id]);
+  }, [source.id, source.headers]);
+
+  const proposalFor = (name: string): FieldProposal | undefined => proposal?.fields.find((f) => f.name === name);
 
   const missing = missingRequired(fields, columns);
   const choiceFields = useMemo(() => fields.filter((f) => f.choices.length> 0 && columns[f.name]), [fields, columns]);
@@ -76,9 +101,33 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
       method: "POST",
       body: JSON.stringify({ report_type: source.report_type, name: name.trim(), ...cleanMapping(columns, valueMaps) }),
     });
+    if (!res.ok) {
+      setBusy(false);
+      return setError(res.message);
+    }
+    const assignments = assignmentsFrom(cleanMapping(columns, valueMaps).columns);
+    if (remember && fields.length > 0 && assignments.length > 0) {
+      // Remembered per tenant and report type for the next file; failure does not undo the template.
+      await bff(`${API}/column-assignments`, {
+        method: "PUT",
+        body: JSON.stringify({ report_type: source.report_type, assignments }),
+      });
+    }
+    setBusy(false);
+    onMapping(res.data);
+  };
+
+  const runCheck = async () => {
+    setError(null);
+    setBusy(true);
+    const { columns: cols, value_maps } = cleanMapping(columns, valueMaps);
+    const res = await bff<ColumnCheck>(`${API}/files/${source.id}/check`, {
+      method: "POST",
+      body: JSON.stringify({ columns: cols, value_maps }),
+    });
     setBusy(false);
     if (!res.ok) return setError(res.message);
-    onMapping(res.data);
+    setCheck(res.data);
   };
 
   const useTemplate = () => {
@@ -110,6 +159,11 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
         </div>
       ) : null}
 
+      {proposal && fields.length > 0 ? (
+        <p className={ui.notice} data-testid="proposal-notice">
+          {tDetect("proposalApplied", { count: Object.keys(proposal.columns).length, stored: proposal.stored_used })}
+        </p>
+      ) : null}
       {fields.length === 0 ? (
         <p className={ui.notice}>{t("stagedOnlyMapping")}</p>
       ) : (
@@ -119,6 +173,7 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
             <tr>
               <th>{t("colTarget")}</th>
               <th>{t("colSourceHeader")}</th>
+              {proposal ? <th>{tDetect("colProposal")}</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -146,6 +201,23 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
                     ))}
                   </select>
                 </td>
+                {proposal ? (
+                  <td data-testid={`proposal-${f.name}`}>
+                    {(() => {
+                      const p = proposalFor(f.name);
+                      if (!p || !p.header) return <span className="text-xs text-muted">{tDetect("status.none")}</span>;
+                      return (
+                        <span className="flex flex-col gap-0.5">
+                          <span className={ui.badge} title={p.basis_label ?? undefined}>
+                            {tDetect("scoreBadge", { status: tDetect(`status.${p.status}`), score: p.score })}
+                          </span>
+                          <span className="text-xs text-muted">{tDetect("proposedHeader", { header: p.header, basis: p.basis_label ?? "" })}</span>
+                          {p.note ? <span className="text-xs text-muted">{p.note}</span> : null}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
@@ -194,7 +266,17 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
         <button type="button" className={ui.primary} disabled={busy || missing.length> 0} onClick={save}>
           {t("templateSave")}
         </button>
+        <button type="button" className={ui.button} disabled={busy} onClick={runCheck}>
+          {tDetect("checkButton")}
+        </button>
       </div>
+      {fields.length > 0 ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          {tDetect("remember")}
+        </label>
+      ) : null}
+      {check ? <ColumnCheckReport report={check} /> : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

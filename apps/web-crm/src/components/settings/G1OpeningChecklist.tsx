@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -14,7 +14,13 @@ export type G1Item = {
   confirmed_on: string | null;
   confirmed_by_name: string | null;
   note: string | null;
+  responsible_user_id?: string | null;
+  evidence_document_id?: string | null;
+  evidence_ref?: string | null;
+  evidence_missing?: boolean;
 };
+
+type G1Member = { user_id: string; display_name: string; email: string };
 
 export type G1GateRequest = { id: string; status: string; scope: string; requested_by: string; four_eyes: boolean };
 
@@ -33,6 +39,9 @@ export type G1OpeningState = {
   requests: G1GateRequest[];
   can_request: boolean;
   documents: Record<string, string>;
+  items_without_responsible?: number;
+  items_without_evidence?: number;
+  gate_checklist_ref?: string;
 };
 
 const BASE = "/api/bff/accounting/g1-opening";
@@ -66,7 +75,26 @@ export function G1OpeningChecklist({
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<G1Item | null>(null);
-  const [form, setForm] = useState({ status: "passed", confirmed_on: today(), confirmed_by_name: "", note: "" });
+  const [form, setForm] = useState({
+    status: "passed",
+    confirmed_on: today(),
+    confirmed_by_name: "",
+    note: "",
+    responsible_user_id: "",
+    evidence_document_id: "",
+    evidence_ref: "",
+  });
+  const [members, setMembers] = useState<G1Member[]>([]);
+
+  useEffect(() => {
+    if (!canRecord) return;
+    void bff<G1Member[]>("/api/bff/tenant/members").then((res) => {
+      if (res.ok && Array.isArray(res.data)) setMembers(res.data);
+    });
+  }, [canRecord]);
+
+  const memberName = (id: string | null | undefined) =>
+    id ? (members.find((m) => m.user_id === id)?.display_name ?? id.slice(0, 8)) : "";
   const [scope, setScope] = useState("");
   const [comment, setComment] = useState("");
 
@@ -83,6 +111,9 @@ export function G1OpeningChecklist({
       confirmed_on: item.confirmed_on ?? today(),
       confirmed_by_name: item.confirmed_by_name ?? "",
       note: item.note ?? "",
+      responsible_user_id: item.responsible_user_id ?? "",
+      evidence_document_id: item.evidence_document_id ?? "",
+      evidence_ref: item.evidence_ref ?? "",
     });
     setMessage(null);
     setError(null);
@@ -92,10 +123,21 @@ export function G1OpeningChecklist({
     event.preventDefault();
     if (!editing) return;
     setBusy(true);
+    const refs = {
+      responsible_user_id: form.responsible_user_id || null,
+      evidence_document_id: form.evidence_document_id.trim() || null,
+      evidence_ref: form.evidence_ref.trim() || null,
+    };
     const body =
       form.status === "open"
-        ? { status: "open" }
-        : { status: form.status, confirmed_on: form.confirmed_on, confirmed_by_name: form.confirmed_by_name.trim(), note: form.note.trim() || null };
+        ? { status: "open", ...refs }
+        : {
+            status: form.status,
+            confirmed_on: form.confirmed_on,
+            confirmed_by_name: form.confirmed_by_name.trim(),
+            note: form.note.trim() || null,
+            ...refs,
+          };
     const res = await bff<G1Item>(`${BASE}/items/${editing.item_key}`, { method: "PUT", body: JSON.stringify(body) });
     setBusy(false);
     if (!res.ok) {
@@ -158,6 +200,8 @@ export function G1OpeningChecklist({
             <th>{t("columns.status")}</th>
             <th>{t("columns.date")}</th>
             <th>{t("columns.name")}</th>
+            <th>{t("columns.responsible")}</th>
+            <th>{t("columns.evidence")}</th>
             {canRecord ? <th /> : null}
           </tr>
         </thead>
@@ -172,6 +216,17 @@ export function G1OpeningChecklist({
               <td>{statusBadge(item)}</td>
               <td>{formatDate(item.confirmed_on)}</td>
               <td>{item.confirmed_by_name ?? ""}</td>
+              <td>{memberName(item.responsible_user_id)}</td>
+              <td>
+                {item.evidence_document_id ? (
+                  <a className="underline" href={`/dokumente/${item.evidence_document_id}`}>
+                    {t("evidence.document")}
+                  </a>
+                ) : item.evidence_ref ? (
+                  <span className={ui.mono}>{item.evidence_ref}</span>
+                ) : null}
+                {item.evidence_missing ? <span className={ui.badgeWarning}>{t("evidence.missing")}</span> : null}
+              </td>
               {canRecord ? (
                 <td>
                   <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => openEditor(item)}>
@@ -250,6 +305,19 @@ export function G1OpeningChecklist({
           {t("documents.title")}
         </h2>
         <p className={ui.help}>{t("documents.help")}</p>
+        {state.gate_checklist_ref ? (
+          <p className={ui.help} data-testid="g1-gate-checklist">
+            {t("documents.gateChecklist")}: <span className={ui.mono}>{state.gate_checklist_ref}</span>
+          </p>
+        ) : null}
+        {state.items_without_responsible !== undefined ? (
+          <p className={ui.help} data-testid="g1-gaps">
+            {t("documents.gaps", {
+              responsible: state.items_without_responsible,
+              evidence: state.items_without_evidence ?? 0,
+            })}
+          </p>
+        ) : null}
         <ul className="mt-2 list-disc pl-5 text-sm">
           {Object.entries(state.documents).map(([key, path]) => (
             <li key={key}>
@@ -308,6 +376,38 @@ export function G1OpeningChecklist({
                 disabled={form.status === "open"}
                 required={form.status !== "open"}
                 onChange={(e) => setForm((f) => ({ ...f, confirmed_by_name: e.target.value }))}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("form.responsible")}</span>
+              <select
+                className={ui.input}
+                value={form.responsible_user_id}
+                onChange={(e) => setForm((f) => ({ ...f, responsible_user_id: e.target.value }))}
+              >
+                <option value="">{t("form.noResponsible")}</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("form.evidenceDocument")}</span>
+              <input
+                className={ui.input}
+                value={form.evidence_document_id}
+                onChange={(e) => setForm((f) => ({ ...f, evidence_document_id: e.target.value }))}
+              />
+            </label>
+            <label className="flex flex-col gap-1 sm:col-span-2">
+              <span className={ui.label}>{t("form.evidenceRef")}</span>
+              <input
+                className={ui.input}
+                maxLength={500}
+                value={form.evidence_ref}
+                onChange={(e) => setForm((f) => ({ ...f, evidence_ref: e.target.value }))}
               />
             </label>
             <label className="flex flex-col gap-1 sm:col-span-2">

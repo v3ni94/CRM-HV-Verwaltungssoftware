@@ -183,3 +183,19 @@ In der Betriebskostenabrechnung zeigt der Abschnitt "Ausnahme von der Abrechnung
 In der Betriebskostenabrechnung und in der Eigentümerabrechnung zeigt der Abschnitt "Ausgaben zum Abrechnungslauf" die Vorschau (Informationsblatt, Anschreiben, Nachweis § 35a) und die abgelegten Dokumente. "Als Dokument ablegen" speichert die Ausgabe am Abrechnungslauf; das ist erst mit Freigabestufe G3 möglich, bei der Eigentümerabrechnung zusätzlich nach interner Freigabe. Absätze mit der Kennzeichnung "Text nicht freigegeben" sind Platzhalter, bis der Betreiber die Texte freigegeben hat. Es wird nichts versendet.
 
 Das Informationsblatt, das am Abrechnungslauf abgelegt wird, ist direkt mit dem Lauf verknüpft und erscheint in dessen Dokumenten.
+
+## Heizkosten: Vergleich extern gegen eigen und Prüfpunkte
+
+In der Abrechnung (Entwurf) zeigt der Abschnitt "Extern gegen eigen" je Nutzer den Messdienstbetrag, den eigenen Betrag und die Differenz. Toleranzen sind einstellbar (Standard 0,50 EUR und 1,0 Prozent). Der Abweichungsbericht (CSV) listet nur Abweichungen und fehlende externe Beträge. Es wird nichts gebucht. Unter Buchhaltung pflegen Sie Prüfpunkte mit Datum, Bezeichnung und Quelle; sie erscheinen in der Vorfrist und bei Fälligkeit als Hinweis ohne Rechtsfolge. Fristen vorher amtlich prüfen.
+
+## Umlagevereinbarungen und Prüfbericht
+
+Im Mietvertrag erfassen Sie unter "Umlagevereinbarungen" je Betriebskostenart den Klauselbezug (zum Beispiel "§ 4 Mietvertrag"), das Nachweisdokument und die Gültigkeit. Mit "Für alle Mietverträge des Objekts erfassen" legen Sie dieselbe Vereinbarung für alle Mietverträge eines Objekts an; zuerst erscheint eine Vorschau, bestehende Einträge werden nie überschrieben. In der Abrechnung zeigt die Karte "Umlagegrundlagen vor der Abrechnung" fehlende Grundlagen je Position und Mietvertrag. Solange der Mandantenschalter eingeschaltet ist (Standard), sperren Lücken die Ausgabe der Abrechnung. Geprüft wird nur, ob eine Vereinbarung erfasst ist, nicht ihre rechtliche Wirksamkeit.
+
+## Abrechnungsfrist je Mietvertrag
+
+In der Abrechnung zeigt der Abschnitt "Abrechnungsfrist je Mietvertrag" das Fristende als Orientierung (im Einzelfall zu verifizieren), den erfassten Zugang und, falls vorhanden, einen Vorschlag aus dem Versandnachweis. "Zugang übernehmen" speichert den Vorschlag erst auf Klick. Unter dem Verhalten nach Fristablauf wählen Sie "Nachforderung sperren" (Standard) oder "Nur Hinweis"; die Warnung vor Fristablauf ist standardmäßig aus.
+
+## Behandlung offener Vorauszahlungen (Mandantenschalter, Welle 16)
+
+Im Bereich "Neue Vorauszahlungen (Vorschlag)" der Betriebskostenabrechnung wählt die Verwaltung, wie Vorauszahlungen behandelt werden, die bei der Abrechnung noch offen sind: "Nur Information (Standard)", "Verrechnung der offenen Posten per Storno" oder "Saldo gegen Soll, Rückstand bleibt bestehen". Die Auswahl gilt für den Mandanten und wirkt erst bei der nächsten Berechnung. Das Anschreiben zeigt den Rechenweg. Die Verrechnung entsteht nur als Buchungsentwurf mit den Ergebnisbuchungen hinter der Freigabestufe G3. Das Verfahren ist nicht freigegeben (Frage AC10-01); vor einer Umstellung ist die Rechtsberatung einzubeziehen.

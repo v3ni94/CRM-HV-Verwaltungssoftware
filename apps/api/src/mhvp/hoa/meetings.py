@@ -801,16 +801,35 @@ async def cast_vote(
         existing = await session.scalar(
             select(Vote).where(Vote.agenda_item_id == item.id, Vote.contract_id == body.contract_id)
         )
-        if existing is not None:
-            raise ProblemError(ErrorCodes.CONFLICT, detail="Stimme bereits erfasst.")
         if circular:
             channel = "circular"
         else:
             channel = "online" if att is not None and att.online else "presence"
+        # AE31: source of the vote for the rule "proxy against own vote"
+        source = "proxy" if att is not None and att.proxy_contact_id and not circular else "own"
+        if existing is not None:
+            if existing.excluded or body.excluded:
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Stimme bereits erfasst.")
+            from mhvp.hoa import online_meeting
+
+            # same source twice stays 409; owner against proxy holder follows the tenant rule
+            await session.get(AgendaItem, item.id, with_for_update=True)
+            return await online_meeting.handle_second_vote(
+                session,
+                tenant_id=principal.tenant_id,
+                meeting=meeting,
+                item=item,
+                existing=existing,
+                source=source,
+                choice=body.choice,
+                proxy_id=None,
+                channel=channel,
+                actor_user_id=principal.user_id,
+            )
         row = Vote(
             tenant_id=principal.tenant_id,
             agenda_item_id=item.id,
-            **(body.model_dump() | {"channel": channel}),
+            **(body.model_dump() | {"channel": channel, "cast_source": source}),
         )
         session.add(row)
         await session.flush()
@@ -1836,6 +1855,16 @@ async def get_meeting(
             # GA07-01: permanent notice, the lock itself stays behind the tenant switch
             "virtual_basis_term_notice": (
                 meeting_rules.basis_term_notice(basis.decided_on, meeting.virtual_basis_valid_until)
+                if basis
+                else None
+            ),
+            # AE12: orientation values for the deadline notice (to be verified)
+            "virtual_basis_deadlines": (
+                meeting_rules.basis_deadlines(
+                    basis.decided_on,
+                    meeting.virtual_basis_valid_until,
+                    await meeting_rules.virtual_basis_transition_date(session, principal.tenant_id),
+                )
                 if basis
                 else None
             ),

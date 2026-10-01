@@ -21,6 +21,7 @@ export default async function ProfilePage() {
     serverFetch("/api/v1/mail/signature/preview").then(async (r) => (r.ok ? ((await r.json()) as SignaturePreviewData) : null)),
   ]);
   redirectIfUnauthenticated(me.response);
+  // M2-04: mfa_required is not yet in the generated client (openapi regenerated centrally).
   const tenantName = ctx.tenants.find((tenant) => tenant.id === ctx.tenantId)?.name ?? "";
   return (
     <div className="flex flex-col gap-4">
@@ -33,6 +34,7 @@ export default async function ProfilePage() {
         initialSessions={sessions.data ?? []}
         initialDevices={devices.data ?? []}
         totpEnabled={me.data?.totp_enabled ?? false}
+        mfaRequired={(me.data as { mfa_required?: boolean } | undefined)?.mfa_required ?? false}
         signatureProfile={signatureProfile}
         signaturePreview={signaturePreview}
       />

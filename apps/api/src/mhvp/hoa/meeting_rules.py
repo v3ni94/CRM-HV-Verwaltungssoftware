@@ -14,7 +14,7 @@ community in the portal only; the attendance list records the channel per owner 
 online, proxy)."""
 
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -161,6 +161,55 @@ def basis_term_notice(decided_on: date, valid_until: date | None) -> str | None:
     )
 
 
+TRANSITION_NOTE = (
+    "Hinweis: Der Betreiber hat den Stichtag {transition} für die Übergangsregel hinterlegt, "
+    "der zulassende Beschluss vom {decided_on} liegt {relation}. Inhalt und Wirkung der "
+    "Übergangsregel sind rechtlich zu prüfen (offene Frage AA06-02); die Angabe ist keine "
+    "Rechtsauskunft und ändert keine Sperre."
+)
+
+
+def transition_notice(decided_on: date, transition_date: date | None) -> str | None:
+    """Orientation note relating the decision date to the operator's transition date."""
+    if transition_date is None:
+        return None
+    relation = "vor dem Stichtag" if decided_on < transition_date else "am oder nach dem Stichtag"
+    return TRANSITION_NOTE.format(
+        transition=f"{transition_date:%d.%m.%Y}",
+        decided_on=f"{decided_on:%d.%m.%Y}",
+        relation=relation,
+    )
+
+
+def basis_deadlines(
+    decided_on: date,
+    valid_until: date | None,
+    transition_date: date | None,
+    today: date | None = None,
+) -> dict[str, Any]:
+    """Orientation values for the meeting detail (to be verified, no legal computation)."""
+    today = today or datetime.now(UTC).date()
+    return {
+        "decided_on": decided_on,
+        "term_limit": basis_term_limit(decided_on),
+        "valid_until": valid_until,
+        "days_until_valid_until": (valid_until - today).days if valid_until else None,
+        "transition_date": transition_date,
+        "transition_notice": transition_notice(decided_on, transition_date),
+        "to_verify": True,
+    }
+
+
+async def virtual_basis_transition_date(session: AsyncSession, tenant_id: uuid.UUID) -> date | None:
+    from mhvp.platform.models import TenantSettings
+
+    return await session.scalar(
+        select(TenantSettings.hoa_virtual_basis_transition_date).where(
+            TenantSettings.tenant_id == tenant_id
+        )
+    )
+
+
 # Tenant settings ----------------------------------------------------------------------------
 
 
@@ -295,6 +344,8 @@ class MeetingSettingsIn(BaseModel):
     virtual_meetings_enabled: bool
     # GA07-01: omitted keeps the stored value
     virtual_basis_term_lock_enabled: bool | None = None
+    # AE12: omitted keeps the stored value, ``null`` clears it
+    virtual_basis_transition_date: date | None = None
 
 
 class DialInIn(BaseModel):
@@ -325,6 +376,9 @@ async def get_meeting_settings(
             "virtual_basis_term_lock_enabled": await virtual_basis_term_lock_enabled(
                 session, principal.tenant_id
             ),
+            "virtual_basis_transition_date": await virtual_basis_transition_date(
+                session, principal.tenant_id
+            ),
             "note": SETTINGS_NOTE,
         }
 
@@ -343,6 +397,8 @@ async def put_meeting_settings(
         row.hoa_virtual_meetings_enabled = body.virtual_meetings_enabled
         if body.virtual_basis_term_lock_enabled is not None:
             row.hoa_virtual_basis_term_lock_enabled = body.virtual_basis_term_lock_enabled
+        if "virtual_basis_transition_date" in body.model_fields_set:
+            row.hoa_virtual_basis_transition_date = body.virtual_basis_transition_date
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -350,10 +406,11 @@ async def put_meeting_settings(
             entity_type="tenant_settings",
             entity_id=row.id,
             actor_user_id=principal.user_id,
-            payload=body.model_dump(),
+            payload=body.model_dump(mode="json"),
         )
-        return body.model_dump() | {
+        return body.model_dump(mode="json") | {
             "virtual_basis_term_lock_enabled": row.hoa_virtual_basis_term_lock_enabled,
+            "virtual_basis_transition_date": row.hoa_virtual_basis_transition_date,
             "note": SETTINGS_NOTE,
         }
 

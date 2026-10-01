@@ -36,7 +36,9 @@ APPROVE = require_permission("accounting:approve")
 class AdvanceRuleIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    surcharge_percent: Decimal = Field(ge=0, le=100, decimal_places=2)
+    surcharge_percent: Decimal | None = Field(default=None, ge=0, le=100, decimal_places=2)
+    # AE15 (D24, AC10-01): treatment of advances still open at issue; default info_only.
+    open_advance_mode: rule.OpenAdvanceMode | None = None
 
 
 class ProposalsIn(BaseModel):
@@ -59,6 +61,9 @@ def _rule_out(row: rule.AdvanceRuleSetting) -> dict[str, Any]:
         "rule_version": rule.RULE_VERSION,
         "formula": "Kostenanteil des Abrechnungszeitraums geteilt durch zwölf, zuzüglich "
         "Sicherheitsaufschlag in Prozent, kaufmännisch auf den Cent gerundet (Entwurf, M17-03).",
+        "open_advance_mode": row.open_advance_mode,
+        "open_advance_modes": list(rule.OPEN_ADVANCE_MODES),
+        "open_advance_decision": "AC10-01 offen; Wirkung nur hinter G3",
     }
 
 
@@ -68,13 +73,21 @@ async def get_rule(request: Request, principal: TenantPrincipal = Depends(READ))
         return _rule_out(await rule.setting(session, principal.tenant_id))
 
 
-@router.put("", summary="Sicherheitsaufschlag der Vorschussregel setzen")
+@router.put("", summary="Sicherheitsaufschlag und Behandlung offener Vorauszahlungen setzen")
 async def put_rule(
     body: AdvanceRuleIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await rule.setting(session, principal.tenant_id)
-        row.surcharge_percent = body.surcharge_percent
+        if body.surcharge_percent is None and body.open_advance_mode is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Sicherheitsaufschlag oder Behandlung offener Vorauszahlungen angeben.",
+            )
+        if body.surcharge_percent is not None:
+            row.surcharge_percent = body.surcharge_percent
+        if body.open_advance_mode is not None:
+            row.open_advance_mode = body.open_advance_mode.value
         row.updated_by = principal.user_id
         await session.flush()
         return _rule_out(row)

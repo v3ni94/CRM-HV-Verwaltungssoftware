@@ -239,3 +239,74 @@ every new code in `mhvp.core.problems` at the end of the HOA block and in the ru
 `GET/POST /portal/meeting-proxies`, `POST /portal/meeting-proxies/{id}/revoke`,
 `POST /portal/meetings/{id}/agenda/{item}/votes` (G4, channel online, one per unit, 409 when
 the item is not open). Migration 0351. Rule: `docs/rules/AD06-online-versammlung.md`.
+
+## Korrekturbericht (AE11, P02, D09)
+
+`POST /hoa/statements/{id}/new-version` nimmt optional Grund (resolution_changed, court_invalid, calculation_error, other), Bezug und Beschluss entgegen und übernimmt Kostenpositionen mit Belegen, Abstimmungsnotizen und Darlehensangaben. `GET /hoa/statements/{id}/correction-report?against=<ältere Version>` liefert Einheitsdiff, Differenz je Eigentümer (`correction.py`) und den Heizkostenblock; keine Buchung, Rechtsfolge offen. Regel: docs/rules/P02-korrekturbericht.md.
+
+## AE12: Übergangsstichtag und Fristhinweise (virtuelle Versammlung)
+
+`PUT /hoa/meeting-settings` nimmt optional `virtual_basis_transition_date` (Weglassen behält, `null` löscht); das Datum hat keine Sperrwirkung. `GET /hoa/meetings/{id}` liefert `virtual_basis_deadlines` (Orientierung, zu verifizieren). Schalter `hoa_virtual_meetings_enabled`, `hoa_virtual_basis_term_lock_enabled` und `hoa_online_meeting_setting.enabled` bleiben Standard aus. Migration 0368.
+
+## Payments per earmarked reserve (AE08, P07-02, rule AE08-01)
+
+`contract_payment.reserve_id` is now accepted on `POST /contracts/{id}/payments` (active reserve of the
+property's GdWE). `hoa_reserve_payment_setting.mode` (migration 0364, default `bound_only`) selects the
+variant; `plan_ratio_proposal` adds `contributions_paid_proposal` per statement position and
+`paid_proposal` in `GET /hoa/ledgers/{ledger_id}/reserve-payments?year=` (`hoa/reserve_split.py`).
+Proposal only: nothing is posted, items and the statement basis stay unchanged, G4 stays closed.
+
+## Plan change within the year (AE09, M24-08, P07-01, rule AE09-01)
+
+`hoa/plan_change.py`: difference of months already posted from `valid_from` (new monthly amount
+minus posted receivables per unit, component and month). Tenant switch
+`hoa_plan_change_setting.mode` (`notice` default, `due_now`, `next_instalment`, migration 0365).
+Drafts in `hoa_plan_difference`; approval needs G4 and a second person; nothing is posted (G1).
+The apply preview carries `plan_change_mode` and `differences_total`.
+
+## AE10: Zuordnungsregel bei Eigentümerwechsel (AA07-01, Migration 0366)
+
+`hoa/acquisition_rule.py`: Mandantenregel je Erwerbsart in `hoa_acquisition_rule`
+(`manual_release` Standard, `by_due_date`, `by_resolution_date`; keine Zeile gleich Standard).
+`GET /hoa/acquisition-rules` (accounting:read), `PUT /hoa/acquisition-rules/{kind}`
+(accounting:approve). Hook `calc.allocation_owner`: bei Standard exakt `owner_at(default_day)`,
+die Berechnung bleibt unverändert; angewendet auf den Schuldnervorschlag der Differenz einer
+Sonderumlage (`levies.py`). Die Freigabeliste der Sondererwerbe zeigt die Variante. Die
+Rechtsfrage je Erwerbsart bleibt offen (AA07-01, P01), G4 bleibt geschlossen.
+
+## AE07: reserve plan per year and opening switch (M24-01, V01-01, rule AE07-01)
+
+`hoa/reserve_plan.py`, migration 0363. `hoa_reserve_plan` holds the planned contribution per
+reserve and year with economic plan and resolution reference (draft, resolved, superseded;
+resolved needs a resolution and is frozen). `POST /hoa/plans/{id}/reserve-plans/derive` builds
+drafts from the reserve items. The development takes a resolved reserve plan as Soll
+(`planned_source`). `hoa_reserve_policy.opening_lock_mode` (default `locked`) decides how
+opening changes after a calculated statement are handled: 409, logged change or four eyes
+request (`/hoa/reserve-opening-changes/{id}/approve|reject`). Tax classification is a
+placeholder (`not_released`). Nothing is posted.
+
+## AE31: proxy against own vote, online data in the minutes draft, checklist (AD06-01 to AD06-03)
+
+`hoa/online_rules.py` (pure rules), `hoa/online_meeting.py`, `hoa/protocol.py`, migration 0387.
+Rule document: `docs/rules/AE31-online-stimmen-vollmacht.md`. Nothing legal is decided.
+
+* `hoa_online_meeting_setting.proxy_conflict_mode` is the tenant rule for a unit that receives a
+  vote of the owner and a vote of the proxy holder: `flag` (default: the first vote stays
+  counted, the second is stored in `meeting_vote_conflict` for review, nothing is discarded),
+  `first_vote` (second refused, 409), `proxy_priority` and `own_priority` (the preferred source
+  replaces the other vote, the replaced vote stays in the conflict record). The same source
+  twice is always 409. The rule applies to the portal vote (`portal/owner_meetings.py`) and to
+  the CRM vote (`POST /hoa/agenda/{id}/votes`) through `online_meeting.handle_second_vote`.
+  `meeting_vote.cast_source` and `meeting_vote.proxy_id` record the source of a vote.
+* `POST /hoa/meetings/{id}/vote-conflicts/{conflict_id}/resolve` (`accounting:create`): the meeting
+  chair confirms the first vote (`keep_first`) or counts the second (`apply_second`, only before
+  the announcement). Both choices stay in the record; the tally calculation is unchanged.
+* `GET /hoa/meetings/{id}/online` also returns `proxy_conflict_mode`, `vote_conflicts`,
+  `open_conflicts` per item and `admissibility`: a checklist of recorded facts (switches,
+  enabling resolution with status and validity end, three year note, conference link). It
+  states no legal rule; the note names the open question AD06-01.
+* The minutes draft (`protocol.online_context`) adds, for hybrid or virtual meetings or when
+  portal data exist, the section "Online-Teilnahme" (confirmations, portal proxies, requests to
+  speak with time, unit and note, checklist), per item the online votes (with proxy share) and
+  the review notes on vote conflicts, and open conflicts in the draft notice. A presence meeting
+  without portal data renders exactly as before.

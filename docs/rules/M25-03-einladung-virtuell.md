@@ -70,3 +70,10 @@ Portal, der Mieter erhält 403, der Eigentümer eines anderen Mandanten sieht ni
 
 Betreiberauftrag 27.09.2026 (Masterprompt WEG-Versammlung, M25-03, V13): Einladungsfrist je
 Mandant statt Konstante, virtuelle und hybride Form mit Beschlussgrundlage und Einwahldaten.
+
+## Ergänzung AE12 (Welle 16): Stichtag Übergangsregel und Fristhinweise
+
+- ID: M25-03 / GA07-01. Geltungsbereich: Mandanteneinstellung `hoa_virtual_basis_transition_date` (Datum, leer = nicht eingetragen) und Versammlungsdetail virtueller Versammlungen.
+- Quellenstatus: Anhang C offen (AA06-02). Das Datum trägt der Betreiber ein, es ist kein Rechtstext und ändert weder Sperre noch Prüfung. Die Dreijahressperre bleibt allein am Schalter `hoa_virtual_basis_term_lock_enabled` (Standard aus).
+- Verhalten: Das Versammlungsdetail liefert `virtual_basis_deadlines` (Beschlussdatum, Dreijahresgrenze, Gültigkeitsende, Resttage, Stichtag, Hinweis zum Stichtag) als Orientierung, gekennzeichnet "zu verifizieren". Der Online-Versammlungsschalter (AD06) ist in der CRM-Maske des Objekts bedienbar, Standard aus.
+- Abnahmefall: tests/integration/test_ae12_virtual_transition.py. Änderungsgrund: Prioritätenliste Punkt 12.

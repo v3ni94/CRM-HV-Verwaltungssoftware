@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { TokenResponse } from "@/lib/session";
 import { writeTokens } from "@/lib/session";
 
-import { guardedJson, postJson, relayProblem, secureOf, str, unreachable } from "../../_shared";
+import { guardedJson, postJson, relayProblem, secureOf, stepResponse, str, unreachable } from "../../_shared";
 
 /** M21-01: redeems a one time login link. "ok" writes the session cookies right away, exactly
  *  like the password login; "code_required" means the account switched on the e-mail code
@@ -25,6 +25,9 @@ export async function POST(request: Request): Promise<Response> {
       writeTokens(result.cookies, data as unknown as TokenResponse, secureOf(request));
       return result;
     }
+    // M2-04: the tenant policy covers this account, the login continues with TOTP or its setup.
+    const step = stepResponse(data, secureOf(request));
+    if (step) return step;
     return NextResponse.json(
       { status: data.status, link_id: data.link_id, tenant_id: data.tenant_id },
       { headers: { "cache-control": "no-store" } },

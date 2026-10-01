@@ -17,7 +17,7 @@ export type Me = {
   /** Portal permissions of a staff account (M2-08); absent or empty for external users. */
   permissions?: string[];
   /** M21-08: Funktionsschalter des Mandanten (Chat, KI-Vorqualifizierung, Support-Sicht). */
-  features?: { chat_enabled: boolean; chat_ai_prequalification_enabled: boolean; support_login_enabled: boolean };
+  features?: { chat_enabled: boolean; chat_ai_prequalification_enabled: boolean; support_login_enabled: boolean; owner_rental_income_enabled?: boolean; owner_ticket_scope?: string; chat_bot_enabled?: boolean; privacy_feature_enabled?: boolean };
   /** M21-05: Vollmachten dieses Zugangs (Vertreterrolle). */
   representations?: { id: string; principal_contact_id: string; valid_from: string; valid_to: string | null }[];
 };
@@ -482,5 +482,55 @@ export type PortalBoardSubmission = {
   tally: { approve: number; reject: number; comment: number };
   member_count: number;
   my_votes: { id: string; vote: "approve" | "reject" | "comment"; comment: string | null; created_at: string }[];
+  created_at: string;
+};
+
+/** AE28 (M7-06): Portal-Assistent, Antworten nur aus den für den Zugang freigegebenen Unterlagen. */
+export type AssistantStatus = {
+  enabled: boolean;
+  privacy: {
+    feature_enabled: boolean;
+    notice_status: "not_required" | "released" | "not_released";
+    title: string | null;
+    body: string | null;
+    version: number | null;
+    acknowledged: boolean;
+  };
+  ai: { available: boolean; blocked_code: string | null; blocked_message: string | null };
+  scope: { units: number; documents: number };
+  hourly_limit: number;
+  notice: string;
+  emergency_note: string;
+};
+
+export type AssistantScopeView = {
+  focus_unit_id: string | null;
+  units: { id: string; number: string; label: string | null }[];
+  documents: { document_id: string; title: string }[];
+  total_documents: number;
+};
+
+export type AssistantAnswer = {
+  id: string;
+  mode: "ai" | "search";
+  status: "answered" | "not_answerable" | "failed" | "search_hits" | "no_sources";
+  answer: string | null;
+  sources: { document_id: string; title: string; excerpt?: string | null }[];
+  hits: { document_id: string; title: string }[];
+  ai_available: boolean;
+  ai_blocked_code: string | null;
+  ai_blocked_reason: string | null;
+  notice: string;
+  emergency_note: string;
+  created_at: string;
+};
+
+export type AssistantHistoryRow = {
+  id: string;
+  question: string;
+  answer: string | null;
+  mode: "ai" | "search";
+  status: AssistantAnswer["status"];
+  sources: { document_id: string; title: string }[];
   created_at: string;
 };

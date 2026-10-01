@@ -18,6 +18,11 @@ Validity and limits are Produktschutz (a stricter internal standard), not a lega
 
 The QR invitation for the printed letter is a separate, longer lived code for account activation
 (``mhvp.portal.routers``, ``QR_INVITE_DAYS``), not this login link.
+
+Second factor policy (M2-04, ``mhvp.core.auth.mfa_policy``): when the tenant policy covers the
+user (CRM roles by default, portal accounts only with ``portal_required``), the link and the
+optional e-mail code do not end the login; the result hands over to TOTP (``mfa_required``) or
+to the TOTP setup (``mfa_setup_required``) with a step token for the auth endpoints.
 """
 
 import secrets
@@ -30,8 +35,8 @@ from redis.exceptions import RedisError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from mhvp.core.auth import mfa_policy, tokens
 from mhvp.core.auth import service as auth_service
-from mhvp.core.auth import tokens
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.logging import get_logger
@@ -50,9 +55,12 @@ _log = get_logger("mhvp.portal.magic_link")
 
 @dataclass(frozen=True)
 class LinkResult:
-    status: str  # "code_required" or "ok"
+    # "code_required", "ok", or (M2-04) "mfa_required" / "mfa_setup_required"
+    status: str
     link_id: uuid.UUID | None = None
     issued: auth_service.IssuedTokens | None = None
+    # M2-04: step token for /auth/mfa/verify (mfa_required) or /auth/mfa/setup/* (setup).
+    step_token: str | None = None
 
 
 def _hash(secret: str) -> str:
@@ -205,6 +213,19 @@ async def consume_link(
             if error:  # pragma: no cover - transport failure, logged without the code
                 _log.warning("magic_link_code_mail_failed", detail=error)
         return LinkResult(status="code_required", link_id=link_id)
+    return await _finish(factory, settings, user_id, tenant_id, user_agent)
+
+
+async def _finish(
+    factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    user_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    user_agent: str | None,
+) -> LinkResult:
+    step = await mfa_policy.policy_step(factory, settings, user_id, tenant_id=tenant_id)
+    if step is not None:
+        return LinkResult(status=step[0], step_token=step[1])
     issued = await auth_service.issue_session(
         factory, settings, user_id=user_id, tenant_id=tenant_id, user_agent=user_agent
     )
@@ -221,6 +242,25 @@ async def verify_code(
     code: str,
     user_agent: str | None,
 ) -> auth_service.IssuedTokens:
+    """Like ``verify_code_step`` for callers that expect a session; refuses (MHVP-AUTH-0015)
+    when the second factor policy demands a further step, so it is never a way around it."""
+    result = await verify_code_step(
+        factory, settings, tenant_id=tenant_id, link_id=link_id, code=code, user_agent=user_agent
+    )
+    if result.issued is None:
+        raise ProblemError(ErrorCodes.MFA_REQUIRED_BY_POLICY)
+    return result.issued
+
+
+async def verify_code_step(
+    factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    *,
+    tenant_id: uuid.UUID,
+    link_id: uuid.UUID,
+    code: str,
+    user_agent: str | None,
+) -> LinkResult:
     now = datetime.now(UTC)
     async with tenant_transaction(factory, tenant_id) as session:
         row = await session.scalar(
@@ -243,8 +283,4 @@ async def verify_code(
         if account is None:  # pragma: no cover - FK guarantees this
             raise ProblemError(ErrorCodes.MAGIC_LINK_INVALID)
         user_id = account.user_id
-    issued = await auth_service.issue_session(
-        factory, settings, user_id=user_id, tenant_id=tenant_id, user_agent=user_agent
-    )
-    await auth_service.record_login(factory, user_id)
-    return issued
+    return await _finish(factory, settings, user_id, tenant_id, user_agent)

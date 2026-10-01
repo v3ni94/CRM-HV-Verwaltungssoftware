@@ -5,7 +5,11 @@ import { LiquidityReport, type LiquiditySnapshot } from "@/components/accounting
 import { ReportsExplorer, type ExplorerAccount } from "@/components/accounting/ReportsExplorer";
 import { PaymentsByDebtor, type PaymentsByDebtorRow } from "@/components/accounting/ReportsPaymentsByDebtor";
 import { RevenueReport, type RevenueRow } from "@/components/accounting/ReportsRevenue";
-import { SubledgerCheck, type SubledgerRow } from "@/components/accounting/SubledgerCheck";
+import {
+  SubledgerCheck,
+  type SubledgerExcluded,
+  type SubledgerRow,
+} from "@/components/accounting/SubledgerCheck";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
@@ -158,6 +162,15 @@ export default async function LedgerReportsPage({
           <SubledgerCheck
             asOf={asOf}
             rows={((checks.data as { subledger?: SubledgerRow[] }).subledger ?? []) as SubledgerRow[]}
+            excluded={(() => {
+              const d = checks.data as {
+                exclude_written_off?: boolean;
+                excluded?: Omit<SubledgerExcluded, "exclude_written_off">;
+              };
+              return d.excluded
+                ? { exclude_written_off: d.exclude_written_off ?? true, ...d.excluded }
+                : undefined;
+            })()}
           />
         )}
       </section>

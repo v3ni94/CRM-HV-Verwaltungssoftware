@@ -9,7 +9,10 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-type Consent = components["schemas"]["ConsentOut"];
+// AE34: `record_type` "objection" marks an objection to a processing on legitimate interest;
+// it is listed with the consents but never counts as one. The field is optional until the
+// generated client carries it.
+type Consent = components["schemas"]["ConsentOut"] & { record_type?: string };
 const KINDS = ["data_sharing", "portal_terms", "email_delivery", "marketing"] as const;
 
 export function ConsentsPanel({ contactId, consents }: { contactId: string; consents: Consent[] }) {
@@ -82,14 +85,17 @@ export function ConsentsPanel({ contactId, consents }: { contactId: string; cons
           <tbody>
             {consents.map((c) => (
               <tr key={c.id} className="border-b border-border">
-                <td className="py-1 pr-3">{tl(`consent.${c.kind}`)}</td>
+                <td className="py-1 pr-3">
+                  {tl(`consent.${c.kind}`)}
+                  {c.record_type === "objection" ? <span className="ml-1 font-medium">({t("consents.objection")})</span> : null}
+                </td>
                 <td className="py-1 pr-3">{formatDate(c.granted_at)}</td>
                 <td className="py-1 pr-3">{c.source}</td>
                 <td className="py-1 pr-3">{c.revoked_at ? formatDate(c.revoked_at) : t("consents.active")}</td>
                 <td className="py-1 text-right">
                   {!c.revoked_at ? (
                     <button type="button" className={ui.button} onClick={() => void revoke(c.id)}>
-                      {t("consents.revoke")}
+                      {c.record_type === "objection" ? t("consents.withdrawObjection") : t("consents.revoke")}
                     </button>
                   ) : null}
                 </td>

@@ -789,6 +789,9 @@ class FinTsConnection(IdMixin, TimestampMixin, TenantMixin, Base):
     bank_connection_id: Mapped[uuid.UUID] = _fk("bank_connection.id")
     blz: Mapped[str] = mapped_column(String(8), nullable=False)
     fints_url: Mapped[str] = mapped_column(String(300), nullable=False)
+    # Address entered by hand (bank merger, new data centre); wins over the institute list.
+    # Set only through the connection endpoint, which validates it (AE26, migration 0382).
+    fints_url_manual: Mapped[str | None] = mapped_column(String(300))
     login: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
     pin: Mapped[str | None] = mapped_column(EncryptedText())
     # base64 of the opaque python-fints blob; None until the first successful dialog
@@ -1101,3 +1104,33 @@ class AutoPostingDigest(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     confirmed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class SwitchRequestStatus(StrEnum):
+    REQUESTED = "requested"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class AutoPostingSwitchRequest(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Request to switch the tenant automation on (AE03, BK2-03, migration 0359): needs gate G1
+    open, filed by one person and approved by another (never a platform admin). Approval sets
+    ``tenant_settings.auto_posting_enabled``; switching off needs no request. Opens no gate."""
+
+    __tablename__ = "auto_posting_switch_request"
+    __table_args__ = (
+        CheckConstraint("status IN ('requested', 'approved', 'rejected')", name="status"),
+        Index("ix_auto_posting_switch_request_status", "tenant_id", "status"),
+    )
+
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=SwitchRequestStatus.REQUESTED.value,
+        server_default="requested",
+    )
+    requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_comment: Mapped[str | None] = mapped_column(Text)

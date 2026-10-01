@@ -141,3 +141,20 @@ async def seed_checkpoints(
         await session.flush()
         created.append(row)
     return created
+
+
+DEFAULT_LEAD_DAYS = 30
+
+
+def checkpoint_state(row: RuleVersion, today: date, lead_days: int = DEFAULT_LEAD_DAYS) -> str:
+    """AB10-01: ``withdrawn``, ``done`` (confirmed), ``due``, ``upcoming`` (inside the lead
+    time) or ``open``. A hint only, no legal consequence."""
+    if row.status == "withdrawn":
+        return "withdrawn"
+    if row.status == "confirmed":
+        return "done"
+    if row.effective_from <= today:
+        return "due"
+    if (row.effective_from - today).days <= lead_days:
+        return "upcoming"
+    return "open"

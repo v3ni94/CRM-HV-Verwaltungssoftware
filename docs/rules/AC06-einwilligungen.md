@@ -49,8 +49,12 @@ Nur zu contact.updated wird geprüft; andere Ereignisarten behalten ihre Nutzlas
 ## Offen
 
 - data_sharing: Einordnung der Weitergabe an Dienstleister (AC06-02); weitere Weitergabestellen (Export an Dritte, andere Webhook-Ereignisse mit Kontaktbezug) sind nicht geprüft (AD03-02).
-- portal_terms: Text und Fassung der Nutzungsbedingungen (AC06-03); eine öffentliche Abfrage der Fassung vor der Aktivierung fehlt, die Maske liest sie aus der Fehlermeldung (AD03-01).
+- portal_terms: Text und Fassung der Nutzungsbedingungen (AC06-03). Die Fassung vor der Aktivierung liefert seit AE34 der öffentliche Abruf `GET /portal/public/terms`; die Fehlermeldung MHVP-CONT-0020 bleibt als Rückfall.
 
 ## Änderungsgrund
 
 Befund GA02-06 (Lückenliste 01.10.2026): die Arten wurden erfasst, aber nur whatsapp ausgewertet. AD03: Einbau an den Weitergabestellen und Portal-Annahmemaske.
+
+## Rechtsgrundlage je Verarbeitung (AE34)
+
+Die Rechtsgrundlage je Verarbeitung (Einwilligung, Vertrag, berechtigtes Interesse), der Widerspruch bei berechtigtem Interesse, der öffentliche Abruf der veröffentlichten Fassung und der Nachweis der Annahme in Textform (Zeit, Fassung, Hash der Client-Adresse) stehen in der Regel [AE34-01](AE34-01.md). Die Standardwerte dieser Regel bleiben die restriktive Variante.

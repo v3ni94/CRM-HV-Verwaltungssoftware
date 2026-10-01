@@ -1,20 +1,27 @@
 """Service provider information in the portal (GA11-04, 14 Dienstleister Phase 4): framework
 contracts (service contracts of the provider, read only) and the availability calendar
-(windows entered by the management, read only for the provider)."""
+(windows entered by the management, read only for the provider).
+
+AE30 (AA14-02): ratings of service providers (stars of a completed work order) are internal.
+Behind the tenant switch ``provider_rating_display`` (default off) the management sees them
+aggregated per provider in the portal administration. Neither the provider nor any other
+portal user gets them, and the free text of the rating is never part of the view."""
 
 from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from mhvp.contacts.models import Contact
 from mhvp.contracts.service_contracts import ServiceContract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import session_allowed_property_ids
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.models import ProviderAvailability
@@ -27,6 +34,11 @@ admin = APIRouter(
 )
 MANAGE = require_permission("contacts:update")
 SETTINGS_READ = require_permission("tenant_settings:read")
+RATINGS_READ = require_permission("tickets:read")
+RATING_NOTE = (
+    "Bewertungen sind interne Einschätzungen der Verwaltung. Die Anzeige gilt nur für die "
+    "Verwaltung, nicht für Dienstleister oder Dritte, und enthält keine Freitexte."
+)
 
 
 class PortalLegalEntityChoice(BaseModel):
@@ -56,6 +68,71 @@ async def list_legal_entity_choices(
             )
         ).all()
     return [PortalLegalEntityChoice(id=r.id, name=r.name) for r in rows]
+
+
+def average_rating(counts: dict[int, int]) -> str | None:
+    """Mean of the stars (1 to 5) with one decimal, half up; None without ratings."""
+    total = sum(counts.values())
+    if total == 0:
+        return None
+    mean = Decimal(sum(star * n for star, n in counts.items())) / Decimal(total)
+    return format(mean.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP), "f")
+
+
+@admin.get(
+    "/provider-ratings",
+    summary="Bewertungen der Dienstleister (nur Verwaltung, hinter Schalter)",
+    dependencies=[Depends(strict_query)],
+)
+async def provider_ratings(
+    request: Request, principal: TenantPrincipal = Depends(RATINGS_READ)
+) -> dict[str, Any]:
+    """AA14-02: stars of completed work orders aggregated per provider. Default off: the answer
+    then carries no data. The view holds counts and the mean only, no free text of the rating
+    and no work order text (data minimisation); a member with a property assignment sees only
+    the work orders of the assigned properties."""
+    from mhvp.portal import features as portal_features
+    from mhvp.tickets.models import WorkOrder
+
+    async with tenant_tx(request, principal) as session:
+        mode = (await portal_features.get_or_default(session)).provider_rating_display or "off"
+        if mode != "staff":
+            return {"mode": mode, "enabled": False, "note": RATING_NOTE, "providers": []}
+        query = (
+            select(WorkOrder.provider_contact_id, WorkOrder.rating, func.count())
+            .where(WorkOrder.rating.is_not(None))
+            .group_by(WorkOrder.provider_contact_id, WorkOrder.rating)
+        )
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            query = query.where(WorkOrder.property_id.in_(allowed))
+        per_provider: dict[uuid.UUID, dict[int, int]] = {}
+        for contact_id, rating, n in (await session.execute(query)).all():
+            per_provider.setdefault(contact_id, {})[int(rating)] = int(n)
+        names = {
+            row.id: row.display_name
+            for row in (
+                await session.execute(
+                    select(Contact.id, Contact.display_name).where(
+                        Contact.id.in_(list(per_provider))
+                    )
+                )
+            ).all()
+        }
+        providers = [
+            {
+                "provider_contact_id": contact_id,
+                "provider_name": names.get(contact_id),
+                "rated_count": sum(counts.values()),
+                "average": average_rating(counts),
+                "distribution": {str(star): counts.get(star, 0) for star in range(1, 6)},
+            }
+            for contact_id, counts in per_provider.items()
+        ]
+        providers.sort(
+            key=lambda p: (str(p["provider_name"] or "").lower(), str(p["provider_contact_id"]))
+        )
+        return {"mode": mode, "enabled": True, "note": RATING_NOTE, "providers": providers}
 
 
 @router.get(

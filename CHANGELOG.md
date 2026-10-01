@@ -5,6 +5,172 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.61.0 (01.10.2026) Welle 16, Prioritätenliste des Betreibers Punkte 1 bis 28 und Prüfung: Abnahmeregister, Kontenrahmen-Freigabe, Rücklagenplan, Periodensperre, Objektspalte, Guthabenposten, EBICS-Gerüst, ZUGFeRD, Zweitfaktor-Richtlinie, Portal-Assistent, Datenschutzverzeichnis, Verfügbarkeitsmessung
+
+- Übersicht: Welle 16 mit 40 Paketen AE01 bis AE40 zu den Punkten 1 bis 28 der Prioritätenliste des Betreibers vom 01.10.2026, davon AE24 (GoCardless) vom Betreiber gestoppt und zurückgebaut; Migrationen 0357 bis 0394, real sind 33 (0357 bis 0359, 0361 bis 0369, 0371 bis 0374, 0376 bis 0379, 0381 bis 0384 und 0386 bis 0394), Platzhalter ohne Schemaänderung sind 0360 (AE04), 0370 (AE14), 0375 (AE19), 0380 (AE24) und 0385 (AE29); neue offene Entscheidungen (38): AE01-01, AE07-01, AE21-01, AE22-01, AE22-02, AE23-01 bis AE23-05, AE25-01, AE26-01 bis AE26-03, AE27-01 bis AE27-03, AE28-01 bis AE28-03, AE29-01, AE30-01, AE30-02, AE31-01, AE32-01, AE33-01 bis AE33-03, AE34-01 bis AE34-03, AE35-01, AE35-02, AE36-01, AE36-02, AE37-01, AE38-01, AE38-02; der Prüfbericht docs/reviews/REVIEW-W16-2026-10-01.md (AE40) nennt drei behobene Befunde (AE40-1 bis AE40-3) und sechs weitere Punkte (AE40-01 bis AE40-06, davon AE40-02 nach dem Bericht umgesetzt).
+- Plattform: Die neue Systemrolle Fachkundige Abnahmeperson trägt das Recht acceptance:approve, das Administratoren bewusst nicht erhalten.
+- Buchhaltung: Das Abnahmeregister führt je Anhang-D-Fall Sollwertfassungen (Eingaben, Sollwert, Quelle, Rechenweg) mit Freigabe durch eine zweite Person, eingefrorenen freigegebenen Fassungen und nur anhängenden Abnahmeergebnissen (Migration 0357).
+- Buchhaltung: Das Abnahmeprotokoll Anhang D lässt sich als Markdown exportieren (GET /accounting/acceptance/export.md).
+- CRM: Die neue Seite Plattform, Abnahmeregister Anhang D dient zum Erfassen, Einreichen, Freigeben und Abnehmen der Sollwerte.
+- Buchhaltung: Die Kontenrahmen-Freigabe folgt dem Vier-Augen-Prinzip, wer zur Prüfung gibt, kann nicht selbst freigeben (Schalter je Version, Standard an, Abschalten nur mit Begründung).
+- Buchhaltung: Mehrschlüsselverteilung je Vorlagenkonto wird geprüft (Summe 100 Prozent) und ist im Kontenrahmen-Entwurf pflegbar.
+- Buchhaltung: Die Abrechnungsart Heizkosten steht an den Heizkostenkonten als Vorschlag mit dem Kennzeichen Freigabe offen und wird im Entwurf übernommen.
+- Buchhaltung: Der Prüfbericht des Kontenrahmens weist Konten ohne Abrechnungsart, ohne gültige Verteilung und offene Vorschläge aus.
+- Buchhaltung: Die G1-Öffnungsliste erfasst je Prüfpunkt eine verantwortliche Person und einen Nachweis (Dokument oder Verweis) und markiert bestandene Punkte ohne Nachweis.
+- Banking: Ein neuer Vergleichsbericht stellt die Automatik der manuellen Buchung je Fallklasse gegenüber (aus dem Entscheidungsspeicher, ohne Buchung).
+- Banking: Der Automatikschalter lässt sich in der Oberfläche nur bei offener G1 per Antrag und Freigabe durch eine zweite Person einschalten.
+- Mietrechnungen: Entwürfe bei geschlossenem G1 tragen Entwurfsnummern ENTWURF-JJJJ-NNNNNN und verbrauchen die lückenlose Rechnungsnummer MR nicht.
+- Mietrechnungen: Ein Mandantenschalter regelt den Nummernmodus von Entwürfen (Entwurfsnummer als Standard, reguläre Nummer, Ablehnung bei geschlossenem G1) mit Auswahl im CRM.
+- Buchhaltung: Der Nummernmodus für Mietrechnungsentwürfe verlangt tenant_settings:update statt contracts:update (Prüfbefund AE40-02).
+- Buchhaltung: Zinsbuchungen erfassen einbehaltene Kapitalertragsteuer, Solidaritätszuschlag und Kirchensteuer als Beträge laut Bankbeleg und buchen im Entwurf Geldkonto netto, Steuerkonten und Zinserlös brutto (P01-01).
+- Buchhaltung: Steuerkonten für Zinsabzüge werden je Buchungskreis hinterlegt; ohne Konto wird ein Abzug mit MHVP-ACC-0011 abgelehnt.
+- WEG Rücklagen: Die Rücklagenentwicklung zeigt die Steuerabzüge gebuchter Zinsbuchungen auf das Rücklagenkonto als eigene Spalte.
+- Buchhaltung: Die Nebenbuchprüfung blendet ausgebuchte Posten und Posten stornierter Buchungen per Mandantenschalter (Standard ein) aus und weist sie getrennt aus.
+- Buchhaltung: Der Prüfexport nebenbuchabgleich.csv enthält die Spalten Grund, Ausgebucht und Storniert.
+- WEG: Der Rücklagenplan führt je Rücklage und Jahr die Soll-Zuführung mit Beschlussbezug und Status (Entwurf, beschlossen, ersetzt), wird aus dem Wirtschaftsplan abgeleitet und liefert das Soll in der Rücklagenentwicklung (Migration 0363).
+- WEG: Ein Mandantenschalter regelt Änderungen des Anfangsbestands nach berechneter Abrechnung (gesperrt als Standard, protokolliert oder Vier Augen) mit Änderungsprotokoll.
+- CRM: Die Seite Rücklagen zeigt den Rücklagenplan je Rücklage mit Anlage als Entwurf und Kennzeichnung als beschlossen.
+- WEG: Zahlungen je Zweckrücklage zeigen Soll laut Wirtschaftsplan und Ist der gebundenen Zahlungen je Rücklage (neue Übersicht in der Jahresabrechnung).
+- WEG: Ein Mandantenschalter steuert einen Aufteilungsvorschlag nicht zugeordneter Rücklagenzahlungen nach Planverhältnis, Standard aus, nur Information ohne Buchung.
+- Verträge: Sollstellungen können beim Anlegen einer aktiven Zweckrücklage der Gemeinschaft zugeordnet werden.
+- WEG: Unterjährige Planänderung zeigt die Differenz bereits gebuchter Monate je Einheit, Komponente und Monat als Nachforderung oder Gutschrift (AE09, M24-08).
+- WEG: Ein Mandantenschalter bestimmt die Behandlung der Differenz mit den Varianten nur Hinweis (Standard), sofort fällig und Verrechnung mit der nächsten Rate; Entwürfe buchen nichts, Freigabe nur mit G4 und durch eine zweite Person (M12-L2, P07-01).
+- CRM: Übernahmevorschau des Wirtschaftsplans enthält den Abschnitt Differenz gebuchter Monate mit Variantenwahl, Entwurf und Freigabe.
+- WEG: Die Zuordnungsregel beim Eigentümerwechsel gilt je Erwerbsart als Mandantenregel (manuelle Freigabe als Standard, Zuordnung nach Fälligkeit oder Abrechnungsbeschluss) mit den Endpunkten GET und PUT /hoa/acquisition-rules (Migration 0366), Anzeige in der Freigabeliste und Einstellung in der Abrechnungsansicht, die Berechnung bleibt beim Standard unverändert.
+- WEG: Neue Abrechnungsversion nimmt Korrekturgrund, Bezug und Beschluss auf und übernimmt Belege, Notizen und Darlehensangaben.
+- WEG: Der Korrekturbericht zeigt je Eigentümer vorher, nachher und Differenz mit der Heizkostenüberleitung als eigenem Block im Versionsvergleich, nur Anzeige, Rechtsfolge offen.
+- WEG: Die Mandanteneinstellung Stichtag der Übergangsregel für den Grundlagenbeschluss virtueller Versammlungen ist neu (Migration 0368, ohne Rechtswirkung, ohne Sperre).
+- WEG: Das Versammlungsdetail zeigt Fristhinweise zum Grundlagenbeschluss (Dreijahresgrenze, Gültigkeitsende, Resttage, Stichtag) als Orientierung.
+- CRM: Eine neue Einstellungsmaske bedient den Online-Versammlungsschalter (Standard aus), und die Versammlungseinstellungen enthalten das Stichtagsfeld.
+- Portal: Mieterträge für Kapitalanleger erscheinen im Eigentümerportal nur bei eingeschaltetem Mandantenschalter (Standard aus).
+- Portal: Der Umfang der Meldungen im Eigentümerportal ist je Mandant wählbar (keine, freigegebene, alle des eigenen Objekts).
+- CRM: Portalfunktionen um Mieterträge-Schalter und Ticketumfang ergänzt.
+- Rechnungen: Die sachliche Prüfung zeigt für verknüpfte Wirtschaftsplanpositionen einen Budgetabgleich mit Planansatz, bisher zugeordneten Rechnungen, dieser Rechnung und Rest.
+- Rechnungen: Die sachliche Prüfung weist auf Beschlüsse zu einem anderen Wirtschaftsplan und auf fehlende Beschlusszuordnung bei zustimmungspflichtigen Aufträgen hin (nur Hinweise, keine Freigabe).
+- Abrechnung Miete: Ein Mandantenschalter regelt offene Vorauszahlungen bei der Abrechnung (nur Information als Standard, Verrechnung per Storno, Saldo gegen Soll), Migration 0371.
+- Abrechnung Miete: Snapshot und Anschreiben legen den Rechenweg für offene Vorauszahlungen offen (Saldo gegen gezahlt und gegen Soll, Gesamtsicht).
+- Abrechnung Miete: Variante Verrechnung erzeugt einen Buchungsentwurf mit Ausgleich der offenen Vorauszahlungsposten nur zusammen mit den Ergebnisentwürfen hinter G3.
+- CRM Abrechnung: Der Bereich Neue Vorauszahlungen bietet die Auswahl der Behandlung offener Vorauszahlungen mit Hinweis auf die offene Frage AC10-01.
+- Dokumente: Textbausteine für Informationsblatt, Eigentümeranschreiben und Nachweis § 35a EStG durchlaufen Entwurf, eingereicht und Freigabe durch eine zweite Person, ausgegeben werden nur freigegebene Texte (Migration 0372).
+- CRM: Die neue Pflegemaske unter Einstellungen, Textbausteine zeigt den Status je Text und den Hinweis Text nicht freigegeben.
+- Verträge: Umlagevereinbarungen lassen sich je Mietvertrag und Betriebskostenart mit Klauselbezug, Nachweisdokument und Gültigkeit erfassen, die Massenerfassung je Objekt zeigt eine Vorschau.
+- Abrechnung: Ein Prüfbericht zeigt fehlende Umlagegrundlagen je Kostenposition und Mietvertrag, und ein Mandantenschalter (Standard an) sperrt Statuswechsel und Informationsblatt.
+- Abrechnung Miete: Die Sperre bei fehlenden Umlagegrundlagen (AE17) ist standardmäßig aktiv; bestehende Abrechnungen ohne erfasste Umlagevereinbarungen können bis zur Erfassung oder bis zum Abschalten des Schalters nicht ausgegeben werden (Hinweis für den Betrieb).
+- Abrechnung: Die Abrechnungsfrist zeigt je Mietvertrag das Fristende als Orientierung und schlägt den Zugang aus dem Versand vor, die Übernahme erfolgt per Klick mit Nachweis.
+- Abrechnung: Ein Mandantenschalter regelt das Verhalten nach Fristablauf (Nachforderung sperren als Standard oder nur Hinweis), und eine optionale tägliche Warnung erinnert vor Fristablauf (Migration 0374).
+- Buchhaltung: Prüfpunkte des Regelregisters sind im CRM pflegbar (Datum, Bezeichnung, Quelle, Notiz) mit Vorfrist und Stand, Hinweis ohne Rechtsfolge (AB10-01).
+- Abrechnung: Der Heizkostenvergleich stellt die externe der eigenen Berechnung je Nutzer gegenüber, mit pflegbarer Toleranz und Abweichungsbericht als CSV, nur lesend (M17-02).
+- Buchhaltung: Die Periodensperre gilt je Objekt und Zeitraum (Tabellen period_lock und period_lock_setting, Migration 0376) mit Mandantenschaltern, als Standard sperrt nur der Buchungskreis.
+- Buchhaltung: Buchen und Stornieren prüft bei aktivem Schalter die Objektsperre (MHVP-ACC-0030).
+- Abrechnung: Abschluss einer Miet- oder Eigentümerabrechnung setzt die Sperre für Objekt und Zeitraum nur mit Schalter, sonst Vorschlag.
+- Buchhaltung: Eine Periodensperre lässt sich nur mit Schalter, Begründung und Freigabe durch eine zweite Person aufheben, die Zeile bleibt erhalten.
+- CRM: Die neue Seite Einstellungen, Buchhaltung, Periodensperren trägt den Hinweis Entscheidung offen.
+- Buchhaltung: Buchungszeilen tragen ein eigenes Objekt (journal_line.property_id), abgeleitet aus Angabe, Einheit oder Vertrag des Buchungssatzes; Zeilen mit Einheit erhalten in der Datenbank stets das Objekt ihrer Einheit (Migration 0377, ADR 0023).
+- Buchhaltung: Bestehende Buchungszeilen wurden einmalig aus Einheit und Vertrag befüllt; Beträge und übrige Inhalte gebuchter Zeilen bleiben unverändert, ein Storno übernimmt das Objekt der Originalzeile.
+- Buchhaltung: Die USt-Übersicht je Objekt gruppiert nach dem Objekt der Buchungszeile; Monatsmatrix, Einnahmen und Ausgaben sowie das Journal lassen sich nach Objekt filtern.
+- Buchhaltung: Neuer Driftbericht line-property-drift zeigt Buchungszeilen, deren Objekt nicht zu Einheit, Vertrag oder Buchungskreis passt; eine Abweichung zur Einheit erscheint zusätzlich im Prüfbericht.
+- Buchhaltung: Unbekannte Einheiten oder Objekte in Buchungszeilen werden mit einer Validierungsmeldung abgelehnt statt mit einem Serverfehler.
+- Buchhaltung: Guthaben aus Betriebskostenabrechnung, Eigentümerabrechnung und Kautionsabrechnung werden als auszahlbare Guthaben angezeigt und können per Vorschlag und Freigabe durch eine zweite Person (G3) zu Verbindlichkeitsposten werden (API /accounting/credit-payables).
+- Buchhaltung: Ein Mandantenschalter regelt die offene Buchungsregel Q01-01 mit den Varianten Aus (Standard), Nebenbuchposten ohne Umbuchung und Umbuchung auf ein hinterlegtes Kreditorenkonto (neue Buchungsart credit_reclass, Buchung über den normalen Weg).
+- Zahlungsverkehr: Ein Zahlungsauftrag ohne Rechnung lässt sich direkt aus dem Verbindlichkeitsposten eines Guthabens mit Auswahl von Empfänger- und Auftraggeberkonto erzeugen, hinter G2 und G3, weiter mit zwei Freigaben am Auftrag.
+- Buchhaltung: Der Storno-Pfad für Guthabenposten umfasst Rücknahme, Verwerfen des Umbuchungsentwurfs und Storno der gebuchten Umbuchung mit G1 und ist bei beauftragten oder bezahlten Posten gesperrt.
+- CRM: Der neue Abschnitt Auszahlung von Guthaben aus Abrechnungen steht unter Bank, Zahllauf.
+- Banking: Das EBICS-Grundgerüst für den Kontoauszugsabruf arbeitet mit einem Mandantenschalter (Standard aus) und einer Variante des Signaturschlüssels (Standard extern bei der unterschreibenden Person).
+- Banking: EBICS-Teilnehmer erhalten Schlüsselerzeugung (Standard 4096 Bit nach Krypto LifeCycle EBICS), INI, HIA, Freischaltung und Bankschlüsselabruf HPB mit Prüfung der Hash-Werte durch eine zweite Person.
+- Banking: Private EBICS-Schlüssel werden nur verschlüsselt gespeichert, jeder Schlüsselwechsel wird mit Zeit, Person und Grund protokolliert und löscht den alten privaten Schlüssel.
+- Banking: Der Abruf von Kontoauszügen mit Auftragsart C53 (camt.053 im ZIP) importiert ohne Dubletten mit Rohdatenablage und Auftragsprotokoll, und ohne installierte EBICS-Übertragung meldet die Plattform MHVP-BANK-0050.
+- Banking: Die Bankseite zeigt den neuen Abschnitt EBICS (Grundgerüst), und das Runbook EBICS-Einrichtung beschreibt die Bedienung in der Plattform.
+- Banking: Das Paket GoCardless (AE24) wurde vom Betreiber gestoppt, der Teilstand entfernt; Migration 0380 ist ein Platzhalter ohne Schemaänderung.
+- Buchhaltung: Honorarrechnungen und Gutschriften lassen sich als ZUGFeRD/Factur-X herunterladen (Briefbogen-PDF mit eingebettetem CII im Profil EN 16931, gleiche Daten und Sperren wie die XRechnung).
+- Buchhaltung: Der ZUGFeRD-Beleg trägt die PDF/A-3 Kennzeichnung (XMP, Factur-X Erweiterungsschema, Associated File, sRGB-Ausgabebedingung); die eigene Vorprüfung weist Blocker aus und behauptet keine Konformität.
+- Buchhaltung: Der ZUGFeRD-Beleg lässt sich prüfen (CII-Struktur und PDF/A-Vorprüfung) und einmalig mit Prüfergebnis ablegen (Migration 0381), nichts wird versendet oder gebucht.
+- Belegeingang: Bei ZUGFeRD-Rechnungen werden Profil (MINIMUM bis XRECHNUNG) und Containerangaben gelesen und als Hinweise im Prüfergebnis angezeigt; ZUGFeRD 1.0 erhält eine klare Meldung.
+- CRM: Das Verwalterhonorar bietet die Schaltflächen ZUGFeRD, ZUGFeRD prüfen und ZUGFeRD ablegen.
+- Banking: Die Meldungen zu MHVP-BANK-0010 (Bankzugang gesperrt) und MHVP-BANK-0013 (Bank nicht erreichbar) sind deutsch mit nummerierten Prüfschritten, der englische Text von python-fints wird nicht mehr angezeigt, und Verbindungsfehler der Netzwerkbibliothek führen zu MHVP-BANK-0013 mit Nennung des Rechnernamens.
+- Banking: Die Meldungen zu MHVP-BANK-0009 (PIN abgelehnt) und MHVP-BANK-0012 (erneute Freigabe) sind deutsch mit dem nächsten Schritt.
+- Banking: Die FinTS-Adresse einer Verbindung kann von Hand eingetragen oder zurückgesetzt werden (PATCH /banking/fints/connections/{id}, Migration 0382), geprüft auf https und einen öffentlichen Rechnernamen, mit erneuter PIN-Eingabe und ohne automatischen Anmeldeversuch.
+- Banking: FinTS-Dialoge verwenden die Adresse der aktuellen Institutsliste statt der beim Anlegen gespeicherten, solange keine manuelle Adresse gesetzt ist.
+- CRM: Die FinTS-Verbindungen zeigen die Prüfschritte bei gesperrtem Zugang und nicht erreichbarer Bank, die verwendete FinTS-Adresse mit Herkunft und ein Formular zum Ändern und Zurücksetzen der Adresse.
+- Skripte: scripts/update_fints_institutes.py spielt die CSV-Datei der Deutschen Kreditwirtschaft in die Institutsliste ein (Trockenlauf als Standard, URLs werden nie stillschweigend entfernt), ein falsch gelesener Name (BLZ 45451555) wurde berichtigt.
+- Buchhaltung: Der KoSIT-Validator ist mit make kosit-fetch, kosit-test und kosit-validate und im Repository gepinnten Prüfsummen (scripts/kosit.lock) reproduzierbar, und der CI-Job xrechnung-kosit läuft ohne Repository-Variablen und ist mit MHVP_KOSIT_ENABLED=false abschaltbar.
+- Sicherheit: Die Zweitfaktor-Richtlinie je Mandant (AE27, Migration 0383) hat den Standard freiwillig gemäß Betreiberentscheidung M2-01; Pflicht für alle Verwaltungsrollen oder je Rolle ist als Mandantenwahl unter Einstellungen, Rollen einstellbar (Frage AE27-01).
+- Portal: Die Pflicht des zweiten Faktors für Portalzugänge ist ein eigener Mandantenschalter, Standard aus.
+- Anmeldung: Wer unter eine gewählte Pflicht fällt und noch keinen zweiten Faktor hat, richtet TOTP bei der nächsten Anmeldung auf der Seite Zweiten Faktor einrichten mit QR-Code ein; laufende Sitzungen bleiben, niemand wird ausgesperrt.
+- Anmeldung: Unter einer gewählten Pflicht lassen sich TOTP und der letzte Passkey nicht entfernen (MHVP-AUTH-0015); der Anmeldelink des Portals führt bei gewählter Pflicht in den TOTP-Schritt oder die Einrichtung.
+- Einstellungen: Neuer Abschnitt Zweiter Faktor je Rolle unter Rollen und Rechte; Meine Daten und Portal Sicherheit zeigen einen Hinweis, wenn der zweite Faktor vorgeschrieben ist.
+- API: Neue Endpunkte GET/PUT /auth/mfa-policy, POST /auth/mfa/setup/start und /auth/mfa/setup/confirm, Feld mfa_required in /auth/me und Status mfa_setup_required beim Login.
+- Portal: Ein neuer Assistent beantwortet Fragen zu den freigegebenen Unterlagen (Menüpunkt Assistent, Seite /assistent) mit Berechtigungsfilter nach access_grant, fremde Einheiten und Dokumente antworten 404, und ein Zugang ohne Freigaben erhält eine leere Antwort ohne Anbieteraufruf.
+- Portal: Die Portalfunktionen der Einstellungen enthalten die Mandantenschalter Chat-Bot und Datenschutz-Feature (beide ab Werk aus), Migration 0384.
+- KI: Antworten im Portal-Assistenten gibt es nur mit freigegebenem Datenschutzhinweis (Textbaustein, Freigabe durch eine zweite Person), Kenntnisnahme je Zugang und Fassung und geöffnetem Gateway-Gate, sonst erscheinen nur Treffer der Dokumentsuche mit Nennung des Grundes.
+- KI: Portalfragen laufen mit dem Prompt portal_v1 ohne Wissensbasis, Plattformsuche, Werkzeuge, Änderungsvorschläge und Beispiele, mit maskierter Frage und Quellenprüfung nach dem Lauf, und die Deduplizierung gibt nie die Antwort eines Zugangs an einen anderen.
+- KI: Die Stichwortsuche der Dokumente filtert den Zugriffsumfang vor dem Limit, damit fremde Treffer erlaubte Dokumente nicht verdrängen.
+- Portal: Alle Fragen an den Assistenten werden protokolliert (maskiert, mit Ergebnis, Quellen und Grund), das CRM zeigt das Protokoll in den Portalfunktionen, und je Zugang gilt ein Stundenlimit von 20 Fragen.
+- Plattform: Rechtstexte des Portals je Mandant (Impressum, Datenschutz, Nutzungsbedingungen) sind Textbausteine mit Freigabe durch eine zweite Person, und der öffentliche Abruf liefert nur die freigegebene Fassung nach Portal-Host.
+- Portal: Fuß der Seite und Anmeldeseite verlinken die freigegebenen Rechtstexte (Seite Rechtliches), sonst den externen Link der Markenanpassung; ohne Freigabe erscheint der Hinweis Text nicht freigegeben.
+- Plattform: Die Fassung der Nutzungsbedingungen in der Einwilligungsrichtlinie lautet NB und Textversion, der Mandantenschalter folgt von Hand oder dem freigegebenen Text, die Übernahme erfolgt ausdrücklich mit Bestätigung und Protokoll.
+- CRM: Die neue Einstellungsseite Rechtstexte des Portals zeigt Freigabestand, Pflegemaske und Abgleich der Fassung, und die Textbausteine-Seite führt nur noch die Brief- und Nachweistexte.
+- Portal: Der Formularbaukasten ist final mit Typregister für 20 Elementtypen (Wertformat und Prüfregel je Typ, Anschrift, Standort, Unterschrift und Textfelder strenger geprüft) und den neuen Endpunkten GET /portal-admin/forms/element-types und POST /portal-admin/forms/preview (Trockenlauf ohne Speichern).
+- CRM: Formularvorlagen zeigen eine Vorschau mit Prüfung von Beispielwerten und eine aufklappbare Übersicht der Elementtypen mit Prüfregeln und Quellenstatus.
+- Portal: Formulare zeigen Hinweise und Längengrenzen zu Anschrift, Standort, Unterschrift und Betrag und die Meldung der Prüfung direkt am Feld.
+- Portal: Bewertungen von Dienstleistern stehen hinter dem Mandantenschalter provider_rating_display (Standard aus, Migration 0386), die Übersicht nur für die Verwaltung zeigt Anzahl, Durchschnitt und Verteilung ohne Freitext, Dienstleister und Dritte sehen nichts.
+- WEG: Eine Mandantenregel legt für Vollmacht gegen eigene Stimme vier Varianten fest, der Standard markiert den Konflikt als Prüfhinweis und verwirft keine Stimme, die Regel gilt für Portal und CRM-Stimmerfassung.
+- WEG: Versammlungsleitung entscheidet Stimmkonflikte im CRM (erste Stimme bestätigen oder zweite zählen), beide Stimmen bleiben im Vorgang erhalten.
+- WEG: Prüfpunkte zur Versammlungsform (Beschlussgrundlage, Status, Gültigkeitsende, Dreijahresgrenze, Konferenzlink) erscheinen als Übersicht erfasster Angaben ohne Rechtsaussage.
+- WEG: Protokollentwurf enthält Online-Zusagen, Portalvollmachten, Wortmeldungen, Online-Stimmen je TOP und Prüfhinweise zu Stimmkonflikten.
+- CRM: Der Online-Schalter bietet die Regelauswahl an, und die Versammlungsseite zeigt Prüfpunkte und Stimmkonflikte.
+- Portal: Das Portal weist darauf hin, wenn eine Stimme zur Prüfung gespeichert und nicht gezählt wird.
+- Datenbank: Die Migration 0387 legt Regelfeld, Stimmquelle und die Tabelle für Stimmkonflikte an.
+- Datenschutz: Das Register erfasst je Verarbeitungstätigkeit die Rolle von GdWE, Verwalter und Betreiber, die Rechtsgrundlage und die eingesetzten Auftragsverarbeiter als Pflegefelder ohne Vorbelegung (Migration 0388).
+- Datenschutz: Die Drittlandübermittlung wird je Anbieter mit Status offen, nein oder ja samt Ländern und Garantien erfasst, bestehende Einträge ohne Drittlandangabe gelten als offen.
+- Datenschutz: Neue Übersicht Dienstleister laut Konfiguration erkennt aus Einstellungen und Konnektoren (Gmail, Google Kalender, Drive, Paperless, finAPI, GoCardless, KI-Anbieter, LetterXpress und weitere) die genutzten Dienste und übernimmt fehlende als Unterauftragnehmer mit offenen Prüffeldern.
+- Datenschutz: Das Verzeichnis von Verarbeitungstätigkeiten lässt sich als PDF-Entwurf herunterladen und listet offene Punkte sowie Dienste ohne Registereintrag.
+- CRM Einstellungen, Datenschutz: Registereinträge sind bearbeitbar (Rollen, Rechtsgrundlage, Auftragsverarbeiter, AVV, Drittland, Prüfstatus).
+- Dokumente: Papierkorb als Mandantenschalter (Standard aus, Frist 30 Tage nur als Vorschlag): zulässig gelöschte Dokumente bleiben bis Fristende erhalten, Wiederherstellung und vorzeitige endgültige Löschung mit Begründung protokolliert, täglicher Löschauftrag prüft Sperren und Fristen erneut (AC07-03).
+- Dokumente: Löschcheckliste um das Ziel Papierkorb und den Status im Papierkorb erweitert, Löschjournal und Replay führen Ablegen und Wiederherstellen mit (AC07-03).
+- Dokumente: Die neue CRM-Seite Papierkorb bietet Wiederherstellen und endgültiges Löschen, der Schalter steht unter Einstellungen, Aufbewahrung (AC07-03).
+- Kontakte: Der Umfang der DSGVO-Auskunft (andere Personen mit Name und Rolle, interne Vermerke) ist ein Mandantenschalter mit unverändert zurückhaltendem Standard, der Umfang wird je Auskunft bei der Vorbereitung festgehalten (AC07-01).
+- Betrieb: Das Runbook Backup beschreibt zusätzlich Papierkorb, Journal und Replay bei einer Wiederherstellung (AC07-03).
+- Kontakte: Die Rechtsgrundlage je Verarbeitung (Einwilligung, Vertrag, berechtigtes Interesse) ist je Mandant mit Begründung pflegbar (GET, PUT, DELETE /consent-legal-basis); E-Mail-Zustellung, Weitergabe an Dienstleister und Werbung folgen der gewählten Grundlage, der Standard bleibt die Einwilligung.
+- Kontakte: Ein Widerspruch bei berechtigtem Interesse lässt sich erfassen (POST /contacts/{id}/objections) und sperrt die Verarbeitung für den Kontakt bis zur Rücknahme; eine widerrufene Einwilligung gilt dort ebenfalls als Sperre.
+- Portal: Die veröffentlichte Fassung der Nutzungsbedingungen ist ohne Anmeldung abrufbar (GET /portal/public/terms?tenant=), bei unbekanntem oder nicht veröffentlichendem Mandanten antwortet die Schnittstelle immer gleich mit 404.
+- Portal: Die Annahme der Nutzungsbedingungen wird mit Zeitpunkt, Fassung und einem Hash der Verbindungsadresse protokolliert (Migration 0390); die Einladungsseite zeigt die Annahme schon vor der Aktivierung.
+- CRM: Widersprüche erscheinen in der Einwilligungsliste des Kontakts als Widerspruch mit der Aktion Zurücknehmen.
+- Plattform: Ein Beat-Job prüft jede Minute die Health-Adressen von API, CRM und Portal (nur bei gesetzten Adressen MHVP_AVAILABILITY_API_URL, MHVP_AVAILABILITY_CRM_URL und MHVP_AVAILABILITY_PORTAL_URL) und speichert die Messpunkte der Eigenmessung der Verfügbarkeit (Migration 0391).
+- Plattform: Die Monatsauswertung der Eigenmessung läuft automatisch täglich und weist den Wert aus allen Prüfungen und den Wert ohne Wartungsfenster getrennt aus, beendete Monate werden festgeschrieben.
+- Plattform: Neuer Schalter Wartungsfenster zählen als Ausfall (Standard aus, auditiert) bestimmt, welcher Wert gegen das Ziel 99,5 Prozent bewertet wird; die Entscheidung dazu bleibt offen (AD10-02, AE35-01).
+- Plattform: Ein Löschlauf entfernt Minutenwerte nach der Aufbewahrung (Standard 120 Tage), aber nur für festgeschriebene Monate.
+- CRM: Die Seite Plattform, Wartung und Verfügbarkeit zeigt die Eigenmessung mit letzter Prüfung, 24 Stunden, Fehlschlägen, Schalter und Monatstabelle.
+- Runbook: verfuegbarkeit.md Abschnitt 4 beschreibt Einrichtung, Auswertung, Löschlauf und Grenzen der Eigenmessung.
+- Betrieb: Die Auslöser der Jahrespartitionierung nach ADR 0021 (Zeilen und Größe von journal_entry, journal_line und bank_transaction, P95 der Journal- und Bankumsatzliste, Dauer des Wiederherstellungstests, produktive Mandanten) werden als Plattformkennzahlen gemessen, wöchentlich gespeichert und bei einem neuen Auslöser an die Plattformadministratoren gemeldet (Migration 0392, Seite Plattform, Betrieb, API /platform/ops/scale).
+- Betrieb: Die Betriebskennzahlen /platform/ops/metrics enthalten Zeilen, Größe und P95 der Listen sowie die Alarme scale_trigger_partition_review und scale_trigger_measure_again; Mandantenzahl und Fachzähler lassen Demo-Mandanten weg.
+- Plattform: Mandanten tragen ein Demo-Kennzeichen (tenant.is_demo, Migration 0392, PUT /platform/tenants/{id}/demo, Merkmal und Schaltfläche in der Plattformansicht); das Setzen ist bei geöffneter Freigabestufe nicht möglich.
+- Plattform: Demo-Mandanten sind aus Lizenz, Nutzungszählung, Abrechnungsvorschau, Mandantenexport, Journal-Export, DATEV, Prüfexport und der mandantenübergreifenden Arbeitsansicht ausgeschlossen (409 MHVP-DEMO-0001).
+- Betrieb: Der Befehl make seed-demo erzeugt nur synthetische IBANs (Bankleitzahl 00000000) mit Selbstprüfung, setzt das Demo-Kennzeichen und die freiwillige Zweitfaktor-Richtlinie des Demo-Mandanten, und das neue Runbook demo-mandant.md beschreibt den Ablauf.
+- Importe: Der Importassistent erkennt die Kopfzeile einer beliebigen CSV- oder XLSX-Datei in den ersten 30 Zeilen und überspringt Titelzeilen; die erkannte Zeile wird mit Begründung angezeigt und lässt sich von Hand ersetzen.
+- Importe: Die Spaltenzuordnung wird je Zielfeld vorgeschlagen (gespeicherte Zuordnung, Feldbezeichnung, Fachbegriff, ähnliche Schreibweise, Typprüfung der Beispielwerte) und zeigt Status und Prozentwert; ohne Speichern der Vorlage wird nichts verwendet.
+- Importe: Bestätigte Spaltenzuordnungen werden je Mandant und Berichtstyp gemerkt (neue Tabelle import_column_assignment, Migration 0393) und bei der nächsten Datei zuerst vorgeschlagen.
+- Importe: Neuer Prüfbericht vor dem Speichern zeigt Pflichtspalten, leere und fremde Spalten, Beispielwerte je Feld sowie Beispielzeilen und fehlerhafte Zeilen, ohne Daten zu verändern.
+- Importe: Abschnitt Benötigte Exporte zeigt je Berichtsart, ob eine Datei vorliegt, ob die Pflichtfelder gemerkt sind und ob übernommen wurde; die Anforderungsliste docs/integrations/immoware24-exporte.md enthält die offenen Angaben für den Betreiber.
+- Postfach: Ein neuer eingehender Webhook (POST /api/v1/mail/inbound/sources/{id}/classified-mails) nimmt klassifizierte Mails des Bestandsprogramms an, mit API-Schlüssel (Recht mail_inbound:ingest), HMAC-Signatur mit fünf Minuten Zeitfenster, Idempotenz je event_id (Wiederholung 200, anderer Inhalt 409) und Größenlimit 1 MiB.
+- Postfach: Mailquellen für den Webhook lassen sich unter /api/v1/mail/inbound/sources anlegen (Geheimnis einmalig sichtbar), ändern, deaktivieren, mit neuem Geheimnis versehen und mit Empfangsprotokoll lesen.
+- Postfach: Die Klassifikation des Bestandsprogramms wird nur als Vorschlag in classification.external gespeichert, die Mail durchläuft dieselbe Zuordnung und Ticketregel wie jede eingehende Mail.
+- Integrationen: Eine Dossier-Vorlage nach Anhang B und eine Checkliste je Bestandstool sind angelegt (DOSSIER-VORLAGE.md, CHECKLISTE-BESTANDSTOOLS.md), und der Vertrag inbound-mail-webhook.md beschreibt den Webhook.
+- Datenbank: Die Migration 0394 legt die Tabellen inbound_mail_source und inbound_mail_event mit Row Level Security an.
+- CRM Einstellungen: Neue Seite Fachliche Regeln (/einstellungen/fachliche-regeln) zeigt 54 Mandantenschalter für fachlich offene Entscheidungen mit aktuellem Wert, Standard, Varianten, Hinweis Entscheidung offen und Nummer der Frage in docs/OPEN_QUESTIONS.md; geändert wird dort über die vorhandenen PUT- und PATCH-Endpunkte, eine Abweichung vom Standard verlangt eine Rückfrage.
+- CRM Einstellungen: Die Einstellungsübersicht hat die Karten Fachliche Regeln und Textbausteine, die Suche findet jeden Schalter der neuen Seite über seine Bezeichnung.
+- CRM Assistent: Seitenkontext und Vorschläge für Abnahmeregister, Papierkorb, Fachliche Regeln, Periodensperren, Textbausteine und Rechtstexte des Portals.
+- CRM Korrekturen: Die Seite Periodensperren lädt ihren Übersetzungsnamensraum korrekt, sechs Tabellen der Welle 16 liegen in einem Scroll-Wrapper, zwei TypeScript-Fehler (StatementVersionDiff, TextBlocksAdmin-Test) sind behoben.
+- CRM BFF: Die Allowlist erlaubt PUT consent-legal-basis/{Zweck} für die Rechtsgrundlage der Einwilligungen.
+- Handbuch: Das Kapitel Einstellungen enthält den neuen Abschnitt Fachliche Regeln mit einer Tabelle aller Schalter.
+- Plattform: Die Genehmigung einer Freigabestufe G1 bis G5 wird für einen Demo-Mandanten mit 409 MHVP-DEMO-0001 abgelehnt, der Antrag bleibt beantragt (Review W16, AE40-1).
+- Dokumente: Textbausteine, Rechtstexte des Portals und der Datenschutzhinweis des Portal-Assistenten können nicht mehr von einer Person freigegeben werden, die die Fassung bearbeitet hat (Review W16, AE40-2).
+- Buchhaltung: Ein Entwurf einer Zinsbuchung mit Steuerabzügen lässt sich wieder löschen, die Abzugszeile des Entwurfs wird mit entfernt (vorher Serverfehler, Review W16, AE40-3).
+- Dokumentation: Der Prüfbericht der Welle 16 mit drei behobenen Befunden und sechs weiteren Punkten steht in docs/reviews/REVIEW-W16-2026-10-01.md.
+- Plattform: Das Gate-Routenregister führt zusätzlich die Freigabewege Abnahmeregister, Periodensperre und Textbausteine (ohne Geldfluss).
+- Datenbank: Die Migrationskette 0357 bis 0394 ist linear und wurde auf einer frischen Datenbank bis head, bis base zurück und erneut hinauf sowie im Autogenerate-Abgleich ohne Drift geprüft (Review W16).
+- Betrieb: Neue Umgebungsvariablen MHVP_AVAILABILITY_API_URL, MHVP_AVAILABILITY_CRM_URL, MHVP_AVAILABILITY_PORTAL_URL (Eigenmessung); die neue Rolle acceptance_expert erscheint bei Bestandsmandanten nach python -m mhvp.platform.sync_roles; der CI-Job xrechnung-kosit läuft bei jedem Push (abschaltbar mit MHVP_KOSIT_ENABLED=false).
+- Dokumentation: Die neue Übersicht docs/plans/IMPLEMENTATION_STATUS.md zeigt den Stand der Punkte 1 bis 28 der Prioritätenliste, Lückenliste und Entscheidungsliste tragen den Stand der Welle 16.
+
 ## 1.60.0 (01.10.2026) Welle 15, Leistungsfehler, Restpunkte und Portal-Versammlung: Buchungswächter mit Indexzugriff, Online-Versammlung im Portal, Wartungsfenster und Verfügbarkeit, Domainprüfung, Portalsprachen
 
 - Übersicht: Welle 15 mit 11 Paketen AD01 bis AD11, Migrationen 0346 bis 0356; real sind 0346 (Buchungszeilen-Wächter indexierbar, Index bank_transaction tenant_id/booking_date), 0351 (Online-Versammlung), 0352 (Domainprüfung) und 0355 (Wartungsfenster, Verfügbarkeit), alle anderen sind Platzhalter ohne Schemaänderung. Neue offene Entscheidungen: AD03-01, AD03-02, AD06-01 bis AD06-03, AD10-01, AD10-02.

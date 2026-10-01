@@ -13,8 +13,9 @@ type Setup = { secret: string; otpauth_uri: string; qr: string };
 
 /** Optional second factor (operator 26.09.2026, M2-01): every portal user may switch TOTP on
  *  or off; the login asks for a code only while it is on, and not on a remembered device. */
-function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
+function SecondFactor({ initialEnabled, required = false }: { initialEnabled: boolean; required?: boolean }) {
   const t = useTranslations("Security");
+  const tAuth = useTranslations("Auth");
   const [enabled, setEnabled] = useState(initialEnabled);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [code, setCode] = useState("");
@@ -90,7 +91,10 @@ function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
           {message}
         </p>
       ) : null}
-      {enabled ? (
+      {/* M2-04: under the tenant policy the second factor stays; the API refuses the switch off. */}
+      {enabled && required ? (
+        <p className={ui.help}>{tAuth("mfaRequiredHint")}</p>
+      ) : enabled ? (
         <form onSubmit={(e) => void disable(e)} className="flex flex-col gap-3 sm:max-w-sm">
           <p className={ui.help}>{t("totpDisableHint")}</p>
           <label className="flex flex-col gap-1">
@@ -297,14 +301,16 @@ export function SecuritySettings({
   totpEnabled,
   initialDevices,
   passkeysAvailable = false,
+  mfaRequired = false,
 }: {
   totpEnabled: boolean;
   initialDevices: TrustedDeviceRow[];
   passkeysAvailable?: boolean;
+  mfaRequired?: boolean;
 }) {
   return (
     <div className={ui.sectionGap}>
-      <SecondFactor initialEnabled={totpEnabled} />
+      <SecondFactor initialEnabled={totpEnabled} required={mfaRequired} />
       {passkeysAvailable ? <Passkeys /> : null}
       <TrustedDevices initial={initialDevices} />
     </div>

@@ -603,13 +603,24 @@ async def cast_online_vote(
             raise ProblemError(ErrorCodes.CONFLICT, detail="Abstimmung zum TOP nicht geöffnet.")
         if item.result in ("deferred", "no_vote"):
             raise ProblemError(ErrorCodes.CONFLICT, detail="TOP vertagt oder ohne Abstimmung.")
-        if await session.scalar(
-            select(Vote.id).where(
-                Vote.agenda_item_id == item.id, Vote.contract_id == body.contract_id
-            )
-        ):
-            raise ProblemError(
-                ErrorCodes.CONFLICT, detail="Für diese Einheit wurde bereits abgestimmt."
+        source = "proxy" if proxy_id else "own"
+        existing = await session.scalar(
+            select(Vote).where(Vote.agenda_item_id == item.id, Vote.contract_id == body.contract_id)
+        )
+        if existing is not None:
+            # AE31: the same source twice stays 409; owner against proxy holder follows the
+            # tenant rule (hoa_online_meeting_setting.proxy_conflict_mode, default flag).
+            return await online_meeting.handle_second_vote(
+                session,
+                tenant_id=principal.tenant_id,
+                meeting=meeting,
+                item=item,
+                existing=existing,
+                source=source,
+                choice=body.choice,
+                proxy_id=proxy_id,
+                channel="online",
+                actor_user_id=principal.user_id,
             )
         row = Vote(
             tenant_id=principal.tenant_id,
@@ -618,6 +629,8 @@ async def cast_online_vote(
             choice=body.choice,
             excluded=False,
             channel="online",
+            proxy_id=proxy_id,
+            cast_source=source,
         )
         session.add(row)
         await session.flush()
@@ -634,4 +647,10 @@ async def cast_online_vote(
                 "proxy_id": str(proxy_id) if proxy_id else None,
             },
         )
-        return {"id": row.id, "channel": "online", "proxy_id": proxy_id}
+        return {
+            "id": row.id,
+            "channel": "online",
+            "proxy_id": proxy_id,
+            "counted": True,
+            "conflict": False,
+        }

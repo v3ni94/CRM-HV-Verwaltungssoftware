@@ -1,11 +1,14 @@
 """Import point for all mapped models, used by Alembic autogenerate."""
 
+from mhvp.accounting import acceptance_models as accounting_acceptance_models
+from mhvp.accounting import credit_payable_models as accounting_credit_payable_models
 from mhvp.accounting import direct_debit_models
 from mhvp.accounting import models as accounting_models
 from mhvp.accounting import rent_invoice_models as accounting_rent_invoice_models
 from mhvp.accounting import tax_models as accounting_tax_models
 from mhvp.ai import models as ai_models
 from mhvp.automation import models as automation_models
+from mhvp.banking import ebics_models as banking_ebics_models
 from mhvp.banking import models as banking_models
 from mhvp.billing import advance_rule as billing_advance_rule
 from mhvp.billing import models as billing_models
@@ -20,6 +23,7 @@ from mhvp.contracts import deposit_settlement as deposit_settlement_models
 from mhvp.contracts import models as contract_models
 from mhvp.contracts import service_contracts as service_contract_models
 from mhvp.core import events, numbering, webhooks
+from mhvp.core.auth import mfa_policy as auth_mfa_policy
 from mhvp.documents import models as document_models
 from mhvp.handover import models as handover_models
 from mhvp.hoa import inspection as hoa_inspection_models
@@ -39,6 +43,7 @@ from mhvp.objektakte import models as objektakte_models
 from mhvp.platform import licensing as licensing_models
 from mhvp.platform import market_readiness as market_readiness_models
 from mhvp.platform import models as platform_models
+from mhvp.platform import scale_models as platform_scale_models
 from mhvp.portal import board as portal_board_models
 from mhvp.portal import forms as portal_form_models
 from mhvp.portal import models as portal_models
@@ -52,11 +57,15 @@ from mhvp.tickets import models as ticket_models
 from mhvp.workspace import models as workspace_models
 
 __all__ = [
+    "accounting_acceptance_models",
+    "accounting_credit_payable_models",
     "accounting_models",
     "accounting_rent_invoice_models",
     "accounting_tax_models",
     "ai_models",
+    "auth_mfa_policy",
     "automation_models",
+    "banking_ebics_models",
     "banking_models",
     "billing_advance_rule",
     "billing_models",
@@ -89,6 +98,7 @@ __all__ = [
     "objektakte_dms_models",
     "objektakte_models",
     "platform_models",
+    "platform_scale_models",
     "portal_board_models",
     "portal_form_models",
     "portal_models",

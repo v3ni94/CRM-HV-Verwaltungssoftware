@@ -81,12 +81,19 @@ DOCUMENTS: list[tuple[str, str]] = [
 ]
 
 
+GATE_CHECKLIST_REF = "docs/plans/GATE-CHECKLISTEN.md#g1"
+
+
 class G1AcceptanceItemIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: G1AcceptanceStatus
     confirmed_on: date | None = None
     confirmed_by_name: str | None = Field(default=None, max_length=200)
     note: str | None = Field(default=None, max_length=2000)
+    # AE03: responsible person (member of the tenant) and evidence (DMS document or reference).
+    responsible_user_id: uuid.UUID | None = None
+    evidence_document_id: uuid.UUID | None = None
+    evidence_ref: str | None = Field(default=None, max_length=500)
 
 
 class G1AcceptanceItemOut(BaseModel):
@@ -96,6 +103,11 @@ class G1AcceptanceItemOut(BaseModel):
     confirmed_on: date | None
     confirmed_by_name: str | None
     note: str | None
+    responsible_user_id: uuid.UUID | None = None
+    evidence_document_id: uuid.UUID | None = None
+    evidence_ref: str | None = None
+    # A passed item without evidence is shown as a gap; the status itself stays as recorded.
+    evidence_missing: bool = False
 
 
 class G1RequestIn(BaseModel):
@@ -135,10 +147,19 @@ class G1OpeningOut(BaseModel):
     requests: list[GateRequestSummary]
     can_request: bool
     documents: dict[str, str]
+    items_without_responsible: int = 0
+    items_without_evidence: int = 0
+    gate_checklist_ref: str = GATE_CHECKLIST_REF
 
 
 def _item_out(key: str, title: str, row: G1AcceptanceItem | None) -> G1AcceptanceItemOut:
+    has_evidence = bool(row and (row.evidence_document_id or (row.evidence_ref or "").strip()))
     return G1AcceptanceItemOut(
+        responsible_user_id=row.responsible_user_id if row else None,
+        evidence_document_id=row.evidence_document_id if row else None,
+        evidence_ref=row.evidence_ref if row else None,
+        evidence_missing=bool(row and row.status == G1AcceptanceStatus.PASSED.value)
+        and not has_evidence,
         item_key=key,
         title=title,
         status=row.status if row else G1AcceptanceStatus.OPEN.value,
@@ -208,7 +229,38 @@ async def overview(session: AsyncSession) -> G1OpeningOut:
         requests=[_summary(r) for r in requests],
         can_request=open_request is None and not gate_open,
         documents=dict(DOCUMENTS),
+        items_without_responsible=sum(
+            1 for i in [*cases, *manual] if i.responsible_user_id is None
+        ),
+        items_without_evidence=sum(1 for i in [*cases, *manual] if i.evidence_missing),
     )
+
+
+async def _check_refs(
+    session: AsyncSession, tenant_id: uuid.UUID, body: G1AcceptanceItemIn
+) -> None:
+    """Responsible person must be a member of the tenant, the document must be visible under
+    RLS (another tenant's document answers 404 like an unknown one)."""
+    from mhvp.documents.models import Document
+    from mhvp.platform.models import Membership
+
+    if body.responsible_user_id is not None:
+        member = await session.scalar(
+            select(Membership.id).where(
+                Membership.tenant_id == tenant_id, Membership.user_id == body.responsible_user_id
+            )
+        )
+        if member is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Die verantwortliche Person ist kein Mitglied dieses Mandanten.",
+            )
+    if body.evidence_document_id is not None:
+        doc = await session.scalar(
+            select(Document.id).where(Document.id == body.evidence_document_id)
+        )
+        if doc is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Nachweisdokument fehlt.")
 
 
 async def set_item(
@@ -228,6 +280,7 @@ async def set_item(
             ErrorCodes.VALIDATION,
             detail="Ein Ergebnis braucht den Namen der bestätigenden Person.",
         )
+    await _check_refs(session, tenant_id, body)
     row = await session.scalar(
         select(G1AcceptanceItem).where(G1AcceptanceItem.item_key == item_key)
     )
@@ -239,6 +292,9 @@ async def set_item(
     row.confirmed_on = body.confirmed_on if body.status is not G1AcceptanceStatus.OPEN else None
     row.confirmed_by_name = (body.confirmed_by_name or "").strip() or None
     row.note = body.note
+    row.responsible_user_id = body.responsible_user_id
+    row.evidence_document_id = body.evidence_document_id
+    row.evidence_ref = (body.evidence_ref or "").strip() or None
     row.updated_by = user_id
     await session.flush()
     await emit(
@@ -248,7 +304,16 @@ async def set_item(
         entity_type="g1_acceptance",
         entity_id=row.id,
         actor_user_id=user_id,
-        payload={"item_key": item_key, "status": row.status},
+        payload={
+            "item_key": item_key,
+            "status": row.status,
+            "responsible_user_id": str(row.responsible_user_id)
+            if row.responsible_user_id
+            else None,
+            "evidence_document_id": str(row.evidence_document_id)
+            if row.evidence_document_id
+            else None,
+        },
         changes={"status": {"old": old, "new": row.status}},
     )
     title = dict(ALL_CASES).get(item_key) or dict(MANUAL_ITEMS).get(item_key) or item_key

@@ -5,12 +5,14 @@ and mappings are stored as versioned templates per report type.
 """
 
 import uuid
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     Enum,
     ForeignKey,
     Index,
@@ -196,3 +198,30 @@ class ImportExternalKey(IdMixin, TimestampMixin, TenantMixin, Base):
     entity_type: Mapped[str] = mapped_column(String(40), nullable=False)
     external_key: Mapped[str] = mapped_column(String(100), nullable=False)
     entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+
+class ImportColumnAssignment(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Confirmed assignment of a file header to a target field per tenant and report type
+    (AE37, Q08-01, migration 0393).
+
+    Written only when a user confirms the mapping of a real file; the header heuristic
+    (``mhvp.imports.column_detection``) proposes it first for the next file of the same report
+    type. ``target_field`` NULL means the header is deliberately not imported. The key is the
+    normalised header (``csvtext.column_key``), so case, spacing and umlaut spelling do not
+    matter. Nothing is imported or changed by an assignment itself."""
+
+    __tablename__ = "import_column_assignment"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "report_type", "header_key", name="uq_import_column_assignment_header"
+        ),
+    )
+
+    report_type: Mapped[ReportType] = mapped_column(
+        _enum(ReportType, "import_report_type"), nullable=False
+    )
+    header_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    header: Mapped[str] = mapped_column(String(200), nullable=False)
+    target_field: Mapped[str | None] = mapped_column(String(63))
+    use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

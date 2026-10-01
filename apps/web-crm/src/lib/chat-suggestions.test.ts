@@ -99,6 +99,7 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/dokumente", area: "documents", subArea: null, entityType: null },
   { path: "/dokumente?q=Protokoll", area: "documents", subArea: "search", entityType: null },
   { path: "/dokumente/loeschvorschlaege", area: "documents", subArea: "deletionProposals", entityType: null },
+  { path: "/dokumente/papierkorb", area: "documents", subArea: "trash", entityType: null },
   { path: `/dokumente/${ID}`, area: "documents", subArea: "detail", entityType: "document" },
   { path: "/dms", area: "dms", subArea: null, entityType: null },
   { path: "/dms/suche", area: "dms", subArea: "search", entityType: null },
@@ -107,6 +108,10 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/einstellungen/mandant", area: "settings", subArea: "mandant", entityType: null },
   { path: "/einstellungen/buchhaltung/datev", area: "settings", subArea: "buchhaltung-datev", entityType: null },
   { path: "/einstellungen/schnittstellen/messdienstleister", area: "settings", subArea: "messdienstleister", entityType: null },
+  { path: "/einstellungen/fachliche-regeln", area: "settings", subArea: "fachliche-regeln", entityType: null },
+  { path: "/einstellungen/buchhaltung/periodensperren", area: "settings", subArea: "buchhaltung-periodensperren", entityType: null },
+  { path: "/einstellungen/textbausteine", area: "settings", subArea: "textbausteine", entityType: null },
+  { path: "/einstellungen/portal-rechtstexte", area: "settings", subArea: "portal-rechtstexte", entityType: null },
   { path: "/importe", area: "imports", subArea: null, entityType: null },
   { path: `/importe/${ID}`, area: "imports", subArea: "detail", entityType: "import_run" },
   { path: "/importe/abgleich", area: "imports", subArea: "reconcile", entityType: null },
@@ -117,6 +122,7 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/immoware", area: "immoware", subArea: null, entityType: null },
   { path: "/immoware/lernphase", area: "immoware", subArea: "learning", entityType: null },
   { path: "/plattform", area: "platform", subArea: null, entityType: null },
+  { path: "/plattform/abnahme", area: "platform", subArea: "acceptance", entityType: null },
   { path: "/plattform/freigabe-g5", area: "platform", subArea: "gateG5", entityType: null },
   { path: "/plattform/mietrecht", area: "platform", subArea: "rentLaw", entityType: null },
   { path: "/plattform/onboarding", area: "platform", subArea: "onboarding", entityType: null },
@@ -205,6 +211,11 @@ describe("suggestionsFor", () => {
     expect(suggestionsFor(chatPageContext("/buchhaltung"))).toEqual(["accountingOpenItems", "accountingJournal", "accountingExplain"]);
     expect(suggestionsFor(chatPageContext("/dokumente"))).toEqual(["documentFind", "documentSummarize", "documentsForProperty"]);
     expect(suggestionsFor(chatPageContext("/einstellungen/mandant"))).toEqual(["settingsExplain", "settingsWhere", "whereSettings"]);
+    expect(suggestionsFor(chatPageContext("/einstellungen/fachliche-regeln"))).toEqual(SUGGESTIONS["settings/fachliche-regeln"]);
+    expect(suggestionsFor(chatPageContext("/einstellungen/buchhaltung/periodensperren"))).toContain("periodLocksExplain");
+    expect(suggestionsFor(chatPageContext("/einstellungen/textbausteine"))).toContain("textBlocksExplain");
+    expect(suggestionsFor(chatPageContext("/einstellungen/portal-rechtstexte"))).toContain("legalTextsExplain");
+    expect(suggestionsFor(chatPageContext("/plattform/abnahme"))).toEqual(SUGGESTIONS["platform/acceptance"]);
     expect(suggestionsFor(chatPageContext("/start"))).toEqual(["todayOverview", "calendarToday", "deadlinesWeek", "ticketsOpen"]);
     expect(suggestionsFor(chatPageContext("/vermietung"))).toEqual(["lettingVacancies", "lettingRentIncreases", "lettingProspects"]);
     expect(suggestionsFor(chatPageContext("/version"))).toEqual(SUGGESTIONS.list);

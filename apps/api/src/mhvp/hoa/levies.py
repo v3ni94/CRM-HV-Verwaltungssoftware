@@ -460,7 +460,14 @@ async def _apply_amendment(
         diff = Decimal(unit["difference"])
         if diff == 0:
             continue
-        contract = await calc.owner_at(session, uuid.UUID(unit["unit_id"]), lv.difference_due)
+        resolution = await session.get(Resolution, lv.resolution_id) if lv.resolution_id else None
+        contract = await calc.allocation_owner(
+            session,
+            uuid.UUID(unit["unit_id"]),
+            default_day=lv.difference_due,
+            due_day=lv.difference_due,
+            resolution_day=resolution.decided_on if resolution else None,
+        )
         if contract is None:
             raise ProblemError(
                 ErrorCodes.CONFLICT,

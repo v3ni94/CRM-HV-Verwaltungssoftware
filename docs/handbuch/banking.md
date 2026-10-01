@@ -421,11 +421,106 @@ Unter Einstellungen, Bank, Täglicher Bankabruf lässt sich "Zustimmungsablauf t
 
 ## Bankzugang gesperrt oder Bank nicht erreichbar (FinTS)
 
-Meldet die Verbindung "Bankzugang gesperrt" (MHVP-BANK-0010), stammt die Sperre von der Bank
-(Rückmeldecode 3938). Die Plattform verwirft die gespeicherte PIN und startet keinen zweiten
-Versuch. Prüfreihenfolge: Online-Banking der Bank im Browser testen (dort entsperren oder
-die Bank anrufen), Freischaltung des FinTS- oder HBCI-Zugangs für den Nutzer prüfen,
-Anmeldename prüfen (oft nicht die Kontonummer), danach die Verbindung mit neuer PIN starten.
-Nach einer Bankfusion gelten gegebenenfalls neue Bankleitzahl, neuer Anmeldename oder eine
-neue Zugangsadresse; die Umstellungshinweise der Bank sind maßgeblich. Alte Adressen der
-Rechenzentren GAD und Fiducia werden seit 1.60.0 automatisch auf Atruvia umgestellt.
+Die Meldungen der Plattform zu diesen beiden Fällen sind deutsch und nennen die Prüfschritte
+in der richtigen Reihenfolge. Sie erscheinen in der Sitzung beim Verbinden, an der Karte der
+Verbindung und im Fehlerfeld der Schnittstelle.
+
+**Bankzugang gesperrt (MHVP-BANK-0010).** Die Sperre stammt von der Bank (Rückmeldecode
+3938 oder 9931). Die Plattform verwirft die gespeicherte PIN und startet keinen zweiten
+Versuch, weil jeder weitere Fehlversuch den Zugang erneut sperrt. Prüfschritte:
+
+1. Online-Banking der Bank im Browser mit denselben Zugangsdaten anmelden. Gelingt das
+   nicht, dort oder bei der Bank entsperren lassen.
+2. Prüfen, ob der Zugang für FinTS (HBCI) und Drittanbieter bei der Bank freigeschaltet ist.
+3. Anmeldename prüfen: oft nicht die Kontonummer (bei Volks- und Raiffeisenbanken meist
+   VR-NetKey oder Alias); nach einer Bankfusion kann er sich ändern.
+4. Die Sperre bei der Bank aufheben lassen (Service-Hotline oder Online-Banking).
+5. Danach an der Karte der Verbindung die PIN neu eingeben und "Erneut freigeben" wählen.
+
+**Bank nicht erreichbar (MHVP-BANK-0013).** Die Meldung nennt den Rechnernamen, der
+angesprochen wurde. Die gespeicherte PIN bleibt erhalten, weil der Fehler nicht an der PIN
+liegt. Prüfschritte:
+
+1. Später erneut versuchen (Wartungsarbeiten der Bank).
+2. Prüfen, ob die FinTS-Adresse noch aktuell ist. Nach einer Bankfusion oder dem Wechsel des
+   Rechenzentrums ändern sich Adresse und gegebenenfalls Bankleitzahl und Anmeldename; die
+   Umstellungshinweise der Bank sind maßgeblich. Alte Adressen der Rechenzentren GAD und
+   Fiducia werden seit 1.60.0 automatisch auf Atruvia umgestellt.
+3. Die aktuelle Adresse bei der Bank erfragen und an der Karte unter "FinTS-Adresse der
+   Bank" eintragen (nächster Abschnitt).
+4. Prüfen, ob der Server der Plattform ausgehende Verbindungen zu dieser Adresse zulässt
+   (Firewall, Proxy; Sache des Betreibers).
+
+## FinTS-Adresse der Bank ändern (Bankfusion)
+
+An jeder FinTS-Verbindung zeigt die Zeile "FinTS-Adresse der Bank" den verwendeten
+Rechnernamen und die Herkunft (aus der Institutsliste oder manuell eingetragen).
+
+1. "Adresse ändern" wählen (nach dem Fehler "Bank nicht erreichbar" heißt die Schaltfläche
+   "FinTS-Adresse prüfen").
+2. Die neue Adresse eintragen, sie muss mit `https://` beginnen und einen öffentlichen
+   Rechnernamen tragen. IP-Adressen, `localhost`, interne Domains und Zugangsdaten in der
+   Adresse werden abgelehnt.
+3. Die PIN für die neue Adresse eingeben. Sie ersetzt die gespeicherte PIN; so geht sie
+   nie ohne Ihr Zutun an eine neue Adresse. Recht: `banking:approve`.
+4. "Adresse speichern". Es wird kein Anmeldeversuch gestartet. Danach "Erneut freigeben"
+   wählen und die TAN eingeben; die Bank sendet nach dem Adresswechsel meist neue
+   Bankparameter, die zwischengespeicherten Parameter des alten Servers werden deshalb
+   verworfen.
+5. "Adresse der Institutsliste verwenden" nimmt die manuelle Adresse zurück. Ohne manuelle
+   Adresse gilt der Eintrag der aktuellen Institutsliste, nicht die beim Anlegen
+   gespeicherte Adresse.
+
+Ändert sich bei der Fusion auch die Bankleitzahl, die Verbindung mit den neuen Angaben neu
+anlegen. Die Pflege der Institutsliste selbst (Skript `scripts/update_fints_institutes.py`)
+beschreibt `docs/integrations/fints.md`.
+
+## Auszahlung von Guthaben aus Abrechnungen (AE22)
+
+Unter **Bank, Zahllauf** zeigt der Abschnitt **Auszahlung von Guthaben aus Abrechnungen** die
+auszahlbaren Guthaben: Guthaben aus der gebuchten Betriebskostenabrechnung, Auszahlungen aus
+ausgegebenen Eigentümerabrechnungen und freigegebene Kautionsabrechnungen. Solange die
+Buchungsregel nicht festgelegt ist (offene Frage Q01-01), steht der Schalter auf **Aus**: die
+Guthaben werden nur angezeigt.
+
+1. Variante wählen (Einstellungen, Recht Mandanteneinstellungen): **Nebenbuchposten ohne
+   Umbuchung** (nur Mietabrechnung) oder **Umbuchung auf Kreditorenkonto** mit den vom
+   Betreiber hinterlegten Konten. Die Freigabe durch eine zweite Person ist standardmäßig an.
+2. **Vorschlagen** legt den Vorschlag an. Hinweise zu offenen Forderungen des Vertrags sperren
+   nicht; eine Verrechnung erfolgt nie automatisch.
+3. **Freigeben** (zweite Person, nur bei geöffnetem G3) legt den Verbindlichkeitsposten an
+   oder schreibt den Umbuchungsentwurf, der danach in der Buchhaltung gebucht wird.
+4. **Zahlungsauftrag** wählt Empfängerkonto (freigegebene Bankverbindung der Vertragspartei)
+   und Auftraggeberkonto (Kautionsrückzahlung nur vom Kautionskonto) und legt einen
+   Auftragsentwurf an (G2 und G3). Der Auftrag braucht wie jeder Auftrag zwei Freigaben.
+5. **Zurücknehmen** mit Grund: vor der Freigabe jederzeit; ein Umbuchungsentwurf wird
+   verworfen, eine gebuchte Umbuchung storniert (G1). Ein Nebenbuchposten wird über den Storno
+   der Ergebnisbuchung geschlossen. Beauftragte oder bezahlte Posten lassen sich nicht
+   zurücknehmen; dann zuerst den Auftrag verwerfen oder die Zahlung zurückbuchen.
+
+## EBICS: Teilnehmer einrichten und Kontoauszüge abrufen (Grundgerüst, AE23)
+
+Ort: Bank, Abschnitt "EBICS (Grundgerüst)". Der Abschnitt zeigt, ob EBICS für den Mandanten
+eingeschaltet ist und ob eine Übertragung zur Bank installiert ist. Solange die Übertragung
+fehlt (Hinweis im Abschnitt, offene Frage AE23-01), lassen sich Teilnehmer und Schlüssel
+vorbereiten, an die Bank wird nichts gesendet.
+
+1. EBICS einschalten und die Variante des Signaturschlüssels wählen. Standard ist "extern bei
+   der unterschreibenden Person": Die Plattform speichert dann nur den öffentlichen
+   Schlüssel. "Von der Plattform erzeugt" erst nach Entscheidung des Betreibers (S16-03-02).
+2. Teilnehmer mit den Angaben aus dem Zugangsbrief der Bank anlegen (Host-ID, Partner-ID,
+   Teilnehmer-ID, EBICS-URL mit https, Version, Signaturverfahren, Schlüssellänge; Standard
+   4096 Bit).
+3. Den Schritten im Abschnitt folgen: Schlüssel erzeugen, Signaturschlüssel hinterlegen oder
+   INI extern bestätigen, INI und HIA senden, Freischaltung mit Datum bestätigen,
+   Bankschlüssel abholen. Die Hash-Werte vom Bankbrief gibt eine zweite Person ein; weicht ein
+   Wert ab, bleibt der Teilnehmer gesperrt.
+4. Danach "Kontoauszüge abrufen" mit optionalem Zeitraum. Umsätze werden wie beim
+   Datei-Import übernommen (keine Dubletten bei erneutem Abruf). Auszüge für Konten, die nicht
+   als Bankkonto angelegt sind, werden übersprungen und im Ergebnis gemeldet.
+5. Schlüsselwechsel und Sperre unter "Schlüsselwechsel und Sperre" mit Grund. Nach einem
+   Wechsel ist die Initialisierung bei der Bank erneut nötig. Eine Sperre ist endgültig; die
+   Bank zusätzlich über den vereinbarten Weg informieren.
+
+Zahlungen werden über EBICS nicht eingereicht (Freigabetor G2). Ausführliche Schritte:
+Runbook `docs/runbooks/ebics-setup.md`, Abschnitt 9.

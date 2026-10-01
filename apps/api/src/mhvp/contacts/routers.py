@@ -14,6 +14,7 @@ from mhvp.contacts import access_export, schemas, services
 from mhvp.contacts.models import (
     Consent,
     Contact,
+    ContactAccessExportSetting,
     ContactBankAccount,
     ContactBankAccountChange,
     ContactMandateStatus,
@@ -52,6 +53,8 @@ CREATE = require_permission("contacts:create")
 UPDATE = require_permission("contacts:update")
 DELETE = require_permission("contacts:delete")
 EXPORT = require_permission("contacts:export")
+SETTINGS_READ = require_permission("tenant_settings:read")
+SETTINGS_UPDATE = require_permission("tenant_settings:update")
 APPROVE = require_permission("contacts:approve")
 
 
@@ -751,6 +754,63 @@ async def download_access_export(
 
 
 @router.get(
+    "/contact-access-export-settings",
+    summary="Auskunftsexport: Umfang Dritter und interne Vermerke (Mandantenschalter)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_access_export_settings(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> schemas.ContactAccessExportSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        options = await access_export.current_options(session)
+        return schemas.ContactAccessExportSettingsOut(
+            third_party_scope=options.third_party_scope,
+            include_internal_notes=options.include_internal_notes,
+        )
+
+
+@router.put(
+    "/contact-access-export-settings",
+    summary="Auskunftsexport: Umfang Dritter und interne Vermerke setzen",
+)
+async def put_access_export_settings(
+    body: schemas.ContactAccessExportSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS_UPDATE),
+) -> schemas.ContactAccessExportSettingsOut:
+    """Default: other persons by role only, internal notes withheld. A wider scope is a legal
+    decision (OPEN_QUESTIONS AC07-01); it applies to exports prepared afterwards, every
+    prepared export keeps the scope it was prepared with."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(ContactAccessExportSetting))
+        if row is None:
+            row = ContactAccessExportSetting(tenant_id=principal.tenant_id)
+            session.add(row)
+            await session.flush()
+        before = {
+            "third_party_scope": row.third_party_scope,
+            "include_internal_notes": row.include_internal_notes,
+        }
+        row.third_party_scope = body.third_party_scope
+        row.include_internal_notes = body.include_internal_notes
+        row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact_access_export_setting.updated",
+            entity_type="contact_access_export_setting",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"before": before, "after": body.model_dump()},
+        )
+        return schemas.ContactAccessExportSettingsOut(
+            third_party_scope=body.third_party_scope,
+            include_internal_notes=body.include_internal_notes,
+        )
+
+
+@router.get(
     "/contacts/{contact_id}/sepa-mandates",
     summary="SEPA-Mandate eines Kontakts (kompakt)",
     dependencies=[Depends(strict_query)],
@@ -1408,9 +1468,55 @@ async def revoke_consent(
             entity_type="contact",
             entity_id=consent.contact_id,
             actor_user_id=principal.user_id,
-            payload={"kind": consent.kind.value},
+            payload={"kind": consent.kind.value, "record_type": consent.record_type},
         )
         return schemas.ConsentOut.model_validate(consent, from_attributes=True)
+
+
+@router.post(
+    "/contacts/{contact_id}/objections", status_code=201, summary="Widerspruch erfassen (AE34)"
+)
+async def add_objection(
+    contact_id: uuid.UUID,
+    body: schemas.ContactObjectionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.ConsentOut:
+    """Objection to a processing on legitimate interest (e-mail delivery, data sharing,
+    marketing). It blocks the processing for this contact as long as it is not revoked
+    (``POST /consents/{id}/revoke``); a consent basis is not affected."""
+    from mhvp.contacts import consent_rules
+
+    now = datetime.now(UTC)
+    if body.kind not in consent_rules.OBJECTION_KINDS:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Für diese Art ist kein Widerspruch vorgesehen."
+        )
+    if body.received_at is not None and body.received_at > now:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Der Eingang liegt in der Zukunft.")
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        row = Consent(
+            tenant_id=principal.tenant_id,
+            contact_id=contact_id,
+            kind=body.kind,
+            granted_at=body.received_at or now,
+            source=body.source,
+            document_id=body.document_id,
+            record_type="objection",
+        )
+        session.add(row)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="consent.objection_recorded",
+            entity_type="contact",
+            entity_id=contact_id,
+            actor_user_id=principal.user_id,
+            payload={"kind": body.kind.value, "source": body.source},
+        )
+        return schemas.ConsentOut.model_validate(row, from_attributes=True)
 
 
 @router.get(
@@ -1459,6 +1565,127 @@ async def put_consent_policy(
             payload={"before": before, "after": value},
         )
         return schemas.ContactConsentPolicyOut(**value)
+
+
+def _legal_basis_out(policy: Any) -> schemas.ConsentLegalBasisListOut:
+    from mhvp.contacts import consent_rules
+
+    items = []
+    for purpose in consent_rules.PURPOSES:
+        entry = policy.legal_basis.get(purpose)
+        basis = policy.basis_for(purpose)
+        items.append(
+            schemas.ConsentLegalBasisOut(
+                purpose=purpose,
+                basis=basis,
+                origin=policy.basis_origin(purpose),
+                allowed_bases=list(consent_rules.ALLOWED_BASES[purpose]),
+                note=entry.note if entry else None,
+                set_at=entry.set_at if entry else None,
+                set_by=entry.set_by if entry else None,
+                consent_required=basis == "consent",
+            )
+        )
+    return schemas.ConsentLegalBasisListOut(items=items)
+
+
+@router.get(
+    "/consent-legal-basis",
+    summary="Rechtsgrundlage je Verarbeitung (AE34)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_consent_legal_basis(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> schemas.ConsentLegalBasisListOut:
+    """Effective legal basis per processing purpose with its origin (register entry, legacy
+    switch of the consent policy or default) and the variants the platform offers."""
+    from mhvp.contacts import consent_rules
+
+    async with tenant_tx(request, principal) as session:
+        return _legal_basis_out(await consent_rules.load_policy(session))
+
+
+@router.put("/consent-legal-basis/{purpose}", summary="Rechtsgrundlage einer Verarbeitung setzen")
+async def put_consent_legal_basis(
+    purpose: Literal["email_delivery", "data_sharing", "marketing", "portal_terms"],
+    body: schemas.ConsentLegalBasisIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ConsentLegalBasisListOut:
+    """Maintains the legal basis of one purpose (AE34, OPEN_QUESTIONS AC06-01 to AC06-03).
+    Which basis is tenable is the operator's decision with legal advice; the default
+    ``consent`` is the restrictive variant. Another basis needs a justification. The change
+    is recorded as an event with the previous value."""
+    from mhvp.contacts import consent_rules
+    from mhvp.platform.models import TenantSettings
+
+    error = consent_rules.validate_basis(purpose, body.basis, body.note)
+    if error:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=error)
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        before = (row.sources or {}).get(consent_rules.LEGAL_BASIS_KEY, {}).get(purpose)
+        entry = consent_rules.BasisEntry(
+            basis=body.basis,
+            note=(body.note or "").strip() or None,
+            set_at=datetime.now(UTC).isoformat(),
+            set_by=str(principal.user_id) if principal.user_id else None,
+        )
+        row.sources = {
+            **(row.sources or {}),
+            consent_rules.LEGAL_BASIS_KEY: consent_rules.register_value(
+                row.sources, purpose, entry
+            ),
+        }
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="consent_legal_basis.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"purpose": purpose, "before": before, "after": entry.as_dict()},
+        )
+        return _legal_basis_out(consent_rules.policy_from(row.sources))
+
+
+@router.delete(
+    "/consent-legal-basis/{purpose}", summary="Rechtsgrundlage einer Verarbeitung zurücksetzen"
+)
+async def reset_consent_legal_basis(
+    purpose: Literal["email_delivery", "data_sharing", "marketing", "portal_terms"],
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ConsentLegalBasisListOut:
+    """Removes the register entry of the purpose; the legacy switch of the consent policy or
+    the default ``consent`` applies again. Recorded as an event with the previous value."""
+    from mhvp.contacts import consent_rules
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        register = dict((row.sources or {}).get(consent_rules.LEGAL_BASIS_KEY) or {})
+        before = register.pop(purpose, None)
+        if before is not None:
+            row.sources = {**(row.sources or {}), consent_rules.LEGAL_BASIS_KEY: register}
+            row.version += 1
+            row.updated_by = principal.user_id
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="consent_legal_basis.reset",
+                entity_type="tenant_settings",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={"purpose": purpose, "before": before},
+            )
+        return _legal_basis_out(consent_rules.policy_from(row.sources))
 
 
 # Parties -------------------------------------------------------------------------------

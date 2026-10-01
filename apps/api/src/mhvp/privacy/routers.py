@@ -4,20 +4,21 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.config import Settings
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Tenant
-from mhvp.privacy import erasure, register_doc
+from mhvp.privacy import config_sources, erasure, register_doc
 from mhvp.privacy.models import (
     PrivacyDeletionProfile,
     PrivacyErasureRequest,
@@ -32,6 +33,9 @@ APPROVE = require_permission("privacy:approve")
 RegisterKind = Literal["processor", "sub_processor", "processing_activity", "responsibility"]
 AvvStatus = Literal["none", "requested", "confirmed", "not_required"]
 DataType = Literal["contact", "portal_account", "communication", "ticket", "other"]
+ThirdCountryStatus = Literal["open", "no", "yes"]
+ResponsibilityActor = Literal["gdwe", "verwalter", "betreiber"]
+ResponsibilityRole = Literal["open", "controller", "joint_controller", "processor", "not_involved"]
 
 
 class PrivacyRegisterIn(BaseModel):
@@ -43,8 +47,13 @@ class PrivacyRegisterIn(BaseModel):
         Literal["verantwortlicher", "gdwe", "verwalter", "betreiber", "auftragsverarbeiter"] | None
     ) = None
     purpose: str | None = None
-    data_categories: list[str] = Field(default_factory=list, max_length=50)
-    data_subjects: list[str] = Field(default_factory=list, max_length=50)
+    # Items are VARCHAR(100) in the table: longer values answer 422 instead of a database error.
+    data_categories: list[Annotated[str, Field(max_length=100)]] = Field(
+        default_factory=list, max_length=50
+    )
+    data_subjects: list[Annotated[str, Field(max_length=100)]] = Field(
+        default_factory=list, max_length=50
+    )
     recipients: str | None = None
     third_country: bool = False
     third_country_note: str | None = None
@@ -55,12 +64,48 @@ class PrivacyRegisterIn(BaseModel):
     legal_review_status: Literal["open", "reviewed"] = "open"
     legal_reviewed_on: date | None = None
     active: bool = True
+    # AE32 (S711-10): maintenance fields, all open unless the operator enters them. Without
+    # ``third_country_status`` the status follows ``third_country`` (true: yes, false: open);
+    # only an explicit ``no`` records that no third country transfer takes place.
+    third_country_status: ThirdCountryStatus | None = None
+    third_country_countries: str | None = Field(default=None, max_length=300)
+    legal_basis: str | None = Field(default=None, max_length=4000)
+    responsibilities: dict[ResponsibilityActor, ResponsibilityRole] | None = None
+    responsibility_note: str | None = Field(default=None, max_length=4000)
+    processor_ids: list[uuid.UUID] | None = Field(default=None, max_length=100)
 
 
 class PrivacyRegisterOut(PrivacyRegisterIn):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    third_country_status: ThirdCountryStatus
+    responsibilities: dict[str, str]  # type: ignore[assignment]
+    processor_ids: list[uuid.UUID]
+    source_key: str | None = None
+    source_detail: str | None = None
+
+
+class PrivacyConfigSourceOut(BaseModel):
+    key: str
+    name: str
+    service: str
+    active: bool
+    scope: Literal["tenant", "platform"]
+    detail: str
+    entry_id: uuid.UUID | None
+
+
+class PrivacyConfigSyncIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    include_inactive: bool | None = None
+
+
+class PrivacyConfigSyncOut(BaseModel):
+    created: list[PrivacyRegisterOut]
+    updated: list[PrivacyRegisterOut]
+    skipped_inactive: int
 
 
 class PrivacyDeletionProfileIn(BaseModel):
@@ -119,6 +164,61 @@ def _nf() -> ProblemError:
     return ProblemError(ErrorCodes.NOT_FOUND)
 
 
+def _settings(request: Request) -> Settings:
+    settings: Settings = request.app.state.settings
+    return settings
+
+
+async def _register_values(
+    session: AsyncSession, body: PrivacyRegisterIn, entry_id: uuid.UUID | None
+) -> dict[str, object]:
+    """Column values of a register entry; checks the AE32 maintenance fields."""
+    data = body.model_dump()
+    status = data.pop("third_country_status") or ("yes" if body.third_country else "open")
+    data["third_country_status"] = status
+    data["third_country"] = status == "yes"
+    roles = {str(k): str(v) for k, v in (data.pop("responsibilities") or {}).items()}
+    pids = list(dict.fromkeys(data.pop("processor_ids") or []))
+    if body.kind != "processing_activity" and (roles or pids):
+        raise ProblemError(
+            ErrorCodes.PRIVACY_REGISTER_INVALID,
+            detail=(
+                "Rollen und Auftragsverarbeiter werden nur bei Verarbeitungstätigkeiten erfasst."
+            ),
+        )
+    if pids:
+        found = set(
+            await session.scalars(
+                select(PrivacyRegisterEntry.id).where(
+                    PrivacyRegisterEntry.id.in_(pids),
+                    PrivacyRegisterEntry.kind.in_(("processor", "sub_processor")),
+                )
+            )
+        )
+        if entry_id in pids or found != set(pids):
+            raise ProblemError(
+                ErrorCodes.PRIVACY_REGISTER_INVALID,
+                detail="Mindestens ein zugeordneter Auftragsverarbeiter ist nicht im Register.",
+            )
+    data["responsibilities"] = roles
+    data["processor_ids"] = pids
+    return data
+
+
+async def _register_rows(session: AsyncSession) -> list[PrivacyRegisterEntry]:
+    return list(
+        await session.scalars(
+            select(PrivacyRegisterEntry).order_by(
+                PrivacyRegisterEntry.kind, PrivacyRegisterEntry.name
+            )
+        )
+    )
+
+
+async def _tenant(session: AsyncSession, principal: TenantPrincipal) -> Tenant | None:
+    return await session.get(Tenant, principal.tenant_id)
+
+
 @router.get(
     "/privacy/register",
     summary="Register der Auftragsverarbeiter und Verarbeitungen",
@@ -141,8 +241,9 @@ async def create_register(
     body: PrivacyRegisterIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> PrivacyRegisterOut:
     async with tenant_tx(request, principal) as session:
+        values = await _register_values(session, body, None)
         row = PrivacyRegisterEntry(
-            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+            tenant_id=principal.tenant_id, created_by=principal.user_id, **values
         )
         session.add(row)
         await session.flush()
@@ -168,7 +269,7 @@ async def update_register(
         row = await session.get(PrivacyRegisterEntry, entry_id)
         if row is None:
             raise _nf()
-        for key, value in body.model_dump().items():
+        for key, value in (await _register_values(session, body, entry_id)).items():
             setattr(row, key, value)
         row.updated_by = principal.user_id
         await session.flush()
@@ -182,20 +283,109 @@ async def processing_records(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> PrivacyRecordsDraft:
     async with tenant_tx(request, principal) as session:
-        tenant = await session.get(Tenant, principal.tenant_id)
-        rows = list(
-            await session.scalars(
-                select(PrivacyRegisterEntry).order_by(
-                    PrivacyRegisterEntry.kind, PrivacyRegisterEntry.name
-                )
-            )
+        tenant = await _tenant(session, principal)
+        rows = await _register_rows(session)
+        detected = await config_sources.detect(
+            session, _settings(request), tenant.slug if tenant else ""
         )
-        text = register_doc.render(tenant.name if tenant else "", rows, datetime.now(UTC).date())
+        text = register_doc.render(
+            tenant.name if tenant else "", rows, datetime.now(UTC).date(), detected
+        )
         return PrivacyRecordsDraft(
             title="Verzeichnis von Verarbeitungstätigkeiten",
             status="Entwurf",
             review_notice=register_doc.REVIEW_NOTICE,
             markdown=text,
+        )
+
+
+@router.get(
+    "/privacy/processing-records/pdf",
+    summary="Verarbeitungsverzeichnis als PDF-Entwurf",
+    dependencies=[Depends(strict_query)],
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def processing_records_pdf(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        tenant = await _tenant(session, principal)
+        rows = await _register_rows(session)
+        detected = await config_sources.detect(
+            session, _settings(request), tenant.slug if tenant else ""
+        )
+        today = datetime.now(UTC).date()
+        pdf = register_doc.render_pdf(tenant.name if tenant else "", rows, today, detected)
+    filename = f"verarbeitungsverzeichnis-entwurf-{today.isoformat()}.pdf"
+    return Response(
+        pdf,
+        media_type="application/pdf",
+        headers={"content-disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/privacy/register/config-sources",
+    summary="Dienstleister laut Konfiguration (Einstellungen und Konnektoren)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_config_sources(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[PrivacyConfigSourceOut]:
+    async with tenant_tx(request, principal) as session:
+        tenant = await _tenant(session, principal)
+        detected = await config_sources.detect(
+            session, _settings(request), tenant.slug if tenant else ""
+        )
+        linked = {e.source_key: e.id for e in await _register_rows(session) if e.source_key}
+        return [
+            PrivacyConfigSourceOut(
+                key=d.key,
+                name=d.name,
+                service=d.service,
+                active=d.active,
+                scope="platform" if d.scope == "platform" else "tenant",
+                detail=d.detail_text,
+                entry_id=linked.get(d.key),
+            )
+            for d in detected
+        ]
+
+
+@router.post(
+    "/privacy/register/config-sources/sync",
+    summary="Erkannte Dienstleister als Registereinträge übernehmen (Pflegefelder bleiben offen)",
+)
+async def sync_config_sources(
+    body: PrivacyConfigSyncIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> PrivacyConfigSyncOut:
+    async with tenant_tx(request, principal) as session:
+        tenant = await _tenant(session, principal)
+        detected = await config_sources.detect(
+            session, _settings(request), tenant.slug if tenant else ""
+        )
+        result = await config_sources.sync(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            sources=detected,
+            include_inactive=bool(body.include_inactive),
+        )
+        for row in result.created:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="privacy.register_created",
+                entity_type="privacy_register_entry",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={"source_key": row.source_key},
+            )
+        return PrivacyConfigSyncOut(
+            created=[PrivacyRegisterOut.model_validate(r) for r in result.created],
+            updated=[PrivacyRegisterOut.model_validate(r) for r in result.updated],
+            skipped_inactive=result.skipped_inactive,
         )
 
 

@@ -317,3 +317,55 @@ blocks `POST /imports/csv`. Rule: `docs/rules/M11-02-csv-import.md` (Nachtrag V1
 ## Abgleich der Zustimmung beim Anbieter (T03-02, Y02)
 
 `tasks.sync_consent_from_provider` und der Beat-Job `mhvp.banking.consent_provider_sync` (07:00) gleichen `FinApiConnection.consent_valid_until` täglich mit der Anbieterantwort ab (`parse_consent_valid_until`), schreiben nur bei Änderung und emittieren `banking.consent_synced`. Schalter je Mandant: `tenant_settings.sources["bank_consent_sync"]` (Standard aus, API `/banking/consent-sync/settings`). Regel: `docs/rules/M11-08-consent-erneuerung.md` (Nachtrag Y02).
+
+## Automatikschalter mit Vier Augen und Vergleichslauf (AE03, Welle 16)
+
+`automation_switch.py`: `GET /banking/automation/comparison` (Bericht Automatik gegen manuelle
+Buchung aus `posting_decision`, bucht nichts), `GET/POST /banking/automation/switch-requests`
+und `POST /banking/automation/switch-requests/{id}/approve|reject`. Einschalten nur bei offener
+G1, Antrag und Freigabe durch verschiedene Personen (`MHVP-GATE-0002`), G1 zu ergibt
+`MHVP-GATE-0001`. Tabelle `auto_posting_switch_request` (Migration 0359, RLS).
+`PUT /banking/automation` bleibt unverändert (API, außerhalb der BFF).
+
+## FinTS: Prüfschritte, Adresse je Verbindung, Institutsliste (AE26, Welle 16)
+
+`fints.py`: `locked_detail` (MHVP-BANK-0010) und `unavailable_detail` (MHVP-BANK-0013) liefern
+deutsche Meldungen mit nummerierten Prüfschritten; der englische Text von python-fints wird nicht
+mehr durchgereicht. `_is_connection_failure` erkennt Verbindungsfehler über die
+Klassenhierarchie und die Ursachenkette (requests SSLError, Timeout, von python-fints umhüllte
+Fehler), `problem_for_exception(exc, fints_url=...)` nennt den kontaktierten Rechnernamen.
+`PATCH /banking/fints/connections/{id}` setzt `fints_connection.fints_url_manual` (Migration
+0382) oder mit `fints_url: null` zurück; Eingabe geprüft durch `validate_manual_fints_url`
+(https, öffentlicher Rechnername, keine IP-Adresse, keine Zugangsdaten), die PIN wird mit der
+Adresse erneut eingegeben, kein Dialogstart, Ereignis `fints_connection.url_changed`.
+`resolve_fints_url` bestimmt die verwendete Adresse: manuell, sonst aktuelle Institutsliste,
+sonst gespeicherte Adresse. Die Verbindungsliste liefert `fints_url`, `fints_url_manual` und
+`fints_url_list`. Die Institutsliste pflegt `scripts/update_fints_institutes.py` (Trockenlauf,
+`--apply`); Regel `docs/rules/M11-07-fints-pin-tan.md`.
+
+## EBICS-Grundgerüst: Teilnehmer, Schlüssel, Abruf C53 (AE23, Welle 16)
+
+Rule M11-11 (`docs/rules/M11-11-ebics-connector.md`), migration 0379, runbook
+`docs/runbooks/ebics-setup.md` section 9, integration notes `docs/integrations/ebics.md`.
+
+- `ebics_models`: `ebics_tenant_setting` (switch, default off; signature key variant
+  `external` default, `server` prepared for decision S16-03-02), `ebics_subscriber` (host,
+  partner and user id, URL, version 2.5 or 3.0, A005/A006, key length, state),
+  `ebics_key` (public keys of subscriber and bank, private keys only `EncryptedText`, rotation
+  by retiring rows with the private key wiped), `ebics_order` (log of INI, HIA, HPB, C53).
+- `ebics_keys`: RSA generation with `cryptography`, length policy from the DK Krypto
+  LifeCycle V1.4 (2048 bits until 31.10.2027, 4096 from 01.11.2027, default 4096), public key
+  validation, exponent and modulus for the letter data, internal SHA-256.
+- `ebics_transport`: protocol `EbicsTransport` (`send_ini`, `send_hia`, `fetch_bank_keys`,
+  `download`, `letter_hash`); production default `UnavailableEbicsTransport` answers
+  `MHVP-BANK-0050` (no specification conform implementation installed, AE23-01). Tests
+  register `tests/ebics_fake.py` via `set_transport_factory` (no network).
+- `ebics_connector`: C53 (BTF `EOP/DE//camt.053/ZIP`, DFÜ-Abkommen Anlage 3 V26.11, 9.2.1)
+  unpacked with size limits, every XML member parsed as camt.053; `EbicsConnector` on the
+  `BankConnector` seam (only `fetch_transactions` reaches the bank, payments refused).
+- `ebics_routers` (`/api/v1/banking/ebics`): status, settings, subscribers, keys, signature
+  key upload, INI (also confirmed as done elsewhere), HIA, letter data, activation, HPB, bank
+  key verification by a second person, suspension, statement download imported through
+  `services.import_file` inside one savepoint (no partial import), raw XML archived (M11-07).
+- Error codes `MHVP-BANK-0050` to `0056`. `EbicsSubmitter` (payments) is unchanged and keeps
+  refusing (G2).

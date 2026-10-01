@@ -1301,3 +1301,5 @@ Unterschrift Betreiber: ____________________________
 | Softwarestand (Commit, Version) | |
 | Datum (TT.MM.JJJJ) | |
 | Unterschrift Betreiber | |
+
+**Nachtrag 01.10.2026 (AE01):** Sollwerte, Freigabe durch die fachkundige Person und Ergebnisse je Fall können im Abnahmeregister (Plattform, Abnahmeregister Anhang D) erfasst werden; `GET /api/v1/accounting/acceptance/export.md` erzeugt dieses Protokoll aus dem System.

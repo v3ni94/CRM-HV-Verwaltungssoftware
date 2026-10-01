@@ -140,13 +140,17 @@ async def create_result_drafts(
         )
     await ensure_superseded_results_reversed(session, statement)
     await acc.sync_debtor_accounts(session, ledger)
+    from mhvp.billing import deadline as deadline_policy
+
+    block_late = await deadline_policy.policy(session, statement.tenant_id) == "block_claims"
     ids: list[str] = list(statement.result_entry_ids)
     for row in snapshot_rows(snapshot):
         balance = Decimal(row["balance"])
         if balance == 0:
             continue
         if (
-            balance > 0
+            block_late
+            and balance > 0
             and row.get("late_claim_blocked")
             and not statement.deadline_exception_effective
         ):
@@ -213,8 +217,91 @@ async def create_result_drafts(
         )
         await acc.write_draft(session, ledger, entry, lines, [])
         ids.append(str(entry.id))
+    ids.extend(await _offset_drafts(session, statement, snapshot, ledger, booking_date, user_id))
     statement.result_entry_ids = ids
     await session.flush()
+    return ids
+
+
+async def _offset_drafts(
+    session: AsyncSession,
+    statement: Statement,
+    snapshot: StatementSnapshot,
+    ledger: Any,
+    booking_date: date,
+    user_id: uuid.UUID | None,
+) -> list[str]:
+    """Variant 1 of the open advance switch (AE15, D24, AC10-01): one draft per contract that
+    credits the debtor with the open advance items of the period and settles them (settlement
+    plan), the counter account of the advance posting is debited. Only rows calculated with
+    ``offset_reversal`` carry ``offset_items``; the default writes nothing. Drafts only, the
+    caller is behind G3; posted records stay untouched (B08)."""
+    from mhvp.accounting import services as acc
+    from mhvp.accounting.models import EntryKind, EntrySource, JournalEntry, LedgerAccount
+    from mhvp.contracts.models import Contract, DebtorAccountReservation
+
+    ids: list[str] = []
+    for row in snapshot_rows(snapshot):
+        items = row.get("offset_items") or []
+        if row.get("open_advance_mode") != "offset_reversal" or not items:
+            continue
+        key = f"rent-statement-offset:{statement.id}:{row['contract_id']}"
+        if await session.scalar(
+            select(JournalEntry.id).where(
+                JournalEntry.ledger_id == ledger.id, JournalEntry.idempotency_key == key
+            )
+        ):
+            continue
+        contract = await session.get(Contract, uuid.UUID(str(row["contract_id"])))
+        reservation = (
+            await session.get(DebtorAccountReservation, contract.debtor_account_id)
+            if contract
+            else None
+        )
+        debtor = (
+            await session.scalar(
+                select(LedgerAccount).where(
+                    LedgerAccount.ledger_id == ledger.id,
+                    LedgerAccount.number == reservation.number,
+                )
+            )
+            if reservation
+            else None
+        )
+        if contract is None or debtor is None or any(not i["counter_account_id"] for i in items):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=f"Verrechnung offener Vorauszahlungen Einheit {row['unit_number']}: "
+                "Debitor oder Gegenkonto fehlt.",
+            )
+        lines = []
+        for i in items:
+            amount = Decimal(i["remaining"])
+            lines.append(acc.LineIn(uuid.UUID(i["counter_account_id"]), amount, ZERO))
+            lines.append(acc.LineIn(debtor.id, ZERO, amount))
+        entry = JournalEntry(
+            tenant_id=statement.tenant_id,
+            created_by=user_id,
+            ledger_id=ledger.id,
+            booking_date=booking_date,
+            accrual_date=statement.period_to,
+            text=(
+                f"Verrechnung offener Vorauszahlungen mit Betriebskostenabrechnung "
+                f"{statement.period_from.year} Einheit {row['unit_number']}"
+            )[:500],
+            kind=EntryKind.STATEMENT_RESULT,
+            contract_id=contract.id,
+            source=EntrySource.STATEMENT,
+            idempotency_key=key,
+        )
+        await acc.write_draft(
+            session,
+            ledger,
+            entry,
+            lines,
+            [{"open_item_id": i["open_item_id"], "amount": i["remaining"]} for i in items],
+        )
+        ids.append(str(entry.id))
     return ids
 
 

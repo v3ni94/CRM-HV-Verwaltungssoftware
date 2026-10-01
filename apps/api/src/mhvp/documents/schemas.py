@@ -76,6 +76,7 @@ class DocumentDeletionChecklistItemOut(BaseModel):
     """One target of a deletion (AC07, GA08-08)."""
 
     target: Literal[
+        "trash",
         "index",
         "original",
         "mirror_paperless",
@@ -85,18 +86,52 @@ class DocumentDeletionChecklistItemOut(BaseModel):
         "thumbnails",
         "backup",
     ]
-    status: Literal["done", "open", "held", "not_applicable", "out_of_scope"]
+    status: Literal["done", "open", "held", "pending", "not_applicable", "out_of_scope"]
     detail: str | None
 
 
 class DocumentDeletionChecklistOut(BaseModel):
-    """Deletion checklist per target; ``held`` when a restored document is under a hold."""
+    """Deletion checklist per target; ``held`` when a restored document is under a hold,
+    ``in_trash`` while the document waits in the trash (AE33)."""
 
     document_id: uuid.UUID
     deleted_at: datetime
-    status: Literal["done", "open", "held"]
+    status: Literal["done", "open", "held", "in_trash"]
     items: list[DocumentDeletionChecklistItemOut]
     mirror_jobs_queued: int = 0
+    purge_at: datetime | None = None
+
+
+class DocumentTrashEntryOut(BaseModel):
+    """Document in the trash (AE33, AC07-03); ``held`` when a hold keeps it from deletion."""
+
+    document_id: uuid.UUID
+    title: str
+    filename: str
+    category_id: uuid.UUID | None
+    deleted_at: datetime
+    deleted_by: uuid.UUID | None
+    purge_at: datetime
+    days_left: int
+    status: Literal["in_trash", "due", "held"]
+    blocker: str | None
+
+
+class DocumentTrashActionIn(_In):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class DocumentTrashSettingsOut(BaseModel):
+    """Trash switch of the tenant; ``proposed_days`` is a proposal, not a legal period."""
+
+    enabled: bool
+    retention_days: int
+    proposed_days: int
+
+
+class DocumentTrashSettingsIn(_In):
+    enabled: bool = False
+    retention_days: int = Field(default=30, ge=1, le=365)
 
 
 class DocumentOut(_Out):

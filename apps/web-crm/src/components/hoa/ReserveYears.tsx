@@ -13,6 +13,8 @@ export type ReserveYearRow = {
   interest: string;
   closing: string;
   source: "statement" | "plan" | "none";
+  /** P01-01 (AE05): withholdings of posted interest entries on the reserve account, display only. */
+  interest_tax_withheld?: { capital_gains_tax: string; solidarity_tax: string; church_tax: string; total: string };
 };
 
 export type AccountOption = { id: string; label: string };
@@ -33,6 +35,7 @@ export function ReserveYearsTable({ rows, caption }: { rows: ReserveYearRow[]; c
             <th>{t("taxes")}</th>
             <th>{t("fees")}</th>
             <th>{t("interest")}</th>
+            <th>{t("interestTaxWithheld")}</th>
             <th>{t("closing")}</th>
             <th>{t("basis")}</th>
           </tr>
@@ -47,6 +50,7 @@ export function ReserveYearsTable({ rows, caption }: { rows: ReserveYearRow[]; c
               <td>{formatEur(r.taxes)}</td>
               <td>{formatEur(r.fees)}</td>
               <td>{formatEur(r.interest)}</td>
+              <td title={t("interestTaxWithheldHelp")}>{formatEur(r.interest_tax_withheld?.total ?? "0")}</td>
               <td className="font-medium">{formatEur(r.closing)}</td>
               <td>
                 {r.source === "statement" ? t("sourceStatement") : r.source === "plan" ? t("sourcePlan") : t("sourceNone")}

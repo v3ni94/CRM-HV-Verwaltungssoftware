@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mhvp import __version__
@@ -51,6 +51,16 @@ class Settings(BaseSettings):
     # GB16-01: lead time in hours before a maintenance window starts from which CRM and portal
     # show the banner (a window may carry its own value).
     maintenance_notice_hours: int = Field(default=48, ge=0, le=720)
+    # AE35 (GB16-02): own availability measurement. The beat job checks these health URLs every
+    # minute; an empty value switches that measuring point (and, if all three are empty, the
+    # whole job) off. Only http(s) URLs. Use the public URLs (via Traefik) to measure what users
+    # reach, internal URLs only measure the containers.
+    availability_api_url: str | None = None
+    availability_crm_url: str | None = None
+    availability_portal_url: str | None = None
+    availability_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    # Retention of the minute measuring points in days; months are evaluated before deletion.
+    availability_retention_days: int = Field(default=120, ge=40, le=800)
 
     # Runtime role (mhvp_app): never superuser, never table owner (ADR 0002).
     database_url: SecretStr
@@ -232,6 +242,32 @@ class Settings(BaseSettings):
     # possible (python-fints 4 refuses to start a dialog). Read only, G2 stays closed.
     fints_product_id: str | None = None
     fints_product_version: str = "1.0"
+
+    @field_validator(
+        "availability_api_url", "availability_crm_url", "availability_portal_url", mode="before"
+    )
+    @classmethod
+    def _availability_url(cls, value: object) -> object:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("availability URL must be a string")
+        value = value.strip()
+        if not value:
+            return None
+        if not value.startswith(("http://", "https://")) or " " in value:
+            raise ValueError("availability URL must be an http(s) URL")
+        return value
+
+    @property
+    def availability_probe_urls(self) -> dict[str, str]:
+        """Measuring points with a configured URL (empty: no beat job, nothing measured)."""
+        urls = {
+            "api": self.availability_api_url,
+            "crm": self.availability_crm_url,
+            "portal": self.availability_portal_url,
+        }
+        return {probe: url for probe, url in urls.items() if url}
 
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":

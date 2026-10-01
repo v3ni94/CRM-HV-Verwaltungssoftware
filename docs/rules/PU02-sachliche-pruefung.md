@@ -33,3 +33,11 @@
   sonst des Auftrags oder Vertrags, nur als Vorschlag.
 - Keine Funktion setzt einen Prüfstatus, gibt frei, bucht oder zahlt (PÜ05,
   `automatic_release` immer false).
+
+## Änderung Welle 16 (AE14, P03-03)
+
+Geltungsbereich: sachliche Prüfung von Eingangsrechnungen mit Bezug zu Wirtschaftsplanposition oder Beschluss.
+Budgetabgleich als Kennzahlen (Planansatz, bisher zugeordnet, diese Rechnung, Rest) und Beschlussdeckung
+(Status, Gegenstand passt zum Wirtschaftsplan). Quellenstatus: Produktschutz, keine Rechtsgrundlage; eine
+Wertgrenze für eine Beschlusspflicht wird nicht angenommen. Abnahmefall: tests/integration/test_ae14_invoice_budget.py
+(Soll 2.000,00 EUR, bisher 952,00 EUR, Rechnung 1.190,00 EUR, Rest -142,00 EUR). Änderungsgrund: Prioritätenliste Punkt 14.

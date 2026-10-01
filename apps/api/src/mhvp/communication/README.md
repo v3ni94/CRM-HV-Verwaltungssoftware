@@ -511,3 +511,13 @@ fields, `compact.reply_draft_hash`); mismatch 409 `MHVP-COMM-0010`. Rule T12.
 ## Zustell- und Leseindizien (GA04-09, AB03)
 
 `message.delivered_at` wird beim Statuswechsel auf `sent` (Annahme durch den Transport) und beim Zugangsnachweis einer verknüpften Zustellung gesetzt, `message.read_at` beim Öffnen eines Dokuments der Nachricht im Portal (`GET /portal/documents/{id}`). Beide sind Indizien ohne Rechtswirkung, der erste Wert bleibt. Logik in `receipts.py`. Eine Zustellbestätigung des Anbieters ist nicht verfügbar.
+
+## Eingehender Webhook klassifizierter Mails (M20-04, AE38, Welle 16, Migration 0394)
+
+`inbound_webhook.py` nimmt Mails entgegen, die ein Fremdsystem (Bestandsprogramm "Mail optimierung") bereits klassifiziert hat. Vertrag und Fehlerfälle: `docs/integrations/inbound-mail-webhook.md`, Regel `docs/rules/M20-04-inbound.md`.
+
+* Endpunkt `POST /api/v1/mail/inbound/sources/{source_id}/classified-mails`: nur mit API-Schlüssel (Recht `mail_inbound:ingest`, ein Benutzer-Token ergibt 403) und HMAC-Signatur `X-MHVP-Signature` (`mhvp.core.webhooks.sign/verify`, 300 Sekunden Fenster, `compare_digest`). Größe höchstens 1 MiB (413), fremder Mandant 404, falsche Signatur 401.
+* Idempotenz: `event_id` im Body, eindeutig je Quelle (`inbound_mail_event`, `INSERT .. ON CONFLICT DO NOTHING` in derselben Transaktion wie die Mail). Wiederholung mit gleichem Inhalt 200, anderer Inhalt 409 (`MHVP-HOOK-0005`).
+* Verarbeitung über `services.ingest_parsed` (ohne Rohmail, `blobs` und `document_id` sind dafür optional): Zuordnung, Thread, Ticket nach Quellschalter `auto_ticket`, Ereignis `message.received` für die Automation. Fremdklassifikation nur als Vorschlag unter `classification.external`.
+* Pflege der Quellen unter `/api/v1/mail/inbound/sources` mit `tenant_settings:read|update` (Anlegen mit einmalig sichtbarem Geheimnis, Ändern, Deaktivieren, Geheimnis erneuern, Empfangsprotokoll). Keine Oberfläche.
+* Tests `tests/integration/test_ae38_inbound_mail_webhook.py`, `tests/unit/test_ae38_inbound_mail.py`.

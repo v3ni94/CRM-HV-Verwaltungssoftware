@@ -36,7 +36,31 @@
     "passkeyLogin": "Sign in with a passkey",
     "passkeyUse": "Use a passkey",
     "passkeyUnsupported": "This browser does not support passkeys.",
-    "passkeyAborted": "The passkey sign in was cancelled."
+    "passkeyAborted": "The passkey sign in was cancelled.",
+    "mfaSetupTitle": "Set up a second factor",
+    "mfaSetupHint": "Your role requires a second factor. Scan the QR code with an authenticator app or enter the key, then confirm with the first code. You are signed in afterwards.",
+    "mfaSetupQrAlt": "QR code for the authenticator app",
+    "mfaSetupSecret": "Key for manual entry",
+    "mfaSetupConfirm": "Set up and sign in"
+  },
+  "MfaPolicy": {
+    "title": "Second factor per role",
+    "intro": "Defines for which roles of this tenant a second factor (TOTP or passkey) is mandatory at sign in. The default is voluntary, the obligation is a choice of the tenant.",
+    "defaultActive": "Default policy active: voluntary, every user decides; optional in the portal.",
+    "crmLegend": "CRM roles",
+    "mode": {
+      "voluntary": "Voluntary, every user decides (default, operator decision M2-01)",
+      "all_staff": "Mandatory for every CRM role (management roles)",
+      "roles": "Mandatory for selected roles only"
+    },
+    "rolesLegend": "Roles with obligation",
+    "rolesRequired": "Please select at least one role.",
+    "portalRequired": "Also require it for portal accounts (tenants, owners, service providers)",
+    "transition": "The policy applies at the next sign in. Running sessions stay. Users without a second factor set it up during sign in and are not locked out.",
+    "save": "Save",
+    "saving": "Please wait",
+    "saved": "Saved.",
+    "requiredHint": "The tenant policy makes the second factor mandatory for your role, so it cannot be switched off."
   },
   "Shell": {
     "workOrders": "Work orders",
@@ -200,7 +224,10 @@
     "exportHint": "The disclosure was downloaded as a JSON file. Before handing it to the data subject, review its content, in particular for third party data.",
     "accessExport": {
       "title": "GDPR disclosure with review",
-      "hint": "The disclosure holds only allowlisted fields, no hashes, tokens, internal notes or AI raw data; other persons appear only with their role. Review and release by a second person, download only afterwards. Draft without legal review.",
+      "hint": "The disclosure holds only allowlisted fields, no hashes, tokens or AI raw data. Other persons and internal notes follow the tenant switches (default: other persons by role only, notes withheld). Review and release by a second person, download only afterwards. Draft without legal review.",
+      "scopeNone": "Other persons by role only",
+      "scopeNames": "Other persons with name and role",
+      "notesIncluded": "with internal notes",
       "prepare": "Prepare disclosure",
       "empty": "No disclosure prepared yet.",
       "review": "Mark as reviewed",
@@ -268,6 +295,8 @@
       "revoke": "Revoke",
       "revokedAt": "Revoked on",
       "active": "active",
+      "objection": "objection",
+      "withdrawObjection": "Withdraw",
       "revokeConfirm": "Really record the consent as revoked?",
       "effectHint": "Effect: marketing controls serial dispatch flagged as advertising, email_delivery the delivery of documents by e-mail (otherwise post), portal_terms the portal access once terms are published, data_sharing the transfer to service providers. A revocation applies at once.",
       "sourceInvalid": "Please enter the source with at least 2 characters.",
@@ -1332,7 +1361,67 @@
     "colPlatform": "Units in the platform",
     "colDifference": "Difference",
     "restart": "Import another report",
-    "listImportLink": "Open list import (objects, contacts, assignment)"
+    "listImportLink": "Open list import (objects, contacts, assignment)",
+    "detect": {
+      "autoHeader": "Detect the header row automatically (the first 30 rows are scored)",
+      "headerDetected": "Header row {row} detected: {reason}. If this is wrong, enter the row number by hand.",
+      "headerNotDetected": "No header row found in the first 30 rows. Please enter the row number by hand.",
+      "proposalApplied": "Columns proposed from the headers: {count} target fields assigned, {stored} of them from stored assignments. The proposal is only used once the template is saved.",
+      "colProposal": "Proposal",
+      "scoreBadge": "{status} {score} %",
+      "proposedHeader": "Column {header}, basis {basis}",
+      "status": {
+        "stored": "stored",
+        "sure": "confident",
+        "check": "please check",
+        "none": "no proposal"
+      },
+      "remember": "Remember this assignment for the report type (proposal for the next file)",
+      "checkButton": "Create check report",
+      "checkTitle": "Check report (nothing is saved)",
+      "checkSummary": "{rows} rows, {valid} valid and {invalid} with errors.",
+      "ready": "All required columns are assigned and filled.",
+      "notReady": "Required columns are missing, empty or not in the file.",
+      "requiredTitle": "Required columns",
+      "required": {
+        "ok": "present",
+        "partly_empty": "partly empty",
+        "empty": "empty",
+        "missing": "not assigned",
+        "not_in_file": "not in the file"
+      },
+      "emptyRows": "{count} rows empty",
+      "fieldsTitle": "Assigned columns",
+      "colField": "Target field",
+      "colHeader": "Column",
+      "colStatus": "Status",
+      "colFilled": "filled",
+      "colEmpty": "empty",
+      "colErrors": "errors",
+      "colExamples": "Example values",
+      "colRow": "Row",
+      "colMessages": "Messages",
+      "noErrors": "none",
+      "notInFile": "Columns not in the file: {headers}",
+      "assignedTwice": "Assigned more than once: {headers}",
+      "unassigned": "Unassigned columns (not imported): {headers}",
+      "samplesTitle": "Sample rows",
+      "errorRowsTitle": "Examples of rows with errors",
+      "requirementsTitle": "Required exports",
+      "requirementsIntro": "Status per report type. Which Immoware24 export provides the columns is confirmed by the operator in the requirement list (docs/integrations/immoware24-exporte.md); the platform assumes no export format.",
+      "colReport": "Report type",
+      "colSource": "Source (section 13.1)",
+      "colRequired": "Required fields remembered",
+      "colFiles": "Files",
+      "requiredCovered": "{covered} of {total}",
+      "noRequired": "no target fields",
+      "requirement": {
+        "file_missing": "file missing",
+        "mapping_open": "assignment open",
+        "mapping_stored": "assignment stored",
+        "applied": "applied"
+      }
+    }
   },
   "Workspace": {
     "filters": "Filters",
@@ -1573,6 +1662,14 @@
   "Accounting": {
     "title": "Accounting",
     "parallelNotice": "Parallel operation: Immoware24 remains the leading system. Postings in the platform are not the leading bookkeeping as long as release gate G1 has not been granted.",
+    "ruleCheckpointsManage": {
+      "title": "Maintain check points",
+      "notice": "Own check points (for example retrofit and transition deadlines of the heating cost ordinance) with date, title and source. Entries are hints without legal effect; verify deadlines and wording officially before entering them.",
+      "empty": "No check points recorded.",
+      "date": "Date", "name": "Title", "source": "Source", "note": "Note", "state": "State", "add": "Add check point", "save": "Save", "withdraw": "Withdraw",
+      "states": {"open": "open", "upcoming": "in lead time", "due": "due", "done": "confirmed", "withdrawn": "withdrawn"},
+      "days": "{days} days"
+    },
     "ruleCheckpoints": {
       "title": "Due check points of the rule register",
       "notice": "Hint without legal effect: a due check point reminds of a review. It locks nothing and changes no rule.",
@@ -1747,6 +1844,8 @@
         "openItems": "Open items",
         "difference": "Difference",
         "toReview": "to review",
+        "excludedNote": "{writtenOff, plural, =0 {No written off} one {# written off} other {# written off}} and {reversed, plural, =0 {no reversed} one {# reversed} other {# reversed}} open items are not counted (tenant switch, default). Amounts: written off {writtenOffAmount}, reversed {reversedAmount}.",
+        "includedNote": "Written off and reversed items are included in the open items (tenant switch off). Written off: {writtenOff}, reversed: {reversed}.",
         "asOf": "Cut-off date",
         "show": "Show",
         "error": "The consistency check could not be loaded."
@@ -2093,6 +2192,7 @@
     "skippedPending": "{count} contracts skipped, approval pending"
   },
   "Bank": {
+    "automationSwitch": {"title": "Automation switch", "help": "Switching the automation on requires gate G1 to be open, a request with reason and the approval of a second person. Switching off is possible at any time. The run still checks levels, rules and gate itself.", "on": "Automation on", "off": "Automation off", "g1Open": "G1 open", "g1Closed": "G1 closed", "reason": "Reason of the request", "request": "Request switch on", "requested": "Request filed. A second person approves it.", "approve": "Approve", "reject": "Reject", "approved": "Request approved, the automation is on.", "rejected": "Request rejected.", "blockedG1": "Locked while gate G1 is closed.", "alreadyOn": "The automation is on.", "pendingOrNoRight": "A request is pending or the right to request is missing.", "status": {"requested": "Requested", "approved": "Approved", "rejected": "Rejected"}, "comparison": {"title": "Comparison run automation against manual booking", "help": "Report from the decision log: per closed decision whether the best automation proposal matches the manual booking. The report posts nothing and is no proof of safety.", "summary": "Compared bookings: {compared}, match rate: {rate}", "noRate": "no data", "caseKind": "Case class", "total": "Total", "outcome": {"match": "Match", "other_proposal": "Other proposal", "modified": "Booked modified", "no_proposal": "No proposal", "rejected": "Rejected", "auto_posted": "Auto posted", "reversed": "Reversed"}}},
     "title": "Bank",
     "metrics": {
       "title": "Matching key figures",
@@ -2884,10 +2984,39 @@
         "warning": "Review hint"
       }
     },
+    "allocationBasis": {
+      "title": "Allocation bases before the statement",
+      "notice": "Report: every cost position with a cost type needs a recorded allocation agreement with a clause reference per tenancy that covers the tenancy period. Presence is checked, not the legal validity of the clause.",
+      "complete": "All positions are covered by recorded agreements.",
+      "blocked": "{count} bases are missing. The output of the statement is blocked until they are recorded.",
+      "notBlocked": "{count} bases are missing. The block is switched off for this tenant.",
+      "state": { "missing": "Missing", "expired": "Period incomplete", "no_type": "Assignment missing", "excluded": "Excluded", "agreed": "Agreed" },
+      "unit": "unit {unit}",
+      "source": "Source: {source}",
+      "agreementsTitle": "Allocation agreements",
+      "agreementsNotice": "Clause reference and validity per cost position. The platform infers nothing from account names.",
+      "agreementsNone": "No allocation agreement recorded yet.",
+      "status": { "agreed": "Allocation agreed", "excluded": "Not allocable" },
+      "statusLabel": "Kind of agreement",
+      "type": "Operating cost type",
+      "clause": "Clause reference (e.g. section 4 lease)",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "add": "Record",
+      "remove": "Remove",
+      "bulk": "Record for all tenancies of the property",
+      "bulkPreviewButton": "Preview",
+      "bulkApply": "Apply",
+      "bulkPreview": "Preview: {created} new, {skipped} already present.",
+      "bulkDone": "Recorded: {created} new, {skipped} already present skipped."
+    },
     "advances": {
       "title": "New advances (proposal)",
       "notice": "Previous year's result per tenant divided by twelve, optionally with a safety surcharge in percent (default 0). Proposals change no contract payments; the adjustment under § 560 BGB is a separate step behind release gate G3.",
       "rule": "Tenant's safety surcharge: {percent} %",
+      "openMode": "Treatment of open advances at statement",
+      "openModeHelp": "Tenant switch, procedure not released (question AC10-01). Effect only through the result entries behind G3; the default changes nothing.",
+      "openModes": { "info_only": "Information only (default)", "offset_reversal": "Offset open items by reversal", "balance_against_due": "Balance against due, arrears stay" },
       "surcharge": "Surcharge %",
       "create": "Determine proposals",
       "needsSnapshot": "Proposals need a calculated result.",
@@ -2909,6 +3038,14 @@
     },
     "noLedgers": "No ledger available. Without a ledger no statement can be created.",
     "heating": {
+      "compare": {
+        "title": "External versus own",
+        "notice": "Comparison of external amounts (metering service) with the own calculation per user. A hint only, nothing is booked or changed.",
+        "load": "Load comparison", "tolAbs": "Tolerance absolute (EUR)", "tolPct": "Tolerance percent",
+        "unit": "Unit", "external": "External", "own": "Own", "diff": "Difference", "pct": "Percent", "status": "Status",
+        "ok": "ok", "abweichung": "deviation", "extern_fehlt": "external missing", "nicht_berechenbar": "not computable",
+        "summary": "Deviations: {n}, external missing: {m}", "report": "Deviation report (CSV)"
+      },
       "title": "Heating costs",
       "notice": "Draft: allocation under the heating cost ordinance as a proposal, approval and legal review pending.",
       "degreeDaysMissing": "No degree day table stored, vacancy and tenant change shares remain to be checked.",
@@ -2967,6 +3104,28 @@
       "trace": "Calculation trace {hash}",
       "loading": "Loading heating costs."
     },
+    "deadlineOverview": {
+      "title": "Statement deadline per tenancy",
+      "unit": "Unit",
+      "deadline": "Deadline end (orientation)",
+      "access": "Access",
+      "state": "Status",
+      "none": "No access recorded",
+      "suggestion": "Proposal from dispatch: {date} ({channel})",
+      "adopt": "Adopt access",
+      "evidenceText": "Access per dispatch record {id}, confirmed by the clerk",
+      "policy": "Behaviour after the deadline",
+      "policyBlock": "Block additional claims (default)",
+      "policyNotice": "Notice only",
+      "watch": "Warn before the deadline ({first} and {second} days ahead)",
+      "states": {
+        "open": "Deadline running",
+        "warning": "Deadline ends in {days} days",
+        "expired": "Deadline expired per orientation",
+        "delivered_in_time": "Access before the deadline end",
+        "delivered_late": "Access after the deadline end"
+      }
+    },
     "deadlineException": {
       "title": "Exception to the statement deadline",
       "hint": "Late claims stay locked until the reason and an evidence document are recorded. The legal review is done by the operator.",
@@ -3022,7 +3181,50 @@
     "active": "recorded",
     "inactive": "outside the period",
     "revoked": "revoked on {at}",
-    "until": "until {date}"
+    "until": "until {date}",
+    "rule": "Rule for proxy against own vote: {mode}.",
+    "mode": {
+      "flag": "Mark the conflict for review",
+      "first_vote": "The first vote cast counts",
+      "proxy_priority": "The proxy takes precedence",
+      "own_priority": "The owner's own vote takes precedence"
+    },
+    "openConflicts": "Open vote conflicts: {n}",
+    "admissibility": {
+      "title": "Checklist for the meeting form",
+      "state": {
+        "ok": "recorded",
+        "open": "to be checked",
+        "missing": "not recorded",
+        "info": "note"
+      },
+      "complete": "All recorded details are present. This does not establish admissibility.",
+      "incomplete": "There are open points. Admissibility needs a legal review (AD06-01)."
+    },
+    "conflicts": {
+      "title": "Vote conflicts (proxy against own vote)",
+      "note": "Note on the decision (optional)",
+      "first": "first {source}: {choice}",
+      "second": "then {source}: {choice}",
+      "source": {
+        "own": "owner",
+        "proxy": "proxy holder"
+      },
+      "choice": {
+        "yes": "Yes",
+        "no": "No",
+        "abstain": "Abstain"
+      },
+      "open": "decision open",
+      "keepFirst": "Confirm first vote",
+      "applySecond": "Count second vote",
+      "resolution": {
+        "keep_first": "first vote confirmed",
+        "apply_second": "second vote counted",
+        "rule_second": "replaced by tenant rule"
+      },
+      "hint": "Until a decision the first vote counts. The meeting chair decides and the rule needs legal clarification (AD06-02); no vote is deleted."
+    }
   },
   "HoaWork": {
     "audits": "Board audits",
@@ -3215,7 +3417,15 @@
       "unit": "Unit",
       "costShare": "Cost share",
       "advancesResolved": "Advances due",
-      "result": "Result"
+      "result": "Result",
+      "perOwner": "Per owner",
+      "heating": "Heating bridge",
+      "heatingRows": {
+        "cash_outflows": "Fuel and heating payments",
+        "cost_distributed": "Distributed costs",
+        "heating_accrual": "Explained heating accrual",
+        "unexplained": "Unexplained difference"
+      }
     },
     "costShare": "Cost share",
     "advancesResolved": "Advances due",
@@ -3426,9 +3636,41 @@
       "virtual": "Allow virtual meetings (V13)",
       "termLock": "Lock when the term exceeds three years (enabling resolution for virtual meetings)",
       "termLockHint": "Default off: notice only. Maximum term and transition rule need legal review (open question AA06-02).",
+      "transitionDate": "Transition rule date (entered by the operator)",
+      "transitionHint": "Free date without legal effect: it triggers no lock and does not replace legal review. Content and applicability of the transition rule are open (AA06-02).",
       "virtualHint": "Default off. Enable only after the operator's decision with legal advice; every virtual meeting also needs the owners' enabling resolution with a validity end.",
       "save": "Save setting",
       "saved": "Setting saved."
+    },
+    "onlineSwitch": {
+      "title": "Online meeting in the owner portal",
+      "hint": "Default off. The system does not check whether an online meeting is admissible (open question AD06-01). Enable only after the operator's decision with legal advice.",
+      "label": "Allow online participation in the portal",
+      "rule": "Rule for a proxy vote against the owner's own vote",
+      "ruleHint": "Applies when a unit has a vote of the owner and a vote of the proxy holder. The rule is an operator setting and no legal advice; its legal effect is open (AD06-02).",
+      "modes": {
+        "flag": "Mark the conflict for review (default)",
+        "first_vote": "The first vote cast counts",
+        "proxy_priority": "The proxy takes precedence",
+        "own_priority": "The owner's own vote takes precedence"
+      },
+      "modeHints": {
+        "flag": "The first vote stays counted, the second is stored and put to the meeting chair for a decision. No vote is discarded.",
+        "first_vote": "The second vote for the unit is refused.",
+        "proxy_priority": "The proxy holder's vote replaces an own vote already cast; the replaced vote stays documented in the record.",
+        "own_priority": "The owner's own vote replaces a vote of the proxy holder already cast; the replaced vote stays documented in the record."
+      },
+      "save": "Save switch",
+      "saved": "Setting saved."
+    },
+    "virtualDeadlines": {
+      "title": "Deadline notes on the enabling resolution",
+      "decidedOn": "Resolution date: {date}",
+      "termLimit": "Three year limit (resolution date plus three years): {date}",
+      "validUntil": "Valid until: {date} ({days} days left)",
+      "validUntilMissing": "Validity end not entered.",
+      "transition": "Transition rule date (operator): {date}",
+      "verify": "Orientation, to be verified. Not legal advice."
     },
     "resolutionDeadline": {
       "title": "Resolution deadline of the virtual meeting",
@@ -4505,6 +4747,56 @@
     "seedResult": "Catalogue loaded: {created} new, {updated} completed, {kept} unchanged.",
     "seedHint": "Creates a template for each of the twelve process types unless one exists. Existing templates stay unchanged.",
     "flowSummary": "Process type: {label}"
+  },
+  "PortalLegalTexts": {
+    "title": "Portal legal texts",
+    "breadcrumb": "Settings",
+    "description": "Legal notice, privacy policy and terms of use of this tenant's portal. The portal shows only the released version (release by a second person). The software ships no legal text. Without a release the portal shows the marker Text not released or the external link stored with the branding.",
+    "statusTitle": "Release status",
+    "released": "released, version {version}",
+    "notReleased": "Text not released",
+    "externalLink": "External link stored",
+    "termsTitle": "Terms version",
+    "termsHint": "If the consent policy publishes a terms version, portal accounts must accept exactly that version. The version is kept as NB plus the version number of the released text, for example NB-2.",
+    "policyVersion": "Version in the consent policy",
+    "approvedVersion": "Released text",
+    "suggested": "Suggestion",
+    "none": "none",
+    "inSync": "Version matches the released text",
+    "notInSync": "Version differs from the released text",
+    "modeLabel": "Maintaining the version",
+    "modeManual": "Maintain by hand (default)",
+    "modeFollow": "Follow the released text",
+    "modeFollowHint": "Each release of a new terms text sets the version. Portal accounts then have to accept the new version.",
+    "saveMode": "Save switch",
+    "apply": "Apply version now",
+    "applyConfirm": "Portal accounts will then have to accept version {label}. Apply the version?",
+    "saved": "Saved.",
+    "error": "Action not possible."
+  },
+  "TextBlocks": {
+    "title": "Text blocks",
+    "description": "Texts for the information sheet, the owner letter and the section 35a proof. Only approved texts are printed, otherwise the note Text nicht freigegeben appears. The software ships no legal text. A second person approves.",
+    "notReleased": "Text nicht freigegeben",
+    "released": "approved, version {version}",
+    "status": {
+      "draft": "draft",
+      "submitted": "submitted",
+      "approved": "approved",
+      "retired": "retired"
+    },
+    "titleField": "Title",
+    "bodyField": "Text",
+    "sourceField": "Source or evidence of the operator",
+    "newVersion": "Create new version",
+    "save": "Save as draft",
+    "submit": "Submit for approval",
+    "approve": "Approve",
+    "reject": "Reject",
+    "retire": "Withdraw approval",
+    "rejectReason": "Reason for rejection",
+    "versions": "Versions",
+    "error": "Action not possible."
   },
   "ReplyTemplates": {
     "title": "Reply templates",
@@ -5879,6 +6171,14 @@
       "settingsExplain": "Explain this setting: {title}",
       "settingsWhere": "Where do I change this?",
       "whereSettings": "Where do I find the settings?",
+      "acceptanceOpen": "Which cases of annex D still have no approved expected value?",
+      "acceptanceHow": "How does a second person approve an expected value?",
+      "businessRulesOpen": "Which professional decisions are still open?",
+      "businessRulesDefaults": "Which switches differ from the default?",
+      "periodLocksExplain": "How does the period lock per property work?",
+      "textBlocksExplain": "Which text blocks are approved?",
+      "legalTextsExplain": "Which legal texts of the portal are approved?",
+      "documentTrashExplain": "How long does a deleted document stay in the trash?",
       "importsStatus": "Status of the imports",
       "importsHow": "How do I import data?",
       "importRunStatus": "Status of this import",
@@ -6025,6 +6325,8 @@
       "generated": "Generated documents",
       "releaseGates": "Release gates",
       "gateG5": "Gate G5 release",
+      "acceptance": "Acceptance register",
+      "trash": "Trash",
       "rentLaw": "Rent law",
       "onboarding": "Onboarding",
       "priceList": "Price list",
@@ -6124,6 +6426,18 @@
     "chartRelease": {
       "title": "Accounting, chart of accounts",
       "description": "Chart of accounts per tenant with release by operator and tax advisor, version history and export as CSV or PDF."
+    },
+    "periodLocks": {
+      "title": "Accounting, period locks",
+      "description": "Lock per property and period, switch for closing a statement and release with four eyes approval."
+    },
+    "businessRules": {
+      "title": "Business rules",
+      "description": "All tenant switches for professionally open decisions with current value, variants, default and a reference to the open question."
+    },
+    "textBlocks": {
+      "title": "Text blocks",
+      "description": "Texts for the information sheet, cover letter and the proof under section 35a with approval by a second person."
     },
     "g1Opening": {
       "title": "Accounting, G1 opening",
@@ -6339,6 +6653,10 @@
     "documentCategories": {
       "title": "Document categories",
       "description": "Maintain the category tree and the mapping to Paperless and Drive."
+    },
+    "portalLegalTexts": {
+      "title": "Portal legal texts",
+      "description": "Legal notice, privacy policy and terms of use of the portal with release."
     },
     "portalProviders": {
       "title": "Service providers in the portal",
@@ -7394,6 +7712,76 @@
     "renewConsent": "Renew consent",
     "wizardStep3": "3. Assign accounts to a ledger/property"
   },
+  "Ebics": {
+    "title": "EBICS (scaffold)",
+    "intro": "Statement download via EBICS (order type C53, camt.053). Keys are stored encrypted; in the default variant the signature key stays with the signing person. Payments are not submitted via EBICS (release gate G2).",
+    "transportMissing": "The bank transport is not available: no verified EBICS implementation is installed (open question AE23-01). Subscribers and keys can be prepared, nothing is sent to the bank.",
+    "keyPolicy": "Key length today at least {min} bits, default {standard} bits; from {date} at least 4096 bits are required (Krypto LifeCycle EBICS of Die Deutsche Kreditwirtschaft).",
+    "enabled": "On",
+    "disabled": "Off",
+    "switchOn": "Switch EBICS on",
+    "switchOff": "Switch EBICS off",
+    "signatureMode": "Signature key",
+    "modeExternal": "external, with the signing person",
+    "modeServer": "generated by the platform (decision S16-03-02 open)",
+    "modeHelp": "The variant applies to newly created subscribers. Recommendation of Die Deutsche Kreditwirtschaft: signature key on a chip card or a dedicated medium.",
+    "empty": "No EBICS subscriber yet.",
+    "created": "Subscriber created.",
+    "createTitle": "Create subscriber from the bank contract",
+    "label": "Name",
+    "hostId": "Host ID",
+    "partnerId": "Partner ID (customer ID)",
+    "userId": "Subscriber ID (user ID)",
+    "url": "EBICS URL (https)",
+    "version": "EBICS version",
+    "signatureVersion": "Signature version",
+    "keyBits": "Key length (bits)",
+    "create": "Create subscriber",
+    "ids": "Host {host}, partner {partner}, subscriber {user}, EBICS {version}",
+    "keysLine": "{count} active subscriber keys, {bits} bits, signature key {mode}",
+    "runsOut": "Key length runs out on {date}, change keys in time.",
+    "lastDownload": "Last download: {at}",
+    "status": {
+      "created": "Created",
+      "keys_ready": "Keys ready",
+      "initialised": "Initialised, waiting for activation",
+      "activated": "Activated",
+      "bank_keys_received": "Bank keys received, check open",
+      "ready": "Ready",
+      "suspended": "Suspended"
+    },
+    "step": {
+      "generate_keys": "Next step: generate authentication and encryption keys.",
+      "upload_signature_key_or_confirm_ini": "Next step: store the public signature key or confirm INI as done outside the platform.",
+      "send_ini": "Next step: send INI.",
+      "send_hia": "Next step: send HIA, then sign the INI and HIA letters and send them to the bank.",
+      "confirm_activation": "Next step: confirm the bank's activation with its date.",
+      "fetch_bank_keys": "Next step: fetch the bank keys (HPB).",
+      "verify_bank_keys": "Next step: enter the hash values from the bank letter. A second person verifies.",
+      "download_statements": "Ready for statement download (C53)."
+    },
+    "done": "Done.",
+    "downloaded": "Download finished, transactions imported.",
+    "generateKeys": "Generate keys",
+    "publicKeyOrNote": "Public key (PEM) or note on INI",
+    "uploadKey": "Store key",
+    "confirmIniExternal": "Confirm INI done externally",
+    "sendIni": "Send INI",
+    "sendHia": "Send HIA",
+    "activatedOn": "Activated on",
+    "confirmActivation": "Confirm activation",
+    "fetchBankKeys": "Fetch bank keys",
+    "authHash": "Hash value authentication key (bank letter)",
+    "encHash": "Hash value encryption key (bank letter)",
+    "verify": "Verify bank keys",
+    "dateFrom": "From",
+    "dateTo": "To",
+    "download": "Download statements",
+    "more": "Key change and suspension",
+    "reason": "Reason",
+    "rotate": "Change keys",
+    "suspend": "Suspend subscriber"
+  },
   "FinTs": {
     "title": "Bank connections (FinTS, PIN/TAN)",
     "intro": "Direct bank access via FinTS/HBCI with login name, PIN and TAN. Read only: accounts, balances and transactions; no transfers, no automatic posting. After 90 days at the latest the bank requires a new authorisation (PSD2).",
@@ -7472,7 +7860,24 @@
     "openSession": "Show running session",
     "disconnect": "Disconnect",
     "disconnectConfirm": "Disconnect {bank}? PIN and access state are deleted, imported transactions are kept.",
-    "disconnected": "Connection disconnected."
+    "disconnected": "Connection disconnected.",
+    "lockedBlocked": "The bank has locked the access. The stored PIN was discarded. Please have the lock lifted at the bank first (check steps below), then enter the PIN again.",
+    "handbookHint": "More information in the handbook, chapter Bank, section Access locked or bank not reachable.",
+    "urlTitle": "FinTS address of the bank",
+    "urlCurrent": "Address in use: {host}",
+    "urlSourceManual": "entered manually",
+    "urlSourceList": "from the institute list",
+    "urlHelp": "After a bank merger or a change of data centre the FinTS address can change. The bank names the current address. For safety the PIN is asked for again together with the new address. No login attempt is started.",
+    "urlChange": "Change address",
+    "urlCheck": "Check FinTS address",
+    "urlInput": "New FinTS address",
+    "urlPlaceholder": "https://",
+    "urlPin": "PIN for the new address",
+    "urlSave": "Save address",
+    "urlReset": "Use the address of the institute list",
+    "urlSaved": "FinTS address saved, the PIN was replaced. Please choose Authorise again now.",
+    "urlResetDone": "The address of the institute list is used again.",
+    "urlCancel": "Cancel"
   },
   "DmsSettings": {
     "folderScheme": "Filing folder scheme",
@@ -8315,6 +8720,10 @@
     }
   },
   "InvoiceFactual": {
+    "budget": { "title": "Budget comparison {label} ({year})", "planned": "Planned amount", "booked_before": "Assigned so far", "invoice": "This invoice", "remaining": "Remaining", "exceeded": "Planned amount including tolerance exceeded (hint)." },
+    "resolutionCoverage": "Resolution no. {number} of {date}: {subject}.",
+    "resolutionEffective": "Resolution is recorded as effective.",
+    "resolutionNotEffective": "Check the resolution status.",
     "title": "Factual review (findings)",
     "loading": "Loading factual review.",
     "none": "No findings on order, contract, resolution, budget and recurrence.",
@@ -8700,7 +9109,9 @@
         "official": "official validator",
         "formal": "internal formal check, not an official validator",
         "unknown": "not recognised",
-        "none": "No validation result stored yet."
+        "none": "No validation result stored yet.",
+        "zugferdProfile": "ZUGFeRD profile",
+        "containerHints": "Notes on the ZUGFeRD container (no PDF/A validation):"
       },
       "einvoiceHint": "The structured part was read without AI. Formal validity does not prove a delivered service; factual, arithmetic and tax checks remain mandatory.",
       "conflicts": "Conflicts between XML and PDF",
@@ -8975,6 +9386,8 @@
     "saved": "Saved.",
     "activeState": "active",
     "inactiveState": "inactive",
+    "showPreview": "Show preview",
+    "hidePreview": "Hide preview",
     "errors": {
       "name": "Please enter a name.",
       "category": "Please enter a ticket category.",
@@ -9283,6 +9696,17 @@
       "noDismiss": "Dismissing requires permission communication:update."
     },
     "maskedHelp": "Full number only with permission contacts:read."
+  },
+  "HoaAcquisitionRule": {
+    "title": "Allocation of the statement result on an owner change",
+    "intro": "Tenant rule per acquisition kind. The default is manual release and the calculation stays unchanged. Which variant is legally correct is open and to be clarified with legal counsel.",
+    "kind": "Acquisition kind",
+    "variant": "Variant",
+    "sourceNote": "Source and note",
+    "save": "Save",
+    "saved": "Rule saved",
+    "loadFailed": "Rules could not be loaded.",
+    "default": "Default"
   },
   "HoaAcquisition": {
     "title": "Special acquisition in the statement year",
@@ -11873,6 +12297,45 @@
       "ensured": "Missing standard categories were added."
     }
   },
+  "DocumentTrash": {
+    "breadcrumb": "Documents",
+    "title": "Trash",
+    "intro": "Deleted documents until the final deletion. The trash is a tenant switch (Settings, Retention) and off by default.",
+    "rules": "Deleted documents are not visible in lists, search or links. Restore and early final deletion are logged with a reason. The final deletion checks holds and periods again; a hold keeps the document in the trash.",
+    "empty": "The trash is empty.",
+    "deletedAt": "Deleted on {at}",
+    "purgeAt": "final deletion not before {at} ({days} days left)",
+    "blocked": "Deletion suspended: {reason}",
+    "restore": "Restore",
+    "purge": "Delete permanently",
+    "reasonLabel": "Reason (at least 3 characters, logged)",
+    "purgeConfirm": "The document is deleted permanently with its original and mirror copies. Only a backup can undo this.",
+    "confirmRestore": "Confirm restore",
+    "confirmPurge": "Confirm permanent deletion",
+    "cancel": "Cancel",
+    "restored": "Document restored.",
+    "purged": "Document deleted permanently, mirror steps are scheduled.",
+    "status": { "in_trash": "in the trash", "due": "period over, deletion follows", "held": "held" }
+  },
+  "TrashSettings": {
+    "title": "Document trash",
+    "hint": "Off by default: a lawful deletion then stays final. With the trash the document is kept until the period ends and can be restored; a daily job then deletes it for good unless a hold exists.",
+    "enabled": "Use the trash",
+    "days": "Period in days",
+    "daysHint": "Proposal {proposed} days. This is not a legal period; whether personal data may stay that long in a trash is open (AE33-01). A change applies to documents moved to the trash afterwards.",
+    "save": "Save",
+    "saved": "Setting saved."
+  },
+  "AccessExportSettings": {
+    "title": "Scope of the GDPR disclosure",
+    "hint": "Default: other persons by role only, internal notes withheld. Which scope is lawful is a legal question (AC07-01). The scope is fixed when a disclosure is prepared and stays unchanged until release. Addresses, contact data, identifiers and bank data of other persons are never disclosed in any variant.",
+    "scope": "Details of other persons",
+    "scopeNone": "role only (default)",
+    "scopeNames": "with name and role",
+    "notes": "Include internal notes (note field and contact notes, without author) in the disclosure",
+    "save": "Save",
+    "saved": "Setting saved."
+  },
   "RetentionSettings": {
     "breadcrumb": "Settings",
     "title": "Retention",
@@ -11932,21 +12395,22 @@
     "checklist": {
       "show": "Deletion checklist",
       "followUp": "Run follow up",
-      "overall": { "done": "All targets deleted.", "open": "Targets open, follow up runs daily.", "held": "Restored and under a hold, document is kept." },
-      "target": { "index": "Index and full text", "original": "Original", "mirror_paperless": "Paperless", "mirror_google_drive": "Google Drive", "embeddings": "Embeddings", "ai_extracts": "AI extracts", "thumbnails": "Thumbnails", "backup": "Backups" },
-      "status": { "done": "done", "open": "open", "held": "held", "not_applicable": "not applicable", "out_of_scope": "not edited (runbook)" }
+      "overall": { "done": "All targets deleted.", "open": "Targets open, follow up runs daily.", "held": "Under a hold, document is kept.", "in_trash": "In the trash, the final deletion follows when the period ends." },
+      "target": { "trash": "Trash", "index": "Index and full text", "original": "Original", "mirror_paperless": "Paperless", "mirror_google_drive": "Google Drive", "embeddings": "Embeddings", "ai_extracts": "AI extracts", "thumbnails": "Thumbnails", "backup": "Backups" },
+      "status": { "done": "done", "open": "open", "held": "held", "pending": "pending", "not_applicable": "not applicable", "out_of_scope": "not edited (runbook)" }
     },
     "breadcrumb": "Documents",
     "title": "Deletion proposals",
     "intro": "Monthly run over documents whose released retention period ended. Nothing is deleted without approval and execution by two different persons.",
     "rules": "Approval not by the initiator, execution not by the approver. At execution every document is checked again: hold, period and profile. Held or not yet due documents are kept and logged with the reason. Drive copies are deleted, Paperless documents are tagged as deleted.",
     "createNow": "Create deletion proposal now",
+    "trashLink": "To the trash (deleted documents until the final deletion)",
     "createHint": "Same run as the monthly job; nothing is deleted.",
     "created": "Deletion proposal created.",
     "approved": "Deletion proposal approved.",
     "rejected": "Deletion proposal rejected.",
     "executed": "Executed: {deleted} deleted, {skipped} kept.",
-    "executeConfirm": "The approved documents are deleted permanently (index, original, mirrors). Continue?",
+    "executeConfirm": "The approved documents are deleted: with the trash switched on they move to the trash first, otherwise they are deleted permanently (index, original, mirrors). Continue?",
     "empty": "No deletion proposals.",
     "proposalTitle": "Run of {date}",
     "counts": "{total} documents, {deleted} deleted.",
@@ -12133,6 +12597,37 @@
     "readOnly": "The check requires the permission accounting export."
   },
   "ChartRelease": {
+    "coverage": {
+      "title": "Coverage report and distribution",
+      "fourEyesOn": "Four eyes release active: whoever submits the version for review cannot release it.",
+      "fourEyesOff": "Four eyes release switched off: the submitter may release as well.",
+      "reasonLabel": "Reason for the change",
+      "fourEyesDisable": "Switch off four eyes release",
+      "fourEyesEnable": "Switch on four eyes release",
+      "load": "Load coverage report",
+      "summary": "{total} accounts, {kind} without statement kind, {alloc} without valid distribution, {open} open proposals.",
+      "kindsWithoutAccount": "Statement kinds without an account: {kinds}. Create accounts only after the tax advisor's release.",
+      "colNumber": "Account",
+      "colName": "Name",
+      "colIssues": "Finding",
+      "colProposal": "Proposal",
+      "proposalOpen": "proposal, release pending",
+      "issue": {
+        "ohne_abrechnungsart": "no statement kind",
+        "ohne_gueltige_verteilung": "no valid distribution",
+        "vorschlag_offen": "proposal open"
+      },
+      "adopt": "Adopt proposal",
+      "editSplit": "Edit distribution",
+      "splitTitle": "Distribution account {number}",
+      "keyCode": "Key",
+      "share": "Share in percent",
+      "removeRow": "Remove",
+      "addRow": "Add key",
+      "sum": "Sum {sum} percent (100 required)",
+      "saveSplit": "Save distribution",
+      "cancel": "Cancel"
+    },
     "title": "Chart of accounts",
     "description": "Chart of accounts of the tenant, released by the operator after coordination with the tax advisor (decision V8). Gate G1 can only be opened with a released chart of accounts.",
     "intro": "A released chart of accounts is not changed any more. Changes create a new version that goes through review and release again.",
@@ -12176,7 +12671,39 @@
     "colBy": "Released by",
     "colComment": "Comment"
   },
+  "PeriodLocks": {
+    "decisionOpen": "Decision open (P06-02 and AA08-01): the default is the lock of the whole ledger. The property lock and the release are technically prepared and off by default.",
+    "settingsTitle": "Switches",
+    "lockMode": "Scope of the lock",
+    "modeLedger": "Ledger only (default)",
+    "modeObject": "Additionally property and period",
+    "autoLock": "Closing a statement sets the lock for property and period",
+    "reopen": "Allow releasing a lock (reason and second person)",
+    "save": "Save switches",
+    "saved": "Switches saved.",
+    "listTitle": "Locks",
+    "empty": "No locks.",
+    "property": "Property (ID)",
+    "ledger": "Ledger (ID)",
+    "from": "From",
+    "to": "To",
+    "reason": "Reason",
+    "create": "Create lock",
+    "created": "Lock created.",
+    "source": "Source",
+    "sourceManual": "manual",
+    "sourceStatement": "rental statement",
+    "sourceOwnerStatement": "owner statement",
+    "statusActive": "active",
+    "statusReleased": "released",
+    "requestRelease": "Request release",
+    "release": "Approve release",
+    "requested": "Release requested",
+    "requestedHint": "A person other than the requester approves the release.",
+    "done": "Updated."
+  },
   "G1Opening": {
+    "evidence": {"document": "Document", "missing": "Evidence missing"},
     "title": "G1 opening",
     "description": "Checklist before productive bookkeeping (release gate G1). The state comes from the system, the operator records the results. The request goes through the existing release flow with a second person; this page never opens the gate itself.",
     "intro": "Order of the opening list M12-09: release the chart of accounts with the tax advisor, accept the annex D cases by the expert person, check the VAT treatment, then file the G1 request. A second person decides under Platform.",
@@ -12185,6 +12712,8 @@
     "requestedMessage": "G1 request filed. A second person decides under Platform, release gates.",
     "record": "Record result",
     "columns": {
+      "responsible": "Responsible",
+      "evidence": "Evidence",
       "key": "Id",
       "title": "Item",
       "status": "Result",
@@ -12227,6 +12756,8 @@
       "countOf": "{passed} of {total}"
     },
     "documents": {
+      "gateChecklist": "Gate checklist",
+      "gaps": "Without responsible person: {responsible}, passed without evidence: {evidence}",
       "title": "Documents",
       "help": "The documents live in the repository and are named as evidence in the request.",
       "kontenrahmen-pruefung": "Chart of accounts review",
@@ -12243,6 +12774,10 @@
       "help": "Items of the opening list the system cannot derive itself."
     },
     "form": {
+      "responsible": "Responsible person",
+      "noResponsible": "No person",
+      "evidenceDocument": "Evidence document (document id from the DMS)",
+      "evidenceRef": "Evidence as reference (path, file number or location)",
       "title": "Result for {key}",
       "status": "Result",
       "date": "Date",
@@ -12627,6 +13162,11 @@
     "noRequests": "No requests."
   },
   "RentInvoices": {
+    "numberingMode": "Number for drafts",
+    "modeDraftNumbers": "Draft number ENTWURF-YYYY-NNNNNN (default)",
+    "modeRegularNumbers": "Regular invoice number MR even for drafts",
+    "modeReject": "Reject issuing while G1 is closed",
+    "numberingHint": "Drafts do not consume the gapless invoice number. The regular number is only assigned when issued with G1 open. Classification open (AC03-01), decision by operator and tax adviser.",
     "title": "Rent invoices with VAT",
     "intro": "Built from the receivable items of the contract (net, tax rate, tax, gross). While release gate G1 is closed the PDF carries the draft watermark. Cancellation only by credit note, never by deletion. Legal mandatory content is to be checked by the tax adviser.",
     "standing": "Standing invoice per year",
@@ -13684,7 +14224,10 @@
         "credit": "Interest received (income)",
         "debit": "Interest charged (expense)"
       },
-      "interestTaxNote": "The amount entered is booked. Tax treatment such as withheld capital gains tax is not booked automatically and must be clarified separately.",
+      "interestTaxNote": "The gross interest is booked. Enter withheld capital gains tax, solidarity surcharge and church tax as amounts from the bank document; they are booked on the tax accounts configured for the ledger. No tax rate is computed; the tax treatment must be clarified with the tax adviser.",
+      "interestNet": "Credit on the money account: {amount}",
+      "taxes": { "capital_gains_tax": "Capital gains tax per bank document", "solidarity_tax": "Solidarity surcharge per bank document", "church_tax": "Church tax per bank document" },
+      "interestTax": { "title": "Tax accounts for interest withholdings", "help": "Without a configured account the withholding cannot be entered. Money, reserve and revenue accounts are not allowed.", "none": "no account", "save": "Save", "saved": "Saved" },
       "save": "Save draft",
       "created": "Draft created."
     },
@@ -13858,6 +14401,13 @@
     "checkOk": "Structural check without findings. The official validation runs outside the platform.",
     "store": "File",
     "stored": "XRechnung filed.",
+    "zugferd": "ZUGFeRD",
+    "zugferdCheck": "Check ZUGFeRD",
+    "zugferdStore": "File ZUGFeRD",
+    "zugferdStored": "ZUGFeRD document filed. Nothing was sent; PDF/A-3 is not verified.",
+    "zugferdFiled": "ZUGFeRD filed",
+    "zugferdStructureOk": "CII structure without findings",
+    "zugferdPdfaNotVerified": "PDF/A-3 marked, conformance not proven (own pre-check, no official validator)",
     "cancel": "Cancel",
     "cancelPrompt": "Reason for the cancellation (creates a credit note with its own number):",
     "cancelled": "Credit note created, invoice cancelled.",
@@ -13902,13 +14452,24 @@
     "keys": {
       "chat_enabled": "Chat at the report",
       "chat_ai_prequalification_enabled": "AI pre-qualification in the chat",
-      "support_login_enabled": "Read only support view with consent"
+      "support_login_enabled": "Read only support view with consent",
+      "owner_rental_income_enabled": "Rental income for investors in the owner portal",
+      "chat_bot_enabled": "Assistant for the own documents (chat bot)",
+      "privacy_feature_enabled": "Privacy feature for AI answers"
     },
     "help": {
       "chat_enabled": "Tenants and owners can write messages to their report, replies run through the ticket.",
       "chat_ai_prequalification_enabled": "Proposal for classification only. Needs the released AI provider with a data processing agreement and the chat switched on.",
-      "support_login_enabled": "The management can view read only with the user's valid consent, every access is logged."
+      "support_login_enabled": "The management can view read only with the user's valid consent, every access is logged.",
+      "owner_rental_income_enabled": "Shows owners with special property administration the agreed rent of their own units without tenant names. Check data protection approval before switching on.",
+      "chat_bot_enabled": "Tenants and owners can ask questions about the documents released for them. Without further releases the assistant only shows matches in these documents; answers never come from foreign documents.",
+      "privacy_feature_enabled": "Prerequisite for AI answers in the assistant: a released privacy notice (text block portal_chat_privacy_notice, released by a second person) and acknowledgement per account. The AI answer also needs the released AI provider with a data processing agreement. The tenant maintains the text; the software ships no legal text."
     },
+    "ticketScope": "Tickets in the owner portal",
+    "ticketScopes": { "none": "no tickets", "released": "only tickets released for owners", "property": "all tickets of the own properties (number, title, status)" },
+    "ratingDisplay": "Ratings of service providers",
+    "ratingModes": { "off": "do not show (default, internal)", "staff": "show to the management only as an overview" },
+    "ratingHelp": "Ratings are internal assessments by the management of completed orders. The overview shows only the count, mean and distribution of the stars per provider, without free text. Providers and third parties do not see the ratings. A display for providers stays excluded until decision AA14-02 and a data protection review.",
     "statistics": "Usage in the last {days} days",
     "accountsTotal": "Portal accounts in total: {count}",
     "accountsInvited": "Invited, not yet activated: {count}",
@@ -13917,6 +14478,124 @@
     "retrievals": "Document retrievals: {opened} opened, {downloaded} downloaded",
     "submissions": "Form submissions: {count}",
     "tickets": "Reports from the portal: {count}"
+  },
+  "PortalFormPreview": {
+    "title": "Preview",
+    "intro": "This is how the form appears in the portal. Sample values are checked with the same rules as in the portal. Nothing is saved, no case is created and nothing is sent.",
+    "defaultName": "Preview",
+    "noFields": "The form has no fields yet.",
+    "requiredHint": "Fields marked with * are required.",
+    "choose": "Please choose",
+    "fileNote": "Files are not uploaded in the preview and not checked for presence.",
+    "check": "Check sample values",
+    "checking": "Checking",
+    "valid": "The sample values are valid.",
+    "invalid": "The sample values are not valid, please check {count} entry(ies).",
+    "ticketText": "How the submission appears in the ticket"
+  },
+  "PortalFormTypes": {
+    "title": "Element types of the form builder",
+    "show": "Show element types and check rules",
+    "hide": "Hide element types and check rules",
+    "count": "{count} element types",
+    "type": "Type",
+    "format": "Value",
+    "rule": "Check rule"
+  },
+  "AssistantLog": {
+    "title": "Log of the portal assistant",
+    "note": "Questions are stored with masked IBAN, e-mail, phone number and address. The answers are information, not a statement of the property manager.",
+    "empty": "No questions logged yet.",
+    "when": "Time",
+    "result": "Result",
+    "question": "Question",
+    "reason": "Reason without AI answer",
+    "sourceCount": "{count, plural, one {# source} other {# sources}}",
+    "mode": { "ai": "AI", "search": "Search" },
+    "status": {
+      "answered": "answered",
+      "not_answerable": "no sufficient basis",
+      "failed": "AI not run",
+      "search_hits": "matches",
+      "no_sources": "no documents"
+    }
+  },
+  "ProviderRatings": {
+    "title": "Ratings of service providers (management only)",
+    "disabled": "The display is switched off.",
+    "empty": "No rated orders yet.",
+    "provider": "Service provider",
+    "count": "Rated orders",
+    "average": "Mean (stars)",
+    "distribution": "Distribution",
+    "unknown": "Unknown service provider"
+  },
+  "CreditPayables": {
+    "title": "Payout of credits from statements",
+    "notice": "Booking rule open ({ref}). Default off: no payable is created. Release by a second person behind G3, payment order behind G2 and G3, every order needs two approvals.",
+    "loading": "Loading …",
+    "mode": "Variant",
+    "modes": {
+      "off": "Off",
+      "subledger": "Subledger item without reclass",
+      "reclass": "Reclass to creditor account"
+    },
+    "modeHelp": {
+      "off": "Credits are only listed; nothing is created.",
+      "subledger": "The release adds the payable to the posted credit on the debtor account. Rental statements only; corrected by reversing the result entry.",
+      "reclass": "The release writes a reclass draft (debit source account, credit creditor account). Only posting it on the regular path (G1) creates the item."
+    },
+    "fourEyes": "Release only by a person other than the proposer",
+    "accounts": {
+      "creditor_account_number": "Creditor account (reclass)",
+      "owner_debit_account_number": "Debit account owner payout",
+      "deposit_debit_account_number": "Debit account deposit refund"
+    },
+    "save": "Save settings",
+    "saved": "Settings saved.",
+    "candidates": "Credits to pay out",
+    "noCandidates": "No credits to pay out.",
+    "rows": "Proposals and payables",
+    "noRows": "No proposals yet.",
+    "source": "Source",
+    "date": "Date",
+    "amount": "Amount",
+    "variant": "Variant",
+    "state": "State",
+    "actions": "Actions",
+    "propose": "Propose",
+    "proposed": "Proposal created.",
+    "offHint": "Switch off (settings)",
+    "release": "Release",
+    "released": "Released.",
+    "order": "Payment order",
+    "orderCreated": "Draft payment order created; two approvals on the order required.",
+    "withdraw": "Withdraw",
+    "withdrawReason": "Reason of the withdrawal or reversal",
+    "withdrawn": "Withdrawn.",
+    "payee": "Payee",
+    "bankAccount": "Ordering account",
+    "executionDate": "Execution date",
+    "noOptions": "No released bank account or no matching ordering account.",
+    "createOrder": "Create order",
+    "cancel": "Cancel",
+    "sources": {
+      "rent_statement": "Credit operating cost statement",
+      "owner_statement": "Payout owner statement",
+      "deposit_settlement": "Deposit refund"
+    },
+    "states": {
+      "proposed": "Proposed",
+      "reclass_draft": "Reclass draft",
+      "discarded": "Draft discarded",
+      "open": "Open",
+      "ordered": "Ordered",
+      "partially_paid": "Partially paid",
+      "paid": "Paid",
+      "reversed": "Reversed",
+      "source_reversed": "Statement reversed",
+      "withdrawn": "Withdrawn"
+    }
   },
   "PaymentRun": {
     "bank": "Bank",
@@ -14350,6 +15029,90 @@
     "priority": "Priority",
     "choosePriority": "Choose priority"
   },
+  "PrivacyRegister": {
+    "sources": {
+      "title": "Service providers from the configuration",
+      "intro": "External services that the settings and connectors of this tenant and of the platform actually use. Only technical facts are shown. Whether a service is a processor or a sub processor, whether a third country is involved and which legal basis applies is maintained in the register entry and needs a legal review.",
+      "loading": "Loading.",
+      "empty": "No external service detected in the configuration.",
+      "name": "Service",
+      "service": "Use",
+      "state": "State",
+      "active": "Active",
+      "inactive": "Configured, not active",
+      "scope": "Origin",
+      "scopeTenant": "Tenant",
+      "scopePlatform": "Platform",
+      "register": "Register",
+      "inRegister": "Recorded",
+      "missing": "Missing",
+      "includeInactive": "Also take over configured services that are currently inactive",
+      "sync": "Take detected services into the register",
+      "syncHint": "New entries start with DPA no evidence, third country open and legal review open. Values already maintained stay unchanged.",
+      "syncResult": "{created} entries taken over, {skipped} inactive services skipped."
+    },
+    "columns": {
+      "thirdCountry": "Third country",
+      "origin": "Origin",
+      "originConfig": "From configuration",
+      "originManual": "Manual",
+      "edit": "Edit"
+    },
+    "editor": {
+      "title": "Maintain entry",
+      "maintenanceHint": "Roles, legal basis and third country transfer are operator entries. The platform does not preset them; open means that nothing has been entered yet.",
+      "originConfig": "Taken over from the configuration.",
+      "name": "Name",
+      "purpose": "Purpose",
+      "responsibilities": "Role per party",
+      "responsibilitiesHint": "Per processing activity, separately for the GdWE, the manager and the platform operator. The classification needs a legal review (V13).",
+      "responsibilityNote": "Note on responsibility",
+      "legalBasis": "Legal basis",
+      "legalBasisHint": "Free text of the operator after legal review. The platform does not suggest a legal basis.",
+      "processors": "Processors and sub processors used",
+      "noProcessors": "No processor in the register yet.",
+      "dataCategories": "Categories of personal data",
+      "dataSubjects": "Categories of data subjects",
+      "listHint": "Separate several values with commas.",
+      "recipients": "Recipients",
+      "retention": "Retention periods",
+      "avv": "DPA status",
+      "avvConfirmedOn": "DPA confirmed on",
+      "thirdCountry": "Third country transfer",
+      "thirdCountryCountries": "Countries",
+      "thirdCountryNote": "Safeguards, note",
+      "thirdCountryHint": "Operator entry, for example the basis of the transfer according to the reviewed contract.",
+      "review": "Legal review",
+      "reviewedOn": "Reviewed on",
+      "active": "Entry active",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "actor": {
+      "gdwe": "GdWE",
+      "verwalter": "Manager",
+      "betreiber": "Platform operator"
+    },
+    "role": {
+      "open": "Open",
+      "controller": "Controller",
+      "joint_controller": "Joint controller",
+      "processor": "Processor",
+      "not_involved": "Not involved"
+    },
+    "thirdCountry": {
+      "open": "Open",
+      "no": "No (as entered)",
+      "yes": "Yes"
+    },
+    "review": {
+      "open": "Open",
+      "reviewed": "Reviewed"
+    },
+    "records": {
+      "pdf": "Download PDF draft"
+    }
+  },
   "PrivacyAdmin": {
     "breadcrumb": "Settings",
     "title": "Data protection",
@@ -14554,6 +15317,40 @@
     "context_statement": "Statement",
     "context_ticket": "Ticket"
   },
+  "HoaReservePayments": {
+    "title": "Payments per reserve",
+    "hint": "Planned from the resolved economic plan, paid from items bound to the reserve. A split proposal by plan ratio is information only and is not posted.",
+    "load": "Load planned and paid",
+    "error": "The payments per reserve could not be loaded.",
+    "reserve": "Reserve",
+    "planned": "Planned",
+    "paidBound": "Paid (bound)",
+    "openBound": "Open (bound)",
+    "paidProposal": "Proposal by plan ratio",
+    "unassigned": "Unassigned reserve payments",
+    "mode": {
+      "bound_only": "Variant: bound payments only",
+      "plan_ratio_proposal": "Variant: proposal by plan ratio"
+    }
+  },
+  "HoaReservePlan": {
+    "title": "Reserve plan per year",
+    "hint": "Planned contribution per reserve and year with resolution reference. Resolved plans are frozen; a change is a new plan that supersedes the old one. No posting, no demand.",
+    "none": "No reserve plan recorded yet.",
+    "year": "Year",
+    "planned": "Planned contribution",
+    "deviation": "Deviation from economic plan",
+    "status": "Status",
+    "status_draft": "Draft",
+    "status_resolved": "Resolved",
+    "status_superseded": "Superseded",
+    "tax": "Tax classification",
+    "taxNotReleased": "Placeholder, not released",
+    "taxReleased": "Released",
+    "resolution": "Resolution",
+    "resolve": "Mark as resolved",
+    "create": "Create draft plan"
+  },
   "HoaReserves": {
     "title": "Reserves",
     "hint": "Earmarked reserves of the community. Payments are assigned to a reserve when the owners' advance is bound to it; otherwise the paid amount stays a total.",
@@ -14606,6 +15403,8 @@
     "cancel": "Cancel",
     "active": "active",
     "inactive": "inactive",
+    "interestTaxWithheld": "Interest tax withheld",
+    "interestTaxWithheldHelp": "Taxes withheld on posted interest entries of the reserve account, display only",
     "yearTitle": "Development per year",
     "year": "Year",
     "contribution": "Contribution",
@@ -15067,5 +15866,534 @@
     "note": "Source and note",
     "noteHelp": "For example: Uptime Kuma, 30 day display, read on DD.MM.YYYY.",
     "save": "Save"
+  },
+  "AE35": {
+    "title": "Own availability measurement",
+    "intro": "Every minute the platform checks the health addresses of API, CRM and portal and evaluates each month automatically. The measurement runs on the platform's own infrastructure. If the whole server fails, there is a gap instead of failed checks. Gaps do not count as downtime but lower the coverage.",
+    "notConfigured": "The own measurement is not set up. Once the addresses are set (MHVP_AVAILABILITY_API_URL, _CRM_URL, _PORTAL_URL in the operating configuration) the check runs every minute.",
+    "probe": "Measuring point",
+    "probes": { "api": "API", "crm": "CRM", "portal": "Portal" },
+    "host": "Address",
+    "off": "not set up",
+    "lastCheck": "Last check",
+    "noCheckYet": "No check yet",
+    "result": "Result",
+    "reachable": "reachable",
+    "latency": "Response time",
+    "last24h": "Last 24 hours",
+    "failuresTitle": "Latest failures",
+    "errors": {
+      "timeout": "Timeout",
+      "connect_error": "Connection failed",
+      "http_status": "Answer without success status",
+      "http_error": "Protocol error",
+      "error": "Unknown error"
+    },
+    "retention": "The minute values are kept for {days} days and are only deleted once the month has been evaluated and frozen. The monthly evaluation is kept.",
+    "switchLabel": "Maintenance windows count as downtime",
+    "switchHelp": "Off (default): checks inside announced maintenance windows are left out and the figure without maintenance windows is rated. On: maintenance windows count as downtime and the figure from all checks is rated. Both figures are always shown in the table. Which way of counting applies towards third parties is open (question AD10-02) and belongs to G5. Every change is written to the platform audit.",
+    "monthsTitle": "Monthly evaluation of the own measurement",
+    "noMonths": "No monthly evaluation yet. It is created daily from the minute values.",
+    "month": "Month",
+    "final": "frozen",
+    "provisional": "provisional",
+    "rated": "Rated ({basis})",
+    "basisAll": "all checks",
+    "basisNet": "without maintenance windows",
+    "gross": "All checks",
+    "net": "Without maintenance windows",
+    "maintenanceMinutes": "Downtime inside maintenance windows (minutes)",
+    "coverage": "Coverage",
+    "target": "Target met",
+    "met": "Yes",
+    "missed": "No",
+    "noVerdict": "Not rated",
+    "verdictHelp": "The columns per measuring point show the rated figure, the columns All checks and Without maintenance windows show the weakest measuring point. A month is only rated once all three measuring points exist and the coverage is at least {min}."
+  },
+  "AE01": {
+    "title": "Annex D acceptance register",
+    "description": "Independent expected results per case, release by a second person and acceptance result (V16).",
+    "link": "Annex D acceptance register",
+    "loadError": "The acceptance register could not be loaded.",
+    "counts": "Released expected values: {released} of {total}, accepted: {passed}",
+    "export": "Download acceptance protocol as Markdown",
+    "name": "Name of the expert person",
+    "softwareVersion": "Software version",
+    "draftFor": "New version of the expected value for {case}",
+    "fieldTitle": "Title",
+    "fieldInputs": "Inputs (JSON)",
+    "fieldExpected": "Expected value (JSON)",
+    "fieldSource": "Source of the expected value",
+    "fieldCalculation": "Calculation",
+    "amountHint": "Give amounts as strings, for example \"1234.56\".",
+    "jsonInvalid": "Inputs and expected value must be valid JSON.",
+    "saveDraft": "Save draft",
+    "cancel": "Cancel",
+    "colCase": "Case",
+    "colTitle": "Title",
+    "colStatus": "Status",
+    "colReleased": "Released",
+    "colResult": "Result",
+    "colActions": "Actions",
+    "releasedBy": "Version {version}, {name}, {date}",
+    "newVersion": "New version",
+    "submit": "Submit for release",
+    "approve": "Release",
+    "reject": "Reject",
+    "passed": "Passed",
+    "failed": "Failed",
+    "status": {
+      "none": "no expected value",
+      "draft": "draft",
+      "submitted": "submitted",
+      "approved": "released",
+      "rejected": "rejected",
+      "superseded": "superseded"
+    },
+    "outcome": {
+      "passed": "passed",
+      "failed": "failed"
+    }
+  },
+  "HoaPlanChange": {
+    "load": "Show difference of posted months",
+    "title": "Plan change within the year: difference of months already posted",
+    "intro": "New monthly amount of the plan against the receivable already posted per unit and month. Drafts post nothing; a second person approves with gate G4, posting follows only with G1. Which variant applies is open (M12-L2).",
+    "mode": "Variant",
+    "modes": {
+      "notice": "Notice only",
+      "due_now": "Difference due now",
+      "next_instalment": "Settle with next instalment"
+    },
+    "none": "No posted months from the start date.",
+    "unit": "Unit",
+    "component": "Component",
+    "month": "Month",
+    "posted": "Posted",
+    "new": "New",
+    "difference": "Difference",
+    "kindLabel": "Kind",
+    "kind": {
+      "claim": "Claim",
+      "credit": "Credit",
+      "none": "no difference",
+      "manual": "manual (mid month)"
+    },
+    "total": "Total of differences: {amount}",
+    "noticeOnly": "Variant notice only: no drafts are created.",
+    "draft": "Create differences as draft",
+    "due": "due {date}",
+    "status": {
+      "draft": "draft",
+      "approved": "approved",
+      "rejected": "rejected"
+    },
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "BusinessRules": {
+    "title": "Business rules",
+    "description": "Tenant switches for professionally open decisions in one place: current value, variants, default and the open question.",
+    "intro": "The default is always the conservative variant that books, sends and deletes nothing. The software decides no legal or tax question: the operator decides which variant applies after review by a lawyer or tax advisor. The release gates G1 to G5 are not affected by the switches.",
+    "summary": "{count} rules, {open} with an open decision",
+    "groupsNav": "Areas of the business rules",
+    "decisionOpen": "Decision open",
+    "current": "Current",
+    "default": "Default",
+    "variants": "Variants",
+    "questionOne": "Open question",
+    "questionMany": "Open questions",
+    "questionFile": "in docs/OPEN_QUESTIONS.md",
+    "change": "Change",
+    "reason": "Reason",
+    "save": "Save",
+    "saved": "Saved.",
+    "openMask": "Open specialist screen",
+    "unavailable": "not readable",
+    "notSet": "not entered",
+    "readOnly": "Display only. Change it in the specialist screen.",
+    "noPermission": "You lack the permission to change this.",
+    "on": "On",
+    "off": "Off",
+    "entries": "{count} entries",
+    "confirmLabel": "Confirm change",
+    "confirm": "This setting differs from the default. The professional decision lies with the operator (management). Clarify it beforehand with a lawyer or tax advisor. Really make the change?",
+    "confirmYes": "Confirm change",
+    "cancel": "Cancel",
+    "groups": {
+      "accounting": "Accounting",
+      "billing": "Rental statements",
+      "hoa": "Condominium",
+      "portal": "Portal",
+      "banking": "Bank and automation",
+      "platform": "Platform",
+      "security": "Security and data protection"
+    },
+    "rules": {
+      "rent-invoice-numbering": {
+        "title": "Number for rent invoice drafts",
+        "description": "Which number a draft of a rent invoice or credit note receives while G1 is closed. Draft numbers do not use up the consecutive invoice number."
+      },
+      "subledger-exclude-written-off": {
+        "title": "Subledger check hides written off items",
+        "description": "Written off items and items of cancelled postings do not appear in the difference of the subledger check and are counted separately. The export nebenbuchabgleich.csv names the reason."
+      },
+      "period-lock-mode": {
+        "title": "Period lock: scope",
+        "description": "Whether postings are checked only against the lock of the ledger or additionally against locks per property and period."
+      },
+      "period-lock-auto": {
+        "title": "Set the period lock when a statement is closed",
+        "description": "Whether closing a rental statement or owner statement sets the lock for property and period itself. Off means: proposal only."
+      },
+      "period-lock-reopen": {
+        "title": "Allow lifting a period lock",
+        "description": "Whether a lock may be lifted with a request, a reason and approval by a second person. The row of the lock is kept."
+      },
+      "chart-four-eyes": {
+        "title": "Chart of accounts: approval by two people",
+        "description": "Whether releasing a chart version requires a second person. The switch applies per version and needs a reason. The newest version is shown and changed, a released version can no longer be changed."
+      },
+      "chart-coverage": {
+        "title": "Chart of accounts: statement kind and multi key distribution",
+        "description": "Proposals for the statement kind (for example heating) and distributions per account, each marked as proposal, approval open. The coverage report shows accounts without an assignment.",
+        "defaultText": "Proposals stay open until the chart is released"
+      },
+      "interest-tax": {
+        "title": "Tax withheld on credit interest",
+        "description": "Capital gains tax, solidarity surcharge and church tax per interest posting as amounts from the bank document. You set the tax accounts per ledger; only a posting draft is created.",
+        "defaultText": "No tax accounts, deductions 0,00 EUR"
+      },
+      "rule-checkpoints": {
+        "title": "Check points for heating cost ordinance deadlines",
+        "description": "Dated hints on retrofit and transition deadlines with a lead time (default 30 days). Without entries they have no effect. Deadlines and sources come from your legal advisor.",
+        "defaultText": "No entries"
+      },
+      "advance-open-mode": {
+        "title": "Open advances when the statement is issued",
+        "description": "Treatment of advances that are still open when the operating cost statement is issued. The effect only concerns drafts behind G3."
+      },
+      "allocation-basis-block": {
+        "title": "Allocation basis report blocks the output",
+        "description": "If the allocation agreement of a cost item is missing, the report blocks the status change and the information sheet."
+      },
+      "deadline-policy": {
+        "title": "Behaviour after the statement deadline",
+        "description": "What happens after the displayed end of the deadline. The end is only an orientation, the grounds for exceptions are professionally open."
+      },
+      "deadline-watch": {
+        "title": "Warning before the statement deadline",
+        "description": "Whether a daily run notifies before the end of the deadline. The notification goes to the person who created the statement."
+      },
+      "deadline-warn-first": {
+        "title": "First warning, days before the deadline",
+        "description": "Distance of the first warning to the end of the deadline in days. Only effective while the warning is on."
+      },
+      "deadline-warn-second": {
+        "title": "Second warning, days before the deadline",
+        "description": "Distance of the second warning to the end of the deadline in days. Only effective while the warning is on."
+      },
+      "text-blocks": {
+        "title": "Text blocks with approval",
+        "description": "Information sheet, cover letter and the proof under section 35a only with an approved text. Without approval the note text not approved appears.",
+        "defaultText": "No text approved"
+      },
+      "opening-lock-mode": {
+        "title": "Opening balance of a reserve after a calculated statement",
+        "description": "Whether the opening balance stays locked after a calculated or approved statement of the first year, can be changed with a log, or needs approval by a second person. No variant posts anything."
+      },
+      "reserve-plan-tax": {
+        "title": "Tax classification of the reserve contribution",
+        "description": "Placeholder field per reserve plan with the approval status not approved. The tax advisor determines the classification.",
+        "defaultText": "Not approved"
+      },
+      "reserve-payment-mode": {
+        "title": "Payments per earmarked reserve",
+        "description": "Whether unbound reserve payments are proposed as a split by the plan ratio. The proposal is a display only, nothing is posted."
+      },
+      "plan-change-mode": {
+        "title": "Budget change during the year",
+        "description": "Treatment of the difference of months already posted when a budget takes effect during the year. Drafts per unit are created, posting needs G1 and approval."
+      },
+      "acquisition": {
+        "description": "To whom the statement result is assigned for this kind of acquisition. With the default variant the approval decides by hand, the calculation stays unchanged."
+      },
+      "acquisition-purchase": {
+        "title": "Assignment on change of owner: purchase"
+      },
+      "acquisition-first-acquisition": {
+        "title": "Assignment on change of owner: first acquisition"
+      },
+      "acquisition-inheritance": {
+        "title": "Assignment on change of owner: inheritance"
+      },
+      "acquisition-foreclosure": {
+        "title": "Assignment on change of owner: foreclosure"
+      },
+      "acquisition-gift": {
+        "title": "Assignment on change of owner: gift"
+      },
+      "acquisition-other": {
+        "title": "Assignment on change of owner: other acquisition"
+      },
+      "virtual-meetings": {
+        "title": "Allow virtual meetings",
+        "description": "Whether meetings can be created in virtual form. Enabling requires the legal review."
+      },
+      "virtual-basis-term-lock": {
+        "title": "Basis resolution: maximum term as a lock",
+        "description": "Whether a virtual meeting is locked whose basis resolution is more than three years old. Off means: notice only."
+      },
+      "virtual-basis-transition-date": {
+        "title": "Cut-off date of the transition rule",
+        "description": "Date you enter as the cut-off date of the transition rule. It is no legal text and has no locking effect, the deadline notices only mention it."
+      },
+      "online-meeting": {
+        "title": "Online meeting in the portal",
+        "description": "Whether owners take part and vote online in hybrid or virtual meetings in the portal. The software does not check admissibility."
+      },
+      "proxy-conflict-mode": {
+        "title": "Proxy versus own vote",
+        "description": "How online voting proceeds when a proxy and an own vote exist for the same unit."
+      },
+      "owner-rental-income": {
+        "title": "Rental income in the owner portal",
+        "description": "Shows owners the agreed rent of their units with separate property management, without the tenant name. The data protection approval is open."
+      },
+      "owner-ticket-scope": {
+        "title": "Tickets in the owner portal",
+        "description": "Which tickets of the property an owner can read."
+      },
+      "provider-rating-display": {
+        "title": "Ratings of service providers",
+        "description": "Whether the management sees the ratings of service providers in aggregate. There is no display for providers or third parties."
+      },
+      "terms-version-mode": {
+        "title": "Version of the terms of use",
+        "description": "Whether the version in the consent policy is maintained by hand or follows the approved text. A new version obliges portal accounts to accept it."
+      },
+      "automation-switch": {
+        "title": "Posting automation",
+        "description": "Switch of the posting automation for bank transactions. Switching on needs an open G1 and a request approved by a second person, so it is display only here."
+      },
+      "g1-checklist": {
+        "title": "G1 opening list",
+        "description": "Checklist with evidence, status and owner per check point before productive bookkeeping.",
+        "defaultText": "Release gate G1 stays closed"
+      },
+      "acceptance-register": {
+        "title": "Acceptance register",
+        "description": "Independent expected values per case of annex D with approval by a second person. Naming the expert person is up to the operator.",
+        "defaultText": "No expected value applies without approval by a second person"
+      },
+      "credit-payable-mode": {
+        "title": "Credit balances from statements as payable items",
+        "description": "Whether and how a credit balance of a statement becomes a payable item for a payout without an invoice. Off means: no items. Payouts stay behind G2 and G3."
+      },
+      "credit-payable-four-eyes": {
+        "title": "Payable items: approval by two people",
+        "description": "Whether releasing a payable item requires a person other than the one who proposed it."
+      },
+      "portal-chat-bot": {
+        "title": "Portal assistant (chat bot)",
+        "description": "Whether tenants and owners can ask questions about the documents released to them in the portal. AI answers only behind the data processing agreement and provider approval, with sources."
+      },
+      "portal-chat-privacy": {
+        "title": "Portal assistant: privacy notice",
+        "description": "Whether an approved privacy notice must be acknowledged before using the assistant. Without it there are only hits of the document search."
+      },
+      "ebics-enabled": {
+        "title": "EBICS connection",
+        "description": "Switch of the EBICS skeleton for subscribers, key management and retrieval of account statements. The transmission to the bank is still missing, payment orders via EBICS stay behind G2."
+      },
+      "ebics-signature-key-mode": {
+        "title": "EBICS: storage of the signature key",
+        "description": "Whether the signature key stays external or is created on the server. The choice applies to subscribers created afterwards, existing ones keep their variant."
+      },
+      "mfa-crm-mode": {
+        "title": "Second factor for CRM users",
+        "description": "Whether and for which CRM users a second factor is mandatory at sign-in. The default is voluntary, the obligation is a choice of the tenant. The change takes effect at the next sign-in. For the variant per role, choose the roles under roles and permissions."
+      },
+      "mfa-portal-required": {
+        "title": "Second factor in the portal",
+        "description": "Whether portal users must set up a second factor. Off means: voluntary."
+      },
+      "access-export-third-party": {
+        "title": "Access export: other persons",
+        "description": "How other persons appear in an access export. The choice applies to exports prepared afterwards, a prepared export keeps its scope."
+      },
+      "access-export-internal-notes": {
+        "title": "Access export: internal notes",
+        "description": "Whether internal notes are part of the access export. Off means: withheld."
+      },
+      "document-trash-enabled": {
+        "title": "Document trash",
+        "description": "Whether a lawfully deleted document first stays in the trash and can be restored within the period. Off means: the process does not change."
+      },
+      "document-trash-days": {
+        "title": "Document trash: period in days",
+        "description": "Period until which a document can be restored from the trash. 30 days is a proposal, the decision is open. The period applies to documents deleted afterwards."
+      },
+      "legal-basis-email-delivery": {
+        "title": "Legal basis: email delivery",
+        "description": "What the sending of statements, reminders and invitations by email is based on. Consent is the default. Another basis needs a justification of at least 10 characters."
+      },
+      "legal-basis-data-sharing": {
+        "title": "Legal basis: data sharing",
+        "description": "What the disclosure of data to third parties is based on. Consent is the default. Another basis needs a justification of at least 10 characters."
+      },
+      "legal-basis-marketing": {
+        "title": "Legal basis: marketing",
+        "description": "What marketing is based on. A contract is not offered for marketing. Legitimate interest needs a justification of at least 10 characters."
+      },
+      "legal-basis-portal-terms": {
+        "title": "Legal basis: terms of use of the portal",
+        "description": "Whether accepting the terms of use of the portal is recorded as consent or as a contract. Consent is the default. Contract needs a justification of at least 10 characters."
+      }
+    },
+    "options": {
+      "rent-invoice-numbering": {
+        "draft_numbers": "Draft number ENTWURF-YYYY-NNNNNN",
+        "regular_numbers": "Regular invoice number MR also for a draft",
+        "reject_when_g1_closed": "Reject the output while G1 is closed"
+      },
+      "period-lock-mode": {
+        "ledger_only": "Lock of the ledger only",
+        "object_period": "Lock per property and period"
+      },
+      "advance-open-mode": {
+        "info_only": "Information only, balance against paid advances",
+        "offset_reversal": "Offset open items against the statement by reversal",
+        "balance_against_due": "Balance against due advances"
+      },
+      "deadline-policy": {
+        "block_claims": "Block additional claims",
+        "notice": "Notice only"
+      },
+      "opening-lock-mode": {
+        "locked": "Locked",
+        "logged": "Change with a log",
+        "four_eyes": "Change with approval by a second person"
+      },
+      "reserve-payment-mode": {
+        "bound_only": "Bound payments only",
+        "plan_ratio_proposal": "Split proposal by plan ratio"
+      },
+      "plan-change-mode": {
+        "notice": "Notice only",
+        "due_now": "Difference due immediately",
+        "next_instalment": "Offset with the next instalment"
+      },
+      "acquisition": {
+        "manual_release": "Manual approval",
+        "by_due_date": "Assignment by due date",
+        "by_resolution_date": "Assignment by statement resolution"
+      },
+      "proxy-conflict-mode": {
+        "flag": "Mark the conflict as a review note",
+        "first_vote": "First vote cast counts",
+        "proxy_priority": "Proxy takes precedence",
+        "own_priority": "Own vote takes precedence"
+      },
+      "owner-ticket-scope": {
+        "none": "No tickets",
+        "released": "Released tickets only",
+        "property": "All tickets of the property"
+      },
+      "provider-rating-display": {
+        "off": "Off, internal only",
+        "staff": "Shown to the management only"
+      },
+      "terms-version-mode": {
+        "manual": "Maintain by hand",
+        "follow_text": "Follow the approved text"
+      },
+      "credit-payable-mode": {
+        "off": "Off, no payable items",
+        "subledger": "Item for the posted credit in the subledger",
+        "reclass": "Reclassification draft to the creditor account"
+      },
+      "ebics-signature-key-mode": {
+        "external": "External (default)",
+        "server": "On the server, stored encrypted"
+      },
+      "mfa-crm-mode": {
+        "all_staff": "Required for all CRM roles",
+        "roles": "Required for chosen roles",
+        "voluntary": "Voluntary"
+      },
+      "access-export-third-party": {
+        "none": "Role only",
+        "names": "With names"
+      },
+      "legal-basis": {
+        "consent": "Consent",
+        "contract": "Contract",
+        "legitimate_interest": "Legitimate interest"
+      }
+    }
+  },
+  "AE36": {
+    "demoBadge": "Demo tenant",
+    "demoHint": "Invented data. The tenant takes no part in billing, exports, DATEV and statistics.",
+    "demoMark": "Mark as demo tenant",
+    "demoUnmark": "Remove demo flag",
+    "demoConfirmMark": "Mark the tenant as demo tenant? It is excluded from billing, exports, DATEV and statistics. Not possible while a release gate is open.",
+    "demoConfirmUnmark": "Remove the demo flag? The tenant then takes part in billing, exports and statistics again. Only for tenants with real data.",
+    "title": "Scale and yearly partitioning",
+    "intro": "Figures for the triggers of ADR 0021 (decision AC09-01 open). The page only reports: nothing is rebuilt, moved or deleted. The thresholds are proposals and can be changed below.",
+    "triggersTitle": "Triggers reached",
+    "noTrigger": "No trigger reached. The weekly measurement runs on Mondays and reports new triggers to all platform administrators.",
+    "kind": {
+      "partition_review": "Plan partitioning",
+      "measure_again": "Repeat measurement"
+    },
+    "tablesTitle": "Tables",
+    "table": "Table",
+    "rows": "Rows",
+    "rowsShare": "Share of {limit} rows",
+    "size": "Size with indexes",
+    "sizeShare": "Share of {limit} GB",
+    "basis": "Count",
+    "exact": "exact",
+    "estimate": "database estimate",
+    "latencyTitle": "Response time of the lists (P95, last 7 days)",
+    "latencyHelp": "Measured on real requests, without tenant, user and search values. Below {min} requests no P95 is shown. Deep access is an offset of 10,000 rows or more.",
+    "list": "List",
+    "samples": "Requests",
+    "p95": "P95",
+    "limit": "Threshold",
+    "tooFew": "too few requests",
+    "latency": {
+      "journal_list": "Journal",
+      "journal_list_deep": "Journal, deep access",
+      "bank_list": "Bank transactions",
+      "bank_list_deep": "Bank transactions, deep access"
+    },
+    "restore": "Latest restore test: {value}, target at most {limit} s.",
+    "noRestore": "no successful test available",
+    "tenants": "Productive tenants: {productive} (demo tenants: {demo}, not counted). Mark for repeating the measurement: {limit}.",
+    "historyTitle": "Weekly measurements",
+    "noHistory": "No weekly measurement stored yet.",
+    "week": "Week",
+    "snapshot": "Store measurement now",
+    "snapshotHelp": "Stores the measurement of the current calendar week and replaces an earlier measurement of the same week.",
+    "snapshotDone": "Measurement {week} stored, new triggers: {count}.",
+    "settingsTitle": "Thresholds and alarm",
+    "settingsHelp": "Proposals from ADR 0021. Every change is written to the platform audit. Maintaining these thresholds does not start a rebuild.",
+    "fields": {
+      "rows": "Rows per table",
+      "size": "Size per table in GB (with indexes)",
+      "p95": "P95 of the lists in ms",
+      "p95Deep": "P95 for deep access in ms",
+      "weeks": "Weekly measurements in a row",
+      "restore": "Restore target in seconds",
+      "restoreHelp": "14,400 seconds are 4 hours.",
+      "tenants": "Productive tenants for repeating the measurement",
+      "alarm": "Report new triggers to platform administrators (note in the bell)"
+    },
+    "save": "Save",
+    "saved": "Saved.",
+    "nothingChanged": "No change."
   }
 }

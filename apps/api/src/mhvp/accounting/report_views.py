@@ -104,9 +104,11 @@ async def monthly_matrix(
     end: date,
     categories: list[AccountCategory] | None = None,
     eur_only: bool = False,
+    property_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     """Accounts (default revenue and cost) by month (M18-01). Amount sign: revenue accounts
-    credit minus debit, all others debit minus credit. Totals per account and per month."""
+    credit minus debit, all others debit minus credit. Totals per account and per month.
+    ``property_id`` keeps only lines of that object (``journal_line.property_id``, Q15-01)."""
     months = month_keys(start, end)
     wanted = categories or [AccountCategory.REVENUE, AccountCategory.COST]
     year = extract("year", JournalEntry.booking_date)
@@ -134,6 +136,8 @@ async def monthly_matrix(
     )
     if eur_only:
         query = query.where(LedgerAccount.eur_relevant.is_(True))
+    if property_id is not None:
+        query = query.where(JournalLine.property_id == property_id)
     rows: dict[str, dict[str, Any]] = {}
     for number, name, category, y, m, debit, credit in (await session.execute(query)).all():
         row = rows.setdefault(
@@ -168,6 +172,7 @@ async def monthly_matrix(
             filters={
                 "categories": ",".join(c.value for c in wanted),
                 "eur_only": eur_only or None,
+                "property_id": str(property_id) if property_id else None,
             },
         ),
         "months": months,
@@ -477,12 +482,17 @@ async def vat_overview(
 
 
 async def income_expense(
-    session: AsyncSession, ledger: Ledger, start: date, end: date, eur_only: bool = False
+    session: AsyncSession,
+    ledger: Ledger,
+    start: date,
+    end: date,
+    eur_only: bool = False,
+    property_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     """Income and expenses per account from the postings (M18-06): for a HOA an income and
     expense statement of the community, explicitly no EÜR. Only account categories are read,
     no tax classification is made."""
-    matrix = await monthly_matrix(session, ledger, start, end, None, eur_only)
+    matrix = await monthly_matrix(session, ledger, start, end, None, eur_only, property_id)
     revenue = [a for a in matrix["accounts"] if a["category"] == AccountCategory.REVENUE.value]
     cost = [a for a in matrix["accounts"] if a["category"] == AccountCategory.COST.value]
     total_rev = sum((a["total"] for a in revenue), ZERO)
@@ -507,17 +517,17 @@ async def vat_overview_by_property(
 ) -> dict[str, Any]:
     """VAT overview grouped by object and cost center (M18-06, 7.7).
 
-    Posted lines carry no property of their own: the object is derived from the line's unit
-    (``unit.property_id``); lines without a unit are listed under "ohne Objekt", the cost center
-    text of the line is the second grouping level. Same selection as ``vat_overview`` (VAT
-    relevant accounts, posted entries only); no deduction rule, no return field. The sums of
-    all groups equal the totals of ``vat_overview`` for the same period."""
+    The object is the line's own ``journal_line.property_id`` (Q15-01, AE21: explicit, from the
+    unit or from the contract of the entry); lines without object are listed under "ohne
+    Objekt", the cost center text of the line is the second grouping level. Same selection as
+    ``vat_overview`` (VAT relevant accounts, posted entries only); no deduction rule, no return
+    field. The sums of all groups equal the totals of ``vat_overview`` for the same period."""
     from mhvp.accounting.models import AccountVatOption
-    from mhvp.properties.models import Property, Unit
+    from mhvp.properties.models import Property
 
     query = (
         select(
-            Unit.property_id,
+            JournalLine.property_id,
             JournalLine.cost_center,
             LedgerAccount.category,
             func.coalesce(func.sum(JournalLine.vat_amount), 0),
@@ -527,7 +537,6 @@ async def vat_overview_by_property(
         .select_from(LedgerAccount)
         .join(JournalLine, JournalLine.account_id == LedgerAccount.id)
         .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
-        .outerjoin(Unit, Unit.id == JournalLine.unit_id)
         .where(
             LedgerAccount.ledger_id == ledger.id,
             LedgerAccount.category.in_((AccountCategory.REVENUE, AccountCategory.COST)),
@@ -537,7 +546,7 @@ async def vat_overview_by_property(
             JournalEntry.status == EntryStatus.POSTED,
             JournalEntry.booking_date.between(start, end),
         )
-        .group_by(Unit.property_id, JournalLine.cost_center, LedgerAccount.category)
+        .group_by(JournalLine.property_id, JournalLine.cost_center, LedgerAccount.category)
     )
     groups: dict[tuple[Any, str], dict[str, Any]] = {}
     for prop_id, cost_center, category, vat, net, count in (await session.execute(query)).all():
@@ -588,7 +597,8 @@ async def vat_overview_by_property(
             (r["input_vat_before_deduction"] for r in rows), ZERO
         ),
         "note": (
-            "Entwurf, keine Umsatzsteuer-Voranmeldung. Das Objekt folgt der Einheit der "
-            "Buchungszeile; Zeilen ohne Einheit stehen unter ohne Objekt."
+            "Entwurf, keine Umsatzsteuer-Voranmeldung. Das Objekt ist das der Buchungszeile "
+            "(aus der Zeile, der Einheit oder dem Vertrag); Zeilen ohne Objekt stehen unter "
+            "ohne Objekt."
         ),
     }

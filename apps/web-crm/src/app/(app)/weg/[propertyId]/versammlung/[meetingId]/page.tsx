@@ -5,6 +5,7 @@ import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa
 import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
 import { MeetingDetailsForm, type MeetingDetails } from "@/components/hoa/MeetingDetailsForm";
 import { MeetingFormPanel, type AttendanceRow, type MeetingFormData } from "@/components/hoa/MeetingFormPanel";
+import { VirtualDeadlines, type VirtualDeadlinesData } from "@/components/hoa/VirtualDeadlines";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
 import { OnlineParticipation, type OnlineOverview } from "@/components/hoa/OnlineParticipation";
 import { ProtocolDraft } from "@/components/hoa/ProtocolDraft";
@@ -51,6 +52,12 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
       <p className={ui.notice}>{t("meetingNotice")}</p>
       <MeetingFormPanel meetingId={meetingId} data={data as unknown as MeetingFormData} attendance={attendance} />
       <MeetingDetailsForm meetingId={meetingId} data={data as unknown as MeetingDetails} closed={String(data.status) === "closed"} templates={templates.map((x) => ({ id: String(x.id), name: String(x.name) }))} />
+      {data.mode === "virtual" && (data as { virtual_basis_deadlines?: VirtualDeadlinesData | null }).virtual_basis_deadlines ? (
+        <VirtualDeadlines
+          data={(data as unknown as { virtual_basis_deadlines: VirtualDeadlinesData }).virtual_basis_deadlines}
+          termNotice={(data as { virtual_basis_term_notice?: string | null }).virtual_basis_term_notice ?? null}
+        />
+      ) : null}
       {data.mode === "virtual" ? (
         <MeetingDeadlineForm
           meetingId={meetingId}

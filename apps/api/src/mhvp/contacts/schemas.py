@@ -497,6 +497,43 @@ class ConsentIn(_Strict):
 class ConsentOut(ConsentIn):
     id: uuid.UUID
     revoked_at: datetime | None
+    # AE34: "objection" marks an objection to a processing on legitimate interest; the portal
+    # terms acceptance carries the accepted version and whether a client hash was recorded.
+    record_type: str = "consent"
+    text_version: str | None = None
+    client_evidence_recorded: bool = False
+
+
+class ContactObjectionIn(_Strict):
+    """Objection of a contact to a processing based on legitimate interest (AE34)."""
+
+    kind: ConsentKind
+    received_at: datetime | None = None
+    source: str = Field(min_length=2, max_length=200)
+    document_id: uuid.UUID | None = None
+
+
+class ConsentLegalBasisIn(_Strict):
+    """Legal basis of one processing purpose (AE34); a basis other than ``consent`` needs a
+    justification of at least 10 characters."""
+
+    basis: Literal["consent", "contract", "legitimate_interest"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class ConsentLegalBasisOut(BaseModel):
+    purpose: Literal["email_delivery", "data_sharing", "marketing", "portal_terms"]
+    basis: Literal["consent", "contract", "legitimate_interest"]
+    origin: Literal["register", "policy", "default"]
+    allowed_bases: list[str]
+    note: str | None
+    set_at: str | None
+    set_by: str | None
+    consent_required: bool
+
+
+class ConsentLegalBasisListOut(BaseModel):
+    items: list[ConsentLegalBasisOut]
 
 
 class ContactConsentPolicyIn(_Strict):
@@ -588,7 +625,22 @@ class ContactAccessExportOut(BaseModel):
     rejected_reason: str | None
     downloads: int
     log: list[ContactAccessExportLogEntry]
+    # AE33: scope frozen at preparation (tenant switches, OPEN_QUESTIONS AC07-01).
+    third_party_scope: Literal["none", "names"] = "none"
+    internal_notes_included: bool = False
 
 
 class ContactAccessExportRejectIn(_Strict):
     reason: str = Field(min_length=3, max_length=500)
+
+
+class ContactAccessExportSettingsOut(BaseModel):
+    """Scope switches of the data subject access export (AE33, AC07-01)."""
+
+    third_party_scope: Literal["none", "names"]
+    include_internal_notes: bool
+
+
+class ContactAccessExportSettingsIn(_Strict):
+    third_party_scope: Literal["none", "names"] = "none"
+    include_internal_notes: bool = False

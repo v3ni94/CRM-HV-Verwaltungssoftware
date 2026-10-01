@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { rejectForeignOrigin } from "@/lib/csrf";
 import { problemJson } from "@/lib/problem";
-import { apiBaseUrl, isSecureHost } from "@/lib/session";
+import { COOKIE, MFA_MAX_AGE, MFA_SETUP_MAX_AGE, apiBaseUrl, cookieOptions, isSecureHost } from "@/lib/session";
 
 export function publicApi() {
   return createApiClient(apiBaseUrl());
@@ -84,4 +84,31 @@ export function publicOrigin(request: Request): string {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.host;
   const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
   return `${proto}://${host}`;
+}
+
+/** AE34: passes the client address chain of the browser request on to the API so that the
+ *  acceptance evidence (keyed hash of the address) and the rate limit see the visitor and not
+ *  this server. The API trusts the header only when `rate_limit_trust_forwarded_for` is set. */
+export function forwardedFor(request: Request): Record<string, string> {
+  const value = request.headers.get("x-forwarded-for");
+  return value ? { "x-forwarded-for": value.slice(0, 200) } : {};
+}
+
+/** M2-04: a login path (password, magic link, e-mail code) that hands over to a further
+ *  step. "mfa_required" keeps the MFA token for /anmelden/zweiter-faktor, "mfa_setup_required"
+ *  the setup token for /anmelden/zweiter-faktor-einrichten, each in its own httpOnly cookie.
+ *  Returns null for any other status. */
+export function stepResponse(data: Record<string, unknown>, secure: boolean): NextResponse | null {
+  const status = data.status;
+  if (status === "mfa_required" && typeof data.mfa_token === "string") {
+    const result = NextResponse.json({ status });
+    result.cookies.set(COOKIE.mfa, data.mfa_token, cookieOptions(secure, MFA_MAX_AGE));
+    return result;
+  }
+  if (status === "mfa_setup_required" && typeof data.mfa_setup_token === "string") {
+    const result = NextResponse.json({ status });
+    result.cookies.set(COOKIE.mfaSetup, data.mfa_setup_token, cookieOptions(secure, MFA_SETUP_MAX_AGE));
+    return result;
+  }
+  return null;
 }

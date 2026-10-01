@@ -4,6 +4,7 @@ Every field is required (nullable where unknown) so the JSON schema works with s
 outputs; the model must answer ``null`` instead of guessing.
 """
 
+import re
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -14,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from mhvp.ai.models import AiTask
 
 PROMPTS = Path(__file__).parent / "prompts"
+VARIANT_PATTERN = re.compile(r"[a-z]+_v[0-9]+")
 
 
 class _Out(BaseModel):
@@ -573,6 +575,11 @@ def prompt(task: AiTask, version: str | None = None) -> Prompt:
     if not files:
         raise LookupError(f"no prompt for {task.value}")
     chosen = next((f for f in files if f.stem == version), None) if version else files[-1]
+    if chosen is None and version and VARIANT_PATTERN.fullmatch(version):
+        # Audience variants (AE28: ``portal_v1``) live next to the numbered versions but are
+        # never the "latest" one, so the CRM chat keeps its newest numbered prompt.
+        variant = folder / f"{version}.md"
+        chosen = variant if variant.is_file() else None
     if chosen is None:
         raise LookupError(f"no prompt {version} for {task.value}")
     return Prompt(task=task, version=chosen.stem, system=chosen.read_text(encoding="utf-8"))

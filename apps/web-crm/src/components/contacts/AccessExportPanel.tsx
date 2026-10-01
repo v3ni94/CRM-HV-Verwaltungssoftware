@@ -16,6 +16,8 @@ type AccessExport = {
   released_by: string | null;
   downloads: number;
   rejected_reason: string | null;
+  third_party_scope?: "none" | "names";
+  internal_notes_included?: boolean;
 };
 
 /** DSGVO-Auskunft mit Prüfschritt (AC07, GA08-06): vorbereiten, prüfen und freigeben durch
@@ -82,6 +84,10 @@ export function AccessExportPanel({ contactId }: { contactId: string }) {
               <span>
                 {formatDateTime(item.prepared_at)}: {t(`status.${item.status}`)}
                 {item.downloads > 0 ? ` (${t("downloads", { count: item.downloads })})` : ""}
+              </span>
+              <span className="block text-xs text-muted">
+                {t(item.third_party_scope === "names" ? "scopeNames" : "scopeNone")}
+                {item.internal_notes_included ? `, ${t("notesIncluded")}` : ""}
               </span>
               <div className="mt-1 flex gap-2">
                 {item.status === "prepared" ? (

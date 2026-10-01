@@ -127,7 +127,7 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   off); the calculation path is stored in `ReceivableRun.calculation`; posting such a run needs
   release gate G1. The output tax account is mapped under the reserved code `vat_output`.
 * `numbering.py`: outgoing invoice numbering, gapless `PREFIX-JJJJ-000001` under a locked counter row (M13-04)
-* `rent_invoice.py`, `rent_invoice_models.py`, `rent_invoice_routers.py`: rent invoices and standing invoices with VAT for tenancies with a VAT option, built from the receivable items, numbered gapless per legal entity and year (`MR-JJJJ-000001`, migration 0210), PDF on the tenant letterhead filed as document, cancellation only by credit note, draft watermark behind G1 (rule M13-04 section Mietrechnung, OPEN_QUESTIONS M13-04a)
+* `rent_invoice.py`, `rent_invoice_models.py`, `rent_invoice_routers.py`: rent invoices and standing invoices with VAT for tenancies with a VAT option, built from the receivable items, numbered gapless per legal entity and year (`MR-JJJJ-000001`, migration 0210), PDF on the tenant letterhead filed as document, cancellation only by credit note, draft watermark behind G1 (rule M13-04 section Mietrechnung, OPEN_QUESTIONS M13-04a); draft numbers `ENTWURF-JJJJ-NNNNNN` while G1 is closed (tenant switch `rent_invoice_draft_numbering`, AC03-01, rule AC03-01, migration 0360 noop)
 * `schemas.py`: API schemas of the ledger (6.4), money as decimal strings, never float (6.9.8)
 * `tasks.py`: Celery job `accounting.dunning_run` (15.1, monthly on the 5th), preview runs only, never sent
 
@@ -264,7 +264,7 @@ Rule `docs/rules/M13-05.md`, migration 0251.
   (preview without `confirm`, one savepoint and one gapless number per invoice). Rule `docs/rules/Q15-fee-documents-carryover.md`.
 - `report_views.vat_overview_by_property`: VAT by object (via the unit of the line) and cost center.
 - `year_carryover`: closing balances to opening balances as two drafts with four eyes.
-- ZUGFeRD (S13-03) is not implemented: no PDF/A-3 library available offline (OPEN_QUESTIONS Q15-03).
+- ZUGFeRD (S13-03): implemented in wave 16 (AE25), see the section below; PDF/A-3 conformance stays unverified (OPEN_QUESTIONS AE25-01).
 
 ## Approval decisions, person check, open item balances (Q01, 30.09.2026)
 
@@ -353,3 +353,81 @@ within the month is not prorated; the item stays manual (`OWNERSHIP_CHANGE`), se
 ## AB09: Plankennzeichen im Lauf
 
 `POST /accounting/recurring-invoices/{id}/generate` liefert zusätzlich `auto_post_requested` und `auto_post_state` (`creditor_routers.auto_post_state`). Der Lauf bucht nie; G1 wird über den Resolver der Anwendung geprüft, der Automatikschalter über `tenant_settings.auto_posting_enabled`.
+
+### Budget comparison and resolution coverage (Wave 16 AE14, P03-03)
+
+`factual-check` additionally returns `budget` (planned amount of the linked plan item, `booked_before`
+as the sum of other non reversed invoices minus credit notes on the same plan item, this invoice,
+`remaining`, tolerance limit, `exceeded`) and `resolution` (number, date, status, subject,
+`effective`, `subject_matches_plan`). New findings: `resolution_subject_mismatch` (resolution on
+another economic plan) and `resolution_none_with_order` (order requires approval, invoice has no
+resolution). Hints only; no threshold for a mandatory resolution is assumed (legal question,
+P03-03 stays open). `booked_before` counts invoices only, not journal lines without invoice.
+
+## AE02: Kontenrahmen Vier-Augen-Freigabe und Prüfbericht (01.10.2026)
+
+`chart_release.release` refuses the release by the submitter while `four_eyes_required` is on
+(`MHVP-ACC-0015`, `PUT /accounting/templates/{id}/four-eyes`). `update_accounts` validates the
+multi key `allocation_split` (sum 100). `defaults.with_kind_proposals` adds the `heating`
+proposal; `GET /accounting/templates/{id}/coverage-report` lists gaps. Migration 0358.
+
+## Periodensperre je Objekt und Zeitraum (P06-02, AE20)
+
+`period_lock.py` und `period_lock_routers.py` (`/accounting/period-locks`): Tabellen `period_lock` und `period_lock_setting` (Migration 0376). Die Festschreibung des Buchungskreises bleibt; zusätzlich prüft `post` und `reverse` bei `lock_mode = object_period` die aktive Sperre des Objekts (MHVP-ACC-0030). Das Objekt kommt aus der Einheit der Zeile oder dem Objekt des Buchungskreises. Abschluss einer Abrechnung setzt die Sperre nur mit `auto_lock_on_close`; Aufhebung nur mit `reopen_enabled`, Antrag und zweiter Person. Regel `docs/rules/P06-02-periodensperre-objekt.md`.
+
+## Steuerabzüge auf Habenzinsen (P01-01, AE05)
+
+`ledger_ops.interest_draft` nimmt optional `capital_gains_tax`, `solidarity_tax` und `church_tax` als Beträge laut Bankbeleg an (kein Satz). Entwurf: Geldkonto Soll netto, Steuerkonten Soll, Zinserlös Haben brutto. Steuerkonten je Buchungskreis über `GET/PUT /accounting/ledgers/{id}/interest-tax-config` (Tabelle `ledger_interest_tax_config`), Abzüge je Buchung in `interest_tax_withholding` und über `GET .../entries/{entry_id}/interest-tax` (Migration 0361). Ohne Konto MHVP-ACC-0011. Die Rücklagenentwicklung (`hoa/reserves.py`) zeigt die Abzüge gebuchter, nicht stornierter Zinsbuchungen auf das Rücklagenkonto als `interest_tax_withheld` an. Regel `docs/rules/P01-01-zinsabzuege.md`.
+
+## Nebenbuchprüfung ausgebuchter Posten (AC01-02, AE06)
+
+`subledger_reconciliation(..., exclude_written_off)` zählt ausgebuchte Posten und Posten stornierter Buchungen getrennt (`excluded_*`) und blendet sie standardmäßig aus (Mandantenschalter `accounting_tax_settings.subledger_exclude_written_off`, Migration 0362). `/checks` liefert `excluded` und `exclude_written_off`; `nebenbuchabgleich.csv` hat die Spalte Grund. Nur Anzeige, Regel: `docs/rules/AC01-02.md`.
+
+## Abnahmeregister (V16, AE01, Welle 16)
+
+`acceptance_models.py`, `acceptance.py`, `acceptance_routers.py`, Migration 0357. Endpunkte unter `/api/v1/accounting/acceptance`: `GET /cases` (Parameter `status`), `GET /cases/{case_id}`, `GET /export.md`, `POST /cases/{case_id}/expected`, `PUT /expected/{id}` (nur Entwurf), `POST /expected/{id}/submit`, `POST /expected/{id}/decision` (zweite Person, `acceptance:approve`), `POST /expected/{id}/results`. Rechte `acceptance:read|manage|approve`, Rolle `acceptance_expert`. Regel `docs/rules/AE01-ACCEPTANCE.md`. Kein Gate-Effekt.
+
+## Objekt der Buchungszeile (Q15-01, AE21, Welle 16)
+
+`JournalLine.property_id` (Migration 0377, ADR 0023, Regel `docs/rules/Q15-01-objektspalte.md`). `line_property.resolve` setzt das Objekt in `services.write_draft` je Zeile: Angabe der Zeile (`lines[].property_id`), sonst Objekt der Einheit, sonst Objekt des Vertrags des Satzes (`journal_entry.contract_id`); Angabe gegen Einheit abweichend, unbekannte Einheit oder unbekanntes Objekt ergeben 422. `services.reverse` übernimmt das Objekt der Originalzeile. Datenbankregel für jede Schreibstelle: Check `ck_journal_line_property_with_unit` und Trigger `journal_line_property` (füllt aus der Einheit, lehnt Abweichung ab). Die Migration befüllt bestehende Zeilen je Mandant aus Einheit und Vertrag; der Guard für gebuchte Zeilen ist nur innerhalb dieser Migration ausgesetzt. Berichte: `vat-overview-by-property` gruppiert nach der Spalte; `monthly-matrix`, `income-expense` und `GET /ledgers/{id}/entries` nehmen `property_id` als Filter; `GET /ledgers/{id}/reports/line-property-drift` (`start`, `end` optional) zählt `unit_mismatch` (Befund, auch in `checks`), `contract_unfilled`, `contract_mismatch`, `ledger_mismatch` (Hinweise) und Zeilen ohne Objekt, höchstens 500 Zeilen. Die Periodensperre je Objekt (AE20, `period_lock.property_ids_of_lines`) liest die Spalte bereits mit.
+
+## ZUGFeRD / Factur-X hybrid (S13-03, wave 16, AE25)
+
+- `zugferd`: `build_cii` writes UN/CEFACT CII (D16B) in the Factur-X / ZUGFeRD profile EN 16931
+  (guideline `urn:cen.eu:en16931:2017`) from the same frozen data and locks as the XRechnung
+  (`xrechnung.load`); a credit note is type 381 with positive amounts and BG-3 reference.
+  `check_cii` reads the XML back with `mhvp.receipts.einvoice` and compares it with the invoice
+  plus the EN 16931 sums (BR-CO-10 to BR-CO-17, BR-CO-25, BR-E-10).
+- `make_hybrid` embeds `factur-x.xml` into the letter PDF of `fee_documents.build_letter` with
+  pypdf only: associated file (`AFRelationship /Alternative`, `Subtype text/xml`, `Params`),
+  catalog `/AF`, unfiltered XMP (`pdfaid` part 3 B, Factur-X extension schema, `fx` values,
+  Info dictionary identical), output intent `GTS_PDFA1` with the LittleCMS sRGB profile
+  (Pillow), trailer ID, header 1.7. No new dependency.
+- `pdfa_precheck` is an own pre-check (`mhvp-pdfa-precheck` 1.0, `official` false,
+  `conformance` always `not_verified`). It lists blockers it can see and the points only veraPDF
+  can decide. Known blocker: the letterhead renderer (`mhvp.documents.letters`) uses the non
+  embedded standard fonts Helvetica and Helvetica-Bold, so the files are not PDF/A conform
+  (OPEN_QUESTIONS AE25-01).
+- API: `GET /accounting/admin-fee-invoices/{id}/zugferd.pdf` (headers
+  `X-MHVP-ZUGFeRD-Findings`, `X-MHVP-PDFA-Status`, `X-MHVP-PDFA-Blockers`), `GET .../zugferd/check`
+  (read right), `POST .../zugferd/document` (update right, idempotent, stores
+  `zugferd_document_id` and `zugferd_check`, migration 0381). Nothing is sent or posted.
+- Rule `docs/rules/S13-03-zugferd.md`.
+
+
+## Payables from statement credits (AE22, P04-04, Q01-01, M15-07)
+
+- `credit_payable_models.py`: `credit_payable_setting` (tenant switch `mode` off, subledger,
+  reclass; default off; `four_eyes_required` default on; account numbers entered by the
+  operator) and `credit_payable` (proposal, release, withdrawal per source and contract,
+  migration 0378).
+- `credit_payables.py`: candidates (posted rental statement credit on the debtor, owner
+  statement from `issued` with positive payout, released deposit settlement), proposal,
+  release (G3, four eyes), payout order via `banking.payment_run.order_for_payout` (G2 and
+  G3), withdrawal (discard reclass draft, reverse posted reclass with G1, subledger item only
+  through the reversal of the statement result entry).
+- Entry kind `credit_reclass`: `_apply_open_items` creates the payable on the creditor line
+  only and never a receivable on the debtor debit.
+- Endpoints `/api/v1/accounting/credit-payables` (`settings`, `candidates`, list, `{id}`,
+  `{id}/payout-options`, `{id}/release`, `{id}/payment-order`, `{id}/withdraw`).
+- Rule `docs/rules/AE22-credit-payables.md`; booking rule open (OPEN_QUESTIONS Q01-01, AE22-01).

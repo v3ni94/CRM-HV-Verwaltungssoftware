@@ -8,6 +8,9 @@ it needs no own table:
 ========================  =============================================================
 target                    done when
 ========================  =============================================================
+``trash``                 AE33: the document left the trash (final deletion); open while
+                          it waits in the trash, ``not_applicable`` when the tenant
+                          deletes without a trash
 ``index``                 the ``document`` row is gone (full text ``search_vector`` and
                           the trigram indexes on title and filename live on that row)
 ``original``              the object store key of the original no longer exists
@@ -25,7 +28,10 @@ target                    done when
 ========================  =============================================================
 
 ``purge_derivatives`` runs inside the deleting transaction (API deletion, proposal run and
-journal replay all go through ``retention.delete_now``). ``follow_up`` is the "Nachlauf": it
+journal replay all go through ``retention.delete_now``; with the trash on (AE33) the final
+deletion by ``trash.purge`` does the same). A document that waits in the trash has the overall
+status ``in_trash`` (``held`` when a hold keeps it there); its other targets are ``pending``
+until the final deletion, and the follow up leaves it alone. ``follow_up`` is the "Nachlauf": it
 repeats every step that is still open (blob still present, derivatives created by a late job,
 open mirror steps) and is run daily for recent deletions and on demand. A document that exists
 again (restore without replay) is never deleted by the follow up: the replay with its hold and
@@ -50,7 +56,7 @@ from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import DomainEvent, emit
-from mhvp.documents import mirror_deletion
+from mhvp.documents import mirror_deletion, trash
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import (
     Document,
@@ -68,6 +74,7 @@ FOLLOW_UP_DAYS = 30  # recent deletions checked by the daily job
 INTAKE_ENTITY_TYPE = "document_intake"
 PLACEHOLDER: dict[str, Any] = {"deleted_with_document": True}
 
+TARGET_TRASH = "trash"
 TARGET_INDEX = "index"
 TARGET_ORIGINAL = "original"
 TARGET_PAPERLESS = "mirror_paperless"
@@ -80,6 +87,8 @@ TARGET_BACKUP = "backup"
 DONE = "done"
 OPEN = "open"
 HELD = "held"
+PENDING = "pending"
+IN_TRASH = "in_trash"
 NOT_APPLICABLE = "not_applicable"
 OUT_OF_SCOPE = "out_of_scope"
 
@@ -97,9 +106,10 @@ class ChecklistItem:
 class Checklist:
     document_id: uuid.UUID
     deleted_at: datetime
-    status: str  # done, open, held
+    status: str  # done, open, held, in_trash
     items: list[ChecklistItem] = field(default_factory=list)
     jobs: list[mirror_deletion.MirrorDeletionJob] = field(default_factory=list)
+    purge_at: datetime | None = None  # AE33: earliest final deletion while in the trash
 
 
 def _ai_models() -> tuple[Any, Any, Any, Any, Any]:
@@ -199,12 +209,15 @@ async def build(
     """Checklist of a deleted document, or None when no deletion was ever recorded."""
     from mhvp.documents import services  # local: services imports retention
 
+    with trash.trashed_visible(session):
+        document = await session.get(Document, document_id)
+    if document is not None and document.deleted_at is not None:
+        return await _trash_checklist(session, document, today or datetime.now(UTC).date())
     event = await _deleted_event(session, document_id)
     if event is None:
         return None
     items: list[ChecklistItem] = []
     held = False
-    document = await session.get(Document, document_id)
     if document is None:
         items.append(ChecklistItem(TARGET_INDEX, DONE))
     else:
@@ -278,6 +291,7 @@ async def build(
             "Nach einer Wiederherstellung wird das Löschjournal erneut angewendet.",
         )
     )
+    items.insert(0, _trash_item(event))
     if held:
         status = HELD
     elif any(i.status == OPEN for i in items):
@@ -286,6 +300,70 @@ async def build(
         status = DONE
     return Checklist(
         document_id=document_id, deleted_at=event.occurred_at, status=status, items=items
+    )
+
+
+def _trash_item(event: DomainEvent) -> ChecklistItem:
+    """The trash step of a finished deletion (AE33)."""
+    if event.payload.get("from_trash"):
+        trashed_at = event.payload.get("trashed_at")
+        detail = "Aus dem Papierkorb endgültig gelöscht."
+        if trashed_at:
+            detail += f" Im Papierkorb seit {str(trashed_at)[:10]}."
+        if event.payload.get("early"):
+            detail += " Vor Ablauf der Frist auf Anweisung."
+        return ChecklistItem(TARGET_TRASH, DONE, detail)
+    return ChecklistItem(TARGET_TRASH, NOT_APPLICABLE, "Löschung ohne Papierkorb.")
+
+
+async def _trash_checklist(session: AsyncSession, document: Document, today: date) -> Checklist:
+    """A document in the trash: nothing is deleted yet, every target waits for the final
+    deletion; a hold set meanwhile keeps it there (status ``held``, the hold wins)."""
+    from mhvp.documents import services  # local: services imports retention
+
+    with trash.trashed_visible(session):
+        blocker = await services.deletion_blocker(session, document, today)
+    purge_at = document.purge_at
+    when = purge_at.strftime("%d.%m.%Y") if purge_at else "unbekannt"
+    waiting = "Wird mit der endgültigen Löschung ausgeführt."
+    held = blocker is not None
+    items = [
+        ChecklistItem(
+            TARGET_TRASH,
+            HELD if held else OPEN,
+            blocker or f"Im Papierkorb, endgültige Löschung frühestens am {when}.",
+        )
+    ]
+    for target in (
+        TARGET_INDEX,
+        TARGET_ORIGINAL,
+        TARGET_PAPERLESS,
+        TARGET_DRIVE,
+        TARGET_EMBEDDINGS,
+        TARGET_AI_EXTRACTS,
+    ):
+        items.append(ChecklistItem(target, PENDING, waiting))
+    items.append(
+        ChecklistItem(
+            TARGET_THUMBNAILS,
+            NOT_APPLICABLE,
+            "Vorschaubilder werden beim Abruf aus dem Original erzeugt und nicht gespeichert.",
+        )
+    )
+    items.append(
+        ChecklistItem(
+            TARGET_BACKUP,
+            OUT_OF_SCOPE,
+            "Backups werden nicht bearbeitet; sie laufen mit der rollierenden Backupfrist ab. "
+            "Nach einer Wiederherstellung wird das Löschjournal erneut angewendet.",
+        )
+    )
+    return Checklist(
+        document_id=document.id,
+        deleted_at=document.deleted_at or datetime.now(UTC),
+        status=HELD if held else IN_TRASH,
+        items=items,
+        purge_at=purge_at,
     )
 
 
@@ -302,8 +380,10 @@ async def follow_up(
     before = await build(session, document_id, blobs)
     if before is None:
         return None
-    if await session.get(Document, document_id) is not None:
-        return before  # restored or held: only the replay may delete it
+    with trash.trashed_visible(session):
+        present = await session.get(Document, document_id)
+    if present is not None:
+        return before  # in the trash, restored or held: only the purge or the replay deletes it
     actions: dict[str, Any] = {}
     event = await _deleted_event(session, document_id)
     ref = event.payload.get("storage_ref") if event else None

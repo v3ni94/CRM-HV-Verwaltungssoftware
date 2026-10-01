@@ -32,9 +32,14 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
   Passwort werden dabei nie ausgegeben. Ohne konfigurierte öffentliche Portaladresse
   erscheint nur der Einladungscode.
 - Einladung annehmen: Code eingeben, Passwort setzen (6 bis 128 Zeichen). Danach Anmeldung
-  mit E-Mail und Passwort. Der zweite Faktor (Code aus einer Authenticator-App) ist
-  freiwillig und wird unter Sicherheit eingeschaltet oder ausgeschaltet (Betreiberentscheidung
-  M2-01 vom 26.09.2026). Ist er eingeschaltet, kann beim Code-Schritt Dieses Gerät 90 Tage
+  mit E-Mail und Passwort. Der zweite Faktor (Code aus einer Authenticator-App) ist im
+  Portal standardmäßig freiwillig und wird unter Sicherheit eingeschaltet oder ausgeschaltet
+  (Betreiberentscheidung M2-01 vom 26.09.2026, Standard auch nach Regel M2-04). Wählt die
+  Verwaltung als Pflicht unter Einstellungen, Rollen und Rechte, ihn auch für Portalzugänge
+  vorzuschreiben (Regel M2-04, Standard aus), richtet der
+  Nutzer ihn bei der nächsten Anmeldung auf der Seite Zweiten Faktor einrichten ein, auch nach
+  einem Anmeldelink; ausschalten lässt er sich dann nicht. Ist er eingeschaltet, kann beim
+  Code-Schritt Dieses Gerät 90 Tage
   merken gewählt werden; gemerkte Geräte stehen unter Sicherheit und lassen sich dort
   abmelden.
 - Anmeldelink per E-Mail (M21-01): Auf der Anmeldeseite kann statt des Passworts ein
@@ -270,6 +275,9 @@ Auftrag.
 - **Aushang im Portal nicht sichtbar**: Gültigkeit liegt nicht im heutigen Tag, Zielgruppe
   passt nicht oder der Aushang wurde beendet.
 - **Foto wird abgelehnt**: Nur JPEG und PNG; nicht lesbare Bilder werden abgewiesen.
+- **Zweiten Faktor einrichten erscheint nach dem Passwort**: Die Verwaltung hat die Pflicht
+  für Portalzugänge gewählt (Regel M2-04, Standard ist freiwillig); QR-Code mit der App scannen, ersten
+  Code eingeben, danach ist der Nutzer angemeldet.
 - **Zweiter Faktor wird abgefragt**: Der Nutzer hat ihn unter Sicherheit eingeschaltet;
   auf einem gemerkten Gerät entfällt die Abfrage 90 Tage lang. Ausschalten unter Sicherheit
   mit dem aktuellen Passwort.
@@ -360,6 +368,8 @@ Die Einstellungsseite "Dienstleister im Portal" bietet die Rechtsträgerauswahl 
 
 Hat der Verwalter für den Mandanten eine Fassung der Nutzungsbedingungen veröffentlicht (Einwilligungsregeln unter Einstellungen, Feld Fassung der Portal-Nutzungsbedingungen), leitet das Portal nach der Anmeldung auf die Seite Nutzungsbedingungen weiter, bis die Fassung angenommen ist. Dort wird die Fassung angezeigt und mit dem Haken und der Schaltfläche Annehmen und fortfahren bestätigt. Zeitpunkt und Fassung werden beim Kontakt als Einwilligung gespeichert. Bei der Aktivierung einer Einladung erscheint der Haken nach dem ersten Versuch, sobald eine Fassung veröffentlicht ist. Ein Widerruf der Annahme im CRM sperrt den Portalzugang sofort wieder bis zur erneuten Annahme.
 
+Ist die Fassung veröffentlicht, zeigt die Einladungsseite den Haken zur Annahme schon beim Öffnen des Einladungslinks (öffentlicher Abruf der Fassung, ohne Anmeldung und ohne Hinweis darauf, welche Mandanten das Portal nutzen). Als Nachweis der Annahme speichert das Portal Zeitpunkt, Fassung und einen Hash der Verbindungsadresse, nicht die Adresse selbst; der Hinweis steht unter dem Haken. Der Text der Nutzungsbedingungen kommt vom Mandanten (Rechtstexte des Portals), die Software erzeugt ihn nicht.
+
 Kontaktdaten des Mieters oder Eigentümers sehen Dienstleister im Auftrag nur, wenn der Kontakt der Weitergabe an Dienstleister zugestimmt hat (Einwilligung data_sharing) oder der Mandant die vertragliche Notwendigkeit zulässt. Sonst erscheint der Auftrag ohne diese Angaben, der Grund steht im Ereignisprotokoll.
 
 ## Online-Teilnahme an der Versammlung (AD06)
@@ -371,3 +381,34 @@ Nur für Eigentümer und nur, wenn die Verwaltung die Online-Versammlung freiges
 - "Wortmeldung abgeben" trägt Sie in die Rednerliste ein; die Verwaltung ruft auf.
 - Abstimmen ist nur möglich, solange die Verwaltung die Abstimmung zum TOP geöffnet hat, eine Stimme je Einheit. Das Ergebnis erscheint erst nach der Verkündung.
 - "Vollmacht erteilen": Einheit wählen, Bevollmächtigten (Einheit eines anderen Eigentümers oder Verwaltung), Zeitraum und das unterschriebene Vollmachtsdokument hochladen. Eine erteilte Vollmacht kann jederzeit widerrufen werden.
+
+## Eigentümerportal: Mieterträge und Meldungen (Welle 16)
+
+Unter Einstellungen, Portalfunktionen schaltet die Verwaltung die Anzeige der Mieterträge für Kapitalanleger ein (Standard aus) und wählt, welche Meldungen Eigentümer zu ihren Objekten sehen: keine, nur freigegebene oder alle Meldungen der eigenen Objekte (nur Nummer, Titel und Status). Vor dem Einschalten der Mieterträge ist die Datenschutzfreigabe zu prüfen.
+
+## Formularbaukasten: Typen, Prüfregeln und Vorschau (Welle 16)
+
+Unter Einstellungen, Portalformulare zeigt "Elementtypen und Prüfregeln anzeigen" die 20 Elementtypen des Baukastens mit dem erwarteten Wert und der Prüfregel je Typ. Der Hinweis dabei nennt, dass der Abgleich mit der Typenliste des bisherigen Portals noch offen ist.
+
+- "Vorschau anzeigen" bei einer Vorlage oder im Editor zeigt das Formular so, wie es im Portal erscheint. Mit "Beispielwerte prüfen" prüft das System Ihre Beispielwerte mit denselben Regeln wie bei einer Einreichung und zeigt den Text, der im Ticket entstehen würde. Es wird nichts gespeichert, kein Vorgang angelegt und nichts versendet. Dateien werden in der Vorschau nicht hochgeladen.
+- Im Portal sehen Mieter und Eigentümer bei Anschrift, Standort, Unterschrift und Betrag einen kurzen Hinweis zum erwarteten Wert. Meldet die Prüfung einen Mangel, steht die Meldung direkt am betroffenen Feld.
+
+## Bewertungen von Dienstleistern (Welle 16)
+
+Unter Einstellungen, Portalformulare, Portalfunktionen steuert die Auswahl "Bewertungen von Dienstleistern", ob die Verwaltung eine Übersicht der Bewertungen sieht. Standard ist "nicht anzeigen". Bei "nur der Verwaltung als Übersicht anzeigen" erscheinen je Dienstleister die Zahl der bewerteten Aufträge, der Durchschnitt und die Verteilung der Sterne, ohne Freitexte. Dienstleister, Mieter und Eigentümer sehen die Bewertungen im Portal nicht. Die Bewertung selbst geben Sie weiter wie bisher beim Abschluss des Auftrags an.
+
+
+## Assistent für die eigenen Unterlagen (Chat-Bot)
+
+Der Assistent beantwortet Fragen von Mietern und Eigentümern zu den Unterlagen, die für ihren Zugang freigegeben sind. Er liest nie Unterlagen anderer Einheiten oder Personen, und ein Zugang ohne Freigaben bekommt gesagt, dass keine Unterlagen freigegeben sind.
+
+**Für die Verwaltung.** Unter Einstellungen, Portalfunktionen gibt es zwei Schalter, beide ab Werk aus: Assistent für die eigenen Unterlagen (Chat-Bot) und Datenschutz-Feature für KI-Antworten. Mit dem Chat-Bot zeigt das Portal den Menüpunkt Assistent und durchsucht die freigegebenen Unterlagen. KI-Antworten kommen erst hinzu, wenn
+
+1. das Datenschutz-Feature eingeschaltet ist,
+2. ein Datenschutzhinweis als Textbaustein "Portal-Assistent: Datenschutzhinweis zur KI-Antwort" eingereicht und durch eine zweite Person freigegeben ist (den Text liefert der Mandant, die Software enthält keinen Rechtstext),
+3. der Nutzer den Hinweis in der aktuellen Fassung zur Kenntnis genommen hat und
+4. der KI-Anbieter mit Auftragsverarbeitungsvertrag freigegeben ist (Einstellungen, KI).
+
+Fehlt eine Voraussetzung, zeigt der Assistent nur die Treffer und nennt den Grund. Das Protokoll der Fragen (maskiert, mit Ergebnis, Quellen und Grund) steht unter Portalfunktionen, sichtbar mit dem Recht Mandanteneinstellungen.
+
+**Für Mieter und Eigentümer.** Menüpunkt Assistent: Frage eingeben, optional eine Einheit wählen. Eine KI-Antwort ist als solche gekennzeichnet, nennt ihre Quellen und ist Information, keine Auskunft oder Zusage der Verwaltung. Reicht die Grundlage nicht, erscheint ein Hinweis und die Treffer; für verbindliche Fragen bleibt die Meldung an die Verwaltung. Pro Stunde sind höchstens 20 Fragen möglich.

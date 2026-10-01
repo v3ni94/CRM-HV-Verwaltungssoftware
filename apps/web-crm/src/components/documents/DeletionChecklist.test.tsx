@@ -35,6 +35,24 @@ describe("DeletionChecklist (AC07, GA08-08)", () => {
     expect(await screen.findByText("Alle Ziele gelöscht.")).toBeInTheDocument();
   });
 
+  it("shows a document in the trash (AE33) without a follow up button", async () => {
+    const inTrash = {
+      document_id: "d1",
+      status: "in_trash",
+      items: [
+        { target: "trash", status: "open", detail: "Im Papierkorb, endgültige Löschung frühestens am 31.10.2026." },
+        { target: "index", status: "pending", detail: null },
+      ],
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(inTrash));
+    renderIntl(<DeletionChecklist documentId="d1" canDelete={true} />);
+    await userEvent.click(screen.getByRole("button", { name: "Löschcheckliste" }));
+    expect(await screen.findByText(/Im Papierkorb, die endgültige Löschung folgt/)).toBeInTheDocument();
+    expect(screen.getByText(/Papierkorb: offen/)).toBeInTheDocument();
+    expect(screen.getByText(/Index und Volltext: folgt/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nachlauf starten" })).not.toBeInTheDocument();
+  });
+
   it("hides the follow up without delete right", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(open));
     renderIntl(<DeletionChecklist documentId="d1" canDelete={false} />);

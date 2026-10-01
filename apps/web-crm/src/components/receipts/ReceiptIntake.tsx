@@ -117,6 +117,9 @@ type EInvoiceValidation = {
   messages?: string[];
   recorded_at?: string | null;
   formal?: EInvoiceValidation | null;
+  // S13-03: ZUGFeRD profile (MINIMUM to XRECHNUNG) and container hints (PDF/A marking, XMP, AF).
+  profile?: string | null;
+  container_findings?: string[];
 };
 
 type Option = { id: string; label: string };
@@ -188,6 +191,10 @@ function EInvoiceBlock({
       ],
     );
   }
+  // The own formal check keeps profile and container hints, also after a recorded KoSIT run.
+  const formal = validation?.formal ?? validation;
+  if (formal?.profile) rows.push(["zugferdProfile", formal.profile]);
+  const containerHints = formal?.container_findings ?? [];
   const messages = validation?.messages ?? [];
   return (
     <section
@@ -216,6 +223,16 @@ function EInvoiceBlock({
             <li key={m}>{m}</li>
           ))}
         </ul>
+      ) : null}
+      {containerHints.length > 0 ? (
+        <>
+          <span className="text-muted">{t("review.einvoiceValidation.containerHints")}</span>
+          <ul className="list-disc pl-5" data-testid="receipt-einvoice-container">
+            {containerHints.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
+        </>
       ) : null}
     </section>
   );

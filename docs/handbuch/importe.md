@@ -111,3 +111,11 @@ Regel: `docs/rules/M8-01-w5-importberichte.md`.
 ## Kautionen, Darlehen und Rücknahme (Welle 6)
 
 Der Prüfbericht der Einzelposten vergleicht jetzt auch Kautionen und Darlehen mit der Eröffnungsbilanz, sofern im Kontenrahmen ein Darlehenskonto oder ein mit dem Kautionskonto verknüpftes Bankkonto einen Eröffnungssaldo hat. Fehlt ein solches Konto, steht die Art mit Grund unter „nicht vergleichbar“. Die Rücknahme eines Imports der SEPA-Übersicht entfernt Zahlungsplan und Mandat, sofern beides noch nicht verwendet wurde; beim Dokumentindex werden nur die Verknüpfungen entfernt, das Dokument bleibt erhalten.
+
+## Spaltenerkennung und gemerkte Zuordnung (Welle 16)
+
+Beim Hochladen im Importassistenten ist „Kopfzeile automatisch erkennen“ voreingestellt: die Plattform bewertet die ersten 30 Zeilen und nimmt die Zeile mit den meisten Spaltenüberschriften (Titelzeilen darüber werden übersprungen). Die erkannte Zeile und die Begründung stehen über der Zuordnung; stimmt sie nicht, den Haken entfernen und die Zeilennummer von Hand eintragen.
+
+Im Schritt Zuordnung sind die Spalten vorbelegt. Die Spalte „Vorschlag“ zeigt je Zielfeld die Grundlage (gespeicherte Zuordnung, Feldbezeichnung, Fachbegriff, ähnliche Schreibweise) und einen Prozentwert: „sicher“ ab 90 %, sonst „bitte prüfen“. Vorschläge werden erst mit dem Speichern der Vorlage verwendet. „Prüfbericht erstellen“ zeigt ohne zu speichern, ob alle Pflichtspalten zugeordnet und gefüllt sind, welche Spalten nicht übernommen werden, Beispielwerte je Feld und Beispielzeilen mit Fehlermeldungen.
+
+Mit dem Haken „Zuordnung für diesen Berichtstyp merken“ merkt sich die Plattform beim Speichern der Vorlage die Zuordnung je Mandant und Berichtsart; die nächste Datei derselben Berichtsart wird damit vorbelegt. Der Abschnitt „Benötigte Exporte“ zeigt je Berichtsart, ob eine Datei vorliegt, ob die Pflichtfelder gemerkt sind und ob schon übernommen wurde. Welche Immoware24-Exporte die Spalten liefern, trägt der Betreiber in `docs/integrations/immoware24-exporte.md` ein.

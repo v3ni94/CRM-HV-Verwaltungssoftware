@@ -575,7 +575,15 @@ class PartyMember(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 class Consent(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Consent of a contact per purpose. AE34: ``record_type`` ``objection`` records an
+    objection to a processing based on legitimate interest (same lifecycle, never counts as
+    a consent); a portal terms acceptance keeps the accepted version and a keyed hash of the
+    client address as evidence (``text_version``, ``ip_hash``, never the clear address)."""
+
     __tablename__ = "consent"
+    __table_args__ = (
+        CheckConstraint("record_type IN ('consent', 'objection')", name="record_type"),
+    )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     kind: Mapped[ConsentKind] = mapped_column(_enum(ConsentKind, "consent_kind"), nullable=False)
@@ -583,6 +591,15 @@ class Consent(IdMixin, TimestampMixin, TenantMixin, Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source: Mapped[str] = mapped_column(String(200), nullable=False)
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    record_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="consent", server_default="consent"
+    )
+    text_version: Mapped[str | None] = mapped_column(String(60))
+    ip_hash: Mapped[str | None] = mapped_column(String(64))
+
+    @property
+    def client_evidence_recorded(self) -> bool:
+        return self.ip_hash is not None
 
 
 class ContactMerge(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -616,3 +633,24 @@ class ContactMerge(IdMixin, TimestampMixin, TenantMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decision_note: Mapped[str | None] = mapped_column(String(1000))
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+class ContactAccessExportSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One row per tenant: scope of the data subject access export (AE33, AC07-01).
+
+    Both switches are conservative by default: other persons appear with their role only and
+    internal notes are withheld. Which variant is lawful is an open legal question
+    (OPEN_QUESTIONS AC07-01); the values are frozen into each prepared export."""
+
+    __tablename__ = "contact_access_export_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_contact_access_export_setting_tenant_id"),
+        CheckConstraint("third_party_scope IN ('none', 'names')", name="third_party_scope_values"),
+    )
+
+    third_party_scope: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default="none"
+    )
+    include_internal_notes: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )

@@ -295,7 +295,7 @@ Im Mahnlauf öffnet der Aufklapper "Prüfhinweise, Zins, Zustellnachweise und Sp
 
 - Honorarlauf: "Fällige Honorare ausstellen" zeigt zuerst die Vorschau aller fälligen Leistungszeiträume. Erst mit Bestätigung wird je Honorar eine Rechnung mit eigener, lückenloser Nummer ausgestellt; ein Fehler bei einem Honorar stoppt die übrigen nicht und verbraucht keine Nummer. Bereits abgerechnete Zeiträume werden übersprungen. Nichts wird versendet oder gebucht.
 - Rechnungsdokument: Zu jeder Honorarrechnung und jeder Gutschrift kann das lesbare Dokument als PDF auf dem Briefbogen des Mandanten abgelegt werden. Ein zweiter Aufruf liefert dasselbe Dokument. Die Gutschrift lässt sich zusätzlich als XRechnung ablegen. Es gelten dieselben Pflichtangaben wie bei der XRechnung.
-- USt-Übersicht je Objekt: Die Auswertung gliedert die Umsatzsteuer und die Vorsteuer vor Abzug nach Objekt (über die Einheit der Buchungszeile) und Kostenstelle. Zeilen ohne Einheit stehen unter "ohne Objekt". Entwurf, keine Voranmeldung.
+- USt-Übersicht je Objekt: Die Auswertung gliedert die Umsatzsteuer und die Vorsteuer vor Abzug nach Objekt (Objekt der Buchungszeile aus Angabe, Einheit oder Vertrag, seit Welle 16) und Kostenstelle. Zeilen ohne Objekt stehen unter "ohne Objekt". Entwurf, keine Voranmeldung.
 - Jahreswechsel: Unter Buchungskreis zeigt "Schlussbestand übernehmen" die Schlussbestände des beendeten Geschäftsjahres. Die Übernahme erzeugt zwei Entwürfe zum Beginn des Folgejahres, die nicht gebucht sind. Der Anfangsbestand braucht die Prüfung durch eine zweite Person. Übernommen werden nur Bank, Kasse, Rücklage, Darlehen und Durchlaufkonten; Personenkonten behalten ihre offenen Posten.
 
 ## Freigabeentscheidungen, Personenhinweis und offene Posten zum Stichtag (Q01)
@@ -353,3 +353,38 @@ Auf der Startseite der Buchhaltung listet ein Block die fälligen, datierten Pr�
 ## Erlöskonto im Honorarformular (AC04)
 
 Das Erlöskonto des Verwalterhonorars wird aus einer Liste gewählt, nicht mehr als ID eingegeben. Angeboten werden die aktiven Konten der Kategorie Erlöse aus den Buchungskreisen des gewählten Objekts. Ohne Auswahl bleibt das Feld leer (optional); das Backend prüft weiterhin, dass das Konto zum Objekt gehört.
+
+## Kontenrahmen: Prüfbericht, Verteilung und Vier-Augen-Freigabe
+
+Unter Einstellungen, Buchhaltung, Kontenrahmen zeigt der Bereich "Prüfbericht und Verteilung" Konten ohne Abrechnungsart, Kostenkonten ohne gültige Schlüsselverteilung und offene Vorschläge (zum Beispiel Abrechnungsart Heizkosten). Im Entwurf lässt sich ein Vorschlag übernehmen und die Verteilung auf mehrere Schlüssel pflegen, die Summe muss 100 Prozent ergeben. Die Freigabe erteilt eine zweite Person; das Abschalten dieser Regel braucht das Freigaberecht und eine Begründung.
+
+## Periodensperre je Objekt und Zeitraum
+
+Unter Einstellungen, Buchhaltung, Periodensperren legen Sie eine Sperre für ein Objekt und einen Zeitraum an. Die Seite zeigt den Hinweis "Entscheidung offen", weil der Umfang der Sperre (P06-02) und die Wiederöffnung (AA08-01) noch nicht entschieden sind. Standard ist die bisherige Festschreibung des ganzen Buchungskreises.
+
+* Schalter "Zusätzlich Objekt und Zeitraum": Buchungen und Stornos mit Zeilen des Objekts im gesperrten Zeitraum werden abgelehnt.
+* Schalter "Abschluss einer Abrechnung setzt die Sperre": Beim Abschluss (Status gesperrt) einer Miet- oder Eigentümerabrechnung wird die Sperre für Objekt und Zeitraum angelegt. Ohne den Schalter erscheint nur ein Vorschlag.
+* Schalter "Aufhebung zulassen": Eine Sperre wird mit Begründung beantragt und von einer anderen Person freigegeben. Die Sperre bleibt als aufgehoben in der Liste.
+
+## Steuerabzüge bei Habenzinsen
+
+Im Formular Buchung erfassen wählen Sie den Vorgang Zinsbuchung mit Richtung Habenzinsen. Tragen Sie den Bruttozins und die einbehaltene Kapitalertragsteuer, den Solidaritätszuschlag und gegebenenfalls die Kirchensteuer so ein, wie sie auf dem Bankbeleg stehen. Das Formular zeigt die Gutschrift auf dem Geldkonto. Vorher hinterlegen Sie im Block Steuerkonten für Zinsabzüge je Buchungskreis die Konten; ohne Konto wird der Abzug abgelehnt. Es entsteht nur ein Entwurf. Die steuerliche Behandlung klären Sie mit dem Steuerberater. In der Rücklagenentwicklung erscheint der Steuerabzug gebuchter Zinsbuchungen als eigene Spalte.
+
+## Nebenbuchabgleich: ausgebuchte und stornierte Posten
+
+Im Prüfbericht (Auswertungen) werden ausgebuchte Posten und Posten stornierter Buchungen standardmäßig nicht in die offenen Posten und die Differenz gezählt. Ein Hinweis nennt Anzahl und Betrag getrennt. Der Mandantenschalter steht in den Steuereinstellungen (`subledger_exclude_written_off`). Der Export `nebenbuchabgleich.csv` enthält die Spalte Grund. Die Anzeige bucht nichts.
+
+## Objekt der Buchungszeile und Driftbericht
+
+Jede Buchungszeile trägt ein Objekt. Wählen Sie eine Einheit, gilt deren Objekt; eine abweichende Objektangabe wird abgelehnt. Ohne Einheit gilt das Objekt des Vertrags, auf den sich der Buchungssatz bezieht. Für Zeilen ohne Einheit und ohne Vertrag geben Sie das Objekt bei Bedarf über die Schnittstelle an (`lines[].property_id`), sonst steht die Zeile unter ohne Objekt. Ein Storno übernimmt das Objekt der stornierten Zeile; ein falsches Objekt einer gebuchten Zeile berichtigen Sie per Storno und neuer Buchung.
+
+* USt-Übersicht je Objekt, Monatsmatrix und Einnahmen und Ausgaben lassen sich auf ein Objekt einschränken (`property_id`), ebenso das Journal.
+* Der Driftbericht (`GET /accounting/ledgers/{id}/reports/line-property-drift`) zeigt Zeilen, deren Objekt nicht zur Einheit passt (Befund, erscheint auch im Prüfbericht), sowie Hinweise: Vertragsobjekt fehlt oder weicht ab, Objekt weicht vom Objekt des Buchungskreises ab. Der Bericht ändert nichts. Eine Oberfläche im CRM folgt.
+
+## ZUGFeRD-Rechnung (Welle 16)
+
+Unter "Honorarrechnungen" steht zu jeder Rechnung und Gutschrift:
+
+- "ZUGFeRD" lädt das Rechnungsdokument auf dem Briefbogen mit den eingebetteten Rechnungsdaten (Factur-X, Profil EN 16931). Es gelten dieselben Pflichtangaben wie bei der XRechnung.
+- "ZUGFeRD prüfen" zeigt das Ergebnis der eigenen Strukturprüfung und der eigenen PDF/A-Vorprüfung. Die Datei ist als PDF/A-3 gekennzeichnet, die Konformität ist nicht nachgewiesen; angezeigte Hinweise (zum Beispiel nicht eingebettete Schriften) sind vor einem Versand mit einem PDF/A-Prüfprogramm zu klären.
+- "ZUGFeRD ablegen" legt den Beleg einmal mit dem Prüfergebnis im Dokumentenbereich ab. Nichts wird versendet oder gebucht.

@@ -115,4 +115,32 @@ describe("AdminFeePanel", () => {
       expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/admin-fee-invoices?status=cancelled"))).toBe(true),
     );
   });
+  it("checks and files the ZUGFeRD hybrid without claiming PDF/A conformance (S13-03)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    mockLoad(fetchMock, [], [invoice]);
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        structure_ok: true,
+        findings: [],
+        profile: "EN 16931",
+        pdfa: { conformance: "not_verified", blockers: ["Schriften nicht eingebettet: Helvetica."] },
+      }),
+    );
+    renderIntl(<AdminFeePanel properties={[]} today="2026-02-15" />);
+    expect(await screen.findByRole("link", { name: "ZUGFeRD" })).toHaveAttribute(
+      "href",
+      `/api/bff/accounting/admin-fee-invoices/${INV}/zugferd.pdf`,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "ZUGFeRD prüfen" }));
+    expect(fetchMock.mock.calls[3]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/zugferd/check`);
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("ZUGFeRD EN 16931: CII-Struktur ohne Befund");
+    expect(status).toHaveTextContent("Konformität nicht nachgewiesen");
+    expect(status).toHaveTextContent("Schriften nicht eingebettet: Helvetica.");
+    fetchMock.mockResolvedValueOnce(jsonResponse({ document_id: "d1", created: true }, 201));
+    mockLoad(fetchMock, [], [{ ...invoice, zugferd_document_id: "d1" }]);
+    await userEvent.click(screen.getByRole("button", { name: "ZUGFeRD ablegen" }));
+    expect(fetchMock.mock.calls[4]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/zugferd/document`);
+    expect(await screen.findByText("ZUGFeRD abgelegt")).toBeInTheDocument();
+  });
 });

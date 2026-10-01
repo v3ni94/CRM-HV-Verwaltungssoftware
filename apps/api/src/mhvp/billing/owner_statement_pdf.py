@@ -26,6 +26,7 @@ ZERO = Decimal("0.00")
 # GA06-03: the tax note of the letter and of the § 35a proof is a placeholder until the
 # operator released a text with tax advice (OPEN_QUESTIONS AA11-02). Nothing is formulated here.
 TEXT_NOT_RELEASED = "Text nicht freigegeben"
+TEXT_CODES = ("owner_letter_tax_note", "owner_s35a_note")  # AE16 text blocks
 TAX_TEXT_PENDING = f"{TEXT_NOT_RELEASED}: Steuerlicher Hinweis zu § 35a EStG ausstehend (AA11-02)"
 NO_SOURCE_35A = (
     "Für diese Abrechnung liegt keine freigegebene Quelle für belegte Lohnanteile vor; es "
@@ -80,6 +81,7 @@ def build_letter(
     property_line: str,
     letter_date: date,
     signatory: list[str],
+    texts: dict[str, str] | None = None,
 ) -> letters.Letter:
     results = (st.snapshot or {}).get("results") or {}
     block = settlement(results)
@@ -186,7 +188,7 @@ def build_letter(
             widths=(0.7, 0.3),
         )
         paragraphs += [letters.TABLE_MARKER.format(name="s35a"), str(s35a["note"])]
-    paragraphs.append(TAX_TEXT_PENDING + ".")
+    paragraphs.append((texts or {}).get("owner_letter_tax_note") or TAX_TEXT_PENDING + ".")
     receipts = results.get("receipts") or {}
     if st.attach_receipts and receipts.get("lines"):
         paragraphs.append(
@@ -216,6 +218,7 @@ def build_s35a_sheet(
     property_line: str,
     letter_date: date,
     signatory: list[str],
+    texts: dict[str, str] | None = None,
 ) -> letters.Letter:
     """GA06-03: separate § 35a proof of the owner statement, read from the snapshot only. The
     amounts are the documented labour shares of the WEG individual statement (SEV); a rental
@@ -250,7 +253,7 @@ def build_s35a_sheet(
         paragraphs.append(NO_SOURCE_35A)
     if s35a.get("note"):
         paragraphs.append(str(s35a["note"]))
-    paragraphs.append(TAX_TEXT_PENDING + ".")
+    paragraphs.append((texts or {}).get("owner_s35a_note") or TAX_TEXT_PENDING + ".")
     return letters.Letter(
         recipient_lines=recipient_lines,
         subject=(

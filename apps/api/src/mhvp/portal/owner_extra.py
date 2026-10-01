@@ -61,17 +61,18 @@ async def owner_tickets(
     async with tenant_tx(request, principal) as session:
         _, ownership = await _owner_scope(session, account, local_today())
         property_ids = await _own_properties(session, ownership)
-        if not property_ids:
+        from mhvp.portal import features as portal_features
+
+        # AE13: ticket scope per tenant: none, released (visible_for owner, default), property.
+        scope = (await portal_features.get_or_default(session)).owner_ticket_scope or "released"
+        if not property_ids or scope == "none":
             return []
+        conditions: list[Any] = [Ticket.property_id.in_(property_ids)]
+        if scope != "property":
+            conditions.append(Ticket.visible_for.contains(["owner"]))
         rows = (
             await session.scalars(
-                select(Ticket)
-                .where(
-                    Ticket.property_id.in_(property_ids),
-                    Ticket.visible_for.contains(["owner"]),
-                )
-                .order_by(Ticket.number.desc())
-                .limit(200)
+                select(Ticket).where(*conditions).order_by(Ticket.number.desc()).limit(200)
             )
         ).all()
         return [

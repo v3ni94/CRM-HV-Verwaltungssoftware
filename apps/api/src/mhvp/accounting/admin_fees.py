@@ -173,6 +173,9 @@ class AdminFeeInvoiceOut(BaseModel):
     corrected_by_id: uuid.UUID | None = None
     xml_document_id: uuid.UUID | None
     pdf_document_id: uuid.UUID | None = None
+    # S13-03 (AE25): filed ZUGFeRD / Factur-X hybrid.
+    zugferd_document_id: uuid.UUID | None = None
+    zugferd_url: str | None = None
     released_at: datetime | None
     cancelled_at: datetime | None
     cancel_reason: str | None
@@ -233,6 +236,8 @@ def invoice_out(row: AdminFeeInvoice, corrected_by: uuid.UUID | None = None) -> 
         corrected_by_id=corrected_by,
         xml_document_id=row.xml_document_id,
         pdf_document_id=row.pdf_document_id,
+        zugferd_document_id=row.zugferd_document_id,
+        zugferd_url=f"/api/v1/accounting/admin-fee-invoices/{row.id}/zugferd.pdf",
         released_at=row.released_at,
         cancelled_at=row.cancelled_at,
         cancel_reason=row.cancel_reason,

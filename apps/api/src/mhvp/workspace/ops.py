@@ -39,12 +39,14 @@ from mhvp.core.auth.principal import (
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
+from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import ApiKey, Tenant, TenantStatus
 from mhvp.platform.schemas import ApiKeyOut
-from mhvp.workspace import backup_verify
+from mhvp.workspace import backup_verify, scale
 
 router = APIRouter(prefix="/platform/ops", tags=["Betrieb"])
+log = get_logger(__name__)
 
 # metric name -> alert when value > 0 (failures), informational otherwise
 ALERTING = {
@@ -61,6 +63,10 @@ ALERTING = {
     "backup_verify_stale",
     "backup_offsite_failed",
     "backup_offsite_stale",
+    # AE36 (AC09-01, ADR 0021): a partitioning trigger was reached (planning), or the number of
+    # productive tenants asks for a repeated scale measurement.
+    "scale_trigger_partition_review",
+    "scale_trigger_measure_again",
 }
 
 # Off-site status line of scripts/backup-offsite.sh: "backup-offsite: status=ok|failed
@@ -238,8 +244,13 @@ async def collect(request: Request) -> dict[str, int]:
 
     factory = sessions(request)
     async with platform_transaction(factory) as session:
+        # AE36: demo tenants (invented data) are left out of every operating statistic.
         tenant_ids: list[uuid.UUID] = list(
-            await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            await session.scalars(
+                select(Tenant.id).where(
+                    Tenant.status == TenantStatus.ACTIVE, Tenant.is_demo.is_(False)
+                )
+            )
         )
     since = datetime.now(UTC) - timedelta(hours=24)
     totals = {
@@ -302,6 +313,16 @@ async def collect(request: Request) -> dict[str, int]:
     return totals
 
 
+async def scale_gauges(request: Request) -> dict[str, int]:
+    """Gauges of the scale monitoring (AE36, ADR 0021); an error must not fail the metrics."""
+    resources = getattr(request.app.state, "resources", None)
+    try:
+        return await scale.metric_gauges(sessions(request), getattr(resources, "redis", None))
+    except Exception:
+        log.warning("scale_metrics_failed")
+        return {}
+
+
 @router.get("/metrics", summary="Betriebskennzahlen je Job (JSON oder Prometheus)")
 async def metrics(
     request: Request,
@@ -311,6 +332,7 @@ async def metrics(
     values = await collect(request)
     jobs = await job_results(request)
     values.update(job_gauges(jobs))
+    values.update(await scale_gauges(request))
     if format == "prometheus":
         lines = []
         for name, value in values.items():

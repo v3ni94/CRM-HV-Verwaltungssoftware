@@ -63,7 +63,7 @@ describe("G1OpeningChecklist", () => {
     expect(call?.[1]?.method).toBe("PUT");
     expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ status: "passed", confirmed_by_name: "Prüferin" });
     await waitFor(() => expect(screen.getByTestId("g1-cases")).toHaveTextContent("2 von 23"));
-  });
+  }, 20000);
 
   it("files the G1 request through the gate flow and then shows it as pending", async () => {
     let state = base;

@@ -29,7 +29,7 @@ from mhvp.core.listparams import (
     strict_query,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters, mirror_deletion, retention
+from mhvp.documents import letters, mirror_deletion, retention, trash
 from mhvp.documents import schemas as s
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
@@ -71,6 +71,7 @@ UPDATE = require_permission("documents:update")
 DELETE = require_permission("documents:delete")
 APPROVE = require_permission("documents:approve")
 SETTINGS = require_permission("tenant_settings:update")
+SETTINGS_READ = require_permission("tenant_settings:read")
 Page = Annotated[int, Query(ge=1)]
 PageSize = Annotated[int, Query(ge=1, le=200)]
 _LINKS = TypeAdapter(list[s.LinkIn])
@@ -503,6 +504,7 @@ def _checklist_out(item: Any, queued: int = 0) -> s.DocumentDeletionChecklistOut
             for i in item.items
         ],
         mirror_jobs_queued=queued,
+        purge_at=item.purge_at,
     )
 
 
@@ -546,6 +548,159 @@ async def deletion_follow_up(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     queued = mirror_deletion.enqueue(item.jobs)
     return _checklist_out(item, queued)
+
+
+# Trash (AE33, AC07-03) ------------------------------------------------------------------------
+
+
+def _scope_conditions(session: Any) -> list[Any]:
+    """Document scope of the membership (tax advisor, property assignment) as conditions."""
+    return [
+        Document.id.in_(scoped)
+        for scoped in (_scope_filter(session), _property_scope_filter(session))
+        if scoped is not None
+    ]
+
+
+async def _get_trashed(session: Any, document_id: uuid.UUID) -> Document:
+    """A document in the trash, within the scope of the membership; 404 otherwise."""
+    with trash.trashed_visible(session):
+        document = await _get(session, Document, document_id)
+    if document.deleted_at is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return document  # type: ignore[no-any-return]
+
+
+def _trash_settings_out(enabled: bool, days: int) -> s.DocumentTrashSettingsOut:
+    return s.DocumentTrashSettingsOut(
+        enabled=enabled, retention_days=days, proposed_days=trash.PROPOSED_DAYS
+    )
+
+
+@router.get(
+    "/documents/trash-settings",
+    summary="Papierkorb: Schalter und Frist des Mandanten",
+    dependencies=[Depends(strict_query)],
+)
+async def get_trash_settings(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> s.DocumentTrashSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        return _trash_settings_out(*await trash.current(session))
+
+
+@router.put("/documents/trash-settings", summary="Papierkorb: Schalter und Frist setzen")
+async def put_trash_settings(
+    body: s.DocumentTrashSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.DocumentTrashSettingsOut:
+    """Off by default. The period is a proposal (30 days) and stays open for decision
+    (OPEN_QUESTIONS AE33-01); changing it affects documents trashed afterwards only."""
+    async with tenant_tx(request, principal) as session:
+        row = await trash.setting_of(session, principal.tenant_id)
+        before = {"enabled": row.enabled, "retention_days": row.retention_days}
+        row.enabled, row.retention_days = body.enabled, body.retention_days
+        row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document_trash_setting.updated",
+            entity_type="document_trash_setting",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "before": before,
+                "after": {"enabled": row.enabled, "retention_days": row.retention_days},
+            },
+        )
+        return _trash_settings_out(row.enabled, row.retention_days)
+
+
+@router.get(
+    "/documents/trash",
+    summary="Papierkorb: gelöschte Dokumente mit Fristende und Sperren",
+    dependencies=[Depends(strict_query)],
+)
+async def list_trash(
+    request: Request,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+    principal: TenantPrincipal = Depends(DELETE),
+) -> list[s.DocumentTrashEntryOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = await trash.entries(
+            session, today=_today(), scope_filters=_scope_conditions(session), limit=limit
+        )
+        return [
+            s.DocumentTrashEntryOut(
+                document_id=r.document.id,
+                title=r.document.title,
+                filename=r.document.filename,
+                category_id=r.document.category_id,
+                deleted_at=r.document.deleted_at,
+                deleted_by=r.document.deleted_by,
+                purge_at=r.document.purge_at,
+                days_left=r.days_left,
+                status=r.status,
+                blocker=r.blocker,
+            )
+            for r in rows
+            if r.document.deleted_at is not None and r.document.purge_at is not None
+        ]
+
+
+@router.post(
+    "/documents/trash/{document_id}/restore",
+    summary="Dokument aus dem Papierkorb wiederherstellen (protokolliert)",
+)
+async def restore_from_trash(
+    document_id: uuid.UUID,
+    body: s.DocumentTrashActionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(DELETE),
+) -> s.DocumentOut:
+    async with tenant_tx(request, principal) as session:
+        document = await _get_trashed(session, document_id)
+        await trash.restore(
+            session,
+            document,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            reason=body.reason,
+        )
+        return await _out(session, document)
+
+
+@router.post(
+    "/documents/trash/{document_id}/purge",
+    status_code=204,
+    summary="Dokument aus dem Papierkorb endgültig löschen (vor Fristende, protokolliert)",
+)
+async def purge_from_trash(
+    document_id: uuid.UUID,
+    body: s.DocumentTrashActionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(DELETE),
+) -> Response:
+    """Every retention check runs again; a hold or a rule answers 409 and the refusal is
+    logged. The mirror steps (Drive, Paperless) are journaled and queued like any deletion."""
+    async with tenant_tx(request, principal) as session:
+        document = await _get_trashed(session, document_id)
+        result = await trash.purge(
+            session,
+            _blobs(request),
+            document,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            today=_today(),
+            reason=body.reason,
+            early=True,
+        )
+    if not result.deleted:
+        raise ProblemError(ErrorCodes.RETENTION_LOCKED, detail=result.reason)
+    mirror_deletion.enqueue(result.jobs)
+    return Response(status_code=204)
 
 
 @router.get("/documents/{document_id}", summary="Dokument lesen")
@@ -883,7 +1038,9 @@ async def delete_document(
         # Paperless document tagged "gelöscht" by a logged job after this deletion; the steps
         # are journaled in the same transaction, and the deletion stays "offen" until every
         # step succeeded (GET /documents/deletions). Shared with the proposal run (M6-04).
-        deleted = await retention.delete_now(
+        # AE33 (AC07-03): with the tenant switch for the trash on, the document moves to the
+        # trash first (restorable, final deletion after the period); without it this is final.
+        deleted = await retention.dispose(
             session,
             _blobs(request),
             document,

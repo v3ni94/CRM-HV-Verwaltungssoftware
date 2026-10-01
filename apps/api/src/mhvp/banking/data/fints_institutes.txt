@@ -1476,7 +1476,7 @@
 45261547=Volksbank Sprockhövel eG.|Sprockhövel|GENODEM1SPO|1312|fints1.atruvia.de|https://fints1.atruvia.de/cgi-bin/hbciservlet|3.0|3.0|
 45450050=Sparkasse an Ennepe und Ruhr|Gevelsberg|WELADED1GEV|1313||https://banking-wl4.s-fints-pt-wl.de/fints30||3.0|
 45451060=Sparkasse Ennepetal-Breckerfeld|Ennepetal|WELADED1ENE|00|w036.s-hbci.de|https://banking-wl6.s-fints-pt-wl.de/fints30|220|300|
-45451555=Sparkasse Schwelm  Sprockhövel|Schwelm|WELADED1SLM|1314||https://banking-wl4.s-fints-pt-wl.de/fints30||3.0|
+45451555=Sparkasse Schwelm – Sprockhövel|Schwelm|WELADED1SLM|1314||https://banking-wl4.s-fints-pt-wl.de/fints30||3.0|
 45660029=Volksbank Altena -alt-|Altena, Westf|GENODEM1ALA|34|||||
 45840026=Commerzbank|Werdohl|COBADEFFXXX|1320|hbci.commerzbank.de|https://fints.commerzbank.de/fints|3.0|3.0|
 45841031=Commerzbank|Plettenberg|COBADEFFXXX|1321|hbci.commerzbank.de|https://fints.commerzbank.de/fints|3.0|3.0|

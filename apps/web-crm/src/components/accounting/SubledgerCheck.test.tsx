@@ -44,4 +44,37 @@ describe("SubledgerCheck", () => {
     expect(screen.getByTestId("subledger-summary").textContent).toMatch(/Keine Differenz/);
     expect(screen.getAllByText(/Keine Konten/)).toHaveLength(2);
   });
+
+  it("names written off and reversed items that are not counted", () => {
+    renderIntl(
+      <SubledgerCheck
+        asOf="2026-09-30"
+        rows={[row({})]}
+        excluded={{
+          exclude_written_off: true,
+          written_off: { count: 2, amount: "80.00" },
+          reversed: { count: 1, amount: "100.00" },
+        }}
+      />,
+    );
+    const note = screen.getByTestId("subledger-excluded").textContent ?? "";
+    expect(note).toMatch(/2 ausgebuchte/);
+    expect(note).toMatch(/1 stornierter/);
+    expect(note).toMatch(/nicht gezählt/);
+  });
+
+  it("states that items are included when the switch is off", () => {
+    renderIntl(
+      <SubledgerCheck
+        asOf="2026-09-30"
+        rows={[row({})]}
+        excluded={{
+          exclude_written_off: false,
+          written_off: { count: 1, amount: "5.00" },
+          reversed: { count: 0, amount: "0.00" },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("subledger-excluded").textContent).toMatch(/enthalten/);
+  });
 });

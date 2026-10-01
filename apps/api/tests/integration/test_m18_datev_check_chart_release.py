@@ -210,6 +210,17 @@ def test_chart_release_workflow_versions_gate_and_tenants(client: TestClient, wo
         headers=h,
     )
     assert missing_doc.status_code == 404
+    # AE02: four eyes, the submitter cannot release; the switch is turned off with a reason.
+    same = client.post(f"{A}/templates/{tid}/release", json={"comment": "x"}, headers=h)
+    assert same.status_code == 409
+    assert same.json()["code"] == "MHVP-ACC-0015"
+    _ok(
+        client.put(
+            f"{A}/templates/{tid}/four-eyes",
+            json={"required": False, "reason": "Testmandant mit einer Person"},
+            headers=h,
+        )
+    )
     released = _ok(
         client.post(
             f"{A}/templates/{tid}/release",

@@ -614,3 +614,33 @@ describe("GA08-07 e-invoice validation block", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("S13-03 ZUGFeRD profile and container hints", () => {
+  it("shows the profile and the container hints of the formal check, also after a KoSIT run", () => {
+    renderIntake(
+      [
+        makeDraft({
+          e_invoice_format: "zugferd",
+          validation: {
+            validator: "KoSIT",
+            validator_version: "1.5.0",
+            official: true,
+            result: "valid",
+            formal: {
+              validator: "mhvp-formal-check",
+              profile: "MINIMUM",
+              container_findings: ["ZUGFeRD: PDF ohne PDF/A-Kennzeichnung im XMP (pdfaid)."],
+            },
+          },
+        }),
+      ],
+      "draft-1",
+    );
+    const block = screen.getByTestId("receipt-einvoice-validation");
+    expect(within(block).getByText("ZUGFeRD-Profil")).toBeInTheDocument();
+    expect(within(block).getByText("MINIMUM")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("receipt-einvoice-container")).getByText(/ohne PDF\/A-Kennzeichnung/),
+    ).toBeInTheDocument();
+  });
+});

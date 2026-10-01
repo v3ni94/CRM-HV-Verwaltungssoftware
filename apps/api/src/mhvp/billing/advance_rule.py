@@ -19,7 +19,17 @@ from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import DateTime, Index, Integer, Numeric, String, Text, UniqueConstraint, select
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    select,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -44,15 +54,48 @@ class ProposalStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class OpenAdvanceMode(StrEnum):
+    """Treatment of advances still open when the statement is issued (D24, AC10-01, AE15).
+
+    The procedure is an open legal decision (docs/rules/AC10-d24.md); every variant is a
+    tenant switch, the default ``info_only`` changes nothing (no posting, no offset).
+    """
+
+    INFO_ONLY = "info_only"  # variant 3: balance against paid, open items stay (default)
+    OFFSET_REVERSAL = "offset_reversal"  # variant 1: open items offset against the result
+    BALANCE_AGAINST_DUE = "balance_against_due"  # variant 2: balance against due, items stay
+
+
+OPEN_ADVANCE_MODES = tuple(m.value for m in OpenAdvanceMode)
+
+
 class AdvanceRuleSetting(IdMixin, TimestampMixin, TenantMixin, Base):
-    """Safety surcharge per tenant in percent (default 0); no other parameter is configurable."""
+    """Safety surcharge per tenant in percent (default 0) and the open advance switch (AE15)."""
 
     __tablename__ = "statement_advance_rule"
-    __table_args__ = (UniqueConstraint("tenant_id", name="uq_statement_advance_rule_tenant"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_statement_advance_rule_tenant"),
+        CheckConstraint(
+            "open_advance_mode IN ('info_only', 'offset_reversal', 'balance_against_due')",
+            name="open_advance_mode",
+        ),
+    )
 
     surcharge_percent: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), nullable=False, default=ZERO, server_default="0"
     )
+    open_advance_mode: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default=OpenAdvanceMode.INFO_ONLY.value,
+        server_default=OpenAdvanceMode.INFO_ONLY.value,
+    )
+
+
+async def open_advance_mode(session: AsyncSession) -> OpenAdvanceMode:
+    """Read-only lookup of the tenant switch (RLS scopes the row); default ``info_only``."""
+    value = await session.scalar(select(AdvanceRuleSetting.open_advance_mode))
+    return OpenAdvanceMode(value) if value else OpenAdvanceMode.INFO_ONLY
 
 
 class AdvanceProposal(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -29,6 +29,7 @@ from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
+from mhvp.platform.demo import ensure_not_demo
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/accounting/audit-exports", tags=["Buchhaltung"])
@@ -80,6 +81,7 @@ async def create_audit_export(
 ) -> dict[str, Any]:
     queued = False
     async with tenant_tx(request, principal) as session:
+        await ensure_not_demo(session, principal.tenant_id, "Der Prüfexport")  # AE36
         ledger = await session.scalar(select(Ledger).where(Ledger.id == body.ledger_id))
         if ledger is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)

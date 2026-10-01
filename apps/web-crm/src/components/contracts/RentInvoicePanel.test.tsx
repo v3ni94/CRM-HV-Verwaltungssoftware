@@ -51,7 +51,8 @@ describe("RentInvoicePanel", () => {
       const url = String(input);
       calls.push({ url, body: typeof init?.body === "string" ? init.body : null });
       if (init?.method === "POST") return jsonResponse(invoice, 201);
-      return jsonResponse(calls.length > 1 ? [invoice] : []);
+      if (url.endsWith("/numbering-mode")) return jsonResponse({ mode: "draft_numbers" });
+      return jsonResponse(calls.filter((c) => c.url.endsWith("/rent-invoices")).length > 1 ? [invoice] : []);
     });
     renderIntl(<RentInvoicePanel contractId="c1" vatOption="commercial_full_vat" canUpdate={true} />);
     expect(await screen.findByText("Noch keine Mietrechnung zu diesem Vertrag.")).toBeInTheDocument();
@@ -65,5 +66,22 @@ describe("RentInvoicePanel", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     await userEvent.click(screen.getByText("Gutschrift"));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/rent-invoices/i1/credit-note"))).toBe(true));
+  });
+
+  it("switches the draft numbering mode via PUT", async () => {
+    const calls: { url: string; method?: string; body: string | null }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method, body: typeof init?.body === "string" ? init.body : null });
+      if (url.endsWith("/numbering-mode")) return jsonResponse({ mode: init?.method === "PUT" ? "regular_numbers" : "draft_numbers" });
+      return jsonResponse([]);
+    });
+    renderIntl(<RentInvoicePanel contractId="c1" vatOption="commercial_full_vat" canUpdate={true} />);
+    const select = await screen.findByLabelText("Nummer für Entwürfe");
+    await userEvent.selectOptions(select, "regular_numbers");
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    const put = calls.find((c) => c.method === "PUT");
+    expect(put?.url).toBe("/api/bff/accounting/rent-invoices/numbering-mode");
+    expect(JSON.parse(put?.body ?? "{}")).toEqual({ mode: "regular_numbers" });
   });
 });

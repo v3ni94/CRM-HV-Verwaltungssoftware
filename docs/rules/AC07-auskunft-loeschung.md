@@ -20,6 +20,8 @@
 
 Der frühere direkte Abruf GET /contacts/{id}/export liefert 409 (MHVP-CONT-0030). Fehler: MHVP-CONT-0030 Status, MHVP-CONT-0031 zweite Person, MHVP-CONT-0032 Inhalt geändert (neu vorbereiten).
 
+Der Umfang für andere Personen und interne Vermerke ist seit AE33 ein Mandantenschalter (Standard wie unten beschrieben, Regel AE33-papierkorb-auskunft).
+
 Inhalt: nur Felder der Allowlist in `mhvp.contacts.access_export` (Kontakt, Anschriften, Telefon, E-Mail, Kennungen, Daten, Bankverbindungen mit IBAN, Einwilligungen). Zusätzlich entfernt eine zweite Sperre jeden Schlüssel, der nach Geheimnis, Hash oder Fingerabdruck aussieht. Nicht enthalten: iban_fingerprint, Tokens, externe Kennungen, Notizfeld und Kontaktnotizen (nur Anzahl), KI-Rohdaten, Nutzdaten des Verarbeitungsprotokolls. Andere Personen: Beziehungen nur mit Art, Parteien nur mit eigener Rolle und Anzahl weiterer Mitglieder, ein abweichender Kontoinhaber als Platzhalter. Die Liste der zurückgehaltenen Kategorien steht im Export (`withheld`).
 
 ## Löschung je Ziel (GA08-08)
@@ -30,5 +32,5 @@ Checkliste GET /documents/deletions/{id}/checklist (documents:read), Nachlauf PO
 - Embeddings werden in derselben Transaktion gelöscht, KI-Auszüge (Laufausgabe, Vorschlag, Lernbeispiel) inhaltlich durch einen Platzhalter ersetzt; Kennung, Entscheidung und Person bleiben (AC07-02).
 - Das Löschereignis vermerkt den Speicherort des Originals, damit die Checkliste ihn prüfen kann. Altbestand ohne Vermerk gilt als erledigt mit Hinweis.
 - Der Nachlauf löscht nie ein wieder vorhandenes Dokument; dafür gilt nur das Replay mit Sperr- und Hashprüfung.
-- Wiederherstellung: Das Replay setzt erledigte Spiegelschritte auf open zurück und löscht Ableitungen erneut. Einen Papierkorb für Dokumente gibt es in der Plattform nicht; die Löschung ist nach Vier-Augen-Prüfung endgültig, Wiederherstellung erfolgt nur aus dem Backup.
+- Wiederherstellung: Das Replay setzt erledigte Spiegelschritte auf open zurück und löscht Ableitungen erneut. Einen Papierkorb für Dokumente gibt es nur als Mandantenschalter (Standard aus, Regel AE33-papierkorb-auskunft); ohne den Schalter ist die Löschung nach Vier-Augen-Prüfung endgültig und die Wiederherstellung erfolgt nur aus dem Backup.
 - Backups werden nicht bearbeitet; es wird keine Löschung in Backups behauptet (Runbook backup.md, AC07-03).

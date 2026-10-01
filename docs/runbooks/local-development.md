@@ -109,7 +109,7 @@ the seed helpers follow in M9 and later milestones (sections 17 and 18).
 
 ## Demo-Mandant (`make seed-demo`)
 
-`make seed-demo` legt den Mandanten `demo-muster` mit erfundenen Daten an: 3 Objekte (WEG, Musterstraße), 40 Einheiten, 60 Kontakte (Max Beispiel und weitere erfundene Namen), 36 Buchungsentwürfe (12 Monate je Objekt, nichts gebucht) und 200 Bankumsätze. Die drei eigenen Konten nutzen die Test-IBANs der Testsuite, die Gegenkonten sind erzeugte IBANs mit fiktiver Bankleitzahl. Kein Bezug zu echten Personen oder Konten.
+`make seed-demo` legt den Mandanten `demo-muster` mit erfundenen Daten an: 3 Objekte (WEG, Musterstraße), 40 Einheiten, 60 Kontakte (Max Beispiel und weitere erfundene Namen), 36 Buchungsentwürfe (12 Monate je Objekt, nichts gebucht) und 200 Bankumsätze. Alle IBANs (die drei eigenen Konten und die Gegenkonten) werden erzeugt: Bankleitzahl 00000000, gültige Prüfziffern, keine Beispiel-IBAN eines echten Instituts. Kein Bezug zu echten Personen oder Konten. Der Mandant trägt das Kennzeichen Demo (`tenant.is_demo`) und ist aus Plattformabrechnung, Exporten, DATEV und Statistiken ausgeschlossen; Einzelheiten im Runbook `demo-mandant.md` (Regel AE36-DEMO).
 
 Voraussetzungen: laufende API (`MHVP_DEMO_API_URL`, Standard `http://localhost:8000`, im Compose-Lauf `http://api:8000`), `MHVP_ENV` dev, test oder staging (in Produktion verweigert das Kommando den Lauf), `MHVP_DEMO_ADMIN_PASSWORD` mit einem Passwort nach Richtlinie für `demo-admin@example.org` (nie ins Repository). Ohne `LOCAL=1` läuft es im Compose-Container, mit `LOCAL=1` nativ. Ein zweiter Aufruf ändert nichts (Mandant besteht). Es wird kein Gate geöffnet. Offene Entscheidung: `docs/OPEN_QUESTIONS.md` AA15-01.
 

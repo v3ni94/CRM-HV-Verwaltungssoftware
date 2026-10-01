@@ -48,6 +48,7 @@ export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
   const [month, setMonth] = useState(today);
   const [year, setYear] = useState(today.slice(0, 4));
   const [standing, setStanding] = useState(false);
+  const [mode, setMode] = useState<string>("draft_numbers");
 
   const load = useCallback(async () => {
     const res = await bff<RentInvoiceOut[]>(`/api/bff/contracts/${contractId}/rent-invoices`);
@@ -58,6 +59,23 @@ export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
   useEffect(() => {
     if (hasOption) void load();
   }, [hasOption, load]);
+
+  useEffect(() => {
+    if (!hasOption) return;
+    void bff<{ mode: string }>("/api/bff/accounting/rent-invoices/numbering-mode").then((res) => {
+      if (res.ok && typeof res.data?.mode === "string") setMode(res.data.mode);
+    });
+  }, [hasOption]);
+
+  const changeMode = async (next: string) => {
+    setError(null);
+    const res = await bff<{ mode: string }>("/api/bff/accounting/rent-invoices/numbering-mode", {
+      method: "PUT",
+      body: JSON.stringify({ mode: next }),
+    });
+    if (res.ok && typeof res.data?.mode === "string") setMode(res.data.mode);
+    else if (!res.ok) setError(res.message);
+  };
 
   if (!hasOption) return null;
 
@@ -94,6 +112,17 @@ export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
     <section className={ui.card} data-testid="rent-invoices">
       <h2 className={ui.h2}>{t("title")}</h2>
       <p className={ui.help}>{t("intro")}</p>
+      {canUpdate ? (
+        <label className={`${ui.label} mt-3`}>
+          {t("numberingMode")}
+          <select className={ui.input} value={mode} onChange={(e) => void changeMode(e.target.value)} aria-label={t("numberingMode")}>
+            <option value="draft_numbers">{t("modeDraftNumbers")}</option>
+            <option value="regular_numbers">{t("modeRegularNumbers")}</option>
+            <option value="reject_when_g1_closed">{t("modeReject")}</option>
+          </select>
+          <span className={ui.help}>{t("numberingHint")}</span>
+        </label>
+      ) : null}
       {canUpdate ? (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="flex items-center gap-2 text-sm">

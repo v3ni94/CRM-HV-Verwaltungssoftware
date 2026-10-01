@@ -59,3 +59,28 @@ export function publicOrigin(request: Request): string {
   const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
   return `${proto}://${host}`;
 }
+
+/** Raw JSON POST against a public API path not yet in the generated schema (M2-04 setup
+ *  step; openapi.json is regenerated centrally). Never logs the body (it carries a token). */
+export async function postJson(
+  path: string,
+  body: Record<string, unknown>,
+  userAgent?: string,
+): Promise<{ status: number; data: Record<string, unknown> | null }> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (userAgent) headers["user-agent"] = userAgent;
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const text = res.status === 204 ? "" : await res.text();
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = text ? (JSON.parse(text) as Record<string, unknown>) : null;
+  } catch {
+    data = null;
+  }
+  return { status: res.status, data };
+}

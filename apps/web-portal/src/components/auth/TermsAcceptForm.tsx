@@ -52,6 +52,7 @@ export function TermsAcceptForm({ version, next = "/start" }: { version: string;
         <input type="checkbox" className="mt-1" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
         <span>{t("accept")}</span>
       </label>
+      <p className="text-xs text-muted">{t("evidence")}</p>
       <button type="submit" className={ui.primary} disabled={busy}>
         {busy ? t("submitting") : t("submit")}
       </button>

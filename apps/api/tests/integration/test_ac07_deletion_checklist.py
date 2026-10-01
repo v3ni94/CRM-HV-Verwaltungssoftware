@@ -303,6 +303,7 @@ def test_deletion_checklist_restore_and_replay(
     first = _ok(client.get(checklist_url, headers=h))
     assert first["status"] == "open"
     assert _status(first) == {
+        "trash": "not_applicable",
         "index": "done",
         "original": "done",
         "mirror_paperless": "open",
@@ -371,6 +372,7 @@ def test_deletion_checklist_restore_and_replay(
     assert client.get(url, headers=h).status_code == 404
     replayed = _ok(client.get(checklist_url, headers=h))
     assert {k: v for k, v in _status(replayed).items() if v != "done"} == {
+        "trash": "not_applicable",
         "mirror_paperless": "open",
         "mirror_google_drive": "open",
         "thumbnails": "not_applicable",
@@ -389,7 +391,8 @@ def test_deletion_checklist_restore_and_replay(
     held = _ok(client.get(checklist_url, headers=h))
     assert held["status"] == "held"
     assert _status(held)["index"] == "held"
-    assert "Rechtsstreit AC07" in held["items"][0]["detail"]
+    index_item = next(i for i in held["items"] if i["target"] == "index")
+    assert "Rechtsstreit AC07" in index_item["detail"]
     _ok(client.post(follow_url, headers=h))
     assert client.get(url, headers=h).status_code == 200
     assert BlobStore(settings).exists(snapshot["document"]["storage_ref"])

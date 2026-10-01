@@ -1371,6 +1371,132 @@ async def set_automation(
         return {"enabled": body.enabled}
 
 
+class BankingSwitchRequestIn(_In):
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class BankingSwitchDecisionIn(_In):
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+async def _g1_open(request: Request, principal: TenantPrincipal) -> bool:
+    from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGate
+
+    resolver = getattr(request.app.state, "release_gate_resolver", ClosedReleaseGateResolver())
+    try:
+        return (await resolver.is_open(principal.tenant_id, ReleaseGate.G1)) is True
+    except Exception:
+        return False
+
+
+def _need_settings_update(principal: TenantPrincipal) -> None:
+    if not principal.has("tenant_settings:update"):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="Missing tenant_settings:update."
+        )
+
+
+@router.get(
+    "/automation/comparison",
+    summary="Vergleich Automatik gegen manuelle Buchung (Bericht, keine Buchung)",
+    dependencies=[Depends(strict_query)],
+)
+async def automation_comparison(
+    request: Request,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    from mhvp.banking import automation_switch
+
+    if date_from and date_to and date_from > date_to:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum: Beginn nach Ende.")
+    async with tenant_tx(request, principal) as session:
+        return await automation_switch.comparison(
+            session, date_from=date_from, date_to=date_to, limit=limit
+        )
+
+
+@router.get(
+    "/automation/switch-requests",
+    summary="Anträge zum Einschalten der Automatik",
+    dependencies=[Depends(strict_query)],
+)
+async def list_switch_requests(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.banking import automation_switch
+    from mhvp.platform.models import TenantSettings
+
+    gate_open = await _g1_open(request, principal)
+    async with tenant_tx(request, principal) as session:
+        rows = await automation_switch.list_requests(session)
+        enabled = await session.scalar(select(TenantSettings.auto_posting_enabled))
+        return {
+            "enabled": bool(enabled),
+            "g1_open": gate_open,
+            "can_request": gate_open
+            and not enabled
+            and not any(r.status == "requested" for r in rows),
+            "items": [automation_switch.switch_out(r) for r in rows],
+        }
+
+
+@router.post(
+    "/automation/switch-requests",
+    status_code=201,
+    summary="Einschalten der Automatik beantragen (G1 und Vier Augen)",
+)
+async def create_switch_request(
+    body: BankingSwitchRequestIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    from mhvp.banking import automation_switch
+
+    _need_settings_update(principal)
+    gate_open = await _g1_open(request, principal)
+    async with tenant_tx(request, principal) as session:
+        row = await automation_switch.request_switch_on(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            reason=body.reason,
+            gate_open=gate_open,
+        )
+        return automation_switch.switch_out(row)
+
+
+@router.post(
+    "/automation/switch-requests/{request_id}/{decision}",
+    summary="Antrag zum Einschalten freigeben oder ablehnen (andere Person)",
+)
+async def decide_switch_request(
+    request_id: uuid.UUID,
+    decision: str,
+    body: BankingSwitchDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    from mhvp.banking import automation_switch
+
+    if decision not in ("approve", "reject"):
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    _need_settings_update(principal)
+    gate_open = await _g1_open(request, principal)
+    async with tenant_tx(request, principal) as session:
+        row = await automation_switch.decide(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            is_platform_admin=principal.is_platform_admin,
+            request_id=request_id,
+            approve=decision == "approve",
+            comment=body.comment,
+            gate_open=gate_open,
+        )
+        return automation_switch.switch_out(row)
+
+
 @router.get("/learning", summary="Lernender Buchhalter: Schalter je Mandant lesen")
 async def get_learning(
     request: Request, principal: TenantPrincipal = Depends(READ)

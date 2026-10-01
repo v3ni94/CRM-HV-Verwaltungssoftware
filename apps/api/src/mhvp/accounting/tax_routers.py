@@ -70,6 +70,7 @@ class TaxSettingsOut(BaseModel):
     section_35a_enabled: bool
     approval_limits_enabled: bool
     approval_limits: list[dict[str, Any]]
+    subledger_exclude_written_off: bool = True
 
 
 class TaxSettingsIn(BaseModel):
@@ -81,6 +82,7 @@ class TaxSettingsIn(BaseModel):
     section_35a_enabled: bool = False
     approval_limits_enabled: bool = False
     approval_limits: list[ApprovalLimitIn] = Field(default_factory=list, max_length=50)
+    subledger_exclude_written_off: bool = True
 
 
 class PropertyProfileOut(BaseModel):
@@ -257,6 +259,7 @@ async def put_settings(
         row.construction_withholding_percent = body.construction_withholding_percent
         row.section_35a_enabled = body.section_35a_enabled
         row.approval_limits_enabled = body.approval_limits_enabled
+        row.subledger_exclude_written_off = body.subledger_exclude_written_off
         row.approval_limits = [
             {"role_code": lim.role_code, "limit_amount": str(lim.limit_amount)}
             for lim in body.approval_limits

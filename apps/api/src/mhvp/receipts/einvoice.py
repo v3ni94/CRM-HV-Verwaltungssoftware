@@ -17,6 +17,11 @@ What this module guarantees and what it does not (0.2 Produktschutz, PÜ03):
   `ai_conflicts` compares them against the AI extraction of the PDF text. Both produce visible
   conflicts (D42) instead of a silent choice.
 
+Profile and container (S13-03, AE25): the profile (MINIMUM to XRECHNUNG) is derived from the
+guideline identifier, the container data (PDF/A identification, Factur-X XMP values and the
+AFRelationship of the attachment) from the PDF; deviations are hints in
+``container_findings`` and in the stored ``formal_validation``, never a rejection.
+
 Parsing uses `defusedxml` (no entity expansion, no external DTD) on files that are limited by
 the upload size (A-016). Schematron or XSD validation against the XRechnung rules is not done
 here; the file is read, not certified.
@@ -64,6 +69,17 @@ ATTACHMENT_NAMES: tuple[str, ...] = (
 )
 XML_MIME_TYPES = frozenset({"application/xml", "text/xml"})
 MAX_XML_BYTES = 20_000_000
+ZUGFERD1_ROOT = "{urn:ferd:CrossIndustryDocument:invoice:1p0}CrossIndustryDocument"
+# Profiles whose XML does not carry all EN 16931 mandatory terms (Factur-X profile overview).
+PROFILES_BELOW_EN16931 = frozenset({"MINIMUM", "BASIC WL"})
+XMP_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+XMP_NAMESPACES = {
+    "http://www.aiim.org/pdfa/ns/id/": "pdfaid",
+    "http://purl.org/dc/elements/1.1/": "dc",
+    "http://ns.adobe.com/pdf/1.3/": "pdf",
+    "http://ns.adobe.com/xap/1.0/": "xmp",
+}
+XMP_SCHEMA_NAMESPACE_URI = "{http://www.aiim.org/pdfa/ns/schema#}namespaceURI"
 # XRechnung convention for cash discounts inside the payment terms note:
 # ``#SKONTO#TAGE=14#PROZENT=2.00#`` (optionally ``#BASISBETRAG=...#``).
 _SKONTO = re.compile(r"#SKONTO#TAGE=(\d+)#PROZENT=([0-9]+(?:\.[0-9]+)?)#", re.IGNORECASE)
@@ -134,6 +150,10 @@ class EInvoice:
     notes: list[str] = field(default_factory=list)
     lines: list[EInvoiceLine] = field(default_factory=list)
     payment: EInvoicePayment = field(default_factory=EInvoicePayment)
+    # S13-03 (AE25): profile name from the guideline identifier and, for a PDF, the container
+    # data (``pdf_container``).
+    profile: str | None = None
+    container: dict[str, Any] | None = None
 
 
 @dataclass
@@ -370,9 +390,15 @@ def parse_xml(data: bytes, *, fmt: str = "xrechnung") -> EInvoice:
         inv = _parse_cii(root, fmt)
     elif tag == f"{{{UBL_CREDIT_NOTE}}}CreditNote":
         raise EInvoiceError("UBL-Gutschrift (CreditNote) wird im Belegeingang nicht gelesen.")
+    elif tag == ZUGFERD1_ROOT:
+        raise EInvoiceError(
+            "ZUGFeRD 1.0 (CrossIndustryDocument) wird nicht gelesen; "
+            "Rechnung anhand des PDF prüfen."
+        )
     else:
         raise EInvoiceError("XML ist keine XRechnung (weder UBL Invoice noch CII).")
     _apply_terms(inv)
+    inv.profile = profile_name(inv.customization_id)
     return inv
 
 
@@ -395,6 +421,149 @@ def embedded_xml(pdf: bytes) -> tuple[str, bytes] | None:
     return None
 
 
+def profile_name(guideline: str | None) -> str | None:
+    """Profile of a ZUGFeRD 2.x / Factur-X or XRechnung guideline identifier (BT-24), by the
+    suffix of the identifier; None when it is not recognised."""
+    if not guideline:
+        return None
+    text = guideline.strip().lower()
+    if "xrechnung" in text:
+        return "XRECHNUNG"
+    for suffix, name in (
+        (":minimum", "MINIMUM"),
+        (":basicwl", "BASIC WL"),
+        (":basic", "BASIC"),
+        (":extended", "EXTENDED"),
+    ):
+        if text.endswith(suffix):
+            return name
+    if text == "urn:cen.eu:en16931:2017":
+        return "EN 16931"
+    return None
+
+
+def xmp_values(xmp: bytes) -> dict[str, str]:
+    """Selected XMP values (element or attribute form): ``pdfaid:part``,
+    ``pdfaid:conformance``, ``dc:title``, ``dc:creator``, ``pdf:Producer``, the Factur-X /
+    ZUGFeRD values as ``fx:<name>`` (any ``CrossIndustryDocument`` namespace) and the
+    namespaces of the declared extension schemas (``extension_namespaces``)."""
+    try:
+        root = SafeElementTree.fromstring(xmp)
+    except (SafeElementTree.ParseError, DefusedXmlException, ValueError):
+        return {}
+    out: dict[str, str] = {}
+
+    def key(tag: str) -> str | None:
+        if not tag.startswith("{"):
+            return None
+        uri, _, local = tag[1:].partition("}")
+        if "CrossIndustryDocument" in uri:
+            return f"fx:{local}"
+        prefix = XMP_NAMESPACES.get(uri)
+        return f"{prefix}:{local}" if prefix else None
+
+    extensions: list[str] = []
+    for node in root.iter():
+        if node.tag == XMP_SCHEMA_NAMESPACE_URI and node.text:
+            extensions.append(node.text.strip())
+        if node.tag == f"{{{XMP_RDF}}}Description":
+            for attr, value in node.attrib.items():
+                name = key(attr)
+                if name and name not in out:
+                    out[name] = value.strip()
+        name = key(node.tag)
+        if name is None or name in out:
+            continue
+        items = [li.text.strip() for li in node.iter(f"{{{XMP_RDF}}}li") if li.text]
+        value = items[0] if items else (node.text or "").strip()
+        if value:
+            out[name] = value
+    if extensions:
+        out["extension_namespaces"] = " ".join(extensions)
+    return out
+
+
+def pdf_container(pdf: bytes, attachment_name: str) -> dict[str, Any]:
+    """PDF/A identification, Factur-X XMP values and the attachment data of a hybrid
+    invoice as found in the file; values are reported, not validated (no PDF/A check)."""
+    out: dict[str, Any] = {
+        "pdfa_part": None,
+        "pdfa_conformance": None,
+        "fx_document_type": None,
+        "fx_document_file_name": None,
+        "fx_version": None,
+        "fx_conformance_level": None,
+        "af_relationship": None,
+        "attachment_subtype": None,
+        "in_catalog_af": False,
+    }
+    try:
+        reader = PdfReader(io.BytesIO(pdf))
+        catalog: Any = reader.trailer["/Root"].get_object()
+        metadata = catalog.get("/Metadata")
+        xmp = xmp_values(metadata.get_object().get_data()) if metadata is not None else {}
+        out.update(
+            {
+                "pdfa_part": xmp.get("pdfaid:part"),
+                "pdfa_conformance": xmp.get("pdfaid:conformance"),
+                "fx_document_type": xmp.get("fx:DocumentType"),
+                "fx_document_file_name": xmp.get("fx:DocumentFileName"),
+                "fx_version": xmp.get("fx:Version"),
+                "fx_conformance_level": xmp.get("fx:ConformanceLevel"),
+            }
+        )
+        for embedded in reader.attachment_list:
+            if embedded.name != attachment_name:
+                continue
+            relationship = embedded.pdf_object.get("/AFRelationship")
+            out["af_relationship"] = str(relationship).lstrip("/") if relationship else None
+            out["attachment_subtype"] = (embedded.subtype or "").lstrip("/") or None
+            associated = [ref.get_object() for ref in (catalog.get("/AF") or [])]
+            out["in_catalog_af"] = embedded.pdf_object in associated
+            break
+    except (PdfReadError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        log.warning("einvoice_pdf_container_failed", extra={"error": type(exc).__name__})
+    return out
+
+
+def container_findings(inv: EInvoice) -> list[str]:
+    """Hints on profile and container of a hybrid invoice (S13-03). Not a PDF/A validation;
+    the formal reading of the XML is not affected."""
+    if inv.format != "zugferd":
+        return []
+    out: list[str] = []
+    if inv.profile is None:
+        out.append("ZUGFeRD: Profil des XML nicht erkannt (Spezifikationskennung BT-24 prüfen).")
+    elif inv.profile in PROFILES_BELOW_EN16931:
+        out.append(
+            f"ZUGFeRD: Profil {inv.profile} enthält nicht alle Pflichtangaben der EN 16931; "
+            "Rechnungsinhalt anhand des PDF prüfen."
+        )
+    box = inv.container or {}
+    if not box.get("pdfa_part"):
+        out.append("ZUGFeRD: PDF ohne PDF/A-Kennzeichnung im XMP (pdfaid).")
+    elif box["pdfa_part"] != "3":
+        out.append(f"ZUGFeRD: PDF/A-Teil {box['pdfa_part']} statt 3 gekennzeichnet.")
+    level = box.get("fx_conformance_level")
+    if not level:
+        out.append("ZUGFeRD: Profilangabe (ConformanceLevel) fehlt im XMP.")
+    elif inv.profile and level.replace(" ", "").upper() != inv.profile.replace(" ", ""):
+        out.append(
+            f"ZUGFeRD: Profil laut XMP ({level}) weicht vom Profil des XML ({inv.profile}) ab."
+        )
+    file_name = box.get("fx_document_file_name")
+    if file_name and inv.attachment_name and file_name != inv.attachment_name:
+        out.append(
+            f"ZUGFeRD: Dateiname laut XMP ({file_name}) weicht vom Anhang "
+            f"({inv.attachment_name}) ab."
+        )
+    if not box.get("af_relationship"):
+        out.append("ZUGFeRD: Anhang ohne AFRelationship (Associated File).")
+    elif not box.get("in_catalog_af"):
+        out.append("ZUGFeRD: Anhang ist nicht im Katalog (/AF) verknüpft.")
+    return out
+
+
 def read(mime_type: str, data: bytes) -> EInvoiceReadResult:
     """Detects and reads the structured part. Plain PDFs and non invoice XML give no e-invoice;
     unreadable candidates give a finding (PÜ01: the structured part is a required part of an
@@ -410,6 +579,7 @@ def read(mime_type: str, data: bytes) -> EInvoiceReadResult:
             name, xml = found
             inv = parse_xml(xml, fmt="zugferd")
             inv.attachment_name = name
+            inv.container = pdf_container(data, name)
             return EInvoiceReadResult(inv, findings)
     except EInvoiceError as exc:
         findings.append(f"E-Rechnung: strukturierter Teil nicht lesbar: {exc}")
@@ -670,6 +840,10 @@ def formal_validation(inv: EInvoice, findings: list[str]) -> dict[str, Any]:
         "syntax": inv.syntax,
         "result": "findings" if findings else "ok",
         "messages": list(findings),
+        # S13-03 (AE25): profile and container hints, separate from the formal result.
+        "profile": inv.profile,
+        "container": inv.container,
+        "container_findings": container_findings(inv),
     }
 
 

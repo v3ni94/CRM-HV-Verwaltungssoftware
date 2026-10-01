@@ -76,8 +76,9 @@ type Setup = { secret: string; otpauth_uri: string; qr: string };
 
 /** Optional second factor (operator 26.09.2026, M2-01): every user may switch TOTP on or off
  *  here; the login asks for a code only while it is on. */
-function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
+function SecondFactor({ initialEnabled, required = false }: { initialEnabled: boolean; required?: boolean }) {
   const t = useTranslations("Profile");
+  const tPolicy = useTranslations("MfaPolicy");
   const [enabled, setEnabled] = useState(initialEnabled);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [code, setCode] = useState("");
@@ -145,7 +146,10 @@ function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
       <p className="text-sm text-muted">{enabled ? t("totpStatusOn") : t("totpStatusOff")}</p>
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
       {message ? <p role="status" className="text-xs text-success-fg">{message}</p> : null}
-      {enabled ? (
+      {/* M2-04: under the tenant policy the second factor stays; the API refuses the switch off. */}
+      {enabled && required ? (
+        <p className="text-xs text-muted">{tPolicy("requiredHint")}</p>
+      ) : enabled ? (
         <form aria-label={t("totpDisable")} onSubmit={(e) => void disable(e)} className="flex flex-col gap-3 sm:max-w-sm">
           <p className="text-xs text-muted">{t("totpDisableHint")}</p>
           <label className="flex flex-col gap-1">
@@ -394,6 +398,7 @@ export function ProfileSettings({
   initialSessions,
   initialDevices,
   totpEnabled,
+  mfaRequired = false,
   signatureProfile = null,
   signaturePreview = null,
 }: {
@@ -404,6 +409,7 @@ export function ProfileSettings({
   initialSessions: SessionRow[];
   initialDevices: TrustedDeviceRow[];
   totpEnabled: boolean;
+  mfaRequired?: boolean;
   signatureProfile?: SignatureProfileData | null;
   signaturePreview?: SignaturePreviewData | null;
 }) {
@@ -439,7 +445,7 @@ export function ProfileSettings({
       </section>
       <SignatureProfile initialProfile={signatureProfile} initialPreview={signaturePreview} />
       <PasswordForm />
-      <SecondFactor initialEnabled={totpEnabled} />
+      <SecondFactor initialEnabled={totpEnabled} required={mfaRequired} />
       <Passkeys />
       <Sessions initial={initialSessions} />
       <TrustedDevices initial={initialDevices} />

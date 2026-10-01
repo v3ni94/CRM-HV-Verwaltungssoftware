@@ -13,6 +13,8 @@ export const COOKIE = {
   access: "mhvp_at",
   refresh: "mhvp_rt",
   mfa: "mhvp_mfa",
+  // M2-04: setup token of a user the tenant policy asks to set up a second factor at login.
+  mfaSetup: "mhvp_mfa_setup",
   ctx: "mhvp_ctx",
   device: "mhvp_dev",
 } as const;
@@ -21,6 +23,8 @@ export const COOKIE = {
 export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 /** The MFA token of login step 1 is short lived. */
 export const MFA_MAX_AGE = 10 * 60;
+/** M2-04: the setup step token lives 15 minutes (API MFA_SETUP_TTL). */
+export const MFA_SETUP_MAX_AGE = 15 * 60;
 /** Trusted device cookie ("Dieses Gerät 90 Tage merken", operator 26.09.2026, M2-01). */
 export const DEVICE_MAX_AGE = 90 * 24 * 60 * 60;
 /** Renew the access token a little before the API rejects it. */

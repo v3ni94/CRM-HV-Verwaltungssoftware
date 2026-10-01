@@ -12,6 +12,9 @@ HBCI/FinTS PIN/TAN (operator decision 27.09.2026) lives in `mhvp.banking.fints` 
 session based workflow (pause for TAN, resume in the worker) rather than behind this
 synchronous protocol, because every call may stop for a TAN; `UnconfiguredConnector` still
 stands in for any connector without a signed contract or credentials (EBICS, GoCardless).
+EBICS statement download (order type C53) has its own `EbicsConnector` on this seam in
+`mhvp.banking.ebics_connector` (AE23, rule M11-11); its bank calls go through
+`mhvp.banking.ebics_transport`, which has no installed implementation yet (AE23-01).
 
 Credentials for online banking never touch this codebase: WebForm based connectors return a
 provider hosted URL (`WebFormHandle.url`) that the browser is redirected to; bank login and

@@ -172,3 +172,25 @@ Hinweise für den Betrieb:
 - Nachweis Plan (Test `test_ad01_line_guard.py::test_guard_lookup_uses_primary_key_index`, generischer Plan wie in PL/pgSQL, App-Rolle mit RLS): neu `Index Scan using pk_journal_entry`, `Index Cond: (id = $1)`; alt `Index Cond` nur auf `tenant_id`, `id = COALESCE($1, $2)` als Filter. Das bestätigt die Ursache des Befunds aus ADR 0021.
 - Der Generator `seed_journal_entries` schaltet den Wächter nicht mehr ab (Entwürfe, Zeilen, dann eine Buchung aller Entwürfe). Lasttest `test_bulk_load_200k_lines_with_guard_active` (nur `MHVP_PERF=1`, Schwelle `MHVP_PERF_GUARD_LIMIT`, Vorgabe 300 s). Messwert nachher: in Welle 15 nicht abgeschlossen (Lauf auf geteilter Maschine nach Fristende abgebrochen). Vorher: 3,4 ms je Zeile bei 20.000 Buchungen, 200.000 Zeilen nach mehr als 9 Minuten abgebrochen.
 - ANALYZE nach Massenimporten: Die App-Rolle darf `ANALYZE` nicht ausführen (geprüft: `WARNING: permission denied to analyze "bank_transaction", skipping it`; Eigentümer ist `mhvp_migrator`). Keine Rechteausweitung. Vorgesehen ist ein Wartungsjob über eine Wartungsverbindung mit Eigentümerrechten außerhalb des Workers (zum Beispiel zeitgesteuert auf dem Datenbankhost: `ANALYZE journal_entry, journal_line, bank_transaction` nach CAMT-Import und Immoware24-Vollimport mit mehr als 10.000 geschriebenen Zeilen, sonst nächtlich). Bis zur Umsetzung manuell durch den Betreiber; Autovacuum zieht ohnehin nach.
+
+## Welle 16, Paket AE36: Auslöser der Partitionierung als Plattformkennzahlen (AC09-01)
+
+Die Auslöser aus ADR 0021 werden laufend gemessen, statt sie von Hand zu prüfen. Regel `docs/rules/AE36-SCALE.md`, Seite Plattform, Betrieb, Abschnitt "Skalierung und Jahrespartitionierung", API `GET /platform/ops/scale`.
+
+| Kennzahl | Quelle | Auslöser (Vorschlag, einstellbar) |
+| --- | --- | --- |
+| Zeilen je Tabelle (`journal_entry`, `journal_line`, `bank_transaction`) | exakte Zählung je Mandant bis 1.000.000 Zeilen, darüber `pg_class.reltuples` | 20.000.000 Zeilen |
+| Größe je Tabelle mit Indizes | `pg_total_relation_size` (bei Partitionen die Summe der Blätter) | 50 GB (1 GB = 1024³ Byte) |
+| P95 Journalliste und Bankumsatzliste, normal und bei tiefem Zugriff (Versatz ab 10.000) | Stichproben echter Aufrufe in Redis, letzte 7 Tage, mindestens 20 Aufrufe | über 300 ms (tief 1.000 ms) in 3 Wochenmessungen in Folge |
+| Dauer des letzten Wiederherstellungstests | Ergebnis `ops.backup_verify` | über 14.400 s (RTO 4 Stunden) |
+| Produktive Mandanten ohne Demo | Tabelle `tenant` | 20: Messung wiederholen, kein Umbau |
+
+Ablauf: Der Job `ops-scale-snapshot` läuft montags 03:10 (Europe/Berlin) und speichert die Messung der ISO-Woche (`platform_scale_snapshot`). Ein neu erreichter Auslöser erzeugt ein Plattformaudit-Ereignis `scale.trigger_reached` und einen Hinweis in der Glocke aller Plattformadministratoren; bis er entfällt, steht er in `/platform/ops/metrics` unter `alerts` und löst über Uptime Kuma die E-Mail an den Betreiber aus (`monitoring.md`, Abschnitt 3.1). Die Schaltfläche "Messung jetzt speichern" löst dieselbe Messung von Hand aus.
+
+Grenzen und Hinweise:
+
+- Die Zeilenzahl ab 1.000.000 Zeilen ist eine Schätzung der Datenbank (`exact: false`). Sie ist nur so aktuell wie die Statistik; ANALYZE läuft außerhalb des Workers (Abschnitt AD01).
+- Das P95 misst die Dauer der Anfrage bis zum Ende der Antwort in der API, nicht die Wahrnehmung im Browser. Es mischt alle Mandanten; ein einzelner großer Mandant verschiebt es spürbar.
+- Die Zahlen sind physisch und enthalten die Tabellen von Demo-Mandanten; nur die Mandantenzahl lässt sie weg.
+- Die Messung ersetzt nicht den Messplan aus ADR 0021 (1, 5 und 10 Millionen Zeilen, 10 und 50 Mandanten, mehrere Worker); sie zeigt, wann er fällig ist.
+- Nach einer Partitionierung zählt die Abfrage die Blätter der Partitionen; sie ist dafür vorbereitet, aber nicht an einer partitionierten Tabelle getestet.

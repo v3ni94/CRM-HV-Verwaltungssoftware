@@ -329,11 +329,15 @@ class BrandingOut(BaseModel):
     # B26/M21-04: PNG or JPEG logo available at ``/tenant/branding/logo/{variant}``.
     has_logo_light: bool = False
     has_logo_dark: bool = False
+    # AE29: codes of the approved portal legal texts (impressum, datenschutz, nutzungsbedingungen).
+    legal_texts_released: list[str] = Field(default_factory=list)
 
 
 class TenantCreate(BaseModel):
     slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")
     name: str = Field(min_length=2, max_length=200)
+    # AE36: demo tenant (invented data only, excluded from billing, exports and statistics).
+    is_demo: bool = False
 
 
 class TenantOut(BaseModel):
@@ -341,6 +345,7 @@ class TenantOut(BaseModel):
     slug: str
     name: str
     status: str
+    is_demo: bool = False
 
 
 class UserCreate(BaseModel):

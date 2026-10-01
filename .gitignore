@@ -40,3 +40,6 @@ apps/web-crm/.e2e-auth.json
 
 # Optional generated Python client (make client-py)
 /packages/api-client-py/
+
+# KoSIT validator downloaded by scripts/kosit_fetch.sh (make kosit-fetch)
+.cache/

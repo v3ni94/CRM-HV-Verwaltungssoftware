@@ -303,6 +303,14 @@ def test_m17_01_result_entries_are_drafts_behind_g3(
 ) -> None:
     client, gated = clients
     h = bearer(login(client, world, "m17radmin"))
+    # The M17-01 allocation basis lock (AE17, default on) is covered by its own tests; this
+    # world records no allocation agreements, so it is switched off for this tenant only.
+    assert (
+        client.put(
+            "/api/v1/billing/allocation-basis-setting", json={"block_output": False}, headers=h
+        ).status_code
+        == 200
+    )
     acc_user = bearer(login(client, world, "m17racc"))
     w = _rental_world(client, h, "873")
     ledger = w["ledger"]

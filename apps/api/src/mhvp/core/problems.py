@@ -124,6 +124,12 @@ class ErrorCodes:
         "Passwortlose Anmeldung für Portalkonten nicht zulässig",
         "Portal only accounts may use passkeys only as second factor (U04-02).",
     )
+    MFA_REQUIRED_BY_POLICY = ErrorCode(
+        "MHVP-AUTH-0015",
+        409,
+        "Zweiter Faktor ist für Ihre Rolle vorgeschrieben",
+        "The tenant's second factor policy covers this user; the last factor stays (M2-04).",
+    )
     RESOURCE_NOT_FOUND = ErrorCode(
         "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."
     )
@@ -132,6 +138,19 @@ class ErrorCodes:
     )
     VERSION_CONFLICT = ErrorCode(
         "MHVP-PLAT-0003", 412, "Datensatz wurde zwischenzeitlich geändert", "If-Match mismatch."
+    )
+    # AE36 (AA15-01): demo tenants take no part in billing, exports and DATEV (rule AE36-DEMO).
+    DEMO_TENANT_EXCLUDED = ErrorCode(
+        "MHVP-DEMO-0001",
+        409,
+        "Im Demo-Mandanten nicht möglich",
+        "Demo tenant (tenant.is_demo) is excluded from billing, exports and DATEV (AE36).",
+    )
+    DEMO_TENANT_FLAG_REFUSED = ErrorCode(
+        "MHVP-DEMO-0002",
+        409,
+        "Demo-Kennzeichen kann nicht gesetzt werden",
+        "A tenant with an open release gate cannot be marked as demo tenant (AE36).",
     )
     WEBHOOK_TARGET = ErrorCode(
         "MHVP-HOOK-0001", 422, "Webhook-Ziel nicht zulässig", "Unsafe or invalid webhook URL."
@@ -153,6 +172,22 @@ class ErrorCodes:
         413,
         "Webhook-Inhalt zu groß",
         "Inbound webhook body exceeds the size limit (A70).",
+    )
+    # Inbound webhook of classified mails (M20-04, AE38, mhvp.communication.inbound_webhook).
+    INBOUND_MAIL_EVENT_CONFLICT = ErrorCode(
+        "MHVP-HOOK-0005",
+        409,
+        "Ereignis-ID bereits mit anderem Inhalt verwendet",
+        (
+            "The event_id was already received for this source with a different payload; "
+            "the same event_id may only be sent again with an identical body."
+        ),
+    )
+    INBOUND_MAIL_SOURCE_INACTIVE = ErrorCode(
+        "MHVP-HOOK-0006",
+        409,
+        "Mailquelle ist deaktiviert",
+        "The inbound mail source is switched off; reactivate it before delivering mails.",
     )
     GATE_FOUR_EYES = ErrorCode(
         "MHVP-GATE-0002",
@@ -341,6 +376,36 @@ class ErrorCodes:
             "Only the latest version of a note can be superseded; the referenced version "
             "already has a successor or belongs to another entry (GA05-02)."
         ),
+    )
+    ACC_INTEREST_TAX_NOT_CONFIGURED = ErrorCode(
+        "MHVP-ACC-0011",
+        422,
+        "Steuerkonto für Zinsabzug nicht hinterlegt",
+        (
+            "Withholdings on credit interest need the tax account of the ledger to be "
+            "configured first (P01-01, AE05)."
+        ),
+    )
+    ACC_CHART_FOUR_EYES = ErrorCode(
+        "MHVP-ACC-0015",
+        409,
+        "Freigabe durch eine zweite Person erforderlich",
+        (
+            "The chart of accounts version was submitted for review by the same user; the "
+            "release needs another person while the four eyes switch is on (AE02, M10-01)."
+        ),
+    )
+    ACC_PERIOD_LOCKED_OBJECT = ErrorCode(
+        "MHVP-ACC-0030",
+        409,
+        "Zeitraum des Objekts gesperrt",
+        "The booking date lies in a period lock of the property (P06-02, AE20).",
+    )
+    ACC_PERIOD_LOCK_RELEASE_DISABLED = ErrorCode(
+        "MHVP-ACC-0031",
+        409,
+        "Aufhebung der Periodensperre nicht freigeschaltet",
+        "Releasing a period lock needs the tenant switch reopen_enabled (AA08-01 open).",
     )
     AI_POSTING_NOT_RELEASED = ErrorCode(
         "MHVP-AI-0001",
@@ -643,6 +708,61 @@ class ErrorCodes:
             "eyes release."
         ),
     )
+    # EBICS connector scaffold (M11-01, AE23, docs/integrations/ebics.md, rule M11-11).
+    EBICS_TRANSPORT_UNAVAILABLE = ErrorCode(
+        "MHVP-BANK-0050",
+        503,
+        "EBICS-Übertragung nicht verfügbar",
+        (
+            "No EBICS protocol implementation is installed: the transport (INI, HIA, HPB, "
+            "C53) needs a library or an own implementation verified against the official "
+            "EBICS specification (operator decision V2, open question AE23-01). Keys, letters "
+            "data and states are kept; nothing was sent to a bank."
+        ),
+    )
+    EBICS_DISABLED = ErrorCode(
+        "MHVP-BANK-0051",
+        409,
+        "EBICS ist für diesen Mandanten nicht freigeschaltet",
+        "The tenant switch EbicsTenantSetting.enabled is off (default); no EBICS action runs.",
+    )
+    EBICS_STATE = ErrorCode(
+        "MHVP-BANK-0052",
+        409,
+        "EBICS-Teilnehmer ist im falschen Zustand",
+        "The requested step does not match the state of the EBICS subscriber (rule M11-11).",
+    )
+    EBICS_BANK_KEY_MISMATCH = ErrorCode(
+        "MHVP-BANK-0053",
+        409,
+        "Hash-Wert der Bankschlüssel weicht vom Bankbrief ab",
+        (
+            "The hash value entered from the bank letter differs from the hash value of the "
+            "bank keys received with HPB. The subscriber stays locked; contact the bank via "
+            "the known phone number (runbook ebics-setup, section 5)."
+        ),
+    )
+    EBICS_FOUR_EYES = ErrorCode(
+        "MHVP-BANK-0054",
+        409,
+        "Bankschlüsselprüfung durch eine zweite Person erforderlich",
+        "The person who fetched the bank keys (HPB) cannot verify them (four eyes, M11-11).",
+    )
+    EBICS_BANK_KEY_HASH_MISSING = ErrorCode(
+        "MHVP-BANK-0055",
+        409,
+        "Hash-Wert der Bankschlüssel nicht verfügbar",
+        (
+            "The transport delivered no hash value for the bank keys; the hash calculation of "
+            "the specification is not implemented in the platform (open question AE23-02)."
+        ),
+    )
+    EBICS_BANK_ERROR = ErrorCode(
+        "MHVP-BANK-0056",
+        502,
+        "Bank hat den EBICS-Auftrag abgelehnt",
+        "The EBICS transport reported an error of the bank or the connection.",
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,
@@ -688,6 +808,13 @@ class ErrorCodes:
         "Accounts of a template in review or released cannot be changed; create a new "
         "version instead (M10-01, V8).",
     )
+    BILLING_ALLOCATION_BASIS_MISSING = ErrorCode(
+        "MHVP-BILL-0015",
+        409,
+        "Umlagegrundlagen fehlen",
+        "The allocation basis report of the statement lists cost positions without an agreed "
+        "clause for a tenancy; the output is blocked while the tenant switch is on (M17-01).",
+    )
     BILLING_LEITWEG_ID_MISSING = ErrorCode(
         "MHVP-BILL-0005",
         409,
@@ -731,6 +858,13 @@ class ErrorCodes:
         409,
         "Rechnung bereits storniert",
         "The rent invoice is already cancelled by a credit note, or is a credit note itself.",
+    )
+    RENT_INVOICE_G1_CLOSED = ErrorCode(
+        "MHVP-BILL-0360",
+        409,
+        "Rechnungsausgabe bei geschlossenem G1 abgelehnt",
+        "The tenant switch rent_invoice_draft_numbering is reject_when_g1_closed and gate G1 "
+        "is closed (AC03-01).",
     )
     # Messdienstleister module (stage 1).
     METERING_MODULE_DISABLED = ErrorCode(
@@ -1062,6 +1196,15 @@ class ErrorCodes:
         "Der Antrag hat einen anderen Status",
         "The erasure request is not in a status that allows this step.",
     )
+    PRIVACY_REGISTER_INVALID = ErrorCode(
+        "MHVP-PRIV-0004",
+        422,
+        "Registereintrag unvollständig oder widersprüchlich",
+        (
+            "Responsibilities and processor_ids are only allowed on a processing_activity; "
+            "processor_ids must reference processor or sub_processor entries of the tenant."
+        ),
+    )
     # Deadline types and entries (rule WS-01, mhvp.workspace.deadlines).
     DEADLINE_DURATION_MISSING = ErrorCode(
         "MHVP-WS-0001",
@@ -1303,6 +1446,25 @@ class ErrorCodes:
         "The person who requested the release of a special acquisition cannot release it "
         "(four eyes, GA07-03).",
     )
+    HOA_ACQUISITION_RULE_INVALID = ErrorCode(
+        "MHVP-HOA-0032",
+        422,
+        "Zuordnungsregel für den Erwerb ist ungültig",
+        "Unknown acquisition kind or allocation variant (AE10, AA07-01).",
+    )
+    # AE07 / M24-01, V01-01: reserve plan and opening change switch.
+    HOA_RESERVE_PLAN_LOCKED = ErrorCode(
+        "MHVP-HOA-0035",
+        409,
+        "Rücklagenplan ist beschlossen oder ersetzt",
+        "A resolved or superseded reserve plan stays unchanged; change via a new plan row (AE07).",
+    )
+    HOA_RESERVE_OPENING_SELF_APPROVAL = ErrorCode(
+        "MHVP-HOA-0036",
+        409,
+        "Änderung des Anfangsbestands braucht eine zweite Person",
+        "The requesting user cannot approve the own opening change (AE07, V01-01).",
+    )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
     CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(
         "MHVP-CONT-0001",
@@ -1388,6 +1550,41 @@ class ErrorCodes:
         "Abgleich ohne Nulldifferenz",
         "The leading system switches only after a reconciliation report of the property with "
         "zero difference that is newer than the posted opening balances (6.9.10).",
+    )
+    # Abnahmeregister V16 (AE01, docs/rules/AE01-ACCEPTANCE.md).
+    ACCEPT_NOT_FOUND = ErrorCode(
+        "MHVP-ACCEPT-0001",
+        404,
+        "Sollwert nicht gefunden",
+        "No acceptance expected value with this id for the tenant (AE01).",
+    )
+    ACCEPT_STATE = ErrorCode(
+        "MHVP-ACCEPT-0002",
+        409,
+        "Sollwert ist nicht im passenden Status",
+        "Only drafts are edited or submitted, only submitted versions are decided and results "
+        "are recorded for approved versions only; released content never changes (D.3).",
+    )
+    ACCEPT_SAME_PERSON = ErrorCode(
+        "MHVP-ACCEPT-0003",
+        409,
+        "Freigabe durch eine zweite Person",
+        "The author of an expected value cannot release it; a second person with "
+        "acceptance:approve decides (AE01, four eyes).",
+    )
+    # Portal-Assistent (AE28, M7-06, SA-04, docs/rules/M7-06.md).
+    PORTAL_ASSISTANT_LOCKED = ErrorCode(
+        "MHVP-PORTAL-0001",
+        403,
+        "Der Assistent ist für diesen Mandanten nicht freigeschaltet",
+        "The tenant switch chat_bot_enabled of the portal is off (default off).",
+    )
+    PORTAL_ASSISTANT_PRIVACY_STATE = ErrorCode(
+        "MHVP-PORTAL-0002",
+        409,
+        "Der Datenschutzhinweis ist nicht freigegeben oder hat sich geändert",
+        "The privacy feature is off, no approved privacy notice exists or the acknowledged "
+        "version is not the approved one; nothing is recorded.",
     )
 
 

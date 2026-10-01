@@ -71,9 +71,29 @@ async function loginAdmin(): Promise<string> {
     body: JSON.stringify({ email, password }),
   });
   type Issued = { access_token: string; tenants: { id: string; name: string }[] };
-  const first = (await login.json()) as Issued & { status: string; mfa_token: string | null };
+  const first = (await login.json()) as Issued & {
+    status: string;
+    mfa_token: string | null;
+    mfa_setup_token?: string | null;
+  };
   let verified: Issued = first;
-  if (first.status !== "ok") {
+  if (first.status === "mfa_setup_required") {
+    // M2-04: first login under the default tenant policy, TOTP is set up via the API.
+    const post = (p: string, body: unknown) =>
+      fetch(`${apiBase}/api/v1${p}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const setup = (await (await post("/auth/mfa/setup/start", { mfa_setup_token: first.mfa_setup_token })).json()) as {
+      secret: string;
+    };
+    const step = Math.floor(Date.now() / 30_000);
+    writeState({ email, secret: setup.secret, lastStep: step });
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(setup.secret), digits: 6, period: 30 });
+    const done = await post("/auth/mfa/setup/confirm", { mfa_setup_token: first.mfa_setup_token, code: totp.generate() });
+    verified = (await done.json()) as Issued;
+  } else if (first.status !== "ok") {
     // TOTP is optional (operator 26.09.2026, M2-01): only an admin who enabled it manually
     // sees the second step; the secret then comes from the shared state file.
     const known = readState();

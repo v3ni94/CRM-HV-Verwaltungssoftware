@@ -81,13 +81,17 @@ async def provision_tenant(
     sources: dict[str, str] | None = None,
     domains: list[str] | None = None,
     actor_user_id: uuid.UUID | None = None,
+    is_demo: bool = False,
 ) -> tuple[uuid.UUID, bool]:
-    """Create or complete a tenant idempotently. Returns (tenant id, created)."""
+    """Create or complete a tenant idempotently. Returns (tenant id, created).
+
+    ``is_demo`` (AE36) marks a newly created tenant as demo tenant; an existing tenant keeps
+    its flag (change only via ``PUT /platform/tenants/{id}/demo``)."""
     async with platform_transaction(factory) as session:
         tenant = await session.scalar(select(Tenant).where(Tenant.slug == slug))
         created = tenant is None
         if tenant is None:
-            tenant = Tenant(slug=slug, name=name, created_by=actor_user_id)
+            tenant = Tenant(slug=slug, name=name, created_by=actor_user_id, is_demo=is_demo)
             session.add(tenant)
             await session.flush()
         tenant_id = tenant.id

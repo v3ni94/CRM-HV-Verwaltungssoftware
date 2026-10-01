@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
+import { AllocationAgreementsPanel } from "@/components/contracts/AllocationAgreementsPanel";
 import { AmountsPanel } from "@/components/contracts/AmountsPanel";
 import { ContractAllocationValues } from "@/components/contracts/ContractAllocationValues";
 import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAccount";
@@ -179,6 +180,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       {contract.kind === "tenancy"
         ? deposits.map((deposit) => <DepositInterestPanel key={deposit.id} depositId={deposit.id} canUpdate={canUpdate} />)
         : null}
+      {contract.kind === "tenancy" ? <AllocationAgreementsPanel contractId={contract.id} propertyId={contract.property_id} canUpdate={canUpdate} /> : null}
       {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} /> : null}
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel sourceType="contract" sourceId={contract.id} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />

@@ -41,6 +41,24 @@ export function OnlineMeetingPanel({ meetingId }: { meetingId: string }) {
     return true;
   }
 
+  /** AE31: a vote that meets a vote of the other source is stored for review and not counted
+   *  (default rule of the tenant); the owner is told so instead of "voted". */
+  async function vote(itemId: string, contractId: string, choice: string) {
+    setBusy(true);
+    setMessage(null);
+    const res = await bff<{ conflict?: boolean; counted?: boolean }>(`/api/bff/portal/meetings/${meetingId}/agenda/${itemId}/votes`, {
+      method: "POST",
+      body: JSON.stringify({ contract_id: contractId, choice }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setMessage(t("error", { message: res.message }));
+      return;
+    }
+    await load();
+    if (res.data?.conflict && res.data.counted === false) setMessage(t("voteReview"));
+  }
+
   async function grantProxy() {
     if (!file) return;
     setBusy(true);
@@ -149,9 +167,7 @@ export function OnlineMeetingPanel({ meetingId }: { meetingId: string }) {
                           type="button"
                           className={ui.buttonSm}
                           disabled={busy}
-                          onClick={() =>
-                            void act(`/api/bff/portal/meetings/${meetingId}/agenda/${item.id}/votes`, { contract_id: cid, choice })
-                          }
+                          onClick={() => void vote(item.id, cid, choice)}
                         >
                           {t(`choice.${choice}`)}
                         </button>

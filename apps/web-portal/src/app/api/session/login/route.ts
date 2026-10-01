@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { COOKIE, MFA_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
 
-import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
+import { guardedJson, publicApi, relayProblem, secureOf, stepResponse, str, unreachable } from "../_shared";
 
 /**
  * Login step 1: e-mail and password. A portal user without a self enabled second factor
@@ -42,6 +42,9 @@ export async function POST(request: Request): Promise<Response> {
       );
       return result;
     }
+    // M2-04: the tenant policy may ask for the setup of a second factor first.
+    const setup = stepResponse(data as unknown as Record<string, unknown>, secure);
+    if (setup && data.status === "mfa_setup_required") return setup;
     const result = NextResponse.json({ status: data.status });
     if (data.mfa_token) {
       result.cookies.set(COOKIE.mfa, data.mfa_token, cookieOptions(secure, MFA_MAX_AGE));

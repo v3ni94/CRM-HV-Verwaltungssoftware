@@ -341,35 +341,32 @@ jobs:
             echo "::endgroup::"
           done
 
-  # GA14-05 (M13, OPEN_QUESTIONS P05, AA02-03): optional check of generated XRechnung files
-  # with the official KoSIT validator. Runs only when the repository variable
-  # MHVP_KOSIT_ENABLED is 'true' and the pinned download URLs and SHA-256 checksums are set
-  # as repository variables (KOSIT_JAR_URL, KOSIT_JAR_SHA256, KOSIT_CFG_URL, KOSIT_CFG_SHA256).
-  # Not blocking until the operator decides on licence and versions.
+  # GA14-05, AC11-01 (M13, OPEN_QUESTIONS P05, AA02-03): check of generated XRechnung files
+  # with the official KoSIT validator. Download URLs and SHA-256 checksums are pinned in the
+  # repository (scripts/kosit.lock); the repository variables KOSIT_JAR_URL, KOSIT_JAR_SHA256,
+  # KOSIT_CFG_URL and KOSIT_CFG_SHA256 are optional overrides, not a precondition. Switch the
+  # job off with the repository variable MHVP_KOSIT_ENABLED=false. Not blocking until the
+  # operator has decided on licence and versions (continue-on-error).
   xrechnung-kosit:
-    if: ${{ vars.MHVP_KOSIT_ENABLED == 'true' }}
+    if: ${{ vars.MHVP_KOSIT_ENABLED != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     continue-on-error: true
     steps:
       # The ubuntu-24.04 runner image ships a Temurin JDK; no extra action is needed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Fetch pinned KoSIT validator and XRechnung configuration
         env:
-          JAR_URL: ${{ vars.KOSIT_JAR_URL }}
-          JAR_SHA: ${{ vars.KOSIT_JAR_SHA256 }}
-          CFG_URL: ${{ vars.KOSIT_CFG_URL }}
-          CFG_SHA: ${{ vars.KOSIT_CFG_SHA256 }}
+          KOSIT_JAR_URL: ${{ vars.KOSIT_JAR_URL }}
+          KOSIT_JAR_SHA256: ${{ vars.KOSIT_JAR_SHA256 }}
+          KOSIT_CFG_URL: ${{ vars.KOSIT_CFG_URL }}
+          KOSIT_CFG_SHA256: ${{ vars.KOSIT_CFG_SHA256 }}
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/kosit/cfg"
-          curl -fsSL "$JAR_URL" -o "$RUNNER_TEMP/validator.zip"
-          echo "$JAR_SHA  $RUNNER_TEMP/validator.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/validator.zip" -d "$RUNNER_TEMP/kosit"
-          curl -fsSL "$CFG_URL" -o "$RUNNER_TEMP/cfg.zip"
-          echo "$CFG_SHA  $RUNNER_TEMP/cfg.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/cfg.zip" -d "$RUNNER_TEMP/kosit/cfg"
+          MHVP_KOSIT_DIR="$RUNNER_TEMP/kosit" scripts/kosit_fetch.sh
           echo "MHVP_KOSIT_DIR=$RUNNER_TEMP/kosit" >> "$GITHUB_ENV"
       - name: Validate generator output
         working-directory: apps/api

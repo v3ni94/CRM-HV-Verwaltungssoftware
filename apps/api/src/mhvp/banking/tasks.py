@@ -1068,7 +1068,7 @@ async def _fints_step_once(
                 return {"failed": 1}
             creds = fints_mod.Credentials(
                 blz=fc.blz,
-                fints_url=fc.fints_url,
+                fints_url=fints_mod.resolve_fints_url(fc.blz, fc.fints_url, fc.fints_url_manual),
                 login=fc.login,
                 pin=fc.pin,
                 product_id=product_id,
@@ -1130,7 +1130,7 @@ async def _fints_step_once(
         except ProblemError as exc:
             problem = exc
         except Exception as exc:  # defensive: mapping already happened in fints_mod
-            problem = fints_mod.problem_for_exception(exc)
+            problem = fints_mod.problem_for_exception(exc, fints_url=creds.fints_url)
 
         async with tenant_transaction(factory, tenant_id) as session:
             fs = await session.get(FinTsSession, session_id, with_for_update=True)

@@ -57,6 +57,7 @@ Empfehlung: Eine echte Exportdatei bereitstellen; Rücknahme von Bankimporten vo
 ### T10-01 Immoware24-Berichte ohne belegte Spalten (Eigentümer Timo Müller)
 Ergebnis: Sechs Berichtsarten (Kaution, Umlageschlüssel, Zähler, Energieausweis, Dienstleister, Portalnutzer) arbeiten mit frei zuordenbaren Spalten.
 Empfehlung: Echte Exportkopfzeilen und Wertzuordnungen liefern; Portalnutzer aus dem Altsystem nicht automatisch einladen, sondern je Objekt entscheiden.
+Vermerk: technisch vorbereitet (Welle 16, AE37): Kopfzeilenerkennung, Spaltenvorschlag, gespeicherte Zuordnung je Mandant und Berichtstyp und Prüfbericht vor dem Speichern, ohne ein Exportformat anzunehmen. Die Anforderungsliste docs/integrations/immoware24-exporte.md führt je Berichtsart die benötigten Angaben, echte Exportdateien und Wertzuordnungen liefert der Betreiber (AE37-01).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -89,6 +90,7 @@ Empfehlung: Als erledigt bestätigen.
 ### S16-03-02 Ablage von EBICS-Schlüsseln (Eigentümer Timo Müller)
 Ergebnis: EBICS ist nicht implementiert, es gibt keine gespeicherten Schlüssel. Bei Umsetzung sind verschlüsselte Ablage und erfasste Rotation Pflicht. Die Bibliothek fintech ist lizenzpflichtig (V2).
 Empfehlung: Bis zur EBICS-Entscheidung beim Datei-Upload bleiben; EBICS erst nach Bankliste und Bankverträgen beauftragen.
+Vermerk: technisch vorbereitet (Welle 16, AE23): EBICS-Grundgerüst hinter einem Mandantenschalter (Standard aus), private Schlüssel nur verschlüsselt mit protokollierter Rotation, Signaturschlüssel standardmäßig extern, Variante server vorbereitet. Es gibt keine echte EBICS-Übertragung, die Entscheidung zum serverseitigen Signaturschlüssel bleibt offen (AE23-05).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -193,6 +195,7 @@ Empfehlung: Frist aus Gesetz, Gemeinschaftsordnung oder Verwaltervertrag rechtli
 ### U07-01 und V10-01 Vorbelegung des Kontenrahmens (Eigentümer Fachbereich WEG mit Steuerberatung)
 Ergebnis: Nur eindeutige Konten vorbelegt. Offen sind Mehrschlüsselverteilungen, 041805 Rauchwarnmelder, Bankkonten 001200 und 001201, Konten ohne BetrKV-Bezug und die Art Hausgeld oder Rücklage.
 Empfehlung: Fachbereich WEG legt je Konto Art und Standardschlüssel fest; Mehrschlüsselverteilungen bleiben Objektentscheidung.
+Vermerk: technisch vorbereitet (Welle 16, AE02): Mehrschlüsselverteilung je Vorlagenkonto pflegbar und geprüft, Abrechnungsart Heizkosten als Vorschlag mit Kennzeichen Freigabe offen, Prüfbericht zu Konten ohne Zuordnung. Die Festlegung je Konto bleibt beim Fachbereich WEG.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -203,6 +206,7 @@ Empfehlung: Fachbereich WEG legt je Konto Art und Standardschlüssel fest; Mehrs
 ### V01-01 Sperre der Anfangsbestände einer Rücklage (Eigentümer Timo Müller), Folge von U15-03
 Ergebnis: Sperre nach berechneter oder freigegebener Abrechnung, Korrektur nur per neuer Bewegung (Produktschutz).
 Empfehlung: Sperre bestätigen.
+Vermerk: technisch vorbereitet (Welle 16, AE07): Mandantenschalter opening_lock_mode mit den Varianten gesperrt (Standard), protokolliert und Vier Augen mit Änderungsprotokoll. Die Entscheidung bleibt offen, der Standard bleibt gesperrt.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -225,6 +229,7 @@ Empfehlung: Mit dem Datenschutz eine kurze Standardaufbewahrung festlegen und Ve
 ### R10-03 und R10-04 Branding und Rechtstexte im Portal (Eigentümer Betreiber)
 Ergebnis: Farben, Logo, Name, Impressum und Datenschutz je Mandant; Manifest neutral. Pflege der Rechtstexte liegt beim Mandanten.
 Empfehlung: Für HVM und Timo Müller abnehmen; für Fremdmandanten erst mit G5 entscheiden.
+Vermerk: technisch vorbereitet (Welle 16, AE29): Rechtstexte (Impressum, Datenschutz, Nutzungsbedingungen) je Mandant als Textbausteine mit Freigabe durch eine zweite Person, Anzeige im Portal-Footer. Logo und Texte für Fremdmandanten bleiben Entscheidung mit G5 (AE29-01).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -287,6 +292,7 @@ Empfehlung: Kennzeichen fachlich bestätigen.
 ### R10-02 Zweiter Faktor im Portal (Eigentümer Betreiber)
 Ergebnis: Option required für Anmeldung per Link; erzwungene TOTP bei Passwortanmeldung fehlt, widerspräche M2-01 (freiwillig).
 Empfehlung: Bei freiwilliger TOTP (M2-01) bleiben.
+Vermerk: technisch vorbereitet (Welle 16, AE27): Die Pflicht eines zweiten Faktors ist als Mandantenrichtlinie vorbereitet (Standard freiwillig gemäß M2-01, für Portalzugänge ein eigener Schalter, Standard aus). Die Entscheidung bleibt offen (AE27-01).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -501,6 +507,7 @@ Frage: Welche Version, Lizenz und Prüfsummen gelten für den KoSIT-Validator un
 Gate: G1.
 Ergebnis (technischer Stand): Der optionale CI-Job xrechnung-kosit läuft nur mit der Repository-Variable MHVP_KOSIT_ENABLED und gepinnten Download-URLs samt SHA-256. Ohne Festlegung bleibt er aus, XSD und Schematron liegen nicht im Repository.
 Empfehlung: Version und Lizenz vor Aktivierung prüfen, Prüfsummen eintragen und den Job einschalten. Für G1 ist ein belegter Validierungsnachweis der Generatorrechnungen sinnvoll.
+Vermerk: technisch vorbereitet (Welle 16, AE26): scripts/kosit.lock mit URLs und SHA-256 im Repository, make kosit-fetch, kosit-test und kosit-validate, der CI-Job xrechnung-kosit läuft ohne Repository-Variablen und ist mit MHVP_KOSIT_ENABLED=false abschaltbar. Version, Lizenz und Herkunft der Prüfsummen bleiben zu bestätigen (AE26-01).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -627,6 +634,7 @@ Frage: Darf ein abgeschlossener Zeitraum mit Begründung und Vier-Augen wieder g
 Gate: G3.
 Ergebnis (technischer Stand): Ein abgeschlossener Zeitraum (closed, locked_at) lässt sich nicht zurücksetzen oder löschen.
 Empfehlung: Wiederöffnung nur mit Begründung und Vier-Augen zulassen und protokollieren. Die Abstimmung mit der Periodensperre klärt der Steuerberater.
+Vermerk: technisch vorbereitet (Welle 16, AE20): Periodensperre je Objekt und Zeitraum mit Mandantenschaltern (Standard aus), Aufhebung nur mit Schalter, Begründung und zweiter Person, die Zeile bleibt erhalten. Die Entscheidung bleibt offen.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -639,6 +647,7 @@ Frage: Welche Texte zu Belegeinsicht und Einwendungen werden freigegeben?
 Gate: G3.
 Ergebnis (technischer Stand): Das Blatt wird aus dem Snapshot erzeugt. Bis zur Freigabe druckt es den Platzhalter "Textbaustein vom Betreiber nicht freigegeben". Die Software formuliert keine Frist oder Rechtsfolge. Ablage am Abrechnungslauf hinter G3.
 Empfehlung: Textbausteine durch den Rechtsanwalt prüfen lassen und als Mandanteneinstellung hinterlegen. Vor Freigabe kein Versand des Blatts.
+Vermerk: technisch vorbereitet (Welle 16, AE16): Textbausteine für das Informationsblatt mit Freigabe durch eine zweite Person, Ausgabe nur freigegebener Texte, sonst Text nicht freigegeben. Den Wortlaut liefert der Betreiber mit dem Rechtsanwalt.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -651,6 +660,7 @@ Frage: Ob und wie erfolgt ein Ausweis haushaltsnaher Leistungen für Vermieter, 
 Gate: G3.
 Ergebnis (technischer Stand): Umgesetzt ist die Übernahme belegter Lohnanteile aus der WEG-Einzelabrechnung für SEV-Eigentümer als Information (M24-05). Für die Mietverwaltung gibt es keine freigegebene Quelle. Der Hinweistext ist als "Text nicht freigegeben" gekennzeichnet.
 Empfehlung: Steuerberater entscheidet, ob ein Ausweis für Vermieter erfolgt, und liefert den Mustertext. Bis dahin keine Ausweisung.
+Vermerk: technisch vorbereitet (Welle 16, AE16): Textbausteine für Anschreiben-Hinweis und Erläuterung des Nachweises nach § 35a EStG mit Freigabe durch eine zweite Person, Ausgabe nur freigegebener Texte. Entscheidung und Mustertext liefert der Steuerberater, der Baustein im Mieteranschreiben ist noch nicht eingebunden.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -663,6 +673,7 @@ Frage: Welche amtlich geprüften Fristen, Daten und Wortlaute sind je Fall einzu
 Gate: G3.
 Ergebnis (technischer Stand): Die Prüfpunkte sind als konfigurierbare Einträge im Regelregister vorbereitet, Standard leer. Fällige Punkte erscheinen über rule-versions/due-checkpoints als Hinweis ohne Rechtsfolge. Eine CRM-Fälligkeitsliste steht noch aus.
 Empfehlung: Gemeinsam mit AA12-02 erledigen: Fristen und Quellen nennen lassen, dann erfassen. Ohne Befüllung bleibt die Funktion wirkungslos, das ist unschädlich.
+Vermerk: technisch vorbereitet (Welle 16, AE19): Die Prüfpunkte sind im CRM pflegbar (Datum, Bezeichnung, Quelle, Notiz, Stand, Vorfrist), Standard bleibt leer. Fristen und Quellen nennt die Rechtsberatung.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -677,6 +688,7 @@ Frage: Wem wird das Abrechnungsergebnis bei Ersterwerb, Erbfall, Zwangsversteige
 Gate: G4.
 Ergebnis (technischer Stand): Umgesetzt ist der Freigabeschritt mit Zuordnungsvorschlag als Text. Die Fälle erscheinen mit deutscher Bezeichnung in Befund und Freigabeliste. Die Berechnung bleibt bei der Annahme M24-01.
 Empfehlung: Regel je Erwerbsart durch den Rechtsanwalt festlegen und die Quelle aus Anhang C benennen, danach Zahlenfall und Anpassung in hoa/calc.py. Bis dahin entscheidet die Verwaltung im Einzelfall.
+Vermerk: technisch vorbereitet (Welle 16, AE10): Mandantenregel je Erwerbsart (manuelle Freigabe als Standard, Zuordnung nach Fälligkeit oder nach Abrechnungsbeschluss), bisher angewendet auf den Schuldnervorschlag der Sonderumlagen-Differenz, Berechnung beim Standard unverändert. Die Regel je Erwerbsart legt der Rechtsanwalt fest.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -713,6 +725,7 @@ Frage: Gilt die Höchstdauer von drei Jahren (7.8 W13 Satz 4) ohne Ausnahme und 
 Gate: G4.
 Ergebnis (technischer Stand): Umgesetzt ist ein dauerhafter Hinweis in der Versammlungsdetailansicht. Die Sperre ist nur mit dem Mandantenschalter hoa_virtual_basis_term_lock_enabled (Standard aus) aktiv.
 Empfehlung: Rechtliche Prüfung mit Quelle aus Anhang C, danach Schalter setzen oder Regel anpassen. Bis dahin Hinweis ohne Sperre.
+Vermerk: technisch vorbereitet (Welle 16, AE12): Stichtag der Übergangsregel als Mandantenfeld (vom Betreiber einzutragen, ohne Rechtswirkung und ohne Sperre), Fristhinweise im Versammlungsdetail und CRM-Maske für den Online-Versammlungsschalter. Die rechtliche Prüfung bleibt offen.
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -739,6 +752,7 @@ Frage: Soll der Dienstleister seine Bewertungen (Auftragsbewertung der Verwaltun
 Gate: G5.
 Ergebnis (technischer Stand): Die Bewertung ist intern. Eine Anzeige berührt Persönlichkeits- und Geschäftsinteressen. Nicht umgesetzt.
 Empfehlung: Bewertungen intern lassen. Eine Anzeige nur nach Abstimmung mit dem Datenschutz und mit sachlichem, begründetem Inhalt.
+Vermerk: technisch vorbereitet (Welle 16, AE30): Bewertungen von Dienstleistern hinter dem Mandantenschalter provider_rating_display (Standard aus), Übersicht nur für die Verwaltung ohne Freitext, Dienstleister und Dritte sehen nichts. Die Entscheidung bleibt offen (AE30-02).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -801,6 +815,7 @@ Frage: Wann werden die Läufe für Müller FLOW, Übergabeprotokoll und smart-ei
 Gate: keins.
 Ergebnis (technischer Stand): Die Dossiers haben seit 1.58.0 einen Abschnitt Faktenstand. Die Dossiers mueller-flow.md und uebergabeprotokoll.md sowie die Wissensdatenbank-Einträge stehen nach den Läufen aus (V1).
 Empfehlung: Läufe in einer ruhigen Phase ansetzen, da ohne Bezug zu Gates. Niedrige Priorität.
+Vermerk: technisch vorbereitet (Welle 16, AE38): Dossier-Vorlage docs/integrations/DOSSIER-VORLAGE.md und Checkliste docs/integrations/CHECKLISTE-BESTANDSTOOLS.md sind angelegt. Die Läufe führt der Betreiber aus (AE38-02).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -873,6 +888,7 @@ Frage: Ist ein separater Demo-Mandant gewünscht, soll er ein Kennzeichen demo e
 Gate: keins.
 Ergebnis (technischer Stand): make seed-demo legt demo-muster mit erfundenen Daten an, nur in dev, test und staging mit MHVP_DEMO_SEED=1.
 Empfehlung: Demo-Mandant nur in Staging, ohne neues Kennzeichen, bis Vorführungen im größeren Umfang anstehen. Keine Schemaänderung auf Vorrat.
+Vermerk: technisch vorbereitet (Welle 16, AE36): Mandantenkennzeichen tenant.is_demo mit Ausschluss aus Plattformabrechnung, Mandantenexport, Journal-Export und DATEV, make seed-demo nur mit synthetischen IBANs (Alternative B). Die Entscheidung bleibt offen (AE36-02).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |
@@ -921,6 +937,7 @@ Frage: Entsprechen die sechs ergänzten Typen (Anschrift, Standort, Unterschrift
 Gate: keins.
 Ergebnis (technischer Stand): Die Typen sind umgesetzt, die Typenliste des Altportals liegt nicht vor.
 Empfehlung: Typenliste aus dem Altportal liefern, Abweichungen danach anpassen. Geringer Aufwand.
+Vermerk: technisch vorbereitet (Welle 16, AE30): Die 20 Elementtypen sind final mit Typregister, Prüfregel je Typ und Vorschau im CRM. Offen bleibt der Abgleich mit der Typenliste des Altportals (AE30-01).
 
 | Alternative | Aufwand | Risiko |
 | --- | --- | --- |

@@ -75,3 +75,20 @@ describe("OnlineMeetingPanel", () => {
     await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([url]) => url === `/api/bff/portal/meetings/${MID}/participation`)).toBe(true));
   });
 });
+
+describe("OnlineMeetingPanel vote conflict (AE31)", () => {
+  beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+
+  it("tells the owner when the vote is stored for review and not counted", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockImplementation(() => Promise.resolve(jsonResponse(detail())));
+    renderIntl(<OnlineMeetingPanel meetingId={MID} />);
+    await user.click(screen.getByRole("button", { name: "Online-Teilnahme anzeigen" }));
+    await screen.findByRole("link", { name: "Videokonferenz öffnen" });
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ id: "v1", channel: "online", counted: false, conflict: true }, 201))
+      .mockImplementation(() => Promise.resolve(jsonResponse(detail())));
+    await user.click(screen.getByRole("button", { name: "Nein" }));
+    expect(await screen.findByText(/wird aber nicht gezählt/)).toBeInTheDocument();
+  });
+});

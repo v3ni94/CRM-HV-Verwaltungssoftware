@@ -18,7 +18,8 @@ type Proposal = {
   letter_text: string;
   snapshot_hash: string;
 };
-type Rule = { surcharge_percent: string; months: number; rule_version: string; formula: string };
+type OpenMode = "info_only" | "offset_reversal" | "balance_against_due";
+type Rule = { surcharge_percent: string; months: number; rule_version: string; formula: string; open_advance_mode?: OpenMode; open_advance_modes?: OpenMode[] };
 
 const STATUS_CLASS: Record<Proposal["status"], string> = {
   proposed: ui.badge,
@@ -61,6 +62,15 @@ export function AdvanceProposalsPanel({ id, hasSnapshot, snapshotHash }: { id: s
     const value = surcharge.trim().replace(",", ".");
     void call(`/api/bff/statements/${id}/advance-proposals`, value ? { surcharge_percent: value } : undefined);
   };
+  /** AE15 (D24, AC10-01): tenant switch for advances still open; default info_only. */
+  const setMode = async (mode: OpenMode) => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<Rule>("/api/bff/billing/advance-rule", { method: "PUT", body: JSON.stringify({ open_advance_mode: mode }) });
+    setBusy(false);
+    if (res.ok) setRule(res.data);
+    else setError(res.message);
+  };
   const surchargeValid = !surcharge.trim() || /^\d{1,3}([.,]\d{1,2})?$/.test(surcharge.trim());
 
   return (
@@ -68,6 +78,19 @@ export function AdvanceProposalsPanel({ id, hasSnapshot, snapshotHash }: { id: s
       <h2 className={ui.h2}>{t("title")}</h2>
       <p className={ui.help}>{t("notice")}</p>
       {rule ? <p className={`${ui.help} mt-1`}>{t("rule", { percent: rule.surcharge_percent.replace(".", ",") })}</p> : null}
+      {rule?.open_advance_modes ? (
+        <label className="mt-2 flex flex-col gap-1">
+          <span className={ui.label}>{t("openMode")}</span>
+          <select className={ui.input} value={rule.open_advance_mode ?? "info_only"} disabled={busy} onChange={(e) => void setMode(e.target.value as OpenMode)} data-testid="open-advance-mode">
+            {rule.open_advance_modes.map((m) => (
+              <option key={m} value={m}>
+                {t(`openModes.${m}`)}
+              </option>
+            ))}
+          </select>
+          <span className={ui.help}>{t("openModeHelp")}</span>
+        </label>
+      ) : null}
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("surcharge")}</span>

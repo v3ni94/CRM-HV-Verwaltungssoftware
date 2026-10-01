@@ -36,13 +36,14 @@ from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.portal import access, magic_link, read_receipts
+from mhvp.portal import access, magic_link, public_terms, read_receipts
 from mhvp.portal.models import AccessGrant, ChangeRequest, PortalAccount
 from mhvp.portal.property_scope import (
     contact_visible,
     ensure_contact_visible,
     portal_admin_guard,
 )
+from mhvp.portal.public_terms import PortalPublicTermsOut
 from mhvp.portal.status import LOGIN_STATUSES, target_status, user_locked
 from mhvp.workspace.models import Notification
 from mhvp.workspace.routers import NotificationOut, notification_out
@@ -1107,7 +1108,7 @@ async def accept(body: PortalAcceptIn, request: Request) -> dict[str, str]:
         ):
             raise ProblemError(ErrorCodes.VALIDATION, detail="Einladung ungültig oder abgelaufen.")
         await _accept_portal_terms(
-            session, tenant_id, account, bool(body.accept_terms), body.terms_version
+            session, tenant_id, account, bool(body.accept_terms), body.terms_version, request
         )
         account.status, account.activated_at, account.invitation_hash = (
             "active",
@@ -1160,6 +1161,16 @@ class MagicLinkOut(BaseModel):
     token_type: str = "Bearer"  # noqa: S105 - fixed scheme name, not a secret
     expires_in: int | None = None
     refresh_token: str | None = None
+    # M2-04: status "mfa_required" (step token for /auth/mfa/verify) or "mfa_setup_required"
+    # (setup token for /auth/mfa/setup/start and /confirm); the tenant policy covers the user.
+    mfa_token: str | None = None
+    mfa_setup_token: str | None = None
+
+
+def _step_out(status: str, step_token: str | None, tenant_id: uuid.UUID) -> MagicLinkOut:
+    if status == "mfa_required":
+        return MagicLinkOut(status=status, tenant_id=tenant_id, mfa_token=step_token)
+    return MagicLinkOut(status=status, tenant_id=tenant_id, mfa_setup_token=step_token)
 
 
 def _settings(request: Request) -> Settings:
@@ -1216,13 +1227,16 @@ async def magic_link_consume(body: MagicLinkConsumeIn, request: Request) -> Magi
     if result.status == "code_required":
         tenant_id, _secret = magic_link.parse_token(body.token)
         return MagicLinkOut(status="code_required", link_id=result.link_id, tenant_id=tenant_id)
+    if result.status in ("mfa_required", "mfa_setup_required"):
+        tenant_id, _secret = magic_link.parse_token(body.token)
+        return _step_out(result.status, result.step_token, tenant_id)
     assert result.issued is not None  # noqa: S101 - status "ok" always carries issued tokens
     return _issued_out("ok", result.issued)
 
 
 @router.post("/magic-link/verify-code", summary="Bestätigungscode prüfen, Sitzung ausstellen")
 async def magic_link_verify_code(body: MagicLinkCodeIn, request: Request) -> MagicLinkOut:
-    issued = await magic_link.verify_code(
+    result = await magic_link.verify_code_step(
         sessions(request),
         _settings(request),
         tenant_id=body.tenant_id,
@@ -1230,7 +1244,9 @@ async def magic_link_verify_code(body: MagicLinkCodeIn, request: Request) -> Mag
         code=body.code,
         user_agent=request.headers.get("user-agent"),
     )
-    return _issued_out("ok", issued)
+    if result.issued is None:
+        return _step_out(result.status, result.step_token, body.tenant_id)
+    return _issued_out("ok", result.issued)
 
 
 async def portal_user(request: Request) -> tuple[TenantPrincipal, PortalAccount]:
@@ -1267,9 +1283,12 @@ async def _accept_portal_terms(
     account: PortalAccount,
     accept_terms: bool,
     terms_version: str | None,
+    request: Request | None = None,
 ) -> None:
     """AC06: without published terms nothing is recorded (no invented legal text). With a
-    published version the acceptance must name that version; time and version are stored."""
+    published version the acceptance must name that version. AE34: the acceptance in text form
+    is recorded with time, accepted version and a keyed hash of the client address (never the
+    address itself)."""
     from mhvp.contacts import consent_rules
     from mhvp.contacts.models import Consent, ConsentKind
 
@@ -1289,6 +1308,8 @@ async def _accept_portal_terms(
         kind=ConsentKind.PORTAL_TERMS,
         granted_at=now,
         source=consent_rules.terms_source(version),
+        text_version=version,
+        ip_hash=_client_hash(request, tenant_id),
     )
     session.add(consent)
     await session.flush()
@@ -1299,8 +1320,33 @@ async def _accept_portal_terms(
         entity_type="contact",
         entity_id=account.contact_id,
         actor_user_id=account.user_id,
-        payload={"kind": "portal_terms", "source": consent.source, "version": version},
+        payload={
+            "kind": "portal_terms",
+            "source": consent.source,
+            "version": version,
+            "declaration_form": "textform",
+            "client_evidence": consent.ip_hash is not None,
+        },
     )
+
+
+def _client_hash(request: Request | None, tenant_id: uuid.UUID) -> str | None:
+    """Keyed hash (HMAC-SHA256, tenant scoped key) of the client address as acceptance
+    evidence. ``None`` without a request, an address or a configured master key; the clear
+    address is never stored."""
+    if request is None:
+        return None
+    from mhvp.core import crypto
+    from mhvp.core.request_identity import client_ip
+
+    settings = _settings(request)
+    address = client_ip(request.scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for)
+    if address == "unknown":
+        return None
+    try:
+        return crypto.fingerprint(address, scope=f"tenant:{tenant_id.hex}:portal-terms-client")
+    except crypto.CryptoError:
+        return None
 
 
 Portal = tuple[TenantPrincipal, PortalAccount]
@@ -1309,6 +1355,22 @@ Portal = tuple[TenantPrincipal, PortalAccount]
 class PortalTermsAcceptIn(_In):
     accept_terms: bool
     terms_version: str = Field(min_length=1, max_length=60)
+
+
+@router.get(
+    "/public/terms",
+    summary="Veröffentlichte Fassung der Nutzungsbedingungen (öffentlich, AE34)",
+    dependencies=[Depends(strict_query)],
+)
+async def portal_public_terms(
+    request: Request,
+    response: Response,
+    tenant: str | None = Query(default=None, max_length=64),
+) -> PortalPublicTermsOut:
+    """Unauthenticated, for the activation screen before the account exists. Returns only the
+    published version; unknown, inactive and not publishing tenants answer the same 404."""
+    response.headers["Cache-Control"] = "no-store"
+    return await public_terms.published_terms(request, tenant)
 
 
 @router.get("/terms", summary="Stand der Nutzungsbedingungen des Portals")
@@ -1333,7 +1395,7 @@ async def portal_terms_accept(body: PortalTermsAcceptIn, request: Request) -> di
     tp, account = await _terms_account(request)
     async with tenant_tx(request, tp) as session:
         await _accept_portal_terms(
-            session, tp.tenant_id, account, body.accept_terms, body.terms_version
+            session, tp.tenant_id, account, body.accept_terms, body.terms_version, request
         )
     return {"terms_version": body.terms_version, "accepted": True}
 

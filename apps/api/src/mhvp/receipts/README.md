@@ -53,3 +53,12 @@ the further hybrid deviations (`einvoice.archive_evidence`, `formal_validation`,
 `hybrid_deviations`). `POST /receipts/drafts/{id}/validation` records an external validator run
 (name, version, configuration, result); the formal check is kept under `validation.formal`.
 Migration 0252.
+
+ZUGFeRD profile and container (S13-03, wave 16, AE25): `einvoice.profile_name` derives the
+profile (MINIMUM, BASIC WL, BASIC, EN 16931, EXTENDED, XRECHNUNG) from the guideline identifier,
+`pdf_container` reports the PDF/A identification, the Factur-X XMP values and the
+`AFRelationship` of the attachment, `container_findings` turns deviations into hints. They are
+stored in `validation` (`profile`, `container`, `container_findings`) next to the unchanged formal
+result; no PDF/A validation takes place. A ZUGFeRD 1.0 XML (`CrossIndustryDocument`) gets a
+clear reading finding.
+

@@ -74,3 +74,42 @@ describe("ChartReleaseAdmin", () => {
     expect(screen.getByRole("link", { name: "CSV" })).toHaveAttribute("href", `/api/bff/accounting/templates/${draft.id}/export?format=csv`);
   });
 });
+
+describe("ChartCoveragePanel (AE02)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("loads the coverage report, adopts a proposal and saves a multi key split", async () => {
+    const tpl: ChartTemplate = {
+      ...draft,
+      four_eyes_required: true,
+      accounts: [{ number: "041000", name: "Brennstoffkosten", statement_kind: "operating_costs", proposed_statement_kind: "heating", proposal_status: "vorschlag_freigabe_offen", allocation_split: [] }],
+    };
+    const bodies: { url: string; method: string; body: string }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      bodies.push({ url, method: init?.method ?? "GET", body: String(init?.body ?? "") });
+      if (url.endsWith("/coverage-report"))
+        return jsonResponse({
+          accounts_total: 1,
+          without_statement_kind: 0,
+          without_allocation: 1,
+          open_proposals: 1,
+          statement_kinds_without_account: ["special_levy"],
+          accounts: [{ number: "041000", name: "Brennstoffkosten", issues: ["ohne_gueltige_verteilung", "vorschlag_offen"], proposed_statement_kind: "heating" }],
+        });
+      if (url.endsWith("/accounts")) return jsonResponse(tpl);
+      return jsonResponse([tpl]);
+    });
+    renderIntl(<ChartReleaseAdmin initial={[tpl]} canManage canApprove />);
+    expect(screen.getByText(/Vier-Augen-Freigabe aktiv/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Prüfbericht laden" }));
+    expect(await screen.findByText(/special_levy/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Vorschlag übernehmen" }));
+    await waitFor(() => expect(bodies.some((b) => b.method === "PUT" && b.body.includes('"statement_kind":"heating"'))).toBe(true));
+    await userEvent.click(screen.getByRole("button", { name: "Verteilung bearbeiten" }));
+    const keys = screen.getAllByRole("textbox", { name: "Schlüssel" });
+    await userEvent.type(keys[0]!, "V_HEIZ");
+    await userEvent.click(screen.getByRole("button", { name: "Verteilung speichern" }));
+    await waitFor(() => expect(bodies.some((b) => b.body.includes('"key_code":"V_HEIZ"'))).toBe(true));
+  });
+});

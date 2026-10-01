@@ -1,6 +1,13 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 
-import type { PortalBranding } from "@/lib/branding";
+import { legalLinks, type LegalCode, type PortalBranding } from "@/lib/branding";
+
+const LABEL: Record<LegalCode, "imprint" | "privacy" | "terms"> = {
+  impressum: "imprint",
+  datenschutz: "privacy",
+  nutzungsbedingungen: "terms",
+};
 
 /** Logo (light and dark variant, PNG or JPEG) and name of the tenant; the neutral product name
  *  when the tenant configured neither. The logo comes from the same-origin route
@@ -30,22 +37,25 @@ export async function BrandMark({ branding, fallback }: { branding: PortalBrandi
   );
 }
 
-/** Imprint and privacy links of the tenant (https only); nothing when none is configured. */
+/** Imprint, privacy and terms links of the tenant (AE29): the released text on the portal page
+ *  /rechtliches/<code>, else the https link of the branding; nothing when neither exists. */
 export async function LegalLinks({ branding }: { branding: PortalBranding }) {
-  if (!branding.imprintUrl && !branding.privacyUrl) return null;
+  const links = legalLinks(branding);
+  if (links.length === 0) return null;
   const t = await getTranslations("Branding");
   return (
     <p className="flex flex-wrap gap-x-3 text-xs text-subtle">
-      {branding.imprintUrl ? (
-        <a href={branding.imprintUrl} className="underline hover:text-fg" rel="noopener noreferrer" target="_blank">
-          {t("imprint")}
-        </a>
-      ) : null}
-      {branding.privacyUrl ? (
-        <a href={branding.privacyUrl} className="underline hover:text-fg" rel="noopener noreferrer" target="_blank">
-          {t("privacy")}
-        </a>
-      ) : null}
+      {links.map((link) =>
+        link.external ? (
+          <a key={link.code} href={link.href} className="underline hover:text-fg" rel="noopener noreferrer" target="_blank">
+            {t(LABEL[link.code])}
+          </a>
+        ) : (
+          <Link key={link.code} href={link.href} className="underline hover:text-fg">
+            {t(LABEL[link.code])}
+          </Link>
+        ),
+      )}
     </p>
   );
 }

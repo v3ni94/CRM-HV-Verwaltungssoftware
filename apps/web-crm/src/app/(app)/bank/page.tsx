@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
 import { BankClarifications } from "@/components/banking/BankClarifications";
 import { BankSetupWizard } from "@/components/banking/BankSetupWizard";
+import { EbicsSubscribers } from "@/components/banking/EbicsSubscribers";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
 import { FinTsConnections } from "@/components/banking/FinTsConnections";
 import { MatchingMetricsCard } from "@/components/banking/MatchingMetricsCard";
@@ -51,6 +52,7 @@ export default async function BankPage() {
       <BankSetupWizard />
       <BankAccountOverview />
       <FinTsConnections />
+      <EbicsSubscribers />
       <FinApiConnections />
       <StatementImport />
       <MatchingMetricsCard />

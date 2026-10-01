@@ -1,7 +1,9 @@
 import { getTranslations } from "next-intl/server";
 
 import { AvailabilityAdmin } from "@/components/platform/AvailabilityAdmin";
+import { AvailabilitySelfMeasurement } from "@/components/platform/AvailabilitySelfMeasurement";
 import { MaintenanceAdmin } from "@/components/platform/MaintenanceAdmin";
+import { ScaleMonitor } from "@/components/platform/ScaleMonitor";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -19,7 +21,9 @@ export default async function Page() {
     <div className={ui.pageGap}>
       <PageHeader title={t("title")} description={t("intro")} />
       <MaintenanceAdmin />
+      <AvailabilitySelfMeasurement />
       <AvailabilityAdmin />
+      <ScaleMonitor />
     </div>
   );
 }

@@ -13,7 +13,7 @@ stays in accounting behind G1 (rule M24-01).
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -51,6 +51,9 @@ class HoaReservePatchIn(BaseModel):
     active: bool | None = None
     opening_balance: Decimal | None = Field(default=None, decimal_places=2)
     opening_year: int | None = Field(default=None, ge=1990, le=2100)
+    # AE07 / V01-01: reason of an opening change after a calculated statement (modes logged
+    # and four_eyes of the tenant switch).
+    change_reason: str | None = Field(default=None, max_length=2000)
 
 
 async def check_reserve_refs(
@@ -146,6 +149,7 @@ async def _year_figures(session: AsyncSession, reserve: HoaReserve, year: int) -
             "statement_id": str(statement.id),
             "statement_version": statement.version,
             "contribution_basis": "paid" if bound else "planned",
+            "planned_source": "statement",
             "contributions_planned": Decimal(position["contributions_planned"]),
             "contributions": Decimal(
                 position["contributions_paid"] if bound else position["contributions_planned"]
@@ -166,6 +170,7 @@ async def _year_figures(session: AsyncSession, reserve: HoaReserve, year: int) -
         .limit(1)
     )
     planned = ZERO
+    planned_source = "none"
     if plan is not None:
         amounts = await session.scalars(
             select(PlanItem.amount).where(
@@ -173,6 +178,14 @@ async def _year_figures(session: AsyncSession, reserve: HoaReserve, year: int) -
             )
         )
         planned = sum(amounts.all(), ZERO)
+        planned_source = "plan_item"
+    # AE07 / M24-01: a resolved reserve plan of the year is the Soll of the development.
+    from mhvp.hoa.reserve_plan import resolved_plan
+
+    rplan = await resolved_plan(session, reserve.id, year)
+    if rplan is not None:
+        planned = rplan.planned_contribution
+        planned_source = "reserve_plan"
     sums = dict.fromkeys(KINDS, ZERO)
     if statement is not None:
         for m in (
@@ -185,7 +198,8 @@ async def _year_figures(session: AsyncSession, reserve: HoaReserve, year: int) -
         ).all():
             sums[m.kind] = sums.get(m.kind, ZERO) + m.amount
     return {
-        "source": "plan" if plan is not None else "none",
+        "source": "plan" if plan is not None or rplan is not None else "none",
+        "planned_source": planned_source,
         "statement_id": str(statement.id) if statement else None,
         "statement_version": statement.version if statement else None,
         "contribution_basis": "planned",
@@ -196,6 +210,39 @@ async def _year_figures(session: AsyncSession, reserve: HoaReserve, year: int) -
         "fees": sums["fee"],
         "interest": sums["interest"],
     }
+
+
+async def interest_tax_withheld(
+    session: AsyncSession, reserve: HoaReserve, year: int
+) -> dict[str, Decimal]:
+    """P01-01 (AE05): withholdings (amounts from the bank document) of posted, not reversed
+    interest entries on the reserve account in ``year``. Display only: the statement figure
+    ``taxes`` and the closing formula stay unchanged."""
+    from mhvp.accounting.models import EntryStatus, InterestTaxWithholding, JournalEntry
+
+    sums = {"capital_gains_tax": ZERO, "solidarity_tax": ZERO, "church_tax": ZERO}
+    if reserve.account_id is None:
+        return {**sums, "total": ZERO}
+    rows = await session.execute(
+        select(
+            InterestTaxWithholding.capital_gains_tax,
+            InterestTaxWithholding.solidarity_tax,
+            InterestTaxWithholding.church_tax,
+        )
+        .join(JournalEntry, JournalEntry.id == InterestTaxWithholding.journal_entry_id)
+        .where(
+            InterestTaxWithholding.bank_account_id == reserve.account_id,
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.reversed_by_id.is_(None),
+            JournalEntry.booking_date >= date(year, 1, 1),
+            JournalEntry.booking_date <= date(year, 12, 31),
+        )
+    )
+    for kest, soli, kist in rows.all():
+        sums["capital_gains_tax"] += kest
+        sums["solidarity_tax"] += soli
+        sums["church_tax"] += kist
+    return {**sums, "total": sum(sums.values(), ZERO)}
 
 
 async def reserve_development(
@@ -211,12 +258,14 @@ async def reserve_development(
     for year in range(start, to_year + 1):
         fig = await _year_figures(session, reserve, year)
         closing = develop(opening, fig)
+        withheld = await interest_tax_withheld(session, reserve, year)
         rows.append(
             {
                 "year": year,
                 "opening": str(opening),
                 "opening_entered": year == start,
                 **{k: (str(v) if isinstance(v, Decimal) else v) for k, v in fig.items()},
+                "interest_tax_withheld": {k: str(v) for k, v in withheld.items()},
                 "closing": str(closing),
             }
         )
@@ -274,19 +323,17 @@ async def get_reserve(
         return reserve_out(reserve, ledger.legal_entity_id)
 
 
-async def _ensure_opening_unlocked(
+async def _opening_lock_hit(
     session: AsyncSession, reserve: HoaReserve, changes: dict[str, Any]
-) -> None:
-    """U15-03: once a statement of the opening year (old or new) or of a later year is
-    calculated or further, opening balance and opening year are frozen; corrections only by a
-    new movement."""
-    touched = [
+) -> list[str]:
+    """Touched opening fields when a calculated statement covers them, else an empty list."""
+    touched: list[str] = [
         key
         for key in ("opening_balance", "opening_year")
         if key in changes and changes[key] != getattr(reserve, key)
     ]
     if not touched:
-        return
+        return []
     # Review W79: the opening carries forward into every later year (``develop_years``) and,
     # without an opening year, is the opening of every year (``opening_for_year``). The lock
     # therefore covers each statement from the earlier of the old and new opening year on;
@@ -299,7 +346,16 @@ async def _ensure_opening_unlocked(
     if reserve.opening_year is not None and new_year is not None:
         conditions.append(HoaStatement.year >= min(reserve.opening_year, new_year))
     hit = await session.scalar(select(HoaStatement.id).where(*conditions).limit(1))
-    if hit is not None:
+    return touched if hit is not None else []
+
+
+async def _ensure_opening_unlocked(
+    session: AsyncSession, reserve: HoaReserve, changes: dict[str, Any]
+) -> None:
+    """U15-03: once a statement of the opening year (old or new) or of a later year is
+    calculated or further, opening balance and opening year are frozen; corrections only by a
+    new movement."""
+    if await _opening_lock_hit(session, reserve, changes):
         raise ProblemError(
             ErrorCodes.HOA_RESERVE_OPENING_LOCKED,
             detail="Abrechnung des Anfangsjahres ist berechnet oder freigegeben; "
@@ -331,12 +387,27 @@ async def patch_reserve(
             account_id=changes.get("account_id"),
             bank_account_id=changes.get("bank_account_id"),
         )
-        await _ensure_opening_unlocked(session, reserve, changes)
+        reason = changes.pop("change_reason", None)
+        # AE07 / V01-01: the tenant switch decides how a locked opening change is handled
+        # (locked: 409, default; logged: applied with log row; four_eyes: pending request).
+        from mhvp.hoa.reserve_plan import handle_opening_change
+
+        pending = await handle_opening_change(
+            session,
+            principal,
+            reserve,
+            changes,
+            reason,
+            await _opening_lock_hit(session, reserve, changes),
+        )
         for key, value in changes.items():
             setattr(reserve, key, value)
         reserve.updated_by = principal.user_id
         await session.flush()
-        return reserve_out(reserve, ledger.legal_entity_id)
+        out = reserve_out(reserve, ledger.legal_entity_id)
+        if pending is not None:
+            out["opening_change"] = pending
+        return out
 
 
 @router.get(
@@ -403,3 +474,7 @@ async def delete_reserve_movement(
             )
         await session.delete(movement)
     return Response(status_code=204)
+
+
+# AE07: reserve plan endpoints register on this router (module import at the end).
+from mhvp.hoa import reserve_plan as _reserve_plan  # noqa: E402, F401

@@ -8,6 +8,11 @@ import type { PortalForm, PortalFormField } from "@/components/portal/types";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+/** AA14-01: maximum length per element type, as checked by the API (portal/forms.py). */
+const MAX_LENGTH: Record<string, number> = { text: 500, location: 300, signature: 120, textarea: 4000, address: 4000 };
+/** Types with a short hint on the expected value (messages Forms.hints). */
+const HINTED = ["address", "location", "signature", "amount"];
+
 type Values = Record<string, string | string[]>;
 type Files = Record<string, File[]>;
 
@@ -23,6 +28,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
   const [values, setValues] = useState<Values>({});
   const [files, setFiles] = useState<Files>({});
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -38,6 +44,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     for (const field of form.fields) {
       if (DISPLAY.includes(field.type)) continue;
       const raw = values[field.key];
@@ -90,6 +97,10 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
     setBusy(false);
     if (!result.ok) {
       setError(result.message);
+      // AA14-01: the API names the field of each defect (values.<key>); show it at the field.
+      const byKey: Record<string, string> = {};
+      for (const e of result.problem?.errors ?? []) byKey[e.field.replace(/^values\./, "")] = e.message;
+      setFieldErrors(byKey);
       return;
     }
     setValues({});
@@ -122,6 +133,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
           field={field}
           id={fieldId(field)}
           value={values[field.key]}
+          error={fieldErrors[field.key]}
           onChange={(value) => setValues((v) => ({ ...v, [field.key]: value }))}
           onFiles={(list) => setFiles((f) => ({ ...f, [field.key]: list }))}
         />
@@ -141,12 +153,14 @@ function FormElement({
   field,
   id,
   value,
+  error,
   onChange,
   onFiles,
 }: {
   field: PortalFormField;
   id: string;
   value: string | string[] | undefined;
+  error?: string;
   onChange: (value: string | string[]) => void;
   onFiles: (files: File[]) => void;
 }) {
@@ -163,12 +177,25 @@ function FormElement({
       </p>
     );
   }
-  const help = field.help ? <p className={ui.help}>{field.help}</p> : null;
+  const hint = HINTED.includes(field.type) ? <p className={ui.help}>{t(`hints.${field.type}`)}</p> : null;
+  const problem = error ? (
+    <p id={`${id}-error`} className={ui.error}>
+      {error}
+    </p>
+  ) : null;
+  const described = error ? `${id}-error` : undefined;
+  const help = (
+    <>
+      {field.help ? <p className={ui.help}>{field.help}</p> : null}
+      {hint}
+      {problem}
+    </>
+  );
   if (isCheck(field.type)) {
     return (
       <div>
         <label htmlFor={id} className="flex items-start gap-2 text-sm">
-          <input id={id} type="checkbox" aria-required={required} checked={text === "true"} onChange={(e) => onChange(e.target.checked ? "true" : "")} />
+          <input id={id} type="checkbox" aria-required={required} aria-invalid={error ? true : undefined} aria-describedby={described} checked={text === "true"} onChange={(e) => onChange(e.target.checked ? "true" : "")} />
           <span>
             {field.label}
             {field.required ? " *" : ""}
@@ -181,7 +208,7 @@ function FormElement({
   if (field.type === "radio" || field.type === "multiselect") {
     const chosen = Array.isArray(value) ? value : [];
     return (
-      <fieldset>
+      <fieldset aria-describedby={described}>
         <legend className={ui.label}>
           {field.label}
           {field.required ? " *" : ""}
@@ -214,7 +241,7 @@ function FormElement({
         {field.required ? " *" : ""}
       </label>
       {field.type === "select" ? (
-        <select id={id} className={ui.input} aria-required={required} value={text} onChange={(e) => onChange(e.target.value)}>
+        <select id={id} className={ui.input} aria-required={required} aria-invalid={error ? true : undefined} aria-describedby={described} value={text} onChange={(e) => onChange(e.target.value)}>
           <option value="">{t("choose")}</option>
           {(field.options ?? []).map((option) => (
             <option key={option} value={option}>
@@ -229,11 +256,13 @@ function FormElement({
           aria-required={required}
           multiple
           accept="image/jpeg,image/png,application/pdf"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={described}
           className={ui.input}
           onChange={(e) => onFiles(Array.from(e.target.files ?? []))}
         />
       ) : field.type === "textarea" || field.type === "address" ? (
-        <textarea id={id} rows={4} aria-required={required} className={ui.input} value={text} onChange={(e) => onChange(e.target.value)} />
+        <textarea id={id} rows={4} maxLength={MAX_LENGTH[field.type]} aria-required={required} aria-invalid={error ? true : undefined} aria-describedby={described} className={ui.input} value={text} onChange={(e) => onChange(e.target.value)} />
       ) : (
         <input
           id={id}
@@ -253,6 +282,9 @@ function FormElement({
           step={field.type === "number" ? "any" : undefined}
           inputMode={field.type === "amount" ? "decimal" : undefined}
           autoComplete={field.type === "signature" ? "name" : undefined}
+          maxLength={MAX_LENGTH[field.type]}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={described}
           aria-required={required}
           className={ui.input}
           value={text}

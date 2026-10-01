@@ -235,7 +235,32 @@ PROPOSED_ACCOUNTS: list[dict[str, Any]] = [
     ]
 ]
 
-TEMPLATE_ACCOUNTS: list[dict[str, Any]] = [*A1_ACCOUNTS, *PROPOSED_ACCOUNTS]
+# AE02 (P07-05, SA-08): proposals for the statement kinds ``heating`` and ``special_levy``.
+# ``statement_kind`` itself stays as drafted (M10-02); the proposal is review information
+# ("Vorschlag, Freigabe offen") that the operator adopts per account in the draft. Annex A.1 has
+# no special levy account, so none is proposed and no number is invented (coverage report).
+PROPOSAL_OPEN = "vorschlag_freigabe_offen"
+PROPOSAL_NOTE = "Vorschlag, Freigabe offen"
+HEATING_PROPOSAL_NUMBERS: frozenset[str] = frozenset(
+    {number for number, _n, alloc, _k, _b in COSTS if alloc == ALLOC_HEATING} | {"060500"}
+)
+STATEMENT_KINDS_PROPOSABLE: tuple[str, ...] = ("heating", "special_levy")
+
+
+def with_kind_proposals(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Copy of ``rows`` with the heating proposal on the matching accounts."""
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        new = dict(row)
+        if new["number"] in HEATING_PROPOSAL_NUMBERS:
+            new["proposed_statement_kind"] = "heating"
+            new["proposal_status"] = PROPOSAL_OPEN
+            new["proposal_note"] = PROPOSAL_NOTE
+        result.append(new)
+    return result
+
+
+TEMPLATE_ACCOUNTS: list[dict[str, Any]] = with_kind_proposals([*A1_ACCOUNTS, *PROPOSED_ACCOUNTS])
 
 
 def merge_missing(

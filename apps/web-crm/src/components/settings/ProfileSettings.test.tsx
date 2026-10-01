@@ -99,3 +99,19 @@ describe("ProfileSettings signature", () => {
     expect(screen.getByRole("form", { name: "Passwort ändern" })).toBeInTheDocument();
   });
 });
+
+describe("ProfileSettings second factor policy (M2-04)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("hides the switch off and explains the policy when the factor is mandatory", () => {
+    render({ totpEnabled: true, mfaRequired: true });
+    expect(screen.getByText(/durch die Richtlinie des Mandanten vorgeschrieben/)).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Zweiten Faktor ausschalten" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the switch off under a voluntary policy", () => {
+    render({ totpEnabled: true, mfaRequired: false });
+    expect(screen.queryByText(/durch die Richtlinie des Mandanten vorgeschrieben/)).not.toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Zweiten Faktor ausschalten" })).toBeInTheDocument();
+  });
+});

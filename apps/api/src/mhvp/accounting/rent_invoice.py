@@ -103,13 +103,52 @@ def _d(value: date) -> str:
 # Numbering -------------------------------------------------------------------------------
 
 
+DRAFT_NUMBER_PREFIX = "ENTWURF"
+NUMBERING_SOURCE_KEY = "rent_invoice_draft_numbering"
+NUMBERING_MODES = ("draft_numbers", "regular_numbers", "reject_when_g1_closed")
+DEFAULT_NUMBERING_MODE = "draft_numbers"
+
+
+def format_draft_number(year: int, number: int) -> str:
+    return f"{DRAFT_NUMBER_PREFIX}-{year:04d}-{number:06d}"
+
+
+def numbering_mode_of(sources: dict[str, Any] | None) -> str:
+    """Tenant switch AC03-01; unknown or missing values fall back to the conservative default."""
+    value = (sources or {}).get(NUMBERING_SOURCE_KEY)
+    return value if value in NUMBERING_MODES else DEFAULT_NUMBERING_MODE
+
+
+async def numbering_mode(session: AsyncSession) -> str:
+    from mhvp.platform.models import TenantSettings
+
+    sources = await session.scalar(select(TenantSettings.sources))
+    return numbering_mode_of(sources)
+
+
+def uses_draft_number(mode: str, draft: bool) -> bool:
+    return draft and mode == "draft_numbers"
+
+
 async def allocate_number(
-    session: AsyncSession, tenant_id: uuid.UUID, legal_entity_id: uuid.UUID, year: int
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    legal_entity_id: uuid.UUID,
+    year: int,
+    *,
+    draft_number: bool = False,
 ) -> str:
-    """Next gapless number per tenant, legal entity and year; the counter row is locked."""
+    """Next gapless number per tenant, legal entity and year; the counter row is locked.
+
+    Draft numbers (AC03-01) use their own counter row (year stored negated) so that drafts
+    never consume the regular ``MR-`` series.
+    """
+    counter_year = -year if draft_number else year
     await session.execute(
         insert(RentInvoiceNumberCounter)
-        .values(tenant_id=tenant_id, legal_entity_id=legal_entity_id, year=year, last_number=0)
+        .values(
+            tenant_id=tenant_id, legal_entity_id=legal_entity_id, year=counter_year, last_number=0
+        )
         .on_conflict_do_nothing()
     )
     counter = await session.scalar(
@@ -117,7 +156,7 @@ async def allocate_number(
         .where(
             RentInvoiceNumberCounter.tenant_id == tenant_id,
             RentInvoiceNumberCounter.legal_entity_id == legal_entity_id,
-            RentInvoiceNumberCounter.year == year,
+            RentInvoiceNumberCounter.year == counter_year,
         )
         .with_for_update()
     )
@@ -125,6 +164,8 @@ async def allocate_number(
         raise ProblemError(ErrorCodes.CONFLICT)
     counter.last_number += 1
     await session.flush()
+    if draft_number:
+        return format_draft_number(year, counter.last_number)
     return format_number(year, counter.last_number)
 
 
@@ -249,6 +290,7 @@ async def issue(
     draft: bool,
     tenant_id: uuid.UUID,
     user_id: uuid.UUID | None,
+    mode: str = DEFAULT_NUMBERING_MODE,
 ) -> RentInvoice:
     """Freeze the items of the period into an invoice with a new gapless number."""
     if contract.vat_option not in VAT_OPTIONS:
@@ -284,7 +326,13 @@ async def issue(
             ErrorCodes.RENT_INVOICE_NOT_ALLOWED,
             detail="Netto plus Steuer ergibt nicht das Brutto der Posten; keine Ausgabe.",
         )
-    number = await allocate_number(session, tenant_id, entity.id, invoice_date.year)
+    number = await allocate_number(
+        session,
+        tenant_id,
+        entity.id,
+        invoice_date.year,
+        draft_number=uses_draft_number(mode, draft),
+    )
     contact_id = await recipients.debtor_contact_id(session, contract.party_id)
     row = RentInvoice(
         tenant_id=tenant_id,
@@ -319,6 +367,7 @@ async def credit_note(
     invoice_date: date,
     draft: bool,
     user_id: uuid.UUID | None,
+    mode: str = DEFAULT_NUMBERING_MODE,
 ) -> RentInvoice:
     """Cancel an invoice by a credit note with negated lines; the invoice itself is kept."""
     if invoice.kind is RentInvoiceKind.CREDIT_NOTE:
@@ -340,7 +389,11 @@ async def credit_note(
         for line in invoice.lines
     ]
     number = await allocate_number(
-        session, invoice.tenant_id, invoice.legal_entity_id, invoice_date.year
+        session,
+        invoice.tenant_id,
+        invoice.legal_entity_id,
+        invoice_date.year,
+        draft_number=uses_draft_number(mode, draft),
     )
     row = RentInvoice(
         tenant_id=invoice.tenant_id,

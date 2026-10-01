@@ -118,6 +118,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/deposit-settlements/${ID}/document$`) },
   // Mietrechnung mit Umsatzsteuerausweis (M13-03 Folgepunkt, Regel M13-04): Liste, Erzeugen,
   // PDF (Entwurf mit Wasserzeichen hinter G1), Storno nur durch Gutschrift.
+  { method: "GET", pattern: /^accounting\/rent-invoices\/numbering-mode$/ },
+  { method: "PUT", pattern: /^accounting\/rent-invoices\/numbering-mode$/ },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/rent-invoices$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/rent-invoices$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/rent-invoices/${ID}/pdf$`) },
@@ -200,11 +202,19 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // AC07 (GA08-08): Löschcheckliste und Nachlauf.
   { method: "GET", pattern: new RegExp(`^documents/deletions/${ID}/checklist$`) },
   { method: "POST", pattern: new RegExp(`^documents/deletions/${ID}/follow-up$`) },
+  // AE33 (AC07-03): Papierkorb; (AC07-01): Umfang der Auskunft als Mandantenschalter.
+  { method: "GET", pattern: /^documents\/(trash|trash-settings)$/ },
+  { method: "PUT", pattern: /^documents\/trash-settings$/ },
+  { method: "POST", pattern: new RegExp(`^documents/trash/${ID}/(restore|purge)$`) },
+  { method: "GET", pattern: /^contact-access-export-settings$/ },
+  { method: "PUT", pattern: /^contact-access-export-settings$/ },
   { method: "GET", pattern: new RegExp(`^contacts/${ID}/relations$`) },
   { method: "POST", pattern: /^contacts\/roles\/recompute$/ },
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
   { method: "GET", pattern: /^consent-policy$/ },
   { method: "PUT", pattern: /^consent-policy$/ },
+  // AE34 (AC06-01): legal basis per processing purpose, shown and changed on "Fachliche Regeln" (AE39).
+  { method: "PUT", pattern: /^consent-legal-basis\/(email_delivery|data_sharing|marketing|portal_terms)$/ },
   {
     method: "POST",
     pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/mandate/revoke$`),
@@ -263,6 +273,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Einwilligung (SA-02), Antwort im Chat zur Meldung (M21-01).
   { method: "GET", pattern: /^portal-admin\/(features|statistics|representations)$/ },
   { method: "PATCH", pattern: /^portal-admin\/features$/ },
+  // AE28 (M7-06): Protokoll des Portal-Assistenten (Recht Mandanteneinstellungen).
+  { method: "GET", pattern: /^portal-admin\/assistant\/log$/ },
   { method: "POST", pattern: /^portal-admin\/representations$/ },
   { method: "POST", pattern: new RegExp(`^portal-admin/representations/${ID}/revoke$`) },
   { method: "GET", pattern: new RegExp(`^portal-admin/accounts/${ID}/(support-view|support-log)$`) },
@@ -292,9 +304,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^privacy\/deletion-profiles$/ },
   { method: "POST", pattern: new RegExp(`^privacy/deletion-profiles/${ID}/release$`) },
   { method: "POST", pattern: new RegExp(`^privacy/erasure-requests/${ID}/(approve|reject|execute)$`) },
+  // AE32 (S711-10): Dienstleister laut Konfiguration, Übernahme ins Register, PDF-Entwurf.
+  { method: "GET", pattern: /^privacy\/(register\/config-sources|processing-records\/pdf)$/ },
+  { method: "POST", pattern: /^privacy\/register\/config-sources\/sync$/ },
   // Portalformulare (A56): Vorlagen je Mandant.
   { method: "GET", pattern: /^portal-admin\/forms$/ },
   { method: "POST", pattern: /^portal-admin\/forms$/ },
+  // AE30 (AA14-01): Elementtypen mit Prüfregel und Vorschau im Trockenlauf; AA14-02: Bewertungen.
+  { method: "GET", pattern: /^portal-admin\/forms\/element-types$/ },
+  { method: "POST", pattern: /^portal-admin\/forms\/preview$/ },
+  { method: "GET", pattern: /^portal-admin\/provider-ratings$/ },
   { method: "PATCH", pattern: new RegExp(`^portal-admin/forms/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^portal-admin/forms/${ID}$`) },
   { method: "GET", pattern: /^tenant\/portal-role-permissions$/ },
@@ -330,6 +349,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Optional second factor (operator 26.09.2026, M2-01): confirm and disable; the setup with
   // its QR code runs through /api/session/totp/setup.
   { method: "POST", pattern: /^auth\/totp\/(confirm|disable)$/ },
+  // M2-04: Richtlinie zweiter Faktor je Rolle (Einstellungen, Rollen und Rechte).
+  { method: "GET", pattern: /^auth\/mfa-policy$/ },
+  { method: "PUT", pattern: /^auth\/mfa-policy$/ },
   // Platform: tenant and tenant administrator creation (platform admins only, checked by the API).
   { method: "POST", pattern: /^platform\/tenants$/ },
   { method: "POST", pattern: /^platform\/users$/ },
@@ -375,6 +397,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
+  // AE37 (Q08-01): header heuristic, validation report, stored column assignments, export status.
+  { method: "POST", pattern: /^imports\/immoware24\/header-detection$/ },
+  { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}/column-proposal$`) },
+  { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/check$`) },
+  { method: "GET", pattern: /^imports\/immoware24\/(column-assignments|export-requirements)$/ },
+  { method: "PUT", pattern: /^imports\/immoware24\/column-assignments$/ },
+  { method: "DELETE", pattern: new RegExp(`^imports/immoware24/column-assignments/${ID}$`) },
   // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
   { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte|zuordnung|adressen|adressen-ableiten)$/ },
   { method: "POST", pattern: /^imports\/immoware24\/lists\/zuordnung\/manuell$/ },
@@ -414,11 +443,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/revenue$`) },
   { method: "GET", pattern: /^accounting\/rule-versions\/due-checkpoints$/ },
+  { method: "GET", pattern: /^accounting\/rule-versions\/checkpoints$/ },
+  { method: "POST", pattern: /^accounting\/rule-versions\/checkpoints$/ },
+  { method: "PATCH", pattern: new RegExp(`^accounting/rule-versions/checkpoints/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/rule-versions/${ID}/withdraw$`) },
   // Weitere Auswertungen mit Kopfangaben, Excel und Verfahrensdokumentation (M18-01 bis M18-09).
   {
     method: "GET",
     pattern: new RegExp(
-      `^accounting/ledgers/${ID}/reports/(monthly-matrix|target-actual|bank-statement|vat-overview|vat-overview-by-property|income-expense|revenue|payments-by-debtor|trial-balance|open-items|account-sheet|xlsx)$`,
+      `^accounting/ledgers/${ID}/reports/(monthly-matrix|target-actual|bank-statement|vat-overview|vat-overview-by-property|income-expense|revenue|payments-by-debtor|trial-balance|open-items|account-sheet|xlsx|line-property-drift)$`,
     ),
   },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/procedure-documentation$`) },
@@ -456,6 +489,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/admin-fees-run$/ },
   { method: "GET", pattern: new RegExp(`^accounting/invoices/${ID}/xrechnung(\\.xml|/check)$`) },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/xrechnung/document$`) },
+  // S13-03 (AE25): ZUGFeRD/Factur-X hybrid of fee invoices (download, check, filing; nothing is sent).
+  { method: "GET", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/zugferd(\\.pdf|/check)$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/zugferd/document$`) },
   // Bank (M11, M12): statement import, proposals, confirmed booking, ignore with reason.
   { method: "POST", pattern: /^banking\/imports$/ },
   // Kennzahlen des Bankabgleichs (A45): Abdeckungsgrad und Fehlerquote je Zeitraum, lesend.
@@ -502,6 +538,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^banking\/automation\/level-requests$/ },
   { method: "POST", pattern: new RegExp(`^banking/automation/level-requests/${ID}/(approve|reject)$`) },
   { method: "PUT", pattern: /^banking\/automation\/(levels|outgoing)$/ },
+  // AE03: comparison report (read only) and the four eyes switch request (G1 checked by the API).
+  { method: "GET", pattern: /^banking\/automation\/(comparison|switch-requests)$/ },
+  { method: "POST", pattern: /^banking\/automation\/switch-requests$/ },
+  { method: "POST", pattern: new RegExp(`^banking/automation/switch-requests/${ID}/(approve|reject)$`) },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(accept|correct)$`) },
   { method: "GET", pattern: /^banking\/rule-proposals$/ },
   { method: "POST", pattern: new RegExp(`^banking/rule-proposals/${ID}/(accept|reject)$`) },
@@ -513,6 +553,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Bookkeeping in the CRM (M10-01 to M10-06, gap list 30.09.2026): drafts, posting,
   // reversal with reason, lock, opening balance check, chart of accounts, allocation.
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries(/cost-transfer|/interest)?$`) },
+  // P01-01 (AE05): tax accounts for withholdings on credit interest and withholdings per entry.
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/interest-tax-config$`) },
+  { method: "PUT", pattern: new RegExp(`^accounting/ledgers/${ID}/interest-tax-config$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/interest-tax$`) },
   { method: "DELETE", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/(post|approve|reverse)$`) },
   // GA05-02: versioned notes on posted entries (read accounting:read, write accounting:update).
@@ -548,6 +592,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/bank-status$`) },
   { method: "GET", pattern: new RegExp(`^accounting/payment-runs/bank-limits/${ID}$`) },
   { method: "PUT", pattern: new RegExp(`^accounting/payment-runs/bank-limits/${ID}$`) },
+  // AE22 (P04-04, Q01-01): payables from statement credits. Switch default off; release G3
+  // and four eyes, payout order G2 and G3, reversal of a posted reclass G1 (API).
+  { method: "GET", pattern: /^accounting\/credit-payables(\/(candidates|settings))?$/ },
+  { method: "PUT", pattern: /^accounting\/credit-payables\/settings$/ },
+  { method: "POST", pattern: /^accounting\/credit-payables$/ },
+  { method: "GET", pattern: new RegExp(`^accounting/credit-payables/${ID}(/payout-options)?$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/credit-payables/${ID}/(release|payment-order|withdraw)$`) },
   // finAPI (M11-finapi): read only aggregator onboarding, consent, fetch (Stufen 1-3).
   { method: "GET", pattern: /^banking\/finapi\/config$/ },
   { method: "PUT", pattern: /^banking\/finapi\/config$/ },
@@ -561,9 +612,22 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^banking\/fints\/connections$/ },
   { method: "POST", pattern: new RegExp(`^banking/fints/connections/${ID}/(restart|refresh)$`) },
   { method: "DELETE", pattern: new RegExp(`^banking/fints/connections/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^banking/fints/connections/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^banking/fints/sessions/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^banking/fints/sessions/${ID}/tan$`) },
   { method: "POST", pattern: new RegExp(`^banking/fints/accounts/${ID}/assign$`) },
+  // EBICS-Grundgerüst (M11-01, AE23): Schalter, Teilnehmer, Schlüssel, INI/HIA, HPB, Prüfung, C53.
+  // Nur Abruf, keine Zahlung (G2 bleibt geschlossen); Übertragung erst mit geprüfter Implementierung.
+  { method: "GET", pattern: /^banking\/ebics\/(status|subscribers)$/ },
+  { method: "PUT", pattern: /^banking\/ebics\/settings$/ },
+  { method: "POST", pattern: /^banking\/ebics\/subscribers$/ },
+  { method: "GET", pattern: new RegExp(`^banking/ebics/subscribers/${ID}(/letters)?$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(
+      `^banking/ebics/subscribers/${ID}/(keys|signature-key|ini|ini/external|hia|activation|hpb|bank-keys/verify|suspend|statements)$`,
+    ),
+  },
   // Bankkontenauswahl: Kontenliste je Objekt und Rechtsträger, Zuordnung und Standardkonto.
   // Nur lesend und organisatorisch, kein Zahlungsverkehr (G2 bleibt geschlossen).
   { method: "GET", pattern: /^banking\/accounts$/ },
@@ -666,6 +730,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^statements/${ID}/inspections/${ID}$`) },
   // Draft heating statement (M17-02): inputs, consumption import, preview and feed; G3 unchanged.
   { method: "GET", pattern: new RegExp(`^statements/${ID}/heating(/consumption-info)?$`) },
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/heating/comparison(/report)?$`) },
   { method: "PUT", pattern: new RegExp(`^statements/${ID}/heating(/consumptions)?$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/heating/(import-consumptions|calculate|apply)$`) },
   // Metering service heating cost import (M17-09).
@@ -675,11 +740,22 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^billing/heating-cost-imports/${ID}/(csv|check|apply)$`) },
   // Umlagefähigkeit (M17-01) und Vorschussregel (M17-03): Katalog, Zuordnung, Vorschläge mit Bestätigung.
   { method: "GET", pattern: new RegExp(`^statements/${ID}/allocability-check$`) },
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/allocation-basis-report$`) },
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/allocation-agreements$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/allocation-agreements$`) },
+  { method: "PATCH", pattern: new RegExp(`^contracts/${ID}/allocation-agreements/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^contracts/${ID}/allocation-agreements/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/allocation-agreements/bulk$`) },
+  { method: "GET", pattern: /^billing\/allocation-basis-setting$/ },
+  { method: "PUT", pattern: /^billing\/allocation-basis-setting$/ },
   { method: "GET", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals/${ID}/(confirm|reject)$`) },
   { method: "GET", pattern: /^billing\/advance-rule$/ },
   { method: "PUT", pattern: /^billing\/advance-rule$/ },
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/deadlines$`) },
+  { method: "GET", pattern: /^billing\/deadline-settings$/ },
+  { method: "PUT", pattern: /^billing\/deadline-settings$/ },
   { method: "GET", pattern: /^billing\/operating-cost-types$/ },
   { method: "GET", pattern: /^billing\/operating-cost-types\/accounts$/ },
   { method: "PUT", pattern: new RegExp(`^billing/operating-cost-types/accounts/${ID}$`) },
@@ -729,21 +805,45 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
   // Wirtschaftsplan in die Zahlungspläne (W02): Vorschau vor der Bestätigung durch die zweite Person.
   { method: "GET", pattern: new RegExp(`^hoa/plans/${ID}/apply/preview$`) },
+  // AE09 (W02, M12-L2): difference of posted months after a plan change within the year.
+  { method: "GET", pattern: new RegExp(`^hoa/plans/${ID}/differences$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/differences/draft$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/plan-differences/${ID}/(approve|reject)$`) },
+  { method: "GET", pattern: /^hoa\/plan-change-settings$/ },
+  { method: "PUT", pattern: /^hoa\/plan-change-settings$/ },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
   // W2 P07 (M24-01, M24-02): reserves, reserve movements, costs from the ledger.
   { method: "POST", pattern: /^hoa\/reserves$/ },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(reserve-movements|costs/from-ledger)$`) },
   // GA07-03: Sondererwerb im Abrechnungsjahr beantragen und freigeben (vier Augen).
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/acquisitions/${ID}/(request|release)$`) },
+  { method: "GET", pattern: /^hoa\/acquisition-rules$/ },
+  { method: "PUT", pattern: /^hoa\/acquisition-rules\/[a-z_]+$/ },
   // T09 (M24-01): reserve detail, change, development per year, movements of a statement.
   { method: "GET", pattern: new RegExp(`^hoa/reserves/${ID}(/development)?$`) },
   { method: "PATCH", pattern: new RegExp(`^hoa/reserves/${ID}$`) },
+  // AE07 (M24-01, V01-01): reserve plan per year and opening change switch.
+  { method: "GET", pattern: new RegExp(`^hoa/reserves/${ID}/(plans|opening-changes)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/reserves/${ID}/plans$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/reserve-plans/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^hoa/reserve-plans/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/reserve-plans/${ID}/resolve$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/reserve-plans/derive$`) },
+  { method: "GET", pattern: /^hoa\/reserve-policy$/ },
+  { method: "PUT", pattern: /^hoa\/reserve-policy$/ },
+  { method: "POST", pattern: new RegExp(`^hoa/reserve-opening-changes/${ID}/(approve|reject)$`) },
+  // AE08 (P07-02): Soll and Ist per earmarked reserve, variant switch.
+  { method: "GET", pattern: new RegExp(`^hoa/ledgers/${ID}/reserve-payments$`) },
+  { method: "GET", pattern: /^hoa\/reserve-payment-settings$/ },
+  { method: "PUT", pattern: /^hoa\/reserve-payment-settings$/ },
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements$`) },
   { method: "DELETE", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
   // AD06 / GA11-03: Online-Abstimmung je TOP öffnen/schließen, Wortmeldung abarbeiten.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/agenda/${ID}/voting/(open|close)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/speaker-requests/${ID}$`) },
+  // AE31 (AD06-02): Stimmkonflikt Vollmacht gegen eigene Stimme entscheiden.
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/vote-conflicts/${ID}/resolve$`) },
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/close(/confirm|/withdraw)?$`) },
@@ -1108,6 +1208,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^dispatches\/(serial|serial-merge)$/ },
   { method: "POST", pattern: new RegExp(`^dispatches/${ID}/evidence$`) },
   { method: "GET", pattern: /^document-templates$/ },
+  // AE16 (AA11-01/02): Textbausteine mit Freigabe.
+  { method: "GET", pattern: new RegExp(`^document-text-blocks(/codes|/${ID})?$`) },
+  { method: "POST", pattern: /^document-text-blocks$/ },
+  { method: "PATCH", pattern: new RegExp(`^document-text-blocks/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^document-text-blocks/${ID}/(submit|approve|reject|retire)$`) },
+  // AE29 (M21-04): Rechtstexte des Portals, Freigabestand, Schalter und Abgleich der Fassung.
+  { method: "GET", pattern: /^tenant\/legal-texts-config$/ },
+  { method: "PUT", pattern: /^tenant\/legal-texts-config$/ },
+  { method: "POST", pattern: /^tenant\/legal-texts-config\/apply-terms-version$/ },
   { method: "PATCH", pattern: new RegExp(`^document-templates/${ID}$`) },
   { method: "GET", pattern: /^generated-documents$/ },
   { method: "PATCH", pattern: new RegExp(`^work-orders/${ID}/approval-workflow$`) },
@@ -1202,6 +1311,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/asset-reports/${ID}/dispatch$`) },
   // Gesamtabrechnung WEG als PDF (M24-03): nur nach interner Freigabe und bei offenem G4 (API).
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/pdf$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/correction-report$`) },
   { method: "PUT", pattern: new RegExp(`^hoa/statements/${ID}/loan-allocation$`) },
   { method: "POST", pattern: /^hoa\/audits$/ },
   { method: "GET", pattern: new RegExp(`^hoa/audits/${ID}/candidates$`) },
@@ -1209,6 +1319,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/audit-reports/${ID}/board-statement$`) },
   { method: "PUT", pattern: new RegExp(`^hoa/meetings/${ID}/dial-in$`) },
   { method: "PUT", pattern: /^hoa\/meeting-settings$/ },
+  { method: "PUT", pattern: /^hoa\/online-meeting-settings$/ },
   // Vermietung: Absage mit Vorlage und Selbstauskunft-Link (M26-02).
   { method: "GET", pattern: /^letting\/prospects\/rejection-templates$/ },
   { method: "POST", pattern: new RegExp(`^letting/prospects/${ID}/(reject|self-disclosure-link)$`) },
@@ -1236,10 +1347,24 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/templates\/default$/ },
   { method: "POST", pattern: new RegExp(`^accounting/templates/${ID}/(release|submit-review|back-to-draft|versions)$`) },
   { method: "GET", pattern: new RegExp(`^accounting/templates/${ID}/export$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/templates/${ID}/coverage-report$`) },
+  { method: "PUT", pattern: new RegExp(`^accounting/templates/${ID}/(four-eyes|accounts)$`) },
   // G1 Öffnung (M12-09): Checkliste, Ergebnis je Prüfpunkt, Antrag über den Freigabepfad.
+  { method: "GET", pattern: /^accounting\/period-locks(\/settings|\/[0-9a-f-]{36})?$/ },
+  { method: "PUT", pattern: /^accounting\/period-locks\/settings$/ },
+  { method: "POST", pattern: /^accounting\/period-locks$/ },
+  { method: "POST", pattern: /^accounting\/period-locks\/[0-9a-f-]{36}\/(release-request|release)$/ },
+  { method: "GET", pattern: /^statements\/[0-9a-f-]{36}\/period-lock$/ },
   { method: "GET", pattern: /^accounting\/g1-opening$/ },
   { method: "PUT", pattern: /^accounting\/g1-opening\/items\/[A-Za-z0-9_]{1,32}$/ },
   { method: "POST", pattern: /^accounting\/g1-opening\/request$/ },
+  // AE01 Abnahmeregister (V16)
+  { method: "GET", pattern: /^accounting\/acceptance\/cases$/ },
+  { method: "GET", pattern: /^accounting\/acceptance\/cases\/D[0-9]{2}$/ },
+  { method: "GET", pattern: /^accounting\/acceptance\/export\.md$/ },
+  { method: "POST", pattern: /^accounting\/acceptance\/cases\/D[0-9]{2}\/expected$/ },
+  { method: "PUT", pattern: new RegExp(`^accounting/acceptance/expected/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/acceptance/expected/${ID}/(submit|decision|results)$`) },
   { method: "GET", pattern: /^accounting\/datev\/exports$/ },
   { method: "POST", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
   { method: "GET", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
@@ -1275,6 +1400,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^platform/maintenance-windows/${ID}$`) },
   { method: "GET", pattern: /^platform\/availability$/ },
   { method: "PUT", pattern: /^platform\/availability$/ },
+  // AE36 (AC09-01, AA15-01): Skalierungsmessung (ADR 0021) und Demo-Kennzeichen, Plattformadministratoren (API prueft).
+  { method: "GET", pattern: /^platform\/ops\/scale$/ },
+  { method: "PATCH", pattern: /^platform\/ops\/scale\/settings$/ },
+  { method: "POST", pattern: /^platform\/ops\/scale\/snapshot$/ },
+  { method: "PUT", pattern: new RegExp(`^platform/tenants/${ID}/demo$`) },
+  { method: "GET", pattern: /^platform\/availability\/live$/ },
+  { method: "PUT", pattern: /^platform\/availability\/settings$/ },
   { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/export-requests$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/(approve|reject)$`) },

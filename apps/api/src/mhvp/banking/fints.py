@@ -27,6 +27,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import hashlib
+import ipaddress
 import logging
 import re
 from collections.abc import Callable
@@ -36,6 +37,7 @@ from decimal import Decimal
 from functools import lru_cache
 from importlib import resources
 from typing import Any
+from urllib.parse import urlsplit
 
 from mhvp.banking import mt940 as mt940_norm
 from mhvp.banking.camt import RawTransaction
@@ -95,6 +97,88 @@ def _effective_fints_url(url: str, domain: str) -> str | None:
     if host in LEGACY_FINTS_HOSTS and domain.casefold() in _ATRUVIA_DOMAINS:
         return f"https://{domain.casefold()}/cgi-bin/hbciservlet"
     return url
+
+
+def fints_host(url: str | None) -> str | None:
+    """Host name of a FinTS URL (lower case), ``None`` when there is none."""
+    if not url:
+        return None
+    host = url.split("//", 1)[-1].split("/", 1)[0].rsplit("@", 1)[-1].split(":", 1)[0].casefold()
+    return host or None
+
+
+# Top level names that never belong to a public bank server. A manual FinTS URL is used for an
+# outgoing request that carries the access data, so addresses of the internal network are
+# refused (a name based check; the network egress rules of the operator remain the second line).
+_INTERNAL_TLDS = frozenset(
+    {"local", "localhost", "internal", "intranet", "lan", "home", "corp", "localdomain", "test"}
+)
+_HOST_LABEL = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+MANUAL_URL_MAX = 300
+
+
+def validate_manual_fints_url(value: str) -> str:
+    """Checks and normalises a FinTS address entered by hand (bank merger, new data centre).
+    Only ``https`` with a public host name is accepted: no IP address, no ``localhost`` or
+    internal domain, no credentials in the URL. Raises ``ValueError`` with a German message."""
+    url = value.strip()
+    if not url or len(url) > MANUAL_URL_MAX:
+        raise ValueError(
+            f"Die FinTS-Adresse muss zwischen 1 und {MANUAL_URL_MAX} Zeichen lang sein."
+        )
+    if any(ch.isspace() or ord(ch) < 32 for ch in url):
+        raise ValueError("Die FinTS-Adresse darf keine Leer- oder Steuerzeichen enthalten.")
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        raise ValueError("Die FinTS-Adresse ist keine gültige Internetadresse.") from None
+    if parts.scheme.lower() != "https":
+        raise ValueError("Die FinTS-Adresse muss mit https:// beginnen.")
+    if parts.username is not None or parts.password is not None or "@" in parts.netloc:
+        raise ValueError("Die FinTS-Adresse darf keine Zugangsdaten enthalten.")
+    if parts.fragment:
+        raise ValueError("Die FinTS-Adresse darf keinen Fragmentteil (#) enthalten.")
+    host = (parts.hostname or "").casefold().rstrip(".")
+    if not host:
+        raise ValueError("Die FinTS-Adresse enthält keinen Rechnernamen.")
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise ValueError("Die FinTS-Adresse muss einen Rechnernamen enthalten, keine IP-Adresse.")
+    labels = host.split(".")
+    if (
+        len(labels) < 2
+        or len(host) > 253
+        or not all(_HOST_LABEL.fullmatch(label) for label in labels)
+        or labels[-1] in _INTERNAL_TLDS
+        or host.endswith(".home.arpa")
+        or labels[-1].isdigit()
+    ):
+        raise ValueError("Die FinTS-Adresse muss einen öffentlichen Rechnernamen enthalten.")
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("Der Port der FinTS-Adresse ist ungültig.")
+    netloc = host + (f":{port}" if port is not None else "")
+    rest = parts.path + (f"?{parts.query}" if parts.query else "")
+    return f"https://{netloc}{rest}"
+
+
+def resolve_fints_url(blz: str, stored_url: str, manual_url: str | None = None) -> str:
+    """The FinTS address a dialog really uses: the manual entry of the connection, else the
+    current institute list entry of the BLZ (so a refreshed list also repairs connections that
+    were created with an address that has since been replaced), else the address stored when the
+    connection was created."""
+    if manual_url:
+        return manual_url
+    return list_fints_url(blz) or stored_url
+
+
+def list_fints_url(blz: str) -> str | None:
+    """Current FinTS address of the institute list for a BLZ (Atruvia redirect applied)."""
+    inst = find_institute(blz)
+    return inst.fints_url if inst and inst.fints_url else None
 
 
 def _parse_line(line: str) -> Institute | None:
@@ -185,11 +269,75 @@ TAN_CODES = frozenset({"9941", "9940", "9943"})
 SCA_CODES = frozenset({"9075"})
 
 
-def problem_for_code(code: str, text: str | None = None) -> ProblemError:
+LOCKED_STEPS = (
+    "Online-Banking der Bank im Browser mit denselben Zugangsdaten anmelden. Gelingt das "
+    "nicht, den Zugang dort oder bei der Bank entsperren lassen.",
+    "Prüfen, ob der Zugang für FinTS (HBCI) und Drittanbieter bei der Bank freigeschaltet ist.",
+    "Anmeldename prüfen: Er ist oft nicht die Kontonummer (bei Volks- und Raiffeisenbanken "
+    "meist VR-NetKey oder Alias) und kann sich nach einer Bankfusion ändern.",
+    "Die Sperre bei der Bank aufheben lassen (Service-Hotline oder Online-Banking).",
+    "Danach die Verbindung mit neu eingegebener PIN starten. Die gespeicherte PIN wurde "
+    "verworfen, es gibt keinen automatischen zweiten Versuch, weil weitere Fehlversuche den "
+    "Zugang erneut sperren.",
+)
+
+UNAVAILABLE_STEPS = (
+    "Später erneut versuchen, die Bank kann Wartungsarbeiten haben.",
+    "Prüfen, ob die FinTS-Adresse noch aktuell ist: Nach einer Bankfusion oder dem Wechsel des "
+    "Rechenzentrums ändern sich Adresse und gegebenenfalls Bankleitzahl und Anmeldename. Die "
+    "Umstellungshinweise der Bank sind maßgeblich.",
+    "Die aktuelle FinTS-Adresse bei der Bank erfragen und bei der Verbindung unter FinTS-Adresse "
+    "der Bank eintragen.",
+    "Prüfen, ob der Server der Plattform ausgehende Verbindungen zu dieser Adresse zulässt "
+    "(Firewall, Proxy).",
+)
+
+
+PIN_REJECTED_DETAIL = (
+    "Die Bank hat Anmeldename oder PIN abgelehnt. Die gespeicherte PIN wurde verworfen, weitere "
+    "Fehlversuche sperren den Zugang. Bitte Anmeldename und PIN im Online-Banking der Bank "
+    "prüfen und die PIN neu eingeben."
+)
+
+SCA_REQUIRED_DETAIL = (
+    "Die Bank verlangt eine erneute starke Kundenauthentifizierung (TAN), spätestens alle 90 "
+    "Tage. Bitte Erneut freigeben wählen und die TAN eingeben."
+)
+
+
+def _numbered(steps: tuple[str, ...]) -> str:
+    return "\n".join(f"{i}. {step}" for i, step in enumerate(steps, start=1))
+
+
+def locked_detail(code: str | None, bank_text: str | None = None) -> str:
+    """German explanation with check steps for ``MHVP-BANK-0010`` (access locked). The English
+    text of python-fints is not passed on; a German text of the bank is quoted."""
+    lead = "Die Bank meldet den Zugang als gesperrt"
+    lead += f" (Rückmeldecode {code})." if code else "."
+    if bank_text:
+        lead += f" Meldung der Bank: {bank_text.strip()[:200]}."
+    return f"{lead} Prüfschritte der Reihe nach:\n{_numbered(LOCKED_STEPS)}"
+
+
+def unavailable_detail(fints_url: str | None, technical: str | None = None) -> str:
+    """German explanation with check steps for ``MHVP-BANK-0013`` (bank not reachable); names
+    the host that was contacted so a replaced address is easy to recognise."""
+    host = fints_host(fints_url)
+    where = f"unter {host}" if host else "unter der hinterlegten FinTS-Adresse"
+    lead = f"Die Bank hat {where} nicht geantwortet oder die Verbindung kam nicht zustande."
+    text = f"{lead} Prüfschritte der Reihe nach:\n{_numbered(UNAVAILABLE_STEPS)}"
+    if technical:
+        text += f"\nTechnische Meldung: {' '.join(technical.split())[:200]}"
+    return text
+
+
+def problem_for_code(
+    code: str, text: str | None = None, *, fints_url: str | None = None
+) -> ProblemError:
     """Registered problem for a bank return code (docs/integrations/fints.md section 5)."""
-    detail = f"Rückmeldecode {code}" + (f": {text}" if text else "")
     if code in LOCKED_CODES:
-        return ProblemError(ErrorCodes.FINTS_ACCOUNT_LOCKED, detail=detail)
+        return ProblemError(ErrorCodes.FINTS_ACCOUNT_LOCKED, detail=locked_detail(code, text))
+    detail = f"Rückmeldecode {code}" + (f": {text}" if text else "")
     if code in PIN_CODES:
         return ProblemError(ErrorCodes.FINTS_PIN_REJECTED, detail=detail)
     if code in TAN_CODES:
@@ -199,20 +347,50 @@ def problem_for_code(code: str, text: str | None = None) -> ProblemError:
     return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=detail)
 
 
-def problem_for_exception(exc: BaseException) -> ProblemError:
+_CONNECTION_CLASSES = frozenset(
+    {"FinTSConnectionError", "FinTSNoResponseError", "ConnectionError", "TimeoutError", "Timeout"}
+)
+
+
+def _cause_chain(exc: BaseException) -> list[BaseException]:
+    chain: list[BaseException] = []
+    current: BaseException | None = exc
+    while current is not None and current not in chain and len(chain) < 6:
+        chain.append(current)
+        current = current.__cause__ or current.__context__
+    return chain
+
+
+def _is_connection_failure(exc: BaseException) -> bool:
+    """Network level failure: the python-fints connection errors and everything derived from
+    ``ConnectionError``/``Timeout`` (requests' SSLError, ConnectTimeout and so on), also when
+    python-fints wrapped it in a dialog error."""
+    return any(
+        cls.__name__ in _CONNECTION_CLASSES
+        for link in _cause_chain(exc)
+        for cls in type(link).__mro__
+    )
+
+
+def problem_for_exception(exc: BaseException, *, fints_url: str | None = None) -> ProblemError:
     """python-fints exception to registered problem. Never includes the PIN; python-fints
-    masks it in its own messages."""
+    masks it in its own messages. ``fints_url`` names the contacted host in the hint for an
+    unreachable bank."""
     if isinstance(exc, ProblemError):
         return exc
     name = type(exc).__name__
     if name == "FinTSClientTemporaryAuthError":
-        return ProblemError(ErrorCodes.FINTS_ACCOUNT_LOCKED, detail=str(exc))
+        # python-fints raises this on return code 3938 only; its English text is not shown.
+        return ProblemError(ErrorCodes.FINTS_ACCOUNT_LOCKED, detail=locked_detail("3938"))
     if name == "FinTSClientPINError":
-        return ProblemError(ErrorCodes.FINTS_PIN_REJECTED, detail=str(exc))
+        # python-fints text ("PIN wrong?") is English and says nothing about the next step.
+        return ProblemError(ErrorCodes.FINTS_PIN_REJECTED, detail=PIN_REJECTED_DETAIL)
     if name == "FinTSSCARequiredError":
-        return ProblemError(ErrorCodes.FINTS_SCA_REQUIRED, detail=str(exc))
-    if name in ("FinTSConnectionError", "FinTSNoResponseError", "ConnectionError", "TimeoutError"):
-        return ProblemError(ErrorCodes.FINTS_UNAVAILABLE, detail=str(exc))
+        return ProblemError(ErrorCodes.FINTS_SCA_REQUIRED, detail=SCA_REQUIRED_DETAIL)
+    if _is_connection_failure(exc):
+        return ProblemError(
+            ErrorCodes.FINTS_UNAVAILABLE, detail=unavailable_detail(fints_url, str(exc))
+        )
     if name == "FinTSDialogError":
         message = str(exc)
         match = re.search(r"\b(9\d{3})\b", message)
@@ -644,7 +822,7 @@ def start_session(
     except ProblemError:
         raise
     except Exception as exc:
-        raise problem_for_exception(exc) from None
+        raise problem_for_exception(exc, fints_url=creds.fints_url) from None
 
 
 def continue_session(
@@ -689,7 +867,7 @@ def continue_session(
     except ProblemError:
         raise
     except Exception as exc:
-        raise problem_for_exception(exc) from None
+        raise problem_for_exception(exc, fints_url=creds.fints_url) from None
 
 
 def _is_work_result(progress: Progress, answer: Any) -> bool:

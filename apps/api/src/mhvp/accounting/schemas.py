@@ -43,6 +43,7 @@ class ChartTemplateOut(BaseModel):
     release_comment: str | None = None
     release_document_id: uuid.UUID | None = None
     supersedes_id: uuid.UUID | None = None
+    four_eyes_required: bool | None = None
     accounts: list[dict[str, Any]]
 
 
@@ -129,6 +130,8 @@ class LineSchema(_In):
     net_amount: Money | None = None
     unit_id: uuid.UUID | None = None
     cost_center: str | None = Field(default=None, max_length=50)
+    # Q15-01: object of the line; without it the object follows the unit, else the contract.
+    property_id: uuid.UUID | None = None
 
 
 class SettlementIn(_In):
@@ -162,6 +165,7 @@ class LineOut(BaseModel):
     vat_amount: Money | None
     net_amount: Money | None
     unit_id: uuid.UUID | None
+    property_id: uuid.UUID | None = None
 
 
 class EntryOut(BaseModel):
@@ -289,3 +293,29 @@ class AccountingInterestIn(_In):
     value_date: date | None = None
     reference: str | None = Field(default=None, max_length=100)
     document_id: uuid.UUID | None = None
+    # P01-01 (AE05): withholdings as stated on the bank document, never computed from a rate
+    capital_gains_tax: Money | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    solidarity_tax: Money | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    church_tax: Money | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+
+
+class AccountingInterestTaxConfigIn(_In):
+    capital_gains_tax_account_id: uuid.UUID | None = None
+    solidarity_tax_account_id: uuid.UUID | None = None
+    church_tax_account_id: uuid.UUID | None = None
+
+
+class AccountingInterestTaxConfigOut(BaseModel):
+    ledger_id: uuid.UUID
+    capital_gains_tax_account_id: uuid.UUID | None = None
+    solidarity_tax_account_id: uuid.UUID | None = None
+    church_tax_account_id: uuid.UUID | None = None
+
+
+class AccountingInterestTaxOut(BaseModel):
+    journal_entry_id: uuid.UUID
+    gross_amount: Money
+    capital_gains_tax: Money
+    solidarity_tax: Money
+    church_tax: Money
+    net_amount: Money

@@ -364,3 +364,32 @@ class HeatingCostImport(IdMixin, TimestampMixin, TenantMixin, Base):
         "statement_cost_item.id", nullable=True, ondelete="SET NULL"
     )
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StatementDeadlineSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M17-04: tenant switches for the statement deadline (§ 556 Abs. 3 BGB, orientation only).
+
+    ``policy`` decides what happens to additional payments after the deadline orientation:
+    ``block_claims`` (default, existing behaviour) blocks them without an effective exception,
+    ``notice`` only reports them. ``watch_enabled`` switches the warning job on (default off).
+    """
+
+    __tablename__ = "statement_deadline_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_statement_deadline_setting_tenant"),
+        CheckConstraint("policy IN ('block_claims', 'notice')", name="policy"),
+        CheckConstraint("warn_days_first > 0 AND warn_days_second > 0", name="warn_days"),
+    )
+
+    policy: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="block_claims", server_default="block_claims"
+    )
+    watch_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    warn_days_first: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60, server_default="60"
+    )
+    warn_days_second: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )

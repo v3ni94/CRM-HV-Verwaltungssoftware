@@ -106,6 +106,14 @@ def test_d08_d10_units() -> None:
 def test_operating_cost_statement(clients: tuple[TestClient, TestClient], world: World) -> None:
     client, gated = clients
     h = bearer(login(client, world, "m17admin"))
+    # The M17-01 allocation basis lock (AE17, default on) is covered by its own tests; this
+    # world records no allocation agreements, so it is switched off for this tenant only.
+    assert (
+        client.put(
+            "/api/v1/billing/allocation-basis-setting", json={"block_output": False}, headers=h
+        ).status_code
+        == 200
+    )
     acc_user = bearer(login(client, world, "m17acc"))
     assert (
         _ok(
@@ -788,6 +796,14 @@ def test_d23_creation_is_not_access(
 
     client, gated = clients
     h = bearer(login(client, world, "m17admin"))
+    # The M17-01 allocation basis lock (AE17, default on) is covered by its own tests; this
+    # world records no allocation agreements, so it is switched off for this tenant only.
+    assert (
+        client.put(
+            "/api/v1/billing/allocation-basis-setting", json={"block_output": False}, headers=h
+        ).status_code
+        == 200
+    )
     acc_user = bearer(login(client, world, "m17acc"))
     w = _rental_world(client, h, "774")
     st = _statement(client, h, w["ledger"])
@@ -853,6 +869,14 @@ def test_d28_rule_version_pinned_in_snapshot(
 
     client, gated = clients
     h = bearer(login(client, world, "m17admin"))
+    # The M17-01 allocation basis lock (AE17, default on) is covered by its own tests; this
+    # world records no allocation agreements, so it is switched off for this tenant only.
+    assert (
+        client.put(
+            "/api/v1/billing/allocation-basis-setting", json={"block_output": False}, headers=h
+        ).status_code
+        == 200
+    )
     acc_user = bearer(login(client, world, "m17acc"))
     w = _rental_world(client, h, "775")
     item = {

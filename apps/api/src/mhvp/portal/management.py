@@ -11,7 +11,7 @@ the portal user is active; every call is logged with the staff user and the reas
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -62,6 +62,11 @@ class PortalFeaturesPatch(_In):
     chat_enabled: bool | None = None
     chat_ai_prequalification_enabled: bool | None = None
     support_login_enabled: bool | None = None
+    owner_rental_income_enabled: bool | None = None
+    chat_bot_enabled: bool | None = None
+    privacy_feature_enabled: bool | None = None
+    owner_ticket_scope: Literal["none", "released", "property"] | None = None
+    provider_rating_display: Literal["off", "staff"] | None = None
 
 
 class PortalRepresentationIn(_In):
@@ -83,15 +88,15 @@ class PortalSupportConsentIn(_In):
 @admin.get("/features", summary="Portal-Funktionsschalter des Mandanten")
 async def get_features(
     request: Request, principal: TenantPrincipal = Depends(READ)
-) -> dict[str, bool]:
+) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        return features.feature_dict(await features.get_or_default(session))
+        return features.admin_feature_dict(await features.get_or_default(session))
 
 
 @admin.patch("/features", summary="Portal-Funktionsschalter ändern")
 async def patch_features(
     body: PortalFeaturesPatch, request: Request, principal: TenantPrincipal = Depends(MANAGE)
-) -> dict[str, bool]:
+) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await session.scalar(select(PortalFeatureSetting))
         if row is None:
@@ -112,9 +117,9 @@ async def patch_features(
             entity_type="portal_feature_setting",
             entity_id=row.id,
             actor_user_id=principal.user_id,
-            payload=features.feature_dict(row),
+            payload=features.admin_feature_dict(row),
         )
-        return features.feature_dict(row)
+        return features.admin_feature_dict(row)
 
 
 @admin.get("/statistics", summary="Portalstatistik (Einladungen, Nutzung, Einreichungen)")

@@ -629,11 +629,18 @@ async def _marketing_allowed(
 ) -> set[uuid.UUID]:
     """AC06: contacts of an advertising batch with a valid marketing consent. The skipped
     ones are counted in ``log`` and recorded once as ``dispatch.marketing_skipped``."""
-    from mhvp.contacts.consent_rules import contacts_with_consent
-    from mhvp.contacts.models import ConsentKind
+    from mhvp.contacts.consent_rules import load_policy, marketing_permitted
 
     unique = list(dict.fromkeys(contact_ids))
-    allowed = await contacts_with_consent(session, unique, ConsentKind.MARKETING)
+    # AE34: the legal basis of the tenant decides (consent, or legitimate interest without
+    # objection); the default is the restrictive variant, a valid consent.
+    policy = await load_policy(session)
+    allowed = await marketing_permitted(session, unique, policy)
+    reason = (
+        "marketing_objection_recorded"
+        if policy.basis_for("marketing") == "legitimate_interest"
+        else "marketing_consent_missing"
+    )
     skipped = [c for c in unique if c not in allowed]
     if skipped:
         log["marketing_skipped"] += len(skipped)
@@ -647,7 +654,7 @@ async def _marketing_allowed(
             actor_user_id=principal.user_id,
             payload={
                 "batch": batch,
-                "reason": "marketing_consent_missing",
+                "reason": reason,
                 "count": len(skipped),
                 "contact_ids": [str(c) for c in skipped],
             },

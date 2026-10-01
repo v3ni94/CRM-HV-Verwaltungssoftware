@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { ReserveDevelopment, type ReserveBlock } from "@/components/hoa/ReserveDevelopment";
 import { ReserveCreateForm, ReserveMovementForm } from "@/components/hoa/ReserveForms";
 import { ReserveStatementPanel } from "@/components/hoa/ReserveStatementPanel";
+import { ReservePlans, type ResolutionOption } from "@/components/hoa/ReservePlans";
 import { ReserveMovementList, ReservePosition, type ReserveRow } from "@/components/hoa/ReservePositions";
 import type { AccountOption } from "@/components/hoa/ReserveYears";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -36,6 +37,13 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
     .filter((a) => a.active)
     .map((a) => ({ id: a.id, label: `${a.number} ${a.name}` }));
   const list = (reserves.data ?? []) as unknown as ReserveRow[];
+  // AE07: resolutions of the community as reference for the reserve plan.
+  const resolutionsRes = ctx.entity
+    ? await ctx.api.GET("/api/v1/hoa/resolutions", { params: { query: { legal_entity_id: ctx.entity.id } } })
+    : null;
+  const resolutions: ResolutionOption[] = ((resolutionsRes?.data ?? []) as unknown as { id: string; number: number; subject: string; status: string }[])
+    .filter((r) => !["negative", "annulled", "void"].includes(r.status))
+    .map((r) => ({ id: r.id, label: `${r.number} ${r.subject}` }));
   const year = (((statements.data ?? []) as unknown as Statement[])[0]?.year ?? new Date().getFullYear()) as number;
   // The list carries no snapshot: the newest versions are read until one has a reserve block.
   const candidates = ((statements.data ?? []) as unknown as Statement[]).slice(0, 5);
@@ -61,6 +69,9 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
           ))}
         </ul>
         <p className={ui.help}>{t("accountsHint")}</p>
+        {list.map((r) => (
+          <ReservePlans key={`plan-${r.id}`} reserveId={r.id} name={r.name} resolutions={resolutions} />
+        ))}
         <ReserveCreateForm ledgerId={ctx.ledger.id} bankAccounts={bankAccounts} accounts={accounts} />
       </section>
       {latest?.snapshot?.reserve ? (

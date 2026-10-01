@@ -98,12 +98,17 @@ async def member_tenants(
     factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID
 ) -> list[tuple[uuid.UUID, str]]:
     """Tenants with an active membership of the user, ordered by name. The platform admin flag
-    and the superadmin marker never add a tenant here (M2-05)."""
+    and the superadmin marker never add a tenant here (M2-05). Demo tenants (AE36) are left out:
+    the merged lists are an operating view and must not mix in invented data."""
     async with platform_transaction(factory) as session:
         rows = await session.execute(
             select(Tenant.id, Tenant.name)
             .join(Membership, Membership.tenant_id == Tenant.id)
-            .where(Membership.user_id == user_id, Membership.status == MembershipStatus.ACTIVE)
+            .where(
+                Membership.user_id == user_id,
+                Membership.status == MembershipStatus.ACTIVE,
+                Tenant.is_demo.is_(False),
+            )
             .order_by(Tenant.name)
         )
         return [(row.id, row.name) for row in rows]

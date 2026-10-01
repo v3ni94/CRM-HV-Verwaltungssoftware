@@ -41,6 +41,9 @@ const CONNECTION = {
   bank_name: "Kreissparkasse Euskirchen",
   blz: "38250110",
   bic: "WELADED1EUS",
+  fints_url: "https://banking-rl5.s-fints-pt-rl.de/fints30",
+  fints_url_manual: null,
+  fints_url_list: "https://banking-rl5.s-fints-pt-rl.de/fints30",
   status: "active",
   tan_mechanism: "912",
   tan_mechanisms: [{ code: "912", name: "chipTAN optisch", decoupled: false }],
@@ -100,6 +103,121 @@ describe("FinTsConnections", () => {
     expect(await screen.findByText(/Die Bank hat Anmeldename oder PIN abgelehnt/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Aktualisieren" })).toBeDisabled();
     expect(screen.getByLabelText("PIN erneut eingeben")).toBeInTheDocument();
+  });
+});
+
+const LOCKED_MESSAGE = [
+  "Die Bank meldet den Zugang als gesperrt (Rückmeldecode 3938). Prüfschritte der Reihe nach:",
+  "1. Online-Banking der Bank im Browser mit denselben Zugangsdaten anmelden.",
+  "2. Prüfen, ob der Zugang für FinTS (HBCI) und Drittanbieter bei der Bank freigeschaltet ist.",
+].join("\n");
+
+const UNREACHABLE_MESSAGE = [
+  "Die Bank hat unter hbci-pintan.gad.de nicht geantwortet oder die Verbindung kam nicht zustande. Prüfschritte der Reihe nach:",
+  "1. Später erneut versuchen, die Bank kann Wartungsarbeiten haben.",
+].join("\n");
+
+describe("FinTsConnections check steps and FinTS address", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("shows the locked access with the German check steps instead of the PIN rejection text", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/banking/fints/connections")) {
+        return jsonResponse([
+          { ...CONNECTION, status: "error", pin_blocked: true, last_error_code: "MHVP-BANK-0010", last_error: LOCKED_MESSAGE },
+        ]);
+      }
+      if (url.includes("/banking/accounts")) return jsonResponse([]);
+      return jsonResponse({});
+    });
+    renderIntl(<FinTsConnections />);
+    expect(await screen.findByText(/Der Bankzugang ist bei der Bank gesperrt/)).toBeInTheDocument();
+    expect(screen.queryByText(/Die Bank hat Anmeldename oder PIN abgelehnt/)).not.toBeInTheDocument();
+    expect(screen.getByText(/2\. Prüfen, ob der Zugang für FinTS/)).toBeInTheDocument();
+    expect(screen.getByText(/Weitere Hinweise im Handbuch/)).toBeInTheDocument();
+    expect(screen.getByLabelText("PIN erneut eingeben")).toBeInTheDocument();
+  });
+
+  it("names the unreachable host and opens the address form from the highlighted button", async () => {
+    const patched: { url: string; body: unknown }[] = [];
+    let manual: string | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (method === "PATCH" && url.endsWith(`/banking/fints/connections/${CONNECTION_ID}`)) {
+        const body = JSON.parse(String(init?.body));
+        patched.push({ url, body });
+        manual = body.fints_url;
+        return jsonResponse({ ...CONNECTION, fints_url: manual ?? CONNECTION.fints_url, fints_url_manual: manual });
+      }
+      if (url.endsWith("/banking/fints/connections")) {
+        return jsonResponse([
+          {
+            ...CONNECTION,
+            status: "error",
+            last_error_code: "MHVP-BANK-0013",
+            last_error: UNREACHABLE_MESSAGE,
+            fints_url: manual ?? "https://hbci-pintan.gad.de/cgi-bin/hbciservlet",
+            fints_url_manual: manual,
+          },
+        ]);
+      }
+      if (url.includes("/banking/accounts")) return jsonResponse([]);
+      return jsonResponse({});
+    });
+    renderIntl(<FinTsConnections />);
+    expect(await screen.findByText(/Die Bank hat unter hbci-pintan\.gad\.de nicht geantwortet/)).toBeInTheDocument();
+    const address = screen.getByTestId("fints-address");
+    expect(address).toHaveTextContent("hbci-pintan.gad.de");
+    expect(address).toHaveTextContent("aus der Institutsliste");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "FinTS-Adresse prüfen" }));
+    const save = screen.getByRole("button", { name: "Adresse speichern" });
+    expect(save).toBeDisabled();
+    await user.type(screen.getByLabelText("Neue FinTS-Adresse"), "https://fints.fusion.example.de/hbci");
+    await user.type(screen.getByLabelText("PIN für die neue Adresse"), "geheim");
+    await user.click(save);
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({ fints_url: "https://fints.fusion.example.de/hbci", pin: "geheim" });
+    expect(await screen.findByText(/FinTS-Adresse gespeichert/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("fints-address")).toHaveTextContent("manuell eingetragen"));
+    expect(screen.getByTestId("fints-address")).toHaveTextContent("fints.fusion.example.de");
+  });
+
+  it("returns to the institute list address without asking for the PIN", async () => {
+    const patched: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if ((init?.method ?? "GET") === "PATCH") {
+        patched.push(JSON.parse(String(init?.body)));
+        return jsonResponse(CONNECTION);
+      }
+      if (url.endsWith("/banking/fints/connections")) {
+        return jsonResponse([{ ...CONNECTION, fints_url: "https://fints.fusion.example.de/hbci", fints_url_manual: "https://fints.fusion.example.de/hbci" }]);
+      }
+      if (url.includes("/banking/accounts")) return jsonResponse([]);
+      return jsonResponse({});
+    });
+    renderIntl(<FinTsConnections />);
+    const user = userEvent.setup();
+    expect(await screen.findByTestId("fints-address")).toHaveTextContent("manuell eingetragen");
+    await user.click(screen.getByRole("button", { name: "Adresse ändern" }));
+    await user.click(screen.getByRole("button", { name: "Adresse der Institutsliste verwenden" }));
+    await waitFor(() => expect(patched).toEqual([{ fints_url: null }]));
+    expect(await screen.findByText(/Adresse der Institutsliste wird wieder verwendet/)).toBeInTheDocument();
+  });
+
+  it("hides the address editor while a TAN session is open", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/banking/fints/connections")) return jsonResponse([{ ...CONNECTION, open_session_id: SESSION_ID }]);
+      if (url.includes("/banking/accounts")) return jsonResponse([]);
+      return jsonResponse({});
+    });
+    renderIntl(<FinTsConnections />);
+    await screen.findByTestId("fints-address");
+    expect(screen.getByRole("button", { name: "Adresse ändern" })).toBeDisabled();
   });
 });
 
@@ -164,6 +282,18 @@ describe("FinTsSessionPanel", () => {
     expect(await screen.findByText(/Bank hat Anmeldename oder PIN abgelehnt/)).toBeInTheDocument();
     expect(screen.getByText(/Nach einem Fehlversuch/)).toBeInTheDocument();
     await waitFor(() => expect(onFailed).toHaveBeenCalled());
+  });
+
+  it("renders the numbered check steps of a locked access on separate lines with the handbook pointer", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse(session("failed", { error_code: "MHVP-BANK-0010", error_message: LOCKED_MESSAGE }))
+    );
+    renderIntl(<FinTsSessionPanel sessionId={SESSION_ID} />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("1. Online-Banking der Bank im Browser");
+    expect(alert).toHaveTextContent("(MHVP-BANK-0010)");
+    expect(alert.querySelector(".whitespace-pre-line")?.textContent).toBe(LOCKED_MESSAGE);
+    expect(screen.getByText(/Weitere Hinweise im Handbuch/)).toBeInTheDocument();
   });
 
   it("shows the decoupled waiting state with the poll button", async () => {

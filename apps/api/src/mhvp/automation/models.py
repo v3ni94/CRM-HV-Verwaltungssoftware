@@ -158,6 +158,7 @@ JOB_CATALOG: dict[str, str] = {
     "banking-sync-all": "Bankabruf",
     "banking-weekly-digest": "Wochenübersicht Bank",
     "billing-consumption-info": "Verbrauchsinformation",
+    "billing-deadline-watch": "Warnung Abrechnungsfrist",
     "accounting-receivable-run": "Sollstellungslauf",
     "accounting-dunning-run": "Mahnlauf",
     "accounting-open-item-balance": "Offene Posten zum Stichtag (Lesekopie)",

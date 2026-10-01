@@ -461,3 +461,51 @@ Technisch vorbereitet, Standard aus. Der Schalter wird über `PUT /hoa/online-me
 5. Ergebnis wie bisher verkünden; erst danach sehen die Eigentümer das Ergebnis im Portal.
 
 Ob eine rein virtuelle Versammlung zulässig ist, prüft das System nicht.
+
+## Korrektur einer Abrechnung (neue Version mit Differenzbericht)
+
+Wird ein Beschluss geändert oder für ungültig erklärt, legen Sie über "Neue Version" eine Korrekturfassung an (Grund, Bezug, optional Beschluss). Die alte Fassung bleibt unverändert. Nach der Berechnung beider Fassungen zeigt der Versionsvergleich je Eigentümer vorher, nachher und Differenz sowie die Heizkostenüberleitung (Zahlung, verteilte Kosten, erklärte Abgrenzung, unerklärter Rest). Der Bericht bucht und fordert nichts; die Rechtsfolge ist offen und braucht die Freigabe der Geschäftsführung.
+
+## Virtuelle Versammlung: Stichtag und Online-Schalter (AE12)
+
+Im Objekt unter WEG, Bereich Versammlungen, tragen Sie in den Einstellungen optional den Stichtag der Übergangsregel ein. Das Datum ist ein Merkposten ohne Rechtswirkung und löst keine Sperre aus; Inhalt und Anwendbarkeit der Regel sind mit der Rechtsberatung zu klären (AA06-02). Dort steht auch der Schalter "Online-Teilnahme im Portal zulassen" (Standard aus, Klärung AD06-01). In der Versammlung zeigt der Block "Fristhinweise Grundlagenbeschluss" Beschlussdatum, Dreijahresgrenze, Gültigkeitsende und Resttage als Orientierung, zu verifizieren.
+
+## Zahlungen je Rücklage (AE08)
+
+In der Jahresabrechnung zeigt der Abschnitt „Zahlungen je Rücklage“ je Zweckrücklage das Soll laut beschlossenem Wirtschaftsplan und das Ist der an die Rücklage gebundenen Zahlungen. Eine Zahlung ist gebunden, wenn die Sollstellung im Vertrag mit einer Rücklage erfasst wurde; dafür braucht jede Rücklage eine eigene Zahlungsart. In den Mandanteneinstellungen (`/hoa/reserve-payment-settings`) lässt sich die Variante „Vorschlag nach Planverhältnis“ wählen. Dann wird der nicht zugeordnete Rest rechnerisch nach Planverhältnis aufgeteilt. Das ist ein Vorschlag zur Information, er wird nicht gebucht und ändert keine Posten. Standard ist „nur gebundene Zahlungen“.
+
+## Unterjährige Planänderung: Differenz gebuchter Monate (Stand 01.10.2026)
+
+Liegt der Wirksamkeitsbeginn eines neuen Wirtschaftsplans vor bereits gebuchten Monaten, zeigt
+die Vorschau der Übernahme den Abschnitt "Differenz gebuchter Monate". Je Einheit und Monat
+stehen gebuchter Betrag, neuer Betrag und Differenz (Nachforderung oder Gutschrift).
+
+* Variante wählen: "Nur Hinweis" (Standard), "Differenz sofort fällig" oder "Verrechnung mit der
+  nächsten Rate". Welche Variante rechtlich gilt, ist noch offen (M12-L2).
+* Bei den Varianten mit Entwurf legt "Differenzen als Entwurf anlegen" je Einheit und Monat
+  einen Entwurf an, erst nach dem Beschluss des Plans.
+* Freigeben oder Verwerfen darf nur eine zweite Person und nur mit Freigabestufe G4. Gebucht
+  wird dabei nichts; die Buchung folgt erst mit G1.
+
+## Zuordnungsregel bei Eigentümerwechsel
+
+In der Abrechnungsansicht erscheint bei Sondererwerben der Block "Zuordnung des Abrechnungsergebnisses bei Eigentümerwechsel". Je Erwerbsart wählen Sie die Variante (manuelle Freigabe als Standard, Zuordnung nach Fälligkeit, Zuordnung nach Abrechnungsbeschluss) und vermerken die Quelle. Die Variante ist eine Konfiguration zur fachlichen Prüfung, keine Rechtsregel; die Rechtsfrage ist mit dem Rechtsanwalt zu klären.
+
+## Rücklagenplan je Jahr (Welle 16)
+
+Unter WEG, Rücklagen steht je Rücklage der Rücklagenplan: Jahr, Soll-Zuführung, Abweichung
+zum Wirtschaftsplan, Status und steuerliche Einordnung (Platzhalter, nicht freigegeben). Ein
+Entwurf wird mit Jahr und Betrag angelegt oder per API aus dem Wirtschaftsplan abgeleitet und
+mit dem gewählten Beschluss als beschlossen gekennzeichnet. Ein beschlossener Plan ist nicht
+mehr änderbar; ein neuer beschlossener Plan desselben Jahres ersetzt ihn. Änderungen des
+Anfangsbestands nach berechneter Abrechnung sind standardmäßig gesperrt; der Mandantenschalter
+erlaubt alternativ eine protokollierte Änderung oder eine Freigabe durch eine zweite Person.
+Es wird nichts gebucht.
+
+## Online-Versammlung: Vollmacht gegen eigene Stimme, Prüfpunkte, Protokollentwurf (AE31)
+
+Unter WEG, Bereich Versammlungen, steht beim Schalter "Online-Teilnahme im Portal zulassen" die Regel für den Fall, dass für eine Einheit eine Stimme des Eigentümers und eine Stimme des Bevollmächtigten vorliegen. Standard ist "Konflikt als Prüfhinweis markieren": Die erste Stimme bleibt gezählt, die zweite wird gespeichert, aber nicht gezählt, und die Versammlungsleitung prüft den Fall. Es wird keine Stimme verworfen. Die weiteren Varianten sind "Zuerst abgegebene Stimme zählt", "Vollmacht hat Vorrang" und "Eigene Stimme hat Vorrang". Die Regel ist eine Einstellung des Betreibers und keine Rechtsauskunft; die rechtliche Wirkung klärt die Rechtsberatung (AD06-02).
+
+Auf der Versammlungsseite führt der Bereich "Online-Teilnahme (Portal)" die Stimmkonflikte mit Einheit, TOP und beiden Stimmen. Mit "Erste Stimme bestätigen" oder "Zweite Stimme zählen" (nur vor der Verkündung) entscheidet die Versammlungsleitung, optional mit Notiz. Beide Stimmen bleiben im Vorgang erhalten. Darüber zeigen die "Prüfpunkte zur Versammlungsform" die erfassten Angaben (Schalter, zulassender Beschluss mit Status und Gültigkeitsende, Dreijahresgrenze als Orientierung, Konferenzlink). Die Liste ist eine Übersicht und stellt keine Zulässigkeit fest (AD06-01).
+
+Der Protokollentwurf übernimmt bei hybrider oder virtueller Form die Zusagen, die Portalvollmachten, die Wortmeldungen mit Uhrzeit und Einheit, je TOP die online abgegebenen Stimmen und die Prüfhinweise zu Stimmkonflikten. Offene Konflikte stehen im Hinweis des Entwurfs und sind vor der Unterschrift zu klären.

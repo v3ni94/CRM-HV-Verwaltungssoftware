@@ -11,6 +11,7 @@ import {
   API,
   REPORT_TYPES,
   STAGED_ONLY,
+  type HeaderDetection,
   type ImportField,
   type ImportMapping,
   type ImportSource,
@@ -33,6 +34,9 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
   const [file, setFile] = useState<File | null>(null);
   const [sheet, setSheet] = useState("");
   const [headerRow, setHeaderRow] = useState("1");
+  // AE37: header row detected from the first rows of the file (proposal, shown to the user).
+  const [autoHeader, setAutoHeader] = useState(true);
+  const [detected, setDetected] = useState<HeaderDetection | null>(null);
   const [source, setSource] = useState<ImportSource | null>(null);
   const [mappings, setMappings] = useState(initialMappings);
   const [mapping, setMapping] = useState<ImportMapping | null>(null);
@@ -51,14 +55,26 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
     e.preventDefault();
     setError(null);
     if (!file) return setError(t("fileRequired"));
-    const row = Number(headerRow);
-    if (!Number.isInteger(row) || row < 1 || row > 50) return setError(t("headerRowInvalid"));
+    let row = Number(headerRow);
+    if (!autoHeader && (!Number.isInteger(row) || row < 1 || row > 50)) return setError(t("headerRowInvalid"));
     setBusy(true);
+    setDetected(null);
     const form = new FormData();
     form.set("file", file);
     form.set("title", file.name);
     const doc = await bff<DocumentOut>("/api/bff/documents", { method: "POST", body: form });
     if (!doc.ok) return fail(doc.message);
+    if (autoHeader) {
+      const found = await bff<HeaderDetection>(`${API}/header-detection`, {
+        method: "POST",
+        body: JSON.stringify({ document_id: doc.data.id, report_type: reportType, sheet: sheet.trim() || null }),
+      });
+      if (!found.ok) return fail(found.message);
+      if (!found.data.header_row) return fail(t("detect.headerNotDetected"));
+      row = Math.min(found.data.header_row, 50);
+      setDetected(found.data);
+      setHeaderRow(String(row));
+    }
     const res = await bff<ImportSource>(`${API}/files`, {
       method: "POST",
       body: JSON.stringify({ document_id: doc.data.id, report_type: reportType, sheet: sheet.trim() || null, header_row: row }),
@@ -117,6 +133,7 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
     setApplied(null);
     setRecon(null);
     setError(null);
+    setDetected(null);
   };
 
   const validation = (source?.report.validation as Record<string, number> | undefined) ?? {};
@@ -169,9 +186,21 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
             <span className={ui.label}>{t("sheet")}</span>
             <input className={ui.input} value={sheet} maxLength={100} onChange={(e) => setSheet(e.target.value)} />
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={autoHeader} onChange={(e) => setAutoHeader(e.target.checked)} />
+            {t("detect.autoHeader")}
+          </label>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("headerRow")}</span>
-            <input className={ui.input} type="number" min={1} max={50} value={headerRow} onChange={(e) => setHeaderRow(e.target.value)} />
+            <input
+              className={ui.input}
+              type="number"
+              min={1}
+              max={50}
+              value={headerRow}
+              disabled={autoHeader}
+              onChange={(e) => setHeaderRow(e.target.value)}
+            />
           </label>
           <div className="flex gap-2">
             <button type="button" className={ui.button} onClick={() => setStep("type")}>
@@ -187,6 +216,12 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
       {source && step !== "type" && step !== "upload" ? (
         <p className="text-sm text-muted">
           {t("sourceInfo", { report: t(`report.${source.report_type}`), rows: source.row_count, headers: source.headers.length })}
+        </p>
+      ) : null}
+
+      {detected && detected.header_row && step === "mapping" ? (
+        <p className={ui.notice} data-testid="header-detected">
+          {t("detect.headerDetected", { row: detected.header_row, reason: detected.candidates[0]?.reason ?? "" })}
         </p>
       ) : null}
 

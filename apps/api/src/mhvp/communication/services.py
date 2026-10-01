@@ -28,13 +28,13 @@ log = logging.getLogger(__name__)
 
 async def ingest_parsed(
     session: AsyncSession,
-    blobs: BlobStore,
+    blobs: BlobStore | None,
     settings: Settings,
     *,
     tenant_id: uuid.UUID,
     actor_user_id: uuid.UUID | None,
     parsed: dict[str, Any],
-    document_id: uuid.UUID,
+    document_id: uuid.UUID | None,
     mailbox_id: uuid.UUID | None,
     auto_ticket: bool,
     gmail_message_id: str | None = None,
@@ -44,7 +44,11 @@ async def ingest_parsed(
 
     ``gmail_message_id`` and ``gmail_thread_id`` come from the Gmail sync (Review 26.09.2026,
     M15): the archive job and the forwarding need the Gmail id, the thread id is the last
-    resort for threading (M7)."""
+    resort for threading (M7).
+
+    ``blobs`` and ``document_id`` may be ``None`` for a mail without raw message and without
+    attachment files (inbound webhook of classified mails, AE38, M20-04): there is no .eml to
+    keep, the payload hash is recorded by ``mhvp.communication.inbound_webhook``."""
     from mhvp.contacts.models import Contact, ContactEmail
     from mhvp.documents.models import DocumentSource
     from mhvp.documents.services import check_upload, store_document
@@ -131,6 +135,8 @@ async def ingest_parsed(
     attachments = []
     rejected: list[dict[str, Any]] = []
     for att in parsed["attachments"]:
+        if blobs is None:  # pragma: no cover - guarded by the callers (no files without a store)
+            raise ValueError("attachments need a blob store")
         try:
             check_upload(att["mime"], att["data"], settings.document_max_bytes)
             doc = await store_document(

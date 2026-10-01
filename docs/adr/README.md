@@ -27,5 +27,6 @@ flag until decided. Copy `0000-template.md` for a new record.
 
 | [0020](0020-formatversionen.md) | Pinned format versions (pain.001, pain.008, camt, XRechnung, ZUGFeRD, HeiWaKo) and compatibility tests | Accepted |
 | [0021](0021-skalierung-phase-4-jahrespartitionierung.md) | Scaling phase 4: yearly partitioning of journal_entry and bank_transaction (analysis, measurements at 100,000 rows, triggers, measurement plan; supplements ADR 0018, GA12-08) | Proposed, operator decision AC09-01 pending |
+| [0023](0023-objektspalte-buchungszeile.md) | Object column `journal_line.property_id` (explicit, unit, contract), database rule for lines with unit, one time fill of posted lines in migration 0377 with the guard disabled only inside the migration, drift report (Q15-01, AE21) | Accepted for implementation, acceptance pending |
 
 Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0017 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration; the CRM shell ADR was written as 0016 in parallel to the handover offline ADR and renumbered to 0017.

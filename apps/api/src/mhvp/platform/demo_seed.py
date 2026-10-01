@@ -2,9 +2,15 @@
 
 Creates the tenant ``demo-muster`` with purely invented data: 3 properties (WEG), 40 units,
 60 contacts (40 owners, 20 other), 12 months of journal entries as drafts and 200 bank
-transactions. Names are invented (Max Beispiel, Musterstrasse), the three own bank accounts use
-the documented test IBANs of the test suite, counterparty IBANs are generated for a fictitious
-bank code. No real person, no real account.
+transactions. Names are invented (Max Beispiel, Musterstrasse). All IBANs, the three own bank
+accounts and the counterparties, are generated with the bank code ``00000000`` (not assigned to
+any institute, assumption A-AE36-03) and valid check digits; ``assert_synthetic_ibans`` checks
+this before anything is written. No real person, no real account, no documented example IBAN
+of a real bank.
+
+Since AE36 the tenant carries the demo flag (``tenant.is_demo``, migration 0392): it is
+excluded from platform billing, exports, DATEV and statistics (rule AE36-DEMO). A tenant of the
+same slug that exists without the flag gets it on the next run (the data is invented anyway).
 
 Safety rules: runs only in the environments ``dev``, ``test`` and ``staging`` and only with
 ``MHVP_DEMO_SEED=1``; the demo administrator password comes from ``MHVP_DEMO_ADMIN_PASSWORD``
@@ -39,8 +45,10 @@ UNITS = 40
 CONTACTS = 60
 BANK_TRANSACTIONS = 200
 MONTHS = 12
-# Documented test IBANs of the test suite (one per property).
-TEST_IBANS = ("DE02120300000000202051", "DE02100500000054540402", "DE02500105170137075030")
+# Bank code of every generated IBAN: not assigned to any institute (assumption A-AE36-03).
+SYNTHETIC_BANK_CODE = "00000000"
+# Account number range of the own accounts (one per property), counterparties use 1 to 200.
+OWN_ACCOUNT_BASE = 9_000_000_000
 FIRST_NAMES = ("Max", "Erika", "Paul", "Anna", "Jonas", "Lena", "Felix", "Marie", "Tom", "Eva")
 COMPANIES = ("Muster Hausmeisterdienst", "Beispiel Heizungsbau", "Muster Gartenpflege")
 
@@ -54,10 +62,30 @@ class ApiClient(Protocol):
 
 
 def synthetic_iban(index: int) -> str:
-    """DE IBAN for the fictitious bank code 10000000 with valid check digits (ISO 13616)."""
-    bban = f"10000000{index:010d}"
+    """DE IBAN for the unassigned bank code 00000000 with valid check digits (ISO 13616)."""
+    bban = f"{SYNTHETIC_BANK_CODE}{index:010d}"
     check = 98 - int(bban + "131400") % 97
     return f"DE{check:02d}{bban}"
+
+
+def own_ibans() -> tuple[str, ...]:
+    """The IBANs of the own bank accounts of the demo properties (one per property)."""
+    return tuple(synthetic_iban(OWN_ACCOUNT_BASE + n + 1) for n in range(PROPERTIES))
+
+
+def assert_synthetic_ibans(ibans: list[str]) -> None:
+    """Self check: only generated IBANs (bank code 00000000, valid check digits) may be written;
+    raises ``ValueError`` for any other IBAN, so a real account can never end up in the demo."""
+    for iban in ibans:
+        valid = (
+            len(iban) == 22
+            and iban.startswith("DE")
+            and iban[4:12] == SYNTHETIC_BANK_CODE
+            and iban[12:].isdigit()
+            and int(iban[4:] + "1314" + iban[2:4]) % 97 == 1
+        )
+        if not valid:
+            raise ValueError("Demo-Daten dürfen nur synthetische IBANs enthalten.")
 
 
 def unit_split(units: int = UNITS, properties: int = PROPERTIES) -> list[int]:
@@ -110,7 +138,7 @@ def seed_via_api(c: ApiClient, h: dict[str, str], end: date) -> dict[str, Any]:
             {
                 "legal_entity_id": entity,
                 "kind": "hoa",
-                "iban": TEST_IBANS[p_index],
+                "iban": own_ibans()[p_index],
                 "holder": f"GdWE Musterstraße {10 + p_index * 10}",
                 "valid_from": "2020-01-01",
             },
@@ -187,7 +215,7 @@ def seed_via_api(c: ApiClient, h: dict[str, str], end: date) -> dict[str, Any]:
             )
             result["entries"] += 1
         result["properties"].append(
-            {"id": prop["id"], "bank_account_id": account["id"], "iban": TEST_IBANS[p_index]}
+            {"id": prop["id"], "bank_account_id": account["id"], "iban": own_ibans()[p_index]}
         )
     # Remaining contacts: service providers and further persons (60 in total).
     while contact_no < CONTACTS:
@@ -261,6 +289,37 @@ def build_statements(ibans: list[str], end: date, total: int = BANK_TRANSACTIONS
     return ParsedFile(version="demo", statements=statements)
 
 
+async def ensure_demo_flag(factory: Any, tenant_id: Any) -> None:
+    """Sets ``tenant.is_demo`` on a demo tenant created before migration 0392 (idempotent)."""
+    from mhvp.core.db.tenancy import platform_transaction
+    from mhvp.platform.models import Tenant
+
+    async with platform_transaction(factory) as session:
+        tenant = await session.get(Tenant, tenant_id)
+        if tenant is not None and not tenant.is_demo:
+            tenant.is_demo = True
+
+
+async def relax_second_factor(factory: Any, tenant_id: Any) -> None:
+    """Second factor policy ``voluntary`` for the demo tenant only (M2-04, AE27): the invented
+    demo administrator logs in with the password alone, so the seed (and a demonstration) needs no
+    TOTP setup. The policy is tenant specific and touches no other tenant; without the policy
+    module (before AE27) the login needs no change."""
+    try:
+        from mhvp.core.auth.mfa_policy import store_policy
+    except ImportError:  # pragma: no cover - policy module not present
+        return
+    async with tenant_transaction(factory, tenant_id) as session:
+        await store_policy(
+            session,
+            tenant_id=tenant_id,
+            actor_user_id=None,
+            crm_mode="voluntary",
+            crm_role_codes=[],
+            portal_required=False,
+        )
+
+
 async def run(client: ApiClient | None = None, today: date | None = None) -> int:
     settings = get_settings()
     configure_logging(settings)
@@ -286,10 +345,12 @@ async def run(client: ApiClient | None = None, today: date | None = None) -> int
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
+        assert_synthetic_ibans(list(own_ibans()))
         tenant_id, created = await services.provision_tenant(
-            factory, slug=DEMO_SLUG, name=DEMO_NAME
+            factory, slug=DEMO_SLUG, name=DEMO_NAME, is_demo=True
         )
         if not created:
+            await ensure_demo_flag(factory, tenant_id)
             log.info("demo_seed_skipped", reason="tenant exists", tenant=DEMO_SLUG)
             return 0
         user_id = await services.create_user(
@@ -302,6 +363,7 @@ async def run(client: ApiClient | None = None, today: date | None = None) -> int
             role_codes=["tenant_admin"],
             actor_user_id=None,
         )
+        await relax_second_factor(factory, tenant_id)
         http: ApiClient
         owned: Any = None
         if client is not None:
@@ -318,13 +380,24 @@ async def run(client: ApiClient | None = None, today: date | None = None) -> int
                 "/api/v1/auth/login", json={"email": DEMO_ADMIN_EMAIL, "password": password}
             )
             if login.status_code != 200 or login.json().get("status") != "ok":
-                raise RuntimeError(f"Demo login failed: {login.status_code}")
+                raise RuntimeError(
+                    f"Demo login failed: {login.status_code} {login.json().get('status')}"
+                )
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
             seeded = seed_via_api(http, headers, end)
         finally:
             if owned is not None:
                 owned.close()
         parsed = build_statements([p["iban"] for p in seeded["properties"]], end)
+        assert_synthetic_ibans(
+            [
+                t.counterpart_iban
+                for s in parsed.statements
+                for t in s.transactions
+                if t.counterpart_iban
+            ]
+            + [s.iban for s in parsed.statements]
+        )
         from mhvp.banking import services as bank_services
 
         async with tenant_transaction(factory, tenant_id) as session:

@@ -407,3 +407,10 @@ transaction with the caller's principal (`input_ref.tool_grant`, written by `sen
 masks the results (`results_text`) and logs every call in `input_ref.tool_calls`
 (`RunOut.tools_used`). Switch: `models.<tier>.tool_use` of the provider config, default off.
 AD04: `GET /ai/conversations/{id}` returns `MessageOut.tools_used` (optional) and merges the tool hit links (`tool_calls[].links`) into `links` (`tool_use.merge_links`); `ProviderSettings` carries the `tool_use` switch.
+
+AE28 (M7-06, SA-04): `portal_answer.py` answers questions of portal users (`input_ref.audience =
+"portal"`, prompt variant `portal_v1`). The gateway then derives the readable documents from the
+access grants of `input_ref.portal_account_id` (`portal.assistant_scope.audience_scope`, never
+`None`), skips the knowledge base and few shot examples, and `retrieve_keyword` filters by
+`only_ids` before the limit. `tasks.prompt` loads named variants (`<name>_v<n>`) that never
+become the latest numbered prompt. Rule: `docs/rules/AE28-01.md`.

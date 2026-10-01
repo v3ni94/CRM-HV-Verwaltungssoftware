@@ -155,3 +155,27 @@ Unter Plattform, Kundendomains steht je Domain die Schaltfläche DNS prüfen. Di
 Unter Plattform, Wartung und Verfügbarkeit (nur Plattformadministratoren) kündigen Sie ein Wartungsfenster an: Beginn, Ende und ein kurzer Text auf Deutsch und Englisch. CRM und Portal zeigen den Hinweis automatisch ab der Vorlaufzeit vor Beginn (Standard 48 Stunden, je Fenster einstellbar) bis zum Ende. Ein Fenster, das entfällt, sagen Sie ab; es wird nicht gelöscht.
 
 Darunter steht die Verfügbarkeit je Monat gegen das Ziel von 99,500 Prozent. Die Zahlen je Messpunkt (API, CRM, Portal) tragen Sie aus Uptime Kuma nach Monatsende ein und vermerken die Quelle. Die Tabelle zeigt auch die geplante Ausfallzeit der Wartungsfenster und den Wert ohne diese; eine Bewertung erscheint, sobald alle drei Messpunkte vorliegen. Welcher der beiden Werte das Ziel belegt, ist noch nicht entschieden (Frage AD10-02). Ablauf: `docs/runbooks/verfuegbarkeit.md`.
+
+Zusätzlich misst die Plattform selbst (Eigenmessung, Paket AE35): Der Abschnitt Eigenmessung der Verfügbarkeit zeigt je Messpunkt die letzte Prüfung, die Werte der letzten 24 Stunden und die letzten Fehlschläge, darunter die Monatsauswertung mit dem Wert aus allen Prüfungen, dem Wert ohne Wartungsfenster, den Ausfallminuten innerhalb von Wartungsfenstern und der Abdeckung. Die Messung läuft nur, wenn die Betriebskonfiguration Adressen für API, CRM und Portal enthält (Hinweis steht auf der Seite). Der Schalter "Wartungsfenster zählen als Ausfall" ist ausgeschaltet; er bestimmt nur, welcher der beiden Werte gegen das Ziel bewertet wird, und ändert keine Messwerte. Ob angekündigte Wartung gegenüber Dritten als Ausfall gilt, bleibt Frage AD10-02. Eine Bewertung erscheint nur bei drei Messpunkten und mindestens 95 Prozent Abdeckung, weil die Messung auf derselben Infrastruktur läuft und ein Totalausfall des Servers eine Lücke statt Fehlschläge hinterlässt.
+
+## Abnahmeregister Anhang D (V16)
+
+Seite Plattform, Abnahmeregister Anhang D (`/plattform/abnahme`). Je Fall D01 bis D58 wird ein unabhängiger Sollwert mit Eingaben, Quelle und Rechenweg als Entwurf erfasst und zur Freigabe eingereicht (Recht Abnahme verwalten). Die fachkundige Abnahmeperson (Rolle „Fachkundige Abnahmeperson“) gibt den Sollwert frei oder lehnt ihn ab und trägt anschließend das Abnahmeergebnis mit Softwarestand ein. Wer einen Sollwert verfasst hat, kann ihn nicht freigeben. Freigegebene Sollwerte lassen sich nicht ändern; eine Korrektur erfolgt über eine neue Fassung. Der Link „Abnahmeprotokoll als Markdown herunterladen“ liefert das Protokoll im Aufbau von `docs/acceptance/abnahme-anhang-d.md`. Die Seite öffnet keine Freigabestufe; wer die fachkundige Person ist, entscheidet der Betreiber (V16).
+
+## Skalierung und Jahrespartitionierung (AE36)
+
+Stand: 01.10.2026. Die Seite Plattform, Betrieb (Wartung und Verfügbarkeit) zeigt unter "Skalierung und Jahrespartitionierung", ob einer der Auslöser aus ADR 0021 erreicht ist. Die Seite meldet nur: Es wird nichts umgebaut, verschoben oder gelöscht.
+
+- Erreichte Auslöser stehen oben. "Partitionierung planen" heißt: Zeilen oder Größe einer Tabelle, P95 der Listen in drei Wochenmessungen in Folge oder die Dauer der Wiederherstellung liegen über der Schwelle. "Messung wiederholen" heißt: Die Zahl produktiver Mandanten hat die Marke erreicht.
+- Die Tabelle zeigt Zeilen und Größe mit Indizes je Tabelle mit dem Anteil an der Schwelle. "Schätzung der Datenbank" bedeutet: Die Tabelle hat über eine Million Zeilen, der Wert stammt aus der Statistik.
+- P95 der Listen: Aufrufe der Journalliste und der Bankumsatzliste der letzten 7 Tage. Unter 20 Aufrufen steht "zu wenige Aufrufe".
+- Wochenmessungen: Jeden Montag wird eine Messung gespeichert. "Messung jetzt speichern" erzeugt dieselbe Messung von Hand und ersetzt die frühere Messung derselben Woche.
+- Schwellen und Alarm: Die Vorschläge aus ADR 0021 können im Formular geändert werden; jede Änderung steht im Plattformaudit. Mit dem Alarmschalter aus bekommen die Plattformadministratoren keinen Hinweis in der Glocke, die Messung läuft weiter. Eine E-Mail an den Betreiber kommt über die Überwachung (Runbook `monitoring.md`).
+
+Die Entscheidung über Zielgrößen und Zeitpunkt der Partitionierung bleibt beim Betreiber (offene Frage AC09-01).
+
+## Demo-Mandant (AE36)
+
+Ein Demo-Mandant enthält nur erfundene Daten (`make seed-demo`, Runbook `demo-mandant.md`). Auf der Startseite Plattform trägt er das Merkmal "Demo-Mandant". Mit der Schaltfläche am Mandanten kennzeichnen Sie einen Mandanten als Demo-Mandanten oder entfernen das Kennzeichen; das Setzen ist nicht möglich, solange eine Freigabestufe des Mandanten geöffnet ist.
+
+Ein Demo-Mandant ist aus der Plattformabrechnung (Lizenz, Nutzungszählung, Abrechnungsvorschau), aus Exporten (Mandantenexport, Journal-Export, DATEV, Prüfexport) und aus den Betriebsstatistiken ausgeschlossen. Ein Export im Demo-Mandanten endet mit der Meldung, dass die Funktion im Demo-Mandanten nicht möglich ist. Nehmen Sie keine echten Daten in einem Demo-Mandanten auf.

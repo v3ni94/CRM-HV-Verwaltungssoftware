@@ -7,6 +7,14 @@ event payloads). References to other persons are reduced to the role, never thei
 disclosed after all is a legal question (OPEN_QUESTIONS AC07-01); the reviewer sees the list
 of withheld categories and decides outside the system.
 
+AE33 (AC07-01): two tenant switches (``contact_access_export_setting``) widen the scope after
+a legal decision. ``third_party_scope`` ``none`` (default) keeps other persons at their role,
+``names`` adds their name and role (never addresses, contact data, identifiers or bank data);
+``include_internal_notes`` (default off) adds the free text note and the contact notes without
+author. The values in force at preparation are frozen into the prepared event, so the review,
+the release and every download rebuild exactly the content that was reviewed, whatever the
+switches say later. The decision stays open (OPEN_QUESTIONS AC07-01).
+
 Workflow, journaled as append only domain events (no own table, migration 0340 is a noop):
 
 ``prepared`` (``contacts:export``) -> ``reviewed`` (``contacts:approve``, not the preparer)
@@ -31,6 +39,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import (
     Consent,
+    Contact,
+    ContactAccessExportSetting,
     ContactBankAccount,
     ContactNote,
     ContactRelation,
@@ -108,10 +118,62 @@ BANK_FIELDS = (
     "mandate_reference",
     "mandate_signed_on",
 )
-CONSENT_FIELDS = ("kind", "granted_at", "revoked_at", "source")
+CONSENT_FIELDS = (
+    "kind",
+    "granted_at",
+    "revoked_at",
+    "source",
+    "record_type",
+    "text_version",
+    "client_evidence_recorded",
+)
+NOTE_FIELDS = ("category", "title", "body", "created_at", "follow_up_on")
 THIRD_PARTY_PLACEHOLDER = "Dritte Person (Angaben zurückgehalten)"
+SCOPE_NONE = "none"
+SCOPE_NAMES = "names"
+THIRD_PARTY_SCOPES = (SCOPE_NONE, SCOPE_NAMES)
 
-# Categories that are never part of the automatic export; the reviewer sees them listed.
+
+@dataclass(frozen=True)
+class ExportOptions:
+    """Scope of one export, frozen at preparation (AE33). The defaults are the conservative
+    variant that was the only one before the switches existed."""
+
+    third_party_scope: str = SCOPE_NONE
+    include_internal_notes: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "third_party_scope": self.third_party_scope,
+            "include_internal_notes": self.include_internal_notes,
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any] | None) -> ExportOptions:
+        if not raw:
+            return cls()
+        scope = str(raw.get("third_party_scope", SCOPE_NONE))
+        return cls(
+            third_party_scope=scope if scope in THIRD_PARTY_SCOPES else SCOPE_NONE,
+            include_internal_notes=bool(raw.get("include_internal_notes", False)),
+        )
+
+
+async def current_options(session: AsyncSession) -> ExportOptions:
+    """Switches of the tenant; no row means the conservative defaults."""
+    row = await session.scalar(select(ContactAccessExportSetting))
+    if row is None:
+        return ExportOptions()
+    return ExportOptions.from_dict(
+        {
+            "third_party_scope": row.third_party_scope,
+            "include_internal_notes": row.include_internal_notes,
+        }
+    )
+
+
+# Categories that are not part of the export by default; the reviewer sees them listed. With
+# the tenant switches (AE33) the released categories drop out of the list (``withheld_for``).
 WITHHELD = {
     "internal_notes": "Interne Vermerke (Kontaktnotizen und Notizfeld) werden nicht "
     "automatisch ausgegeben; Herausgabe nur nach Einzelprüfung (AC07-01).",
@@ -122,6 +184,18 @@ WITHHELD = {
     "Kennung ausgegeben.",
     "event_payloads": "Das Verarbeitungsprotokoll nennt nur Art und Zeitpunkt.",
 }
+
+
+def withheld_for(options: ExportOptions) -> dict[str, str]:
+    out = dict(WITHHELD)
+    if options.include_internal_notes:
+        del out["internal_notes"]
+    if options.third_party_scope == SCOPE_NAMES:
+        out["third_parties"] = (
+            "Angaben zu anderen Personen werden mit Namen und Rolle ausgegeben, ohne "
+            "Anschrift, Kontaktdaten, Kennungen und Bankdaten (Mandantenschalter, AC07-01)."
+        )
+    return out
 
 
 def _jsonable(value: Any) -> Any:
@@ -164,10 +238,30 @@ def content_hash(content: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+def _label(names: dict[uuid.UUID, str], contact_id: uuid.UUID) -> str:
+    """Name of another person when the scope allows it (``names`` is empty otherwise)."""
+    return names.get(contact_id) or THIRD_PARTY_PLACEHOLDER
+
+
+async def _names(session: AsyncSession, ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
+    if not ids:
+        return {}
+    rows = await session.execute(
+        select(Contact.id, Contact.display_name).where(Contact.id.in_(ids))
+    )
+    return {cid: str(name or "") for cid, name in rows.all()}
+
+
 async def build(
-    session: AsyncSession, contact_id: uuid.UUID, generated_at: datetime
+    session: AsyncSession,
+    contact_id: uuid.UUID,
+    generated_at: datetime,
+    options: ExportOptions | None = None,
 ) -> dict[str, Any] | None:
     from mhvp.contacts import services  # local: services is large and imports widely
+
+    options = options or ExportOptions()
+    with_names = options.third_party_scope == SCOPE_NAMES
 
     contact = await services.load(session, contact_id)
     if contact is None:
@@ -194,16 +288,24 @@ async def build(
             .order_by(Party.id)
         )
     ).all()
-    co_members: dict[uuid.UUID, int] = {}
+    co_members: dict[uuid.UUID, list[tuple[uuid.UUID, Any]]] = {}
     for party_id, _ in parties:
-        co_members[party_id] = len(
-            (
-                await session.scalars(
-                    select(PartyMember.id).where(
-                        PartyMember.party_id == party_id, PartyMember.contact_id != contact_id
-                    )
+        co_members[party_id] = [
+            (cid, member_role)
+            for cid, member_role in (
+                await session.execute(
+                    select(PartyMember.contact_id, PartyMember.role)
+                    .where(PartyMember.party_id == party_id, PartyMember.contact_id != contact_id)
+                    .order_by(PartyMember.id)
                 )
             ).all()
+        ]
+    names: dict[uuid.UUID, str] = {}
+    if with_names:
+        names = await _names(
+            session,
+            {r.related_contact_id for r in relations}
+            | {cid for members in co_members.values() for cid, _ in members},
         )
     events = (
         await session.scalars(
@@ -223,7 +325,9 @@ async def build(
         holder = (account.holder or "").strip()
         # A different holder is another person (joint account, payer): role only.
         item["holder"] = (
-            holder if not holder or holder.casefold() == own_name else THIRD_PARTY_PLACEHOLDER
+            holder
+            if not holder or holder.casefold() == own_name or with_names
+            else THIRD_PARTY_PLACEHOLDER
         )
         bank_accounts.append(item)
     content: dict[str, Any] = {
@@ -239,21 +343,44 @@ async def build(
         "bank_accounts": bank_accounts,
         "consents": [pick(c, CONSENT_FIELDS) for c in consents],
         "relations": [
-            {"kind": _jsonable(r.kind), "related_person": THIRD_PARTY_PLACEHOLDER}
+            {
+                "kind": _jsonable(r.kind),
+                "related_person": _label(names, r.related_contact_id),
+            }
             for r in relations
         ],
         "parties": [
-            {"own_role": _jsonable(role), "further_members": co_members[party_id]}
+            {
+                "own_role": _jsonable(role),
+                "further_members": len(co_members[party_id]),
+                **(
+                    {
+                        "members": [
+                            {
+                                "name": _label(names, cid),
+                                "role": _jsonable(member_role),
+                            }
+                            for cid, member_role in co_members[party_id]
+                        ]
+                    }
+                    if with_names
+                    else {}
+                ),
+            }
             for party_id, role in parties
         ],
         "processing_log": [
             {"type": e.type, "occurred_at": e.occurred_at.isoformat()} for e in events
         ],
-        "withheld": {
-            "categories": WITHHELD,
-            "internal_notes_count": len(notes) + (1 if contact.notes else 0),
-        },
+        "withheld": {"categories": withheld_for(options)},
     }
+    if options.include_internal_notes:
+        content["internal_notes"] = {
+            "contact_note": contact.notes,
+            "notes": [pick(n, NOTE_FIELDS) for n in notes],
+        }
+    else:
+        content["withheld"]["internal_notes_count"] = len(notes) + (1 if contact.notes else 0)
     result: dict[str, Any] = strip_secrets(content)
     return result
 
@@ -274,6 +401,15 @@ class AccessExport:
     rejected_reason: str | None = None
     downloads: int = 0
     log: list[dict[str, Any]] = field(default_factory=list)
+    options: ExportOptions = field(default_factory=ExportOptions)
+
+    @property
+    def third_party_scope(self) -> str:
+        return self.options.third_party_scope
+
+    @property
+    def internal_notes_included(self) -> bool:
+        return self.options.include_internal_notes
 
 
 def _fold(events: list[DomainEvent]) -> AccessExport | None:
@@ -288,6 +424,7 @@ def _fold(events: list[DomainEvent]) -> AccessExport | None:
         generated_at=datetime.fromisoformat(first.payload["generated_at"]),
         prepared_by=first.actor_user_id,
         prepared_at=first.occurred_at,
+        options=ExportOptions.from_dict(first.payload.get("options")),
     )
     for event in events:
         export.log.append(
@@ -365,7 +502,8 @@ async def prepare(
 ) -> AccessExport | None:
     _person(actor)
     generated_at = datetime.now(UTC).replace(microsecond=0)
-    content = await build(session, contact_id, generated_at)
+    options = await current_options(session)
+    content = await build(session, contact_id, generated_at, options)
     if content is None:
         return None
     export_id = uuid.uuid4()
@@ -381,6 +519,7 @@ async def prepare(
             "contact_id": str(contact_id),
             "sha256": digest,
             "generated_at": generated_at.isoformat(),
+            "options": options.as_dict(),
         },
     )
     return await get(session, export_id)
@@ -403,7 +542,7 @@ def _second_person(export: AccessExport, actor: uuid.UUID | None) -> None:
 
 
 async def _rebuild_checked(session: AsyncSession, export: AccessExport) -> dict[str, Any]:
-    content = await build(session, export.contact_id, export.generated_at)
+    content = await build(session, export.contact_id, export.generated_at, export.options)
     if content is None or content_hash(content) != export.sha256:
         raise ProblemError(ErrorCodes.CONTACT_ACCESS_EXPORT_CHANGED)
     return content

@@ -217,6 +217,10 @@ class HoaStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     loan_allocation: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
+    # P02 (AE11, migration 0367): why this version corrects its predecessor.
+    correction_reason: Mapped[str | None] = mapped_column(String(32))
+    correction_basis: Mapped[str | None] = mapped_column(Text)
+    correction_resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
 
 
 class HoaCostItem(IdMixin, TenantMixin, Base):
@@ -341,6 +345,11 @@ class Attendance(IdMixin, TenantMixin, Base):
 
 class Vote(IdMixin, TenantMixin, Base):
     __tablename__ = "meeting_vote"
+    __table_args__ = (
+        CheckConstraint(
+            "cast_source IS NULL OR cast_source IN ('own', 'proxy')", name="cast_source"
+        ),
+    )
 
     agenda_item_id: Mapped[uuid.UUID] = _fk(
         "meeting_agenda_item.id", nullable=False, ondelete="CASCADE"
@@ -355,6 +364,11 @@ class Vote(IdMixin, TenantMixin, Base):
     channel: Mapped[str] = mapped_column(
         String(16), nullable=False, default="presence", server_default="presence"
     )
+    # AE31 (migration 0387): proxy (meeting_proxy) the vote was cast under in the portal; null
+    # for the owner's own vote. ``cast_source`` (own, proxy) is the source of the vote for the
+    # "proxy against own vote" rule; null on votes recorded before the migration (own).
+    proxy_id: Mapped[uuid.UUID | None] = _fk("meeting_proxy.id", ondelete="SET NULL")
+    cast_source: Mapped[str | None] = mapped_column(String(8))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
@@ -717,15 +731,51 @@ class HoaAcquisitionRelease(IdMixin, TimestampMixin, TenantMixin, Base):
     release_note: Mapped[str | None] = mapped_column(Text)
 
 
+class HoaAcquisitionRule(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE10 / AA07-01 (migration 0366): per tenant allocation variant for the statement result
+    on an owner change, per acquisition kind. No row means ``manual_release`` (the standing
+    assumption M24-01 plus four eyes release). The legal rule per kind is open (P01)."""
+
+    __tablename__ = "hoa_acquisition_rule"
+    __table_args__ = (
+        Index("ix_hoa_acquisition_rule_tenant_id", "tenant_id"),
+        UniqueConstraint("tenant_id", "acquisition_kind", name="uq_hoa_acquisition_rule_kind"),
+        CheckConstraint(
+            "allocation_variant IN ('manual_release', 'by_due_date', 'by_resolution_date')",
+            name="allocation_variant_values",
+        ),
+    )
+
+    acquisition_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    allocation_variant: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="manual_release", server_default="manual_release"
+    )
+    source_note: Mapped[str | None] = mapped_column(Text)
+
+
 class HoaOnlineMeetingSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     """AD06 / GA11-03 (migration 0351): per tenant switch for the online meeting in the owner
     portal, default off. One row per tenant; no row means off."""
 
     __tablename__ = "hoa_online_meeting_setting"
-    __table_args__ = (UniqueConstraint("tenant_id"),)
 
     enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AE31 (migration 0387, AD06-02/03): rule when a unit receives a vote of the owner and a
+    # vote of the proxy holder. flag (default): the first vote stays counted, the second is
+    # stored as a conflict for review, nothing is discarded; first_vote: the second is refused;
+    # proxy_priority / own_priority: the preferred source replaces the other one (the replaced
+    # vote stays in the conflict record).
+    proxy_conflict_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="flag", server_default="flag"
+    )
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint(
+            "proxy_conflict_mode IN ('flag', 'first_vote', 'proxy_priority', 'own_priority')",
+            name="proxy_conflict_mode",
+        ),
     )
 
 
@@ -777,3 +827,195 @@ class MeetingSpeakerRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     handled_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class MeetingVoteConflict(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE31 (migration 0387, AD06-02/03): second vote of a unit that was cast by the other
+    source (owner against proxy holder). The first vote stays in ``meeting_vote``; the record
+    keeps both choices so that no vote is lost. ``open`` is a review note for the meeting
+    chair; the decision (keep_first, apply_second) is traceable here and never deletes a row.
+    ``rule_second`` marks a replacement made by the tenant rule (proxy_priority or
+    own_priority)."""
+
+    __tablename__ = "meeting_vote_conflict"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'resolved')", name="status"),
+        CheckConstraint("first_source IN ('own', 'proxy')", name="first_source"),
+        CheckConstraint("second_source IN ('own', 'proxy')", name="second_source"),
+        CheckConstraint(
+            "resolution IS NULL OR resolution IN ('keep_first', 'apply_second', 'rule_second')",
+            name="resolution",
+        ),
+        Index("ix_meeting_vote_conflict_item", "tenant_id", "agenda_item_id"),
+    )
+
+    meeting_id: Mapped[uuid.UUID] = _fk("owners_meeting.id", nullable=False, ondelete="CASCADE")
+    agenda_item_id: Mapped[uuid.UUID] = _fk(
+        "meeting_agenda_item.id", nullable=False, ondelete="CASCADE"
+    )
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", nullable=False)
+    vote_id: Mapped[uuid.UUID] = _fk("meeting_vote.id", nullable=False, ondelete="CASCADE")
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    first_source: Mapped[str] = mapped_column(String(8), nullable=False)
+    first_choice: Mapped[str] = mapped_column(String(8), nullable=False)
+    second_source: Mapped[str] = mapped_column(String(8), nullable=False)
+    second_choice: Mapped[str] = mapped_column(String(8), nullable=False)
+    second_proxy_id: Mapped[uuid.UUID | None] = _fk("meeting_proxy.id", ondelete="SET NULL")
+    second_channel: Mapped[str] = mapped_column(String(16), nullable=False)
+    attempted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
+    resolution: Mapped[str | None] = mapped_column(String(16))
+    decision_note: Mapped[str | None] = mapped_column(String(500))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class HoaPlanChangeSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE09 (M24-08, P07-01, M12-L2, migration 0365): per tenant variant for the difference of
+    months already posted when a plan takes effect within the year. ``notice`` (default)
+    only shows the difference; ``due_now`` proposes it due in the month after the
+    resolution; ``next_instalment`` proposes to settle it with the next instalment. No row
+    means ``notice``. Nothing is posted by any variant."""
+
+    __tablename__ = "hoa_plan_change_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint("mode IN ('notice', 'due_now', 'next_instalment')", name="mode"),
+    )
+
+    mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="notice", server_default="notice"
+    )
+
+
+class HoaPlanDifference(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE09: draft of a difference (claim or credit) per unit, contract, component and
+    posted month of a plan changed within the year. Draft until approved by a second person
+    with gate G4; the approval posts nothing (posting is a later step behind G1)."""
+
+    __tablename__ = "hoa_plan_difference"
+    __table_args__ = (
+        UniqueConstraint(
+            "plan_id",
+            "contract_id",
+            "payment_type_code",
+            "period_month",
+            name="uq_hoa_plan_difference_month",
+        ),
+        CheckConstraint("mode IN ('due_now', 'next_instalment')", name="mode"),
+        CheckConstraint("status IN ('draft', 'approved', 'rejected')", name="status"),
+        Index("ix_hoa_plan_difference_plan", "tenant_id", "plan_id"),
+    )
+
+    plan_id: Mapped[uuid.UUID] = _fk("economic_plan.id", nullable=False, ondelete="CASCADE")
+    unit_id: Mapped[uuid.UUID] = _fk("unit.id", nullable=False)
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", nullable=False)
+    payment_type_code: Mapped[str] = mapped_column(String(63), nullable=False)
+    period_month: Mapped[date] = mapped_column(Date, nullable=False)
+    posted_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    new_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    difference: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    proposed_due: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default="draft"
+    )
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HoaReservePlan(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE07 / M24-01 (migration 0363): planned contribution (Soll) of one reserve and year with
+    economic plan and resolution reference. A resolved row is frozen; a change goes through a
+    new row that supersedes it. The tax classification is a placeholder with release status
+    (not released by default); the system decides no tax treatment."""
+
+    __tablename__ = "hoa_reserve_plan"
+    __table_args__ = (
+        CheckConstraint("status IN ('draft', 'resolved', 'superseded')", name="status"),
+        CheckConstraint(
+            "tax_classification_status IN ('not_released', 'released')", name="tax_status"
+        ),
+        CheckConstraint("year BETWEEN 1990 AND 2100", name="year"),
+        CheckConstraint("status = 'draft' OR resolution_id IS NOT NULL", name="resolution"),
+        Index("ix_hoa_reserve_plan_reserve", "tenant_id", "reserve_id", "year"),
+        Index(
+            "uq_hoa_reserve_plan_resolved",
+            "tenant_id",
+            "reserve_id",
+            "year",
+            unique=True,
+            postgresql_where=text("status = 'resolved'"),
+        ),
+    )
+
+    reserve_id: Mapped[uuid.UUID] = _fk("hoa_reserve.id", nullable=False, ondelete="CASCADE")
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    economic_plan_id: Mapped[uuid.UUID | None] = _fk("economic_plan.id", ondelete="SET NULL")
+    planned_contribution: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal(0), server_default=text("0")
+    )
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default="draft"
+    )
+    tax_classification: Mapped[str | None] = mapped_column(String(64))
+    tax_classification_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="not_released", server_default="not_released"
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HoaReservePolicy(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE07 / V01-01 (migration 0363): per tenant handling of opening balance changes after a
+    calculated statement. No row means ``locked`` (product protection, current rule)."""
+
+    __tablename__ = "hoa_reserve_policy"
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint("opening_lock_mode IN ('locked', 'logged', 'four_eyes')", name="mode"),
+    )
+
+    opening_lock_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="locked", server_default="locked"
+    )
+
+
+class HoaReserveOpeningChange(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE07 / V01-01 (migration 0363): logged or requested change of opening balance or opening
+    year of a reserve after a calculated statement. Never deleted."""
+
+    __tablename__ = "hoa_reserve_opening_change"
+    __table_args__ = (
+        CheckConstraint("status IN ('applied', 'pending', 'rejected')", name="status"),
+        Index("ix_hoa_reserve_opening_change_reserve", "tenant_id", "reserve_id"),
+    )
+
+    reserve_id: Mapped[uuid.UUID] = _fk("hoa_reserve.id", nullable=False, ondelete="CASCADE")
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    changes: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HoaReservePaymentSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AE08 / P07-02 (migration 0364): per tenant variant how reserve payments are shown per
+    earmarked reserve. ``bound_only`` (default, no row means it): only payments on items bound
+    to a reserve count. ``plan_ratio_proposal``: the unbound rest is split by the planned
+    contributions as a proposal; nothing is posted, items stay unchanged (G4 stays closed)."""
+
+    __tablename__ = "hoa_reserve_payment_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint("mode IN ('bound_only', 'plan_ratio_proposal')", name="mode"),
+    )
+
+    mode: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="bound_only", server_default="bound_only"
+    )

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { AgendaResultForm, MEETING_KINDS } from "@/components/hoa/MeetingDetailsForm";
+import { PlanDifferences } from "@/components/hoa/PlanDifferences";
 import { SUBJECT_KINDS } from "@/components/settings/MajorityRulesAdmin";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
@@ -356,6 +357,7 @@ export function PlanApplyPreview({ id, snapshotHash }: { id: string; snapshotHas
           </div>
           <p className="text-xs text-muted">{t("counts", preview.counts)}</p>
           {preview.posted_months > 0 ? <p className={ui.notice}>{t("postedMonths", { count: preview.posted_months })}</p> : null}
+          {preview.posted_months > 0 ? <PlanDifferences id={id} /> : null}
           {preview.applied_at ? <p className={ui.success}>{t("alreadyApplied", { date: formatDate(preview.applied_at.slice(0, 10)) })}</p> : null}
           {applied !== null ? <p className={ui.success}>{t("applied", { count: applied })}</p> : null}
           {preview.can_apply && applied === null ? (

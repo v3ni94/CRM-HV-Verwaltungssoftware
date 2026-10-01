@@ -56,10 +56,17 @@ export async function uiLogin(page: Page, target: string) {
   await page.getByLabel("E-Mail").fill(email);
   await page.getByLabel("Passwort").fill(password);
   await page.getByRole("button", { name: "Weiter" }).click();
-  // TOTP is optional (operator 26.09.2026, M2-01): the seeded admin normally lands on the
-  // tenant choice directly; the second factor page appears only if it was enabled manually.
+  // M2-04: the default tenant policy requires a second factor for CRM roles; the seeded admin
+  // sets up TOTP on the first login (setup page), later logins ask for the code. Under the
+  // voluntary policy (M2-01) the admin lands on the tenant choice directly.
   await page.waitForURL(/\/(mandant|anmelden\/zweiter-faktor)/);
-  if (page.url().includes("/anmelden/zweiter-faktor")) {
+  if (page.url().includes("/anmelden/zweiter-faktor-einrichten")) {
+    const secret = (await page.getByTestId("mfa-setup-secret").textContent())?.trim() ?? "";
+    rememberSecret(secret);
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
+    await page.getByLabel("Code").fill(totp.generate());
+    await page.getByRole("button", { name: "Einrichten und anmelden" }).click();
+  } else if (page.url().includes("/anmelden/zweiter-faktor")) {
     await page.getByLabel("Code").fill(await nextCode());
     await page.getByRole("button", { name: "Bestätigen" }).click();
   }
@@ -75,9 +82,28 @@ export async function apiToken(): Promise<string> {
     body: JSON.stringify({ email, password }),
   });
   type Issued = { access_token: string; tenants: { id: string; name: string }[] };
-  const step = (await login.json()) as Issued & { status: string; mfa_token: string | null };
+  const step = (await login.json()) as Issued & {
+    status: string;
+    mfa_token: string | null;
+    mfa_setup_token?: string | null;
+  };
   let first: Issued = step;
-  if (step.status !== "ok") {
+  if (step.status === "mfa_setup_required") {
+    // M2-04: first login under the default policy, TOTP is set up via the API.
+    const post = (p: string, body: unknown) =>
+      fetch(`${apiBase}/api/v1${p}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const setup = (await (await post("/auth/mfa/setup/start", { mfa_setup_token: step.mfa_setup_token })).json()) as {
+      secret: string;
+    };
+    rememberSecret(setup.secret);
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(setup.secret), digits: 6, period: 30 });
+    const done = await post("/auth/mfa/setup/confirm", { mfa_setup_token: step.mfa_setup_token, code: totp.generate() });
+    first = (await done.json()) as Issued;
+  } else if (step.status !== "ok") {
     // Only when the admin enabled the optional second factor (operator 26.09.2026, M2-01).
     const verify = await fetch(`${apiBase}/api/v1/auth/mfa/verify`, {
       method: "POST",

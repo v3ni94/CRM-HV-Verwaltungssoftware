@@ -124,6 +124,9 @@ class EntryKind(StrEnum):
     STATEMENT_RESULT = "statement_result"
     DUNNING_FEE = "dunning_fee"
     INTEREST = "interest"
+    # AE22 (Q01-01 variant reclass): statement credit moved to a creditor account; posting
+    # creates only the payable on the creditor line, never a receivable on the debtor debit.
+    CREDIT_RECLASS = "credit_reclass"
 
 
 class EntrySource(StrEnum):
@@ -191,6 +194,11 @@ class ChartTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     # [{number, name, category, type, statement_kind, allocation_category, vat_option,
     #   relevant_for_cash_report, applies_to: [hoa, rental_owner, sev_owner, manager]}]
     accounts: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    # AE02 (M10-01, Produktschutz): release only by a person other than the one who asked for
+    # the review. Default on; switching off needs accounting:approve and a reason (event).
+    four_eyes_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
 
 
 class Ledger(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -446,6 +454,10 @@ class JournalLine(IdMixin, TenantMixin, Base):
         ),
         Index("ix_journal_line_journal_entry_id", "journal_entry_id"),
         Index("ix_journal_line_account_id", "account_id"),
+        # Q15-01 (AE21, migration 0377): a line with a unit always carries its object; the
+        # trigger ``journal_line_property`` fills it from the unit and refuses a mismatch.
+        CheckConstraint("unit_id IS NULL OR property_id IS NOT NULL", name="property_with_unit"),
+        Index("ix_journal_line_property_id", "property_id"),
     )
 
     journal_entry_id: Mapped[uuid.UUID] = _fk("journal_entry.id", ondelete="CASCADE")
@@ -460,6 +472,9 @@ class JournalLine(IdMixin, TenantMixin, Base):
     unit_id: Mapped[uuid.UUID | None] = _fk("unit.id", nullable=True)
     allocation_key_override_id: Mapped[uuid.UUID | None] = _fk("allocation_key.id", nullable=True)
     text: Mapped[str | None] = mapped_column(String(500))
+    # Object of the line (Q15-01, AE21): explicit, else from the unit, else from the contract of
+    # the entry (``mhvp.accounting.line_property``). Reports per object read this column.
+    property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True)
 
 
 class OpenItem(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -1110,6 +1125,11 @@ class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
     xml_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
     # M13-05 (migration 0282): readable invoice document (PDF on the letterhead) in the index.
     pdf_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    # S13-03 (migration 0381): ZUGFeRD / Factur-X hybrid (PDF with CII EN 16931) in the index
+    # and the result of the own checks at filing time (CII structure, PDF/A pre-check; the
+    # PDF/A conformance itself stays unverified, mhvp.accounting.zugferd).
+    zugferd_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    zugferd_check: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # M13-05/M13-06 (migration 0251): service period, kind (invoice or credit note), the
     # corrected invoice of a credit note, release and cancellation trail. One invoice per
     # setting and period while it is not cancelled (uq_admin_fee_invoice_period).
@@ -1223,6 +1243,14 @@ class G1AcceptanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
     confirmed_on: Mapped[date | None] = mapped_column(Date)
     confirmed_by_name: Mapped[str | None] = mapped_column(String(200))
     note: Mapped[str | None] = mapped_column(Text)
+    # AE03 (migration 0359): responsible person and evidence per item.
+    responsible_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+    evidence_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id", ondelete="SET NULL")
+    )
+    evidence_ref: Mapped[str | None] = mapped_column(String(500))
 
 
 class RuleVersion(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -1315,4 +1343,112 @@ class OpenItemBalance(IdMixin, TenantMixin, Base):
     )
     refreshed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+
+class LedgerInterestTaxConfig(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Tax accounts per ledger for withholdings on credit interest (P01-01, AE05, migration
+    0361). No row or an empty account means the withholding cannot be entered: no tax rate is
+    stored, amounts always come from the bank document."""
+
+    __tablename__ = "ledger_interest_tax_config"
+    __table_args__ = (UniqueConstraint("ledger_id"),)
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", ondelete="CASCADE")
+    capital_gains_tax_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="RESTRICT"
+    )
+    solidarity_tax_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="RESTRICT"
+    )
+    church_tax_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="RESTRICT"
+    )
+
+
+class InterestTaxWithholding(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Withholdings of one interest entry as stated on the bank document (P01-01, AE05).
+    Written with the draft and immutable afterwards (the entry lines carry the booking)."""
+
+    __tablename__ = "interest_tax_withholding"
+    __table_args__ = (
+        UniqueConstraint("journal_entry_id"),
+        CheckConstraint(
+            "capital_gains_tax >= 0 AND solidarity_tax >= 0 AND church_tax >= 0",
+            name="non_negative",
+        ),
+        CheckConstraint(
+            "capital_gains_tax + solidarity_tax + church_tax < gross_amount", name="below_gross"
+        ),
+    )
+
+    journal_entry_id: Mapped[uuid.UUID] = _fk("journal_entry.id", ondelete="RESTRICT")
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", ondelete="RESTRICT")
+    bank_account_id: Mapped[uuid.UUID] = _fk("ledger_account.id", ondelete="RESTRICT")
+    gross_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    capital_gains_tax: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0"), server_default="0"
+    )
+    solidarity_tax: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0"), server_default="0"
+    )
+    church_tax: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0"), server_default="0"
+    )
+
+
+class PeriodLock(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Period lock per property and period (P06-02, migration 0376). It restricts postings
+    whose lines belong to the property; a release keeps the row (``released_at``)."""
+
+    __tablename__ = "period_lock"
+    __table_args__ = (
+        CheckConstraint("period_from <= period_to", name="period"),
+        CheckConstraint("source IN ('manual', 'statement', 'owner_statement')", name="source"),
+        Index("ix_period_lock_property", "tenant_id", "ledger_id", "property_id"),
+        Index(
+            "uq_period_lock_statement_active",
+            "tenant_id",
+            "source",
+            "statement_id",
+            unique=True,
+            postgresql_where=text("statement_id IS NOT NULL AND released_at IS NULL"),
+        ),
+    )
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    property_id: Mapped[uuid.UUID] = _fk("property.id")
+    period_from: Mapped[date] = mapped_column(Date, nullable=False)
+    period_to: Mapped[date] = mapped_column(Date, nullable=False)
+    source: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="manual", server_default="manual"
+    )
+    statement_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    reason: Mapped[str | None] = mapped_column(String(500))
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    release_reason: Mapped[str | None] = mapped_column(String(500))
+    release_requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    release_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    release_request_reason: Mapped[str | None] = mapped_column(String(500))
+
+
+class PeriodLockSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Tenant switches of the period lock; no row means the defaults (all conservative):
+    ledger wide lock only, no automatic lock on closing, no release (AA08-01 open)."""
+
+    __tablename__ = "period_lock_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint("lock_mode IN ('ledger_only', 'object_period')", name="lock_mode"),
+    )
+
+    lock_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="ledger_only", server_default="ledger_only"
+    )
+    auto_lock_on_close: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    reopen_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
     )

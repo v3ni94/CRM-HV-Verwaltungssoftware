@@ -121,6 +121,20 @@ def csv_table(columns: list[str], rows: list[list[Any]]) -> bytes:
     return out.getvalue().encode("utf-8")
 
 
+def _subledger_reason(row: dict[str, Any]) -> str:
+    """AC01-02: reason column of nebenbuchabgleich.csv; excluded items are named."""
+    parts: list[str] = []
+    if Decimal(row["difference"]) != 0:
+        parts.append("Differenz")
+    applied = row["excluded_applied"]
+    suffix = "nicht gezählt" if applied else "enthalten"
+    if row["excluded_written_off_count"]:
+        parts.append(f"{row['excluded_written_off_count']} ausgebucht ({suffix})")
+    if row["excluded_reversed_count"]:
+        parts.append(f"{row['excluded_reversed_count']} storniert ({suffix})")
+    return "; ".join(parts) if parts else "ausgeglichen"
+
+
 @dataclass
 class Table:
     name: str
@@ -1066,7 +1080,10 @@ async def collect(
     }
     # GA05-03 follow up (AB01): sub ledger reconciliation per debtor and creditor account as
     # of the period end; a difference is listed for review, it is no finding by itself.
-    from mhvp.accounting.services import subledger_reconciliation
+    from mhvp.accounting.services import subledger_exclude_switch, subledger_reconciliation
+
+    exclude_switch = await subledger_exclude_switch(session)
+    sub_rows = await subledger_reconciliation(session, ledger, end, exclude_switch)
 
     nebenbuch = Table(
         "nebenbuchabgleich",
@@ -1079,6 +1096,9 @@ async def collect(
             "Saldo Hauptbuch",
             "Offene Posten",
             "Differenz",
+            "Grund",
+            "Ausgebucht",
+            "Storniert",
         ],
         [
             [
@@ -1090,8 +1110,11 @@ async def collect(
                 Decimal(row["ledger_balance"]),
                 Decimal(row["open_items_remaining"]),
                 Decimal(row["difference"]),
+                _subledger_reason(row),
+                Decimal(row["excluded_written_off"]),
+                Decimal(row["excluded_reversed"]),
             ]
-            for row in await subledger_reconciliation(session, ledger, end)
+            for row in sub_rows
         ],
     )
     return ExportBundle(

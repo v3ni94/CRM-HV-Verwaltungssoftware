@@ -1,0 +1,13 @@
+# AE07-01 Rücklagenplan je Rücklage und Jahr, Umgang mit Anfangsbeständen nach Abrechnung (Welle 16, Paket AE07)
+
+Status: technisch umgesetzt am 01.10.2026. Es wird nichts gebucht, keine Sollstellung angelegt
+und keine steuerliche Einordnung getroffen. Die WEG-Abrechnung bleibt hinter G4.
+
+| Feld | Inhalt |
+| --- | --- |
+| ID | AE07-01 (Befunde M24-01, V01-01; Prioritätenliste Punkt 7) |
+| Geltung | WEG-Modul, Tabellen `hoa_reserve_plan`, `hoa_reserve_policy`, `hoa_reserve_opening_change` (Migration 0363), Modul `mhvp.hoa.reserve_plan` |
+| Quellenstatus | Fachliche Umsetzung (7.8 W08, 6.5 reserve) und Produktschutz. Keine neue Rechtsregel. Die steuerliche Einordnung ist nur ein Platzhalterfeld mit Freigabestatus `not_released` (Frage AE07-01 in OPEN_QUESTIONS) |
+| Abnahmefall | Anhang D D19 unverändert. Erwartete Werte von Hand: Plan 2026 mit Rücklagenposten 1.200,00 und 300,00 EUR für die Rücklage „Dach“, abgeleiteter Entwurf 1.500,00, nach Beschluss Entwicklung 2026 Soll 1.500,00 aus dem Rücklagenplan, Anfang 10.000,00, Ende 11.500,00; zweiter beschlossener Plan 1.800,00 ersetzt den ersten, Ende 11.800,00. Sperrschalter: gesperrt 409, protokolliert 200 mit Protokollzeile, Vier Augen ausstehend, Selbstfreigabe 409, Freigabe durch zweite Person setzt 9.000,00. Test `apps/api/tests/integration/test_ae07_reserve_plan.py` |
+| Umsetzung | (1) Rücklagenplan: Rücklage, Jahr, Soll-Zuführung (NUMERIC(14,2)), Wirtschaftsplan (gleicher Buchungskreis und gleiches Jahr), Beschluss (gleicher Rechtsträger, nicht negativ, aufgehoben oder nichtig), Status Entwurf, beschlossen, ersetzt. Beschlossen nur mit Beschlussbezug (Datenbankprüfung und 422); ein beschlossener Plan ist unveränderlich (409), höchstens ein beschlossener Plan je Rücklage und Jahr (Teilindex), der vorherige wird beim Beschluss ersetzt. (2) Ableitung aus dem Wirtschaftsplan: je Rücklage die Summe der Rücklagenposten als Entwurf mit dem Beschluss des Plans; Ausgabe der Abweichung zum Wirtschaftsplan. (3) Entwicklung: Soll aus dem beschlossenen Rücklagenplan, sonst wie bisher aus den Planposten (Feld `planned_source`); berechnete Abrechnungen bleiben eingefroren, Ist weiter aus den Zahlungen der Abrechnung. (4) Mandantenschalter `opening_lock_mode` (V01-01): `locked` Standard und bisherige Regel U15-03, `logged` Änderung mit Begründung und Protokoll, `four_eyes` Antrag mit Begründung, Freigabe oder Ablehnung durch eine zweite Person mit `accounting:approve`, Prüfung auf zwischenzeitliche Änderung |
+| Änderungsgrund | Prioritätenliste 01.10.2026 Punkt 7: Rücklagenplan als eigene Entität, Verknüpfung Wirtschaftsplan und Rücklagenabrechnung, Sperre der Anfangsbestände per Schalter |

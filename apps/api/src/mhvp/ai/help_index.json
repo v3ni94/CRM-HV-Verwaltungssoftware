@@ -1509,6 +1509,43 @@
  },
  {
   "kind": "page",
+  "title": "Rechtstexte des Portals",
+  "source": "Einstellungen",
+  "href": "/einstellungen/portal-rechtstexte",
+  "keywords": [
+   "impressum",
+   "datenschutzerklärung",
+   "nutzungsbedingungen",
+   "portal",
+   "rechtstext",
+   "white label",
+   "fassung",
+   "einwilligung"
+  ],
+  "permission": [
+   "documents:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Textbausteine",
+  "source": "Einstellungen",
+  "href": "/einstellungen/textbausteine",
+  "keywords": [
+   "textbaustein",
+   "informationsblatt",
+   "35a",
+   "freigabe",
+   "anschreiben"
+  ],
+  "permission": [
+   "documents:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "DATEV-Kontenzuordnung",
   "source": "Einstellungen",
   "href": "/einstellungen/buchhaltung/datev",
@@ -1598,6 +1635,24 @@
    "freigabe g1",
    "versionsverlauf konten",
    "kontenplan"
+  ],
+  "permission": [
+   "accounting:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Buchhaltung, Periodensperren",
+  "source": "Einstellungen",
+  "href": "/einstellungen/buchhaltung/periodensperren",
+  "keywords": [
+   "periodensperre",
+   "festschreibung",
+   "objekt",
+   "zeitraum",
+   "abschluss abrechnung",
+   "aufhebung"
   ],
   "permission": [
    "accounting:read"
@@ -1984,6 +2039,46 @@
   "keywords": [],
   "permission": null,
   "excerpt": "In der Betriebskostenabrechnung zeigt der Abschnitt \"Ausnahme von der Abrechnungsfrist\", ob eine Nachforderung nach Ablauf der Fristorientierung gesperrt ist. Im Entwurf werden Ausnahmegrund und die Dokument-ID des Nachweises erfasst; erst mit beiden ist die Ausnahme wirksam. Unt",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Heizkosten: Vergleich extern gegen eigen und Prüfpunkte",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Abrechnung (Entwurf) zeigt der Abschnitt \"Extern gegen eigen\" je Nutzer den Messdienstbetrag, den eigenen Betrag und die Differenz. Toleranzen sind einstellbar (Standard 0,50 EUR und 1,0 Prozent). Der Abweichungsbericht (CSV) listet nur Abweichungen und fehlende externe Be",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Umlagevereinbarungen und Prüfbericht",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Mietvertrag erfassen Sie unter \"Umlagevereinbarungen\" je Betriebskostenart den Klauselbezug (zum Beispiel \"§ 4 Mietvertrag\"), das Nachweisdokument und die Gültigkeit. Mit \"Für alle Mietverträge des Objekts erfassen\" legen Sie dieselbe Vereinbarung für alle Mietverträge eines O",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Abrechnungsfrist je Mietvertrag",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Abrechnung zeigt der Abschnitt \"Abrechnungsfrist je Mietvertrag\" das Fristende als Orientierung (im Einzelfall zu verifizieren), den erfassten Zugang und, falls vorhanden, einen Vorschlag aus dem Versandnachweis. \"Zugang übernehmen\" speichert den Vorschlag erst auf Klick. ",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Behandlung offener Vorauszahlungen (Mandantenschalter, Welle 16)",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Bereich \"Neue Vorauszahlungen (Vorschlag)\" der Betriebskostenabrechnung wählt die Verwaltung, wie Vorauszahlungen behandelt werden, die bei der Abrechnung noch offen sind: \"Nur Information (Standard)\", \"Verrechnung der offenen Posten per Storno\" oder \"Saldo gegen Soll, Rücksta",
   "file": "docs/handbuch/abrechnung-miete.md"
  },
  {
@@ -3473,7 +3568,37 @@
   "href": "/bank",
   "keywords": [],
   "permission": null,
-  "excerpt": "Meldet die Verbindung \"Bankzugang gesperrt\" (MHVP-BANK-0010), stammt die Sperre von der Bank (Rückmeldecode 3938). Die Plattform verwirft die gespeicherte PIN und startet keinen zweiten Versuch. Prüfreihenfolge: Online-Banking der Bank im Browser testen (dort entsperren oder die ",
+  "excerpt": "Die Meldungen der Plattform zu diesen beiden Fällen sind deutsch und nennen die Prüfschritte in der richtigen Reihenfolge. Sie erscheinen in der Sitzung beim Verbinden, an der Karte der Verbindung und im Fehlerfeld der Schnittstelle. Bankzugang gesperrt (MHVP-BANK-0010). Die Sper",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "FinTS-Adresse der Bank ändern (Bankfusion)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "An jeder FinTS-Verbindung zeigt die Zeile \"FinTS-Adresse der Bank\" den verwendeten Rechnernamen und die Herkunft (aus der Institutsliste oder manuell eingetragen). 1. \"Adresse ändern\" wählen (nach dem Fehler \"Bank nicht erreichbar\" heißt die Schaltfläche \"FinTS-Adresse prüfen\"). ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Auszahlung von Guthaben aus Abrechnungen (AE22)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, Zahllauf zeigt der Abschnitt Auszahlung von Guthaben aus Abrechnungen die auszahlbaren Guthaben: Guthaben aus der gebuchten Betriebskostenabrechnung, Auszahlungen aus ausgegebenen Eigentümerabrechnungen und freigegebene Kautionsabrechnungen. Solange die Buchungsregel ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "EBICS: Teilnehmer einrichten und Kontoauszüge abrufen (Grundgerüst, AE23)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ort: Bank, Abschnitt \"EBICS (Grundgerüst)\". Der Abschnitt zeigt, ob EBICS für den Mandanten eingeschaltet ist und ob eine Übertragung zur Bank installiert ist. Solange die Übertragung fehlt (Hinweis im Abschnitt, offene Frage AE23-01), lassen sich Teilnehmer und Schlüssel vorbere",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -3808,6 +3933,16 @@
  },
  {
   "kind": "handbook",
+  "title": "ZUGFeRD-Profil und Container (Welle 16)",
+  "source": "Handbuch: Belegeingang",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei einer ZUGFeRD- oder Factur-X-Rechnung zeigt das Prüfergebnis zusätzlich das Profil (MINIMUM, BASIC WL, BASIC, EN 16931, EXTENDED, XRECHNUNG) und Hinweise zum Container, etwa eine fehlende PDF/A-Kennzeichnung, ein abweichendes Profil in den Metadaten oder einen Anhang ohne Ken",
+  "file": "docs/handbuch/belegeingang.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck und Freigabestufen",
   "source": "Handbuch: Buchhaltung",
   "href": "/buchhaltung",
@@ -4028,6 +4163,66 @@
  },
  {
   "kind": "handbook",
+  "title": "Kontenrahmen: Prüfbericht, Verteilung und Vier-Augen-Freigabe",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Buchhaltung, Kontenrahmen zeigt der Bereich \"Prüfbericht und Verteilung\" Konten ohne Abrechnungsart, Kostenkonten ohne gültige Schlüsselverteilung und offene Vorschläge (zum Beispiel Abrechnungsart Heizkosten). Im Entwurf lässt sich ein Vorschlag übernehmen u",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Periodensperre je Objekt und Zeitraum",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Buchhaltung, Periodensperren legen Sie eine Sperre für ein Objekt und einen Zeitraum an. Die Seite zeigt den Hinweis \"Entscheidung offen\", weil der Umfang der Sperre (P06-02) und die Wiederöffnung (AA08-01) noch nicht entschieden sind. Standard ist die bisher",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Steuerabzüge bei Habenzinsen",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Formular Buchung erfassen wählen Sie den Vorgang Zinsbuchung mit Richtung Habenzinsen. Tragen Sie den Bruttozins und die einbehaltene Kapitalertragsteuer, den Solidaritätszuschlag und gegebenenfalls die Kirchensteuer so ein, wie sie auf dem Bankbeleg stehen. Das Formular zeigt",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Nebenbuchabgleich: ausgebuchte und stornierte Posten",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Prüfbericht (Auswertungen) werden ausgebuchte Posten und Posten stornierter Buchungen standardmäßig nicht in die offenen Posten und die Differenz gezählt. Ein Hinweis nennt Anzahl und Betrag getrennt. Der Mandantenschalter steht in den Steuereinstellungen (subledgerexcludewrit",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Objekt der Buchungszeile und Driftbericht",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Jede Buchungszeile trägt ein Objekt. Wählen Sie eine Einheit, gilt deren Objekt; eine abweichende Objektangabe wird abgelehnt. Ohne Einheit gilt das Objekt des Vertrags, auf den sich der Buchungssatz bezieht. Für Zeilen ohne Einheit und ohne Vertrag geben Sie das Objekt bei Bedar",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "ZUGFeRD-Rechnung (Welle 16)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter \"Honorarrechnungen\" steht zu jeder Rechnung und Gutschrift: - \"ZUGFeRD\" lädt das Rechnungsdokument auf dem Briefbogen mit den eingebetteten Rechnungsdaten (Factur-X, Profil EN 16931). Es gelten dieselben Pflichtangaben wie bei der XRechnung. - \"ZUGFeRD prüfen\" zeigt das Erg",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschprofile",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -4058,6 +4253,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Dienstleister laut Konfiguration und Pflegefelder",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Bereich „Dienstleister laut Konfiguration“ zeigt, welche externen Dienste die Einstellungen und Konnektoren tatsächlich nutzen, zum Beispiel Gmail, Google Drive, Paperless, finAPI, KI-Anbieter oder LetterXpress, mit Zustand (aktiv oder nur konfiguriert), Herkunft (Mandant ode",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
   "title": "DSGVO-Auskunft mit Prüfschritt",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -4074,6 +4279,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Dokumente, Löschvorschläge zeigt „Löschcheckliste“ bei jedem gelöschten Dokument den Stand je Ziel: Index und Volltext, Original, Paperless, Google Drive, Embeddings, KI-Auszüge, Vorschaubilder und Backups. Offene Ziele bearbeitet der tägliche Nachlauf; mit „Nachlauf starte",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Umfang der Auskunft einstellen",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Datenschutz legt der Bereich „Umfang der DSGVO-Auskunft“ zwei Schalter je Mandant fest. „Angaben zu anderen Personen“ steht standardmäßig auf „nur mit Rolle“; die Stufe „mit Name und Rolle“ nennt zusätzlich den Namen von Beziehungen, weiteren Parteimitglieder",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Papierkorb für Dokumente",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Papierkorb ist standardmäßig aus; eine zulässige Löschung bleibt dann endgültig. Unter Einstellungen, Aufbewahrung schaltet „Papierkorb für Dokumente“ ihn ein und legt die Frist fest (Vorschlag 30 Tage, keine Rechtsfrist; ob personenbezogene Daten so lange im Papierkorb bleib",
   "file": "docs/handbuch/datenschutz.md"
  },
  {
@@ -4498,6 +4723,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Zweiter Faktor je Rolle",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Rollen und Rechte legt der Abschnitt Zweiter Faktor je Rolle fest, wer sich mit einem zweiten Faktor (TOTP-App oder Passkey) anmelden muss (Regel M2-04): - Freiwillig (Standard): jeder Benutzer entscheidet selbst, ob er einen zweiten Faktor einrichtet (Betrei",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschen nur Administrator",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -4688,6 +4923,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Buchhaltung, Automatikstufen: Automatikschalter und Vergleichslauf",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Automatikschalter des Mandanten lässt sich in der Oberfläche nur einschalten, wenn die Freigabestufe G1 offen ist: eine Person mit den Rechten Buchhaltung freigeben und Mandanteneinstellungen ändern stellt einen Antrag mit Grund, eine zweite Person gibt ihn frei oder lehnt ih",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Lexware Office",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -4844,6 +5089,36 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Plattformadministratoren sehen die festgeschriebenen Plattformaktionen (Domain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert) über GET /api/v1/platform/audit-events (Parameter limit, offset, action). Die Einträge s",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Textbausteine (Informationsblatt, Anschreiben, § 35a)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Textbausteine pflegen Sie die Texte, die auf dem Informationsblatt zur Betriebskostenabrechnung, im Eigentümeranschreiben und im Nachweis § 35a EStG erscheinen. Ein Text wird als Entwurf angelegt, zur Freigabe eingereicht und von einer zweiten Person mit dem ",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechtstexte des Portals (Impressum, Datenschutz, Nutzungsbedingungen)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Rechtstexte des Portals pflegen Sie Impressum, Datenschutzerklärung und Nutzungsbedingungen des Portals Ihres Mandanten. Die Pflege entspricht den Textbausteinen: Entwurf anlegen, zur Freigabe einreichen, Freigabe durch eine zweite Person mit dem Recht Dokume",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Fachliche Regeln (alle Schalter für offene Entscheidungen)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln (/einstellungen/fachliche-regeln) finden Sie alle Mandantenschalter, mit denen die Plattform fachlich offene Entscheidungen abbildet, an einer Stelle. Die Seite sehen Sie mit dem Recht Mandanteneinstellungen lesen oder Buchhaltung lesen. Jede",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -5308,6 +5583,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Spaltenerkennung und gemerkte Zuordnung (Welle 16)",
+  "source": "Handbuch: Importe (Imports)",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Hochladen im Importassistenten ist „Kopfzeile automatisch erkennen“ voreingestellt: die Plattform bewertet die ersten 30 Zeilen und nimmt die Zeile mit den meisten Spaltenüberschriften (Titelzeilen darüber werden übersprungen). Die erkannte Zeile und die Begründung stehen üb",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Kalender",
   "href": "/kalender",
@@ -5464,6 +5749,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Zweck Fremdsysteme (zum Beispiel Buchhaltung oder Einzugsdienste) erhalten Ereignisse der Plattform als signierte Meldung, sobald sie eintreten. Die Meldung enthält nur Kennungen, Feldnamen, Nummern, Daten und Beträge; nie IBAN, Namen, Anschriften, E-Mail-Adressen, Telefonnummern",
+  "file": "docs/handbuch/kommunikation.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Eingehender Webhook für klassifizierte Mails (Bestandsprogramm)",
+  "source": "Handbuch: Kommunikation (Telefonie, Zustellungen, ausgehende Webhooks)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Zweck Ein Fremdsystem, zum Beispiel das Bestandsprogramm \"Mail optimierung\", kann Mails, die es bereits klassifiziert hat, signiert an die Plattform senden. Die Mail wird wie jede andere eingehende Mail zugeordnet und erhält ein Ticket, außer sie ist die Antwort in einem bestehen",
   "file": "docs/handbuch/kommunikation.md"
  },
  {
@@ -6498,6 +6793,36 @@
  },
  {
   "kind": "handbook",
+  "title": "Abnahmeregister Anhang D (V16)",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seite Plattform, Abnahmeregister Anhang D (/plattform/abnahme). Je Fall D01 bis D58 wird ein unabhängiger Sollwert mit Eingaben, Quelle und Rechenweg als Entwurf erfasst und zur Freigabe eingereicht (Recht Abnahme verwalten). Die fachkundige Abnahmeperson (Rolle „Fachkundige Abna",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Skalierung und Jahrespartitionierung (AE36)",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Stand: 01.10.2026. Die Seite Plattform, Betrieb (Wartung und Verfügbarkeit) zeigt unter \"Skalierung und Jahrespartitionierung\", ob einer der Auslöser aus ADR 0021 erreicht ist. Die Seite meldet nur: Es wird nichts umgebaut, verschoben oder gelöscht. - Erreichte Auslöser stehen ob",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Demo-Mandant (AE36)",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ein Demo-Mandant enthält nur erfundene Daten (make seed-demo, Runbook demo-mandant.md). Auf der Startseite Plattform trägt er das Merkmal \"Demo-Mandant\". Mit der Schaltfläche am Mandanten kennzeichnen Sie einen Mandanten als Demo-Mandanten oder entfernen das Kennzeichen; das Setz",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,
@@ -6818,6 +7143,46 @@
  },
  {
   "kind": "handbook",
+  "title": "Eigentümerportal: Mieterträge und Meldungen (Welle 16)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Portalfunktionen schaltet die Verwaltung die Anzeige der Mieterträge für Kapitalanleger ein (Standard aus) und wählt, welche Meldungen Eigentümer zu ihren Objekten sehen: keine, nur freigegebene oder alle Meldungen der eigenen Objekte (nur Nummer, Titel und S",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Formularbaukasten: Typen, Prüfregeln und Vorschau (Welle 16)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Portalformulare zeigt \"Elementtypen und Prüfregeln anzeigen\" die 20 Elementtypen des Baukastens mit dem erwarteten Wert und der Prüfregel je Typ. Der Hinweis dabei nennt, dass der Abgleich mit der Typenliste des bisherigen Portals noch offen ist. - \"Vorschau ",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bewertungen von Dienstleistern (Welle 16)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Portalformulare, Portalfunktionen steuert die Auswahl \"Bewertungen von Dienstleistern\", ob die Verwaltung eine Übersicht der Bewertungen sieht. Standard ist \"nicht anzeigen\". Bei \"nur der Verwaltung als Übersicht anzeigen\" erscheinen je Dienstleister die Zahl",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Assistent für die eigenen Unterlagen (Chat-Bot)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Assistent beantwortet Fragen von Mietern und Eigentümern zu den Unterlagen, die für ihren Zugang freigegeben sind. Er liest nie Unterlagen anderer Einheiten oder Personen, und ein Zugang ohne Freigaben bekommt gesagt, dass keine Unterlagen freigegeben sind. Für die Verwaltung",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Rechnungen (Invoices)",
   "href": "/rechnungen",
@@ -6954,6 +7319,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Belegeingang zeigt der Block \"E-Rechnung: Prüfergebnis\" Profil, Prüfer, Version, Ergebnis und Meldungen. Die interne formale Prüfung ist kein amtlicher Validator. Ein Reverse Charge Kennzeichen führt zum Hinweis auf einen möglichen Fall des § 13b UStG als gesonderten Freigabep",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Budgetabgleich und Beschlussdeckung",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist eine Rechnung einer Wirtschaftsplanposition zugeordnet, zeigt die sachliche Prüfung Planansatz, bisher zugeordnete Rechnungen, diese Rechnung und den Rest. Ist ein Beschluss verknüpft, erscheinen Nummer, Datum, Gegenstand und ein Hinweis, ob der Beschluss als wirksam erfasst ",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Nummern von Mietrechnungs-Entwürfen",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Solange die Freigabestufe G1 geschlossen ist, sind Mietrechnungen und Gutschriften Entwürfe mit Wasserzeichen. Standardmäßig tragen sie eine Entwurfsnummer (ENTWURF-JJJJ-NNNNNN) und verbrauchen die fortlaufende Rechnungsnummer MR nicht. Die reguläre Nummer wird erst bei Ausgabe m",
   "file": "docs/handbuch/rechnungen.md"
  },
  {
@@ -7844,6 +8229,76 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Technisch vorbereitet, Standard aus. Der Schalter wird über PUT /hoa/online-meeting-settings gesetzt, erst nach Klärung durch die Rechtsberatung (AD06-01). Vollmacht und Stimmabgabe im Portal brauchen zusätzlich die Freigabestufe G4. 1. Hybride oder virtuelle Versammlung anlegen,",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Korrektur einer Abrechnung (neue Version mit Differenzbericht)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Wird ein Beschluss geändert oder für ungültig erklärt, legen Sie über \"Neue Version\" eine Korrekturfassung an (Grund, Bezug, optional Beschluss). Die alte Fassung bleibt unverändert. Nach der Berechnung beider Fassungen zeigt der Versionsvergleich je Eigentümer vorher, nachher un",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Virtuelle Versammlung: Stichtag und Online-Schalter (AE12)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Objekt unter WEG, Bereich Versammlungen, tragen Sie in den Einstellungen optional den Stichtag der Übergangsregel ein. Das Datum ist ein Merkposten ohne Rechtswirkung und löst keine Sperre aus; Inhalt und Anwendbarkeit der Regel sind mit der Rechtsberatung zu klären (AA06-02).",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zahlungen je Rücklage (AE08)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Jahresabrechnung zeigt der Abschnitt „Zahlungen je Rücklage“ je Zweckrücklage das Soll laut beschlossenem Wirtschaftsplan und das Ist der an die Rücklage gebundenen Zahlungen. Eine Zahlung ist gebunden, wenn die Sollstellung im Vertrag mit einer Rücklage erfasst wurde; daf",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Unterjährige Planänderung: Differenz gebuchter Monate (Stand 01.10.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Liegt der Wirksamkeitsbeginn eines neuen Wirtschaftsplans vor bereits gebuchten Monaten, zeigt die Vorschau der Übernahme den Abschnitt \"Differenz gebuchter Monate\". Je Einheit und Monat stehen gebuchter Betrag, neuer Betrag und Differenz (Nachforderung oder Gutschrift). Variante",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zuordnungsregel bei Eigentümerwechsel",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Abrechnungsansicht erscheint bei Sondererwerben der Block \"Zuordnung des Abrechnungsergebnisses bei Eigentümerwechsel\". Je Erwerbsart wählen Sie die Variante (manuelle Freigabe als Standard, Zuordnung nach Fälligkeit, Zuordnung nach Abrechnungsbeschluss) und vermerken die ",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagenplan je Jahr (Welle 16)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter WEG, Rücklagen steht je Rücklage der Rücklagenplan: Jahr, Soll-Zuführung, Abweichung zum Wirtschaftsplan, Status und steuerliche Einordnung (Platzhalter, nicht freigegeben). Ein Entwurf wird mit Jahr und Betrag angelegt oder per API aus dem Wirtschaftsplan abgeleitet und mi",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Online-Versammlung: Vollmacht gegen eigene Stimme, Prüfpunkte, Protokollentwurf (AE31)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter WEG, Bereich Versammlungen, steht beim Schalter \"Online-Teilnahme im Portal zulassen\" die Regel für den Fall, dass für eine Einheit eine Stimme des Eigentümers und eine Stimme des Bevollmächtigten vorliegen. Standard ist \"Konflikt als Prüfhinweis markieren\": Die erste Stimm",
   "file": "docs/handbuch/weg.md"
  }
 ]

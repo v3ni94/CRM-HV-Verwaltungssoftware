@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DeletionProposals, type DeletionProposal } from "@/components/documents/DeletionProposals";
@@ -21,6 +22,13 @@ export default async function DeletionProposalsPage() {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/dokumente", label: t("breadcrumb") }]} title={t("title")} description={t("intro")} />
+      {permissions.includes("documents:delete") ? (
+        <p className="text-sm">
+          <Link href="/dokumente/papierkorb" className="underline">
+            {t("trashLink")}
+          </Link>
+        </p>
+      ) : null}
       <DeletionProposals
         proposals={proposals}
         userId={me.data?.user_id ?? null}
