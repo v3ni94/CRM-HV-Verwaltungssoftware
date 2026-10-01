@@ -86,6 +86,8 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
     account_id: "",
     sev_fee_amount: "",
   });
+  // AC04: Erlöskonto als Auswahl der Erlöskonten (Kategorie revenue) der Buchungskreise des Objekts.
+  const [revenueAccounts, setRevenueAccounts] = useState<{ id: string; number: string; name: string }[]>([]);
   const [manager, setManager] = useState<{ id: string; name: string } | null>(null);
   const dueDayNeeded = form.due_day_rule === "day" || form.due_day_rule === "day_next_month";
   const dueDayNumber = Number(form.due_day);
@@ -112,6 +114,30 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRevenueAccounts([]);
+    if (!form.property_id) return;
+    void (async () => {
+      const ledgers = await bff<{ id: string }[]>(`/api/bff/accounting/ledgers?property_id=${form.property_id}`);
+      if (!ledgers.ok || !Array.isArray(ledgers.data)) return;
+      const lists = await Promise.all(
+        ledgers.data.map((l) =>
+          bff<{ id: string; number: string; name: string; category: string; active: boolean }[]>(
+            `/api/bff/accounting/ledgers/${l.id}/accounts`,
+          ),
+        ),
+      );
+      if (cancelled) return;
+      setRevenueAccounts(
+        lists.flatMap((r) => (r.ok && Array.isArray(r.data) ? r.data : [])).filter((a) => a.category === "revenue" && a.active),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [form.property_id]);
 
   const run = async (call: () => Promise<{ ok: boolean; message?: string }>, done?: string) => {
     setBusy(true);
@@ -290,7 +316,19 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
           ) : null}
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className={ui.label}>{t("extra.account")}</span>
-            <input className={ui.input} value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} />
+            <select
+              className={ui.input}
+              value={form.account_id}
+              onChange={(e) => setForm({ ...form, account_id: e.target.value })}
+              data-testid="admin-fee-account"
+            >
+              <option value="">{t("extra.accountNone")}</option>
+              {revenueAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.number} {a.name}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <p className={ui.help}>{t("extra.hint")}</p>

@@ -7,6 +7,13 @@ export type Conversation = S["ConversationOut"];
 export type Message = S["MessageOut"];
 /** Record or page link of a platform lookup answer (rule AI-LOOKUP-01). */
 export type ChatLink = S["ChatLink"];
+/** One lookup the model asked for (tool use, GA10-06); arguments are masked by the API.
+ *  Declared here until the generated client carries ``RunOut.tools_used``. */
+export type AiToolUse = { tool: string; label: string; arguments: Record<string, string>; permitted: boolean; count: number };
+export function toolsUsedOf(run: unknown): AiToolUse[] {
+  const value = (run as { tools_used?: unknown } | null)?.tools_used;
+  return Array.isArray(value) ? (value as AiToolUse[]) : [];
+}
 export type Run = S["RunOut"];
 export type Proposal = S["ProposalOut"];
 export type ImportRun = S["ImportOut"];

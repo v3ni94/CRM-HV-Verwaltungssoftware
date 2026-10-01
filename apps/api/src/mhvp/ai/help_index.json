@@ -2888,6 +2888,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Verwendete Nachschlagewerkzeuge",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist für den KI-Anbieter das Nachschlagen eingeschaltet (Einstellungen, KI-Anbieter, Stufe mit tooluse, Standard aus), kann der Assistent vor der Antwort selbst in den Daten nachsehen: Kontakte, Verträge, offene Posten, Dokumente, Termine und Kontenplan. Er sieht dabei nie mehr al",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Ziel",
   "source": "Handbuch: Aufgabenverteilung Mail und Tickets: Vorschlag",
   "href": null,
@@ -3988,6 +3998,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Erlöskonto im Honorarformular (AC04)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Erlöskonto des Verwalterhonorars wird aus einer Liste gewählt, nicht mehr als ID eingegeben. Angeboten werden die aktiven Konten der Kategorie Erlöse aus den Buchungskreisen des gewählten Objekts. Ohne Auswahl bleibt das Feld leer (optional); das Backend prüft weiterhin, dass",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschprofile",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -4014,6 +4034,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Das Register führt Auftragsverarbeiter, Unterauftragsverarbeiter, Verarbeitungstätigkeiten und Verantwortlichkeiten mit AVV-Status. Mit Entwurf erzeugen wird das Verzeichnis von Verarbeitungstätigkeiten aus dem Register gebildet und kann als Markdown-Datei heruntergeladen werden.",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "DSGVO-Auskunft mit Prüfschritt",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Kontakt öffnet die Schaltfläche „DSGVO-Auskunft“ den Bereich „DSGVO-Auskunft mit Prüfschritt“. Eine Person bereitet die Auskunft vor. Eine zweite Person sieht die Vorschau, markiert sie als geprüft und gibt sie zur Herausgabe frei. Erst danach ist der Download möglich; jeder S",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Löschcheckliste",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Dokumente, Löschvorschläge zeigt „Löschcheckliste“ bei jedem gelöschten Dokument den Stand je Ziel: Index und Volltext, Original, Paperless, Google Drive, Embeddings, KI-Auszüge, Vorschaubilder und Backups. Offene Ziele bearbeitet der tägliche Nachlauf; mit „Nachlauf starte",
   "file": "docs/handbuch/datenschutz.md"
  },
  {
@@ -5608,6 +5648,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Einwilligungen und ihre Wirkung (AC06)",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Reiter Einwilligungen erfassen Sie Art, Datum und Quelle. Jede Art wirkt auf eine Verarbeitung: - marketing: Beim Serienbrief mit dem Haken Werbung erhalten nur Kontakte mit gültiger Werbeeinwilligung das Schreiben. Die übrigen werden übersprungen und im Ergebnis gezählt. Pfli",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Einrichtung",
   "source": "Handbuch: Lexware Office",
   "href": "/einstellungen/schnittstellen/lexware-office",
@@ -6388,6 +6438,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Audit (Plattform)",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Plattform, Plattformaudit sehen Plattformadministratoren die festgeschriebenen Plattformaktionen ohne Mandantenkontext: Kundendomain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert. Die Liste zeigt Zeitpunkt, A",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,
@@ -6674,6 +6734,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Die Sprache wählen Sie im Portal oben rechts und auf der Anmeldeseite. Angemeldete Personen haben die Wahl am Portalkonto gespeichert; bei der nächsten Anmeldung gilt diese Sprache auch auf einem anderen Gerät. Wer nicht angemeldet ist, behält die im Browser gewählte Sprache. Ein",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Portalzugang ohne sofortige Einladung und Statusanzeige (AC04)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Anlegen eines Portalzugangs in der Kontaktakte steuert der Schalter \"Einladung sofort senden\", ob die Einladung direkt versendet wird. Ist er aus, entsteht der Zugang mit dem Status \"Nicht eingeladen\"; die Einladung lässt sich später mit der Aktion \"Einladen\" nachholen. Bei ",
   "file": "docs/handbuch/portal.md"
  },
  {

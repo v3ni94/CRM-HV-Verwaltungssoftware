@@ -410,10 +410,17 @@ async def delete_now(
         actor_user_id=actor_user_id,
     )
     blobs.delete(document.storage_ref)
+    # AC07 (GA08-08): derivatives (embeddings, AI extracts) go in the same transaction; the
+    # storage key is journaled so that the deletion checklist can verify the original.
+    from mhvp.documents.deletion_checklist import purge_derivatives
+
+    purged = await purge_derivatives(session, document.id)
     payload: dict[str, Any] = {
         "sha256": document.sha256,
         "profile": str(document.retention_profile_id),
         "mirror_deletions": len(jobs),
+        "storage_ref": document.storage_ref,
+        "derivatives": purged,
     }
     payload.update(extra or {})
     await emit(

@@ -51,6 +51,7 @@ describe("AdminFeePanel", () => {
   it("lists fees and due periods and issues a period after confirmation", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     mockLoad(fetchMock, [period("due")], []);
+    fetchMock.mockResolvedValueOnce(jsonResponse([])); // AC04: ledgers of the property (revenue account selection)
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: INV, number: "PZ-2026-000001" }));
     mockLoad(fetchMock, [period("issued")], [invoice]);
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -59,7 +60,7 @@ describe("AdminFeePanel", () => {
     expect(screen.getAllByText("vierteljährlich").length).toBeGreaterThan(1);
     await userEvent.click(screen.getByRole("button", { name: "Ausstellen" }));
     await waitFor(() => expect(screen.getByText("Rechnung ausgestellt.")).toBeInTheDocument());
-    expect(String(fetchMock.mock.calls[3]?.[0])).toContain(`/admin-fees/${FEE}/invoice-issue?period_start=2026-01-01`);
+    expect(String(fetchMock.mock.calls[4]?.[0])).toContain(`/admin-fees/${FEE}/invoice-issue?period_start=2026-01-01`);
     expect(await screen.findByText("ausgestellt (PZ-2026-000001)")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "XRechnung" })).toHaveAttribute(
       "href",
@@ -87,12 +88,13 @@ describe("AdminFeePanel", () => {
   it("files the fee invoice PDF and then offers the download (Q15)", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     mockLoad(fetchMock, [period("issued")], [invoice]);
+    fetchMock.mockResolvedValueOnce(jsonResponse([])); // AC04: ledgers of the property (revenue account selection)
     fetchMock.mockResolvedValueOnce(jsonResponse({ document_id: "0192abcd-0000-7000-8000-00000000d001", created: true }, 201));
     renderIntl(<AdminFeePanel properties={[{ id: "p1", label: "P022 Honorarhaus" }]} today="2026-02-15" />);
     await userEvent.click(await screen.findByRole("button", { name: "PDF erzeugen" }));
     const link = await screen.findByRole("link", { name: "PDF herunterladen" });
     expect(link).toHaveAttribute("href", "/api/handover-files/documents/0192abcd-0000-7000-8000-00000000d001/content");
-    expect(fetchMock.mock.calls[3]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/document`);
+    expect(fetchMock.mock.calls[4]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/document`);
   });
 
   it("creates posting drafts for a released invoice and filters by status (M13-07)", async () => {

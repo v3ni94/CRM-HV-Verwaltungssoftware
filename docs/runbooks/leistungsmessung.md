@@ -40,7 +40,7 @@ als Plausibilitätsprüfung.
 ## Offen
 
 - Messung auf dem Staging-Server mit produktionsnaher Datenmenge (Betreiber).
-- Die Entscheidung über Partitionierung hängt an diesen Werten (ADR 0018).
+- Die Entscheidung über Partitionierung hängt an diesen Werten (ADR 0018, ergänzt durch ADR 0021).
 
 ## Lastdaten-Seed (S16-08)
 
@@ -113,3 +113,55 @@ PERF ticket_detail samples=40 median=81ms p95=125ms target=500ms
 ```
 
 Offen: Messung mit produktionsnahem Bestand (Betreiber, Staging), siehe oben.
+
+## Große Listen: Journal und Bankumsätze bei 100.000 Zeilen (GA12-08)
+
+Grundlage für ADR 0021 (Jahrespartitionierung von `journal_entry` und `bank_transaction`). Der Test
+`test_large_journal_and_bank_lists_p95` in `apps/api/tests/integration/test_ga12_perf.py` erzeugt in einem
+Mandanten 100.000 gebuchte Buchungen mit 200.000 Zeilen (fünf Buchungsjahre 2022 bis 2026) und 100.000
+Bankumsätze (`perf_seed.py`: `seed_journal_entries`, `seed_bank_transactions`) und misst je acht Listenabfragen
+in zwei Runden: direkt nach dem Massenimport (Statistik nicht erneuert) und nach `ANALYZE`. Aufruf:
+
+```
+cd apps/api
+MHVP_PERF=1 uv run pytest tests/integration/test_ga12_perf.py -m slow -s --no-cov -k large
+```
+
+Die CI-Schwelle ist 1 Sekunde (`MHVP_PERF_LIST_LIMIT`), der Zielwert 300 ms (P95) wird auf dem Staging-Server
+mit `MHVP_PERF_LIST_LIMIT=0.3` geprüft. Der Wächter `journal_line_guard` wird vom Generator auf der
+Testdatenbank für die Dauer des Ladens deaktiviert und im `finally` wieder eingeschaltet (Begründung im
+ADR 0021, Befund 3). Nie gegen eine produktive Datenbank verwenden.
+
+Messwerte 01.10.2026 (Entwicklungsumgebung, 4 Kerne, mit anderen Läufen geteilt, nicht repräsentativ; je 20
+Abrufe, Datenbank mhvp_p09; Laden von 100.000 Buchungen, 200.000 Zeilen und 100.000 Umsätzen in 14,2 s):
+
+| Abfrage | Median ohne frische Statistik | P95 ohne frische Statistik | Median nach ANALYZE | P95 nach ANALYZE |
+| --- | --- | --- | --- | --- |
+| Journal Seite 1 (100 je Seite) | 64 ms | 133 ms | 28 ms | 31 ms |
+| Journal Seite 900 | 109 ms | 119 ms | 86 ms | 94 ms |
+| Journal Jahresfilter 2024 (gebucht) | 42 ms | 100 ms | 40 ms | 63 ms |
+| Journal Monatsfilter 03.2024 | 88 ms | 194 ms | 24 ms | 26 ms |
+| Bankumsätze Seite 1 (200 je Seite) | 99 ms | 111 ms | 80 ms | 91 ms |
+| Bankumsätze Offset 90.000 | 347 ms | 404 ms | 180 ms | 201 ms |
+| Bankumsätze Jahresfilter 2024 | 84 ms | 111 ms | 46 ms | 55 ms |
+| Bankumsätze Status neu (10 Prozent) | 85 ms | 96 ms | 68 ms | 84 ms |
+
+Auswertung: Mit aktueller Statistik liegen alle Abfragen unter 300 ms (P95). Ohne aktuelle Statistik
+überschreitet nur der tiefe Offset der Bankumsatzliste die Vorgabe (404 ms). Die Pläne (EXPLAIN ANALYZE, 100.000
+Zeilen) zeigen: Das Journal nutzt nach `ANALYZE` den Unique-Index `(tenant_id, ledger_id, fiscal_year,
+number)` für die Sortierung (erste Seite 0,3 ms, Zeilen 90.000 bis 90.100 78 ms, Gesamtzähler 22 ms);
+die Bankumsatzliste sortiert mangels passenden Index alle Umsätze des Mandanten (43 ms erste Seite, 189 ms bei
+Offset 90.000). Die Kosten wachsen bei beiden linear mit der Zeilenzahl; die Messung belegt keine Aussage für
+10 Millionen Zeilen.
+
+Hinweise für den Betrieb:
+
+- Nach Massenimporten (Immoware24-Übernahme, Kontoauszugsimport) `ANALYZE` auf `journal_entry`,
+  `journal_line` und `bank_transaction` ausführen, bis Autovacuum nachgezogen hat.
+- Befund Wächterfunktion: `journal_line_guard` verbraucht je eingefügter Zeile Zeit proportional zur Größe von
+  `journal_entry` (3,4 ms je Zeile bei 20.000 Buchungen im Mandanten, gemessen). Ein Massenimport von 200.000
+  Zeilen über die normale Schreibstrecke ist damit nicht praktikabel. Korrektur nur über eine eigene Migration
+  mit Tests der Wache und Freigabe der Geschäftsführung (ADR 0021, Folgen).
+- Offen: Messung mit 1, 5 und 10 Millionen Zeilen, mit 10 und 50 Mandanten und mit mehreren Celery-Workern
+  gegen dieselbe Queue (Messplan in ADR 0021, Zeitpunkt vor G5, Frage AC09-01). Bis dahin ist die Zielgröße
+  Phase 4 aus Abschnitt 16 nicht nachgewiesen.

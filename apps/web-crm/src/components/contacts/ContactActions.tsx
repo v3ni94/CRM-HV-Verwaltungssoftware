@@ -8,6 +8,8 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { AccessExportPanel } from "./AccessExportPanel";
+
 export function ContactActions({
   id,
   name,
@@ -37,23 +39,10 @@ export function ContactActions({
     router.refresh();
   }
 
-  async function exportData() {
+  // AC07 (GA08-06): no direct download; the panel runs prepare, review, release, download.
+  function exportData() {
     setError(null);
-    const result = await bff<unknown>(`/api/bff/contacts/${id}/export`);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
-    const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dsgvo-auskunft-${id}.json`;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    setHint(true);
+    setHint((open) => !open);
   }
 
   return (
@@ -62,7 +51,7 @@ export function ContactActions({
         <Link href={`/kontakte/${id}/bearbeiten`} className={ui.button}>
           {t("edit")}
         </Link>
-        <button type="button" className={ui.button} onClick={() => void exportData()}>
+        <button type="button" className={ui.button} onClick={exportData}>
           {t("export")}
         </button>
         {canDelete ? (
@@ -86,11 +75,7 @@ export function ContactActions({
           </div>
         </div>
       ) : null}
-      {hint ? (
-        <p role="status" className={`${ui.notice} max-w-md`}>
-          {t("exportHint")}
-        </p>
-      ) : null}
+      {hint ? <AccessExportPanel contactId={id} /> : null}
       {error ? (
         <p role="alert" className={`${ui.alert} max-w-md`}>
           {error}

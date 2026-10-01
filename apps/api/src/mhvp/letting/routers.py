@@ -1340,7 +1340,7 @@ async def patch_prospect(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await session.get(Prospect, prospect_id)
+        row = await session.get(Prospect, prospect_id, with_for_update=True)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         check_if_match(if_match, row.updated_at)  # GA04-06

@@ -50,3 +50,18 @@
    zeigen den Abgleich aus Punkt 3 je Debitor und Kreditor zum gewählten Stichtag. Der Prüfexport
    (ZIP) enthält die Tabelle `nebenbuchabgleich.csv` mit Stichtag gleich Zeitraumende. Keine
    neue Fachregel: Darstellung und Ablage des bestehenden Abgleichs.
+9. **Register bereinigt und Laufzeitnachweis vollständig (AC03, 01.10.2026).** Das Register ist
+   in drei Listen geteilt. `GATED_ROUTES`: Routen, die bei geschlossenem Gate mit 403
+   `MHVP-GATE-0001` ablehnen. `GATE_REQUEST_ROUTES`: Routen des Freigabeverfahrens selbst (Antrag
+   auf Öffnung von G1, Ablehnung eines Antrags auf Systemwechsel, Entscheidung über
+   Freigabeanträge in der Plattformverwaltung); sie sind bei geschlossenem Gate zulässig und
+   öffnen nichts. `GATE_CONDITIONAL_ROUTES`: Routen, bei denen das geschlossene Gate die Wirkung
+   ändert statt abzulehnen (Mietrechnung und Gutschrift nur als Entwurf mit Wasserzeichen,
+   automatische Verbuchung bucht nichts). `PRECONDITION_FIRST` ist leer: für Routen mit
+   vorgelagerter Datensatzprüfung legt der Test den Datensatz an (Buchungskreis, Sollstellungslauf
+   mit Umsatzsteuerpositionen, freigegebener externer Postdienst, ausstehender Wechselantrag einer
+   anderen Person) und weist danach 403 mit G1 nach; der Wechselantrag wird direkt angelegt, weil
+   die Programmierschnittstelle ihn bei geschlossenem G1 nicht zulässt. Der Ausgleichsvorschlag
+   wird mit sofortiger Buchung aufgerufen, nur dieser Zweig ist gegatet. Neu im Register seit
+   1.58.0: Informationsblatt ablegen (G3), Ausgaben der Eigentümerabrechnung ablegen (G3),
+   Vermögensbericht versenden (G4). Keine neue Fachregel, keine Gate-Entscheidung.

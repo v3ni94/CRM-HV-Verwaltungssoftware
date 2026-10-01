@@ -1,6 +1,6 @@
 # ADR 0018: Vorbereitung der Jahrespartitionierung für journal_line und bank_transaction
 
-- Status: Proposed
+- Status: Proposed, ergänzt durch ADR 0021 (Ist-Analyse, Messwerte, Auslöser)
 - Date: 30.09.2026
 
 ## Context

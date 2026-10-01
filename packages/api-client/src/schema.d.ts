@@ -6623,6 +6623,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/consent-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Einwilligungsregeln des Mandanten
+         * @description Switches of the consent checks per purpose (AC06, rule AC06-einwilligungen).
+         */
+        get: operations["get_consent_policy_api_v1_consent_policy_get"];
+        /**
+         * Einwilligungsregeln des Mandanten setzen
+         * @description Widening a default (``consent_or_contract``) is an operator decision on the legal
+         *     basis (OPEN_QUESTIONS AC06-01, AC06-02); the change is recorded as an event.
+         */
+        put: operations["put_consent_policy_api_v1_consent_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/consents/{consent_id}/revoke": {
         parameters: {
             query?: never;
@@ -6858,6 +6883,109 @@ export interface paths {
         head?: never;
         /** Kontakt teilweise ändern (Stammdaten, If-Match) */
         patch: operations["patch_contact_api_v1_contacts__contact_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/access-exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auskunftsexporte eines Kontakts mit Prüfstatus */
+        get: operations["list_access_exports_api_v1_contacts__contact_id__access_exports_get"];
+        put?: never;
+        /** Auskunftsexport vorbereiten (Status prepared, AC07) */
+        post: operations["prepare_access_export_api_v1_contacts__contact_id__access_exports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auskunftsexport zur Herausgabe freigeben (zweite Person) */
+        post: operations["release_access_export_api_v1_contacts__contact_id__access_exports__export_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Freigegebenen Auskunftsexport herunterladen (protokolliert) */
+        get: operations["download_access_export_api_v1_contacts__contact_id__access_exports__export_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auskunftsexport zur Prüfung ansehen (interne Vorschau, keine Herausgabe) */
+        get: operations["preview_access_export_api_v1_contacts__contact_id__access_exports__export_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auskunftsexport verwerfen */
+        post: operations["reject_access_export_api_v1_contacts__contact_id__access_exports__export_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auskunftsexport geprüft (zweite Person) */
+        post: operations["review_access_export_api_v1_contacts__contact_id__access_exports__export_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/contacts/{contact_id}/bank-accounts": {
@@ -7124,7 +7252,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** DSGVO-Auskunft (Entwurf zur Prüfung) */
+        /**
+         * DSGVO-Auskunft (abgelöst durch Prüfablauf, AC07)
+         * @description The direct download without review is closed (AC07, GA08-06): prepare, review and
+         *     release under ``/contacts/{id}/access-exports``.
+         */
         get: operations["export_contact_api_v1_contacts__contact_id__export_get"];
         put?: never;
         post?: never;
@@ -8545,6 +8677,44 @@ export interface paths {
         get: operations["list_deletions_api_v1_documents_deletions_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/deletions/{document_id}/checklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Löschcheckliste je Ziel (Index, Original, Spiegel, Ableitungen, AC07) */
+        get: operations["deletion_checklist_api_v1_documents_deletions__document_id__checklist_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/deletions/{document_id}/follow-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nachlauf der Löschung: offene Ziele erneut bearbeiten (AC07)
+         * @description Never deletes a document that exists again (restore): that is the replay path with its
+         *     hold and hash checks; a retention hold always wins.
+         */
+        post: operations["deletion_follow_up_api_v1_documents_deletions__document_id__follow_up_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18590,6 +18760,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal-admin/legal-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rechtsträger zur Auswahl (nur Id und Name, AC04)
+         * @description Small read path for the provider portal settings page: the selection needs no
+         *     members:read, only tenant_settings:read. RLS limits it to the own tenant.
+         */
+        get: operations["list_legal_entity_choices_api_v1_portal_admin_legal_entities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal-admin/provider-availability": {
         parameters: {
             query?: never;
@@ -20037,6 +20228,44 @@ export interface paths {
         post: operations["grant_consent_api_v1_portal_support_consent_post"];
         /** Einwilligung widerrufen */
         delete: operations["revoke_consent_api_v1_portal_support_consent_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stand der Nutzungsbedingungen des Portals
+         * @description AC06: published terms version and whether the signed in account has accepted it.
+         *     Reachable without accepted terms so that the portal can ask for the acceptance.
+         */
+        get: operations["portal_terms_status_api_v1_portal_terms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/terms/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Nutzungsbedingungen des Portals annehmen */
+        post: operations["portal_terms_accept_api_v1_portal_terms_accept_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -26133,6 +26362,24 @@ export interface components {
          */
         AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution" | "call_summary" | "embed" | "rent_increase_check" | "reply_draft";
         /**
+         * AiToolUseOut
+         * @description One lookup the model asked for (``input_ref["tool_calls"]``); arguments are masked.
+         */
+        AiToolUseOut: {
+            /** Arguments */
+            arguments?: {
+                [key: string]: string;
+            };
+            /** Count */
+            count: number;
+            /** Label */
+            label: string;
+            /** Permitted */
+            permitted: boolean;
+            /** Tool */
+            tool: string;
+        };
+        /**
          * AlertChannel
          * @enum {string}
          */
@@ -29778,6 +30025,72 @@ export interface components {
                 [key: string]: components["schemas"]["UnitTotalIn"];
             };
         };
+        /** ContactAccessExportLogEntry */
+        ContactAccessExportLogEntry: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Type */
+            type: string;
+        };
+        /**
+         * ContactAccessExportOut
+         * @description Auskunftsexport Art. 15 DSGVO mit Prüfstatus (AC07, GA08-06).
+         */
+        ContactAccessExportOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Downloads */
+            downloads: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Log */
+            log: components["schemas"]["ContactAccessExportLogEntry"][];
+            /**
+             * Prepared At
+             * Format: date-time
+             */
+            prepared_at: string;
+            /** Prepared By */
+            prepared_by: string | null;
+            /** Rejected Reason */
+            rejected_reason: string | null;
+            /** Released At */
+            released_at: string | null;
+            /** Released By */
+            released_by: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Sha256 */
+            sha256: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "prepared" | "reviewed" | "released" | "rejected";
+        };
+        /** ContactAccessExportRejectIn */
+        ContactAccessExportRejectIn: {
+            /** Reason */
+            reason: string;
+        };
         /**
          * ContactBankAccountKind
          * @description Account types of catalogue B.4 (Masterprompt Ergänzung 27.09.2026).
@@ -29901,6 +30214,41 @@ export interface components {
              * @description Rolle dieser Zeile (ContactRoleCode); ersetzt die Rolle des Laufs nicht, sie kommt hinzu (10.1 Schritt 4, GA10-05)
              */
             role?: ("eigentuemer" | "mieter" | "verwalter" | "dienstleister" | "bank" | "sonstiges") | null;
+        };
+        /**
+         * ContactConsentPolicyIn
+         * @description Tenant switches of the consent checks (AC06). Defaults are restrictive.
+         */
+        ContactConsentPolicyIn: {
+            /**
+             * Data Sharing
+             * @default consent_only
+             * @enum {string}
+             */
+            data_sharing: "consent_only" | "consent_or_contract";
+            /**
+             * Email Delivery
+             * @default consent_only
+             * @enum {string}
+             */
+            email_delivery: "consent_only" | "consent_or_contract";
+            /** Portal Terms Version */
+            portal_terms_version?: string | null;
+        };
+        /** ContactConsentPolicyOut */
+        ContactConsentPolicyOut: {
+            /**
+             * Data Sharing
+             * @enum {string}
+             */
+            data_sharing: "consent_only" | "consent_or_contract";
+            /**
+             * Email Delivery
+             * @enum {string}
+             */
+            email_delivery: "consent_only" | "consent_or_contract";
+            /** Portal Terms Version */
+            portal_terms_version: string | null;
         };
         /** ContactDateIn */
         ContactDateIn: {
@@ -32536,6 +32884,52 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to: string | null;
+        };
+        /**
+         * DocumentDeletionChecklistItemOut
+         * @description One target of a deletion (AC07, GA08-08).
+         */
+        DocumentDeletionChecklistItemOut: {
+            /** Detail */
+            detail: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "done" | "open" | "held" | "not_applicable" | "out_of_scope";
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "index" | "original" | "mirror_paperless" | "mirror_google_drive" | "embeddings" | "ai_extracts" | "thumbnails" | "backup";
+        };
+        /**
+         * DocumentDeletionChecklistOut
+         * @description Deletion checklist per target; ``held`` when a restored document is under a hold.
+         */
+        DocumentDeletionChecklistOut: {
+            /**
+             * Deleted At
+             * Format: date-time
+             */
+            deleted_at: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Items */
+            items: components["schemas"]["DocumentDeletionChecklistItemOut"][];
+            /**
+             * Mirror Jobs Queued
+             * @default 0
+             */
+            mirror_jobs_queued: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "done" | "open" | "held";
         };
         /**
          * DocumentDeletionOut
@@ -41345,8 +41739,12 @@ export interface components {
         };
         /** PortalAcceptIn */
         PortalAcceptIn: {
+            /** Accept Terms */
+            accept_terms?: boolean | null;
             /** Password */
             password: string;
+            /** Terms Version */
+            terms_version?: string | null;
             /** Token */
             token: string;
         };
@@ -41565,6 +41963,19 @@ export interface components {
             /** Vat Rate */
             vat_rate?: number | string | null;
         };
+        /**
+         * PortalLegalEntityChoice
+         * @description Minimal option for the legal entity selection (id and name only).
+         */
+        PortalLegalEntityChoice: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** PortalLocaleIn */
         PortalLocaleIn: {
             /** Locale */
@@ -41666,6 +42077,13 @@ export interface components {
              * @default 24
              */
             hours: number;
+        };
+        /** PortalTermsAcceptIn */
+        PortalTermsAcceptIn: {
+            /** Accept Terms */
+            accept_terms: boolean;
+            /** Terms Version */
+            terms_version: string;
         };
         /** PortalTicketIn */
         PortalTicketIn: {
@@ -45015,6 +45433,8 @@ export interface components {
             tokens_in: number;
             /** Tokens Out */
             tokens_out: number;
+            /** Tools Used */
+            tools_used?: components["schemas"]["AiToolUseOut"][];
             /** Warnings */
             warnings?: string[];
         };
@@ -45180,6 +45600,11 @@ export interface components {
         };
         /** SerialDispatchIn */
         SerialDispatchIn: {
+            /**
+             * Advertising
+             * @default false
+             */
+            advertising: boolean;
             /** Items */
             items: components["schemas"]["DispatchIn"][];
         };
@@ -45215,6 +45640,11 @@ export interface components {
          * @description Template with placeholders merged per recipient, then dispatched (M23-03).
          */
         SerialMergeIn: {
+            /**
+             * Advertising
+             * @default false
+             */
+            advertising: boolean;
             /** Channel */
             channel?: string | null;
             /** Contact Ids */
@@ -47276,6 +47706,11 @@ export interface components {
             model: string;
             /** Output Eur Per Mtok */
             output_eur_per_mtok: number | string;
+            /**
+             * Tool Use
+             * @description None counts as off
+             */
+            tool_use?: boolean | null;
         };
         /**
          * TierTestOut
@@ -62798,6 +63233,59 @@ export interface operations {
             };
         };
     };
+    get_consent_policy_api_v1_consent_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactConsentPolicyOut"];
+                };
+            };
+        };
+    };
+    put_consent_policy_api_v1_consent_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactConsentPolicyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactConsentPolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     revoke_consent_api_v1_consents__consent_id__revoke_post: {
         parameters: {
             query?: never;
@@ -63396,6 +63884,236 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_access_exports_api_v1_contacts__contact_id__access_exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAccessExportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_access_export_api_v1_contacts__contact_id__access_exports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAccessExportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_access_export_api_v1_contacts__contact_id__access_exports__export_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAccessExportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_access_export_api_v1_contacts__contact_id__access_exports__export_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_access_export_api_v1_contacts__contact_id__access_exports__export_id__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_access_export_api_v1_contacts__contact_id__access_exports__export_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactAccessExportRejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAccessExportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_access_export_api_v1_contacts__contact_id__access_exports__export_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAccessExportOut"];
                 };
             };
             /** @description Validation Error */
@@ -67004,6 +67722,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentDeletionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deletion_checklist_api_v1_documents_deletions__document_id__checklist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDeletionChecklistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deletion_follow_up_api_v1_documents_deletions__document_id__follow_up_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDeletionChecklistOut"];
                 };
             };
             /** @description Validation Error */
@@ -88458,6 +89238,26 @@ export interface operations {
             };
         };
     };
+    list_legal_entity_choices_api_v1_portal_admin_legal_entities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalLegalEntityChoice"][];
+                };
+            };
+        };
+    };
     list_availability_api_v1_portal_admin_provider_availability_get: {
         parameters: {
             query?: {
@@ -91020,6 +91820,63 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    portal_terms_status_api_v1_portal_terms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    portal_terms_accept_api_v1_portal_terms_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalTermsAcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

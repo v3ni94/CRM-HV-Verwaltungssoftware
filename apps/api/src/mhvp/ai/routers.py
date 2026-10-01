@@ -23,6 +23,7 @@ from mhvp.ai import (
     lookup,
     providers,
     tasks,
+    tool_use,
 )
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
@@ -837,6 +838,9 @@ async def send_message(
                 sub_area=body.sub_area,
             )
             ref["lookup"] = found
+            # Tool use (GA10-06): the caller's rights travel with the run; the worker runs the
+            # model's lookups with exactly these rights (``tool_use.principal_of``).
+            ref["tool_grant"] = tool_use.grant_of(principal)
             # Without documents:read the question is answered without document search.
             ref["rag"] = rag
             hash_extra["lookup"] = lookup.fingerprint(found)
@@ -917,6 +921,7 @@ async def get_run(
         if ref.get("lookup") is not None:
             out.links = [s.ChatLink.model_validate(x) for x in lookup.links_of(ref["lookup"])]
             out.lookup_answer = lookup.answer_text(ref["lookup"])
+        out.tools_used = [s.AiToolUseOut.model_validate(x) for x in tool_use.used_tools(ref)]
         out.proposal_id = await session.scalar(
             select(AiProposal.id).where(AiProposal.task_run_id == run.id)
         )

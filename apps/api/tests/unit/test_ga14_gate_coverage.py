@@ -7,7 +7,9 @@ a money, statement or dispatch function must be listed in ``REVIEWED_UNGATED``: 
 of that kind fails the test until it is gated or classified. ``REVIEWED_UNGATED`` is the
 inventory of 01.10.2026; its classification is open question AA01-01 (operator, G1 to G4),
 it is not a release. The runtime proof (403 MHVP-GATE-0001 with the closed resolver) for every
-route of the register is ``tests/integration/test_ab01_gate_runtime.py`` (AB01).
+route of the register is ``tests/integration/test_ab01_gate_runtime.py`` (AB01, AC03).
+AC03 split off ``GATE_REQUEST_ROUTES`` (the gate procedure itself) and
+``GATE_CONDITIONAL_ROUTES`` (closed gate yields a draft or no effect instead of 403).
 """
 
 import inspect
@@ -26,16 +28,11 @@ GATED_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("POST", "/api/v1/deposit-settlements/{settlement_id}/release", "G3"),
     ("POST", "/api/v1/imports/migration/ledgers/{ledger_id}/switch-requests", "G1"),
     ("POST", "/api/v1/imports/migration/switch-requests/{request_id}/approve", "G1"),
-    ("POST", "/api/v1/imports/migration/switch-requests/{request_id}/reject", "G1"),
     ("POST", "/api/v1/accounting/ledgers/{ledger_id}/leading", "G1"),
     ("POST", "/api/v1/accounting/ledgers/{ledger_id}/open-items/settlement-proposal/confirm", "G1"),
     ("POST", "/api/v1/accounting/receivable-runs/{run_id}/post", "G1"),
     ("POST", "/api/v1/accounting/dunning-cases/{case_id}/letter/send", "G1"),
-    ("POST", "/api/v1/accounting/g1-opening/request", "G1"),
     ("POST", "/api/v1/accounting/admin-fee-invoices/{invoice_id}/posting-drafts", "G1"),
-    ("POST", "/api/v1/contracts/{contract_id}/rent-invoices", "G1"),
-    ("POST", "/api/v1/contracts/{contract_id}/rent-invoices/{invoice_id}/credit-note", "G1"),
-    ("POST", "/api/v1/banking/auto-post", "G1"),
     ("POST", "/api/v1/banking/payment-batches", "G2"),
     ("POST", "/api/v1/banking/payment-batches/{batch_id}/submit", "G2"),
     ("POST", "/api/v1/accounting/direct-debits/{run_id}/submit", "G2"),
@@ -52,6 +49,29 @@ GATED_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("POST", "/api/v1/letting/rent-increases/{case_id}/letter/pdf", "G3"),
     ("POST", "/api/v1/letting/rent-increases/{case_id}/actions", "G3"),
     ("POST", "/api/v1/postal/jobs", "G1"),
+    # AC03: outputs and dispatch added since 1.58.0, gate checked before any lookup.
+    ("POST", "/api/v1/statements/{statement_id}/info-sheet", "G3"),
+    ("POST", "/api/v1/billing/owner-statements/{statement_id}/outputs", "G3"),
+    ("POST", "/api/v1/hoa/asset-reports/{report_id}/dispatch", "G4"),
+)
+
+# AC03: routes that belong to the gate procedure itself (request, decision on a request).
+# They must work while the gate is closed and open nothing; refusing a request needs no gate.
+_PLATFORM_GATE_REQUEST = "/api/v1/platform/tenants/{tenant_id}/release-gates/requests/{request_id}"
+GATE_REQUEST_ROUTES: tuple[tuple[str, str, str], ...] = (
+    ("POST", "/api/v1/accounting/g1-opening/request", "G1"),
+    ("POST", "/api/v1/imports/migration/switch-requests/{request_id}/reject", "G1"),
+    ("POST", _PLATFORM_GATE_REQUEST + "/approve", "G1"),
+    ("POST", _PLATFORM_GATE_REQUEST + "/reject", "G1"),
+)
+
+# AC03: routes where the closed gate changes the effect instead of refusing: the result is a
+# draft (rent invoice, credit note with watermark) or nothing is posted (auto-post runner).
+# Runtime proof of the closed branch: tests/integration/test_ab01_gate_runtime.py.
+GATE_CONDITIONAL_ROUTES: tuple[tuple[str, str, str], ...] = (
+    ("POST", "/api/v1/contracts/{contract_id}/rent-invoices", "G1"),
+    ("POST", "/api/v1/contracts/{contract_id}/rent-invoices/{invoice_id}/credit-note", "G1"),
+    ("POST", "/api/v1/banking/auto-post", "G1"),
 )
 
 REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(
@@ -199,14 +219,17 @@ def routes() -> dict[tuple[str, str], set[str]]:
 def test_register_routes_exist_and_check_their_gate(
     routes: dict[tuple[str, str], set[str]],
 ) -> None:
-    missing = [(m, p) for m, p, _ in GATED_ROUTES if (m, p) not in routes]
+    every = GATED_ROUTES + GATE_REQUEST_ROUTES + GATE_CONDITIONAL_ROUTES
+    missing = [(m, p) for m, p, _ in every if (m, p) not in routes]
     assert missing == [], f"Registered gated routes no longer exist: {missing}"
-    ungated = [(m, p, g) for m, p, g in GATED_ROUTES if g not in routes[(m, p)]]
+    ungated = [(m, p, g) for m, p, g in every if g not in routes[(m, p)]]
     assert ungated == [], f"Registered routes without their release gate: {ungated}"
 
 
 def test_no_unclassified_money_route(routes: dict[tuple[str, str], set[str]]) -> None:
-    registered = {(m, p) for m, p, _ in GATED_ROUTES}
+    registered = {
+        (m, p) for m, p, _ in GATED_ROUTES + GATE_REQUEST_ROUTES + GATE_CONDITIONAL_ROUTES
+    }
     unknown = sorted(
         key
         for key, gates in routes.items()
@@ -219,6 +242,13 @@ def test_no_unclassified_money_route(routes: dict[tuple[str, str], set[str]]) ->
         "New money, statement or dispatch routes without release gate; gate them or classify "
         f"them in REVIEWED_UNGATED (AA01-01): {unknown}"
     )
+
+
+def test_lists_are_disjoint() -> None:
+    lists = (GATED_ROUTES, GATE_REQUEST_ROUTES, GATE_CONDITIONAL_ROUTES)
+    keys = [(m, p) for rows in lists for m, p, _ in rows]
+    assert len(keys) == len(set(keys))
+    assert not set(keys) & REVIEWED_UNGATED
 
 
 def test_reviewed_inventory_is_current(routes: dict[tuple[str, str], set[str]]) -> None:

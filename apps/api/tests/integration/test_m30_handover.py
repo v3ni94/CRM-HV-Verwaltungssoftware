@@ -399,6 +399,19 @@ def test_handover_flow(client: TestClient, world: World) -> None:
     assert original["status"] == "completed"
     assert len(original["rooms"]) == 1
 
+    # AC06: e-mail delivery of documents needs an email_delivery consent.
+    _ok(
+        client.post(
+            f"/api/v1/contacts/{contact['id']}/consents",
+            json={
+                "kind": "email_delivery",
+                "granted_at": "2026-01-01T00:00:00Z",
+                "source": "Test AC06",
+            },
+            headers=h,
+        ),
+        201,
+    )
     # Dispatch preparation: only participants with a CRM contact get a dispatch; e-mail becomes
     # a draft in the outbox (M20-01), nothing is sent.
     prepared = _ok(client.post(f"{H}/{pid}/dispatches", json={}, headers=h), 201)

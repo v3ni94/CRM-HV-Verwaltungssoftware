@@ -198,6 +198,24 @@
     "deleteYes": "Delete permanently",
     "cancel": "Cancel",
     "exportHint": "The disclosure was downloaded as a JSON file. Before handing it to the data subject, review its content, in particular for third party data.",
+    "accessExport": {
+      "title": "GDPR disclosure with review",
+      "hint": "The disclosure holds only allowlisted fields, no hashes, tokens, internal notes or AI raw data; other persons appear only with their role. Review and release by a second person, download only afterwards. Draft without legal review.",
+      "prepare": "Prepare disclosure",
+      "empty": "No disclosure prepared yet.",
+      "review": "Mark as reviewed",
+      "release": "Release for hand over",
+      "reject": "Discard",
+      "rejectReason": "Discarded in the CRM",
+      "download": "Download",
+      "downloads": "downloaded {count} times",
+      "status": {
+        "prepared": "prepared, awaiting review",
+        "reviewed": "reviewed, awaiting release",
+        "released": "released",
+        "rejected": "discarded"
+      }
+    },
     "tabs": {
       "master": "Master data",
       "communication": "Communication",
@@ -251,6 +269,7 @@
       "revokedAt": "Revoked on",
       "active": "active",
       "revokeConfirm": "Really record the consent as revoked?",
+      "effectHint": "Effect: marketing controls serial dispatch flagged as advertising, email_delivery the delivery of documents by e-mail (otherwise post), portal_terms the portal access once terms are published, data_sharing the transfer to service providers. A revocation applies at once.",
       "sourceInvalid": "Please enter the source with at least 2 characters.",
       "dateInvalid": "Please enter a valid date."
     },
@@ -379,8 +398,14 @@
       "emailRequired": "Please enter an e-mail address.",
       "invite": "Invite",
       "noPermission": "Inviting requires the permission contacts:update.",
+      "sendInvitation": "Send invitation immediately",
+      "createOnly": "Create access without invitation",
+      "createdOnly": "Portal access created, not yet invited. The invitation can be sent later with Invite.",
+      "notInvitedHint": "The portal access exists, the invitation has not been sent yet.",
       "status": {
         "loading": "Loading",
+        "notInvited": "Not invited",
+        "revoked": "Access revoked",
         "none": "No portal access",
         "invited": "Invited, password not yet set",
         "active": "Access active",
@@ -1546,6 +1571,12 @@
   "Accounting": {
     "title": "Accounting",
     "parallelNotice": "Parallel operation: Immoware24 remains the leading system. Postings in the platform are not the leading bookkeeping as long as release gate G1 has not been granted.",
+    "ruleCheckpoints": {
+      "title": "Due check points of the rule register",
+      "notice": "Hint without legal effect: a due check point reminds of a review. It locks nothing and changes no rule.",
+      "empty": "No check points due.",
+      "rule": "Rule","version": "Version","dueOn": "Due since","status": "Status","reason": "Reason"
+    },
     "empty": "No ledger created yet.",
     "ledger": "Ledger",
     "leading": "Leading system",
@@ -1679,7 +1710,7 @@
       },
       "auditExport": {
         "title": "Audit export (machine readable)",
-        "description": "ZIP per legal entity and period with one CSV per table (accounts, entries, open item settlements, opening balances, master data history, approvals, reversal relations, allocation keys), a table of contents with SHA-256 and the linked original receipts. Scope per section 7.7; no DATEV chart of accounts and no tax classification.",
+        "description": "ZIP per legal entity and period with one CSV per table (accounts, entries, open item settlements, opening balances, master data history, approvals, reversal relations, allocation keys, subledger reconciliation as nebenbuchabgleich.csv with ledger balance, open items and difference per debtor and creditor), a table of contents with SHA-256 and the linked original receipts. Scope per section 7.7; no DATEV chart of accounts and no tax classification.",
         "start": "Period from",
         "end": "Period to",
         "create": "Create audit export",
@@ -5826,6 +5857,9 @@
       "assistantHow": "What can the assistant do?"
     },
     "linksTitle": "Records found",
+    "toolsTitle": "Lookup tools used",
+    "toolsHits": "{count} hits",
+    "toolsDenied": "no permission, not searched",
     "linkType": {
       "contact": "Contact",
       "property": "Property",
@@ -5951,6 +5985,7 @@
       "full": "Full import",
       "migration": "Immoware24 migration",
       "learning": "Learning phase",
+      "audit": "Platform audit",
       "domains": "Customer domains",
       "oidcClients": "OIDC clients",
       "generated": "Generated documents",
@@ -9165,6 +9200,11 @@
     "remove": "Remove {name}",
     "noRecipients": "No recipients chosen yet.",
     "runSerial": "Create serial letter and prepare dispatches",
+    "advertising": "Advertising (only contacts with marketing consent)",
+    "advertisingHint": "Tick only for advertising letters. Contacts without a valid marketing consent are skipped and counted. Mandatory letters such as statements, dunning and invitations are not affected.",
+    "emailConsentHint": "Delivery by e-mail only with a valid email_delivery consent or per tenant rule. Otherwise the delivery is prepared as post.",
+    "marketingSkipped": "{count} contacts without marketing consent skipped",
+    "emailFallback": "{count} deliveries without e-mail consent switched to post",
     "result": "Run {batch}",
     "resultLine": "{channel}: {count}"
   },
@@ -9244,6 +9284,12 @@
     "notRetrieved": "Not retrieved yet",
     "letter": "Letter",
     "noLetter": "No letter",
+    "status": {
+      "prepared": "prepared",
+      "sent": "sent",
+      "delivered": "delivered",
+      "failed": "failed"
+    },
     "dispatch": "Send report by letter",
     "dispatchAll": "Also send to owners who retrieved it in the portal",
     "dispatchResult": "{created} letters prepared, {skipped} units skipped",
@@ -11849,6 +11895,13 @@
     }
   },
   "DeletionProposals": {
+    "checklist": {
+      "show": "Deletion checklist",
+      "followUp": "Run follow up",
+      "overall": { "done": "All targets deleted.", "open": "Targets open, follow up runs daily.", "held": "Restored and under a hold, document is kept." },
+      "target": { "index": "Index and full text", "original": "Original", "mirror_paperless": "Paperless", "mirror_google_drive": "Google Drive", "embeddings": "Embeddings", "ai_extracts": "AI extracts", "thumbnails": "Thumbnails", "backup": "Backups" },
+      "status": { "done": "done", "open": "open", "held": "held", "not_applicable": "not applicable", "out_of_scope": "not edited (runbook)" }
+    },
     "breadcrumb": "Documents",
     "title": "Deletion proposals",
     "intro": "Monthly run over documents whose released retention period ended. Nothing is deleted without approval and execution by two different persons.",
@@ -13793,7 +13846,8 @@
         "day_next_month": "Fixed day of the following month"
       },
       "dueDay": "Day (1 to 31)",
-      "account": "Revenue account (ID, optional)",
+      "account": "Revenue account (optional)",
+      "accountNone": "No revenue account",
       "hint": "The termination date limits the fee run. The due date rule applies to fee invoices issued from now on. Nothing is posted and nothing is sent.",
       "columnTerms": "Termination, due date, SEV",
       "terminatedOn": "Terminated on {date}",
@@ -14901,5 +14955,24 @@
         "board": "Advisory board"
       }
     }
+  },
+  "AC02": {
+    "link": "Platform audit",
+    "title": "Platform audit",
+    "intro": "Recorded platform actions without tenant context. Entries cannot be changed and contain no secrets.",
+    "forbidden": "Platform administrators only.",
+    "filterAction": "Action",
+    "allActions": "All actions",
+    "empty": "No entries.",
+    "time": "Time",
+    "action": "Action",
+    "actor": "Actor",
+    "target": "Target",
+    "payload": "Payload",
+    "show": "Show",
+    "system": "System",
+    "prev": "Previous",
+    "next": "Next",
+    "range": "{from} to {to} of {total}"
   }
 }

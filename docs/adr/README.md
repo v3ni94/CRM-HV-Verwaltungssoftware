@@ -26,5 +26,6 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0017](0017-crm-pwa-shell.md) | CRM as an installable shell without a data cache (manifest, service worker for offline page and icons only, middleware exception, plan M31 WP5, decision M30-08) | Accepted, product protection |
 
 | [0020](0020-formatversionen.md) | Pinned format versions (pain.001, pain.008, camt, XRechnung, ZUGFeRD, HeiWaKo) and compatibility tests | Accepted |
+| [0021](0021-skalierung-phase-4-jahrespartitionierung.md) | Scaling phase 4: yearly partitioning of journal_entry and bank_transaction (analysis, measurements at 100,000 rows, triggers, measurement plan; supplements ADR 0018, GA12-08) | Proposed, operator decision AC09-01 pending |
 
 Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0017 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration; the CRM shell ADR was written as 0016 in parallel to the handover offline ADR and renumbered to 0017.

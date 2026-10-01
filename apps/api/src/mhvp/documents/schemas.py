@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
@@ -69,6 +70,33 @@ class DocumentDeletionOut(BaseModel):
     requested_at: datetime
     requested_by: uuid.UUID | None
     steps: list[MirrorDeletionStepOut]
+
+
+class DocumentDeletionChecklistItemOut(BaseModel):
+    """One target of a deletion (AC07, GA08-08)."""
+
+    target: Literal[
+        "index",
+        "original",
+        "mirror_paperless",
+        "mirror_google_drive",
+        "embeddings",
+        "ai_extracts",
+        "thumbnails",
+        "backup",
+    ]
+    status: Literal["done", "open", "held", "not_applicable", "out_of_scope"]
+    detail: str | None
+
+
+class DocumentDeletionChecklistOut(BaseModel):
+    """Deletion checklist per target; ``held`` when a restored document is under a hold."""
+
+    document_id: uuid.UUID
+    deleted_at: datetime
+    status: Literal["done", "open", "held"]
+    items: list[DocumentDeletionChecklistItemOut]
+    mirror_jobs_queued: int = 0
 
 
 class DocumentOut(_Out):

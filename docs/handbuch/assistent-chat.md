@@ -136,3 +136,13 @@ Kosten: Liefert das kleine Modell eine ungültige Antwort oder eine Konfidenz un
 ## Objekt anlegen: weitere Angaben und Personenabgleich (Nachtrag 01.10.2026)
 
 Vor dem Bestätigen eines Objektvorschlags zeigt die Tabelle "Personenabgleich (Vorschau)" nach Klick auf "Abgleich anzeigen", ob eine Person mit einem vorhandenen Kontakt verknüpft würde, nur vorgeschlagen wird oder neu entsteht. Dabei wird nichts angelegt. Unter "Weitere Angaben zum Objekt" können Bankkonten (IBAN, Inhaber, Art, Standardkonto), Umlageschlüssel (vorhandener Schlüssel nur mit Werten, neuer Schlüssel mit Name, Einheit und Art; Werte als Zeilen "01=70,5"), die Übernahme der Debitorenkonten und die Verknüpfung der Quelldokumente gewählt werden. Alles wird mit "Bestätigen und übernehmen" in einem Schritt angelegt, bei einem Fehler entsteht nichts. "Rückgängig" entfernt die Anlage wieder, solange nichts darauf gebucht oder zugeordnet wurde.
+
+## Verwendete Nachschlagewerkzeuge
+
+Ist für den KI-Anbieter das Nachschlagen eingeschaltet (Einstellungen, KI-Anbieter, Stufe mit
+`tool_use`, Standard aus), kann der Assistent vor der Antwort selbst in den Daten nachsehen:
+Kontakte, Verträge, offene Posten, Dokumente, Termine und Kontenplan. Er sieht dabei nie mehr
+als Sie: Werkzeuge ohne Ihre Berechtigung liefern nichts. Unter der Antwort steht
+"Verwendete Nachschlagewerkzeuge" mit Werkzeug, Suchtext (E-Mail, Telefon und Anschrift
+maskiert) und Trefferzahl. Je Frage sind höchstens sechs Abfragen möglich. Die Antwort bleibt
+ein Vorschlag; Änderungen entstehen weiterhin nur über bestätigte Vorschläge.

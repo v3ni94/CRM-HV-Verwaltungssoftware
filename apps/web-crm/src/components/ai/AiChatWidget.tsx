@@ -17,6 +17,8 @@ import {
   type Message,
   type Proposal,
   type Run,
+  type AiToolUse,
+  toolsUsedOf,
 } from "@/lib/ai";
 import { bff } from "@/lib/bff";
 import { mergeChatContext, readChatContextAttribute, useChatContextOverride } from "@/lib/chat-context";
@@ -26,6 +28,7 @@ import { ui } from "@/lib/ui";
 import { ASSISTANT_OPEN_EVENT } from "./AssistantTab";
 import { ChatActionProposal } from "./ChatActionProposal";
 import { ChatLinks } from "./ChatLinks";
+import { ChatTools } from "./ChatTools";
 import { ContactProposal } from "./ContactProposal";
 import { ImportResult } from "./ImportResult";
 import { PropertyProposal } from "./PropertyProposal";
@@ -66,7 +69,7 @@ export function pageContext(pathname: string, search?: string): PageContext {
 
 type Chip = { id: string; label: string };
 type Entry =
-  | { kind: "assistant"; text: string; chips?: Chip[]; links?: ChatLink[] }
+  | { kind: "assistant"; text: string; chips?: Chip[]; links?: ChatLink[]; tools?: AiToolUse[] }
   | { kind: "user"; text: string }
   | { kind: "proposal"; proposal: Proposal }
   | { kind: "chat_action"; proposal: Proposal }
@@ -125,7 +128,8 @@ export function AiChatWidget() {
   const greetedFor = useRef<string | null>(null);
   const conversationRef = useRef<string | null>(null);
 
-  const say = (text: string, chips?: Chip[], links?: ChatLink[]) => setEntries((p) => [...p, { kind: "assistant", text, chips, links }]);
+  const say = (text: string, chips?: Chip[], links?: ChatLink[], tools?: AiToolUse[]) =>
+    setEntries((p) => [...p, { kind: "assistant", text, chips, links, tools }]);
   const push = (e: Entry) => setEntries((p) => [...p, e]);
 
   const startChips = (area: Area): Chip[] => {
@@ -543,13 +547,13 @@ export function AiChatWidget() {
       // released provider, the deterministic fallback (rule AI-LOOKUP-01).
       const stored = await answerOf(run);
       if (stored) {
-        say(stored.content, startChips(ctx.area), stored.links ?? []);
+        say(stored.content, startChips(ctx.area), stored.links ?? [], toolsUsedOf(run));
         const proposal = stored.proposal_id ? await proposalOf({ ...run, proposal_id: stored.proposal_id }) : null;
         if (proposal?.entity_type === "chat_action") push({ kind: "chat_action", proposal });
       } else {
         const problem = describeRun(run);
         const out = run.output as { answer?: string; answerable?: boolean } | null;
-        say(problem ?? (out?.answerable === false ? t("notAnswerable") : (out?.answer ?? "")), startChips(ctx.area), run.links ?? []);
+        say(problem ?? (out?.answerable === false ? t("notAnswerable") : (out?.answer ?? "")), startChips(ctx.area), run.links ?? [], toolsUsedOf(run));
       }
       setFlow({ step: "idle" });
     });
@@ -636,6 +640,7 @@ export function AiChatWidget() {
                 <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-gold-soft px-3.5 py-2 text-fg">
                   <p className="whitespace-pre-wrap">{e.text}</p>
                   <ChatLinks links={e.links} />
+                  <ChatTools tools={e.tools} />
                   {last && e.chips?.length && !busy ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {e.chips.map((c) => (

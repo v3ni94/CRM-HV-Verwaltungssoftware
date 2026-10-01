@@ -17,7 +17,7 @@ import inspect
 import json
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 import anthropic
@@ -69,12 +69,40 @@ def status_detail(exc: object, status_code: int) -> str:
 
 
 @dataclass
+class ToolCall:
+    """A lookup the model asks for (tool use, ``mhvp.ai.tool_use``): tool name and arguments."""
+
+    name: str
+    arguments: dict[str, Any] = field(default_factory=dict)
+
+
+def tool_calls_of(data: Any) -> list[ToolCall]:
+    """Tool calls of a structured answer (``{"tool_calls": [{"name", "arguments"}]}``, the
+    provider neutral form of tool use: both adapters return JSON by schema). Malformed entries
+    are dropped."""
+    if not isinstance(data, dict):
+        return []
+    raw = data.get("tool_calls")
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw:
+        if isinstance(item, dict) and isinstance(item.get("name"), str):
+            args = item.get("arguments")
+            out.append(ToolCall(item["name"], args if isinstance(args, dict) else {}))
+    return out
+
+
+@dataclass
 class Completion:
     data: Any  # parsed JSON (not yet schema validated)
     raw_text: str
     tokens_in: int
     tokens_out: int
     model: str
+    # Lookups the model asked for (empty without tool use). Filled from ``data`` by the
+    # adapters; recorded test clients may set it directly.
+    tool_calls: list[ToolCall] = field(default_factory=list)
 
 
 class ProviderClient(Protocol):
@@ -237,6 +265,7 @@ class AnthropicClient:
             + (response.usage.cache_creation_input_tokens or 0),
             tokens_out=response.usage.output_tokens,
             model=response.model,
+            tool_calls=tool_calls_of(data),
         )
 
 
@@ -305,6 +334,7 @@ class OpenAIClient:
             tokens_in=usage.prompt_tokens if usage else 0,
             tokens_out=usage.completion_tokens if usage else 0,
             model=response.model,
+            tool_calls=tool_calls_of(data),
         )
 
     async def embed(self, *, model: str, inputs: list[str]) -> Embeddings:

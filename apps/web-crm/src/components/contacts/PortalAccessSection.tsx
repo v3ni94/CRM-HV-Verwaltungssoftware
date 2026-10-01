@@ -29,7 +29,7 @@ type Invited = {
   id: string;
   user_id: string;
   grants: number;
-  invitation_token: string;
+  invitation_token: string | null;
   invitation_url?: string | null;
 };
 
@@ -64,6 +64,9 @@ export function PortalAccessSection({
   const [letterBusy, setLetterBusy] = useState(false);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [renewBusy, setRenewBusy] = useState(false);
+  // AB08 (6.2): false creates the account as not_invited, the invitation follows later.
+  const [sendInvitation, setSendInvitation] = useState(true);
+  const [createdOnly, setCreatedOnly] = useState(false);
 
   const load = useCallback(async () => {
     const res = await bff<PortalAccount[]>(
@@ -86,11 +89,17 @@ export function PortalAccessSection({
     setError(null);
     const res = await bff<Invited>("/api/bff/portal-admin/accounts", {
       method: "POST",
-      body: JSON.stringify({ contact_id: contactId, email: address, display_name: displayName }),
+      body: JSON.stringify({
+        contact_id: contactId,
+        email: address,
+        display_name: displayName,
+        send_invitation: sendInvitation,
+      }),
     });
     setBusy(false);
     if (res.ok) {
-      setInvited(res.data);
+      if (sendInvitation) setInvited(res.data);
+      else setCreatedOnly(true);
       await load();
       return;
     }
@@ -170,6 +179,7 @@ export function PortalAccessSection({
       (account.status === "invited" &&
         account.invitation_expires_at !== null &&
         new Date(account.invitation_expires_at).getTime() <= Date.now()));
+  const notInvited = account !== null && account.status === "not_invited";
   const status =
     loaded.state === "loading"
       ? t("status.loading")
@@ -180,7 +190,11 @@ export function PortalAccessSection({
         : account
           ? account.status === "expired"
             ? t("status.expired")
-            : account.status === "locked"
+            : account.status === "not_invited"
+              ? t("status.notInvited")
+              : account.status === "revoked"
+                ? t("status.revoked")
+                : account.status === "locked"
               ? `${t("status.active")}, ${t("status.locked")}`
               : `${account.status === "active" ? t("status.active") : t("status.invited")}${
                   account.locked ? `, ${t("status.locked")}` : ""
@@ -226,15 +240,15 @@ export function PortalAccessSection({
           >
             {letterBusy ? t("letterBusy") : t("letterButton")}
           </button>
-          {expired ? (
+          {expired || notInvited ? (
             <button
               type="button"
               className={ui.button}
               disabled={renewBusy}
               onClick={() => void renew()}
-              data-testid="contact-portal-renew"
+              data-testid={notInvited ? "contact-portal-invite-existing" : "contact-portal-renew"}
             >
-              {renewBusy ? t("renewBusy") : t("renewButton")}
+              {renewBusy ? t("renewBusy") : notInvited ? t("invite") : t("renewButton")}
             </button>
           ) : null}
           <label className="flex items-center gap-2 text-xs text-subtle">
@@ -249,6 +263,8 @@ export function PortalAccessSection({
         </div>
       ) : null}
       {expired && canInvite ? <p className={ui.help}>{t("expiredHint")}</p> : null}
+      {notInvited && canInvite ? <p className={ui.help}>{t("notInvitedHint")}</p> : null}
+      {createdOnly && !invited ? <p className={ui.notice}>{t("createdOnly")}</p> : null}
       {!canInvite ? (
         <p className={ui.help}>{t("noPermission")}</p>
       ) : invited || hasAccount || loaded.state === "loading" ? null : (
@@ -271,8 +287,17 @@ export function PortalAccessSection({
               ))}
             </datalist>
           </div>
+          <label className="flex items-center gap-2 text-xs text-subtle">
+            <input
+              type="checkbox"
+              checked={sendInvitation}
+              onChange={(e) => setSendInvitation(e.target.checked)}
+              data-testid="contact-portal-send-invitation"
+            />
+            {t("sendInvitation")}
+          </label>
           <button type="button" className={ui.button} disabled={busy} onClick={() => void invite()}>
-            {t("invite")}
+            {sendInvitation ? t("invite") : t("createOnly")}
           </button>
         </div>
       )}

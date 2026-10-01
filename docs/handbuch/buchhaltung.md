@@ -345,3 +345,11 @@ enthält denselben Abgleich als Tabelle `nebenbuchabgleich.csv` zum Ende des Exp
 **Rechnungsplan, automatische Buchung ja oder nein.** In der Planliste (Kreditoren, Rechnungspläne) zeigt die Spalte "Automatische Buchung" das Kennzeichen. Nein: Der Lauf erzeugt nur Rechnungsentwürfe. Ja kann nur angefordert werden, wenn der Mandant die Automatik freigeschaltet hat; gebucht wird trotzdem nichts, solange die Freigabestufe G1 geschlossen ist und keine aktive, freigegebene Regel besteht. Nach "Entwurf erzeugen" meldet die Oberfläche den Sperrgrund.
 
 **Standard-Bankregel.** Wird ein Dienstleisterverhältnis mit der Option Standard-Bankregel angelegt (Bankverbindung und Kreditorenkonto vorhanden), entsteht eine Vorschlagsregel (Zustand vorgeschlagen, Priorität 900). Sie bucht nichts; Freigabe und Aktivierung laufen über die Regelverwaltung mit zweiter Person. Ohne die Option entsteht keine Regel, pro Bankverbindung höchstens eine.
+
+### Fällige Prüfpunkte des Regelregisters
+
+Auf der Startseite der Buchhaltung listet ein Block die fälligen, datierten Prüfpunkte des Regelregisters. Der Hinweis ist ohne Rechtsfolge: Er erinnert an eine fachliche Prüfung, sperrt nichts und ändert keine Regel.
+
+## Erlöskonto im Honorarformular (AC04)
+
+Das Erlöskonto des Verwalterhonorars wird aus einer Liste gewählt, nicht mehr als ID eingegeben. Angeboten werden die aktiven Konten der Kategorie Erlöse aus den Buchungskreisen des gewählten Objekts. Ohne Auswahl bleibt das Feld leer (optional); das Backend prüft weiterhin, dass das Konto zum Objekt gehört.

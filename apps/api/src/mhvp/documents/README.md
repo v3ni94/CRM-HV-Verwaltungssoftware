@@ -197,3 +197,19 @@ created_at)` (migration 0127). Measurements in `docs/reviews/2026-09-26-performa
 * AA05 (GA04-10, GA04-11): `DocumentTemplate.master_template_id`, `context_types` (contact, contract, unit, property, meeting, statement, ticket; empty means unrestricted) and `placeholders_used` (computed by `letters.placeholders_of`); `GET /document-templates?context_type=`; a letter with an entity the template does not allow answers 422. `GeneratedDocument` (`generated_document`, migration 0307) records template, version, context, recipient and dispatch of every stored letter (`_letter`, `letter_records.store_letter`, `record_dispatch`); `GET /generated-documents` joins channel and evidence of the dispatch. `template_block` is open (AA05-02). Rule `docs/rules/GA04-vorlagen-erzeugte-dokumente.md`.
 * AA17 (GA01-09): `folder_scheme.py` validates and renders the Drive folder scheme (`dms_connection.options["folder_scheme"]`, default `{objekt}/{jahr}`); `GoogleDriveStore.file_in_property_year_folder` uses it, `PUT /dms-connections/google_drive` validates it.
 * AB05 (GA04-07, GA04-10, GA04-11): `PATCH /document-templates/{id}` maintains `context_types` (placeholders recomputed); `GET /generated-documents` filters by `template_id`, `created_from`, `created_to`. CRM page `/dokumente/erzeugt`.
+
+## AC05: Verknüpfungsziele Vermögensbericht und Abrechnungslauf
+
+`LINKABLE` kennt `asset_report` (HoaAssetReport) und `statement` (Abrechnungslauf der Betriebskosten). Erzeugte Dokumente (Versandbrief, Informationsblatt) tragen diese Verknüpfung zusätzlich zu `generated_document.context`. Ein Ziel eines anderen Mandanten antwortet 404 (RLS).
+
+## AC07: deletion checklist per target and follow up (GA08-08)
+
+`deletion_checklist.py` derives the state of a deletion per target (index, original, Paperless,
+Drive, embeddings, AI extracts, thumbnails not stored, backups out of scope) from rows and
+events. `retention.delete_now` and the journal replay purge embeddings and replace AI extract
+content in the deleting transaction and journal the storage key. The daily task
+`mhvp.documents.deletion_follow_up` and `POST /documents/deletions/{id}/follow-up` repeat open
+targets; a document that exists again (restore) is never deleted by the follow up. A repeated
+deletion after a restore resets the mirror steps to open (`mirror_deletion.request`). Backups
+are not edited (runbook `backup.md`). Rule: `docs/rules/AC07-auskunft-loeschung.md`; open:
+AC07-02, AC07-03.

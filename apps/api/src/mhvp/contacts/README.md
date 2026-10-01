@@ -121,3 +121,23 @@ Paket Q05 (Welle 3): CRM-Oberflächen für Parteien (`PartiesPanel`, Reiter Bezi
 ## Kontakt-Merge (Q04, M3-03)
 
 `merge.py`, `routers_merge.py`: `GET/POST /contact-merges`, `GET /contact-merges/{id}`, `POST /contact-merges/{id}/reject|execute`. Vorschlag (`contacts:update`), Ausführung und Ablehnung (`contacts:approve`, zweite Person). Verweise werden über ein Registry aus den Fremdschlüsseln auf `contact.id` umgehängt (plus `document_link`), die Quelle bleibt als zusammengeführt erhalten (`merged_into_id`, `merged_at`, `deleted_at`). Regel: `docs/rules/M3-03-kontakt-merge.md`. UI: `/kontakte/zusammenfuehrung`.
+
+## Consent checks per purpose (AC06, GA02-06)
+
+`consent_rules` evaluates the consent kinds of 6.1 (rule `docs/rules/AC06-einwilligungen.md`):
+`email_delivery_decision` (dispatch falls back to post), `contacts_with_consent` (marketing
+filter of advertising serial dispatch), `portal_terms_decision` (portal activation and access
+once `portal_terms_version` is published) and `data_sharing_decision` (check before a transfer
+to a service provider; not yet wired in tickets and automation, AC06-02). Tenant switches in
+`tenant_settings.sources.consent_policy`, API `GET/PUT /api/v1/consent-policy`.
+
+## Access export with review (AC07, GA08-06)
+
+`access_export.py`: data subject access export built from an explicit field allowlist per
+entity plus a second filter that drops secret, hash and fingerprint keys. Other persons appear
+only with their role (relations, parties, deviating account holder). Workflow prepared,
+reviewed, released (review and release by a person other than the preparer), downloaded;
+journaled as `contact.access_export.*` domain events (no own table, migration 0340 noop). The
+prepared event stores the content hash only; review, release and download rebuild the export
+and refuse with MHVP-CONT-0032 when the data changed. The old `GET /contacts/{id}/export`
+returns 409. Rule: `docs/rules/AC07-auskunft-loeschung.md`; open: AC07-01.

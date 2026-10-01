@@ -349,3 +349,9 @@ Ist die Einladung eines Kontakts abgelaufen und nicht angenommen, zeigt der Absc
 
 * Die Sprache wählen Sie im Portal oben rechts und auf der Anmeldeseite. Angemeldete Personen haben die Wahl am Portalkonto gespeichert; bei der nächsten Anmeldung gilt diese Sprache auch auf einem anderen Gerät. Wer nicht angemeldet ist, behält die im Browser gewählte Sprache.
 * Einstellungen, Dienstleister im Portal (Recht: Kontakte ändern): Dienstleister suchen, Verfügbarkeitsfenster erfassen oder entfernen und Unterlagenklassen eines Rechtsträgers für das Portalkonto freigeben. Der Dienstleister sieht die Fenster im Portal nur lesend. Bewertungen werden dort nicht angezeigt.
+
+## Portalzugang ohne sofortige Einladung und Statusanzeige (AC04)
+
+Beim Anlegen eines Portalzugangs in der Kontaktakte steuert der Schalter "Einladung sofort senden", ob die Einladung direkt versendet wird. Ist er aus, entsteht der Zugang mit dem Status "Nicht eingeladen"; die Einladung lässt sich später mit der Aktion "Einladen" nachholen. Bei abgelaufener Einladung steht die Aktion "Einladung erneuern" bereit. Angezeigt werden alle sechs Status: Nicht eingeladen, Eingeladen, Zugang aktiv, gesperrt, Einladung abgelaufen und Zugang entzogen. Ein entzogener Zugang bleibt entzogen.
+
+Die Einstellungsseite "Dienstleister im Portal" bietet die Rechtsträgerauswahl über einen eigenen Lesepfad (`GET /portal-admin/legal-entities`, nur Id und Name) an, der das Recht tenant_settings:read verlangt; das Recht members:read ist dafür nicht nötig. Pflegen der Fenster und Freigaben verlangt weiterhin contacts:update.

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { AssetReportDispatch } from "@/components/hoa/AssetReportDispatch";
+import { dispatchStatusLabel } from "@/components/hoa/dispatchStatus";
 import { AssetReportActions, type ManualItem } from "@/components/hoa/AssetReportForms";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -91,7 +92,7 @@ export default async function AssetReportPage({ params }: { params: Promise<{ pr
                     <td>{p.first_retrieved_at ? formatDate(p.first_retrieved_at) : tp("notRetrieved")}</td>
                     <td>{p.last_retrieved_at ? formatDate(p.last_retrieved_at) : ""}</td>
                     <td className="num">{p.retrievals}</td>
-                    <td>{(p.dispatches ?? []).map((d) => `${tp(`channels.${d.channel}`)} (${d.status})`).join(", ") || tp("noLetter")}</td>
+                    <td>{(p.dispatches ?? []).map((d) => `${tp(`channels.${d.channel}`)} (${dispatchStatusLabel(tp, d.status)})`).join(", ") || tp("noLetter")}</td>
                   </tr>
                 ))}
               </tbody>

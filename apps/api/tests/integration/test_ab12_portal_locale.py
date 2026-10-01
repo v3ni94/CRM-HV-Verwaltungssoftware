@@ -38,6 +38,14 @@ async def _world_ab12(settings: object) -> World:
             factory, email=world.email("ab12admin"), display_name="ab12admin", password=PASSWORD
         )
         world.users["ab12admin"] = uid
+        for name, role in (("ab12reader", "read_only_master_data"), ("ab12care", "caretaker")):
+            extra = await services.create_user(
+                factory, email=world.email(name), display_name=name, password=PASSWORD
+            )
+            world.users[name] = extra
+            await services.add_member(
+                factory, tenant_id=a, user_id=extra, role_codes=[role], actor_user_id=None
+            )
         await services.add_member(
             factory, tenant_id=a, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
         )
@@ -80,3 +88,23 @@ def test_portal_locale_is_stored_per_account(client: TestClient, world: World) -
     # Staff without a portal account and anonymous callers have no access.
     assert client.patch(f"{P}/me/locale", json={"locale": "de"}, headers=ha).status_code == 403
     assert client.patch(f"{P}/me/locale", json={"locale": "de"}).status_code in (401, 403)
+
+
+def test_ac04_legal_entity_choices_need_only_settings_read(
+    client: TestClient, world: World
+) -> None:
+    """AC04: GET /portal-admin/legal-entities returns only id and name for tenant_settings:read;
+    read_only (no settings right) gets 403, anonymous 401/403, unknown query parameter 422, and the
+    list is limited to the own tenant (RLS, a foreign entity is never listed)."""
+    ha = bearer(login(client, world, "ab12admin"))
+    res = client.get("/api/v1/portal-admin/legal-entities", headers=ha)
+    assert res.status_code == 200
+    for row in res.json():
+        assert set(row) == {"id", "name"}
+    # Settings read alone is enough (no members:read, no contacts:update); without it: 403.
+    reader = bearer(login(client, world, "ab12reader"))
+    assert client.get("/api/v1/portal-admin/legal-entities", headers=reader).status_code == 200
+    care = bearer(login(client, world, "ab12care"))
+    assert client.get("/api/v1/portal-admin/legal-entities", headers=care).status_code == 403
+    assert client.get("/api/v1/portal-admin/legal-entities?x=1", headers=ha).status_code == 422
+    assert client.get("/api/v1/portal-admin/legal-entities").status_code in (401, 403)

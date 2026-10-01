@@ -294,7 +294,7 @@ async def update_rule(
     principal: TenantPrincipal = Depends(MANAGE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        rule = await session.get(SlaRule, rule_id)
+        rule = await session.get(SlaRule, rule_id, with_for_update=True)
         if rule is None:
             raise ProblemError(ErrorCodes.NOT_FOUND)
         check_if_match(if_match, rule.updated_at)  # GA04-06

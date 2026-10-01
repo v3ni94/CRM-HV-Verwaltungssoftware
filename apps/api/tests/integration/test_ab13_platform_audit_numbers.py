@@ -249,6 +249,31 @@ def test_tenant_delivery_default_in_dispatch(client: TestClient, world: World) -
         )
         return str(_ok(res, 201)["channel"])
 
+    # AC06: without email_delivery consent the e-mail default falls back to post, with the
+    # reason recorded as event dispatch.channel_fallback.
+    assert dispatch(plain, submit_postal=False) == "post"
+    events = _ok(
+        client.get(
+            "/api/v1/tenant/events",
+            params={"type": "dispatch.channel_fallback", "page_size": 200},
+            headers=h,
+        )
+    )
+    fallback = [e for e in events if e["entity_id"] == plain]
+    assert fallback
+    assert fallback[0]["payload"]["reason"] == "email_delivery_consent_missing"
+    _ok(
+        client.post(
+            f"/api/v1/contacts/{plain}/consents",
+            json={
+                "kind": "email_delivery",
+                "granted_at": "2026-01-01T00:00:00Z",
+                "source": "Test AC06",
+            },
+            headers=h,
+        ),
+        201,
+    )
     # tenant default applies without position channel and contact preference
     assert dispatch(plain) == "email"
     # contact preference wins over the tenant default

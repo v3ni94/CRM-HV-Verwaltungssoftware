@@ -289,6 +289,29 @@ Order (every step is recorded, the run is part of the restore protocol):
 Technical acceptance: `apps/api/tests/integration/test_m9_restore_replay.py` (D47). The
 functional release of the procedure (data protection) stays open under M9-03.
 
+## Löschcheckliste, Nachlauf und Backups (AC07, GA08-08)
+
+Eine rechtmäßige Löschung wird je Ziel geprüft: `GET /api/v1/documents/deletions/{id}/checklist`
+zeigt Index und Volltext, Original im Objektspeicher, Paperless, Google Drive, Embeddings,
+KI-Auszüge, Vorschaubilder (nicht gespeichert, entfällt) und Backups (nicht bearbeitet). Der
+tägliche Auftrag `mhvp.documents.deletion_follow_up` (04:50 UTC, Löschungen der letzten 30 Tage)
+und `POST /api/v1/documents/deletions/{id}/follow-up` wiederholen offene Ziele. Ein Dokument,
+das nach einer Wiederherstellung wieder vorhanden ist, löscht der Nachlauf nie; dafür gilt
+allein der Ablauf oben (Journal, Probelauf, Replay mit Sperr- und Hashprüfung). Steht das
+wiederhergestellte Dokument unter einer Löschungssperre, zeigt die Checkliste `held` und das
+Dokument bleibt erhalten.
+
+Nach dem Replay: die Checkliste jedes erneut gelöschten Dokuments muss `done` zeigen, sobald
+die Spiegelschritte gelaufen sind. Das Replay setzt bereits erledigte Spiegelschritte auf
+`open` zurück (Ereignis `document.mirror_delete_requested` mit `reset_after_restore`), weil die
+Wiederherstellung auch Spiegelzuordnungen zurückbringt.
+
+Backups: Es wird nicht behauptet, dass Daten in Backups gelöscht werden. Backups und
+Offsite-Läufe werden nicht bearbeitet; gelöschte Daten verschwinden erst mit dem Ablauf der
+Backup-Aufbewahrung. Backups sind Betriebsabsicherung und kein Archiv (7.11 S05). Die konkrete
+Aufbewahrungsdauer für personenbezogene Daten in Backups (heute Offsite 14 täglich, 8 wöchentlich,
+12 monatlich; 6.9.5 nennt 30 Tage rollierend) ist offen (OPEN_QUESTIONS AC07-03).
+
 ## Prüfskript Offsite-Lauf (M9-06)
 
 `scripts/backup-offsite-check.sh` baut ein lokales Verzeichnis als Ersatz für den Bucket (oder nimmt mit `--dir` ein vorhandenes), füttert `backup-offsite.sh --dry-run --list` mit dem Schlüsselverzeichnis und prüft den Aufbewahrungsplan: neueste Tagesläufe bleiben erhalten, nichts Neueres als der älteste Tageslauf wird gelöscht, `--list` ohne `--dry-run` wird abgelehnt. Kein S3-Zugriff, keine Schlüssel. Ausgabe `backup-offsite-check: ... status=ok|failed`, Exit 0 bei Erfolg.

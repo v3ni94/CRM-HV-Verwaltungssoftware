@@ -24,6 +24,7 @@ export default async function PlatformPage() {
   const tl = await getTranslations("PlatformLicensing");
   const tx = await getTranslations("AA17");
   const tg = await getTranslations("PlatformGates");
+  const ta = await getTranslations("AC02");
   const api = serverApi();
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
@@ -62,6 +63,9 @@ export default async function PlatformPage() {
         </Link>
         <Link className="underline" href="/plattform/oidc-clients">
           {tx("oidcLink")}
+        </Link>
+        <Link className="underline" href="/plattform/audit">
+          {ta("link")}
         </Link>
         <Link className="underline" href="/plattform/onboarding">
           {t("onboardingLink")}

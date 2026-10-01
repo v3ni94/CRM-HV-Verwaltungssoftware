@@ -1017,6 +1017,7 @@ async def dispatch_asset_report(
                         ("contact", recipient.contact_id, LinkRole.GENERATED),
                         ("contract", contract.id, LinkRole.GENERATED),
                         ("legal_entity", row.legal_entity_id, LinkRole.GENERATED),
+                        ("asset_report", row.id, LinkRole.GENERATED),
                     ],
                     created_by=principal.user_id,
                 )

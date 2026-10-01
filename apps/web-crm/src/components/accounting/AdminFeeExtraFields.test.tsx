@@ -44,6 +44,15 @@ describe("AdminFeePanel GA03-06 fields", () => {
   it("sends the new fields on create and blocks invalid input", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     load(fetchMock, []);
+    // AC04: ledgers of the property, then their accounts (only revenue accounts are offered).
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([{ id: "l1" }]))
+      .mockResolvedValueOnce(
+        jsonResponse([
+          { id: ACC, number: "400000", name: "Verwalterhonorar", category: "revenue", active: true },
+          { id: "other", number: "600000", name: "Instandhaltung", category: "cost", active: true },
+        ]),
+      );
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: FEE }, 201));
     load(fetchMock, [fee]);
     renderIntl(<AdminFeePanel properties={[{ id: "p1", label: "P022 Haus" }]} today="2026-02-15" />);
@@ -53,16 +62,18 @@ describe("AdminFeePanel GA03-06 fields", () => {
     expect(create).toBeDisabled();
     await userEvent.clear(screen.getByLabelText("Tag (1 bis 31)"));
     await userEvent.type(screen.getByLabelText("Tag (1 bis 31)"), "15");
-    await userEvent.type(screen.getByLabelText("Erlöskonto (ID, optional)"), "kein-uuid");
-    expect(create).toBeDisabled();
-    await userEvent.clear(screen.getByLabelText("Erlöskonto (ID, optional)"));
-    await userEvent.type(screen.getByLabelText("Erlöskonto (ID, optional)"), ACC);
+    const account = screen.getByLabelText("Erlöskonto (optional)");
+    await screen.findByRole("option", { name: "400000 Verwalterhonorar" });
+    expect(screen.queryByRole("option", { name: /Instandhaltung/ })).not.toBeInTheDocument();
+    expect(String(fetchMock.mock.calls[3]?.[0])).toBe("/api/bff/accounting/ledgers?property_id=p1");
+    expect(String(fetchMock.mock.calls[4]?.[0])).toBe("/api/bff/accounting/ledgers/l1/accounts");
+    await userEvent.selectOptions(account, ACC);
     await userEvent.type(screen.getByLabelText("Honorar je SE-Einheit netto (optional)"), "25,50");
     await userEvent.type(screen.getByLabelText("Kündigungsdatum (optional)"), "2026-12-31");
     await userEvent.type(screen.getByLabelText("Je Wohnung (netto)"), "40.00");
     await userEvent.click(create);
-    await waitFor(() => expect(fetchMock.mock.calls[3]?.[0]).toBe("/api/bff/accounting/admin-fees"));
-    expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toMatchObject({
+    await waitFor(() => expect(fetchMock.mock.calls[5]?.[0]).toBe("/api/bff/accounting/admin-fees"));
+    expect(JSON.parse(fetchMock.mock.calls[5]?.[1]?.body as string)).toMatchObject({
       property_id: "p1",
       termination_date: "2026-12-31",
       due_day_rule: "day",

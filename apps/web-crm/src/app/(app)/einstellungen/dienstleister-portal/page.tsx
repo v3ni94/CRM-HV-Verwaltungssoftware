@@ -17,7 +17,7 @@ export default async function PortalProvidersPage() {
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("contacts:update")) notFound();
   const [entitiesRes, profilesRes] = await Promise.all([
-    serverFetch("/api/v1/tenant/legal-entities"),
+    serverFetch("/api/v1/portal-admin/legal-entities"),
     serverFetch("/api/v1/retention-profiles"),
   ]);
   const legalEntities = entitiesRes.ok ? ((await entitiesRes.json()) as EntityOption[]) : [];

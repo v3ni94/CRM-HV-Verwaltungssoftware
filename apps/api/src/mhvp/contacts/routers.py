@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import case, func, literal, or_, select
 
 from mhvp.ai.examples import delete_examples_for_contact
-from mhvp.contacts import schemas, services
+from mhvp.contacts import access_export, schemas, services
 from mhvp.contacts.models import (
     Consent,
     Contact,
@@ -586,24 +586,168 @@ async def contact_duplicates(
         ]
 
 
-@router.get("/contacts/{contact_id}/export", summary="DSGVO-Auskunft (Entwurf zur Prüfung)")
+@router.get(
+    "/contacts/{contact_id}/export",
+    summary="DSGVO-Auskunft (abgelöst durch Prüfablauf, AC07)",
+    dependencies=[Depends(strict_query)],
+)
 async def export_contact(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(EXPORT)
 ) -> dict[str, Any]:
+    """The direct download without review is closed (AC07, GA08-06): prepare, review and
+    release under ``/contacts/{id}/access-exports``."""
     async with tenant_tx(request, principal) as session:
-        data = await services.export(session, contact_id)
-        if data is None:
+        if await services.load(session, contact_id) is None:
             raise _not_found()
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="contact.exported",
-            entity_type="contact",
-            entity_id=contact_id,
-            actor_user_id=principal.user_id,
-            payload={"purpose": "data_subject_access"},
+    raise ProblemError(
+        ErrorCodes.CONTACT_ACCESS_EXPORT_STATE,
+        detail="Auskunft nur über Vorbereitung, Prüfung und Freigabe durch eine zweite Person "
+        "(POST /contacts/{id}/access-exports).",
+    )
+
+
+def _access_out(item: access_export.AccessExport) -> schemas.ContactAccessExportOut:
+    return schemas.ContactAccessExportOut.model_validate(item, from_attributes=True)
+
+
+async def _access(
+    session: Any, contact_id: uuid.UUID, export_id: uuid.UUID
+) -> access_export.AccessExport:
+    item = await access_export.get(session, export_id)
+    if item is None or item.contact_id != contact_id:
+        raise _not_found()
+    return item
+
+
+@router.post(
+    "/contacts/{contact_id}/access-exports",
+    status_code=201,
+    summary="Auskunftsexport vorbereiten (Status prepared, AC07)",
+)
+async def prepare_access_export(
+    contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(EXPORT)
+) -> schemas.ContactAccessExportOut:
+    async with tenant_tx(request, principal) as session:
+        item = await access_export.prepare(
+            session, tenant_id=principal.tenant_id, contact_id=contact_id, actor=principal.user_id
         )
-        return data
+        if item is None:
+            raise _not_found()
+        return _access_out(item)
+
+
+@router.get(
+    "/contacts/{contact_id}/access-exports",
+    summary="Auskunftsexporte eines Kontakts mit Prüfstatus",
+    dependencies=[Depends(strict_query)],
+)
+async def list_access_exports(
+    contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(EXPORT)
+) -> list[schemas.ContactAccessExportOut]:
+    async with tenant_tx(request, principal) as session:
+        if await services.load(session, contact_id) is None:
+            raise _not_found()
+        return [_access_out(x) for x in await access_export.list_for_contact(session, contact_id)]
+
+
+@router.get(
+    "/contacts/{contact_id}/access-exports/{export_id}/preview",
+    summary="Auskunftsexport zur Prüfung ansehen (interne Vorschau, keine Herausgabe)",
+    dependencies=[Depends(strict_query)],
+)
+async def preview_access_export(
+    contact_id: uuid.UUID,
+    export_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        item = await _access(session, contact_id, export_id)
+        return {
+            "status": item.status,
+            "for_review_only": True,
+            **await access_export.preview(session, item),
+        }
+
+
+@router.post(
+    "/contacts/{contact_id}/access-exports/{export_id}/review",
+    summary="Auskunftsexport geprüft (zweite Person)",
+)
+async def review_access_export(
+    contact_id: uuid.UUID,
+    export_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ContactAccessExportOut:
+    async with tenant_tx(request, principal) as session:
+        item = await _access(session, contact_id, export_id)
+        return _access_out(
+            await access_export.review(
+                session, item, tenant_id=principal.tenant_id, actor=principal.user_id
+            )
+        )
+
+
+@router.post(
+    "/contacts/{contact_id}/access-exports/{export_id}/approve",
+    summary="Auskunftsexport zur Herausgabe freigeben (zweite Person)",
+)
+async def release_access_export(
+    contact_id: uuid.UUID,
+    export_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ContactAccessExportOut:
+    async with tenant_tx(request, principal) as session:
+        item = await _access(session, contact_id, export_id)
+        return _access_out(
+            await access_export.release(
+                session, item, tenant_id=principal.tenant_id, actor=principal.user_id
+            )
+        )
+
+
+@router.post(
+    "/contacts/{contact_id}/access-exports/{export_id}/reject",
+    summary="Auskunftsexport verwerfen",
+)
+async def reject_access_export(
+    contact_id: uuid.UUID,
+    export_id: uuid.UUID,
+    body: schemas.ContactAccessExportRejectIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ContactAccessExportOut:
+    async with tenant_tx(request, principal) as session:
+        item = await _access(session, contact_id, export_id)
+        return _access_out(
+            await access_export.reject(
+                session,
+                item,
+                tenant_id=principal.tenant_id,
+                actor=principal.user_id,
+                reason=body.reason,
+            )
+        )
+
+
+@router.get(
+    "/contacts/{contact_id}/access-exports/{export_id}/download",
+    summary="Freigegebenen Auskunftsexport herunterladen (protokolliert)",
+    dependencies=[Depends(strict_query)],
+)
+async def download_access_export(
+    contact_id: uuid.UUID,
+    export_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(EXPORT),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        item = await _access(session, contact_id, export_id)
+        return await access_export.download(
+            session, item, tenant_id=principal.tenant_id, actor=principal.user_id
+        )
 
 
 @router.get(
@@ -1267,6 +1411,54 @@ async def revoke_consent(
             payload={"kind": consent.kind.value},
         )
         return schemas.ConsentOut.model_validate(consent, from_attributes=True)
+
+
+@router.get(
+    "/consent-policy",
+    summary="Einwilligungsregeln des Mandanten",
+    dependencies=[Depends(strict_query)],
+)
+async def get_consent_policy(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> schemas.ContactConsentPolicyOut:
+    """Switches of the consent checks per purpose (AC06, rule AC06-einwilligungen)."""
+    from mhvp.contacts import consent_rules
+
+    async with tenant_tx(request, principal) as session:
+        policy = await consent_rules.load_policy(session)
+        return schemas.ContactConsentPolicyOut(**policy.as_dict())
+
+
+@router.put("/consent-policy", summary="Einwilligungsregeln des Mandanten setzen")
+async def put_consent_policy(
+    body: schemas.ContactConsentPolicyIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ContactConsentPolicyOut:
+    """Widening a default (``consent_or_contract``) is an operator decision on the legal
+    basis (OPEN_QUESTIONS AC06-01, AC06-02); the change is recorded as an event."""
+    from mhvp.contacts import consent_rules
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        before = (row.sources or {}).get(consent_rules.POLICY_KEY)
+        value = body.model_dump()
+        row.sources = {**(row.sources or {}), consent_rules.POLICY_KEY: value}
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="consent_policy.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"before": before, "after": value},
+        )
+        return schemas.ContactConsentPolicyOut(**value)
 
 
 # Parties -------------------------------------------------------------------------------

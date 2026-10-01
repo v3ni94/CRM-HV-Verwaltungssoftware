@@ -41,6 +41,7 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "mhvp.documents.intake",
             "mhvp.documents.mirror_deletion",
             "mhvp.documents.retention",
+            "mhvp.documents.deletion_checklist",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
             "mhvp.workspace.backup_verify",
@@ -182,6 +183,12 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "documents-deletion-proposals": {
                 "task": "mhvp.documents.deletion_proposals",
                 "schedule": crontab(day_of_month=2, hour=4, minute=20),
+            },
+            # AC07 (GA08-08): daily follow up of recent deletions; repeats open targets
+            # (original, derivatives, mirror steps), never deletes a restored document.
+            "documents-deletion-follow-up": {
+                "task": "mhvp.documents.deletion_follow_up",
+                "schedule": crontab(hour=4, minute=50),
             },
             # T01-01: delete expired tenant export archives (retention per tenant, default off).
             "platform-purge-expired-exports": {

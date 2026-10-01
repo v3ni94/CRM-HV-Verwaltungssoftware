@@ -200,3 +200,7 @@ Rule: `docs/rules/AA08-abrechnungszeitraum-status.md`.
 * `portal_account.locale` (migration 0331, nullable). `PATCH /portal/me/locale` speichert `de` oder `en` (`PORTAL_LOCALES`, sonst 422, `null` löscht); `GET /portal/me` liefert `locale`. Das Portal übernimmt die Sprache bei der Anmeldung in den Cookie (`apps/web-portal/src/lib/locale-sync.ts`); der Cookie hat Vorrang für nicht angemeldete Besucher.
 * CRM: Seite `/einstellungen/dienstleister-portal` (Zeitfenster und Klassenfreigaben, bestehende API `portal-admin/provider-availability` und `document-class-grants`).
 * Offen: AB12-01 (Gate G5 für Klassenfreigaben, nichts geändert).
+
+### AC04: Rechtsträgerauswahl für die Dienstleister-Seite
+
+`GET /portal-admin/legal-entities` (Recht `tenant_settings:read`, nur `id` und `name`, RLS auf den eigenen Mandanten, unbekannte Query-Parameter 422) ersetzt für die CRM-Seite `/einstellungen/dienstleister-portal` den Pfad `/tenant/legal-entities`, der `members:read` verlangt. Tests: `tests/integration/test_ab12_portal_locale.py::test_ac04_legal_entity_choices_need_only_settings_read`.

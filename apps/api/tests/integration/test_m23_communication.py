@@ -97,6 +97,19 @@ def test_dispatch_history_and_calendar(client: TestClient, world: World) -> None
         ),
         201,
     )
+    # AC06: e-mail delivery of documents needs an email_delivery consent.
+    _ok(
+        client.post(
+            f"/api/v1/contacts/{mail['id']}/consents",
+            json={
+                "kind": "email_delivery",
+                "granted_at": "2026-01-01T00:00:00Z",
+                "source": "Test AC06",
+            },
+            headers=h,
+        ),
+        201,
+    )
     doc = _ok(
         client.post(
             "/api/v1/documents",

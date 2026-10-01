@@ -35,3 +35,5 @@ bank refusal, ticket proposal), `tests/unit/test_ai_lookup.py`; vitest `ChatLink
 ## Open points
 
 `docs/OPEN_QUESTIONS.md` AI-LOOKUP-Q1 to Q3.
+
+Status 01.10.2026 (AC08, GA10-06): model planned lookups (tool use) implemented behind `models.<tier>.tool_use` (default off), rule AI-TOOL-01, decision AC08-01 / AI-LOOKUP-Q1 open.

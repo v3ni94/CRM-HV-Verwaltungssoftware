@@ -315,6 +315,18 @@ class TenantStatusPatch(BaseModel):
     status: Literal["active", "suspended"]
 
 
+def _platform_hosts(request: Request) -> set[str]:
+    settings = request.app.state.settings
+    hosts: set[str] = set()
+    for name in ("jwt_issuer", "api_public_url", "web_crm_url", "web_portal_url"):
+        value = getattr(settings, name, None)
+        if isinstance(value, str) and value:
+            host = re.sub(r"^https?://", "", value).split("/")[0].split(":")[0].lower()
+            if host:
+                hosts.add(host.rstrip("."))
+    return hosts
+
+
 def _domain_out(request: Request, row: TenantDomain) -> TenantDomainOut:
     crm = getattr(request.app.state.settings, "web_crm_url", None) or ""
     target = re.sub(r"^https?://", "", crm).split("/")[0].split(":")[0] or "<Plattformhost>"
@@ -357,6 +369,12 @@ async def add_tenant_domain(
     host = body.host.strip().lower().rstrip(".")
     if not HOST_PATTERN.match(host):
         raise ProblemError(ErrorCodes.VALIDATION, detail="Ungültiger Hostname.")
+    if host in _platform_hosts(request):
+        # AC01-2: a shared platform host bound to one tenant would answer every other
+        # tenant (and platform administrators) with a tenant mismatch.
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Der Hostname gehört der Plattform selbst."
+        )
     async with platform_transaction(sessions(request)) as session:
         if await session.get(Tenant, tenant_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)

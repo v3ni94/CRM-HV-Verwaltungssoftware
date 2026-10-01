@@ -65,6 +65,7 @@ describe("PortalAccessSection", () => {
       contact_id: CONTACT,
       email: "erika@example.test",
       display_name: "Erika Mustermann",
+      send_invitation: true,
     });
     // After inviting the status is reloaded from the API.
     await waitFor(() => expect(screen.getByText("Eingeladen, Passwort noch nicht gesetzt")).toBeInTheDocument());
@@ -171,5 +172,45 @@ describe("PortalAccessSection", () => {
     renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
     await screen.findByTestId("contact-portal-account");
     expect(screen.queryByTestId("contact-portal-renew")).toBeNull();
+  });
+
+  it("creates the access without invitation when the switch is off and sends send_invitation=false", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse({ id: "acc", user_id: "usr", grants: 0, invitation_token: null, invitation_url: null }, 201))
+      .mockResolvedValueOnce(jsonResponse([{ ...ACCOUNT, status: "not_invited" }]));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    const toggle = await screen.findByTestId("contact-portal-send-invitation");
+    expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
+    await userEvent.click(screen.getByRole("button", { name: "Zugang ohne Einladung anlegen" }));
+    await waitFor(() => expect(screen.getByTestId("contact-portal-status")).toHaveTextContent("Nicht eingeladen"));
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({ send_invitation: false });
+    expect(screen.queryByTestId("contact-invitation")).toBeNull();
+  });
+
+  it("offers Einladen for not_invited and sends the invitation", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([{ ...ACCOUNT, status: "not_invited" }]))
+      .mockResolvedValueOnce(jsonResponse({ id: "acc", user_id: "usr", grants: 0, invitation_token: "x.y", invitation_url: null }, 201))
+      .mockResolvedValueOnce(jsonResponse([ACCOUNT]));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    await userEvent.click(await screen.findByRole("button", { name: "Einladen" }));
+    await waitFor(() => expect(screen.getByText("x.y")).toBeInTheDocument());
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({ email: "erika@example.test" });
+  });
+
+  it.each([
+    ["not_invited", "Nicht eingeladen"],
+    ["invited", "Eingeladen, Passwort noch nicht gesetzt"],
+    ["active", "Zugang aktiv"],
+    ["locked", "Zugang aktiv, gesperrt"],
+    ["expired", "Einladung abgelaufen"],
+    ["revoked", "Zugang entzogen"],
+  ])("labels the status %s", async (status, label) => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([{ ...ACCOUNT, status, invitation_expires_at: "2099-01-01T00:00:00Z" }]));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    await screen.findByTestId("contact-portal-account");
+    expect(screen.getByTestId("contact-portal-status")).toHaveTextContent(label);
   });
 });

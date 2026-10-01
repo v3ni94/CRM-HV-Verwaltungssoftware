@@ -13,7 +13,7 @@ import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -24,7 +24,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.ai import instructions as chat_instructions
-from mhvp.ai import journal_history, lookup, providers, table_mapper, tasks
+from mhvp.ai import journal_history, lookup, providers, table_mapper, tasks, tool_use
 from mhvp.ai.journal_history import journal_examples
 from mhvp.ai.masking import mask_personal_data
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
@@ -1449,6 +1449,8 @@ class _PlanResult:
     # The provider refused the input as too large (HTTP 400 naming tokens or the context):
     # the chat retries once with the budget halved (``_call_within_budget``).
     token_limit: bool = False
+    # Lookups the model asked for instead of answering (tool use, ``_tool_loop``).
+    tool_calls: list[providers.ToolCall] = field(default_factory=list)
 
 
 def _status_of(exc: providers.ProviderError) -> int | None:
@@ -1504,6 +1506,7 @@ async def _call_plan(
     tenant_id: uuid.UUID | None = None,
     run_id: uuid.UUID | None = None,
     model: type[BaseModel] | None = None,
+    allow_tools: bool = False,
 ) -> _PlanResult:
     """One prompt against the routing plan: retries per provider (schema errors), falls back to
     the next provider of the plan on a provider error (budget exhausted providers are already
@@ -1516,6 +1519,7 @@ async def _call_plan(
     skips: list[str] = []
     chosen = plan[0][0]
     token_limit = False
+    tool_calls: list[providers.ToolCall] = []
     for step in plan:
         chosen, _spent, _budget = step
         provider = chosen.config.provider
@@ -1550,8 +1554,22 @@ async def _call_plan(
                     break
                 tokens_in += completion.tokens_in
                 tokens_out += completion.tokens_out
+                asked = (
+                    completion.tool_calls or providers.tool_calls_of(completion.data)
+                    if allow_tools
+                    else []
+                )
+                if asked:
+                    # The model asks for lookups first (``_tool_loop``); no answer yet.
+                    tool_calls, output, error = list(asked), None, None
+                    break
+                data = completion.data
+                if isinstance(data, dict) and "tool_calls" in data:
+                    # An answer of a tool round carries an empty ``tool_calls`` list; after the
+                    # limits a further request is ignored and the answer is taken as is.
+                    data = {k: v for k, v in data.items() if k != "tool_calls"}
                 try:
-                    output = output_model.model_validate(completion.data).model_dump(mode="json")
+                    output = output_model.model_validate(data).model_dump(mode="json")
                     error = None
                     break
                 except ValidationError as exc:
@@ -1573,7 +1591,89 @@ async def _call_plan(
         skips.append(f"{provider.value}: {error}")
         if token_limit:
             break  # the caller retries with a smaller input instead of the next provider
-    return _PlanResult(output, tokens_in, tokens_out, error, skips, chosen, token_limit)
+    return _PlanResult(output, tokens_in, tokens_out, error, skips, chosen, token_limit, tool_calls)
+
+
+async def _tool_loop(
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    grant: dict[str, Any],
+    tools_plan: list[tuple[Route, Decimal, Decimal]],
+    plan: list[tuple[Route, Decimal, Decimal]],
+    keys: dict[AiProvider, str],
+    system: str,
+    messages: list[dict[str, str]],
+    schema: dict[str, Any],
+    task: AiTask,
+    budget: tool_use.Budget | None = None,
+) -> _PlanResult:
+    """Chat with model planned lookups (9.1, rule AI-TOOL-01): the model may ask for read
+    only tools (``tool_use.TOOLS``) up to the limits of ``tool_use.Budget``; every round runs
+    in its own tenant transaction with the caller's principal (``grant``), the masked results
+    go back as a data block and every call is logged on the run (``input_ref["tool_calls"]``).
+    When the limits are reached the model answers once more without tools."""
+    budget = budget or tool_use.Budget()
+    permissions = frozenset(grant.get("permissions") or [])
+    principal = tool_use.principal_of(grant, tenant_id)
+    current = [
+        *messages[:-1],
+        {
+            "role": "user",
+            "content": messages[-1]["content"] + "\n\n" + tool_use.instructions(permissions),
+        },
+    ]
+    tokens_in = tokens_out = 0
+    tool_schema = tool_use.schema_with_tools(schema)
+    while not budget.exhausted():
+        result = await _call_plan(
+            tools_plan,
+            keys,
+            system,
+            current,
+            tool_schema,
+            task,
+            tenant_id=tenant_id,
+            run_id=run_id,
+            allow_tools=True,
+        )
+        tokens_in += result.tokens_in
+        tokens_out += result.tokens_out
+        if not result.tool_calls:
+            result.tokens_in, result.tokens_out = tokens_in, tokens_out
+            return result
+        calls = budget.take(result.tool_calls)
+        async with tenant_transaction(factory, tenant_id) as session:
+            tool_use.attach(session, principal)
+            entries = [await tool_use.run_call(session, permissions, c) for c in calls]
+            run = await session.get(AiTaskRun, run_id)
+            if run is not None:
+                log_lines = [tool_use.log_entry(e, budget.rounds) for e in entries]
+                run.input_ref = {
+                    **run.input_ref,
+                    "tool_calls": [*(run.input_ref.get("tool_calls") or []), *log_lines],
+                }
+        asked = json.dumps(
+            {
+                "tool_calls": [
+                    {"name": c.name, "arguments": tool_use.masked_arguments(c.arguments)}
+                    for c in calls
+                ]
+            },
+            ensure_ascii=False,
+        )
+        current = [
+            *current,
+            {"role": "assistant", "content": asked},
+            {"role": "user", "content": tool_use.results_text(entries)},
+        ]
+    current = [*current, {"role": "user", "content": tool_use.FINAL_NOTICE}]
+    result = await _call_plan(
+        plan, keys, system, current, schema, task, tenant_id=tenant_id, run_id=run_id
+    )
+    result.tokens_in += tokens_in
+    result.tokens_out += tokens_out
+    return result
 
 
 async def _update_progress(
@@ -1644,6 +1744,14 @@ async def execute(
                 plan.append((candidate, spent, budget))
             if not plan:
                 raise GatewayBlockedError("; ".join(reasons))
+            # Tool use (GA10-06): only answer_question runs that carry the caller's grant and
+            # only providers whose tier entry has ``tool_use`` switched on (default off).
+            tool_grant = run.input_ref.get("tool_grant") if task is AiTask.ANSWER_QUESTION else None
+            tools_plan = (
+                [st for st in plan if tool_use.enabled_for(st[0].config.models, st[0].tier)]
+                if isinstance(tool_grant, dict)
+                else []
+            )
             skipped = list(reasons)
             preferred = usable[0].config.provider
             # Fast table import (M7-06): a table document eligible for the deterministic path
@@ -1808,6 +1916,20 @@ async def execute(
                     current.instruction,
                     masked=task in MASKED_TASKS,
                 )
+                if tools_plan and isinstance(tool_grant, dict):
+                    return await _tool_loop(
+                        factory,
+                        tenant_id,
+                        run_id,
+                        tool_grant,
+                        tools_plan,
+                        plan,
+                        keys,
+                        prompt.system,
+                        messages,
+                        schema,
+                        task,
+                    )
                 return await _call_plan(
                     plan,
                     keys,

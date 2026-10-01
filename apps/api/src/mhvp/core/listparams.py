@@ -268,6 +268,16 @@ class ListSpec:
     valid_to: InstrumentedAttribute[Any] | None = None
 
     def dependency(self, request: Request) -> ListParams:
+        try:
+            return self._parse(request)
+        except ProblemError:
+            # AC01-1: the parse may run before the route's auth dependency; its message lists
+            # the allowed columns, so an unauthenticated caller gets 401 instead.
+            if _route_authenticates(request) and not _has_credentials(request):
+                raise ProblemError(ErrorCodes.NOT_AUTHENTICATED, extensions={}) from None
+            raise
+
+    def _parse(self, request: Request) -> ListParams:
         params = list_params(request)
         route = request.scope.get("route")
         dependant = getattr(route, "dependant", None)
@@ -356,4 +366,37 @@ def strict_query(request: Request) -> None:
             continue
         if generic and (key.startswith("filter[") or key in GENERIC_LIST_KEYS):
             continue
+        if _route_authenticates(request) and not _has_credentials(request):
+            # AC01-1: route dependencies run before the endpoint's auth dependency; an
+            # unauthenticated caller gets 401, never a 422 that describes the route.
+            raise ProblemError(ErrorCodes.NOT_AUTHENTICATED, extensions={})
         raise _invalid(key, f"Parameter '{key}' wird von dieser Liste nicht angeboten.")
+
+
+_AUTH_CALL_NAMES = frozenset(
+    {"get_principal", "require_permission", "require_platform_admin", "portal_user"}
+)
+
+
+def _has_credentials(request: Request) -> bool:
+    authorization = request.headers.get("authorization", "")
+    return authorization.lower().startswith("bearer ") or bool(request.headers.get("x-api-key"))
+
+
+def _route_authenticates(request: Request) -> bool:
+    """True when a dependency of the route resolves the principal (directly or through the
+    usual guards). Public routes keep the plain 422."""
+    dependant = getattr(request.scope.get("route"), "dependant", None)
+    stack = [dependant] if dependant is not None else []
+    while stack:
+        dep = stack.pop()
+        call = dep.call
+        names = set(getattr(getattr(call, "__code__", None), "co_names", ()))
+        names.add(getattr(call, "__name__", ""))
+        names.update(getattr(getattr(call, "__code__", None), "co_freevars", ()))
+        if names & _AUTH_CALL_NAMES or (
+            getattr(call, "__qualname__", "").startswith("require_permission.")
+        ):
+            return True
+        stack.extend(dep.dependencies)
+    return False

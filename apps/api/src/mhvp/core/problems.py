@@ -1334,6 +1334,33 @@ class ErrorCodes:
         "Ausführung durch eine zweite Person erforderlich",
         "The proposer must not execute the merge (four eyes).",
     )
+    CONTACT_PORTAL_TERMS_MISSING = ErrorCode(
+        "MHVP-CONT-0020",
+        403,
+        "Die Nutzungsbedingungen des Portals sind nicht angenommen",
+        "The tenant has published portal terms (consent policy portal_terms_version); access "
+        "needs a valid, not revoked portal_terms consent for this version (AC06, GA02-06).",
+    )
+    # Auskunftsexport Art. 15 DSGVO mit Prüfschritt (AC07, GA08-06, 7.11 S06).
+    CONTACT_ACCESS_EXPORT_STATE = ErrorCode(
+        "MHVP-CONT-0030",
+        409,
+        "Der Auskunftsexport hat einen anderen Status",
+        "The access export is not in the state the action needs (prepared, reviewed, released); "
+        "download only after review and release (AC07).",
+    )
+    CONTACT_ACCESS_EXPORT_FOUR_EYES = ErrorCode(
+        "MHVP-CONT-0031",
+        403,
+        "Prüfung und Freigabe durch eine zweite Person erforderlich",
+        "The person who prepared the access export cannot review or release it (AC07).",
+    )
+    CONTACT_ACCESS_EXPORT_CHANGED = ErrorCode(
+        "MHVP-CONT-0032",
+        409,
+        "Die Daten haben sich seit der Prüfung geändert",
+        "The rebuilt access export no longer matches the reviewed hash; prepare it again (AC07).",
+    )
     MIG_CUTOFF_MISSING = ErrorCode(
         "MHVP-MIG-0001",
         409,

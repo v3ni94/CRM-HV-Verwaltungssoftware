@@ -247,6 +247,10 @@ async def _replay_one(
     )
     pending_jobs.extend(jobs)
     blobs.delete(document.storage_ref)
+    # AC07 (GA08-08): derivatives restored with the backup go again (embeddings, AI extracts).
+    from mhvp.documents.deletion_checklist import purge_derivatives
+
+    purged = await purge_derivatives(session, document_id)
     await emit(
         session,
         tenant_id=tenant_id,
@@ -263,6 +267,8 @@ async def _replay_one(
             "journal_event_id": entry.event_id,
             "original_occurred_at": entry.occurred_at,
             "mirror_deletions": len(jobs),
+            "storage_ref": document.storage_ref,
+            "derivatives": purged,
         },
     )
     await session.delete(document)

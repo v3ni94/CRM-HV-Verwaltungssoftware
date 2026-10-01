@@ -84,6 +84,10 @@ class PortalInviteIn(_In):
 class PortalAcceptIn(_In):
     token: str = Field(min_length=10, max_length=200)
     password: str = Field(min_length=1, max_length=200)
+    # AC06: once the tenant has published a terms version (consent policy), activation needs
+    # the acceptance of exactly that version; it is stored as a portal_terms consent.
+    accept_terms: bool | None = None
+    terms_version: str | None = Field(default=None, min_length=1, max_length=60)
 
 
 class PortalTicketIn(_In):
@@ -1102,6 +1106,9 @@ async def accept(body: PortalAcceptIn, request: Request) -> dict[str, str]:
             or account.invitation_expires_at < datetime.now(UTC)
         ):
             raise ProblemError(ErrorCodes.VALIDATION, detail="Einladung ungültig oder abgelaufen.")
+        await _accept_portal_terms(
+            session, tenant_id, account, bool(body.accept_terms), body.terms_version
+        )
         account.status, account.activated_at, account.invitation_hash = (
             "active",
             datetime.now(UTC),
@@ -1243,12 +1250,114 @@ async def portal_user(request: Request) -> tuple[TenantPrincipal, PortalAccount]
                 PortalAccount.status.in_(LOGIN_STATUSES),
             )
         )
+        if account is not None:
+            from mhvp.contacts.consent_rules import portal_terms_decision
+
+            decision = await portal_terms_decision(session, account.contact_id)
+            if not decision.allowed:
+                raise ProblemError(ErrorCodes.CONTACT_PORTAL_TERMS_MISSING)
     if account is None:
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="No active portal account.")
     return tp, account
 
 
+async def _accept_portal_terms(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    account: PortalAccount,
+    accept_terms: bool,
+    terms_version: str | None,
+) -> None:
+    """AC06: without published terms nothing is recorded (no invented legal text). With a
+    published version the acceptance must name that version; time and version are stored."""
+    from mhvp.contacts import consent_rules
+    from mhvp.contacts.models import Consent, ConsentKind
+
+    policy = await consent_rules.load_policy(session)
+    version = policy.portal_terms_version
+    if version is None:
+        return
+    if not accept_terms or terms_version != version:
+        raise ProblemError(
+            ErrorCodes.CONTACT_PORTAL_TERMS_MISSING,
+            detail=f"Bitte die Nutzungsbedingungen in der Fassung {version} annehmen.",
+        )
+    now = datetime.now(UTC)
+    consent = Consent(
+        tenant_id=tenant_id,
+        contact_id=account.contact_id,
+        kind=ConsentKind.PORTAL_TERMS,
+        granted_at=now,
+        source=consent_rules.terms_source(version),
+    )
+    session.add(consent)
+    await session.flush()
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="consent.granted",
+        entity_type="contact",
+        entity_id=account.contact_id,
+        actor_user_id=account.user_id,
+        payload={"kind": "portal_terms", "source": consent.source, "version": version},
+    )
+
+
 Portal = tuple[TenantPrincipal, PortalAccount]
+
+
+class PortalTermsAcceptIn(_In):
+    accept_terms: bool
+    terms_version: str = Field(min_length=1, max_length=60)
+
+
+@router.get("/terms", summary="Stand der Nutzungsbedingungen des Portals")
+async def portal_terms_status(request: Request) -> dict[str, Any]:
+    """AC06: published terms version and whether the signed in account has accepted it.
+    Reachable without accepted terms so that the portal can ask for the acceptance."""
+    tp, account = await _terms_account(request)
+    from mhvp.contacts import consent_rules
+
+    async with tenant_tx(request, tp) as session:
+        policy = await consent_rules.load_policy(session)
+        decision = await consent_rules.portal_terms_decision(session, account.contact_id, policy)
+    return {
+        "terms_version": policy.portal_terms_version,
+        "accepted": decision.allowed,
+        "reason": decision.reason,
+    }
+
+
+@router.post("/terms/accept", summary="Nutzungsbedingungen des Portals annehmen")
+async def portal_terms_accept(body: PortalTermsAcceptIn, request: Request) -> dict[str, Any]:
+    tp, account = await _terms_account(request)
+    async with tenant_tx(request, tp) as session:
+        await _accept_portal_terms(
+            session, tp.tenant_id, account, body.accept_terms, body.terms_version
+        )
+    return {"terms_version": body.terms_version, "accepted": True}
+
+
+async def _terms_account(request: Request) -> tuple[TenantPrincipal, PortalAccount]:
+    principal = await get_principal(request)
+    if principal.tenant_id is None or principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    tp = TenantPrincipal(
+        user_id=principal.user_id,
+        tenant_id=principal.tenant_id,
+        permissions=principal.permissions,
+        roles=principal.roles,
+    )
+    async with tenant_tx(request, tp) as session:
+        account = await session.scalar(
+            select(PortalAccount).where(
+                PortalAccount.user_id == principal.user_id,
+                PortalAccount.status.in_(LOGIN_STATUSES),
+            )
+        )
+    if account is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="No active portal account.")
+    return tp, account
 
 
 async def _scopes(session: AsyncSession, account: PortalAccount) -> dict[str, set[uuid.UUID]]:

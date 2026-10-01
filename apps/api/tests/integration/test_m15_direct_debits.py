@@ -333,6 +333,19 @@ def test_direct_debit_run(clients: tuple[TestClient, TestClient], world: World) 
     assert approved["approvals"] == 2
     assert approved["status"] == "approved"
 
+    # AC06: e-mail delivery of documents needs an email_delivery consent.
+    _ok(
+        client.post(
+            f"/api/v1/contacts/{contact_a['id']}/consents",
+            json={
+                "kind": "email_delivery",
+                "granted_at": "2026-01-01T00:00:00Z",
+                "source": "Test AC06",
+            },
+            headers=h,
+        ),
+        201,
+    )
     # Pre-notifications are drafts filed at the contact; a repeated call adds nothing.
     notes = _ok(client.post(f"{D}/{run['id']}/pre-notifications", headers=h))
     assert len(notes) == 1  # one draft per payer covering both items

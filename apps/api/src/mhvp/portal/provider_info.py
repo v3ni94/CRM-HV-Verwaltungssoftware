@@ -26,6 +26,36 @@ admin = APIRouter(
     prefix="/portal-admin", tags=["Portal Verwaltung"], dependencies=[Depends(portal_admin_guard)]
 )
 MANAGE = require_permission("contacts:update")
+SETTINGS_READ = require_permission("tenant_settings:read")
+
+
+class PortalLegalEntityChoice(BaseModel):
+    """Minimal option for the legal entity selection (id and name only)."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: uuid.UUID
+    name: str
+
+
+@admin.get(
+    "/legal-entities",
+    summary="Rechtsträger zur Auswahl (nur Id und Name, AC04)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_legal_entity_choices(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> list[PortalLegalEntityChoice]:
+    """Small read path for the provider portal settings page: the selection needs no
+    members:read, only tenant_settings:read. RLS limits it to the own tenant."""
+    from mhvp.properties.models import LegalEntity
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.execute(
+                select(LegalEntity.id, LegalEntity.name).order_by(LegalEntity.name)
+            )
+        ).all()
+    return [PortalLegalEntityChoice(id=r.id, name=r.name) for r in rows]
 
 
 @router.get(

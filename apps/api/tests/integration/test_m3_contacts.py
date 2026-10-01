@@ -311,18 +311,11 @@ def test_parties_notes_consents_relations_and_export(client: TestClient, world: 
         headers=headers,
     )
     assert self_rel.status_code == 422
+    # AC07 (GA08-06): no direct download without review and release by a second person;
+    # the reviewed export is tested in test_ac07_access_export.
     export = client.get(f"/api/v1/contacts/{anna['id']}/export", headers=headers)
-    assert export.status_code == 200
-    data = export.json()
-    assert data["review_required"] is True
-    assert data["contact"]["id"] == anna["id"]
-    assert data["notes"][0]["body"] == "Rückruf erbeten"
-    assert data["consents"][0]["revoked_at"] is not None
-    assert data["parties"][0]["own_role"] == "primary"
-    # Relations only reference the other contact; no data of that person is disclosed.
-    assert data["relations"] == [{"kind": "spouse", "related_contact_id": ben["id"]}]
-    assert "Ben" not in str(data["contact"])
-    assert any(e["type"] == "contact.created" for e in data["processing_log"])
+    assert export.status_code == 409
+    assert export.json()["code"] == "MHVP-CONT-0030"
 
 
 def test_list_flags_pending_iban_and_reject_reason_is_exposed(

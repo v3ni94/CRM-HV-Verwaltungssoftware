@@ -132,19 +132,34 @@ async def request(
         if mirror.status is MirrorStatus.PENDING or not mirror.external_ref:
             continue  # nothing exists in the mirror yet
         action = action_for(mirror.kind)
-        session.add(
-            DocumentMirrorDeletion(
-                tenant_id=tenant_id,
-                document_id=document_id,
-                kind=mirror.kind,
-                action=action,
-                external_ref=mirror.external_ref,
-                status=MirrorDeletionStatus.OPEN,
-                attempts=0,
-                requested_at=now,
-                requested_by=actor_user_id,
+        existing = await session.scalar(
+            select(DocumentMirrorDeletion).where(
+                DocumentMirrorDeletion.document_id == document_id,
+                DocumentMirrorDeletion.kind == mirror.kind,
             )
         )
+        reset = existing is not None
+        if existing is not None:
+            # AC07 (GA08-08): the document came back (restore) and is deleted again, so every
+            # target starts over; the earlier result stays in the event journal.
+            existing.action, existing.external_ref = action, mirror.external_ref
+            existing.status, existing.attempts = MirrorDeletionStatus.OPEN, 0
+            existing.result, existing.last_error, existing.completed_at = None, None, None
+            existing.requested_at, existing.requested_by = now, actor_user_id
+        else:
+            session.add(
+                DocumentMirrorDeletion(
+                    tenant_id=tenant_id,
+                    document_id=document_id,
+                    kind=mirror.kind,
+                    action=action,
+                    external_ref=mirror.external_ref,
+                    status=MirrorDeletionStatus.OPEN,
+                    attempts=0,
+                    requested_at=now,
+                    requested_by=actor_user_id,
+                )
+            )
         job = MirrorDeletionJob(
             tenant_id=tenant_id,
             document_id=document_id,
@@ -164,6 +179,7 @@ async def request(
                 "external_ref": job.external_ref,
                 "mirror_status": mirror.status.value,
                 "requested_at": now.isoformat(),
+                **({"reset_after_restore": True} if reset else {}),
             },
         )
         jobs.append(job)

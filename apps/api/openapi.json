@@ -2521,6 +2521,42 @@
         "title": "AiTask",
         "type": "string"
       },
+      "AiToolUseOut": {
+        "description": "One lookup the model asked for (``input_ref[\"tool_calls\"]``); arguments are masked.",
+        "properties": {
+          "arguments": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Arguments",
+            "type": "object"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "permitted": {
+            "title": "Permitted",
+            "type": "boolean"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "label",
+          "permitted",
+          "count"
+        ],
+        "title": "AiToolUseOut",
+        "type": "object"
+      },
       "AlertChannel": {
         "enum": [
           "email",
@@ -14028,6 +14064,193 @@
         "title": "ConsumptionsIn",
         "type": "object"
       },
+      "ContactAccessExportLogEntry": {
+        "properties": {
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "actor_user_id",
+          "occurred_at"
+        ],
+        "title": "ContactAccessExportLogEntry",
+        "type": "object"
+      },
+      "ContactAccessExportOut": {
+        "description": "Auskunftsexport Art. 15 DSGVO mit Prüfstatus (AC07, GA08-06).",
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "downloads": {
+            "title": "Downloads",
+            "type": "integer"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "log": {
+            "items": {
+              "$ref": "#/components/schemas/ContactAccessExportLogEntry"
+            },
+            "title": "Log",
+            "type": "array"
+          },
+          "prepared_at": {
+            "format": "date-time",
+            "title": "Prepared At",
+            "type": "string"
+          },
+          "prepared_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepared By"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "released_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "prepared",
+              "reviewed",
+              "released",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contact_id",
+          "status",
+          "sha256",
+          "generated_at",
+          "prepared_by",
+          "prepared_at",
+          "reviewed_by",
+          "reviewed_at",
+          "released_by",
+          "released_at",
+          "rejected_reason",
+          "downloads",
+          "log"
+        ],
+        "title": "ContactAccessExportOut",
+        "type": "object"
+      },
+      "ContactAccessExportRejectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ContactAccessExportRejectIn",
+        "type": "object"
+      },
       "ContactBankAccountKind": {
         "description": "Account types of catalogue B.4 (Masterprompt Ergänzung 27.09.2026).",
         "enum": [
@@ -14427,6 +14650,83 @@
           "index"
         ],
         "title": "ContactChoice",
+        "type": "object"
+      },
+      "ContactConsentPolicyIn": {
+        "additionalProperties": false,
+        "description": "Tenant switches of the consent checks (AC06). Defaults are restrictive.",
+        "properties": {
+          "data_sharing": {
+            "default": "consent_only",
+            "enum": [
+              "consent_only",
+              "consent_or_contract"
+            ],
+            "title": "Data Sharing",
+            "type": "string"
+          },
+          "email_delivery": {
+            "default": "consent_only",
+            "enum": [
+              "consent_only",
+              "consent_or_contract"
+            ],
+            "title": "Email Delivery",
+            "type": "string"
+          },
+          "portal_terms_version": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portal Terms Version"
+          }
+        },
+        "title": "ContactConsentPolicyIn",
+        "type": "object"
+      },
+      "ContactConsentPolicyOut": {
+        "properties": {
+          "data_sharing": {
+            "enum": [
+              "consent_only",
+              "consent_or_contract"
+            ],
+            "title": "Data Sharing",
+            "type": "string"
+          },
+          "email_delivery": {
+            "enum": [
+              "consent_only",
+              "consent_or_contract"
+            ],
+            "title": "Email Delivery",
+            "type": "string"
+          },
+          "portal_terms_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portal Terms Version"
+          }
+        },
+        "required": [
+          "email_delivery",
+          "data_sharing",
+          "portal_terms_version"
+        ],
+        "title": "ContactConsentPolicyOut",
         "type": "object"
       },
       "ContactDateIn": {
@@ -22407,6 +22707,98 @@
           "valid_to"
         ],
         "title": "DocumentClassGrantOut",
+        "type": "object"
+      },
+      "DocumentDeletionChecklistItemOut": {
+        "description": "One target of a deletion (AC07, GA08-08).",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "status": {
+            "enum": [
+              "done",
+              "open",
+              "held",
+              "not_applicable",
+              "out_of_scope"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "enum": [
+              "index",
+              "original",
+              "mirror_paperless",
+              "mirror_google_drive",
+              "embeddings",
+              "ai_extracts",
+              "thumbnails",
+              "backup"
+            ],
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "status",
+          "detail"
+        ],
+        "title": "DocumentDeletionChecklistItemOut",
+        "type": "object"
+      },
+      "DocumentDeletionChecklistOut": {
+        "description": "Deletion checklist per target; ``held`` when a restored document is under a hold.",
+        "properties": {
+          "deleted_at": {
+            "format": "date-time",
+            "title": "Deleted At",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentDeletionChecklistItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "mirror_jobs_queued": {
+            "default": 0,
+            "title": "Mirror Jobs Queued",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "done",
+              "open",
+              "held"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "deleted_at",
+          "status",
+          "items"
+        ],
+        "title": "DocumentDeletionChecklistOut",
         "type": "object"
       },
       "DocumentDeletionOut": {
@@ -49615,11 +50007,35 @@
       "PortalAcceptIn": {
         "additionalProperties": false,
         "properties": {
+          "accept_terms": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accept Terms"
+          },
           "password": {
             "maxLength": 200,
             "minLength": 1,
             "title": "Password",
             "type": "string"
+          },
+          "terms_version": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms Version"
           },
           "token": {
             "maxLength": 200,
@@ -50219,6 +50635,27 @@
         "title": "PortalInvoiceSubmitIn",
         "type": "object"
       },
+      "PortalLegalEntityChoice": {
+        "additionalProperties": false,
+        "description": "Minimal option for the legal entity selection (id and name only).",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PortalLegalEntityChoice",
+        "type": "object"
+      },
       "PortalLocaleIn": {
         "additionalProperties": false,
         "properties": {
@@ -50485,6 +50922,27 @@
           }
         },
         "title": "PortalSupportConsentIn",
+        "type": "object"
+      },
+      "PortalTermsAcceptIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_terms": {
+            "title": "Accept Terms",
+            "type": "boolean"
+          },
+          "terms_version": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Terms Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accept_terms",
+          "terms_version"
+        ],
+        "title": "PortalTermsAcceptIn",
         "type": "object"
       },
       "PortalTicketIn": {
@@ -61224,6 +61682,13 @@
             "title": "Tokens Out",
             "type": "integer"
           },
+          "tools_used": {
+            "items": {
+              "$ref": "#/components/schemas/AiToolUseOut"
+            },
+            "title": "Tools Used",
+            "type": "array"
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -61671,6 +62136,11 @@
       "SerialDispatchIn": {
         "additionalProperties": false,
         "properties": {
+          "advertising": {
+            "default": false,
+            "title": "Advertising",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/DispatchIn"
@@ -61784,6 +62254,11 @@
         "additionalProperties": false,
         "description": "Template with placeholders merged per recipient, then dispatched (M23-03).",
         "properties": {
+          "advertising": {
+            "default": false,
+            "title": "Advertising",
+            "type": "boolean"
+          },
           "channel": {
             "anyOf": [
               {
@@ -68330,6 +68805,18 @@
               }
             ],
             "title": "Output Eur Per Mtok"
+          },
+          "tool_use": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None counts as off",
+            "title": "Tool Use"
           }
         },
         "required": [
@@ -94529,6 +95016,68 @@
         ]
       }
     },
+    "/api/v1/consent-policy": {
+      "get": {
+        "description": "Switches of the consent checks per purpose (AC06, rule AC06-einwilligungen).",
+        "operationId": "get_consent_policy_api_v1_consent_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactConsentPolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Einwilligungsregeln des Mandanten",
+        "tags": [
+          "Kontakte"
+        ]
+      },
+      "put": {
+        "description": "Widening a default (``consent_or_contract``) is an operator decision on the legal\nbasis (OPEN_QUESTIONS AC06-01, AC06-02); the change is recorded as an event.",
+        "operationId": "put_consent_policy_api_v1_consent_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactConsentPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactConsentPolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einwilligungsregeln des Mandanten setzen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/consents/{consent_id}/revoke": {
       "post": {
         "operationId": "revoke_consent_api_v1_consents__consent_id__revoke_post",
@@ -95578,6 +96127,373 @@
         ]
       }
     },
+    "/api/v1/contacts/{contact_id}/access-exports": {
+      "get": {
+        "operationId": "list_access_exports_api_v1_contacts__contact_id__access_exports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContactAccessExportOut"
+                  },
+                  "title": "Response List Access Exports Api V1 Contacts  Contact Id  Access Exports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auskunftsexporte eines Kontakts mit Prüfstatus",
+        "tags": [
+          "Kontakte"
+        ]
+      },
+      "post": {
+        "operationId": "prepare_access_export_api_v1_contacts__contact_id__access_exports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAccessExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auskunftsexport vorbereiten (Status prepared, AC07)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/approve": {
+      "post": {
+        "operationId": "release_access_export_api_v1_contacts__contact_id__access_exports__export_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAccessExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auskunftsexport zur Herausgabe freigeben (zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/download": {
+      "get": {
+        "operationId": "download_access_export_api_v1_contacts__contact_id__access_exports__export_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Download Access Export Api V1 Contacts  Contact Id  Access Exports  Export Id  Download Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigegebenen Auskunftsexport herunterladen (protokolliert)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/preview": {
+      "get": {
+        "operationId": "preview_access_export_api_v1_contacts__contact_id__access_exports__export_id__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Access Export Api V1 Contacts  Contact Id  Access Exports  Export Id  Preview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auskunftsexport zur Prüfung ansehen (interne Vorschau, keine Herausgabe)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/reject": {
+      "post": {
+        "operationId": "reject_access_export_api_v1_contacts__contact_id__access_exports__export_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactAccessExportRejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAccessExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auskunftsexport verwerfen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/access-exports/{export_id}/review": {
+      "post": {
+        "operationId": "review_access_export_api_v1_contacts__contact_id__access_exports__export_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAccessExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auskunftsexport geprüft (zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}/bank-accounts": {
       "post": {
         "description": "The account starts as ``pending``; a second person with ``contacts:approve`` releases\nit (M5-01). Same rules as on ``POST /contacts``, without rewriting the other accounts.",
@@ -96521,6 +97437,7 @@
     },
     "/api/v1/contacts/{contact_id}/export": {
       "get": {
+        "description": "The direct download without review is closed (AC07, GA08-06): prepare, review and\nrelease under ``/contacts/{id}/access-exports``.",
         "operationId": "export_contact_api_v1_contacts__contact_id__export_get",
         "parameters": [
           {
@@ -96558,7 +97475,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "DSGVO-Auskunft (Entwurf zur Prüfung)",
+        "summary": "DSGVO-Auskunft (abgelöst durch Prüfablauf, AC07)",
         "tags": [
           "Kontakte"
         ]
@@ -101462,6 +102379,93 @@
           }
         },
         "summary": "Löschungen mit Spiegelschritten",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/deletions/{document_id}/checklist": {
+      "get": {
+        "operationId": "deletion_checklist_api_v1_documents_deletions__document_id__checklist_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDeletionChecklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Löschcheckliste je Ziel (Index, Original, Spiegel, Ableitungen, AC07)",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/deletions/{document_id}/follow-up": {
+      "post": {
+        "description": "Never deletes a document that exists again (restore): that is the replay path with its\nhold and hash checks; a retention hold always wins.",
+        "operationId": "deletion_follow_up_api_v1_documents_deletions__document_id__follow_up_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDeletionChecklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nachlauf der Löschung: offene Ziele erneut bearbeiten (AC07)",
         "tags": [
           "Dokumente"
         ]
@@ -134115,6 +135119,32 @@
         ]
       }
     },
+    "/api/v1/portal-admin/legal-entities": {
+      "get": {
+        "description": "Small read path for the provider portal settings page: the selection needs no\nmembers:read, only tenant_settings:read. RLS limits it to the own tenant.",
+        "operationId": "list_legal_entity_choices_api_v1_portal_admin_legal_entities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PortalLegalEntityChoice"
+                  },
+                  "title": "Response List Legal Entity Choices Api V1 Portal Admin Legal Entities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rechtsträger zur Auswahl (nur Id und Name, AC04)",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
     "/api/v1/portal-admin/provider-availability": {
       "get": {
         "operationId": "list_availability_api_v1_portal_admin_provider_availability_get",
@@ -137720,6 +138750,73 @@
           }
         },
         "summary": "In die Support-Sicht einwilligen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/terms": {
+      "get": {
+        "description": "AC06: published terms version and whether the signed in account has accepted it.\nReachable without accepted terms so that the portal can ask for the acceptance.",
+        "operationId": "portal_terms_status_api_v1_portal_terms_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Portal Terms Status Api V1 Portal Terms Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stand der Nutzungsbedingungen des Portals",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/terms/accept": {
+      "post": {
+        "operationId": "portal_terms_accept_api_v1_portal_terms_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalTermsAcceptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Portal Terms Accept Api V1 Portal Terms Accept Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nutzungsbedingungen des Portals annehmen",
         "tags": [
           "Portal"
         ]

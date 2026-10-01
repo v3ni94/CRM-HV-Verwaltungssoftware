@@ -48,7 +48,7 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"rch-{RUN}", name=f"Rkette {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"rchb-{RUN}", name=f"Rkette B {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
-        for name, tenant in (("rchadmin", a), ("rchadminb", b)):
+        for name, tenant in (("a80radmin", a), ("a80radminb", b)):
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -196,7 +196,7 @@ def _watermark(world: World, database: Database, redis_url: str) -> None:
 def test_learned_contact_rule_then_chain_fills_property_and_unit(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    h = bearer(login(client, world, "rchadmin"))
+    h = bearer(login(client, world, "a80radmin"))
     prop = _property(client, h, _n(1), "rental")
     unit = _unit(client, h, prop["id"], "01")
     _owner(client, h, prop["id"])
@@ -246,7 +246,7 @@ def test_mail_target_fills_property(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
     """A mail has no unit field: the chain fills the property only."""
-    h = bearer(login(client, world, "rchadmin"))
+    h = bearer(login(client, world, "a80radmin"))
     prop = _property(client, h, _n(2), "rental")
     unit = _unit(client, h, prop["id"], "01")
     _owner(client, h, prop["id"])
@@ -269,7 +269,7 @@ def test_mail_target_fills_property(
 def test_two_contracts_leave_fields_empty_and_question_open(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    h = bearer(login(client, world, "rchadmin"))
+    h = bearer(login(client, world, "a80radmin"))
     prop = _property(client, h, _n(3), "rental")
     unit_a = _unit(client, h, prop["id"], "01")
     unit_b = _unit(client, h, prop["id"], "02")
@@ -299,7 +299,7 @@ def test_two_contracts_leave_fields_empty_and_question_open(
 def test_field_set_by_member_or_decided_stays_unchanged(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    h = bearer(login(client, world, "rchadmin"))
+    h = bearer(login(client, world, "a80radmin"))
     settings = _settings(database, redis_url)
     prop = _property(client, h, _n(4), "rental")
     other = _property(client, h, _n(5), "rental")
@@ -354,8 +354,8 @@ def test_tenant_separation(
 ) -> None:
     """The learned rule and its chain act only in their tenant: a mail of the same sender in
     another tenant stays unassigned, and the other tenant sees neither rule nor runs."""
-    h = bearer(login(client, world, "rchadmin"))
-    hb = bearer(login(client, world, "rchadminb"))
+    h = bearer(login(client, world, "a80radmin"))
+    hb = bearer(login(client, world, "a80radminb"))
     prop = _property(client, h, _n(6), "rental")
     unit = _unit(client, h, prop["id"], "01")
     _owner(client, h, prop["id"])

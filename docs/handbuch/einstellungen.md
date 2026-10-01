@@ -467,4 +467,4 @@ Plattformadministratoren pflegen unter Plattform, Domains die Hostnamen eines Ma
 
 ## Plattformaudit
 
-Plattformadministratoren sehen die festgeschriebenen Plattformaktionen (Domain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert) über `GET /api/v1/platform/audit-events` (Parameter `limit`, `offset`, `action`). Die Einträge sind nicht änderbar und enthalten keine Secrets. Eine Oberfläche dafür ist noch nicht vorhanden.
+Plattformadministratoren sehen die festgeschriebenen Plattformaktionen (Domain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert) über `GET /api/v1/platform/audit-events` (Parameter `limit`, `offset`, `action`). Die Einträge sind nicht änderbar und enthalten keine Secrets. Die Oberfläche dafür ist die Seite Plattform, Plattformaudit (siehe Handbuch Plattform, Abschnitt Audit).

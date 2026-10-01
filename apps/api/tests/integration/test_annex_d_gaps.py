@@ -1055,7 +1055,7 @@ def test_d24_open_advances_shown_apart_calculation_creates_no_claim_and_issue_is
     strict=True,
     reason=(
         "Defekt D24 (Anhang D: kein doppelter wirtschaftlicher Anspruch), Behandlung hängt an "
-        "M17-03 (Betreiber mit Rechtsberatung, G3): der Abrechnungssaldo wird gegen die "
+        "M17-03 und AC10-01 (Rechtsberatung, G3, docs/rules/AC10-d24.md): der Abrechnungssaldo wird gegen die "
         "gezahlten Vorauszahlungen gerechnet (mhvp.billing.services, balance = costs - paid), "
         "der offene Vorauszahlungsposten bleibt daneben unverändert offen. Ausgewiesene "
         "Ansprüche 20,00 + 100,00 = 120,00 statt 20,00."

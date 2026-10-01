@@ -5,6 +5,7 @@ import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { AllocabilityHints, type AllocabilityHint } from "@/components/billing/AllocabilityHints";
 import { DeadlineExceptionPanel, type DeadlineException } from "@/components/billing/DeadlineExceptionPanel";
 import { HeatingPanel } from "@/components/billing/HeatingPanel";
+import { RuleRegisterNote } from "@/components/billing/RuleRegisterNote";
 import { StatementLettersPanel } from "@/components/billing/StatementLettersPanel";
 import { StatementOutputsPanel } from "@/components/billing/StatementOutputsPanel";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
@@ -54,19 +55,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         description={`${t(`status.${String(data.status)}`)} · ${t("deadline", { date: formatDate(String(data.deadline_orientation)) })}`}
       />
       <p className={ui.notice}>{t("notice")}</p>
-      {snap ? (
-        <p className={ui.help} data-testid="rule-register">
-          <strong>{t("ruleRegisterTitle")}: </strong>
-          {snap.rule_register
-            ? t("ruleRegisterText", {
-                rule: snap.rule_register.rule_id,
-                version: snap.rule_register.version,
-                status: snap.rule_register.status,
-                date: formatDate(snap.rule_register.effective_from),
-              })
-            : t("ruleRegisterNone")}
-        </p>
-      ) : null}
+      {snap ? <RuleRegisterNote rule={snap.rule_register} /> : null}
       <h2 className={ui.h2}>{t("items")}</h2>
       <div className="overflow-x-auto">
 <table className="mhvp-table">

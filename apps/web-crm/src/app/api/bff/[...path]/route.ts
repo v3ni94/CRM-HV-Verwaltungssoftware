@@ -194,9 +194,17 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     pattern: new RegExp(`^contacts/${ID}/(export|notes|consents|duplicates|sepa-mandates)$`),
   },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/(notes|consents)$`) },
+  // AC07 (GA08-06): Auskunftsexport mit Prüfschritt.
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/access-exports(/${ID}/(preview|download))?$`) },
+  { method: "POST", pattern: new RegExp(`^contacts/${ID}/access-exports(/${ID}/(review|approve|reject))?$`) },
+  // AC07 (GA08-08): Löschcheckliste und Nachlauf.
+  { method: "GET", pattern: new RegExp(`^documents/deletions/${ID}/checklist$`) },
+  { method: "POST", pattern: new RegExp(`^documents/deletions/${ID}/follow-up$`) },
   { method: "GET", pattern: new RegExp(`^contacts/${ID}/relations$`) },
   { method: "POST", pattern: /^contacts\/roles\/recompute$/ },
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
+  { method: "GET", pattern: /^consent-policy$/ },
+  { method: "PUT", pattern: /^consent-policy$/ },
   {
     method: "POST",
     pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/mandate/revoke$`),
@@ -245,6 +253,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal-admin\/accounts$/ },
   { method: "POST", pattern: /^portal-admin\/accounts$/ },
   // GA11-04 (AB12): Verfügbarkeitsfenster und Klassenfreigaben der Dienstleister.
+  { method: "GET", pattern: /^portal-admin\/legal-entities$/ },
   { method: "GET", pattern: /^portal-admin\/provider-availability$/ },
   { method: "POST", pattern: /^portal-admin\/provider-availability$/ },
   { method: "DELETE", pattern: new RegExp(`^portal-admin/provider-availability/${ID}$`) },
@@ -404,6 +413,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/liquidity$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/revenue$`) },
+  { method: "GET", pattern: /^accounting\/rule-versions\/due-checkpoints$/ },
   // Weitere Auswertungen mit Kopfangaben, Excel und Verfahrensdokumentation (M18-01 bis M18-09).
   {
     method: "GET",
@@ -1290,6 +1300,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/domains$`) },
   { method: "DELETE", pattern: new RegExp(`^platform/tenants/${ID}/domains/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^platform/tenants/${ID}$`) },
+  { method: "GET", pattern: /^platform\/audit-events$/ },
   { method: "GET", pattern: /^platform\/oidc-clients$/ },
   { method: "POST", pattern: /^platform\/oidc-clients$/ },
   { method: "POST", pattern: /^platform\/oidc-clients\/[a-z0-9][a-z0-9._-]{1,99}\/(rotate-secret|activate|deactivate)$/ },

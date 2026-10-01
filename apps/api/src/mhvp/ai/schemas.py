@@ -36,6 +36,9 @@ class TierModel(_In):
     # Output limit of the model as published by the provider (max_tokens of one call). Empty
     # means the platform default (gateway.DEFAULT_MAX_OUTPUT_TOKENS); never invented here.
     max_output_tokens: int | None = Field(default=None, ge=1, le=1_000_000)
+    # Tool use of the chat (GA10-06, rule AI-TOOL-01): the model may ask for read only lookups.
+    # Default off; decision AI-LOOKUP-Q1 stays with the operator.
+    tool_use: bool | None = Field(default=None, description="None counts as off")
 
 
 class ProviderIn(_In):
@@ -285,6 +288,18 @@ class RunOut(_Out):
     # answer without AI when no provider is released or the budget is exhausted).
     links: list[ChatLink] = Field(default_factory=list)
     lookup_answer: str | None = None
+    # Model planned lookups of the run (tool use, GA10-06): name, masked arguments, hit count.
+    tools_used: list["AiToolUseOut"] = Field(default_factory=list)
+
+
+class AiToolUseOut(BaseModel):
+    """One lookup the model asked for (``input_ref["tool_calls"]``); arguments are masked."""
+
+    tool: str
+    label: str
+    arguments: dict[str, str] = Field(default_factory=dict)
+    permitted: bool
+    count: int
 
 
 class ProposalOut(_Out):

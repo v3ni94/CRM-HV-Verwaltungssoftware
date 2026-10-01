@@ -101,6 +101,7 @@ export function ConsentsPanel({ contactId, consents }: { contactId: string; cons
       ) : (
         <p className="text-sm text-muted">{t("none")}</p>
       )}
+      <p className="text-sm text-muted">{t("consents.effectHint")}</p>
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3" aria-label={t("consents.add")}>
         <h2 className="w-full text-sm font-semibold">{t("consents.add")}</h2>
         <div>

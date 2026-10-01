@@ -185,7 +185,7 @@ async def info_sheet_file(
             pdf=pdf,
             title=f"Informationsblatt Betriebskostenabrechnung {st.period_from.year} (Entwurf)",
             filename=f"betriebskosten_{st.period_from.year}_informationsblatt.pdf",
-            links=[("property", st.property_id)],
+            links=[("property", st.property_id), ("statement", st.id)],
             context_type="statement",
             context_id=st.id,
             origin="billing_info_sheet",

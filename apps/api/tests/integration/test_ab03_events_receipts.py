@@ -318,6 +318,19 @@ def test_message_delivered_and_read_indications(
             201,
         )["id"]
     )
+    # AC06: e-mail delivery of documents needs an email_delivery consent.
+    _ok(
+        client.post(
+            f"/api/v1/contacts/{contact['id']}/consents",
+            json={
+                "kind": "email_delivery",
+                "granted_at": "2026-01-01T00:00:00Z",
+                "source": "Test AC06",
+            },
+            headers=h,
+        ),
+        201,
+    )
     mail = _ok(
         client.post(
             "/api/v1/dispatches",

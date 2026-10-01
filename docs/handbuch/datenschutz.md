@@ -13,3 +13,11 @@ Antrag mit Kontakt, Eingangsdatum und Anlass erfassen. Die Sperrprüfung nennt j
 ## Register und Verzeichnis
 
 Das Register führt Auftragsverarbeiter, Unterauftragsverarbeiter, Verarbeitungstätigkeiten und Verantwortlichkeiten mit AVV-Status. Mit Entwurf erzeugen wird das Verzeichnis von Verarbeitungstätigkeiten aus dem Register gebildet und kann als Markdown-Datei heruntergeladen werden. Der Entwurf ist kein geprüftes Dokument.
+
+## DSGVO-Auskunft mit Prüfschritt
+
+Im Kontakt öffnet die Schaltfläche „DSGVO-Auskunft“ den Bereich „DSGVO-Auskunft mit Prüfschritt“. Eine Person bereitet die Auskunft vor. Eine zweite Person sieht die Vorschau, markiert sie als geprüft und gibt sie zur Herausgabe frei. Erst danach ist der Download möglich; jeder Schritt und jeder Download wird protokolliert. Haben sich die Daten nach der Vorbereitung geändert, ist die Auskunft neu vorzubereiten. Die Auskunft enthält keine Hashwerte, Tokens, internen Vermerke oder KI-Rohdaten; andere Personen erscheinen nur mit ihrer Rolle. Ob zurückgehaltene Angaben doch herauszugeben sind, ist rechtlich zu prüfen (AC07-01).
+
+## Löschcheckliste
+
+Unter Dokumente, Löschvorschläge zeigt „Löschcheckliste“ bei jedem gelöschten Dokument den Stand je Ziel: Index und Volltext, Original, Paperless, Google Drive, Embeddings, KI-Auszüge, Vorschaubilder und Backups. Offene Ziele bearbeitet der tägliche Nachlauf; mit „Nachlauf starten“ lässt er sich sofort auslösen. Backups werden nicht bearbeitet, gelöschte Daten verschwinden dort erst mit Ablauf der Backupfrist. Ein nach einer Wiederherstellung gesperrtes Dokument bleibt erhalten.

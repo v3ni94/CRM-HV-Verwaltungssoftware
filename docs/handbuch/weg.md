@@ -447,3 +447,5 @@ In der Ansicht des ausgegebenen Vermögensberichts zeigt das Bereitstellungsprot
 ### Sonderfälle des Eigentümerwechsels
 
 Ersterwerb, Zwangsversteigerung, Erbfall, Schenkung, sonstiger Erwerb und Sonderrechtsnachfolge im Abrechnungsjahr sperren das Abrechnungspaket, bis eine erste Person die Freigabe beantragt und eine zweite Person sie erteilt hat. Der Zuordnungsvorschlag ist ein Prüfhinweis, keine Rechtsregel.
+
+Der Versandstatus im Bereitstellungsprotokoll erscheint auf Deutsch (vorbereitet, versendet, zugegangen, fehlgeschlagen). Mit dem Brief erzeugte Dokumente sind direkt mit dem Vermögensbericht verknüpft.

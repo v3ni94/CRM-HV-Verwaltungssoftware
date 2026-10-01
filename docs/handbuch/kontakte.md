@@ -216,3 +216,14 @@ entfernt den Tag bei allen betroffenen Kontakten und fragt vorher nach. Umbenenn
 setzen das Recht zum Ändern von Kontakten voraus, Löschen das Recht zum Löschen von Kontakten.
 
 Vorschläge aus dem Portal: Bei einer angenommenen Rechnungseinreichung eines Dienstleisters führt der Link "Belegentwurf im Belegeingang" zum Entwurf, der dort geprüft wird. Es wird nichts gebucht.
+
+## Einwilligungen und ihre Wirkung (AC06)
+
+Im Reiter Einwilligungen erfassen Sie Art, Datum und Quelle. Jede Art wirkt auf eine Verarbeitung:
+
+- marketing: Beim Serienbrief mit dem Haken Werbung erhalten nur Kontakte mit gültiger Werbeeinwilligung das Schreiben. Die übrigen werden übersprungen und im Ergebnis gezählt. Pflichtschreiben wie Abrechnungen, Mahnungen und Einladungen versenden Sie ohne den Haken.
+- email_delivery: Dokumente gehen nur mit gültiger Einwilligung per E-Mail. Ohne Einwilligung wird die Zustellung als Post vorbereitet, das Ergebnis nennt die Zahl der Umstellungen.
+- portal_terms: Sobald der Mandant eine Fassung der Nutzungsbedingungen hinterlegt hat, ist deren Annahme Voraussetzung für Aktivierung und Zugang zum Portal.
+- data_sharing: Vor der Weitergabe von Kontaktdaten an Dienstleister wird die Einwilligung geprüft.
+
+Ein Widerruf wirkt sofort. Die Regeln je Mandant (zum Beispiel E-Mail auch bei vertraglicher Vereinbarung) setzt die Geschäftsführung über die Schnittstelle consent-policy, erst nach rechtlicher Klärung (offene Fragen AC06-01 bis AC06-03).

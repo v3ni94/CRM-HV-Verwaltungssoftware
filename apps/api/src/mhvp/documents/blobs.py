@@ -69,6 +69,21 @@ class BlobStore:
             log.error("object storage get failed for %s: %s", key, type(exc).__name__)
             raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_UNREACHABLE) from exc
 
+    def exists(self, key: str) -> bool:
+        """True when the object is still stored (deletion checklist, AC07)."""
+        try:
+            self._client.head_object(Bucket=self._bucket, Key=key)
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            if code in {"404", "NoSuchKey", "NotFound"}:
+                return False
+            log.error("object storage head failed for %s: %s", key, type(exc).__name__)
+            raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_UNREACHABLE) from exc
+        except BotoCoreError as exc:
+            log.error("object storage head failed for %s: %s", key, type(exc).__name__)
+            raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_UNREACHABLE) from exc
+        return True
+
     def delete(self, key: str) -> None:
         try:
             self._client.delete_object(Bucket=self._bucket, Key=key)

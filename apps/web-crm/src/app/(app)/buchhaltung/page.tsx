@@ -5,6 +5,7 @@ import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { RuleCheckpointsDue } from "@/components/accounting/RuleCheckpointsDue";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -30,6 +31,7 @@ export default async function LedgersPage() {
       <Link href="/buchhaltung/eigentuemerabrechnung" className="text-sm font-medium hover:underline">
         {t("ownerStatementsLink")}
       </Link>
+      <RuleCheckpointsDue />
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

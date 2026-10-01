@@ -16,6 +16,7 @@ export type SerialResult = {
   batch: string;
   counts: Record<string, number>;
   by_channel: Record<string, { id: string; contact_id: string }[]>;
+  consent?: { marketing_skipped: number; email_fallback_to_post: number };
 };
 
 export function SerialDispatchForm({
@@ -29,6 +30,7 @@ export function SerialDispatchForm({
   const [subject, setSubject] = useState("");
   const [text, setText] = useState("");
   const [recipients, setRecipients] = useState<PickedContact[]>([]);
+  const [advertising, setAdvertising] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SerialResult | null>(null);
@@ -44,6 +46,7 @@ export function SerialDispatchForm({
         contact_ids: recipients.map((r) => r.id),
         ...(channel ? { channel } : {}),
         fields: { betreff: subject, text },
+        advertising,
       }),
     });
     setBusy(false);
@@ -95,6 +98,18 @@ export function SerialDispatchForm({
           ))}
         </select>
       </label>
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={advertising}
+          onChange={(e) => setAdvertising(e.target.checked)}
+        />
+        <span>
+          <span className={ui.label}>{t("advertising")}</span>
+          <span className={`block ${ui.help}`}>{t("advertisingHint")}</span>
+        </span>
+      </label>
+      <p className={ui.help}>{t("emailConsentHint")}</p>
       <ContactPicker
         label={t("addRecipient")}
         onPick={(c) => setRecipients((r) => (r.some((x) => x.id === c.id) ? r : [...r, c]))}
@@ -136,6 +151,12 @@ export function SerialDispatchForm({
               <li key={c}>{t("resultLine", { channel: t(`channels.${c}`), count: result.counts[c] ?? 0 })}</li>
             ))}
           </ul>
+          {result.consent && result.consent.marketing_skipped > 0 ? (
+            <p className="mt-1 text-sm">{t("marketingSkipped", { count: result.consent.marketing_skipped })}</p>
+          ) : null}
+          {result.consent && result.consent.email_fallback_to_post > 0 ? (
+            <p className="mt-1 text-sm">{t("emailFallback", { count: result.consent.email_fallback_to_post })}</p>
+          ) : null}
         </section>
       ) : null}
     </div>

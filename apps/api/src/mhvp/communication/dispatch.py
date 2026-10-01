@@ -66,6 +66,10 @@ class DispatchIn(_In):
 
 class SerialDispatchIn(_In):
     items: list[DispatchIn] = Field(min_length=1, max_length=2000)
+    # AC06: True marks the batch as advertising ("Werbung"); only contacts with a valid
+    # marketing consent receive it, the others are skipped and counted. Mandatory
+    # communication (statements, dunning, invitations) keeps the default False.
+    advertising: bool = False
 
 
 class SerialMergeIn(_In):
@@ -82,6 +86,7 @@ class SerialMergeIn(_In):
     reference: str | None = Field(default=None, max_length=50)
     fields: dict[str, str] = Field(default_factory=dict)
     signatory: list[str] = Field(default_factory=list, max_length=4)
+    advertising: bool = False  # AC06, see SerialDispatchIn.advertising
 
 
 class EvidenceIn(_In):
@@ -112,7 +117,17 @@ def _out(d: Dispatch) -> dict[str, Any]:
     }
 
 
-def _grouped(batch: str, rows: list[Dispatch]) -> dict[str, Any]:
+def _consent_log() -> dict[str, Any]:
+    """Counters of the consent checks of one request (AC06)."""
+    return {
+        "marketing_skipped": 0,
+        "marketing_skipped_contact_ids": [],
+        "email_fallback_to_post": 0,
+        "email_fallback_contact_ids": [],
+    }
+
+
+def _grouped(batch: str, rows: list[Dispatch], log: dict[str, Any] | None = None) -> dict[str, Any]:
     """Rows per channel. The original channels always appear (also with 0), the newer ones
     (sms, registered, courier) only when used, so existing clients see the same keys."""
     groups: dict[str, list[dict[str, Any]]] = {c: [] for c in CHANNELS}
@@ -123,6 +138,7 @@ def _grouped(batch: str, rows: list[Dispatch]) -> dict[str, Any]:
         "batch": batch,
         "by_channel": groups,
         "counts": {c: len(v) for c, v in groups.items()},
+        "consent": log or _consent_log(),
     }
 
 
@@ -132,7 +148,9 @@ async def _create(
     item: DispatchIn,
     batch: str | None,
     request: Request | None = None,
+    log: dict[str, Any] | None = None,
 ) -> Dispatch:
+    from mhvp.contacts import consent_rules
     from mhvp.contacts.models import Contact, ContactEmail, ContactPhone
     from mhvp.documents.models import Document, DocumentLink, LinkRole
 
@@ -145,6 +163,31 @@ async def _create(
         if contact.preferred_channel
         else await _tenant_default_channel(session)
     )
+    if channel == "email":
+        # AC06: documents go by e-mail only with a valid email_delivery consent or when the
+        # tenant policy accepts a contractual agreement; otherwise the delivery falls back to
+        # post and the reason is recorded as an event.
+        decision = await consent_rules.email_delivery_decision(session, contact.id)
+        if not decision.allowed:
+            channel = "post"
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="dispatch.channel_fallback",
+                entity_type="contact",
+                entity_id=contact.id,
+                actor_user_id=principal.user_id,
+                payload={
+                    "document_id": str(document.id),
+                    "requested_channel": "email",
+                    "channel": "post",
+                    "reason": decision.reason,
+                    "batch": batch,
+                },
+            )
+            if log is not None:
+                log["email_fallback_to_post"] += 1
+                log["email_fallback_contact_ids"].append(str(contact.id))
     row = Dispatch(
         tenant_id=principal.tenant_id,
         created_by=principal.user_id,
@@ -291,12 +334,13 @@ async def serial(
     (``mhvp.contacts.recipients``): depending on the rule the represented contact, the
     representative or both receive the document; a contact reached twice gets it once."""
     batch = uuid.uuid4().hex[:16]
+    log = _consent_log()
     async with tenant_tx(request, principal) as session:
-        rows = [
-            await _create(session, principal, item, batch, request)
-            for item in await expand_items(session, body.items)
-        ]
-        return _grouped(batch, rows)
+        items = await expand_items(session, body.items)
+        if body.advertising:
+            items = await _marketing_filter(session, principal, items, batch, log)
+        rows = [await _create(session, principal, item, batch, request, log) for item in items]
+        return _grouped(batch, rows, log)
 
 
 @router.post(
@@ -319,16 +363,25 @@ async def serial_merge(
     if not principal.has("documents:create"):
         raise ProblemError(ErrorCodes.FORBIDDEN, detail="Recht documents:create fehlt.")
     batch = uuid.uuid4().hex[:16]
+    log = _consent_log()
     async with tenant_tx(request, principal) as session:
         template = await _template(session, body.template_id)
         head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
         letter_date = body.letter_date or datetime.now(UTC).date()
         rows: list[Dispatch] = []
         seen: set[uuid.UUID] = set()
-        for recipient in await resolve_recipients(session, body.contact_ids):
+        recipients = await resolve_recipients(session, body.contact_ids)
+        allowed: set[uuid.UUID] | None = None
+        if body.advertising:
+            allowed = await _marketing_allowed(
+                session, principal, [r.contact_id for r in recipients], batch, log
+            )
+        for recipient in recipients:
             if recipient.contact_id in seen:
                 continue
             seen.add(recipient.contact_id)
+            if allowed is not None and recipient.contact_id not in allowed:
+                continue
             _, document = await _letter(
                 session,
                 request,
@@ -358,9 +411,10 @@ async def serial_merge(
                     ),
                     batch,
                     request,
+                    log,
                 )
             )
-        return _grouped(batch, rows)
+        return _grouped(batch, rows, log)
 
 
 @router.post(
@@ -564,3 +618,51 @@ async def _tenant_default_channel(session: AsyncSession) -> str:
     sources = await session.scalar(select(TenantSettings.sources)) or {}
     value = sources.get("default_delivery_channel")
     return value if value in ("post", "email", "portal") else "post"
+
+
+async def _marketing_allowed(
+    session: Any,
+    principal: TenantPrincipal,
+    contact_ids: list[uuid.UUID],
+    batch: str,
+    log: dict[str, Any],
+) -> set[uuid.UUID]:
+    """AC06: contacts of an advertising batch with a valid marketing consent. The skipped
+    ones are counted in ``log`` and recorded once as ``dispatch.marketing_skipped``."""
+    from mhvp.contacts.consent_rules import contacts_with_consent
+    from mhvp.contacts.models import ConsentKind
+
+    unique = list(dict.fromkeys(contact_ids))
+    allowed = await contacts_with_consent(session, unique, ConsentKind.MARKETING)
+    skipped = [c for c in unique if c not in allowed]
+    if skipped:
+        log["marketing_skipped"] += len(skipped)
+        log["marketing_skipped_contact_ids"].extend(str(c) for c in skipped)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="dispatch.marketing_skipped",
+            entity_type="dispatch_batch",
+            entity_id=None,
+            actor_user_id=principal.user_id,
+            payload={
+                "batch": batch,
+                "reason": "marketing_consent_missing",
+                "count": len(skipped),
+                "contact_ids": [str(c) for c in skipped],
+            },
+        )
+    return allowed
+
+
+async def _marketing_filter(
+    session: Any,
+    principal: TenantPrincipal,
+    items: list[DispatchIn],
+    batch: str,
+    log: dict[str, Any],
+) -> list[DispatchIn]:
+    allowed = await _marketing_allowed(
+        session, principal, [i.contact_id for i in items], batch, log
+    )
+    return [i for i in items if i.contact_id in allowed]

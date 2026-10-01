@@ -181,3 +181,5 @@ In der Betriebskostenabrechnung zeigt der Abschnitt "Ausnahme von der Abrechnung
 ### Ausgaben zum Abrechnungslauf
 
 In der Betriebskostenabrechnung und in der Eigentümerabrechnung zeigt der Abschnitt "Ausgaben zum Abrechnungslauf" die Vorschau (Informationsblatt, Anschreiben, Nachweis § 35a) und die abgelegten Dokumente. "Als Dokument ablegen" speichert die Ausgabe am Abrechnungslauf; das ist erst mit Freigabestufe G3 möglich, bei der Eigentümerabrechnung zusätzlich nach interner Freigabe. Absätze mit der Kennzeichnung "Text nicht freigegeben" sind Platzhalter, bis der Betreiber die Texte freigegeben hat. Es wird nichts versendet.
+
+Das Informationsblatt, das am Abrechnungslauf abgelegt wird, ist direkt mit dem Lauf verknüpft und erscheint in dessen Dokumenten.

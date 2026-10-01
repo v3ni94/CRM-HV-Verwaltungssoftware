@@ -395,3 +395,14 @@ CRM: `EntityDecisions` in `OnboardingExtras.tsx`, eingebunden in `PropertyPropos
 `mhvp.ai.takeover_defaults` liest und schreibt `team_id` und `assignee_user_id` unter dem Schlüssel `takeover_tickets` im JSON-Dokument `TenantSettings.objektakte_classification` (keine Migration). `GET/PUT /onboarding/takeover-ticket-defaults` (Rechte `tenant_settings:read` und `tenant_settings:update`); Team und Zuständiger müssen zum Mandanten gehören (422), leer bedeutet ohne Zuweisung. `POST /properties/{id}/takeover-checklist/tickets` setzt Team und Zuständigen (über `assign_ticket`) bei neu angelegten Tickets. Ein Sammelkonto je Eigentümer wird nicht angelegt (Entscheidungspunkt V06-02).
 
 * AA05 (GA04-12): learning examples are embedded by the index job (`EmbeddingSourceKind.AI_EXAMPLE`, masked text of task, features and result; `embeddings.status` counts `examples_*`). `gateway.similar_examples` orders the few shot examples by cosine distance to the input via `embeddings.rank_examples`; without embeddings, route, budget or hit it keeps the recency order. Distance limit AA05-03.
+
+## Tool use (GA10-06, AC08, rule AI-TOOL-01)
+
+`tool_use.py`: read only tools for model planned lookups (`kontakte`, `vertraege`,
+`offene_posten`, `dokumente`, `termine` reuse the functions of `lookup` / `lookup_tools`;
+`kontenplan` is new). The model asks for them in the structured answer (`tool_calls`, parsed by
+`providers.tool_calls_of` into `Completion.tool_calls`); `gateway._tool_loop` runs at most
+`MAX_CALLS` calls in `MAX_ROUNDS` rounds within `TIME_LIMIT_S`, each round in a tenant
+transaction with the caller's principal (`input_ref.tool_grant`, written by `send_message`),
+masks the results (`results_text`) and logs every call in `input_ref.tool_calls`
+(`RunOut.tools_used`). Switch: `models.<tier>.tool_use` of the provider config, default off.

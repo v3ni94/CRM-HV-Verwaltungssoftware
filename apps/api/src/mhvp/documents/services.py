@@ -11,6 +11,7 @@ from fastapi import Request
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.billing.models import Statement
 from mhvp.contacts.models import Contact, ContactAddress
 from mhvp.contracts.models import Contract
 from mhvp.core.config import Settings
@@ -41,7 +42,7 @@ from mhvp.handover.models import (
     HandoverProtocol,
     HandoverRoom,
 )
-from mhvp.hoa.models import HoaInsuranceClaim, HoaLoan, HoaMeasure
+from mhvp.hoa.models import HoaAssetReport, HoaInsuranceClaim, HoaLoan, HoaMeasure
 from mhvp.letting.models import Listing, RentIncreaseCase
 from mhvp.objektakte.drive_quota import drive_http_client
 from mhvp.platform.models import TenantSettings
@@ -76,6 +77,10 @@ LINKABLE: dict[str, Any] = {
     "hoa_loan": HoaLoan,
     "hoa_insurance_claim": HoaInsuranceClaim,
     "hoa_measure": HoaMeasure,
+    # AC05: generated documents hang directly at the asset report (GA07-02) and the
+    # operating cost statement run (GA06-02, GA06-03).
+    "asset_report": HoaAssetReport,
+    "statement": Statement,
     # Released version of another document (E06, D31): a redacted copy links to its original
     # with role "generated"; the portal shows the copy with a redaction note, never the original.
     "document": Document,

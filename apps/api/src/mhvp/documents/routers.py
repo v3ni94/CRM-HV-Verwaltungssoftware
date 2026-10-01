@@ -492,6 +492,61 @@ async def retry_deletion(
     return _deletions(rows)[0]
 
 
+def _checklist_out(item: Any, queued: int = 0) -> s.DocumentDeletionChecklistOut:
+    return s.DocumentDeletionChecklistOut(
+        document_id=item.document_id,
+        deleted_at=item.deleted_at,
+        status=item.status,
+        items=[
+            s.DocumentDeletionChecklistItemOut(target=i.target, status=i.status, detail=i.detail)
+            for i in item.items
+        ],
+        mirror_jobs_queued=queued,
+    )
+
+
+@router.get(
+    "/documents/deletions/{document_id}/checklist",
+    summary="Löschcheckliste je Ziel (Index, Original, Spiegel, Ableitungen, AC07)",
+    dependencies=[Depends(strict_query)],
+)
+async def deletion_checklist(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> s.DocumentDeletionChecklistOut:
+    from mhvp.documents import deletion_checklist as checklist
+
+    async with tenant_tx(request, principal) as session:
+        item = await checklist.build(session, document_id, _blobs(request), _today())
+        if item is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return _checklist_out(item)
+
+
+@router.post(
+    "/documents/deletions/{document_id}/follow-up",
+    summary="Nachlauf der Löschung: offene Ziele erneut bearbeiten (AC07)",
+)
+async def deletion_follow_up(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
+) -> s.DocumentDeletionChecklistOut:
+    """Never deletes a document that exists again (restore): that is the replay path with its
+    hold and hash checks; a retention hold always wins."""
+    from mhvp.documents import deletion_checklist as checklist
+
+    async with tenant_tx(request, principal) as session:
+        item = await checklist.follow_up(
+            session,
+            tenant_id=principal.tenant_id,
+            document_id=document_id,
+            blobs=_blobs(request),
+            actor_user_id=principal.user_id,
+        )
+        if item is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    queued = mirror_deletion.enqueue(item.jobs)
+    return _checklist_out(item, queued)
+
+
 @router.get("/documents/{document_id}", summary="Dokument lesen")
 async def get_document(
     document_id: uuid.UUID,

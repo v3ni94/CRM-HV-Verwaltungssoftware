@@ -9,6 +9,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { DeletionChecklist } from "./DeletionChecklist";
+
 export type DeletionProposalItem = {
   id: string;
   document_id: string;
@@ -236,6 +238,9 @@ export function DeletionProposals({
                                 {formatDateTime(i.deleted_at)}
                                 {i.mirror_deletions > 0 ? `, ${t("mirrorSteps", { count: i.mirror_deletions })}` : ""}
                               </div>
+                            ) : null}
+                            {i.status === "deleted" ? (
+                              <DeletionChecklist documentId={i.document_id} canDelete={canDelete} />
                             ) : null}
                           </td>
                           <td>

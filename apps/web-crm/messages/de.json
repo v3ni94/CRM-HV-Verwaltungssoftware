@@ -198,6 +198,24 @@
     "deleteYes": "Endgültig löschen",
     "cancel": "Abbrechen",
     "exportHint": "Die Auskunft wurde als JSON-Datei heruntergeladen. Vor der Herausgabe an die betroffene Person ist sie inhaltlich zu prüfen, insbesondere auf Daten Dritter.",
+    "accessExport": {
+      "title": "DSGVO-Auskunft mit Prüfschritt",
+      "hint": "Die Auskunft enthält nur freigegebene Felder, keine Hashwerte, Tokens, internen Vermerke oder KI-Rohdaten; andere Personen erscheinen nur mit Rolle. Prüfung und Freigabe durch eine zweite Person, erst danach Download. Entwurf ohne Rechtsprüfung.",
+      "prepare": "Auskunft vorbereiten",
+      "empty": "Noch keine Auskunft vorbereitet.",
+      "review": "Als geprüft markieren",
+      "release": "Zur Herausgabe freigeben",
+      "reject": "Verwerfen",
+      "rejectReason": "Im CRM verworfen",
+      "download": "Herunterladen",
+      "downloads": "{count} mal heruntergeladen",
+      "status": {
+        "prepared": "vorbereitet, wartet auf Prüfung",
+        "reviewed": "geprüft, wartet auf Freigabe",
+        "released": "freigegeben",
+        "rejected": "verworfen"
+      }
+    },
     "tabs": {
       "master": "Stammdaten",
       "communication": "Kommunikation",
@@ -251,6 +269,7 @@
       "revokedAt": "Widerrufen am",
       "active": "wirksam",
       "revokeConfirm": "Einwilligung wirklich als widerrufen erfassen?",
+      "effectHint": "Wirkung: marketing steuert Serienversand mit Kennzeichen Werbung, email_delivery die Zustellung von Dokumenten per E-Mail (sonst Post), portal_terms den Portalzugang bei veröffentlichten Nutzungsbedingungen, data_sharing die Weitergabe an Dienstleister. Ein Widerruf wirkt sofort.",
       "sourceInvalid": "Bitte die Quelle mit mindestens 2 Zeichen angeben.",
       "dateInvalid": "Bitte ein gültiges Datum angeben."
     },
@@ -379,8 +398,14 @@
       "emailRequired": "Bitte eine E-Mail-Adresse angeben.",
       "invite": "Einladen",
       "noPermission": "Einladen nur mit dem Recht contacts:update.",
+      "sendInvitation": "Einladung sofort senden",
+      "createOnly": "Zugang ohne Einladung anlegen",
+      "createdOnly": "Portalzugang angelegt, noch nicht eingeladen. Die Einladung kann später über Einladen erfolgen.",
+      "notInvitedHint": "Der Portalzugang besteht, die Einladung wurde noch nicht versendet.",
       "status": {
         "loading": "Wird geladen",
+        "notInvited": "Nicht eingeladen",
+        "revoked": "Zugang entzogen",
         "none": "Kein Portalzugang",
         "invited": "Eingeladen, Passwort noch nicht gesetzt",
         "active": "Zugang aktiv",
@@ -1546,6 +1571,12 @@
   "Accounting": {
     "title": "Buchhaltung",
     "parallelNotice": "Parallelbetrieb: Führend ist weiterhin Immoware24. Buchungen in der Plattform sind nicht die führende Buchhaltung, solange die Freigabestufe G1 nicht erteilt ist.",
+    "ruleCheckpoints": {
+      "title": "Fällige Prüfpunkte des Regelregisters",
+      "notice": "Hinweis ohne Rechtsfolge: Ein fälliger Prüfpunkt erinnert an eine fachliche Prüfung. Er sperrt nichts und ändert keine Regel.",
+      "empty": "Keine Prüfpunkte fällig.",
+      "rule": "Regel","version": "Version","dueOn": "Fällig seit","status": "Status","reason": "Anlass"
+    },
     "empty": "Noch kein Buchungskreis angelegt.",
     "ledger": "Buchungskreis",
     "leading": "Führendes System",
@@ -1679,7 +1710,7 @@
       },
       "auditExport": {
         "title": "Prüfexport (maschinell auswertbar)",
-        "description": "ZIP je Rechtsträger und Zeitraum mit CSV je Tabelle (Konten, Buchungen, OP-Ausgleich, Eröffnungsbestände, Stammdatenhistorie, Freigaben, Stornobeziehungen, Verteilungsschlüssel), Inhaltsverzeichnis mit SHA-256 und verknüpften Originalbelegen. Umfang nach Abschnitt 7.7; kein DATEV-Kontenrahmen und keine steuerliche Einordnung.",
+        "description": "ZIP je Rechtsträger und Zeitraum mit CSV je Tabelle (Konten, Buchungen, OP-Ausgleich, Eröffnungsbestände, Stammdatenhistorie, Freigaben, Stornobeziehungen, Verteilungsschlüssel, Nebenbuchabgleich nebenbuchabgleich.csv mit Hauptbuchsaldo, offenen Posten und Differenz je Debitor und Kreditor), Inhaltsverzeichnis mit SHA-256 und verknüpften Originalbelegen. Umfang nach Abschnitt 7.7; kein DATEV-Kontenrahmen und keine steuerliche Einordnung.",
         "start": "Zeitraum von",
         "end": "Zeitraum bis",
         "create": "Prüfexport erstellen",
@@ -5826,6 +5857,9 @@
       "assistantHow": "Was kann der Assistent?"
     },
     "linksTitle": "Gefundene Datensätze",
+    "toolsTitle": "Verwendete Nachschlagewerkzeuge",
+    "toolsHits": "{count} Treffer",
+    "toolsDenied": "ohne Berechtigung, nicht durchsucht",
     "linkType": {
       "contact": "Kontakt",
       "property": "Objekt",
@@ -5951,6 +5985,7 @@
       "full": "Vollimport",
       "migration": "Migration Immoware24",
       "learning": "Lernphase",
+      "audit": "Plattformaudit",
       "domains": "Kundendomains",
       "oidcClients": "OIDC-Clients",
       "generated": "Erzeugte Dokumente",
@@ -9165,6 +9200,11 @@
     "remove": "{name} entfernen",
     "noRecipients": "Noch keine Empfänger gewählt.",
     "runSerial": "Serienbrief erzeugen und Zustellungen vorbereiten",
+    "advertising": "Werbung (nur an Kontakte mit Werbeeinwilligung)",
+    "advertisingHint": "Nur für werbliche Schreiben ankreuzen. Kontakte ohne gültige Einwilligung marketing werden übersprungen und gezählt. Pflichtschreiben wie Abrechnungen, Mahnungen und Einladungen bleiben unberührt.",
+    "emailConsentHint": "Zustellung per E-Mail nur mit gültiger Einwilligung email_delivery oder nach Mandantenregel. Sonst wird die Zustellung als Post vorbereitet.",
+    "marketingSkipped": "{count} Kontakte ohne Werbeeinwilligung übersprungen",
+    "emailFallback": "{count} Zustellungen ohne E-Mail-Einwilligung auf Post umgestellt",
     "result": "Lauf {batch}",
     "resultLine": "{channel}: {count}"
   },
@@ -9244,6 +9284,12 @@
     "notRetrieved": "Noch nicht abgerufen",
     "letter": "Brief",
     "noLetter": "Kein Brief",
+    "status": {
+      "prepared": "vorbereitet",
+      "sent": "versendet",
+      "delivered": "zugegangen",
+      "failed": "fehlgeschlagen"
+    },
     "dispatch": "Bericht per Brief versenden",
     "dispatchAll": "Auch an Eigentümer mit Portalabruf versenden",
     "dispatchResult": "{created} Briefe vorbereitet, {skipped} Einheiten übersprungen",
@@ -11849,6 +11895,13 @@
     }
   },
   "DeletionProposals": {
+    "checklist": {
+      "show": "Löschcheckliste",
+      "followUp": "Nachlauf starten",
+      "overall": { "done": "Alle Ziele gelöscht.", "open": "Ziele offen, Nachlauf läuft täglich.", "held": "Wiederhergestellt und gesperrt, Dokument bleibt erhalten." },
+      "target": { "index": "Index und Volltext", "original": "Original", "mirror_paperless": "Paperless", "mirror_google_drive": "Google Drive", "embeddings": "Embeddings", "ai_extracts": "KI-Auszüge", "thumbnails": "Vorschaubilder", "backup": "Backups" },
+      "status": { "done": "erledigt", "open": "offen", "held": "gesperrt", "not_applicable": "entfällt", "out_of_scope": "nicht bearbeitet (Runbook)" }
+    },
     "breadcrumb": "Dokumente",
     "title": "Löschvorschläge",
     "intro": "Monatlicher Lauf über Dokumente mit abgelaufener, freigegebener Aufbewahrungsfrist. Nichts wird ohne Freigabe und Ausführung durch zwei verschiedene Personen gelöscht.",
@@ -13793,7 +13846,8 @@
         "day_next_month": "Fester Tag im Folgemonat"
       },
       "dueDay": "Tag (1 bis 31)",
-      "account": "Erlöskonto (ID, optional)",
+      "account": "Erlöskonto (optional)",
+      "accountNone": "Kein Erlöskonto",
       "hint": "Das Kündigungsdatum begrenzt den Honorarlauf. Die Fälligkeitsregel gilt für künftig ausgestellte Honorarrechnungen. Es wird nichts gebucht und nichts versendet.",
       "columnTerms": "Kündigung, Fälligkeit, SE",
       "terminatedOn": "Kündigung zum {date}",
@@ -14901,5 +14955,24 @@
         "board": "Beirat"
       }
     }
+  },
+  "AC02": {
+    "link": "Plattformaudit",
+    "title": "Plattformaudit",
+    "intro": "Festgeschriebene Plattformaktionen ohne Mandantenkontext. Die Einträge sind nicht änderbar und enthalten keine Secrets.",
+    "forbidden": "Nur für Plattformadministratoren.",
+    "filterAction": "Aktion",
+    "allActions": "Alle Aktionen",
+    "empty": "Keine Einträge vorhanden.",
+    "time": "Zeitpunkt",
+    "action": "Aktion",
+    "actor": "Akteur",
+    "target": "Ziel",
+    "payload": "Payload",
+    "show": "Anzeigen",
+    "system": "System",
+    "prev": "Zurück",
+    "next": "Weiter",
+    "range": "{from} bis {to} von {total}"
   }
 }

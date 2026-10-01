@@ -5,6 +5,43 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.59.0 (01.10.2026) Welle 14, Prüfung der Wellen 12 und 13 und technischer Rest: Sicherheitskorrekturen, Auskunftsexport mit Vier-Augen-Freigabe, Einwilligungsregeln, KI-Nachschlagewerkzeuge, Löschcheckliste, Skalierung
+
+- Übersicht: Welle 14 mit 12 Paketen AC01 bis AC12, Migrationen 0334 bis 0345 sämtlich als Platzhalter ohne Schemaänderung (noop). Die Prüfung der Wellen 12 und 13 (docs/reviews/REVIEW-W1213-2026-10-01.md) ergab drei Korrekturen, die umgesetzt sind. Neue offene Entscheidungen: AC03-01, AC06-01 bis AC06-03, AC07-01 bis AC07-03, AC08-01, AC09-01, AC10-01, AC11-01.
+- Sicherheit: Unbekannte Abfrageparameter ergeben ohne Anmeldung 401 statt 422 (keine Schemaangaben an Unangemeldete); Listen nennen Unangemeldeten keine erlaubten Filter- oder Sortierspalten mehr.
+- Plattform: Eigene Plattform-Hosts sind als Kundendomain gesperrt (422); API, CRM und Portal der Plattform können nicht für einen Mandanten eingetragen werden.
+- Plattform: Änderungen mit If-Match in Vermietung (Interessenten) und SLA (Regeln) sperren die Zeile, gleichzeitige Schreibvorgänge mit demselben ETag überschreiben sich nicht mehr.
+- Plattform: Neue Seite Plattformaudit listet die festgeschriebenen Plattformaktionen mit Filter nach Aktion, Paginierung und aufklappbarem Payload.
+- Plattform: Das Register der gate-pflichtigen Routen trennt Routen mit Gate, Routen des Freigabeverfahrens und Routen mit Entwurf statt Ablehnung; Informationsblatt, Ausgaben der Eigentümerabrechnung und Versand des Vermögensberichts sind aufgenommen.
+- Plattform: Der Laufzeitnachweis legt für Routen mit vorgelagerter Datensatzprüfung den Datensatz an und weist die Ablehnung bei geschlossenem Gate für jede Route des Registers nach.
+- Kontakte: Auskunftsexport nach Art. 15 DSGVO mit Feld-Allowlist, Fremdpersonenschutz und Vier-Augen-Freigabe; alter Endpunkt GET /contacts/{id}/export antwortet 409
+- Kontakte: Der Auskunftsexport enthält keine Hashwerte, Tokens, internen Vermerke und KI-Rohdaten; andere Personen erscheinen nur mit Rolle. Download erst nach Freigabe durch eine zweite Person, protokolliert.
+- Kontakte: Einwilligungsregeln je Mandant unter /consent-policy (E-Mail-Zustellung, Weitergabe, Fassung der Portal-Nutzungsbedingungen), Standard restriktiv; die Prüfung der Weitergabe an Dienstleister an der Einwilligung data_sharing ist vorbereitet.
+- Kontakte: Portalzugang der Kontaktakte mit Schalter Einladung sofort senden, Beschriftung aller sechs Status und Aktion Einladen für nicht eingeladene Zugänge.
+- Kommunikation: Zustellung per E-Mail fällt ohne email_delivery-Einwilligung auf Post zurück (Mandantenschalter, Protokollgrund)
+- Kommunikation: Serienversand mit Kennzeichen Werbung erreicht nur Kontakte mit gültiger Werbeeinwilligung, übersprungene werden gezählt und protokolliert.
+- Portal: Aktivierung und Zugang setzen bei veröffentlichter Fassung die Annahme der Nutzungsbedingungen voraus, Zeitpunkt und Fassung werden gespeichert.
+- Portal: Neuer Lesepfad GET /portal-admin/legal-entities (tenant_settings:read, nur Id und Name) für die Rechtsträgerauswahl der Seite Dienstleister im Portal.
+- Dokumente: Löschcheckliste je Ziel (Index, Original, Paperless, Drive, Embeddings, KI-Auszüge) mit täglichem Nachlauf und Schaltfläche in den Löschvorschlägen; Löschung und Replay entfernen Embeddings und ersetzen KI-Auszüge in derselben Transaktion, erneute Löschung nach Wiederherstellung setzt Spiegelschritte zurück.
+- Dokumente: Vermögensbericht (asset_report) und Abrechnungslauf (statement) sind Verknüpfungsziele; Versandbrief und Informationsblatt hängen direkt am Bericht bzw. Lauf.
+- WEG: Der Versandstatus im Bereitstellungsprotokoll des Vermögensberichts wird auf Deutsch und Englisch angezeigt.
+- Buchhaltung: Erlöskonto im Honorarformular wird aus den Erlöskonten des Objekts gewählt statt als ID eingegeben.
+- Buchhaltung: Die Startseite listet fällige Prüfpunkte des Regelregisters mit dem Hinweis ohne Rechtsfolge.
+- Buchhaltung: Die Beschreibung des Prüfexports nennt die Tabelle nebenbuchabgleich.csv.
+- Buchhaltung: Regelversion am Abrechnungslauf und Freigabepunkt § 13b UStG sind als getestete Komponenten umgesetzt.
+- Buchhaltung: Analyse zu D24 (offene Mietvorauszahlungen bei Abrechnungserteilung) als Regeldokument AC10-d24 mit Rechenbeispiel ergänzt, Entscheidungsfrage AC10-01 angelegt, Verhalten unverändert hinter G3.
+- KI: Der Chat-Assistent kann über Nachschlagewerkzeuge (Kontakte, Verträge, offene Posten, Dokumente, Termine, Kontenplan) selbst in den Fachdaten nachsehen, nur lesend, mit den Rechten des fragenden Nutzers, höchstens sechs Abfragen je Frage, Standard aus (Schalter tool_use je Anbieterstufe).
+- KI: Werkzeugaufrufe werden am KI-Lauf mit Werkzeug, maskiertem Suchtext und Trefferzahl protokolliert und über GET /ai/runs/{id} als tools_used ausgegeben; Werkzeugausgaben gehen nur maskiert an den Anbieter. Das Chat-Widget im CRM zeigt die verwendeten Werkzeuge mit Trefferzahl oder dem Hinweis ohne Berechtigung.
+- Betrieb: Leistungsbefund journal_line_guard (Suche ohne Index, Korrektur in Folgewelle geplant), ADR 0021 Skalierung
+- Betrieb: ADR 0021 beschreibt Ist-Analyse, Alternativen, Auslöser und Messplan der Jahrespartitionierung von journal_entry und bank_transaction (ohne Schemaänderung); Lasttest mit 100.000 Buchungen und 100.000 Bankumsätzen (nur mit MHVP_PERF=1), Messwerte im Runbook leistungsmessung.md.
+- Betrieb: Runbook Backup um Löschcheckliste, Nachlauf und Hinweis ergänzt, dass Backups nicht bearbeitet werden.
+- Betrieb: Runbook xrechnung-kosit mit gepinnten Fassungen und Prüfsummen von KoSIT-Validator 1.5.0 und XRechnung-Konfiguration 3.0.2; lokaler Lauf der Generatorrechnungen ohne Fehler und Warnungen, CI-Job bleibt inaktiv bis zur Betreiberentscheidung AC11-01.
+- Doku: Abnahmeprotokoll der Wellen 12 und 13 für die Releases 1.57.0 und 1.58.0 angelegt, Freigabefelder leer.
+- Doku: Bericht docs/plans/BERICHT-2026-10-01-WELLEN-11-13.md und 38 Fragen AA01-01 bis AB12-01 mit Prioritäten in docs/plans/ENTSCHEIDUNGEN-2026-10-01.md.
+- Doku: Prüfbericht docs/reviews/REVIEW-W1213-2026-10-01.md mit den drei umgesetzten Korrekturen und den offenen Punkten AC01-01 und AC01-02.
+- API: Felder tool_use (KI-Anbieterstufe) und accept_terms (Portalaktivierung) sind optional (Kompatibilität des API-Clients, Standard aus)
+- Tests: Bestandstests zu Übergabeprotokoll und Lastschrift-Vorankündigung erteilen die E-Mail-Einwilligung, eigene Namensräume für Regelketten-Tests
+
 ## 1.58.0 (01.10.2026) Welle 13, Folgearbeiten der zweiten Lückenanalyse: Freigabestufen mit Objektbezug, Nebenbuchabgleich, strikte Listenparameter, WEG-Versammlung und Vermögensbericht, Portalstatus, Plattformaudit
 
 - Übersicht: Welle 13 der zweiten Lückenanalyse (Folgearbeiten zu Welle 12) mit 14 Paketen AB01 bis AB14, Migrationen 0320 bis 0333, davon 0331 (portal_account.locale) und 0332 (platform_audit_event) als echte Migrationen und die übrigen (0320 bis 0330 und 0333) als Platzhalter ohne Schemaänderung. Neue offene Entscheidungen: AB10-01, AB12-01.

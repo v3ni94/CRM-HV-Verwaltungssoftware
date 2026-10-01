@@ -499,6 +499,20 @@ class ConsentOut(ConsentIn):
     revoked_at: datetime | None
 
 
+class ContactConsentPolicyIn(_Strict):
+    """Tenant switches of the consent checks (AC06). Defaults are restrictive."""
+
+    email_delivery: Literal["consent_only", "consent_or_contract"] = "consent_only"
+    data_sharing: Literal["consent_only", "consent_or_contract"] = "consent_only"
+    portal_terms_version: str | None = Field(default=None, min_length=1, max_length=60)
+
+
+class ContactConsentPolicyOut(BaseModel):
+    email_delivery: Literal["consent_only", "consent_or_contract"]
+    data_sharing: Literal["consent_only", "consent_or_contract"]
+    portal_terms_version: str | None
+
+
 class PartyMemberIn(_Strict):
     contact_id: uuid.UUID
     role: PartyRole = PartyRole.PRIMARY
@@ -549,3 +563,32 @@ class ObjectRelationOut(BaseModel):
 
 class RecomputeRolesOut(BaseModel):
     changed: int
+
+
+class ContactAccessExportLogEntry(BaseModel):
+    type: str
+    actor_user_id: uuid.UUID | None
+    occurred_at: datetime
+
+
+class ContactAccessExportOut(BaseModel):
+    """Auskunftsexport Art. 15 DSGVO mit Prüfstatus (AC07, GA08-06)."""
+
+    id: uuid.UUID
+    contact_id: uuid.UUID
+    status: Literal["prepared", "reviewed", "released", "rejected"]
+    sha256: str
+    generated_at: datetime
+    prepared_by: uuid.UUID | None
+    prepared_at: datetime
+    reviewed_by: uuid.UUID | None
+    reviewed_at: datetime | None
+    released_by: uuid.UUID | None
+    released_at: datetime | None
+    rejected_reason: str | None
+    downloads: int
+    log: list[ContactAccessExportLogEntry]
+
+
+class ContactAccessExportRejectIn(_Strict):
+    reason: str = Field(min_length=3, max_length=500)

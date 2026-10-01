@@ -141,3 +141,7 @@ mit Checkliste, Nachweisdokument (Dokument-ID) und optionaler Begrenzung auf Obj
 eine Freigabe widerrufen. Genehmigen und Ablehnen erfolgt durch eine zweite Person mit Kommentar.
 Grenzen: Die Seite ändert keine Prüfregel; eine begrenzte Freigabe öffnet Buchungs- und
 Zahlungsfunktionen nur für das genannte Objekt.
+
+## Audit (Plattform)
+
+Unter Plattform, Plattformaudit sehen Plattformadministratoren die festgeschriebenen Plattformaktionen ohne Mandantenkontext: Kundendomain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert. Die Liste zeigt Zeitpunkt, Aktion, Akteur und Ziel, ist nach Aktion filterbar und seitenweise (50 Einträge je Seite, Parameter limit und offset der API) abrufbar. Der Payload lässt sich je Eintrag aufklappen. Grenzen: Die Einträge sind nicht änderbar, enthalten keine Secrets und werden nur gelesen; die Seite ist nur für Plattformadministratoren erreichbar.
