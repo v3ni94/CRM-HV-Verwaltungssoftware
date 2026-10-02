@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.63.2 (02.10.2026) Korrektur Bankabruf FinTS: Umsätze per CAMT, wenn die Bank kein MT940 mehr anbietet
+
+- Bank FinTS: Banken, die den MT940-Umsatzabruf (HKKAZ) nicht mehr anbieten (Meldung "No supported HIKAZS version found", MHVP-BANK-0014, betrifft Volks- und Raiffeisenbanken auf Atruvia), werden jetzt automatisch über den CAMT-Abruf (HKCAZ, camt.052) gelesen; Kontenliste und Salden waren davon nicht betroffen.
+- Bank: Der CAMT-Parser wertet den Buchungsstatus auch in der Textform (Sts BOOK oder PDNG ohne Code) aus; vorgemerkte Umsätze wurden in dieser Form bisher als gebucht eingelesen. Betrifft den Dateiimport CAMT.053 und den neuen FinTS-Abruf.
+
 ## 1.63.1 (02.10.2026) Korrektur Hintergrundverarbeitung aus der API (FinTS-Dialog, Exporte, Zählersynchronisation)
 
 - Bank FinTS: Der Start eines Bankdialogs scheiterte in der Produktion mit MHVP-BANK-0057, weil der API-Prozess die konfigurierte Celery-App nie als Standard-App gebunden hatte und Aufgaben über .delay an den eingebauten Standardbroker (amqp://localhost) übergab; die API bindet die konfigurierte App jetzt beim Start prozessweit, betroffen waren alle Aufgaben, die ein Endpunkt über .delay anstößt (FinTS-Schritt, finAPI-Abruf, EBICS-Abruf, Mandanten- und Objektakten-Export, Prüfexport, Zählersynchronisation, Belegeingang Paperless).

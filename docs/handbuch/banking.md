@@ -458,6 +458,14 @@ liegt. Prüfschritte:
 4. Prüfen, ob der Server der Plattform ausgehende Verbindungen zu dieser Adresse zulässt
    (Firewall, Proxy; Sache des Betreibers).
 
+## Umsatzabruf ohne MT940 (CAMT)
+
+Einige Banken, vor allem Volks- und Raiffeisenbanken auf der Atruvia-Plattform, bieten den
+klassischen MT940-Umsatzabruf über FinTS nicht mehr an. Die Plattform erkennt das an der
+leeren Liste der unterstützten Versionen und liest die Umsätze dann im CAMT-Format
+(camt.052). Für die Bedienung ändert sich nichts, Kontenliste, Salden und Umsätze erscheinen
+wie gewohnt; vorgemerkte Umsätze werden nicht eingelesen, nur gebuchte.
+
 ## FinTS-Adresse der Bank ändern (Bankfusion)
 
 An jeder FinTS-Verbindung zeigt die Zeile "FinTS-Adresse der Bank" den verwendeten

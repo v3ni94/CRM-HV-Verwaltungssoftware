@@ -67,12 +67,13 @@ class Scenario:
     constructed: ClassVar[list[dict[str, Any]]] = []
     polls: ClassVar[int] = 0
     transactions_tan_done: ClassVar[bool] = False
+    mt940_unsupported: ClassVar[bool] = False
 
     @classmethod
     def reset(cls) -> None:
         cls.init_tan, cls.decoupled, cls.decoupled_polls_until_confirmed = True, False, 1
         cls.tan_for_transactions = cls.reject_pin = cls.lock_account = cls.matrix = False
-        cls.unreachable = False
+        cls.unreachable = cls.mt940_unsupported = False
         cls.transactions = [
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-1"),
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-2"),
@@ -238,11 +239,58 @@ class FakeClient:
 
     def get_transactions(self, account: Any, start: date | None, end: date | None) -> Any:
         assert self._in_dialog
+        if Scenario.mt940_unsupported:
+            raise FinTSUnsupportedOperation(
+                "No supported HIKAZS version found. I support (5, 6, 7), bank supports ()."
+            )
         if Scenario.tan_for_transactions and not Scenario.transactions_tan_done:
             return FakeTan("transactions", False)
         if account.iban != IBAN_1:
             return []
         return list(Scenario.transactions)
+
+    def get_transactions_xml(self, account: Any, start: date | None, end: date | None) -> Any:
+        assert self._in_dialog
+        if account.iban != IBAN_1:
+            return ([], [])
+        return ([CAMT052_DOC], [b""])
+
+
+class FinTSUnsupportedOperation(Exception):  # noqa: N818  (name mirrors python-fints)
+    """Same class name as python-fints; the production code matches on the name."""
+
+
+CAMT052_DOC = b"""<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.02">
+  <BkToCstmrAcctRpt>
+    <Rpt>
+      <Id>RPT-1</Id>
+      <Acct><Id><IBAN>DE02120300000000202051</IBAN></Id><Ccy>EUR</Ccy></Acct>
+      <Ntry>
+        <Amt Ccy="EUR">700.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-09-02</Dt></BookgDt>
+        <ValDt><Dt>2026-09-02</Dt></ValDt>
+        <AcctSvcrRef>CAMT-REF-1</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>E2E-C1</EndToEndId></Refs>
+          <RltdPties><Dbtr><Nm>Max Mieter</Nm></Dbtr>
+            <DbtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></DbtrAcct></RltdPties>
+          <RmtInf><Ustrd>Miete September</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">10.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>PDNG</Sts>
+        <BookgDt><Dt>2026-09-03</Dt></BookgDt>
+        <AcctSvcrRef>CAMT-REF-PENDING</AcctSvcrRef>
+      </Ntry>
+    </Rpt>
+  </BkToCstmrAcctRpt>
+</Document>
+"""
 
 
 def install(monkeypatch: Any) -> None:

@@ -41,7 +41,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from mhvp.banking import mt940 as mt940_norm
-from mhvp.banking.camt import RawTransaction
+from mhvp.banking.camt import RawTransaction, parse_report_entries
 from mhvp.core.problems import ErrorCode, ErrorCodes, ProblemError
 
 logger = logging.getLogger(__name__)
@@ -788,12 +788,12 @@ def _work(client: Any, progress: Progress, pending: Any = None) -> Progress:
         if progress.stage == "transactions":
             since = date.fromisoformat(progress.since) if progress.since else None
             until = date.fromisoformat(progress.until) if progress.until else None
-            rows = _guard(
-                pending if pending is not None else client.get_transactions(sepa, since, until)
-            )
-            pending = None
             statement_ref = f"{snap['iban']}/{since or ''}/{until or ''}"
-            raws = [mt940_transaction_to_raw(t, statement_ref) for t in rows]
+            if pending is not None:
+                raws = _rows_to_raw(pending, statement_ref)
+                pending = None
+            else:
+                raws = _fetch_transactions(client, sepa, since, until, statement_ref)
             if since is not None:
                 raws = [r for r in raws if r.booking_date >= since]
             if until is not None:
@@ -801,6 +801,35 @@ def _work(client: Any, progress: Progress, pending: Any = None) -> Progress:
             progress.transactions[snap["iban"]] = [raw_to_json(r) for r in raws]
             progress.stage, progress.next_index = "balance", progress.next_index + 1
     return progress
+
+
+def _rows_to_raw(rows: Any, statement_ref: str) -> list[RawTransaction]:
+    """MT940 rows (python-fints `get_transactions`) or CAMT documents (`get_transactions_xml`,
+    a tuple of booked and pending byte lists or a plain list of bytes) to `RawTransaction`."""
+    if isinstance(rows, tuple):
+        rows = rows[0]
+    out: list[RawTransaction] = []
+    for item in rows:
+        if isinstance(item, bytes | bytearray):
+            out.extend(parse_report_entries(bytes(item)))
+        else:
+            out.append(mt940_transaction_to_raw(item, statement_ref))
+    return out
+
+
+def _fetch_transactions(
+    client: Any, sepa: Any, since: date | None, until: date | None, statement_ref: str
+) -> list[RawTransaction]:
+    """MT940 (HKKAZ) first; banks that no longer offer it (Atruvia institutes since 2025
+    report an empty HIKAZS list) are read with the CAMT variant (HKCAZ, camt.052)."""
+    try:
+        rows = client.get_transactions(sepa, since, until)
+    except Exception as exc:
+        if type(exc).__name__ != "FinTSUnsupportedOperation":
+            raise
+        logger.info("fints_mt940_unsupported fallback=camt")
+        rows = client.get_transactions_xml(sepa, since, until)
+    return _rows_to_raw(_guard(rows), statement_ref)
 
 
 def _pause(client: Any, response: Any, result: StepResult, progress: Progress) -> StepResult:

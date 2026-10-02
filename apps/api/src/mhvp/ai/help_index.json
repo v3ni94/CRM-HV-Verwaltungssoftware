@@ -3672,6 +3672,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Umsatzabruf ohne MT940 (CAMT)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Einige Banken, vor allem Volks- und Raiffeisenbanken auf der Atruvia-Plattform, bieten den klassischen MT940-Umsatzabruf über FinTS nicht mehr an. Die Plattform erkennt das an der leeren Liste der unterstützten Versionen und liest die Umsätze dann im CAMT-Format (camt.052). Für d",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "FinTS-Adresse der Bank ändern (Bankfusion)",
   "source": "Handbuch: Banking",
   "href": "/bank",

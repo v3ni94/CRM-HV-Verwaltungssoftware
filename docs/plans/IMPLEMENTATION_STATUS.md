@@ -227,6 +227,10 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 
 Produktionsbefund nach dem Deploy von 1.63.0: Der Start eines FinTS-Bankdialogs scheiterte mit MHVP-BANK-0057. Ursache war kein Betriebsfehler (Redis und Worker liefen), sondern ein Fehler im API-Prozess: Aufgaben, die ein Endpunkt über `.delay` anstößt, lösen die aktuelle Celery-App auf, und die API hatte die konfigurierte App nie prozessweit gebunden. Der Aufruf ging an die eingebaute Standard-App von Celery (amqp://localhost). Betroffen waren alle Endpunkte mit `.delay` (FinTS-Schritt, finAPI-Abruf, EBICS-Abruf, Mandanten- und Objektakten-Export, Prüfexport, Zählersynchronisation, Belegeingang Paperless); Endpunkte mit `send_task` über `get_celery()` waren nicht betroffen. Korrektur: `get_celery` installiert die konfigurierte App als Standard-App, die API ruft sie beim Start auf, `create_celery` bindet die Thread-lokale App nur noch auf Anforderung. Regressionstest in `tests/unit/test_worker.py`, Testfixtures für FinTS und finAPI patchen nach dem Start der API. Nach dem Deploy ist die Verbindung in der Bankmaske neu zu starten.
 
+## Korrektur 1.63.2 (02.10.2026): FinTS-Umsatzabruf per CAMT
+
+Produktionsbefund nach dem ersten erfolgreichen Bankdialog mit der Volksbank: Kontenliste und Salden kamen an, der Umsatzabruf scheiterte mit MHVP-BANK-0014 ("No supported HIKAZS version found, bank supports ()"). Die Bank bietet MT940 (HKKAZ) nicht mehr an. Korrektur: Fallback auf HKCAZ (camt.052) in `mhvp.banking.fints._fetch_transactions`, neuer Parser `camt.parse_report_entries`, Statusprüfung gebucht oder vorgemerkt in beiden CAMT-Pfaden vereinheitlicht. Regressionstest in `tests/unit/test_fints.py`.
+
 ## Bewusst nicht umgesetzt (Welle 18, AG18, 02.10.2026)
 
 - GAA-04 Konto Sonderumlage: wartet auf die Steuerberatung (P07-05, AG18-01). Die Prüfbericht-Warnung bleibt.

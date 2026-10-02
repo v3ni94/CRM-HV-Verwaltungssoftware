@@ -109,6 +109,14 @@ def _balance(stmt: Element, code: str) -> tuple[Decimal | None, date | None]:
     return None, None
 
 
+def _is_booked(ntry: Element) -> bool:
+    """camt.052/053 v2 carry the status as text (``<Sts>BOOK</Sts>``), v8 as a code
+    (``<Sts><Cd>BOOK</Cd></Sts>``); without a status the entry counts as booked."""
+    code = _text(ntry, "Sts", "Cd")
+    status = code if code is not None else _text(ntry, "Sts")
+    return status in (None, "BOOK")
+
+
 def _entry(ntry: Element) -> RawTransaction:
     value, currency = _amount(ntry)
     amount = _signed(ntry, value)
@@ -170,10 +178,7 @@ def parse(data: bytes) -> ParsedFile:
         period = _child(stmt, "FrToDt")
         entries = []
         for number, ntry in enumerate(_children(stmt, "Ntry"), start=1):
-            if _text(ntry, "Sts") not in (None, "BOOK") and _text(ntry, "Sts", "Cd") not in (
-                None,
-                "BOOK",
-            ):
+            if not _is_booked(ntry):
                 continue  # pending entries are not booked transactions
             try:
                 entries.append(_entry(ntry))
@@ -195,3 +200,31 @@ def parse(data: bytes) -> ParsedFile:
     if not statements:
         raise ValueError("Kein Kontoauszug in der Datei.")
     return ParsedFile(version=namespace.rsplit(":", 1)[-1], statements=statements)
+
+
+def parse_report_entries(data: bytes) -> list[RawTransaction]:
+    """Booked entries of a camt.052 account report (``BkToCstmrAcctRpt/Rpt``, what FinTS
+    HKCAZ returns) or a camt.053 statement (``BkToCstmrStmt/Stmt``). Pending entries are
+    skipped like in `parse`; balances are not needed here because the FinTS session reads
+    them with HKSAL."""
+    try:
+        root = ElementTree.fromstring(data)
+    except ElementTree.ParseError:
+        raise ValueError("Die Bank hat kein lesbares CAMT-XML geliefert.") from None
+    body = _child(root, "BkToCstmrAcctRpt")
+    containers = _children(body, "Rpt") if body is not None else []
+    if body is None:
+        body = _child(root, "BkToCstmrStmt")
+        containers = _children(body, "Stmt") if body is not None else []
+    if body is None:
+        raise ValueError("Unbekanntes CAMT-Format (weder camt.052 noch camt.053).")
+    entries: list[RawTransaction] = []
+    for container in containers:
+        for number, ntry in enumerate(_children(container, "Ntry"), start=1):
+            if not _is_booked(ntry):
+                continue
+            try:
+                entries.append(_entry(ntry))
+            except ValueError as exc:
+                raise ValueError(f"Umsatz {number}: {exc}") from None
+    return entries

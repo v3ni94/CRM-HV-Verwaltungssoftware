@@ -182,6 +182,28 @@ def test_tan_in_the_middle_of_transactions_resumes_at_the_same_account() -> None
     assert raw.end_to_end_id == "E2E-1"
 
 
+def test_bank_without_mt940_falls_back_to_camt_report() -> None:
+    """Atruvia institutes answer HKKAZ with an empty HIKAZS list (python-fints raises
+    FinTSUnsupportedOperation); the session then reads camt.052 via HKCAZ. Pending entries
+    are skipped, booked ones map to the same RawTransaction as the file import."""
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_unsupported = True
+    progress = fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None)
+    done = _start(progress)
+    assert done.status == "done"
+    assert done.progress is not None
+    rows = done.progress.transactions[fake.IBAN_1]
+    assert len(rows) == 1
+    assert done.progress.transactions[fake.IBAN_2] == []
+    raw = fints_mod.raw_from_json(rows[0])
+    assert raw.amount == Decimal("700.00")
+    assert raw.bank_reference == "CAMT-REF-1"
+    assert raw.counterpart_iban == "DE89370400440532013000"
+    assert raw.counterpart_name == "Max Mieter"
+    assert raw.end_to_end_id == "E2E-C1"
+    assert raw.purpose == "Miete September"
+
+
 def test_no_tan_at_all_completes_in_one_step() -> None:
     fake.Scenario.init_tan = False
     step = _start()

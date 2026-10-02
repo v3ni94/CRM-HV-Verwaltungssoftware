@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.63.2",
+    date: "02.10.2026",
+    title: "Korrektur Bankabruf FinTS: Umsätze per CAMT, wenn die Bank kein MT940 mehr anbietet",
+    changes: [
+      "Bank FinTS: Banken, die den MT940-Umsatzabruf (HKKAZ) nicht mehr anbieten (Meldung \"No supported HIKAZS version found\", MHVP-BANK-0014, betrifft Volks- und Raiffeisenbanken auf Atruvia), werden jetzt automatisch über den CAMT-Abruf (HKCAZ, camt.052) gelesen; Kontenliste und Salden waren davon nicht betroffen.",
+      "Bank: Der CAMT-Parser wertet den Buchungsstatus auch in der Textform (Sts BOOK oder PDNG ohne Code) aus; vorgemerkte Umsätze wurden in dieser Form bisher als gebucht eingelesen. Betrifft den Dateiimport CAMT.053 und den neuen FinTS-Abruf.",
+    ],
+  },
+  {
     version: "1.63.1",
     date: "02.10.2026",
     title: "Korrektur Hintergrundverarbeitung aus der API (FinTS-Dialog, Exporte, Zählersynchronisation)",
