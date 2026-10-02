@@ -20,6 +20,13 @@ export type ReconciliationRow = {
   statement_difference: string | null;
   ledger_balance: string | null;
   ledger_difference: string | null;
+  /** GAH-102: per statement status and chain check against the previous statement. */
+  status?: "ok" | "difference" | "not_checkable";
+  chain_status?: "first" | "ok" | "break" | "not_checkable";
+  chain_difference?: string | null;
+  period_status?: "first" | "ok" | "gap" | "overlap" | "not_checkable";
+  gap_from?: string | null;
+  gap_to?: string | null;
 };
 
 /** Bank reconciliation per statement (B09, `GET /banking/accounts/{id}/reconciliation`):
@@ -67,6 +74,17 @@ export function BankReconciliation() {
 
   const diffClass = (value: string | null) => (value !== null && toCents(value) !== 0 ? "num text-danger-fg font-medium" : "num");
   const findings = (rows ?? []).filter((r) => toCents(r.statement_difference) !== 0 || toCents(r.ledger_difference) !== 0).length;
+  const chainFindings = (rows ?? []).filter((r) => r.chain_status === "break" || r.period_status === "gap" || r.period_status === "overlap").length;
+  const notCheckable = (rows ?? []).filter((r) => r.status === "not_checkable").length;
+  const chainText = (r: ReconciliationRow) => {
+    const parts: string[] = [];
+    if (r.chain_status === "break") parts.push(t("chainBreak", { amount: formatEur(r.chain_difference ?? "0") }));
+    else if (r.chain_status === "not_checkable") parts.push(t("chainNotCheckable"));
+    else if (r.chain_status === "ok") parts.push(t("chainOk"));
+    if (r.period_status === "gap") parts.push(t("periodGap", { from: formatDate(r.gap_from ?? ""), to: formatDate(r.gap_to ?? "") }));
+    else if (r.period_status === "overlap") parts.push(t("periodOverlap"));
+    return parts.join(", ");
+  };
 
   return (
     <section className="flex flex-col gap-3" data-testid="bank-reconciliation">
@@ -93,6 +111,16 @@ export function BankReconciliation() {
           <p className={findings > 0 ? ui.warning : ui.success} data-testid="reconciliation-summary">
             {findings > 0 ? t("findings", { count: findings }) : t("noFindings")}
           </p>
+          {chainFindings > 0 ? (
+            <p className={ui.warning} data-testid="reconciliation-chain-summary">
+              {t("chainFindings", { count: chainFindings })}
+            </p>
+          ) : null}
+          {notCheckable > 0 ? (
+            <p className="text-sm text-muted" data-testid="reconciliation-not-checkable">
+              {t("notCheckable", { count: notCheckable })}
+            </p>
+          ) : null}
           <div className="overflow-x-auto">
             <table className="mhvp-table">
               <thead>
@@ -105,6 +133,7 @@ export function BankReconciliation() {
                   <th className="num">{t("statementDifference")}</th>
                   <th className="num">{t("ledgerBalance")}</th>
                   <th className="num">{t("ledgerDifference")}</th>
+                  <th>{t("chain")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,6 +147,7 @@ export function BankReconciliation() {
                     <td className={diffClass(r.statement_difference)}>{r.statement_difference !== null ? formatEur(r.statement_difference) : t("na")}</td>
                     <td className="num">{r.ledger_balance !== null ? formatEur(r.ledger_balance) : t("na")}</td>
                     <td className={diffClass(r.ledger_difference)}>{r.ledger_difference !== null ? formatEur(r.ledger_difference) : t("na")}</td>
+                    <td className={r.chain_status === "break" || r.period_status === "gap" || r.period_status === "overlap" ? "text-danger-fg" : undefined}>{chainText(r)}</td>
                   </tr>
                 ))}
               </tbody>

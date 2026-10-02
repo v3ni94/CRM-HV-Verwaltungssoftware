@@ -1365,6 +1365,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/dunning-interest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zinstagemethode und Hinweis zum Basiszinssatz */
+        get: operations["get_dunning_interest_api_v1_accounting_dunning_interest_get"];
+        /** Zinstagemethode setzen (Mandantenschalter) */
+        put: operations["put_dunning_interest_api_v1_accounting_dunning_interest_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/dunning-interest-rates": {
         parameters: {
             query?: never;
@@ -1377,6 +1395,27 @@ export interface paths {
         put?: never;
         /** Basiszinssatz ab Gültigkeitsbeginn mit Quelle erfassen */
         post: operations["dunning_interest_rate_create_api_v1_accounting_dunning_interest_rates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/dunning-interest/base-rate-checkpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prüfpunkte zum Basiszinssatz (01.01. und 01.07.) als Entwurf anlegen
+         * @description Creates the check points of the next two change dates in the rule register (group
+         *     Prüfpunkt); the lead time of the check point list is the Vorfrist. Idempotent per date.
+         */
+        post: operations["seed_base_rate_checkpoints_api_v1_accounting_dunning_interest_base_rate_checkpoints_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2530,6 +2569,26 @@ export interface paths {
          *     Read only: nothing is changed, posted lines are corrected by reversal and new posting.
          */
         get: operations["report_line_property_drift_api_v1_accounting_ledgers__ledger_id__reports_line_property_drift_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/reports/liquidity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liquiditätsvorschau mit Kopfangaben
+         * @description GAH-104 (7.5, 7.7 Absatz 1): the 90 day preview with the common report header.
+         */
+        get: operations["report_liquidity_api_v1_accounting_ledgers__ledger_id__reports_liquidity_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4531,6 +4590,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/mfa-reset/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anträge Zurücksetzen zweiter Faktor */
+        get: operations["list_mfa_reset_requests_api_v1_auth_mfa_reset_requests_get"];
+        put?: never;
+        /** Zurücksetzen zweiter Faktor beantragen */
+        post: operations["create_mfa_reset_request_api_v1_auth_mfa_reset_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa-reset/requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zurücksetzen zweiter Faktor freigeben */
+        post: operations["approve_mfa_reset_request_api_v1_auth_mfa_reset_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa-reset/requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zurücksetzen zweiter Faktor ablehnen */
+        post: operations["reject_mfa_reset_request_api_v1_auth_mfa_reset_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa-reset/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Schalter Zurücksetzen zweiter Faktor (GAH-301) */
+        get: operations["get_mfa_reset_setting_api_v1_auth_mfa_reset_settings_get"];
+        /** Schalter Zurücksetzen zweiter Faktor ändern (GAH-301) */
+        put: operations["put_mfa_reset_setting_api_v1_auth_mfa_reset_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/mfa/setup/confirm": {
         parameters: {
             query?: never;
@@ -4854,6 +4983,23 @@ export interface paths {
         };
         /** Passkeys (WebAuthn): Verfügbarkeit (M2-03) */
         get: operations["webauthn_status_api_v1_auth_webauthn_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/automation/event-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Katalog der emittierten Ereignistypen (GAH-307) */
+        get: operations["event_types_api_v1_automation_event_types_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9279,6 +9425,24 @@ export interface paths {
         put?: never;
         /** Löschvorschlag ablehnen */
         post: operations["reject_deletion_proposal_api_v1_deletion_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deposit-hint-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prüfhinweis Kaution: Mandantenschalter (Standard aus) */
+        get: operations["get_deposit_hint_settings_api_v1_deposit_hint_settings_get"];
+        /** Prüfhinweis Kaution setzen (nicht sperrend, keine Rechtsentscheidung) */
+        put: operations["put_deposit_hint_settings_api_v1_deposit_hint_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -27219,6 +27383,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/webhook-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Webhook-Einstellungen des Mandanten */
+        get: operations["get_webhook_settings_api_v1_tenant_webhook_settings_get"];
+        /**
+         * Webhook-Einstellungen setzen
+         * @description GAH-206 (AI07-02): ``auto_disable_after`` NULL = only notify (default). GAH-202
+         *     (AI07-01): ``objektakte_require_timestamp`` false = deliveries without timestamp header
+         *     keep the old behaviour (default).
+         */
+        put: operations["put_webhook_settings_api_v1_tenant_webhook_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/webhooks": {
         parameters: {
             query?: never;
@@ -27289,6 +27476,48 @@ export interface paths {
         get: operations["list_deliveries_api_v1_tenant_webhooks__hook_id__deliveries_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/webhooks/{hook_id}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signaturschlüssel des Webhooks erneuern
+         * @description GAH-207: new secret, shown once; the old one stops working immediately.
+         */
+        post: operations["rotate_webhook_secret_api_v1_tenant_webhooks__hook_id__rotate_secret_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/webhooks/{hook_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Testzustellung an den Webhook
+         * @description GAH-207: records the event ``webhook_subscription.test`` and queues one delivery to this
+         *     subscription only (signed like every delivery, sent by the minute job). The event type is
+         *     not in the subscription catalogue, so other subscriptions only receive it with ``*``.
+         */
+        post: operations["send_test_webhook_api_v1_tenant_webhooks__hook_id__test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -29422,6 +29651,8 @@ export interface components {
             party_id: string | null;
             /** Property Bank Account Id */
             property_bank_account_id: string | null;
+            /** Range Warning */
+            range_warning?: string | null;
             /** Relevant For Cash Report */
             relevant_for_cash_report: boolean;
             /** Review Note */
@@ -31169,6 +31400,69 @@ export interface components {
             crm_role_codes?: string[];
             /** Portal Required */
             portal_required: boolean;
+        };
+        /** AuthMfaResetDecisionIn */
+        AuthMfaResetDecisionIn: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** AuthMfaResetRequestIn */
+        AuthMfaResetRequestIn: {
+            /**
+             * Membership Id
+             * Format: uuid
+             */
+            membership_id: string;
+            /** Reason */
+            reason: string;
+        };
+        /** AuthMfaResetRequestOut */
+        AuthMfaResetRequestOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision Comment */
+            decision_comment?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Membership Id
+             * Format: uuid
+             */
+            membership_id: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Requested By
+             * Format: uuid
+             */
+            requested_by: string;
+            /** Status */
+            status: string;
+            /**
+             * Target User Id
+             * Format: uuid
+             */
+            target_user_id: string;
+        };
+        /** AuthMfaResetSettingIn */
+        AuthMfaResetSettingIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** AuthMfaResetSettingOut */
+        AuthMfaResetSettingOut: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** AuthMfaSetupConfirmRequest */
         AuthMfaSetupConfirmRequest: {
@@ -33353,11 +33647,23 @@ export interface components {
             labor_amount: string;
             /** Material Amount */
             material_amount: string;
+            /**
+             * Paid
+             * @default false
+             */
+            paid: boolean;
+            /** Paid On */
+            paid_on?: string | null;
             /** Text */
             text: string | null;
         };
         /** CertificateOut */
         CertificateOut: {
+            /**
+             * Basis
+             * @default invoice_date
+             */
+            basis: string;
             /**
              * Contract Id
              * Format: uuid
@@ -33375,10 +33681,35 @@ export interface components {
             material_total: string;
             /** Notice */
             notice: string;
+            /** Previous */
+            previous?: components["schemas"]["CertificatePreviousOut"][];
+            /** Repeat Notice */
+            repeat_notice?: string | null;
             /** Share Percent */
             share_percent: string;
+            /**
+             * Unpaid Lines
+             * @default 0
+             */
+            unpaid_lines: number;
             /** Year */
             year: number;
+        };
+        /** CertificatePreviousOut */
+        CertificatePreviousOut: {
+            /** Basis */
+            basis: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Id */
+            document_id: string | null;
+            /** Labor Total */
+            labor_total: string;
+            /** Output */
+            output: string;
         };
         /** ChangeIn */
         ChangeIn: {
@@ -36647,6 +36978,40 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** DepositHintSettingIn */
+        DepositHintSettingIn: {
+            /** Deposit Limit Hint Enabled */
+            deposit_limit_hint_enabled: boolean;
+            /** Factor Months */
+            factor_months: number | string;
+            /** Max Installments */
+            max_installments: number;
+            /** Rent Payment Codes */
+            rent_payment_codes: string[];
+        };
+        /**
+         * DepositHintSettingOut
+         * @description AI18 (GAH-111): tenant switch of the non blocking deposit hint (default off).
+         */
+        DepositHintSettingOut: {
+            /**
+             * Deposit Limit Hint Enabled
+             * @default false
+             */
+            deposit_limit_hint_enabled: boolean;
+            /**
+             * Factor Months
+             * @default 3
+             */
+            factor_months: string;
+            /**
+             * Max Installments
+             * @default 3
+             */
+            max_installments: number;
+            /** Rent Payment Codes */
+            rent_payment_codes?: string[];
+        };
         /** DepositIn */
         DepositIn: {
             /** Amount Due */
@@ -36853,6 +37218,8 @@ export interface components {
             /** Interest Rule */
             interest_rule: string | null;
             kind: components["schemas"]["DepositKind"];
+            /** Limit Hints */
+            limit_hints?: string[];
             /** Movements */
             movements?: components["schemas"]["DepositMovementOut"][];
             /**
@@ -37938,6 +38305,14 @@ export interface components {
             proof_date: string;
             /** Reference */
             reference?: string | null;
+        };
+        /** DunningInterestDayCountIn */
+        DunningInterestDayCountIn: {
+            /**
+             * Day Count
+             * @enum {string}
+             */
+            day_count: "act_365_fixed" | "act_act";
         };
         /**
          * DunningInterestRateIn
@@ -53068,6 +53443,12 @@ export interface components {
              */
             input_tax_enabled: boolean;
             /**
+             * Section 35A Basis
+             * @default invoice_date
+             * @enum {string}
+             */
+            section_35a_basis: "invoice_date" | "payment_date";
+            /**
              * Section 35A Enabled
              * @default false
              */
@@ -53094,6 +53475,11 @@ export interface components {
             input_tax_account_number: string | null;
             /** Input Tax Enabled */
             input_tax_enabled: boolean;
+            /**
+             * Section 35A Basis
+             * @default invoice_date
+             */
+            section_35a_basis: string;
             /** Section 35A Enabled */
             section_35a_enabled: boolean;
             /**
@@ -54909,10 +55295,17 @@ export interface components {
         WebhookCreated: {
             /** Active */
             active: boolean;
+            /**
+             * Consecutive Failures
+             * @default 0
+             */
+            consecutive_failures: number;
             /** Created At */
             created_at?: string | null;
             /** Description */
             description: string | null;
+            /** Disabled Reason */
+            disabled_reason?: string | null;
             /** Event Types */
             event_types: string[];
             /**
@@ -54926,6 +55319,8 @@ export interface components {
             last_delivery_status?: string | null;
             /** Last Delivery Status Code */
             last_delivery_status_code?: number | null;
+            /** Last Failure At */
+            last_failure_at?: string | null;
             /**
              * Secret
              * @description Signaturschlüssel, wird nur einmal angezeigt
@@ -54945,10 +55340,17 @@ export interface components {
         WebhookOut: {
             /** Active */
             active: boolean;
+            /**
+             * Consecutive Failures
+             * @default 0
+             */
+            consecutive_failures: number;
             /** Created At */
             created_at?: string | null;
             /** Description */
             description: string | null;
+            /** Disabled Reason */
+            disabled_reason?: string | null;
             /** Event Types */
             event_types: string[];
             /**
@@ -54962,6 +55364,8 @@ export interface components {
             last_delivery_status?: string | null;
             /** Last Delivery Status Code */
             last_delivery_status_code?: number | null;
+            /** Last Failure At */
+            last_failure_at?: string | null;
             /** Url */
             url: string;
         };
@@ -54969,8 +55373,45 @@ export interface components {
         WebhookPatch: {
             /** Active */
             active?: boolean | null;
+            /** Description */
+            description?: string | null;
             /** Event Types */
             event_types?: string[] | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** WebhookSettingsIn */
+        WebhookSettingsIn: {
+            /** Auto Disable After */
+            auto_disable_after?: number | null;
+            /** Objektakte Require Timestamp */
+            objektakte_require_timestamp?: boolean | null;
+        };
+        /**
+         * WebhookSettingsOut
+         * @description GAH-206, GAH-202 tenant switches (questions AI07-01, AI07-02).
+         */
+        WebhookSettingsOut: {
+            /** Auto Disable After */
+            auto_disable_after?: number | null;
+            /**
+             * Objektakte Require Timestamp
+             * @default false
+             */
+            objektakte_require_timestamp: boolean;
+        };
+        /** WebhookTestOut */
+        WebhookTestOut: {
+            /**
+             * Delivery Id
+             * Format: uuid
+             */
+            delivery_id: string;
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
         };
         /** WhatsAppConfigIn */
         WhatsAppConfigIn: {
@@ -58378,6 +58819,63 @@ export interface operations {
             };
         };
     };
+    get_dunning_interest_api_v1_accounting_dunning_interest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_dunning_interest_api_v1_accounting_dunning_interest_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DunningInterestDayCountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dunning_interest_rates_api_v1_accounting_dunning_interest_rates_get: {
         parameters: {
             query?: never;
@@ -58435,10 +58933,40 @@ export interface operations {
             };
         };
     };
+    seed_base_rate_checkpoints_api_v1_accounting_dunning_interest_base_rate_checkpoints_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
     dunning_runs_api_v1_accounting_dunning_runs_get: {
         parameters: {
             query?: {
                 limit?: number;
+                /** @description Gleichheitsfilter auf `run_date` (mehrere Werte mit Komma). */
+                "filter[run_date]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, run_date. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -58929,6 +59457,14 @@ export interface operations {
                 page?: number;
                 /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
                 page_size?: number | null;
+                /** @description Gleichheitsfilter auf ein von der Liste angebotenes Feld. */
+                "filter[feld]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+                /** @description Eingebettete Relationen, kommagetrennt. */
+                include?: string;
             };
             header?: never;
             path?: never;
@@ -61141,6 +61677,41 @@ export interface operations {
             };
         };
     };
+    report_liquidity_api_v1_accounting_ledgers__ledger_id__reports_liquidity_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     report_monthly_matrix_api_v1_accounting_ledgers__ledger_id__reports_monthly_matrix_get: {
         parameters: {
             query: {
@@ -61438,7 +62009,7 @@ export interface operations {
     report_xlsx_download_api_v1_accounting_ledgers__ledger_id__reports_xlsx_get: {
         parameters: {
             query: {
-                report: "journal" | "monthly_matrix" | "target_actual" | "trial_balance" | "open_items" | "revenue" | "vat_overview" | "income_expense";
+                report: "journal" | "monthly_matrix" | "target_actual" | "trial_balance" | "open_items" | "revenue" | "vat_overview" | "income_expense" | "liquidity";
                 start?: string | null;
                 end?: string | null;
                 as_of?: string | null;
@@ -65473,6 +66044,182 @@ export interface operations {
             };
         };
     };
+    list_mfa_reset_requests_api_v1_auth_mfa_reset_requests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMfaResetRequestOut"][];
+                };
+            };
+        };
+    };
+    create_mfa_reset_request_api_v1_auth_mfa_reset_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthMfaResetRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMfaResetRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_mfa_reset_request_api_v1_auth_mfa_reset_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthMfaResetDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMfaResetRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_mfa_reset_request_api_v1_auth_mfa_reset_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthMfaResetDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMfaResetRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_mfa_reset_setting_api_v1_auth_mfa_reset_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMfaResetSettingOut"];
+                };
+            };
+        };
+    };
+    put_mfa_reset_setting_api_v1_auth_mfa_reset_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthMfaResetSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMfaResetSettingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     mfa_setup_confirm_api_v1_auth_mfa_setup_confirm_post: {
         parameters: {
             query?: never;
@@ -66005,6 +66752,28 @@ export interface operations {
             };
         };
     };
+    event_types_api_v1_automation_event_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     list_job_schedules_api_v1_automation_job_schedules_get: {
         parameters: {
             query?: never;
@@ -66208,7 +66977,20 @@ export interface operations {
     };
     list_rules_api_v1_automation_rules_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Gleichheitsfilter auf `active` (mehrere Werte mit Komma). */
+                "filter[active]"?: string;
+                /** @description Gleichheitsfilter auf `test_mode` (mehrere Werte mit Komma). */
+                "filter[test_mode]"?: string;
+                /** @description Gleichheitsfilter auf `trigger_event_type` (mehrere Werte mit Komma). */
+                "filter[trigger_event_type]"?: string;
+                /** @description Gleichheitsfilter auf `trigger_kind` (mehrere Werte mit Komma). */
+                "filter[trigger_kind]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, name. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -69237,6 +70019,22 @@ export interface operations {
             query?: {
                 status?: string | null;
                 limit?: number;
+                /** @description Gleichheitsfilter auf `batch_id` (mehrere Werte mit Komma). */
+                "filter[batch_id]"?: string;
+                /** @description Gleichheitsfilter auf `invoice_id` (mehrere Werte mit Komma). */
+                "filter[invoice_id]"?: string;
+                /** @description Gleichheitsfilter auf `kind` (mehrere Werte mit Komma). */
+                "filter[kind]"?: string;
+                /** @description Gleichheitsfilter auf `ledger_id` (mehrere Werte mit Komma). */
+                "filter[ledger_id]"?: string;
+                /** @description Gleichheitsfilter auf `property_bank_account_id` (mehrere Werte mit Komma). */
+                "filter[property_bank_account_id]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: amount, created_at, execution_date. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -69503,7 +70301,22 @@ export interface operations {
     };
     list_rules_api_v1_banking_rules_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Gleichheitsfilter auf `approval_state` (mehrere Werte mit Komma). */
+                "filter[approval_state]"?: string;
+                /** @description Gleichheitsfilter auf `contract_id` (mehrere Werte mit Komma). */
+                "filter[contract_id]"?: string;
+                /** @description Gleichheitsfilter auf `learned_from_ai` (mehrere Werte mit Komma). */
+                "filter[learned_from_ai]"?: string;
+                /** @description Gleichheitsfilter auf `legal_entity_id` (mehrere Werte mit Komma). */
+                "filter[legal_entity_id]"?: string;
+                /** @description Gleichheitsfilter auf `property_id` (mehrere Werte mit Komma). */
+                "filter[property_id]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, hit_count, last_hit_at, name, priority. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -69764,6 +70577,24 @@ export interface operations {
                 end?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Gleichheitsfilter auf `booking_date` (mehrere Werte mit Komma). */
+                "filter[booking_date]"?: string;
+                /** @description Gleichheitsfilter auf `currency` (mehrere Werte mit Komma). */
+                "filter[currency]"?: string;
+                /** @description Gleichheitsfilter auf `journal_entry_id` (mehrere Werte mit Komma). */
+                "filter[journal_entry_id]"?: string;
+                /** @description Gleichheitsfilter auf `legal_entity_id` (mehrere Werte mit Komma). */
+                "filter[legal_entity_id]"?: string;
+                /** @description Gleichheitsfilter auf `property_bank_account_id` (mehrere Werte mit Komma). */
+                "filter[property_bank_account_id]"?: string;
+                /** @description Gleichheitsfilter auf `statement_id` (mehrere Werte mit Komma). */
+                "filter[statement_id]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: amount, booking_date, counterpart_name, created_at, value_date. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -72477,6 +73308,14 @@ export interface operations {
                 include_deleted?: boolean;
                 page?: number;
                 page_size?: number;
+                /** @description Gleichheitsfilter auf ein von der Liste angebotenes Feld. */
+                "filter[feld]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+                /** @description Eingebettete Relationen, kommagetrennt. */
+                include?: string;
             };
             header?: never;
             path?: never;
@@ -73913,6 +74752,14 @@ export interface operations {
                 page?: number;
                 /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
                 page_size?: number | null;
+                /** @description Gleichheitsfilter auf ein von der Liste angebotenes Feld. */
+                "filter[feld]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+                /** @description Eingebettete Relationen, kommagetrennt. */
+                include?: string;
             };
             header?: never;
             path?: never;
@@ -74258,7 +75105,10 @@ export interface operations {
     };
     list_allocation_values_api_v1_contracts__contract_id__allocation_values_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Stichtag: nur am Tag gültige Zeilen */
+                as_of?: string | null;
+            };
             header?: never;
             path: {
                 contract_id: string;
@@ -74596,7 +75446,10 @@ export interface operations {
     };
     payment_history_api_v1_contracts__contract_id__payments_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Stichtag: nur am Tag gültige Zeilen */
+                as_of?: string | null;
+            };
             header?: never;
             path: {
                 contract_id: string;
@@ -75422,6 +76275,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeletionProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_deposit_hint_settings_api_v1_deposit_hint_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositHintSettingOut"];
+                };
+            };
+        };
+    };
+    put_deposit_hint_settings_api_v1_deposit_hint_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositHintSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositHintSettingOut"];
                 };
             };
             /** @description Validation Error */
@@ -77087,6 +77993,14 @@ export interface operations {
                 is_draft?: boolean | null;
                 page?: number;
                 page_size?: number;
+                /** @description Gleichheitsfilter auf ein von der Liste angebotenes Feld. */
+                "filter[feld]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+                /** @description Eingebettete Relationen, kommagetrennt. */
+                include?: string;
             };
             header?: never;
             path?: never;
@@ -84335,6 +85249,20 @@ export interface operations {
         parameters: {
             query: {
                 legal_entity_id: string;
+                /** @description Gleichheitsfilter auf `decided_on` (mehrere Werte mit Komma). */
+                "filter[decided_on]"?: string;
+                /** @description Gleichheitsfilter auf `kind` (mehrere Werte mit Komma). */
+                "filter[kind]"?: string;
+                /** @description Gleichheitsfilter auf `meeting_id` (mehrere Werte mit Komma). */
+                "filter[meeting_id]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Gleichheitsfilter auf `subject_kind` (mehrere Werte mit Komma). */
+                "filter[subject_kind]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: decided_on, number, status. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -86102,7 +87030,16 @@ export interface operations {
     };
     sync_runs_api_v1_immoware_sync_runs_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Gleichheitsfilter auf `kind` (mehrere Werte mit Komma). */
+                "filter[kind]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: finished_at, started_at. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -90807,6 +91744,16 @@ export interface operations {
                 status?: string | null;
                 property_id?: string | null;
                 q?: string | null;
+                /** @description Gleichheitsfilter auf `object_type` (mehrere Werte mit Komma). */
+                "filter[object_type]"?: string;
+                /** @description Gleichheitsfilter auf `publication_status` (mehrere Werte mit Komma). */
+                "filter[publication_status]"?: string;
+                /** @description Gleichheitsfilter auf `unit_id` (mehrere Werte mit Komma). */
+                "filter[unit_id]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: available_from, created_at, price, title. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -91439,6 +92386,18 @@ export interface operations {
         parameters: {
             query: {
                 unit_id: string;
+                /** @description Gleichheitsfilter auf `contact_id` (mehrere Werte mit Komma). */
+                "filter[contact_id]"?: string;
+                /** @description Gleichheitsfilter auf `listing_id` (mehrere Werte mit Komma). */
+                "filter[listing_id]"?: string;
+                /** @description Gleichheitsfilter auf `source` (mehrere Werte mit Komma). */
+                "filter[source]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, viewing_at. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -93461,6 +94420,16 @@ export interface operations {
                 page_size?: number | null;
                 /** @description Abgleichstand mit Gmail (Rückkanal M20-08) */
                 sync_state?: string | null;
+                /** @description Gleichheitsfilter auf `channel` (mehrere Werte mit Komma). */
+                "filter[channel]"?: string;
+                /** @description Gleichheitsfilter auf `direction` (mehrere Werte mit Komma). */
+                "filter[direction]"?: string;
+                /** @description Gleichheitsfilter auf `mailbox_id` (mehrere Werte mit Komma). */
+                "filter[mailbox_id]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -95958,6 +96927,18 @@ export interface operations {
                 page?: number;
                 page_size?: number | null;
                 limit?: number;
+                /** @description Gleichheitsfilter auf `connection_id` (mehrere Werte mit Komma). */
+                "filter[connection_id]"?: string;
+                /** @description Gleichheitsfilter auf `data_kind` (mehrere Werte mit Komma). */
+                "filter[data_kind]"?: string;
+                /** @description Gleichheitsfilter auf `property_assignment_id` (mehrere Werte mit Komma). */
+                "filter[property_assignment_id]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, finished_at, started_at. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -96755,6 +97736,12 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, status. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -106131,6 +107118,14 @@ export interface operations {
                 include_terminated?: boolean;
                 page?: number;
                 page_size?: number;
+                /** @description Gleichheitsfilter auf ein von der Liste angebotenes Feld. */
+                "filter[feld]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+                /** @description Eingebettete Relationen, kommagetrennt. */
+                include?: string;
             };
             header?: never;
             path?: never;
@@ -106401,7 +107396,10 @@ export interface operations {
     };
     list_keys_api_v1_properties__property_id__allocation_keys_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Stichtag: nur Schlüssel mit einem am Tag gültigen Einheitenwert */
+                as_of?: string | null;
+            };
             header?: never;
             path: {
                 property_id: string;
@@ -109017,6 +110015,8 @@ export interface operations {
                 expiring_until?: string | null;
                 /** @description true: noch nie verwendet */
                 unused?: boolean | null;
+                /** @description Stichtag: unterschrieben bis zum Tag und nicht vor dem Tag abgelaufen */
+                as_of?: string | null;
                 limit?: number;
                 /** @description Seite (ab 1), zusammen mit page_size */
                 page?: number;
@@ -109284,6 +110284,16 @@ export interface operations {
             query?: {
                 unacknowledged?: boolean;
                 limit?: number;
+                /** @description Gleichheitsfilter auf `channel` (mehrere Werte mit Komma). */
+                "filter[channel]"?: string;
+                /** @description Gleichheitsfilter auf `level` (mehrere Werte mit Komma). */
+                "filter[level]"?: string;
+                /** @description Gleichheitsfilter auf `ticket_id` (mehrere Werte mit Komma). */
+                "filter[ticket_id]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: level, sent_at. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -109409,6 +110419,18 @@ export interface operations {
                 state?: components["schemas"]["ClockState"] | null;
                 color?: components["schemas"]["SlaColor"] | null;
                 limit?: number;
+                /** @description Gleichheitsfilter auf `color` (mehrere Werte mit Komma). */
+                "filter[color]"?: string;
+                /** @description Gleichheitsfilter auf `rule_id` (mehrere Werte mit Komma). */
+                "filter[rule_id]"?: string;
+                /** @description Gleichheitsfilter auf `state` (mehrere Werte mit Komma). */
+                "filter[state]"?: string;
+                /** @description Gleichheitsfilter auf `ticket_id` (mehrere Werte mit Komma). */
+                "filter[ticket_id]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: due_resolution_at, due_response_at, started_at. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;
@@ -113350,6 +114372,59 @@ export interface operations {
             };
         };
     };
+    get_webhook_settings_api_v1_tenant_webhook_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSettingsOut"];
+                };
+            };
+        };
+    };
+    put_webhook_settings_api_v1_tenant_webhook_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_webhooks_api_v1_tenant_webhooks_get: {
         parameters: {
             query?: never;
@@ -113521,6 +114596,68 @@ export interface operations {
             };
         };
     };
+    rotate_webhook_secret_api_v1_tenant_webhooks__hook_id__rotate_secret_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_test_webhook_api_v1_tenant_webhooks__hook_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_template_api_v1_ticket_templates_post: {
         parameters: {
             query?: never;
@@ -113600,6 +114737,12 @@ export interface operations {
                 page?: number;
                 /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
                 page_size?: number | null;
+                /** @description Gleichheitsfilter auf ein von der Liste angebotenes Feld. */
+                "filter[feld]"?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
+                /** @description Eingebettete Relationen, kommagetrennt. */
+                include?: string;
             };
             header?: never;
             path?: never;
@@ -115840,6 +116983,20 @@ export interface operations {
                 ticket_id?: string | null;
                 page?: number;
                 page_size?: number;
+                /** @description Gleichheitsfilter auf `property_id` (mehrere Werte mit Komma). */
+                "filter[property_id]"?: string;
+                /** @description Gleichheitsfilter auf `provider_contact_id` (mehrere Werte mit Komma). */
+                "filter[provider_contact_id]"?: string;
+                /** @description Gleichheitsfilter auf `requires_board_approval` (mehrere Werte mit Komma). */
+                "filter[requires_board_approval]"?: string;
+                /** @description Gleichheitsfilter auf `status` (mehrere Werte mit Komma). */
+                "filter[status]"?: string;
+                /** @description Gleichheitsfilter auf `ticket_id` (mehrere Werte mit Komma). */
+                "filter[ticket_id]"?: string;
+                /** @description Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, scheduled_at, status. */
+                sort?: string;
+                /** @description Sparantwort: `a,b` (`id` bleibt immer enthalten). */
+                fields?: string;
             };
             header?: never;
             path?: never;

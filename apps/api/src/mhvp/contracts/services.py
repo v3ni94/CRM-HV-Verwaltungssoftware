@@ -17,6 +17,7 @@ from mhvp.contracts.models import (
     ContractTerminationReading,
     DebtorAccountReservation,
     Deposit,
+    DepositHintSetting,
     DepositMovement,
     DepositMovementKind,
     MandateStatus,
@@ -621,4 +622,76 @@ async def record_termination_readings(
         session.add(link)
         out.append(link)
     await session.flush()
+    return out
+
+
+# AI18 (GAH-111): non blocking deposit hint ---------------------------------------------------
+
+DEPOSIT_HINT_RESIDENTIAL_UNITS = ("apartment",)
+
+
+def _months(value: Decimal) -> str:
+    text_ = f"{value.normalize():f}".replace(".", ",")
+    return text_
+
+
+def _eur(value: Decimal) -> str:
+    whole, frac = f"{value:,.2f}".split(".")
+    return f"{whole.replace(',', '.')},{frac} EUR"
+
+
+async def deposit_hint_setting(session: AsyncSession) -> DepositHintSetting | None:
+    return await session.scalar(select(DepositHintSetting))
+
+
+async def deposit_limit_hints(
+    session: AsyncSession, deposits: list[Deposit]
+) -> dict[uuid.UUID, list[str]]:
+    """Review hints per deposit when the tenant switch is on: amount above ``factor_months``
+    monthly rents (payment types ``rent_payment_codes`` valid at ``valid_from``) or more
+    instalments than ``max_installments``. Only tenancies of residential units; never blocks.
+    Example: rent 800,00, factor 3 -> comparison value 2.400,00; 2.500,00 gives a hint."""
+    setting = await deposit_hint_setting(session)
+    if setting is None or not setting.enabled or not deposits:
+        return {}
+    out: dict[uuid.UUID, list[str]] = {}
+    for deposit in deposits:
+        contract = await session.get(Contract, deposit.contract_id)
+        if contract is None or contract.kind != ContractKind.TENANCY:
+            continue
+        unit = await session.get(Unit, contract.unit_id)
+        if unit is None or str(unit.unit_type) not in DEPOSIT_HINT_RESIDENTIAL_UNITS:
+            continue
+        hints: list[str] = []
+        day = deposit.valid_from
+        rents = (
+            await session.scalars(
+                select(ContractPayment.net).where(
+                    ContractPayment.contract_id == contract.id,
+                    ContractPayment.payment_type_code.in_(list(setting.rent_payment_codes)),
+                    ContractPayment.valid_from <= day,
+                    or_(ContractPayment.valid_to.is_(None), ContractPayment.valid_to >= day),
+                )
+            )
+        ).all()
+        if not rents:
+            hints.append(
+                "Prüfhinweis Kaution: keine Miete ohne Nebenkosten zum Beginn hinterlegt, "
+                "Vergleich nicht möglich."
+            )
+        else:
+            limit = (sum(rents, Decimal("0.00")) * setting.factor_months).quantize(Decimal("0.01"))
+            if deposit.amount_due > limit:
+                hints.append(
+                    f"Prüfhinweis Kaution: Betrag {_eur(deposit.amount_due)} liegt über dem "
+                    f"Vergleichswert von {_months(setting.factor_months)} Monatsmieten ohne "
+                    f"Nebenkosten ({_eur(limit)}). Bitte prüfen."
+                )
+        if deposit.installments > setting.max_installments:
+            hints.append(
+                f"Prüfhinweis Kaution: {deposit.installments} Raten liegen über dem "
+                f"Vergleichswert von {setting.max_installments} Raten. Bitte prüfen."
+            )
+        if hints:
+            out[deposit.id] = hints
     return out

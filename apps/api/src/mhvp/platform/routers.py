@@ -38,6 +38,7 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import GATE_LABELS, ReleaseGate
 from mhvp.core.webhooks import (
     EVENT_TYPES,
+    DeliveryStatus,
     UnsafeWebhookTargetError,
     WebhookDelivery,
     WebhookSubscription,
@@ -120,6 +121,9 @@ from mhvp.platform.schemas import (
     WebhookEventTypeOut,
     WebhookOut,
     WebhookPatch,
+    WebhookSettingsIn,
+    WebhookSettingsOut,
+    WebhookTestOut,
 )
 from mhvp.platform.services import (
     add_member,
@@ -2141,6 +2145,9 @@ def _hook_out(hook: WebhookSubscription, last: WebhookDelivery | None = None) ->
         last_delivery_status=last.status.value if last else None,
         last_delivery_status_code=last.last_status_code if last else None,
         last_delivery_at=(last.delivered_at or last.updated_at) if last else None,
+        consecutive_failures=hook.consecutive_failures or 0,
+        last_failure_at=hook.last_failure_at,
+        disabled_reason=hook.disabled_reason,
     )
 
 
@@ -2229,12 +2236,30 @@ async def patch_webhook(
         hook = await session.get(WebhookSubscription, hook_id)
         if hook is None:
             raise _not_found()
-        before = {"active": hook.active, "event_types": hook.event_types}
+
+        def state() -> dict[str, object]:
+            return {
+                "active": hook.active,
+                "event_types": hook.event_types,
+                "url": hook.url,
+                "description": hook.description,
+            }
+
+        before = state()
+        if body.url is not None and body.url != hook.url:
+            _check_url(request, body.url)
+            hook.url = body.url
+        if "description" in body.model_fields_set:
+            hook.description = body.description
         if body.active is not None:
+            if body.active and not hook.active:
+                # Reactivation by a person starts a new failure count (GAH-206).
+                hook.consecutive_failures = 0
+                hook.disabled_reason = None
             hook.active = body.active
         if body.event_types is not None:
             hook.event_types = sorted(set(body.event_types))
-        changes = diff(before, {"active": hook.active, "event_types": hook.event_types})
+        changes = diff(before, state())
         if changes:
             await emit(
                 session,
@@ -2246,6 +2271,131 @@ async def patch_webhook(
                 changes=changes,
             )
         return _hook_out(hook)
+
+
+@tenant_router.post(
+    "/webhooks/{hook_id}/rotate-secret", summary="Signaturschlüssel des Webhooks erneuern"
+)
+async def rotate_webhook_secret(
+    hook_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("webhooks:update")),
+) -> WebhookCreated:
+    """GAH-207: new secret, shown once; the old one stops working immediately."""
+    secret = tokens.new_opaque_secret()
+    async with tenant_tx(request, principal) as session:
+        hook = await session.get(WebhookSubscription, hook_id)
+        if hook is None:
+            raise _not_found()
+        hook.secret = secret
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="webhook_subscription.secret_rotated",
+            entity_type="webhook_subscription",
+            entity_id=hook.id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
+        await session.flush()
+        return WebhookCreated(
+            **_hook_out(hook, await _last_delivery(session, hook.id)).model_dump(), secret=secret
+        )
+
+
+@tenant_router.post(
+    "/webhooks/{hook_id}/test", status_code=202, summary="Testzustellung an den Webhook"
+)
+async def send_test_webhook(
+    hook_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("webhooks:update")),
+) -> WebhookTestOut:
+    """GAH-207: records the event ``webhook_subscription.test`` and queues one delivery to this
+    subscription only (signed like every delivery, sent by the minute job). The event type is
+    not in the subscription catalogue, so other subscriptions only receive it with ``*``."""
+    async with tenant_tx(request, principal) as session:
+        hook = await session.get(WebhookSubscription, hook_id)
+        if hook is None:
+            raise _not_found()
+        event = await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="webhook_subscription.test",
+            entity_type="webhook_subscription",
+            entity_id=hook.id,
+            actor_user_id=principal.user_id,
+            payload={"test": True},
+        )
+        await session.flush()
+        delivery = WebhookDelivery(
+            tenant_id=principal.tenant_id,
+            subscription_id=hook.id,
+            event_id=event.id,
+            status=DeliveryStatus.PENDING,
+            next_attempt_at=datetime.now(UTC),
+        )
+        session.add(delivery)
+        await session.flush()
+        return WebhookTestOut(delivery_id=delivery.id, event_id=event.id)
+
+
+@tenant_router.get(
+    "/webhook-settings",
+    summary="Webhook-Einstellungen des Mandanten",
+    dependencies=[Depends(strict_query)],
+)
+async def get_webhook_settings(
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:read")),
+) -> WebhookSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings))
+        if row is None:
+            return WebhookSettingsOut()
+        return WebhookSettingsOut(
+            auto_disable_after=row.webhook_auto_disable_after,
+            objektakte_require_timestamp=row.objektakte_webhook_require_timestamp,
+        )
+
+
+@tenant_router.put("/webhook-settings", summary="Webhook-Einstellungen setzen")
+async def put_webhook_settings(
+    body: WebhookSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> WebhookSettingsOut:
+    """GAH-206 (AI07-02): ``auto_disable_after`` NULL = only notify (default). GAH-202
+    (AI07-01): ``objektakte_require_timestamp`` false = deliveries without timestamp header
+    keep the old behaviour (default)."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        before = {
+            "auto_disable_after": row.webhook_auto_disable_after,
+            "objektakte_require_timestamp": row.objektakte_webhook_require_timestamp,
+        }
+        if "auto_disable_after" in body.model_fields_set:
+            row.webhook_auto_disable_after = body.auto_disable_after
+        if body.objektakte_require_timestamp is not None:
+            row.objektakte_webhook_require_timestamp = body.objektakte_require_timestamp
+        after = {
+            "auto_disable_after": row.webhook_auto_disable_after,
+            "objektakte_require_timestamp": row.objektakte_webhook_require_timestamp,
+        }
+        changes = diff(before, after)
+        if changes:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="webhook_settings.updated",
+                entity_type="tenant_settings",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                changes=changes,
+            )
+        return WebhookSettingsOut(**after)
 
 
 @tenant_router.delete("/webhooks/{hook_id}", status_code=204, summary="Webhook löschen")

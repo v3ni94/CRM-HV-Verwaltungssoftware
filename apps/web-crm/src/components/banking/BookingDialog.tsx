@@ -177,7 +177,8 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
   const restAsCredit = restCents > 0 && !counterAccountId && settlements.length > 0 && settledAccounts.size === 1;
   const restNeedsContra = restCents > 0 && !counterAccountId && !restAsCredit;
   const transferNeedsPartner = isTransfer && !counterAccountId;
-  const canBook = !busy && !loading && !overAllocated && !unreadableAmount && !invalidAmount && !restNeedsContra && !transferNeedsPartner;
+  const periodLocked = proposals?.object_period_lock?.locked === true;
+  const canBook = !periodLocked && !busy && !loading && !overAllocated && !unreadableAmount && !invalidAmount && !restNeedsContra && !transferNeedsPartner;
 
   const applySplits = (splits: Split[] | undefined) => {
     setSettlements((splits ?? []).map((s) => ({ open_item_id: s.open_item_id, amount: s.amount })));
@@ -469,6 +470,11 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
           </div>
         </section>
         <div className="mt-4 flex flex-col gap-2">
+          {periodLocked ? (
+            <p role="alert" className={ui.error} data-testid="period-lock-hint">
+              {t("periodLocked", { code: proposals?.object_period_lock?.code ?? "MHVP-ACC-0030" })}
+            </p>
+          ) : null}
           {confirming ? (
             <div className={ui.notice} data-testid="confirm-box">
               <p>{t("confirmText", { amount: formatEur(tx.amount) })}</p>

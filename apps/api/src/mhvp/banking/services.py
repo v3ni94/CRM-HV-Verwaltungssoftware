@@ -303,14 +303,21 @@ async def reconcile(session: AsyncSession, bank_account_id: uuid.UUID) -> list[d
         await session.scalars(
             select(BankStatement)
             .where(BankStatement.property_bank_account_id == bank_account_id)
-            .order_by(BankStatement.closing_date.nulls_last(), BankStatement.created_at)
+            .order_by(
+                func.coalesce(BankStatement.closing_date, BankStatement.to_date).nulls_last(),
+                BankStatement.from_date.nulls_last(),
+                BankStatement.created_at,
+            )
         )
     ).all()
     ledger_account = await session.scalar(
         select(LedgerAccount).where(LedgerAccount.property_bank_account_id == bank_account_id)
     )
     out = []
+    prev: BankStatement | None = None
     for st in statements:
+        chain = _chain_check(prev, st)
+        prev = st
         moved = Decimal(
             await session.scalar(
                 select(func.coalesce(func.sum(BankTransaction.amount), 0)).where(
@@ -351,6 +358,52 @@ async def reconcile(session: AsyncSession, bank_account_id: uuid.UUID) -> list[d
                 "statement_difference": difference,
                 "ledger_balance": ledger_balance,
                 "ledger_difference": ledger_difference,
+                "from_date": st.from_date,
+                "to_date": st.to_date,
+                "status": _statement_status(difference, ledger_difference),
+                **chain,
             }
         )
     return out
+
+
+def _statement_status(difference: Decimal | None, ledger_difference: Decimal | None) -> str:
+    """GAH-102: visible status instead of silent nulls (CSV statements carry no balances)."""
+    if difference is None:
+        return "not_checkable"
+    if difference != 0 or (ledger_difference is not None and ledger_difference != 0):
+        return "difference"
+    return "ok"
+
+
+def _chain_check(prev: BankStatement | None, st: BankStatement) -> dict[str, Any]:
+    """GAH-102 (B09): closing balance of statement n equals opening balance of statement n+1,
+    and the statement periods follow each other without gap or overlap. Read only; a break
+    is a finding to clear, never corrected here."""
+    result: dict[str, Any] = {
+        "chain_status": "first",
+        "chain_difference": None,
+        "period_status": "first",
+        "gap_from": None,
+        "gap_to": None,
+    }
+    if prev is None:
+        return result
+    if prev.closing_balance is None or st.opening_balance is None:
+        result["chain_status"] = "not_checkable"
+    else:
+        diff = st.opening_balance - prev.closing_balance
+        result["chain_difference"] = diff
+        result["chain_status"] = "ok" if diff == 0 else "break"
+    prev_end = prev.to_date or prev.closing_date
+    if prev_end is None or st.from_date is None:
+        result["period_status"] = "not_checkable"
+    elif st.from_date > prev_end + timedelta(days=1):
+        result["period_status"] = "gap"
+        result["gap_from"] = prev_end + timedelta(days=1)
+        result["gap_to"] = st.from_date - timedelta(days=1)
+    elif st.from_date <= prev_end:
+        result["period_status"] = "overlap"
+    else:
+        result["period_status"] = "ok"
+    return result

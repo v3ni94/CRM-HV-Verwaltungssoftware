@@ -580,6 +580,13 @@ def test_section35a_markers_and_certificate_draft(
     assert len(cert["lines"]) == 1
     assert cert["lines"][0]["invoice_number"] == "R-TAX-1"
     assert "Steuerberater" in cert["notice"]
+    # AI18 (GAH-101): default basis unchanged, each line carries its payment state.
+    assert cert["basis"] == "invoice_date"
+    assert cert["lines"][0]["paid"] is False
+    assert cert["lines"][0]["paid_on"] is None
+    assert cert["unpaid_lines"] == 1
+    assert cert["previous"] == []
+    assert cert["repeat_notice"] is None
     _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
     pdf = client.get(f"{T}/section35a/certificate.pdf", params=params, headers=h)
     assert pdf.status_code == 200, pdf.text
@@ -587,6 +594,28 @@ def test_section35a_markers_and_certificate_draft(
     assert pdf.content.startswith(b"%PDF")
     stored = _ok(client.post(f"{T}/section35a/certificate/document", params=params, headers=h), 201)
     assert stored["contract_id"] == setup.contract
+    # PDF and filed document were both recorded; the second one already carried the notice.
+    assert stored["repeat_notice"] is not None
+    again = _ok(client.get(f"{T}/section35a/certificate", params=params, headers=read))
+    assert [p["output"] for p in again["previous"]] == ["pdf", "document"]
+    assert again["previous"][1]["document_id"] == stored["document_id"]
+    assert again["previous"][1]["labor_total"] == "100.00"
+    assert again["repeat_notice"] is not None
+    # Variant payment_date: the unpaid invoice drops out of the certificate.
+    bad = _settings_body(section_35a_enabled=True, section_35a_basis="cash")
+    assert client.put(f"{T}/settings", json=bad, headers=h).status_code == 422
+    _ok(
+        client.put(
+            f"{T}/settings",
+            json=_settings_body(section_35a_enabled=True, section_35a_basis="payment_date"),
+            headers=h,
+        )
+    )
+    by_payment = _ok(client.get(f"{T}/section35a/certificate", params=params, headers=read))
+    assert by_payment["basis"] == "payment_date"
+    assert by_payment["lines"] == []
+    assert by_payment["labor_total"] == "0.00"
+    _ok(client.put(f"{T}/settings", json=_settings_body(section_35a_enabled=True), headers=h))
     assert (
         client.get(f"{T}/section35a/certificate", params=params, headers=foreign).status_code == 404
     )

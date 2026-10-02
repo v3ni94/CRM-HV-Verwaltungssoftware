@@ -35,6 +35,7 @@ from mhvp.accounting import (
     xrechnung_credit,
 )
 from mhvp.accounting import services as svc
+from mhvp.accounting.chart_rules import account_range_problem
 from mhvp.accounting.models import (
     AccountCategory,
     AdminFeeSetting,
@@ -601,6 +602,11 @@ async def create_account(
 
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
+        range_problem = account_range_problem(
+            body.number, body.category, body.property_bank_account_id
+        )
+        if range_problem:
+            raise ProblemError(ErrorCodes.ACC_ACCOUNT_RANGE_CATEGORY, detail=range_problem)
         if body.property_bank_account_id:
             bank = await _get(session, PropertyBankAccount, body.property_bank_account_id)
             if bank.legal_entity_id != ledger.legal_entity_id:
@@ -4279,3 +4285,7 @@ router.include_router(year_carryover.router)
 from mhvp.accounting import zugferd  # noqa: E402
 
 router.include_router(zugferd.router)
+# AI03 (GAH-110, GAH-113): day count switch and Basiszinssatz hint of the default interest.
+from mhvp.accounting import dunning_interest_routers  # noqa: E402
+
+router.include_router(dunning_interest_routers.router)

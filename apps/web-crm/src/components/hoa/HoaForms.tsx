@@ -7,6 +7,7 @@ import { useState } from "react";
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { AgendaResultForm, MEETING_KINDS } from "@/components/hoa/MeetingDetailsForm";
 import { PlanDifferences } from "@/components/hoa/PlanDifferences";
+import { StatementNewVersionDialog } from "@/components/hoa/StatementNewVersionDialog";
 import { SUBJECT_KINDS } from "@/components/settings/MajorityRulesAdmin";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
@@ -448,9 +449,7 @@ export function HoaSteps({
           </button>
         ) : null}
         {target === "statement" && status !== "draft" ? (
-          <button type="button" className={ui.button} onClick={() => call(`${base}/new-version`)} disabled={busy}>
-            {t("newVersion")}
-          </button>
+          <StatementNewVersionDialog statementId={id} legalEntityId={legalEntityId} disabled={busy} />
         ) : null}
       </div>
       <ErrorLine error={error} />

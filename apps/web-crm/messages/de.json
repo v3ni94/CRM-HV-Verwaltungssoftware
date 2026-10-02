@@ -1,4 +1,24 @@
 {
+  "HoaNewVersion": {
+    "open": "Neue Version",
+    "title": "Neue Version der Jahresabrechnung",
+    "reason": "Korrekturgrund",
+    "reasonNone": "Ohne Angabe",
+    "reasons": {
+      "resolution_changed": "Beschluss geändert",
+      "court_invalid": "Gerichtlich für ungültig erklärt",
+      "calculation_error": "Rechenfehler",
+      "other": "Sonstiger Grund"
+    },
+    "basis": "Grundlage (Beschreibung)",
+    "resolution": "Korrekturbeschluss",
+    "resolutionNone": "Kein Korrekturbeschluss",
+    "resolutionHint": "Nur Beschlüsse derselben GdWE. Die Mehrheitsprüfung ist ein Anzeigevermerk und ändert keinen Status.",
+    "submit": "Neue Version anlegen",
+    "cancel": "Abbrechen",
+    "created": "Version {version} angelegt.",
+    "loadFailed": "Beschlüsse konnten nicht geladen werden."
+  },
   "Metadata": {
     "title": "MH Verwaltungsplattform · Verwaltung",
     "description": "Verwaltungsoberfläche der MH Verwaltungsplattform"
@@ -1690,6 +1710,30 @@
     "entriesTitle": "Eigene Fristen"
   },
   "Accounting": {
+    "approvalHistory": {
+      "title": "Freigabeverlauf",
+      "show": "Freigabeverlauf anzeigen",
+      "hide": "Freigabeverlauf ausblenden",
+      "loading": "Freigabeverlauf wird geladen.",
+      "empty": "Noch keine Freigabeentscheidung erfasst.",
+      "step": "Schritt",
+      "decidedAt": "Entschieden am",
+      "status": "Status",
+      "hash": "Prüfsumme",
+      "steps": {
+        "approval": "Zahlungsfreigabe",
+        "release": "Rechnungsfreigabe",
+        "second_approval": "Zweite Freigabe"
+      },
+      "statuses": {
+        "valid": "gültig",
+        "invalidated": "entwertet"
+      },
+      "invalidated": "Entwertet am {at}: {reason}",
+      "noReason": "ohne Angabe eines Grundes",
+      "personWarning": "Personenhinweis: {text}",
+      "note": "Eine Freigabe gilt nur für den geprüften Stand. Ändert sich der Vorgang, wird sie entwertet und muss neu erteilt werden."
+    },
     "title": "Buchhaltung",
     "parallelNotice": "Parallelbetrieb: Führend ist weiterhin Immoware24. Buchungen in der Plattform sind nicht die führende Buchhaltung, solange die Freigabestufe G1 nicht erteilt ist.",
     "ruleCheckpointsManage": {
@@ -1753,6 +1797,8 @@
         "expectedOutflows": "Erwartete Auszahlungen",
         "projectedFreeFunds": "Projizierte freie Mittel",
         "horizon": "Stichtag {asOf}, Vorschauhorizont bis {horizon}",
+        "xlsx": "Als Excel herunterladen",
+        "numberConvention": "Rücklage nur nach Kontonummer 001201 erkannt, Bankkonto nicht verknüpft",
         "kind": "Art",
         "kinds": {
           "free": "frei",
@@ -2254,6 +2300,23 @@
   "Bank": {
     "automationSwitch": {"title": "Automatikschalter", "help": "Das Einschalten der Automatik setzt die offene Freigabestufe G1 voraus und braucht einen Antrag mit Grund sowie die Freigabe durch eine zweite Person. Ausschalten ist jederzeit sofort möglich. Der Lauf prüft Stufen, Regeln und Gate weiterhin selbst.", "on": "Automatik eingeschaltet", "off": "Automatik ausgeschaltet", "g1Open": "G1 offen", "g1Closed": "G1 geschlossen", "reason": "Grund des Antrags", "request": "Einschalten beantragen", "requested": "Antrag gestellt. Die Freigabe erteilt eine zweite Person.", "switchOff": "Sofort ausschalten", "offReason": "Grund für das Ausschalten", "switchedOff": "Die Automatik ist ausgeschaltet.", "approve": "Freigeben", "reject": "Ablehnen", "approved": "Antrag freigegeben, die Automatik ist eingeschaltet.", "rejected": "Antrag abgelehnt.", "blockedG1": "Gesperrt, solange die Freigabestufe G1 geschlossen ist.", "alreadyOn": "Die Automatik ist eingeschaltet.", "pendingOrNoRight": "Ein Antrag ist offen oder das Recht zum Beantragen fehlt.", "status": {"requested": "Beantragt", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "target": {"main": "Hauptschalter", "outgoing": "Ausgangsautomatik"}, "outgoing": {"title": "Ausgangsautomatik", "help": "Automatische Buchung ausgehender Zahlungen. Einschalten nur über einen Antrag mit Freigabe durch eine zweite Person bei offener Freigabestufe G1, wirksam nur bei eingeschaltetem Hauptschalter. Ausschalten ist sofort möglich.", "on": "Ausgangsautomatik eingeschaltet", "off": "Ausgangsautomatik ausgeschaltet", "request": "Ausgangsautomatik beantragen", "switchOff": "Ausgangsautomatik sofort ausschalten", "switchedOff": "Die Ausgangsautomatik ist ausgeschaltet."}, "comparison": {"title": "Vergleichslauf Automatik gegen manuelle Buchung", "help": "Bericht aus dem Entscheidungsspeicher: je abgeschlossener Entscheidung, ob der beste Vorschlag der Automatik der manuellen Buchung entspricht. Der Bericht bucht nichts und ist kein Sicherheitsnachweis.", "summary": "Verglichene Buchungen: {compared}, Übereinstimmungsquote: {rate}", "noRate": "keine Daten", "caseKind": "Fallklasse", "total": "Gesamt", "outcome": {"match": "Übereinstimmung", "other_proposal": "Anderer Vorschlag", "modified": "Geändert gebucht", "no_proposal": "Ohne Vorschlag", "rejected": "Abgelehnt", "auto_posted": "Automatisch gebucht", "reversed": "Storniert"}}},
     "title": "Bank",
+    "kpi": {
+      "title": "Automatik-Kennzahlen",
+      "description": "Abdeckung und Fehlerquote der Bankautomatik sowie Vergleich der Vorschläge mit den manuellen Buchungen. Reine Berichte, es wird nichts gebucht.",
+      "backToBank": "Zurück zur Bank",
+      "comparisonTitle": "Vergleich Automatik gegen manuelle Buchung",
+      "comparisonIntro": "Je abgeschlossener Entscheidung: entspricht der beste Vorschlag der Automatik der manuellen Buchung?",
+      "from": "Von",
+      "to": "Bis",
+      "loading": "Vergleich wird geladen.",
+      "summary": "Verglichene Buchungen: {compared}, Übereinstimmungsquote: {rate}",
+      "noRate": "keine Basis",
+      "caseKind": "Fallklasse",
+      "total": "Gesamt",
+      "lastDecision": "Jüngste Entscheidung im Zeitraum: {date}",
+      "note": "Der Bericht bucht nichts und ist kein Sicherheitsnachweis. Die Automatisierungsquote ist eine Betriebskennzahl und keine Freigabe.",
+      "outcome": {"match": "Übereinstimmung", "other_proposal": "Anderer Vorschlag", "modified": "Geändert gebucht", "no_proposal": "Ohne Vorschlag", "rejected": "Abgelehnt", "auto_posted": "Automatisch gebucht", "reversed": "Storniert"}
+    },
     "metrics": {
       "title": "Kennzahlen Bankabgleich",
       "intro": "Abdeckungsgrad und Fehlerquote der Automatik getrennt, je Zeitraum, aus vorhandenen Daten.",
@@ -2287,6 +2350,7 @@
     "noCandidates": "Kein passender offener Posten.",
     "unambiguous": "eindeutig",
     "openItemLink": "Offener Posten",
+    "periodLocked": "Der Objektzeitraum ist gesperrt ({code}). Buchen ist nicht möglich.",
     "contractLink": "Vertrag",
     "sourceRule": "Regel",
     "sourceMatch": "Abgleich",
@@ -2420,6 +2484,7 @@
       "unconfirmed": "unbestätigt"
     },
     "dialog": {
+      "periodLocked": "Der Objektzeitraum ist gesperrt ({code}). Dieser Umsatz kann nicht gebucht werden, bis die Sperre aufgehoben ist.",
       "title": "Umsatz buchen",
       "close": "Schließen",
       "loading": "Vorschläge, Konten und offene Posten werden geladen.",
@@ -2469,6 +2534,7 @@
       "confirmText": "Buchung über {amount}. Nach der Buchung ist der Satz unveränderlich; Korrektur nur durch Storno und Neubuchung (B03)."
     },
     "bulk": {
+      "periodLocked": "Objektzeitraum gesperrt (MHVP-ACC-0030), nicht gebucht",
       "title": "Massenbestätigung",
       "intro": "Nur deterministisch geprüfte Vorschläge (eindeutiger Vollausgleich oder Treffer einer freigegebenen Regel) werden vorbereitet. Jeder Umsatz wird ganz oder gar nicht gebucht.",
       "loading": "Vorschläge werden geladen und die Vorschau berechnet.",
@@ -2541,6 +2607,14 @@
       "statementDifference": "Differenz Auszug",
       "ledgerBalance": "Saldo Sachkonto",
       "ledgerDifference": "Differenz Sachkonto",
+      "chain": "Kette zum Vorauszug",
+      "chainOk": "Anfangssaldo passt",
+      "chainBreak": "Kettenbruch {amount}",
+      "chainNotCheckable": "Kette nicht prüfbar (Salden fehlen)",
+      "periodGap": "Lücke {from} bis {to}",
+      "periodOverlap": "Zeitraum überschneidet sich",
+      "chainFindings": "{count, plural, one {# Auszug mit Kettenbruch oder Zeitraumlücke.} other {# Auszüge mit Kettenbruch oder Zeitraumlücke.}}",
+      "notCheckable": "{count, plural, one {# Auszug ohne Salden, nicht prüfbar (z. B. CSV).} other {# Auszüge ohne Salden, nicht prüfbar (z. B. CSV).}}",
       "na": "nicht ermittelbar",
       "note": "Eine Differenz ist ein Befund zur Klärung; sie wird hier nicht korrigiert. Ohne Sachkonto oder Salden im Auszug bleibt die Spalte leer."
     },
@@ -2603,6 +2677,7 @@
       "gated": "Nur Anzeige. Eingeschaltet wird nur über einen Antrag mit Freigabe durch eine zweite Person bei offener Freigabestufe G1. Der Automatiklauf bucht nur Fallklassen auf Stufe L2 oder L3 (Einstellungen, Buchhaltung, Automatikstufen) unter einer aktiven Regel mit deterministischer Prüfung und Nachkontrolle; vor G1 nur im nicht führenden Buchungskreis (ADR 0014, Betreiberentscheidung vom 28.09.2026).",
       "outgoingOn": "Ausgangsautomatik eingeschaltet", "outgoingOff": "Ausgangsautomatik ausgeschaltet (Standard)", "requestPath": "Antrag, Freigabe und sofortiges Ausschalten:", "requestLink": "Automatikschalter"
     },
+    "kpiLink": "Automatik-Kennzahlen",
     "reviewLink": "Nachkontrolle",
     "levelsLink": "Automatikstufen",
     "levels": {
@@ -4502,12 +4577,14 @@
     },
     "none": "Keiner",
     "notifyTitle": "Titel (Platzhalter in geschweiften Klammern erlaubt, zum Beispiel Ticketnummer oder Tickettitel)",
+    "notifyTitlePlaceholder": "Ticket {number}: {title}",
     "notifyBody": "Text",
     "roles": "Rollen",
     "users": "Benutzer",
     "template": "Ticketvorlage",
     "noTemplates": "Keine Vorlage vorhanden",
     "ticketTitle": "Titel (leer = Titel der Vorlage)",
+    "ticketTitlePlaceholder": "Folgeauftrag zu {title}",
     "fromTemplate": "aus Vorlage",
     "copyFromEvent": {
       "property_id": "Objekt aus Ereignis übernehmen",
@@ -4572,6 +4649,7 @@
       "schedule": "Zeitplan"
     },
     "customEvent": "Anderer Ereignistyp",
+    "unknownEventWarning": "Dieser Ereignistyp wird im System nicht ausgelöst. Die Regel würde nie feuern. Bitte Schreibweise prüfen.",
     "eventTypeCode": "Ereignistyp (Code)",
     "events": {
       "ticket_created": "Ticket angelegt",
@@ -6438,6 +6516,7 @@
       "reconciliation": "Bankabstimmung",
       "rules": "Bankregeln",
       "review": "Nachkontrolle",
+      "kpi": "Automatik-Kennzahlen",
       "merge": "Zusammenführung",
       "reserves": "Rücklagen",
       "rentIndex": "Mietspiegel",
@@ -10805,6 +10884,17 @@
     }
   },
   "Webhooks": {
+    "ai07": {
+      "test": "Testzustellung",
+      "testQueued": "Testzustellung eingeplant, sie erscheint im Protokoll.",
+      "edit": "Bearbeiten",
+      "editUrl": "Ziel-URL",
+      "editDescription": "Beschreibung (leer lassen zum Entfernen)",
+      "rotate": "Schlüssel erneuern",
+      "rotateConfirm": "Neuen Signaturschlüssel erzeugen? Der bisherige Schlüssel ist sofort ungültig.",
+      "failures": "{count} Zustellungen in Folge endgültig fehlgeschlagen, zuletzt {at}.",
+      "autoDisabled": "Nach {count} fehlgeschlagenen Zustellungen in Folge automatisch deaktiviert."
+    },
     "card": {
       "title": "Webhooks",
       "description": "Ausgehende Ereignismeldungen an Fremdsysteme: Abonnements, Zustellprotokoll, Neuzustellung."
@@ -10871,7 +10961,7 @@
       "redelivered": "Neuzustellung eingeplant.",
       "loadError": "Das Zustellprotokoll konnte nicht geladen werden."
     },
-    "testDelivery": "Eine Testzustellung bietet die Schnittstelle nicht. Beim Anlegen entsteht das Ereignis webhook_subscription.created, das an bestehende Abonnements zugestellt wird und sich im Protokoll prüfen lässt."
+    "testDelivery": "Eine Testzustellung plant ein Ereignis webhook_subscription.test nur für dieses Abonnement ein; das Ergebnis steht im Protokoll. Schlägt eine Zustellung endgültig fehl, erhalten Berechtigte eine Benachrichtigung."
   },
   "ContractForm": {
     "notesSection": {
@@ -12041,6 +12131,7 @@
     }
   },
   "Common": {
+    "breadcrumbNav": "Brotkrümelnavigation",
     "links": {
       "title": "Verknüpfungen",
       "contact": "Kontakt",
@@ -15429,7 +15520,12 @@
     "baseRateInput": "Basiszinssatz in Prozent",
     "source": "Quelle",
     "add": "Satz erfassen",
-    "added": "Basiszinssatz erfasst."
+    "added": "Basiszinssatz erfasst.",
+    "dayCount": "Zinstagemethode (Mandantenschalter, Entscheidung offen AI03-01): {label}",
+    "staleTitle": "Basiszinssatz prüfen",
+    "seedCheckpoints": "Prüfpunkte 01.01. und 01.07. anlegen",
+    "seeded": "{count} Prüfpunkte im Fristenregister angelegt.",
+    "nextChange": "Nächste Änderungstermine: {dates}"
   },
   "DirectDebitFeedback": {
     "selectAll": "Alle Lastschriften auswählen",
@@ -16754,6 +16850,14 @@
         "title": "Objektübernahme, Schwelle für Vorschläge in Prozent",
         "description": "Zwischen dieser Schwelle und der Zuordnungsschwelle wird ein Treffer nur vorgeschlagen, darunter entsteht ein unvollständiger neuer Kontakt. Standard 60 Prozent."
       },
+      "webhook-auto-disable": {
+        "title": "Webhooks nach Fehlschlägen in Folge deaktivieren",
+        "description": "0 bedeutet nur benachrichtigen, nie deaktivieren (Standard). Ein Wert ab 1 deaktiviert ein Abonnement, sobald so viele Zustellungen in Folge endgültig fehlgeschlagen sind."
+      },
+      "objektakte-webhook-timestamp": {
+        "title": "Objektakte-Webhook nur mit Zeitstempel annehmen",
+        "description": "Eingeschaltet lehnt der Webhook Aufrufe ohne Kopfzeile X-MHVP-Timestamp ab. Ausgeschaltet (Standard) gilt für ältere Aufrufer die bisherige Signatur über den Inhalt."
+      },
       "invoice-intake-auto": {
         "title": "Belegerfassung nach Ablage einer Rechnung",
         "description": "Eingeschaltet startet die Bestätigung eines Eingangsvorschlags, der als Rechnung erkannt wurde, die Rechnungsauslesung als Vorschlag im Belegeingang. Nichts wird gebucht, freigegeben oder bezahlt. Ausgeschaltet bietet der Hinweis die Schaltfläche Beleg erfassen."
@@ -16765,6 +16869,14 @@
       "subledger-exclude-written-off": {
         "title": "Nebenbuchprüfung blendet ausgebuchte Posten aus",
         "description": "Ausgebuchte Posten und Posten stornierter Buchungen erscheinen nicht in der Differenz der Nebenbuchprüfung und werden getrennt gezählt. Der Export nebenbuchabgleich.csv nennt den Grund."
+      },
+      "tax-35a-basis": {
+        "title": "Ausweis haushaltsnaher Leistungen, Auswahl der Rechnungen",
+        "description": "Rechnungsdatum im Jahr (bisheriges Verhalten) oder nur bezahlte Rechnungen mit Zahlungsdatum im Jahr. Jede Zeile zeigt den Zahlungsstand, ein zweiter Ausweis desselben Jahres erhält einen Hinweis. Die steuerliche Festlegung bleibt offen."
+      },
+      "deposit-limit-hint": {
+        "title": "Prüfhinweis zur Kautionshöhe und Ratenzahl",
+        "description": "Bei Wohnraum erscheint ein nicht sperrender Hinweis, wenn die Kaution über dem eingestellten Vielfachen der Miete ohne Nebenkosten (Standard 3) oder die Ratenzahl über dem Vergleichswert (Standard 3) liegt. Keine rechtliche Bewertung."
       },
       "period-lock-mode": {
         "title": "Periodensperre: Umfang",
@@ -16791,6 +16903,10 @@
         "title": "Steuerabzug auf Habenzinsen",
         "description": "Kapitalertragsteuer, Solidaritätszuschlag und Kirchensteuer je Zinsbuchung als Beträge laut Bankbeleg. Die Steuerkonten legen Sie je Buchungskreis fest, es entsteht nur ein Buchungsentwurf.",
         "defaultText": "Keine Steuerkonten, Abzüge 0,00 EUR"
+      },
+      "dunning-day-count": {
+        "title": "Verzugszins: Zinstagemethode",
+        "description": "Ob die Zinstage durch 365 (fest, auch im Schaltjahr) oder durch die tatsächlichen Jahrestage (365 oder 366) geteilt werden. Die Methode steht in jedem Zinsergebnis. Welche Methode gilt, klärt Ihre Rechtsberatung."
       },
       "rule-checkpoints": {
         "title": "Prüfpunkte für Fristen der Heizkostenverordnung",
@@ -16974,6 +17090,10 @@
         "title": "Zweiter Faktor im Portal",
         "description": "Ob Portalnutzer einen zweiten Faktor einrichten müssen. Aus bedeutet: freiwillig."
       },
+      "mfa-admin-reset": {
+        "title": "Zweiten Faktor zurücksetzen (Vier-Augen)",
+        "description": "Ob Administratoren den verlorenen zweiten Faktor eines Benutzers per Antrag und Freigabe durch eine zweite Person zurücksetzen dürfen. Aus bedeutet: nicht möglich."
+      },
       "access-export-third-party": {
         "title": "Auskunftsexport: andere Personen",
         "description": "Wie andere Personen in einem Auskunftsexport erscheinen. Die Wahl gilt für danach vorbereitete Exporte, ein vorbereiteter Export behält seinen Umfang."
@@ -17017,6 +17137,10 @@
         "regular_numbers": "Reguläre Rechnungsnummer MR auch im Entwurf",
         "reject_when_g1_closed": "Ausgabe bei geschlossenem G1 ablehnen"
       },
+      "tax-35a-basis": {
+        "invoice_date": "Nach Rechnungsdatum",
+        "payment_date": "Nur bezahlte Rechnungen nach Zahlungsdatum"
+      },
       "period-lock-mode": {
         "ledger_only": "Nur Sperre des Buchungskreises",
         "object_period": "Sperre je Objekt und Zeitraum"
@@ -17025,6 +17149,10 @@
         "info_only": "Nur Information, Saldo gegen gezahlte Vorauszahlungen",
         "offset_reversal": "Offene Posten per Storno gegen die Abrechnung verrechnen",
         "balance_against_due": "Saldo gegen fällige Vorauszahlungen"
+      },
+      "dunning-day-count": {
+        "act_365_fixed": "Tage durch 365 (fest)",
+        "act_act": "Tage durch tatsächliche Jahrestage"
       },
       "deadline-policy": {
         "block_claims": "Nachforderungen sperren",

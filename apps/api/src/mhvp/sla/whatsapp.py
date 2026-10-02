@@ -179,14 +179,55 @@ def verify_webhook_signature(app_secret: str, body: bytes, signature_header: str
     return hmac.compare_digest(expected, signature_header.removeprefix("sha256="))
 
 
+# GAH-212: known Cloud API status values and their order. A status is only applied when it
+# moves forward (read stays read); ``failed`` is terminal and only follows ``sent``.
+STATUS_RANK: dict[str, int] = {"sent": 1, "delivered": 2, "read": 3}
+FAILED_STATUS = "failed"
+KNOWN_STATUSES = frozenset({*STATUS_RANK, FAILED_STATUS})
+# Replay window of a status update (product protection, not a legal rule): Meta retries a
+# webhook for up to seven days, so older status timestamps and timestamps more than five
+# minutes in the future are ignored.
+REPLAY_WINDOW_SECONDS = 7 * 24 * 3600
+FUTURE_SKEW_SECONDS = 300
+
+
+def status_timestamp_ok(raw: object, *, now: float) -> bool:
+    """True when the status timestamp (unix seconds, string or int) lies in the window.
+
+    A missing timestamp is accepted (older payloads); an unparsable one is not.
+    """
+    if raw is None:
+        return True
+    try:
+        ts = int(str(raw).strip())
+    except ValueError:
+        return False
+    return now - REPLAY_WINDOW_SECONDS <= ts <= now + FUTURE_SKEW_SECONDS
+
+
+def status_transition_allowed(current: str | None, new: str) -> bool:
+    if new not in KNOWN_STATUSES:
+        return False
+    if current == FAILED_STATUS:
+        return False
+    current_rank = STATUS_RANK.get(current or "", 0)
+    if new == FAILED_STATUS:
+        return current_rank <= STATUS_RANK["sent"]
+    return STATUS_RANK[new] > current_rank
+
+
 async def apply_status_update(
     session: AsyncSession, wa_message_id: str, status: str
 ) -> WhatsAppDelivery | None:
-    """Updates the delivery row's status from a Cloud API status webhook payload."""
+    """Updates the delivery row's status from a Cloud API status webhook payload.
+
+    Unknown values and backward steps (late ``delivered`` after ``read``) leave the row
+    unchanged; the row is still returned so the caller knows the message was found.
+    """
     delivery = await session.scalar(
         select(WhatsAppDelivery).where(WhatsAppDelivery.wa_message_id == wa_message_id)
     )
-    if delivery is not None:
+    if delivery is not None and status_transition_allowed(delivery.status, status):
         delivery.status = status
         delivery.updated_at = datetime.now(UTC)
     return delivery

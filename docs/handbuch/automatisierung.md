@@ -151,3 +151,7 @@ Die Aktion "Feld setzen (Auftrag, Dokument)" wirkt auf das Objekt des auslösend
 ### Regelvorlagen übernehmen
 
 Unter Einstellungen, Automatisierung zeigt die Schaltfläche "Regelvorlagen" (nur mit Recht zur Pflege von Regeln) die mitgelieferten Beispiele, zum Beispiel "Dringendes Ticket melden". "Übernehmen" legt daraus eine neue Regel an. Die Regel ist immer inaktiv: sie löst erst etwas aus, wenn Sie sie prüfen, im Testlauf ansehen und selbst aktivieren. Existiert bereits eine Regel mit demselben Namen, meldet das System einen Konflikt, die vorhandene Regel bleibt unverändert.
+
+## Ereigniskatalog
+
+Beim Auslöser "Anderer Ereignistyp" schlägt die Maske alle im System ausgelösten Ereignistypen vor (Katalog aus `GET /automation/event-types`). Ein Typ, der nicht im Katalog steht, wird mit einem Hinweis markiert: Die Regel würde nie feuern, meist liegt ein Tippfehler vor. Die Eingabe bleibt möglich.

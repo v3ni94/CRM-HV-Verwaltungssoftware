@@ -158,6 +158,28 @@ def _draft_reply(
     ]
 
 
+def _reply_draft(
+    output: dict[str, Any], expected: dict[str, Any], case_input: dict[str, Any]
+) -> list[tuple[Any, Any]]:
+    """GAH-205: the own reply task (T12) through ``suggest.reply_task_payload``: answered and
+    style tone, used and unknown placeholders, open question count and the approval flag that
+    must stay false (only a draft)."""
+    from mhvp.communication.suggest import reply_task_payload
+
+    payload = reply_task_payload(output, case_input.get("style"), model=None)
+    if payload is None:
+        return [(None, expected.get("tone")), (False, expected["has_body"])]
+    return [
+        (True, expected["has_body"]),
+        (payload["tone"], expected["tone"]),
+        (payload["style_tone"], expected["style_tone"]),
+        (payload["placeholders"], expected["placeholders"]),
+        (payload["unknown_placeholders"], expected["unknown_placeholders"]),
+        (len(payload["open_questions"]), expected["open_question_count"]),
+        (payload["approved"], False),
+    ]
+
+
 def _map_columns(
     output: dict[str, Any], expected: dict[str, Any], case_input: dict[str, Any]
 ) -> list[tuple[Any, Any]]:
@@ -343,6 +365,7 @@ SCORERS: dict[AiTask, Scorer] = {
 INPUT_SCORERS: dict[AiTask, InputScorer] = {
     AiTask.CLASSIFY_EMAIL: _classify_email,
     AiTask.DRAFT_REPLY: _draft_reply,
+    AiTask.REPLY_DRAFT: _reply_draft,
     AiTask.MAP_COLUMNS: _map_columns,
     AiTask.CONTACT_MASTER_DATA_CHANGE: _contact_change,
     AiTask.PROPOSE_POSTING: _propose_posting,

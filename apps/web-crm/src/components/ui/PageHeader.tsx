@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export type Breadcrumb = { href?: string; label: string };
 
@@ -17,10 +18,11 @@ export function PageHeader({
   breadcrumb?: Breadcrumb[];
   action?: React.ReactNode;
 }) {
+  const t = useTranslations("Common");
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-3 pb-1">
       {breadcrumb && breadcrumb.length > 0 ? (
-        <nav aria-label="Breadcrumb" className="mhvp-caption flex flex-wrap items-center gap-1 text-subtle">
+        <nav aria-label={t("breadcrumbNav")} className="mhvp-caption flex flex-wrap items-center gap-1 text-subtle">
           {breadcrumb.map((crumb, index) => (
             <span key={`${crumb.label}-${index}`} className="flex items-center gap-1">
               {index > 0 ? <span aria-hidden>/</span> : null}

@@ -9,7 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-import { KINDS, ownersFor, type SetupKind } from "./BankSetupWizard";
+import { INLINE_KINDS, ownersFor, type InlineKind } from "./BankSetupWizard";
 import { DisconnectedToggle, isDisconnected, useShowDisconnected } from "./DisconnectedToggle";
 
 export type FinTsInstitute = {
@@ -620,7 +620,7 @@ export function FinTsCreateInternalForm({
   const [properties, setProperties] = useState<FinTsPropertyOption[]>([]);
   const [propertyId, setPropertyId] = useState("");
   const [entities, setEntities] = useState<FinTsEntityOption[]>([]);
-  const [kind, setKind] = useState<SetupKind>("hoa");
+  const [kind, setKind] = useState<InlineKind>("hoa");
   const [legalEntityId, setLegalEntityId] = useState("");
   const [holder, setHolder] = useState(defaultHolder);
   const [busy, setBusy] = useState(false);
@@ -684,8 +684,8 @@ export function FinTsCreateInternalForm({
       </label>
       <label className={ui.label}>
         {t("createKind")}
-        <select className={ui.input} value={kind} onChange={(e) => setKind(e.target.value as SetupKind)}>
-          {KINDS.map((k) => (
+        <select className={ui.input} value={kind} onChange={(e) => setKind(e.target.value as InlineKind)}>
+          {INLINE_KINDS.map((k) => (
             <option key={k} value={k}>{tk(k)}</option>
           ))}
         </select>

@@ -1,0 +1,3 @@
+# Known findings that are accepted for now (GAH-310). One advisory id per line (GHSA-..., CVE-...,
+# PYSEC-...), then " # reason, owner, review date TT.MM.JJJJ". Empty at the start.
+PYSEC-2026-4141 # pyjwt 2.14.0, Stand 02.10.2026 bei Einführung, Bewertung und Update durch Betreiber offen (AI12-02), Prüfung bis 16.10.2026

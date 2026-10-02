@@ -26,6 +26,8 @@ export type ManagedAccount = {
   eur_relevant?: boolean;
   ust_relevant?: boolean;
   mixed_use_review?: boolean;
+  /** GAH-105: hint from the API when an existing account breaks the bank range rule of 7.2. */
+  range_warning?: string | null;
 };
 
 const CATEGORIES = ["bank", "cash", "reserve", "loan", "technical", "revenue", "cost", "transit", "tax"] as const;
@@ -238,7 +240,14 @@ function EditRow({ ledgerId, account, canUpdate, canApprove }: { ledgerId: strin
           </p>
         ) : null}
       </td>
-      <td>{t(`accounts.categories.${account.category}`)}</td>
+      <td>
+        {t(`accounts.categories.${account.category}`)}
+        {account.range_warning ? (
+          <p className="text-xs text-warning-fg" data-testid="account-range-warning">
+            {account.range_warning}
+          </p>
+        ) : null}
+      </td>
       <td>
         <AllocationCell ledgerId={ledgerId} account={account} />
       </td>

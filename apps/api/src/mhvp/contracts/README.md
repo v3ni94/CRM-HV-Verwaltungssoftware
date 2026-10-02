@@ -182,3 +182,7 @@ for the collection after G2. New columns in migration 0265: `contract.custom_fie
 ## Settlement PDF preview (GAG-29)
 
 `GET /contracts/{id}/deposit-settlements/{settlement_id}/document-preview` (`contracts:read`) renders the stored settlement draft as PDF without filing, sending or posting (`Cache-Control: no-store`). CRM: `DepositSettlementPreviewButton` in `DepositPanel` (BFF allowlist entry). Tests: `tests/integration/test_ah18_deposit_settlement_preview.py` (read permission, 403 without role, foreign tenant 404, unknown or mismatching ids 404, 422).
+
+### Deposit hint (AI18, GAH-111)
+
+`DepositHintSetting` (default off) adds non blocking `limit_hints` to `DepositOut` for residential tenancies; `GET/PUT /deposit-hint-settings` with `tenant_settings` permissions. Rule AI18-02.

@@ -478,3 +478,29 @@ the dunning run, direct debit run, payment run and bank auto posting; it falls b
 legacy system (comparison postings stay, M10-05). Requests: `POST
 /accounting/ledgers/{id}/leading-switches`; decision by another person: `POST
 .../{switch_id}/decide` (G1 when the platform becomes leading). Rule AG02-01.
+
+## Liquidity report variant (wave 20, AI02, GAH-104)
+
+`GET /accounting/ledgers/{id}/reports/liquidity` returns the 90 day preview with the common
+`report_header` (legal entity, key date, data state, filter `horizon`, draft status) and runs the
+legal entity scope check. `liquidity` is part of `ReportName`, so `reports/xlsx?report=liquidity`
+exports it. Each account row carries `kind_basis` (`bank_account`, `number_convention` for the
+001201 fallback, `default`). The raw `GET /ledgers/{id}/liquidity` stays for compatibility.
+
+### § 35a basis switch (AI18, GAH-101)
+
+`AccountingTaxSettings.section_35a_basis` (`invoice_date` default, `payment_date`) selects the lines of `section35a_summary`; `invoice_payment_states` derives paid and payment date from the settlements of the invoice's open items. Every generated certificate is recorded in `section35a_certificate_log` (no lock, `repeat_notice` on repeats). Rule AI18-01.
+
+## Default interest day count and Basiszinssatz hint (AI03, rule AI03-01)
+
+`GET/PUT /accounting/dunning-interest` reads and sets the tenant switch
+`tenant_settings.sources.dunning_interest_day_count` (`act_365_fixed` default, `act_act`);
+every interest period carries `day_count`. The same GET reports `base_rate_stale` with a hint
+when no Basiszinssatz is maintained for the current half year; `POST
+/accounting/dunning-interest/base-rate-checkpoints` seeds draft check points for the next two
+change dates. Concurrency of payment approval, bank status, dunning approval and direct debit
+approval is covered by the `test_ai03_*` tests (GAH-112).
+
+## Nummernkreis Bank und Kasse (AI01, GAH-105)
+
+`POST /ledgers/{id}/accounts` weist Konten im Bereich 001200 bis 001999 mit anderer Kategorie als bank, cash, technical oder transit und Bankkontoverknüpfungen an anderen Kategorien als bank oder cash mit 422 `MHVP-ACC-0032` ab (`accounting/chart_rules.py`). Bestehende Konten tragen in der Kontenliste den Hinweis `range_warning`. Regel AI01-01.

@@ -37,6 +37,7 @@ from mhvp.core.listparams import (
     embed,
     list_params,
     strict_query,
+    valid_on,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
@@ -892,16 +893,27 @@ async def update_unit(
     dependencies=[Depends(strict_query)],
 )
 async def list_keys(
-    property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    property_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = Query(
+        default=None,
+        description="Stichtag: nur Schlüssel mit einem am Tag gültigen Einheitenwert",
+    ),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[s.AllocationKeyOut]:
     async with tenant_tx(request, principal) as session:
-        rows = (
-            await session.scalars(
-                select(AllocationKey)
-                .where(AllocationKey.property_id == property_id)
-                .order_by(AllocationKey.sort_order)
+        query = select(AllocationKey).where(AllocationKey.property_id == property_id)
+        if as_of is not None:
+            in_force = valid_on(
+                select(UnitAllocationValue.id).where(
+                    UnitAllocationValue.allocation_key_id == AllocationKey.id
+                ),
+                as_of,
+                UnitAllocationValue.valid_from,
+                UnitAllocationValue.valid_to,
             )
-        ).all()
+            query = query.where(in_force.exists())
+        rows = (await session.scalars(query.order_by(AllocationKey.sort_order))).all()
         return [s.AllocationKeyOut.model_validate(k) for k in rows]
 
 

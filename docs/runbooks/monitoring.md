@@ -276,3 +276,17 @@ Das Ziel 99,5 Prozent je Monat, die Messpunkte, die Monatsauswertung und die Ank
 Wartungsfenstern stehen in `verfuegbarkeit.md` (Befunde GB16-01 und GB16-02). Die Eigenmessung der
 Plattform (Minutenprüfung der Health Adressen, Abschnitt 4 dort) ersetzt Uptime Kuma nicht: Kuma
 bleibt die unabhängige zweite Quelle auf anderer Infrastruktur.
+
+## 10. Abweichung von Abschnitt 17 der Spezifikation (GAH-314)
+
+Abschnitt 17 des Master-Prompts nennt `infra/grafana/`, `infra/prometheus/`, `infra/loki/` und
+GlitchTip. Umgesetzt ist die Beobachtbarkeit nach ADR 0024 (OpenTelemetry-Collector in
+`infra/otel-collector.yaml`, Uptime Kuma, Beszel). Diese Verzeichnisse und GlitchTip existieren
+bewusst nicht. Abschnitt 17 und `docs/AGENT_RULES.md` bleiben unverändert, bis der Betreiber
+die Frage AI12-01 in `docs/OPEN_QUESTIONS.md` entschieden hat (Angleichung der Spezifikation
+an den ADR oder Nachrüstung einer Sentry-kompatiblen Fehlererfassung).
+
+Bis zur Entscheidung gilt: Fehler der API stehen als strukturierte Logs mit Korrelations-ID im
+Container-Log (`docker compose logs api worker`) und fließen über den Collector in die
+Auswertung. Eine eigene Fehleraggregation mit Gruppierung und Alarm je Fehlerklasse gibt es
+nicht; Ausfälle meldet Uptime Kuma (Abschnitt 1).

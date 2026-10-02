@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select, update
 
-from mhvp.core.auth import mfa_policy, passwords, service, tokens, webauthn
+from mhvp.core.auth import audit, mfa_policy, passwords, service, tokens, webauthn
 from mhvp.core.auth.permissions import SYSTEM_ROLES
 from mhvp.core.auth.principal import (
     Principal,
@@ -295,6 +295,20 @@ def _out(issued: service.IssuedTokens, *, device_token: str | None = None) -> To
     )
 
 
+async def _audit(
+    request: Request,
+    user_id: uuid.UUID,
+    type: str,
+    *,
+    tenant_id: uuid.UUID | None = None,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    """GAH-302: security event of the login flow (no passwords, codes or tokens)."""
+    await audit.record(
+        sessions(request), user_id=user_id, type=type, tenant_id=tenant_id, payload=payload
+    )
+
+
 def _ok_step(issued: service.IssuedTokens) -> LoginStep:
     out = _out(issued)
     return LoginStep(
@@ -355,6 +369,12 @@ async def login(body: LoginRequest, request: Request) -> LoginStep:
         # Password only and trusted device logins skip verify_totp, which otherwise records
         # the login (last_login_at feeds the portal account list, A86).
         await service.record_login(sessions(request), user_id)
+        await _audit(
+            request,
+            user_id,
+            audit.LOGIN_SUCCEEDED,
+            payload={"method": "trusted_device" if trusted else "password"},
+        )
         return _ok_step(issued)
     return LoginStep(
         status="mfa_required",
@@ -437,6 +457,13 @@ async def mfa_setup_confirm(body: AuthMfaSetupConfirmRequest, request: Request) 
             raw_token=device_token,
             user_agent=request.headers.get("user-agent"),
         )
+    await _audit(request, user_id, audit.TOTP_ENABLED)
+    await _audit(
+        request,
+        user_id,
+        audit.LOGIN_SUCCEEDED,
+        payload={"method": "totp_setup"},
+    )
     return _out(issued, device_token=device_token)
 
 
@@ -457,6 +484,7 @@ async def totp_confirm(
     if principal.user_id is None:
         raise ProblemError(ErrorCodes.FORBIDDEN)
     await service.enable_totp(sessions(request), principal.user_id, body.code)
+    await _audit(request, principal.user_id, audit.TOTP_ENABLED)
     return Response(status_code=204)
 
 
@@ -474,6 +502,7 @@ async def totp_disable(
     ) and await mfa_policy.user_requires_second_factor(sessions(request), principal.user_id):
         raise ProblemError(ErrorCodes.MFA_REQUIRED_BY_POLICY)
     await service.disable_totp(sessions(request), principal.user_id, body.current_password)
+    await _audit(request, principal.user_id, audit.TOTP_DISABLED)
     return Response(status_code=204)
 
 
@@ -501,6 +530,12 @@ async def mfa_verify(body: MfaVerifyRequest, request: Request) -> TokenResponse:
             raw_token=device_token,
             user_agent=request.headers.get("user-agent"),
         )
+    await _audit(
+        request,
+        user_id,
+        audit.LOGIN_SUCCEEDED,
+        payload={"method": "totp", "remember_device": bool(body.remember_device)},
+    )
     return _out(issued, device_token=device_token)
 
 
@@ -586,6 +621,7 @@ async def change_password(
             .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
             .values(revoked_at=datetime.now(UTC))
         )
+    await _audit(request, principal.user_id, audit.PASSWORD_CHANGED)
     return Response(status_code=204)
 
 
@@ -644,6 +680,9 @@ async def revoke_session(
         sessions(request), principal.user_id, family_id
     ):
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    await _audit(
+        request, principal.user_id, audit.SESSION_REVOKED, payload={"family_id": str(family_id)}
+    )
     return Response(status_code=204)
 
 
@@ -765,6 +804,12 @@ async def revoke_webauthn_credential(
             )
             .values(revoked_at=datetime.now(UTC))
         )
+    await _audit(
+        request,
+        principal.user_id,
+        audit.PASSKEY_REVOKED,
+        payload={"credential_id": str(credential_id)},
+    )
     return Response(status_code=204)
 
 
@@ -929,13 +974,20 @@ async def webauthn_register_verify(
         session.add(row)
         await session.flush()
         await session.refresh(row)
-        return AuthWebAuthnCredentialOut(
+        out = AuthWebAuthnCredentialOut(
             id=row.id,
             label=row.label,
             created_at=row.created_at,
             last_used_at=row.last_used_at,
             passwordless=row.passwordless,
         )
+    await _audit(
+        request,
+        principal.user_id,
+        audit.PASSKEY_REGISTERED,
+        payload={"credential_id": str(out.id), "passwordless": out.passwordless},
+    )
+    return out
 
 
 @router.post(
@@ -1051,6 +1103,12 @@ async def webauthn_login_verify(
             user.last_login_at = now
         user_id = user.id
     if failure is not None:
+        await _audit(
+            request,
+            user_id,
+            audit.LOGIN_FAILED,
+            payload={"factor": "passkey", "reason": "assertion_invalid"},
+        )
         raise failure
     if passwordless_user_id is not None:
         await _refuse_passwordless_for_portal(request, passwordless_user_id)
@@ -1071,6 +1129,12 @@ async def webauthn_login_verify(
             raw_token=device_token,
             user_agent=request.headers.get("user-agent"),
         )
+    await _audit(
+        request,
+        user_id,
+        audit.LOGIN_SUCCEEDED,
+        payload={"method": "passkey", "passwordless": passwordless_user_id is not None},
+    )
     return _out(issued, device_token=device_token)
 
 

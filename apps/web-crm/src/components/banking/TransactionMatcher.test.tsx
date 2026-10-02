@@ -116,4 +116,14 @@ describe("TransactionMatcher", () => {
     await userEvent.click(screen.getByText("Ignorieren"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("shows the object period lock and disables the book buttons (GAH-401)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({ ...proposals(), object_period_lock: { locked: true, code: "MHVP-ACC-0030" } }),
+    );
+    renderIntl(<TransactionMatcher txId={TX} amount="250.00" />);
+    await userEvent.click(screen.getByText("Vorschläge"));
+    expect(await screen.findByTestId("period-lock-hint")).toHaveTextContent("MHVP-ACC-0030");
+    for (const b of screen.getAllByRole("button", { name: "Zuordnen und buchen" })) expect(b).toBeDisabled();
+  });
 });

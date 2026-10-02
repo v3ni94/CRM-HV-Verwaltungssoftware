@@ -49,6 +49,8 @@ export type Proposals = {
   stage1: Proposal[];
   ai: AiProposal[];
   ai_stage: { enabled: boolean; blocked_reason: string | null };
+  /** Object period lock of the settled items (API field; locked bookings fail with MHVP-ACC-0030). */
+  object_period_lock?: { locked: boolean; code: string | null };
   note: string;
 };
 

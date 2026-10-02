@@ -198,3 +198,7 @@ Freigabe im Importassistenten von objektakte; die Antwort nennt den Link zur Pr�
 Liste ein zweites Mal ergibt keinen neuen Import (Pr체fsumme). Ereignis im CRM:
 `objektakte.persons_exported`. Einrichtung: Token in objektakte um `persons:write` erweitern (neues
 Token anlegen, altes sperren), Schalter `sync.crm_persons_enabled` einschalten.
+
+## Zeitstempel (AI07, GAH-202)
+
+Optional sendet Objektakte `X-MHVP-Timestamp: <Unix-Sekunden>`; dann ist `X-Objektakte-Signature` `sha256=` plus HMAC-SHA256 체ber `"<Zeitstempel>." + Inhalt`, g체ltig 300 Sekunden. Ohne Kopfzeile gilt die bisherige Signatur 체ber den Inhalt, solange der Mandantenschalter `objektakte_require_timestamp` aus ist (Frage AI07-01). Eine angek체ndigte L채nge 체ber 256 KiB wird ungelesen mit 413 abgelehnt.

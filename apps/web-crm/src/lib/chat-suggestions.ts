@@ -139,6 +139,7 @@ export const ROUTES: Rule[] = [
   { path: "/bank/regeln", area: "bank", subArea: "rules" },
   // Nachkontrolle automatischer Buchungen (Regel M12-05).
   { path: "/bank/nachkontrolle", area: "bank", subArea: "review" },
+  { path: "/bank/kennzahlen", area: "bank", subArea: "kpi" },
   { path: "/bank/zahllauf", area: "bank", subArea: "paymentRun" },
   { path: "/bank/verbindungen", area: "bank", subArea: "connections" },
   { path: "/bank", area: "bank" },

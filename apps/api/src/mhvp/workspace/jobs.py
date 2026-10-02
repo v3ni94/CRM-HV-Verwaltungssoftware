@@ -9,7 +9,6 @@ open operator decision (M1-09) and is neither computed nor claimed here.
 
 from __future__ import annotations
 
-import importlib
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
@@ -510,15 +509,10 @@ async def _read_work_order_appointments(
     return out
 
 
-def _has_attr(dotted: str, attr: str) -> bool:
-    module_name, _, class_name = dotted.rpartition(".")
-    module = importlib.import_module(module_name)
-    return hasattr(getattr(module, class_name), attr)
-
-
 def calendar_sources() -> list[SourceReader]:
-    """Registry of the source readers; fields added by parallel work packages join once the
-    model carries them (P1 plan AP1 to AP3, migrations 0147 to 0150)."""
+    """Fixed registry of all source readers (GAH-312). Every reader is registered
+    unconditionally; a renamed model field fails loudly in the reader and in the test
+    ``test_calendar_sources_complete`` instead of silently dropping a deadline source."""
     readers: list[SourceReader] = [
         _read_contracts,
         _read_meters,
@@ -529,11 +523,8 @@ def calendar_sources() -> list[SourceReader]:
         _read_maintenance,
         _read_energy_certificates,
     ]
-    # TODO(P1 merge): fields of parallel packages; the readers join once the model has them.
-    if _has_attr("mhvp.contacts.models.ContactNote", "follow_up_on"):
-        readers.append(_read_note_follow_ups)
-    if _has_attr("mhvp.tickets.models.Ticket", "due_on"):
-        readers.append(_read_ticket_due)
+    readers.append(_read_note_follow_ups)
+    readers.append(_read_ticket_due)
     readers.append(_read_work_order_appointments)
     readers.append(_read_deadline_entries)
     return readers

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { ApprovalHistory } from "@/components/accounting/ApprovalHistory";
 import { OrderActions } from "@/components/banking/OrderActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -88,6 +89,7 @@ export default async function PaymentOrdersPage() {
                 </td>
                 <td>
                   <OrderActions id={o.id} status={o.status} />
+                  <ApprovalHistory subjectType="payment_order" subjectId={o.id} />
                 </td>
               </tr>
             ))}

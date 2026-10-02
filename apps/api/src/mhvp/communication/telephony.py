@@ -28,7 +28,6 @@ is masked for users without ``contacts:read``.
 from __future__ import annotations
 
 import hashlib
-import hmac
 import logging
 import time
 import uuid
@@ -57,6 +56,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.contacts.models import Contact, ContactPhone
 from mhvp.contacts.validation import InvalidValueError, normalise_phone
+from mhvp.core import hmac_signature
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
@@ -188,20 +188,18 @@ class CallLog(IdMixin, TimestampMixin, TenantMixin, Base):
 
 def sign(secret: str, timestamp: int | str, body: bytes) -> str:
     """Signature value the telephone system must send (``docs/integrations/telefonie.md``)."""
-    digest = hmac.new(secret.encode(), f"{timestamp}.".encode() + body, hashlib.sha256)
-    return f"sha256={digest.hexdigest()}"
+    return f"sha256={hmac_signature.mac_hex(secret, timestamp, body)}"
 
 
 def verify(secret: str, timestamp: str | None, signature: str | None, body: bytes) -> bool:
-    if not timestamp or not signature or not signature.startswith("sha256="):
+    if not signature or not signature.startswith("sha256="):
         return False
-    try:
-        ts = int(timestamp)
-    except ValueError:
-        return False
-    if abs(time.time() - ts) > WINDOW_SECONDS:
-        return False
-    return hmac.compare_digest(sign(secret, ts, body), signature)
+    return (
+        hmac_signature.check(
+            secret, body, timestamp, signature, now=time.time(), window=WINDOW_SECONDS
+        )
+        is None
+    )
 
 
 def _refuse() -> ProblemError:

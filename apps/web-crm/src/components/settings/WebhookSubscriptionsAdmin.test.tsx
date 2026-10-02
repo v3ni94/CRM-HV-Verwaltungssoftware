@@ -136,4 +136,33 @@ describe("WebhookSubscriptionsAdmin", () => {
     expect(screen.queryByRole("button", { name: "Löschen" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Protokoll" })).toBeInTheDocument();
   });
+  it("AI07: warns on failures, queues a test delivery and rotates the secret", { timeout: 20000 }, async () => {
+    const calls: string[] = [];
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/test")) return jsonResponse({ delivery_id: DELIVERY_ID, event_id: NEW_ID }, 202);
+      if (url.endsWith("/rotate-secret")) return jsonResponse({ ...hook, secret: "neu-5678" });
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    const failing = { ...hook, consecutive_failures: 3, last_failure_at: "2026-09-26T09:15:00+00:00" };
+    renderIntl(<WebhookSubscriptionsAdmin initial={[failing]} eventTypes={eventTypes} canManage canDelete />);
+    expect(screen.getByTestId(`webhook-failures-${HOOK_ID}`)).toHaveTextContent("3 Zustellungen in Folge");
+    await userEvent.click(screen.getByRole("button", { name: "Testzustellung" }));
+    expect(await screen.findByText("Testzustellung eingeplant, sie erscheint im Protokoll.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Schlüssel erneuern" }));
+    expect(await screen.findByText("neu-5678")).toBeInTheDocument();
+    expect(calls).toEqual([
+      `POST /api/bff/tenant/webhooks/${HOOK_ID}/test`,
+      `POST /api/bff/tenant/webhooks/${HOOK_ID}/rotate-secret`,
+    ]);
+  });
+
+  it("AI07: shows the automatic deactivation and hides the new actions without rights", () => {
+    const off = { ...hook, active: false, consecutive_failures: 5, disabled_reason: "consecutive_failures" };
+    renderIntl(<WebhookSubscriptionsAdmin initial={[off]} eventTypes={eventTypes} canManage={false} canDelete={false} />);
+    expect(screen.getByTestId(`webhook-disabled-${HOOK_ID}`)).toHaveTextContent("automatisch deaktiviert");
+    expect(screen.queryByRole("button", { name: "Testzustellung" })).toBeNull();
+  });
 });

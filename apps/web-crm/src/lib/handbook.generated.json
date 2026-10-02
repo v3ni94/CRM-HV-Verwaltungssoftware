@@ -5480,6 +5480,16 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, Automatisierung zeigt die Schaltfläche \"Regelvorlagen\" (nur mit Recht zur Pflege von Regeln) die mitgelieferten Beispiele, zum Beispiel \"Dringendes Ticket melden\". \"Übernehmen\" legt daraus eine neue Regel an. Die Regel ist immer inaktiv: sie löst erst etwas aus, wenn Sie sie prüfen, im Testlauf ansehen und selbst aktivieren. Existiert bereits eine Regel mit demselben Namen, meldet das System einen Konflikt, die vorhandene Regel bleibt unverändert."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ereigniskatalog",
+     "id": "ereigniskatalog"
+    },
+    {
+     "t": "p",
+     "text": "Beim Auslöser \"Anderer Ereignistyp\" schlägt die Maske alle im System ausgelösten Ereignistypen vor (Katalog aus `GET /automation/event-types`). Ein Typ, der nicht im Katalog steht, wird mit einem Hinweis markiert: Die Regel würde nie feuern, meist liegt ein Tippfehler vor. Die Eingabe bleibt möglich."
     }
    ]
   },
@@ -6387,6 +6397,53 @@
     {
      "t": "p",
      "text": "In der Umsatzliste (Bank) zeigt ein ignorierter Umsatz die Schaltfläche „Wieder eröffnen“, sofern Sie Umsätze bearbeiten dürfen. Nach Eingabe einer Begründung (mindestens 3 Zeichen) steht der Umsatz wieder im Status „neu“ zur Bearbeitung bereit. Ein Umsatz mit wirksamer Buchung bleibt gebucht; eine Korrektur erfolgt dann nur per Storno."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Automatik-Kennzahlen (GAH-107, GAH-211, Welle 20)",
+     "id": "automatik-kennzahlen-gah-107-gah-211-welle-20"
+    },
+    {
+     "t": "p",
+     "text": "Unter Bank, \"Automatik-Kennzahlen\" (`/bank/kennzahlen`) stehen zwei reine Berichte. Sie buchen nichts und sind keine Freigabe der Automatik."
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Kennzahlen Bankabgleich: Abdeckungsgrad (automatisch eindeutig zugeordnete Umsätze im Verhältnis zu allen Umsätzen) und Fehlerquote (stornierte automatische Zuordnungen im Verhältnis zu allen automatischen Zuordnungen), getrennt, je Zeitraum."
+      },
+      {
+       "depth": 0,
+       "text": "Vergleich Automatik gegen manuelle Buchung: je Fallklasse die Ergebnisse Übereinstimmung, anderer Vorschlag, geändert gebucht und ohne Vorschlag, dazu die Übereinstimmungsquote. Der Zeitraum ist wählbar. Ohne verglichene Buchungen steht \"keine Basis\"."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Beide Berichte zeigen Betriebskennzahlen und ersetzen weder die Freigabestufe G1 noch die Prüfung der Buchungen durch eine zweite Person."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Objektsperre und Kontoart \"Sonstiges Konto\" (GAH-401, GAH-404, Welle 20)",
+     "id": "objektsperre-und-kontoart-sonstiges-konto-gah-401-gah-404-welle-20"
+    },
+    {
+     "t": "p",
+     "text": "Ist der Objektzeitraum eines Umsatzes gesperrt, zeigen Buchungsdialog, Vorschlagsliste und Massenbestätigung den Hinweis mit dem Fehlercode MHVP-ACC-0030. Die Schaltfläche Buchen ist dann deaktiviert, in der Massenbestätigung erscheint der Umsatz unter den Ausnahmen. Im Formular \"Internes Konto anlegen\" der FinTS-Zeile steht zusätzlich die Kontoart \"Sonstiges Konto\"; als Rechtsträger kommt jeder Rechtsträger der Plattform in Frage."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Kettenprüfung in der Bankabstimmung",
+     "id": "kettenpruefung-in-der-bankabstimmung"
+    },
+    {
+     "t": "p",
+     "text": "Die Bankabstimmung zeigt je Auszug in der Spalte \"Kette zum Vorauszug\", ob der Anfangssaldo zum Endsaldo des vorherigen Auszugs passt, und meldet Kettenbrüche mit Betrag sowie Zeitraumlücken und Überschneidungen. Auszüge ohne Salden, etwa aus CSV, werden als nicht prüfbar gezählt. Befunde werden hier nur angezeigt und nicht korrigiert."
     }
    ]
   },
@@ -7556,6 +7613,10 @@
      "text": "Im Mahnlauf öffnet der Aufklapper \"Prüfhinweise, Zins, Zustellnachweise und Sperren\" je Fall die Prüfhinweise zu Verjährung und Fristen (nur Hinweise, die Plattform berechnet kein Verjährungsdatum), den Vorschlag für den Zinsaufschlag aus dem Verbraucherkennzeichen (die Einstellung ändert sich nicht), die Zinsberechnung je Basiszinssatzzeitraum und den Knopf \"Zinsentwurf anlegen\". Der Zinsentwurf ist keine Buchung; Freigabe nur über die Vier-Augen-Buchung bei geöffnetem Gate G1, Zinssatz und Anspruchsgrundlage sind anwaltlich zu prüfen. Zustellnachweise (Einschreiben, Posteinlieferung, E-Mail, Portal) werden mit Datum und Referenz am Fall erfasst. Je Posten lässt sich eine Mahnsperre mit Grund (Ratenplan, bestrittener Posten, Aufrechnung, Prozess, Insolvenz) setzen und aufheben. Auf der Startseite des Mahnwesens steht die Basiszinssatzhistorie; Sätze sind Betreibereingaben mit Quelle, ohne Satz für den Zeitraum wird kein Zins berechnet."
     },
     {
+     "t": "p",
+     "text": "Unter der Basiszinssatzhistorie zeigt die Startseite des Mahnwesens die gewählte Zinstagemethode. Ist für das laufende Halbjahr (ab 01.01. oder 01.07.) noch kein Satz gepflegt, erscheint der Hinweis \"Basiszinssatz prüfen\" mit den nächsten Änderungsterminen; die Vorschau rechnet bis zur Pflege mit dem zuletzt gepflegten Satz. Der Knopf \"Prüfpunkte 01.01. und 01.07. anlegen\" legt für die nächsten zwei Termine je einen Prüfpunkt im Fristenregister an (Vorfrist laut Prüfpunktliste, Standard 30 Tage). Die Zinstagemethode (Tage durch 365 fest oder durch die tatsächlichen Jahrestage) stellen Sie unter Einstellungen, Fachliche Regeln ein; der Standard bleibt 365, die Entscheidung ist offen (AI03-01) und anwaltlich zu klären. Jede Zinsberechnung nennt die verwendete Methode."
+    },
+    {
      "t": "h",
      "level": 2,
      "text": "Honorarlauf, Rechnungsdokument und Jahreswechsel (Q15)",
@@ -7877,6 +7938,30 @@
     {
      "t": "p",
      "text": "Im Buchungskreis zeigt der Abschnitt \"Führendes System je Vorgangstyp\", welches System für Sollstellung, Mahnung, Lastschrift und Zahlungsauftrag heute führt und ob dies aus einer Umschaltung oder aus der Einstellung des Buchungskreises stammt. Wer Freigaberechte hat, beantragt eine Umschaltung mit Vorgangstyp, führendem System, Gültig-ab und optional einem Objekt. Freigeben oder ablehnen muss eine andere Person; die Plattform als führendes System lässt sich nur mit geöffneter Freigabestufe G1 freigeben. Ohne Umschaltung arbeiten alle Läufe wie bisher."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Liquiditätsvorschau mit Kopfangaben und Freigabeverlauf (Welle 20, AI02)",
+     "id": "liquiditaetsvorschau-mit-kopfangaben-und-freigabeverlauf-welle-20-ai02"
+    },
+    {
+     "t": "p",
+     "text": "Die Liquiditätsvorschau auf der Seite Auswertungen zeigt jetzt die gemeinsamen Kopfangaben (Rechtsträger, Stichtag, Datenstand, Status Entwurf) und lässt sich über \"Als Excel herunterladen\" als Arbeitsmappe speichern (Recht Export). Ein Rücklagenkonto, das nur über die Kontonummer 001201 und nicht über ein verknüpftes Bankkonto erkannt wurde, trägt einen Hinweis; die Verknüpfung mit dem Bankkonto des Objekts ist der verlässliche Weg."
+    },
+    {
+     "t": "p",
+     "text": "Auf der Rechnungsseite und in der Liste der Zahlungsaufträge öffnet \"Freigabeverlauf anzeigen\" die Freigabeentscheidungen des Vorgangs mit Schritt, Zeitpunkt, Status und Prüfsumme des freigegebenen Stands. Eine entwertete Freigabe nennt Zeitpunkt und Grund (zum Beispiel geänderter Betrag); Personenhinweise aus der Identitätsprüfung erscheinen als Hinweis. Die Ansicht ist reine Anzeige, eine Freigabe wird an der bisherigen Stelle erteilt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Hinweis zum Nummernkreis Bank und Kasse",
+     "id": "hinweis-zum-nummernkreis-bank-und-kasse"
+    },
+    {
+     "t": "p",
+     "text": "Neue Konten mit Nummer 001200 bis 001999 sind nur als Bank, Kasse, technisches Konto oder Geldtransit möglich, eine Bankkontoverknüpfung nur an Bank- oder Kassenkonten. Bestehende abweichende Konten bleiben erhalten und zeigen in der Kontenliste einen Hinweis unter der Kategorie."
     }
    ]
   },
@@ -10138,6 +10223,36 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, KI-Anbieter, lässt sich je Anbieter die Stapelverarbeitung einschalten (Standard aus, derzeit nur Anthropic). Zurückgestellte nächtliche Läufe werden dann gesammelt an den Anbieter gesendet und stündlich abgerufen; das Ergebnis erscheint wie bisher als Vorschlag. Der Preisfaktor wird aus der Preisliste des Anbieters übernommen (1 bedeutet kein Abschlag). Jede Änderung hebt die Freigabe auf; die zweite Person muss erneut freigeben."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ausgehende Webhooks: Testzustellung, Schlüssel, Fehlschläge (AI07)",
+     "id": "ausgehende-webhooks-testzustellung-schluessel-fehlschlaege-ai07"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Webhooks bietet jede Zeile zusätzlich Testzustellung (plant das Ereignis webhook_subscription.test nur für dieses Abonnement ein, das Ergebnis steht im Protokoll), Bearbeiten (Ziel-URL und Beschreibung) und Schlüssel erneuern (der neue Signaturschlüssel wird einmal angezeigt, der alte ist sofort ungültig). Schlagen Zustellungen endgültig fehl, zeigt die Zeile einen Warnhinweis mit Anzahl und Zeitpunkt, und Benutzer mit dem Recht webhooks:update erhalten eine Benachrichtigung. Ein automatisches Deaktivieren erfolgt nur, wenn unter Fachliche Regeln der Wert Webhooks nach Fehlschlägen in Folge deaktivieren größer als 0 ist (Standard 0, nur melden). Beim erneuten Aktivieren beginnt die Zählung neu. Dort steht auch der Schalter Objektakte-Webhook nur mit Zeitstempel annehmen (Standard aus)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ausweis haushaltsnaher Leistungen und Prüfhinweis Kaution (Welle 20)",
+     "id": "ausweis-haushaltsnaher-leistungen-und-pruefhinweis-kaution-welle-20"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Fachliche Regeln stehen zwei Schalter. \"Ausweis haushaltsnaher Leistungen, Auswahl der Rechnungen\" wählt zwischen Rechnungsdatum (Standard) und nur bezahlten Rechnungen nach Zahlungsdatum. Jede Zeile des Ausweises zeigt, ob und wann die Rechnung bezahlt wurde. Wird für denselben Vertrag und dasselbe Jahr erneut ein Ausweis erzeugt, erscheint ein Hinweis; gesperrt wird nichts. \"Prüfhinweis zur Kautionshöhe und Ratenzahl\" (Standard aus) zeigt in der Kautionsübersicht des Vertrags einen Hinweis, wenn die Kaution einer Wohnung über dem Vergleichswert liegt. Beide Schalter treffen keine steuerliche oder rechtliche Festlegung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zweiten Faktor eines Benutzers zurücksetzen (Vier-Augen)",
+     "id": "zweiten-faktor-eines-benutzers-zuruecksetzen-vier-augen"
+    },
+    {
+     "t": "p",
+     "text": "Hat ein Benutzer seinen zweiten Faktor verloren, kann ein Administrator mit dem Recht Mitglieder ändern einen Antrag stellen (Schnittstelle `POST /auth/mfa-reset/requests` mit Mitgliedschaft und Begründung, mindestens 10 Zeichen). Voraussetzung ist der Mandantenschalter `mfa_admin_reset_enabled` (Standard aus, `PUT /auth/mfa-reset/settings`). Ein zweiter Administrator gibt den Antrag frei oder lehnt ihn ab; der Antragsteller selbst und der betroffene Benutzer können nicht freigeben. Mit der Freigabe werden TOTP, Passkeys, gemerkte Geräte und alle Sitzungen des Benutzers widerrufen; er meldet sich mit dem Passwort an und richtet den zweiten Faktor neu ein. Benutzer und Antragsteller erhalten eine Benachrichtigung. Die Identität des Benutzers prüfen die Administratoren vorher selbst. Eine Maske im CRM folgt; die Variantenwahl ist offen (Frage AI09-01)."
     }
    ]
   },
@@ -12225,6 +12340,16 @@
     {
      "t": "p",
      "text": "Auf der Seite Kalender lädt der Link \"ICS-Datei herunterladen\" einen einmaligen Stand Ihrer eigenen und geteilten Termine sowie der Fristen als Datei kalender.ics, die sich in jedem Kalenderprogramm importieren lässt. Die Datei aktualisiert sich nicht. Für laufend aktuelle Daten richten Sie darunter das Kalender-Abo ein (Abo-Adresse erzeugen); die Adresse wird nur einmal angezeigt und gilt wie ein Passwort."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "ICS-Download",
+     "id": "ics-download"
+    },
+    {
+     "t": "p",
+     "text": "Der Link \"ICS-Datei herunterladen\" erscheint nur für Nutzer mit dem Recht `tenant_settings:read`. Ohne dieses Recht bleibt das Kalender-Abo (Adresse erzeugen) nutzbar, der Direktdownload ist ausgeblendet."
     }
    ]
   },
@@ -15480,6 +15605,10 @@
     },
     {
      "t": "p",
+     "text": "Seit GAH-304 prüft ESLint zusätzlich das Regelset `jsx-a11y` (recommended) und `pages.axe.test.tsx` lässt axe über alle Seiten unter `app/(portal)` laufen (gesperrter und leerer Zustand). `@axe-core/playwright` für Browserläufe ist offline nicht installierbar und bleibt offen."
+    },
+    {
+     "t": "p",
      "text": "Die Erklärung zur Barrierefreiheit nach dem Barrierefreiheitsstärkungsgesetz (BFSG) steht ohne Anmeldung unter `/barrierefreiheit`; sie ist als Entwurf gekennzeichnet, offene Pflichtangaben (Ergebnis der externen Prüfung, Feedback-Kontakt, zuständige Überwachungsstelle) sind mit „[zu ergänzen]“ markiert, siehe `docs/OPEN_QUESTIONS.md` (M21-09). Automatisierte Prüfungen der Kernkomponenten (Navigation, Übersicht, Aushänge, Meldung, Kontoauszug/Hausgeldkonto) laufen mit `axe-core` über `vitest-axe` (`apps/web-portal/src/components/portal/Accessibility.axe.test.tsx`) als technisches Hilfsmittel; sie ersetzen keine externe Prüfung (`docs/ASSUMPTIONS.md` A-060)."
     },
     {
@@ -15897,6 +16026,117 @@
     {
      "t": "p",
      "text": "Eigentümer mit Sondereigentumsverwaltung sehen unter Reporting je Einheit und Abrechnungszeitraum die vereinbarte Monatsmiete, die auf Mieter umlagefähigen Kosten, die Leerstandstage und den Leerstandsanteil des Objekts. Die Seite ist nur sichtbar gefüllt, wenn der Mandantenschalter \"Mieterträge im Portal\" (owner_rental_income_enabled) eingeschaltet und die Freigabestufe G3 offen ist; sonst erscheint ein Hinweis. Mieternamen und Zahlungsstatus werden nicht angezeigt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "SEPA-Lastschriftmandat erteilen (GAH-309)",
+     "id": "sepa-lastschriftmandat-erteilen-gah-309"
+    },
+    {
+     "t": "p",
+     "text": "Mieter und Eigentümer mit Vertrag erteilen unter Lastschrift (`/lastschrift`) der Verwaltung ein SEPA-Lastschriftmandat für wiederkehrende Zahlungen. Ablauf:"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Vertrag wählen. Mit \"Mandatstext anzeigen\" erscheinen Gläubiger-Identifikationsnummer, Mandatsreferenz und die Zahlungsart \"wiederkehrende Zahlung\"."
+      },
+      {
+       "depth": 0,
+       "text": "Kontoinhaber (Vor- und Nachname) und IBAN eingeben, die BIC ist optional. Die IBAN wird auf Gültigkeit geprüft."
+      },
+      {
+       "depth": 0,
+       "text": "Die Bestätigung \"Ich bin Kontoinhaber und erteile das oben stehende SEPA-Lastschriftmandat\" setzen und \"Mandat erteilen\" wählen."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Das Mandat wird nur als Vorschlag übermittelt. Es steht unter \"Ihre Mandate\" mit dem Status \"in Prüfung\", wird nach Prüfung und Freigabe durch die Verwaltung \"übernommen\" oder \"abgelehnt\". Der Textform-Nachweis liegt als PDF unter Dokumente. Erst ein übernommenes Mandat kann die Verwaltung verwenden; Einzüge löst das Portal nicht aus, sie bleiben hinter der Freigabestufe für Zahlungsausgang (G2) und der Freigabe der Verwaltung."
+    },
+    {
+     "t": "p",
+     "text": "Häufige Rückfragen: Fehlt die Seite oder ist die Vertragsliste leer, hat das Konto keinen Vertrag; dann in der Kontaktakte im CRM den Portalzugang und die Verträge prüfen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Passkeys als zweiter Faktor (GAH-309)",
+     "id": "passkeys-als-zweiter-faktor-gah-309"
+    },
+    {
+     "t": "p",
+     "text": "Unter Sicherheit können Portalnutzer Passkeys (Fingerabdruck, Gesichtserkennung, Gerätesperre oder Sicherheitsschlüssel) als zweiten Faktor registrieren. Ein Passkey ersetzt bei der Anmeldung den Code der Authenticator-App, das Passwort bleibt erforderlich; es gibt keine Anmeldung allein per Passkey."
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "**Registrieren:** Unter Sicherheit im Abschnitt \"Passkeys (zweiter Faktor)\" eine Bezeichnung eingeben (zum Beispiel \"Handy privat\"), \"Passkey hinzufügen\" wählen und die Abfrage des Geräts bestätigen. Danach erscheint der Passkey in der Liste."
+      },
+      {
+       "depth": 0,
+       "text": "**Anmelden:** Bei der Anmeldung steht \"Passkey verwenden\" zur Wahl; der Code der Authenticator-App bleibt als Weg erhalten."
+      },
+      {
+       "depth": 0,
+       "text": "**Entfernen:** In der Liste \"Entfernen\" wählen. Geht ein Gerät verloren, den Passkey von einem anderen Gerät aus entfernen; bei Problemen die Verwaltung ansprechen."
+      },
+      {
+       "depth": 0,
+       "text": "**Nicht sichtbar oder nicht nutzbar:** Zeigt die Seite \"Passkeys sind nicht freigeschaltet\", ist die Funktion für den Mandanten nicht aktiv. Meldet der Browser \"Dieser Browser unterstützt keine Passkeys\", hilft ein aktueller Browser mit HTTPS-Zugang."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Reporting für Kapitalanleger: warum die Seite leer bleibt (GAH-311)",
+     "id": "reporting-fuer-kapitalanleger-warum-die-seite-leer-bleibt-gah-311"
+    },
+    {
+     "t": "p",
+     "text": "Die Seite Reporting (`/reporting`) zeigt nur dann Zahlen, wenn zwei Bedingungen zugleich erfüllt sind:"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Der Mandantenschalter \"Mieterträge im Portal\" (`owner_rental_income_enabled`) ist eingeschaltet. Er steht im CRM unter Einstellungen, Fachliche Regeln, und ist im Standard aus."
+      },
+      {
+       "depth": 0,
+       "text": "Die Freigabestufe G3 (Mietabrechnungen) ist für den Mandanten geöffnet. Solange sie geschlossen ist, erscheint der Hinweis zur Sperre statt der Zahlen."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Bleibt die Seite leer oder zeigt nur den Hinweis, zuerst Schalter und Freigabestufe prüfen, danach, ob dem Eigentümer eine Einheit mit Sondereigentumsverwaltung zugeordnet ist. Nicht-Eigentümer sehen den Hinweis \"nur für Eigentümer\". Die Seite enthält weder Mieternamen noch Zahlungsstatus; sie ersetzt keine Abrechnung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Sicherheit: Passwort ändern und aktive Sitzungen",
+     "id": "sicherheit-passwort-aendern-und-aktive-sitzungen"
+    },
+    {
+     "t": "p",
+     "text": "Unter Sicherheit ändern Portalnutzer ihr Passwort: aktuelles Passwort, neues Passwort und Wiederholung eingeben, dann Passwort ändern wählen. Danach enden alle Sitzungen des Kontos, auch auf anderen Geräten; die Anmeldung erfolgt mit dem neuen Passwort."
+    },
+    {
+     "t": "p",
+     "text": "Die Liste Aktive Sitzungen zeigt Gerät oder Browser, Beginn und letzte Aktivität jeder Sitzung. Mit Sitzung beenden wird eine unbekannte oder nicht mehr benötigte Sitzung sofort widerrufen. Anmeldungen, Fehlversuche, Sperren, Passwortänderungen und beendete Sitzungen werden im Protokoll der Verwaltung festgehalten, ohne Passwörter oder Codes."
+    },
+    {
+     "t": "p",
+     "text": "Ist der zweite Faktor verloren (Smartphone verloren), kann die Verwaltung ihn nur zurücksetzen, wenn sie das Verfahren freigeschaltet hat (Standard aus); zwei Mitarbeitende müssen zustimmen."
     }
    ]
   },
@@ -19210,6 +19450,16 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, Fachliche Regeln, schaltet der Schalter \"Zuordnungsvorschlag bei Eigentümerwechsel\" (Standard aus) einen Hinweis frei: Die Vorschau der Planübernahme zeigt je Zeile den Eigentümer, den die Regel je Erwerbsart vorschlagen würde, und markiert Abweichungen vom verwendeten Eigentümer. Für eine Abrechnung mit Beschluss liefert die Schnittstelle dieselbe Gegenüberstellung je Einheit. Übernommen und gebucht wird weiterhin beim bisherigen Eigentümer; der Vorschlag bucht nichts und versendet nichts. Die Rechtsfrage bleibt offen (W07, P01)."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Neue Version einer Jahresabrechnung mit Korrekturbeschluss",
+     "id": "neue-version-einer-jahresabrechnung-mit-korrekturbeschluss"
+    },
+    {
+     "t": "p",
+     "text": "Die Schaltfläche \"Neue Version\" öffnet einen Dialog. Dort wählen Sie optional den Korrekturgrund, beschreiben die Grundlage und wählen einen Korrekturbeschluss derselben Gemeinschaft. Nach dem Anlegen zeigt die Maske die Mehrheitsprüfung des Beschlusses an. Die Prüfung ist nur ein Vermerk und ändert keinen Status. Ein Beschluss einer anderen Gemeinschaft wird abgelehnt (Fehler MHVP-HOA-0038)."
     }
    ]
   }

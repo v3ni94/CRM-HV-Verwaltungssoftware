@@ -130,6 +130,24 @@ class ErrorCodes:
         "Zweiter Faktor ist für Ihre Rolle vorgeschrieben",
         "The tenant's second factor policy covers this user; the last factor stays (M2-04).",
     )
+    MFA_RESET_DISABLED = ErrorCode(
+        "MHVP-AUTH-0016",
+        409,
+        "Zurücksetzen des zweiten Faktors ist nicht freigeschaltet",
+        "Tenant switch mfa_admin_reset_enabled is off (GAH-301, AI09-01).",
+    )
+    MFA_RESET_FOUR_EYES = ErrorCode(
+        "MHVP-AUTH-0017",
+        409,
+        "Antrag braucht eine zweite Person",
+        "Requester and approver of a second factor reset must differ (GAH-301).",
+    )
+    MFA_RESET_STATE = ErrorCode(
+        "MHVP-AUTH-0018",
+        409,
+        "Antrag ist bereits entschieden",
+        "Only a requested second factor reset can be approved or rejected.",
+    )
     RESOURCE_NOT_FOUND = ErrorCode(
         "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."
     )
@@ -406,6 +424,15 @@ class ErrorCodes:
         409,
         "Aufhebung der Periodensperre nicht freigeschaltet",
         "Releasing a period lock needs the tenant switch reopen_enabled (AA08-01 open).",
+    )
+    ACC_ACCOUNT_RANGE_CATEGORY = ErrorCode(
+        "MHVP-ACC-0032",
+        422,
+        "Kontonummer passt nicht zur Kategorie",
+        (
+            "Numbers 001200 to 001999 hold bank, cash, technical or transit accounts; a bank "
+            "account link is only allowed on bank or cash accounts (7.2, GAH-105)."
+        ),
     )
     AI_POSTING_NOT_RELEASED = ErrorCode(
         "MHVP-AI-0001",
@@ -1508,6 +1535,13 @@ class ErrorCodes:
         409,
         "Änderung des Anfangsbestands braucht eine zweite Person",
         "The requesting user cannot approve the own opening change (AE07, V01-01).",
+    )
+    HOA_CORRECTION_RESOLUTION_FOREIGN = ErrorCode(
+        "MHVP-HOA-0038",
+        422,
+        "Korrekturbeschluss gehört zu einer anderen GdWE",
+        "The correcting resolution must belong to the same legal entity as the statement "
+        "ledger (GAH-403, 6.9.1).",
     )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
     CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(

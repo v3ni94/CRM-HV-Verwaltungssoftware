@@ -262,4 +262,18 @@ describe("BookingDialog", () => {
     expect(within(row).queryByText("Ablehnen")).not.toBeInTheDocument();
     expect(screen.getByText(/Entscheidungsprotokoll \(Schritt S1\)/)).toBeInTheDocument();
   });
+
+  it("shows the object period lock and disables booking (GAH-401)", async () => {
+    mockApi({
+      "/posting-proposals": () =>
+        jsonResponse({ ...proposals(), object_period_lock: { locked: true, code: "MHVP-ACC-0030" } }),
+    });
+    renderIntl(<BookingDialog tx={tx()} onClose={() => {}} onBooked={() => {}} />);
+    const hint = await screen.findByTestId("period-lock-hint");
+    expect(hint).toHaveTextContent("MHVP-ACC-0030");
+    const candidates = await screen.findByTestId("open-item-candidates");
+    await waitFor(() => expect(within(candidates).getAllByText("Hinzufügen").length).toBe(2));
+    await userEvent.click(within(candidates).getAllByText("Hinzufügen")[0]!);
+    expect(screen.getByRole("button", { name: "Buchen" })).toBeDisabled();
+  });
 });

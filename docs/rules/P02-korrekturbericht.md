@@ -14,3 +14,8 @@ Der Korrekturbericht ist hinter dem Mandantenschalter `hoa_correction_report_set
 (Standard aus, Migration 0402, `GET/PUT /hoa/correction-report-settings`, Seite Fachliche Regeln).
 Ausgeschaltet antwortet der Bericht mit 409, die Abrechnungsseite blendet ihn aus. Quellenstatus
 unverändert (P02 offen). Abnahmefall: `test_ae11_correction.py::test_af08_switch_default_off`.
+
+Änderung Welle 20 (GAH-403, Rechtsträgertrennung 6.9.1): Der Korrekturbeschluss einer neuen
+Version muss zur GdWE des Buchungskreises gehören (gleiche `legal_entity_id`), sonst 422
+`MHVP-HOA-0038`. Fachliche Umsetzung, Quellenstatus unverändert. Abnahmefall:
+`test_ah05_reserve_bank_majority.py::test_gah403_correction_resolution_of_other_gdwe`.

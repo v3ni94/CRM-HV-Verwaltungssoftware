@@ -207,6 +207,109 @@ services:
       <<: [*s3-env, *scan-env]
       MHVP_ENV: ${MHVP_ENV:-prod}
 
+  # Split worker groups (GAH-306, docs/runbooks/skalierung.md). Optional profile "split-workers":
+  # the standard service "worker" above consumes all queues and stays the default. To split,
+  # stop "worker" first so no queue is consumed twice, then start the profile:
+  #   docker compose ... stop worker
+  #   docker compose ... --profile split-workers up -d --scale worker-ocr=2
+  # release.sh handles api/worker/beat only; split services are recreated by hand.
+
+  worker-default:
+    <<: [*prod, *api-image]
+    profiles: ["split-workers"]
+    command:
+      - celery
+      - -A
+      - mhvp.worker
+      - worker
+      - --loglevel
+      - INFO
+      - -Q
+      - default,beat
+      - --hostname
+      - worker-default@%h
+      - --concurrency
+      - ${MHVP_WORKER_CONCURRENCY_DEFAULT:-4}
+      - --prefetch-multiplier
+      - "1"
+      - --max-tasks-per-child
+      - "200"
+    environment:
+      <<: [*s3-env, *scan-env]
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
+  worker-io:
+    <<: [*prod, *api-image]
+    profiles: ["split-workers"]
+    command:
+      - celery
+      - -A
+      - mhvp.worker
+      - worker
+      - --loglevel
+      - INFO
+      - -Q
+      - io,mail
+      - --hostname
+      - worker-io@%h
+      - --concurrency
+      - ${MHVP_WORKER_CONCURRENCY_IO:-8}
+      - --prefetch-multiplier
+      - "1"
+      - --max-tasks-per-child
+      - "200"
+    environment:
+      <<: [*s3-env, *scan-env]
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
+  worker-ocr:
+    <<: [*prod, *api-image]
+    profiles: ["split-workers"]
+    command:
+      - celery
+      - -A
+      - mhvp.worker
+      - worker
+      - --loglevel
+      - INFO
+      - -Q
+      - ocr,ai
+      - --hostname
+      - worker-ocr@%h
+      - --concurrency
+      - ${MHVP_WORKER_CONCURRENCY_OCR:-4}
+      - --prefetch-multiplier
+      - "1"
+      - --max-tasks-per-child
+      - "200"
+    environment:
+      <<: [*s3-env, *scan-env]
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
+  worker-bank:
+    <<: [*prod, *api-image]
+    profiles: ["split-workers"]
+    command:
+      - celery
+      - -A
+      - mhvp.worker
+      - worker
+      - --loglevel
+      - INFO
+      - -Q
+      - bank
+      - --hostname
+      - worker-bank@%h
+      - --concurrency
+      - ${MHVP_WORKER_CONCURRENCY_BANK:-2}
+      - --prefetch-multiplier
+      - "1"
+      - --max-tasks-per-child
+      - "200"
+    environment:
+      <<: [*s3-env, *scan-env]
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
   beat:
     <<: [*prod, *api-image]
     environment:

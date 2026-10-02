@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 
@@ -7,6 +8,7 @@ import { MaintenanceBanner } from "@/components/shell/MaintenanceBanner";
 import { PwaRegister } from "@/components/shell/PwaRegister";
 import { ThemeController } from "@/components/shell/ThemeToggle";
 import { brandingCssVars, fetchPortalBranding } from "@/lib/branding";
+import { NONCE_HEADER } from "@/lib/csp";
 import { PORTAL_THEME_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
@@ -40,6 +42,8 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [locale, branding] = await Promise.all([getLocale(), fetchPortalBranding()]);
+  // GAH-303: nonce of this request from the middleware (CSP without script unsafe-inline).
+  const nonce = (await headers()).get(NONCE_HEADER) ?? undefined;
   // B26, M21-04: tenant colours replace the neutral primary and accent tokens, empty stays neutral.
   const brandVars = brandingCssVars(branding);
   return (
@@ -51,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: PORTAL_THEME_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PORTAL_THEME_SCRIPT }} />
       </head>
       <body
         className="min-h-screen antialiased"

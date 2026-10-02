@@ -5,6 +5,71 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.65.0 (02.10.2026) Welle 20, Befunde der Lückenanalyse GAH: Kettenprüfung der Kontoauszüge, unveränderlicher Abrechnungs-Snapshot, Tenant-Indizes, Audit der Anmeldung, CSP mit Nonce, Webhook-Härtung, KI-Stapel mit AVV-Prüfung, Mandantenschalter für Zinstage, § 35a und Kautionshinweis
+
+- Übersicht: Welle 20 mit 18 Paketen AI01 bis AI18 zu den 62 Befunden der Lückenanalyse GAH (Abschnitte 3 bis 17 des Master-Prompts, Anhang D und Rückstände der Welle 19); Migrationen 0439 bis 0443 (Snapshot-Wächter, Tenant-Indizes, Webhook-Fehlerzähler, Zurücksetzen des zweiten Faktors, § 35a und Kautionshinweis); die Freigabestufen G1 bis G5 bleiben geschlossen; 13 neue Entscheidungsvorlagen AI17-01 bis AI17-13.
+- Bank: Die Bankabstimmung prüft die Kette der Kontoauszüge (Endsaldo gleich Anfangssaldo des Folgeauszugs) und Zeitraumlücken und zeigt Auszüge ohne Salden als nicht prüfbar.
+- Buchhaltung: Neue Konten im Nummernkreis 001200 bis 001999 sind nur als Bank, Kasse, technisches Konto oder Geldtransit zulässig, Bankkontoverknüpfungen nur an Bank- oder Kassenkonten (MHVP-ACC-0032); die Kontenliste zeigt einen Hinweis bei bestehenden Abweichungen.
+- Tests: Nebenläufigkeitstests für paralleles Einreichen eines Zahlungsstapels und parallelen Import derselben oder überlappender Kontoauszüge.
+- Abrechnung: Der Ergebnis-Snapshot einer Abrechnung ist per Datenbank-Trigger unveränderlich, Ändern und Löschen werden abgewiesen (Migration 0439).
+- Buchhaltung: Neue Berichtsvariante der Liquiditätsvorschau mit Kopfangaben (Rechtsträger, Stichtag, Datenstand, Entwurf) und Aufnahme in den Excel-Export.
+- Buchhaltung: Die Liquiditätsvorschau kennzeichnet Rücklagenkonten, die nur über die Kontonummer 001201 erkannt wurden.
+- CRM: Freigabeverlauf mit Prüfsumme, Entwertungsgrund und Personenhinweis auf der Rechnungsseite und in der Liste der Zahlungsaufträge.
+- Mahnwesen: Zinstagemethode des Verzugszinses als Mandantenschalter (Tage durch 365 fest als Standard oder tatsächliche Jahrestage), Methode in jedem Zinszeitraum ausgewiesen (AI03-01, Entscheidung offen).
+- Mahnwesen: Hinweis in der Mahnmaske, wenn für das laufende Halbjahr kein Basiszinssatz gepflegt ist, und Prüfpunkte zum 01.01. und 01.07. im Fristenregister per Knopf.
+- Tests: Nebenläufigkeitstests für Zahlungsfreigabe, Bankrückmeldung, Mahnlauf-Freigabe (Gebühr nur einmal) und Lastschriftlauf-Freigabe.
+- WEG: Neue Version einer Jahresabrechnung lehnt einen Korrekturbeschluss einer anderen GdWE mit 422 MHVP-HOA-0038 ab.
+- WEG CRM: Neue Version öffnet einen Dialog für Korrekturgrund, Grundlage und Korrekturbeschluss und zeigt die Mehrheitsprüfung des Beschlusses an.
+- Bank CRM: Bei gesperrtem Objektzeitraum zeigen Buchungsdialog, Vorschlagsliste und Massenbestätigung den Hinweis MHVP-ACC-0030 und sperren das Buchen.
+- Bank CRM: Das Formular Internes Konto anlegen bietet zusätzlich die Kontoart Sonstiges Konto.
+- Bank CRM: Neue Maske Automatik-Kennzahlen (/bank/kennzahlen) mit Abdeckung, Fehlerquote und Vergleich Automatik gegen manuelle Buchung.
+- Bank CRM: Komponententest sichert contract_id bei Gutschrift-Verbindlichkeiten aus Kautionsabrechnung.
+- KI: Der Stapelpfad prüft vor Einreichen und Abruf AVV-Nachweis, AVV-Dokument, Opt-out und Freigabe wie das Gateway; bei nachträglich entzogener Freigabe erfolgt kein Anbieteraufruf, offene Läufe gehen mit Vermerk in die Nachtwarteschlange zurück.
+- KI: Negativtests belegen, dass Gateway, Stapel und Einbettungen nach entzogener Freigabe, fehlendem AVV-Dokument oder zurückgenommenem Opt-out keinen Anbieter aufrufen.
+- KI: Offline-Goldstandard für die Aufgabe reply_draft mit 20 Fällen, in make ai-eval enthalten.
+- Kern: gemeinsamer Signaturhelfer für Webhooks (HMAC über Zeitstempel und Inhalt, Zeitfenster, Vergleich in konstanter Zeit); Paperless, Telefonie, Schadenstool, Objektakte und ausgehende Webhooks nutzen ihn bei unverändertem Format.
+- Objektakte: Webhook prüft die optionale Kopfzeile X-MHVP-Timestamp mit Fenster 300 Sekunden, lehnt angekündigte Übergröße vor dem Lesen mit 413 ab; Mandantenschalter objektakte_webhook_require_timestamp (Standard aus).
+- WhatsApp: Statusrückmeldungen werden nur für bekannte Werte und nur vorwärts übernommen (read bleibt read), Rückmeldungen außerhalb des Wiederholzeitraums werden ignoriert.
+- Webhooks: Zähler aufeinanderfolgender Fehlschläge mit Warnhinweis und Benachrichtigung, automatisches Deaktivieren nur per Mandantenschalter (Standard nur melden).
+- Webhooks: neue Endpunkte für Testzustellung und Erneuerung des Signaturschlüssels, Ziel-URL und Beschreibung änderbar; Maske Einstellungen, Webhooks ergänzt.
+- API: Listenparameter filter[feld], sort, fields, include und as_of erscheinen jetzt in der OpenAPI-Beschreibung aller Listen, die sie unterstützen (Verhalten unverändert).
+- Verträge: Zahlungshistorie, Umlagewerte, SEPA-Mandate und Umlageschlüssel akzeptieren den Stichtag as_of.
+- Postausgang: /postal/jobs begrenzt limit auf 1 bis 500.
+- Doku: Inventar der Listenlimits über 200 in docs/plans/LISTENLIMITS-2026-10-02.md.
+- Anmeldung: Login Erfolg und Fehlschlag, Kontosperre, Passwortänderung, TOTP ein und aus, Passkey anlegen und widerrufen, Sitzungswiderruf und OIDC-Tokenausgabe werden als Ereignis im Protokoll jedes Mandanten des Benutzers festgehalten, ohne Passwörter oder Codes.
+- Anmeldung: Zurücksetzen des zweiten Faktors durch Administratoren per Antrag und Freigabe durch eine zweite Person, hinter dem Mandantenschalter mfa_admin_reset_enabled (Standard aus), mit Benachrichtigung von Benutzer und Antragsteller.
+- Portal: Sicherheitsseite mit Passwort ändern und Liste aktiver Sitzungen mit Sitzung beenden.
+- Sicherheit: Beide Web-Apps senden eine Content Security Policy mit Nonce je Anfrage; Skripte ohne unsafe-inline, eval nur im Entwicklungsmodus.
+- CRM: Brotkrümelnavigation und Platzhalter der Regelmaske sind in Deutsch und Englisch übersetzt.
+- CRM: Kontaktvorschlag und Postfach-Einstellungen nutzen die generierten API-Typen statt lokaler Umgehungen.
+- Portal: ESLint prueft jetzt das Regelset jsx-a11y (recommended), Befunde behoben oder begruendet unterdrueckt.
+- Portal: Axe-Komponententest laeuft ueber alle Seiten unter app/(portal) im gesperrten und leeren Zustand.
+- Portal: Tests fuer PhotoPicker, AuthCard, MaintenanceBanner und PwaRegister ergaenzt.
+- Handbuch Portal: neue Kapitel SEPA-Lastschriftmandat, Passkeys und Hinweis zum leeren Reporting (Schalter und Gate G3).
+- Betrieb: Compose prod bietet optional das Profil split-workers mit Workern je Queue-Gruppe (default+beat, io+mail, ocr+ai, bank), Runbook skalierung.md.
+- CI: neuer Job dependency-audit mit pip-audit und pnpm audit --prod gegen die Lockfiles vor dem Image-Bau, Ausnahmen in .github/audit-allowlist.txt.
+- Workspace: Fristenquellen Notiz-Wiedervorlage und Ticket-Fälligkeit fest registriert, Test auf vollständige Quellenliste.
+- Doku: monitoring.md Abschnitt 10 zur Abweichung von Abschnitt 17 gegenüber ADR 0024.
+- Automatisierung: Neuer Endpunkt GET /automation/event-types liefert den Katalog aller ausgelösten Ereignistypen; ein Test gleicht ihn mit dem Quelltext ab.
+- Automatisierung: Das Regelformular schlägt bei eigenem Ereignistyp alle Katalogtypen vor und warnt vor Typen, die nie ausgelöst werden.
+- Kalender: Der ICS-Download-Link erscheint nur noch für Nutzer mit dem Recht tenant_settings:read.
+- Datenbank: Migration 0440 legt für 128 Mandantentabellen (unter anderem journal_line, open_item, payment_order, bank_rule, meter_reading, deposit_movement) einen Index mit führender tenant_id an.
+- Datenbank: Neuer Wächtertest prüft gegen pg_index, dass jede Tabelle mit tenant_id einen Index oder Unique/PK mit führender tenant_id hat (Allowlist mit Begründung für kleine Konfigurationstabellen).
+- CRM Tests: Komponententests für ImportUndoDialog, G5Evidence, MaintenanceAdmin, OnboardingWizard, PricingAdmin, TenantAdmin, CompanySettings, LexofficeRecurringPreps, RolesAdmin und SecretOnceNotice ergänzt.
+- Tests: BFF-Allowlist-Fälle für Uprotokoll-Import, Objektakte-Importläufe und OCR-Cache ergänzt.
+- Tests: allowlist-coverage.test.ts mit einmaligem Scan, Deduplizierung und Aufteilung je Bereich robuster gemacht.
+- Tests: Prüfung der deutschen Meldungsdateien auf Gedankenstriche als Satzzeichen ergänzt.
+- Tests: Komponententests für Periodensperren, SEPA-Mandate, Debitorenkonto, Abrechnung anlegen und weitere zuvor ungetestete CRM-Komponenten ergänzt.
+- Dokumentation: Entscheidungsvorlagen AI17-01 bis AI17-13 (§ 35a, HeizkostenV, CO2, Kaution, Webhooks, Seitengröße, If-Match, zweiter Faktor, Observability, Zählerstände, OCR-Cache, IBAN und Rundung) mit Fragen in OPEN_QUESTIONS ergänzt.
+- Abnahme: Register docs/acceptance/anhang-d-register.md ordnet D01 bis D58 Testfunktion und Sollwertquelle zu.
+- Regeln: Rundungsregister docs/rules/RUNDUNG.md mit Verfahren je Rechenwert und Fundstelle, Verweis aus B06.
+- Buchhaltung: Mandantenschalter für den Ausweis haushaltsnaher Leistungen wählt Rechnungsdatum (Standard) oder nur bezahlte Rechnungen nach Zahlungsdatum, jede Zeile zeigt den Zahlungsstand.
+- Buchhaltung: Jeder erzeugte Ausweis haushaltsnaher Leistungen wird je Vertrag und Jahr protokolliert, ein weiterer Ausweis desselben Jahres erhält einen Hinweis ohne Sperre.
+- Verträge: Nicht sperrender Prüfhinweis zur Kautionshöhe und Ratenzahl bei Wohnraum hinter Mandantenschalter (Standard aus, Vergleichswerte 3 Monatsmieten ohne Nebenkosten und 3 Raten einstellbar).
+- Bank FinTS: Lehnt die Bank die Dialogeröffnung mit Rückmeldecode 9010 ab, zeigt die Fehlermeldung jetzt Code und Text der Bank statt nur einer Vermutung; ein gespeicherter Dialogzustand (Kundensystem-ID, Bankparameter) wird bei 9010 einmal verworfen und der Dialog neu von vorn eröffnet (Produktionsbefund 02.10.2026 nach dem Aktualisieren).
+- Koordinator: Portal-Seitentest Sicherheit um den neuen Sitzungsaufruf ergänzt, Nebenläufigkeitstest Mahnlauf mit eindeutiger Objektnummer; Readiness-Test unter Last einmal rot (Timeout einer Prüfung), isoliert grün; Playwright-Smoke beider Apps gegen den Produktionsbuild mit der neuen CSP grün (21 bestanden, Backend-Spezifikationen übersprungen).
+- Koordinator: tsc, eslint, ruff, mypy, OpenAPI-Export mit api-client (neue Routen und Felder aller Pakete), Migrationskette 0248 bis 0443 im Auf- und Rückweg, Drift-Check, Tenant-Index-Wächter, Ereigniskatalog, Gesamtsuiten API, CRM und Portal ausgeführt.
+
 ## 1.64.0 (02.10.2026) Welle 19, Befunde der Lückenanalyse GAG: FinTS-Kontoeinrichtung aus der Bankzeile, Fallbacks im Bankabruf, Periodensperren und CO2-Aufteilung in der Abrechnung, Zählerstände, Löschungssperren, Importverläufe und breite Testabdeckung
 
 - Übersicht: Welle 19 mit 20 Paketen AH01 bis AH20 zu den 39 Befunden der Lückenanalyse GAG (38 done, 1 partial, GAG-35 vom Koordinator als Paket AH21 ergänzt); keine Migration, kein Schemaeingriff; die Freigabestufen G1 bis G5 bleiben geschlossen.

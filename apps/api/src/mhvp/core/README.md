@@ -202,3 +202,18 @@ need `tenant_settings:read`/`update`; changes emit `auth.mfa_policy_changed`. `M
 evaluates the current tenant only (UI hint). `policy_step` hands magic link logins over to TOTP
 or its setup (`mhvp.portal.magic_link`). Platform admins without membership are not covered
 (AE27-02). Tests that need the obligation set the policy explicitly (`test_ae27_mfa_policy`).
+
+## Tenant index guard (GAH-308, section 5.3)
+
+Every table with `tenant_id` needs an index or unique/primary key led by `tenant_id`.
+`mhvp.core.db.tenant_index.tenant_tables_without_leading_index` checks this against
+`pg_index`; `tests/integration/test_tenant_index.py` fails for any new table without one.
+Migration 0440 created `ix_<table>_tenant_id` for 128 tables; `apply_tenant_indexes` declares
+the same indexes on the ORM metadata (called in `mhvp/models.py`). Small configuration tables
+are allowlisted with a reason in `TENANT_INDEX_ALLOWLIST`. New tables declare their own index.
+
+## Listenparameter in OpenAPI und Stichtag (AI08)
+
+- `declare_list_parameters(app)` (in `create_app`) trägt `filter[feld]`, `sort`, `fields`, `include` und `as_of` für alle Listen mit `list_params` oder `ListSpec` in das OpenAPI-Dokument ein (nur Deklaration, Verhalten und `strict_query` unverändert).
+- `valid_on(query, tag, von, bis)` filtert Gültigkeitszeilen auf einen Stichtag. `as_of` gilt für `/contracts/{id}/payments`, `/contracts/{id}/allocation-values`, `/properties/{id}/allocation-keys`, `/sepa-mandates` und `/parties`.
+- Limits über 200: Inventar in `docs/plans/LISTENLIMITS-2026-10-02.md`; `/postal/jobs` hat `limit` 1 bis 500.

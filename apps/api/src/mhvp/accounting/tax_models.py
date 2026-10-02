@@ -59,6 +59,10 @@ class AccountingTaxSettings(IdMixin, TimestampMixin, TenantMixin, Base):
             "construction_withholding_percent BETWEEN 0 AND 100",
             name="ck_accounting_tax_withholding_percent",
         ),
+        # AI18 (GAH-101, migration 0443): selection basis of the § 35a certificate.
+        CheckConstraint(
+            "section_35a_basis IN ('invoice_date', 'payment_date')", name="section_35a_basis"
+        ),
     )
 
     # M14-02: input tax proposals (deductible share per opted property) are computed only
@@ -90,6 +94,12 @@ class AccountingTaxSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # difference (counted separately); display only, nothing is posted. Default on.
     subledger_exclude_written_off: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    # AI18 (GAH-101, migration 0443): ``invoice_date`` (default, previous behaviour) takes the
+    # marked lines by invoice date; ``payment_date`` only paid invoices whose payment date lies
+    # in the year. Technical preparation, the tax criterion stays an open decision (G3, G4).
+    section_35a_basis: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="invoice_date", server_default="invoice_date"
     )
 
 
@@ -209,3 +219,26 @@ class InvoiceSecondApproval(IdMixin, TenantMixin, Base):
     approved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class Section35aCertificateLog(IdMixin, TenantMixin, Base):
+    """AI18 (GAH-101, migration 0443): record of every generated § 35a certificate (PDF or
+    filed document) per contract and year. No lock: a second certificate of the same year only
+    shows a notice. Append only, nothing financial is changed."""
+
+    __tablename__ = "section35a_certificate_log"
+    __table_args__ = (
+        Index("ix_section35a_certificate_log_contract_year", "tenant_id", "contract_id", "year"),
+        CheckConstraint("output IN ('pdf', 'document')", name="output"),
+    )
+
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id")
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    basis: Mapped[str] = mapped_column(String(16), nullable=False)
+    output: Mapped[str] = mapped_column(String(16), nullable=False)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    labor_total: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

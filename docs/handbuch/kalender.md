@@ -91,3 +91,7 @@ bisher als "Ticketfrist".
 ### Kalender als ICS-Datei laden
 
 Auf der Seite Kalender lädt der Link "ICS-Datei herunterladen" einen einmaligen Stand Ihrer eigenen und geteilten Termine sowie der Fristen als Datei kalender.ics, die sich in jedem Kalenderprogramm importieren lässt. Die Datei aktualisiert sich nicht. Für laufend aktuelle Daten richten Sie darunter das Kalender-Abo ein (Abo-Adresse erzeugen); die Adresse wird nur einmal angezeigt und gilt wie ein Passwort.
+
+## ICS-Download
+
+Der Link "ICS-Datei herunterladen" erscheint nur für Nutzer mit dem Recht `tenant_settings:read`. Ohne dieses Recht bleibt das Kalender-Abo (Adresse erzeugen) nutzbar, der Direktdownload ist ausgeblendet.

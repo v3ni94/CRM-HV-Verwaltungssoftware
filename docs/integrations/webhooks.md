@@ -86,3 +86,10 @@ Neue Typen werden nur ergänzt, nie umbenannt (ADR 0009).
   nicht auf smart-einzug zugeschnitten.
 
 Test für Eigentümerkontakte mit Zustellfehler und Neuzustellung (gleicher Idempotency-Key, signiert, ohne Namen, Adressen und IBAN): `apps/api/tests/integration/test_ga09_smart_einzug_contact_updated.py` (GA09-04).
+
+## Verwaltung und Fehlschläge (AI07, GAH-206, GAH-207)
+
+* `PATCH /tenant/webhooks/{id}` ändert zusätzlich `url` (gleiche Zielprüfung wie beim Anlegen) und `description`.
+* `POST /tenant/webhooks/{id}/rotate-secret` erzeugt einen neuen Signaturschlüssel (einmalige Anzeige).
+* `POST /tenant/webhooks/{id}/test` (202) plant das Ereignis `webhook_subscription.test` nur für dieses Abonnement ein; Abonnements mit `*` erhalten es ebenfalls.
+* Je Abonnement: `consecutive_failures`, `last_failure_at`, `disabled_reason`. `GET/PUT /tenant/webhook-settings`: `auto_disable_after` (leer = nur melden), `objektakte_require_timestamp`.

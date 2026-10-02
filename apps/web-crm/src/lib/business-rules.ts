@@ -115,6 +115,7 @@ const TAX_FIELDS = [
   "section_35a_enabled",
   "approval_limits_enabled",
   "subledger_exclude_written_off",
+  "section_35a_basis",
 ] as const;
 
 /** PUT /accounting/tax/settings replaces the whole document: send it back unchanged except for
@@ -127,6 +128,26 @@ function taxBody(doc: unknown, value: RuleValue): unknown {
   out.approval_limits = limits.map((l) => ({ role_code: rec(l).role_code, limit_amount: rec(l).limit_amount }));
   out.subledger_exclude_written_off = value;
   return out;
+}
+
+/** Same full document as `taxBody`, setting the given field (AI18). */
+function taxFieldBody(field: (typeof TAX_FIELDS)[number]): (doc: unknown, value: RuleValue) => unknown {
+  return (doc, value) => {
+    const out = rec(taxBody(doc, rec(doc).subledger_exclude_written_off as RuleValue));
+    out[field] = value;
+    return out;
+  };
+}
+
+/** PUT /deposit-hint-settings needs the whole document (AI18, GAH-111). */
+function depositHintBody(doc: unknown, value: RuleValue): unknown {
+  const d = rec(doc);
+  return {
+    deposit_limit_hint_enabled: value,
+    factor_months: d.factor_months ?? "3",
+    max_installments: d.max_installments ?? 3,
+    rent_payment_codes: Array.isArray(d.rent_payment_codes) ? d.rent_payment_codes : ["rent"],
+  };
 }
 
 /** PUT /hoa/meeting-settings needs the invitation weeks and the virtual switch every time. */
@@ -294,6 +315,43 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "subledger_exclude_written_off",
   },
   {
+    id: "tax-35a-basis",
+    group: "accounting",
+    pkg: "AI18",
+    kind: "enum",
+    options: ["invoice_date", "payment_date"],
+    default: "invoice_date",
+    questions: ["AI17-01"],
+    href: "/buchhaltung",
+    permission: SETTINGS,
+    read: { path: "accounting/tax/settings", pick: fieldPick("section_35a_basis") },
+    write: {
+      method: "PUT",
+      path: "accounting/tax/settings",
+      permission: "tenant_settings:update",
+      body: taxFieldBody("section_35a_basis"),
+    },
+    field: "section_35a_basis",
+  },
+  {
+    id: "deposit-limit-hint",
+    group: "billing",
+    pkg: "AI18",
+    kind: "boolean",
+    default: false,
+    questions: ["AI17-04"],
+    href: "/vertraege",
+    permission: SETTINGS,
+    read: { path: "deposit-hint-settings", pick: fieldPick("deposit_limit_hint_enabled") },
+    write: {
+      method: "PUT",
+      path: "deposit-hint-settings",
+      permission: "tenant_settings:update",
+      body: depositHintBody,
+    },
+    field: "deposit_limit_hint_enabled",
+  },
+  {
     id: "period-lock-mode",
     group: "accounting",
     pkg: "AE20",
@@ -405,6 +463,26 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     permission: ACCOUNTING,
     // Buchungskreise mit mindestens einem Steuerkonto (GAE-38, tenantweite Zusammenfassung).
     read: { path: "accounting/interest-tax-config", pick: (doc) => numberField(doc, "ledgers_configured") },
+  },
+  {
+    // AI03 (GAH-110): day count of the default interest; default as before (days/365).
+    id: "dunning-day-count",
+    group: "accounting",
+    pkg: "AI03",
+    kind: "enum",
+    options: ["act_365_fixed", "act_act"],
+    default: "act_365_fixed",
+    questions: ["AI03-01"],
+    href: "/buchhaltung/mahnwesen",
+    permission: ACCOUNTING,
+    read: { path: "accounting/dunning-interest", pick: fieldPick("day_count") },
+    write: {
+      method: "PUT",
+      path: "accounting/dunning-interest",
+      permission: "accounting:approve",
+      body: fieldBody("day_count"),
+    },
+    field: "day_count",
   },
   {
     id: "rule-checkpoints",
@@ -997,6 +1075,19 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "portal_required",
   },
   {
+    id: "mfa-admin-reset",
+    group: "security",
+    pkg: "AI09",
+    kind: "boolean",
+    default: false,
+    questions: ["AI09-01"],
+    href: "/einstellungen/rollen",
+    permission: SETTINGS,
+    read: { path: "auth/mfa-reset/settings", pick: fieldPick("enabled") },
+    write: { method: "PUT", path: "auth/mfa-reset/settings", permission: "tenant_settings:update", body: fieldBody("enabled") },
+    field: "enabled",
+  },
+  {
     id: "access-export-third-party",
     group: "security",
     pkg: "AE33",
@@ -1197,6 +1288,43 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: fieldBody("enabled"),
     },
     field: "enabled",
+  },
+  {
+    id: "webhook-auto-disable",
+    group: "platform",
+    pkg: "AI07",
+    kind: "integer",
+    range: [0, 100],
+    default: 0,
+    questions: ["AI07-02"],
+    href: "/einstellungen/webhooks",
+    permission: ["tenant_settings:read"],
+    read: { path: "tenant/webhook-settings", pick: (doc) => (rec(doc).auto_disable_after as number | null) ?? 0 },
+    write: {
+      method: "PUT",
+      path: "tenant/webhook-settings",
+      permission: "tenant_settings:update",
+      body: (_doc, value) => ({ auto_disable_after: value === 0 || value === null ? null : value }),
+      apply: (doc, value) => ({ ...rec(doc), auto_disable_after: value === 0 ? null : value }),
+    },
+    field: "auto_disable_after",
+  },
+  {
+    id: "objektakte-webhook-timestamp",
+    group: "security",
+    pkg: "AI07",
+    kind: "boolean",
+    default: false,
+    questions: ["AI07-01"],
+    permission: ["tenant_settings:read"],
+    read: { path: "tenant/webhook-settings", pick: fieldPick("objektakte_require_timestamp") },
+    write: {
+      method: "PUT",
+      path: "tenant/webhook-settings",
+      permission: "tenant_settings:update",
+      body: fieldBody("objektakte_require_timestamp"),
+    },
+    field: "objektakte_require_timestamp",
   },
   {
     id: "insurance-broker-access",

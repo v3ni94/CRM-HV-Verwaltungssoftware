@@ -63,6 +63,21 @@ describe("FinTS account assignment (GAG-01, GAG-02)", () => {
     expect(call.body).toEqual({ property_id: PROP, legal_entity_id: GDWE.id, kind: "reserve", holder: "GdWE Testweg 1" });
   });
 
+  it("offers the account kind other with every legal entity as possible owner (GAH-404)", async () => {
+    const calls: Call[] = [];
+    mockFetch(calls, () => jsonResponse({ id: LINK, property_bank_account_id: "new" }));
+    renderIntl(<FinTsCreateInternalForm link={ACCOUNT} defaultHolder="" onDone={() => {}} />);
+    await screen.findByRole("option", { name: "801 Testweg 1" });
+    await userEvent.selectOptions(screen.getByLabelText("Objekt"), PROP);
+    expect(screen.getByRole("option", { name: "Sonstiges Konto" })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Kontoart"), "other");
+    await userEvent.selectOptions(screen.getByLabelText("Rechtsträger"), MANAGER.id);
+    await userEvent.click(screen.getByRole("button", { name: "Anlegen und zuordnen" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/assign"))).toBe(true));
+    const call = calls.find((c) => c.url.endsWith("/assign"))!;
+    expect(call.body).toMatchObject({ kind: "other", legal_entity_id: MANAGER.id });
+  });
+
   it("shows the API error text and keeps the form open", async () => {
     const calls: Call[] = [];
     mockFetch(calls, () => jsonResponse({ title: "Ungültig", detail: "Der Rechtsträger gehört nicht zu diesem Objekt.", code: "MHVP-VAL-0001" }, 422));

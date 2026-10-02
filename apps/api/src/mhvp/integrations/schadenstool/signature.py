@@ -7,8 +7,7 @@ HMAC-SHA256 over ``f"{timestamp}.{raw_body}"``. The receiver accepts a timestamp
 
 from __future__ import annotations
 
-import hashlib
-import hmac
+from mhvp.core import hmac_signature
 
 REPLAY_WINDOW_SECONDS = 300
 TIMESTAMP_HEADER = "X-Timestamp"
@@ -17,8 +16,7 @@ PREFIX = "sha256="
 
 
 def sign(secret: str, body: bytes, timestamp: int) -> str:
-    mac = hmac.new(secret.encode(), f"{timestamp}.".encode() + body, hashlib.sha256)
-    return PREFIX + mac.hexdigest()
+    return PREFIX + hmac_signature.mac_hex(secret, timestamp, body)
 
 
 def signed_headers(secret: str, body: bytes, timestamp: int) -> dict[str, str]:
@@ -35,14 +33,6 @@ def verify(
     window: int = REPLAY_WINDOW_SECONDS,
 ) -> str | None:
     """``None`` when valid, otherwise a short reason (``missing``, ``stale``, ``bad``)."""
-    if not timestamp_header or not signature_header:
-        return "missing"
-    try:
-        timestamp = int(timestamp_header.strip())
-    except ValueError:
-        return "bad"
-    if abs(now - timestamp) > window:
-        return "stale"
-    if not hmac.compare_digest(sign(secret, body, timestamp), signature_header.strip()):
-        return "bad"
-    return None
+    return hmac_signature.check(
+        secret, body, timestamp_header, signature_header, now=now, window=window, prefix=PREFIX
+    )

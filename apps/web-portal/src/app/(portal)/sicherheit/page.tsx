@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { ActiveSessions, PasswordChange } from "@/components/portal/AccountSessions";
 import { SecuritySettings } from "@/components/portal/SecuritySettings";
 import { SupportConsent } from "@/components/portal/SupportConsent";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -11,10 +12,11 @@ export const dynamic = "force-dynamic";
  *  the own portal account. */
 export default async function SecurityPage() {
   const api = serverApi();
-  const [t, me, devices] = await Promise.all([
+  const [t, me, devices, activeSessions] = await Promise.all([
     getTranslations("Security"),
     api.GET("/api/v1/auth/me"),
     api.GET("/api/v1/auth/trusted-devices"),
+    api.GET("/api/v1/auth/sessions"),
   ]);
   redirectIfUnauthenticated(me.response);
   // SA-02: the consent card appears only while the tenant has the support view switched on.
@@ -37,6 +39,9 @@ export default async function SecurityPage() {
         passkeysAvailable={passkeysAvailable}
         mfaRequired={(me.data as { mfa_required?: boolean } | undefined)?.mfa_required ?? false}
       />
+      {/* GAH-305: Passwort ändern und aktive Sitzungen. */}
+      <PasswordChange />
+      <ActiveSessions initial={activeSessions.data ?? []} />
       {consent?.available ? <SupportConsent initial={consent} /> : null}
     </div>
   );

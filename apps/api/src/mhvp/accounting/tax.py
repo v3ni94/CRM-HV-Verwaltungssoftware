@@ -14,10 +14,18 @@ from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting.models import Invoice, InvoiceLine, Ledger, LedgerAccount, VatMode
+from mhvp.accounting.models import (
+    Invoice,
+    InvoiceLine,
+    Ledger,
+    LedgerAccount,
+    OpenItem,
+    OpenItemSettlement,
+    VatMode,
+)
 from mhvp.accounting.tax_models import (
     SECTION_35A_KINDS,
     AccountingTaxSettings,
@@ -118,6 +126,12 @@ class Section35aLine:
     labor_amount: Decimal
     material_amount: Decimal
     text: str | None = None
+    # AI18 (GAH-101): payment state of the invoice (settled open items of its posting).
+    paid: bool = False
+    paid_on: date | None = None
+
+
+SECTION_35A_BASES = ("invoice_date", "payment_date")
 
 
 @dataclass
@@ -473,10 +487,15 @@ async def section35a_summary(
     year: int,
     unit_id: uuid.UUID | None,
     share_percent: Decimal,
+    basis: str = "invoice_date",
 ) -> Section35aSummary:
     """Marked lines of the property's ledgers in ``year``. Lines assigned to a unit count only
     for that unit; unassigned lines are shared by ``share_percent`` (allocation share of the
-    tenant, given by the caller, draft until the operating cost statement supplies it)."""
+    tenant, given by the caller, draft until the operating cost statement supplies it).
+
+    AI18 (GAH-101): ``basis`` ``invoice_date`` (default) filters by invoice date; with
+    ``payment_date`` only fully paid invoices whose last settlement lies in ``year`` count.
+    Every line carries its payment state either way."""
     ledger_ids = list(
         (
             await session.scalars(
@@ -494,17 +513,17 @@ async def section35a_summary(
             select(InvoiceLineSection35a, InvoiceLine, Invoice)
             .join(InvoiceLine, InvoiceLine.id == InvoiceLineSection35a.invoice_line_id)
             .join(Invoice, Invoice.id == InvoiceLineSection35a.invoice_id)
-            .where(
-                Invoice.ledger_id.in_(ledger_ids),
-                Invoice.invoice_date >= date(year, 1, 1),
-                Invoice.invoice_date <= date(year, 12, 31),
-            )
+            .where(Invoice.ledger_id.in_(ledger_ids), *_section35a_date_filter(basis, year))
             .order_by(Invoice.invoice_date, Invoice.number)
         )
     ).all()
+    states = await invoice_payment_states(session, [inv for _, _, inv in rows])
     direct: list[Section35aLine] = []
     shared: list[Section35aLine] = []
     for marker, line, invoice in rows:
+        paid, paid_on = states.get(invoice.id, (False, None))
+        if basis == "payment_date" and (not paid or paid_on is None or paid_on.year != year):
+            continue
         item = Section35aLine(
             invoice.number,
             invoice.invoice_date,
@@ -512,6 +531,8 @@ async def section35a_summary(
             marker.labor_amount,
             marker.material_amount,
             marker.text or line.text,
+            paid,
+            paid_on,
         )
         if line.unit_id is not None:
             if unit_id is not None and line.unit_id == unit_id:
@@ -528,9 +549,63 @@ async def section35a_summary(
             _money(s.labor_amount * share_percent / Decimal(100)),
             _money(s.material_amount * share_percent / Decimal(100)),
             s.text,
+            s.paid,
+            s.paid_on,
         )
         for s in shared
     ]
     summary.lines = direct + scaled
     summary.share_percent = Decimal(100)
     return summary
+
+
+def _section35a_date_filter(basis: str, year: int) -> list[Any]:
+    """Invoice date window: the whole year for ``invoice_date``; for ``payment_date`` every
+    invoice dated up to the end of the year (payment in the year is checked afterwards)."""
+    if basis == "payment_date":
+        return [Invoice.invoice_date <= date(year, 12, 31)]
+    return [Invoice.invoice_date >= date(year, 1, 1), Invoice.invoice_date <= date(year, 12, 31)]
+
+
+async def invoice_payment_states(
+    session: AsyncSession, invoices: list[Invoice]
+) -> dict[uuid.UUID, tuple[bool, date | None]]:
+    """AI18 (GAH-101): (paid, payment date) per invoice from the open items of its posting.
+    Paid means: open items exist and their settlements cover the full amount; the payment
+    date is the date of the last settlement. Unposted invoices count as unpaid."""
+    by_entry = {inv.journal_entry_id: inv.id for inv in invoices if inv.journal_entry_id}
+    if not by_entry:
+        return {}
+    items = (
+        await session.execute(
+            select(OpenItem.id, OpenItem.journal_entry_id, OpenItem.amount).where(
+                OpenItem.journal_entry_id.in_(list(by_entry))
+            )
+        )
+    ).all()
+    if not items:
+        return {}
+    settled = {
+        row[0]: (row[1], row[2])
+        for row in (
+            await session.execute(
+                select(
+                    OpenItemSettlement.open_item_id,
+                    func.sum(OpenItemSettlement.amount),
+                    func.max(OpenItemSettlement.date),
+                )
+                .where(OpenItemSettlement.open_item_id.in_([i[0] for i in items]))
+                .group_by(OpenItemSettlement.open_item_id)
+            )
+        ).all()
+    }
+    acc: dict[uuid.UUID, list[Any]] = {}
+    for item_id, entry_id, amount in items:
+        invoice_id = by_entry[entry_id]
+        total, last = settled.get(item_id, (ZERO, None))
+        state = acc.setdefault(invoice_id, [True, None])
+        if abs(total or ZERO) < abs(amount):
+            state[0] = False
+        if last is not None and (state[1] is None or last > state[1]):
+            state[1] = last
+    return {k: (bool(v[0]), v[1] if v[0] else None) for k, v in acc.items()}

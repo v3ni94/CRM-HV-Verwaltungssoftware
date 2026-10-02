@@ -223,6 +223,88 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 20 (Stand 1.65.0, 02.10.2026)
+
+Befunde der Lückenanalyse GAH (Modul-Durchlauf MASTER-PROMPT 3 bis 17 und Anhang D sowie Rückstände der Welle 19, 62 Befunde GAH-101 bis GAH-418), Pakete AI01 bis AI18. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.65.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.
+
+- Migrationen 0439 bis 0443, alle real: 0439 Trigger statement_snapshot (nur Einfügen), 0440 Indizes mit führender tenant_id für 128 Tabellen, 0441 Fehlerzähler und Schalter der Webhooks, 0442 Antrag und Einstellung zum Zurücksetzen des zweiten Faktors, 0443 Schalter § 35a sowie Tabellen section35a_certificate_log und deposit_hint_setting.
+- Fachliche Korrektur aus den Tests: Der KI-Stapelpfad prüfte AVV-Nachweis, Dokument und Opt-out nicht (GAH-203); jetzt wie das Gateway, offene Stapel werden bei entzogener Freigabe nicht mehr abgerufen.
+- Neue offene Entscheidungen: AI03-01, AI07-01, AI07-02, AI08-01, AI09-01, AI12-01, AI12-02, AI17-01 bis AI17-13 (Vorlagen in `docs/plans/ENTSCHEIDUNGEN-2026-10-01.md`). Vermerke technisch vorbereitet: AI18-01, AI18-02. Neue Annahme A-AI01-01 in `docs/ASSUMPTIONS.md`.
+- Festlegungen des Koordinators: as_of bei Umlageschlüsseln liefert Schlüssel mit einem am Stichtag gültigen Einheitenwert (AI08, zu bestätigen in AI08-01); Nummernkreis 001200 bis 001999 erlaubt auch technical und transit (A-AI01-01).
+- Zählung: 62 Befunde (13 davon nur Entscheidung, als Vorlagen erledigt), Status je Paket in der Tabelle; partial: GAH-102, GAH-201, GAH-402, GAH-213, GAH-208, GAH-301, GAH-304, GAH-310, GAH-407 (AI16), GAH-101 (AI18).
+- Vom Koordinator bei der Integration erledigt: ruff format für drei Dateien, LooseGet-Cast in der Auswertungsseite nach dem OpenAPI-Export entfernt, OpenAPI-Export und api-client neu erzeugt, Hilfeindex und Handbuch neu gebaut, Migrationskette 0248 bis 0443 mit Drift-Check, Tenant-Index-Wächter, Ereigniskatalog, Listeninventar und Gate-Abdeckung grün (42 Tests), Gesamtsuiten API, CRM und Portal sowie next build und Playwright wegen der CSP-Umstellung (Ergebnis siehe Versionsverlauf und Ergebnisbericht).
+- Korrektur des Koordinators (Produktionsbefund 02.10.2026, MHVP-BANK-0014 mit Rückmeldecode 9010 beim Aktualisieren): `mhvp.banking.fints` zeichnet die Rückmeldungen der Bank auf (RecordingClient), zeigt sie in der Fehlermeldung an und eröffnet den Dialog bei 9010 einmal ohne gespeicherten Zustand neu; drei neue Tests in `tests/unit/test_fints.py`.
+- Rückstände für Welle 21: GAH-407 Rest (22 Komponenten), alte Liquiditätsroute ohne Scope-Prüfung, billing new-version mit Body-Schema, CRM-Maske für MFA-Reset-Anträge, Bankbefund in accounting checks(), Vitest-Coverage-Schwelle, quantize ohne Rundungsverfahren, Summentreue reserve_split, party.valid_from und valid_to, CSP-Dokumentation im Runbook.
+
+| Befund-ID | Paket | Status | Hinweis |
+| --- | --- | --- | --- |
+| GAH-101 | AI17 | done | AI17 Vorlage AI17-01; AI18 Schalter section_35a_basis Standard Rechnungsdatum, Protokoll je Vertrag und Jahr ohne Sperre |
+| GAH-101 | AI18 | partial | AI17 Vorlage AI17-01; AI18 Schalter section_35a_basis Standard Rechnungsdatum, Protokoll je Vertrag und Jahr ohne Sperre |
+| GAH-102 | AI01 | partial | Bankbefund noch nicht in accounting checks() |
+| GAH-103 | AI02 | done |  |
+| GAH-104 | AI02 | done | Rohvariante GET /ledgers/{id}/liquidity ohne Scope-Prüfung bleibt vorerst (Folgepunkt) |
+| GAH-105 | AI01 | done | Annahme A-AI01-01: technical und transit im Bereich 001200 bis 001999 zulässig |
+| GAH-106 | AI02 | done |  |
+| GAH-107 | AI05 | done |  |
+| GAH-108 | AI17 | done |  |
+| GAH-109 | AI17 | done |  |
+| GAH-110 | AI03 | done | Entscheidung AI03-01 offen, Standard 365 fest |
+| GAH-111 | AI17 | done | AI17 Vorlage AI17-04; AI18 Schalter deposit_limit_hint_enabled Standard aus |
+| GAH-111 | AI18 | done | AI17 Vorlage AI17-04; AI18 Schalter deposit_limit_hint_enabled Standard aus |
+| GAH-112 | AI03 | done |  |
+| GAH-113 | AI03 | done |  |
+| GAH-114 | AI17 | done | D16 ohne Fallkennung, 13 Fälle mit Einzelfundstelle |
+| GAH-115 | AI17 | done | rund 100 quantize-Aufrufe ohne Rundungsverfahren (AI17-13), Summentreue reserve_split zu testen |
+| GAH-201 | AI01 | partial | paralleler finAPI- und FinTS-Abruf nicht getestet (Celery, Anbieter) |
+| GAH-202 | AI07 | done | Schalter objektakte_webhook_require_timestamp Standard aus, AI07-01 offen |
+| GAH-202 | AI17 | done | Schalter objektakte_webhook_require_timestamp Standard aus, AI07-01 offen |
+| GAH-203 | AI06 | done |  |
+| GAH-204 | AI06 | done |  |
+| GAH-205 | AI06 | done |  |
+| GAH-206 | AI07 | done | automatisches Deaktivieren nur per Schalter, AI07-02 offen |
+| GAH-206 | AI17 | done | automatisches Deaktivieren nur per Schalter, AI07-02 offen |
+| GAH-207 | AI07 | done |  |
+| GAH-208 | AI08 | partial | nur /postal/jobs begrenzt, Inventar LISTENLIMITS-2026-10-02.md, AI08-01 offen |
+| GAH-208 | AI17 | done | nur /postal/jobs begrenzt, Inventar LISTENLIMITS-2026-10-02.md, AI08-01 offen |
+| GAH-209 | AI08 | done |  |
+| GAH-210 | AI17 | done |  |
+| GAH-211 | AI05 | done |  |
+| GAH-212 | AI07 | done |  |
+| GAH-213 | AI08 | partial | /parties braucht valid_from und valid_to (Schema), as_of bei allocation-keys über gültigen Einheitenwert |
+| GAH-214 | AI10 | done |  |
+| GAH-215 | AI07 | done |  |
+| GAH-301 | AI09 | partial | Admin-Reset hinter Schalter Standard aus, CRM-Maske und Wiederherstellungscodes offen (AI09-01) |
+| GAH-301 | AI17 | done | Admin-Reset hinter Schalter Standard aus, CRM-Maske und Wiederherstellungscodes offen (AI09-01) |
+| GAH-302 | AI09 | done |  |
+| GAH-303 | AI10 | done | style-src behält unsafe-inline (React style-Props, next/font); Playwright-Prüfung durch Koordinator |
+| GAH-304 | AI11 | partial | @axe-core/playwright offline nicht installierbar |
+| GAH-305 | AI09 | done |  |
+| GAH-306 | AI12 | done |  |
+| GAH-307 | AI13 | done | Katalogtest verlangt Gleichheit mit emit-Aufrufen |
+| GAH-308 | AI14 | done | 0440 sperrt Schreibzugriffe je Tabelle während des Indexaufbaus; bei großen Tabellen vorab CONCURRENTLY mit gleichem Namen möglich |
+| GAH-309 | AI11 | done |  |
+| GAH-310 | AI12 | partial | Vitest-Coverage-Schwelle nicht gesetzt (Coverage-Paket fehlt offline); PYSEC-2026-4141 pyjwt in Allowlist, AI12-02 |
+| GAH-311 | AI11 | done |  |
+| GAH-312 | AI12 | done |  |
+| GAH-313 | AI10 | done |  |
+| GAH-314 | AI12 | done |  |
+| GAH-314 | AI17 | done |  |
+| GAH-401 | AI05 | done |  |
+| GAH-402 | AI04 | partial | Workbench Mietabrechnung: billing new-version ohne Body-Schema (Folgepunkt billing) |
+| GAH-403 | AI04 | done | neuer Code MHVP-HOA-0038 |
+| GAH-404 | AI05 | done |  |
+| GAH-405 | AI13 | done |  |
+| GAH-406 | AI05 | done |  |
+| GAH-407 | AI15 | done | AI15 Ordner ai, platform, settings vollständig; AI16 Rest, rund 22 Komponenten weiter ohne Test |
+| GAH-407 | AI16 | partial | AI15 Ordner ai, platform, settings vollständig; AI16 Rest, rund 22 Komponenten weiter ohne Test |
+| GAH-408 | AI11 | done |  |
+| GAH-409 | AI16 | done |  |
+| GAH-410 | AI16 | done |  |
+| GAH-411 | AI17 | done |  |
+| GAH-414 | AI17 | done |  |
+| GAH-415 | AI12 | done |  |
+| GAH-417 | AI16 | done |  |
+
 ## Welle 19 (Stand 1.64.0, 02.10.2026)
 
 Befunde der Lückenanalyse GAG (Prüfung der Masken, Endpunkte und Tests nach Welle 18), Pakete AH01 bis AH20 plus AH21 des Koordinators. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.64.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.

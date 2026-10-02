@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { CSP_HEADER, NONCE_HEADER, buildCsp, createNonce } from "@/lib/csp";
+
 import {
   COOKIE,
   clearSession,
@@ -48,11 +50,22 @@ function unauthenticated(request: NextRequest): NextResponse {
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  // GAH-303: one nonce per request, forwarded to the rendering and sent on every response.
+  const nonce = createNonce();
+  const csp = buildCsp(nonce);
+  const response = await handle(request, nonce, csp);
+  response.headers.set(CSP_HEADER, csp);
+  return response;
+}
+
+async function handle(request: NextRequest, nonce: string, csp: string): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
   const secure = isSecureHost(request.headers.get("x-forwarded-host") ?? request.headers.get("host"));
   const forward = () => {
     const h = new Headers(request.headers);
     h.set(PATH_HEADER, pathname + search);
+    h.set(NONCE_HEADER, nonce);
+    h.set(CSP_HEADER, csp);
     return h;
   };
 

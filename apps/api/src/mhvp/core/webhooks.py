@@ -5,8 +5,6 @@ Signature header ``X-MHVP-Signature: t=<unix>,v1=<hex>`` with
 than five minutes. Retry schedule: 1 min, 5 min, 30 min, 2 h, 6 h, 24 h, then failed.
 """
 
-import hashlib
-import hmac
 import ipaddress
 import json
 import socket
@@ -29,11 +27,13 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     select,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
+from mhvp.core import hmac_signature
 from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
@@ -113,6 +113,14 @@ class WebhookSubscription(IdMixin, TimestampMixin, TenantMixin, Base):
     secret: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     description: Mapped[str | None] = mapped_column(String(200))
+    # GAH-206 (migration 0441): consecutive final failures (status failed) since the last
+    # successful delivery; reset on success. ``disabled_reason`` is set when the tenant switch
+    # ``tenant_settings.webhook_auto_disable_after`` deactivated the subscription.
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    last_failure_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    disabled_reason: Mapped[str | None] = mapped_column(String(32))
 
 
 class WebhookDelivery(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -148,19 +156,17 @@ class UnsafeWebhookTargetError(ValueError):
 
 
 def sign(secret: str, body: bytes, timestamp: int) -> str:
-    mac = hmac.new(secret.encode(), f"{timestamp}.".encode() + body, hashlib.sha256)
-    return f"t={timestamp},v1={mac.hexdigest()}"
+    return f"t={timestamp},v1={hmac_signature.mac_hex(secret, timestamp, body)}"
 
 
 def verify(secret: str, body: bytes, header: str, *, now: int, tolerance: int = 300) -> bool:
     parts = dict(item.split("=", 1) for item in header.split(",") if "=" in item)
-    try:
-        timestamp = int(parts["t"])
-    except (KeyError, ValueError):
+    timestamp = hmac_signature.parse_timestamp(parts.get("t"))
+    if timestamp is None:
         return False
-    if abs(now - timestamp) > tolerance:
+    if not hmac_signature.within_window(timestamp, now=now, window=tolerance):
         return False
-    return hmac.compare_digest(sign(secret, body, timestamp), header)
+    return hmac_signature.equal(sign(secret, body, timestamp), header)
 
 
 def _is_public(address: str) -> bool:
@@ -353,9 +359,11 @@ async def attempt_delivery(
         delivery.status = DeliveryStatus.SUCCEEDED
         delivery.delivered_at = now
         delivery.next_attempt_at = None
+        subscription.consecutive_failures = 0
     elif delivery.attempts > len(RETRY_SCHEDULE_SECONDS):
         delivery.status = DeliveryStatus.FAILED
         delivery.next_attempt_at = None
+        await record_final_failure(session, subscription, now=now)
     else:
         delay = RETRY_SCHEDULE_SECONDS[delivery.attempts - 1]
         delivery.next_attempt_at = now + timedelta(seconds=delay)
@@ -389,6 +397,57 @@ async def deliver_due(
             session, delivery, client=client, allow_private=allow_private, now=now
         )
     return len(due)
+
+
+FAILURE_NOTIFICATION_KIND = "webhook.delivery_failed"
+FAILURE_NOTIFICATION_PERMISSION = "webhooks:update"
+AUTO_DISABLED_REASON = "consecutive_failures"
+
+
+async def record_final_failure(
+    session: AsyncSession, subscription: WebhookSubscription, *, now: datetime
+) -> bool:
+    """GAH-206: count the final failure, notify, deactivate only when the tenant switch says so.
+
+    Every member allowed to change webhooks gets one unread notification per subscription
+    (``workspace.services.notify`` is idempotent on the unread entry). Automatic deactivation
+    happens only when ``tenant_settings.webhook_auto_disable_after`` is set (default off,
+    question AI07-02) and the counter reached it. Returns True when deactivated.
+    """
+    from mhvp.banking.tasks import users_with_permission
+    from mhvp.platform.models import TenantSettings
+    from mhvp.workspace.services import notify
+
+    subscription.consecutive_failures = (subscription.consecutive_failures or 0) + 1
+    subscription.last_failure_at = now
+    threshold = await session.scalar(
+        select(TenantSettings.webhook_auto_disable_after).where(
+            TenantSettings.tenant_id == subscription.tenant_id
+        )
+    )
+    disabled = threshold is not None and subscription.consecutive_failures >= threshold
+    if disabled:
+        subscription.active = False
+        subscription.disabled_reason = AUTO_DISABLED_REASON
+    title = "Webhook automatisch deaktiviert" if disabled else "Webhook-Zustellung fehlgeschlagen"
+    body = (
+        f"{subscription.url[:300]}: {subscription.consecutive_failures} Zustellungen "
+        "in Folge endgültig fehlgeschlagen."
+    )
+    for user_id in await users_with_permission(
+        session, subscription.tenant_id, FAILURE_NOTIFICATION_PERMISSION
+    ):
+        await notify(
+            session,
+            tenant_id=subscription.tenant_id,
+            user_id=user_id,
+            kind=FAILURE_NOTIFICATION_KIND,
+            title=title,
+            body=body,
+            target_type="webhook_subscription",
+            target_id=subscription.id,
+        )
+    return disabled
 
 
 def redeliver(delivery: WebhookDelivery, *, now: datetime | None = None) -> None:

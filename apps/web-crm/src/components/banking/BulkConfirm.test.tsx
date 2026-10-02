@@ -149,4 +149,25 @@ describe("BulkConfirm", () => {
     expect(screen.getByRole("button", { name: "0 Umsätze buchen" })).toBeDisabled();
     expect(calls.some((url) => url.endsWith("/banking/bulk-confirm"))).toBe(false);
   });
+
+  it("lists transactions with a locked object period as exceptions and never submits them (GAH-401)", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      const full = { source: "match" as const, kind: "full", confidence: 0.9, reasoning: null, account_number: "1400", splits: split(), unambiguous: true };
+      if (url.includes(`${ids(1)}/posting-proposals`)) return jsonResponse({ ...base([full]), object_period_lock: { locked: true, code: "MHVP-ACC-0030" } });
+      if (url.includes("/posting-proposals")) return jsonResponse(base([full]));
+      if (url.endsWith("/banking/bulk-confirm")) {
+        return jsonResponse({ preview: true, count: 1, total: "100.00", legal_entities: ["le2"], exceptions: [], allocations: {} });
+      }
+      return jsonResponse({}, 404);
+    });
+    renderIntl(<BulkConfirm transactions={[tx(1), tx(2)]} legalEntityNames={new Map()} onClose={() => {}} onDone={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("bulk-count")).toHaveTextContent("1"));
+    expect(screen.getByTestId("bulk-period-locked")).toHaveTextContent("Zahler 1");
+    expect(screen.getByTestId("bulk-period-locked")).toHaveTextContent("MHVP-ACC-0030");
+    const preview = calls.find((c) => c.url.endsWith("/banking/bulk-confirm"))!;
+    expect(JSON.parse(preview.init!.body as string).items).toEqual([{ transaction_id: ids(2), settlements: split() }]);
+  });
 });

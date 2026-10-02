@@ -31,6 +31,10 @@ class FinTSDialogError(Exception):
     pass
 
 
+class FinTSClientError(Exception):
+    pass
+
+
 class FakeTan:
     """Stands in for `fints.client.NeedTANResponse` (duck typed by `fints.is_tan_request`)."""
 
@@ -72,6 +76,9 @@ class Scenario:
     sepa_unsupported: ClassVar[bool] = False
     mt940_empty: ClassVar[bool] = False
     camt_with_balance: ClassVar[bool] = False
+    # 9010 at dialog initialisation: "stored" rejects only a client built from stored state,
+    # "always" rejects every dialog and the fake records the bank's return message.
+    init_rejected: ClassVar[str | None] = None
 
     @classmethod
     def reset(cls) -> None:
@@ -80,6 +87,7 @@ class Scenario:
         cls.unreachable = cls.mt940_unsupported = False
         cls.balance_unsupported = cls.sepa_unsupported = False
         cls.mt940_empty = cls.camt_with_balance = False
+        cls.init_rejected = None
         cls.transactions = [
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-1"),
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-2"),
@@ -133,6 +141,8 @@ class FakeClient:
         self._mechanism: str | None = None
         self.init_tan_response: Any = None
         self._in_dialog = False
+        self._from_stored_state = bool(from_data)
+        self.mhvp_responses: list[tuple[str, str]] = []
         if from_data:
             state = json.loads(from_data)
             self._mechanism = state.get("mechanism")
@@ -177,6 +187,14 @@ class FakeClient:
             raise FinTSClientTemporaryAuthError("Account is temporarily locked.")
         if Scenario.reject_pin or self.pin != GOOD_PIN:
             raise FinTSClientPINError("Error during dialog initialization, PIN wrong?")
+        if Scenario.init_rejected == "always" or (
+            Scenario.init_rejected == "stored" and self._from_stored_state
+        ):
+            self.mhvp_responses.append(("9010", "Verarbeitung zur Zeit nicht möglich"))
+            raise FinTSClientError(
+                "Error during dialog initialization, could not fetch BPD. Please check that "
+                "you passed the correct bank identifier to the HBCI URL of the correct bank."
+            )
 
     def __enter__(self) -> FakeClient:
         self._auth()

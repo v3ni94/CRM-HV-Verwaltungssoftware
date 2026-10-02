@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import hmac
 import json
 import logging
 import time
@@ -35,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.core import crypto
+from mhvp.core import crypto, hmac_signature
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -71,20 +70,18 @@ TENANT_HEADER = "X-MHVP-Tenant"
 
 def sign(secret: str, timestamp: int | str, body: bytes) -> str:
     """Signature value the post-consume script must send (documented in the handbook)."""
-    digest = hmac.new(secret.encode(), f"{timestamp}.".encode() + body, hashlib.sha256)
-    return f"sha256={digest.hexdigest()}"
+    return f"sha256={hmac_signature.mac_hex(secret, timestamp, body)}"
 
 
 def verify(secret: str, timestamp: str | None, signature: str | None, body: bytes) -> bool:
-    if not timestamp or not signature or not signature.startswith("sha256="):
+    if not signature or not signature.startswith("sha256="):
         return False
-    try:
-        ts = int(timestamp)
-    except ValueError:
-        return False
-    if abs(time.time() - ts) > WINDOW_SECONDS:
-        return False
-    return hmac.compare_digest(sign(secret, ts, body), signature)
+    return (
+        hmac_signature.check(
+            secret, body, timestamp, signature, now=time.time(), window=WINDOW_SECONDS
+        )
+        is None
+    )
 
 
 def _refuse() -> ProblemError:

@@ -137,6 +137,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^deposit-interest-drafts/${ID}/(confirm|discard)$`) },
   // AF05 (GAF-27): deposit movements (no posting without G1) and the yearly interest draft run.
   { method: "POST", pattern: new RegExp(`^deposits/${ID}/movements$`) },
+  // AI18 (GAH-111): non blocking deposit hint switch.
+  { method: "GET", pattern: /^deposit-hint-settings$/ },
+  { method: "PUT", pattern: /^deposit-hint-settings$/ },
   { method: "POST", pattern: /^deposit-interest-drafts\/run$/ },
   { method: "GET", pattern: /^sepa-mandates$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
@@ -339,6 +342,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^tenant/webhooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^tenant/webhooks/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^tenant/webhooks/${ID}/deliveries$`) },
+  // AI07 (GAH-206, GAH-207): Testzustellung, Schlüsselrotation, Mandantenschalter.
+  { method: "POST", pattern: new RegExp(`^tenant/webhooks/${ID}/(test|rotate-secret)$`) },
+  { method: "GET", pattern: /^tenant\/webhook-settings$/ },
+  { method: "PUT", pattern: /^tenant\/webhook-settings$/ },
   // GAE-30, GAF-20, GAF-21: API-Schlüssel (nur Präfix, Widerruf), Branding, Mailquellen mit Geheimnisrotation.
   { method: "GET", pattern: /^tenant\/(api-keys|branding)$/ },
   { method: "POST", pattern: /^tenant\/api-keys$/ },
@@ -376,6 +383,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // M2-04: Richtlinie zweiter Faktor je Rolle (Einstellungen, Rollen und Rechte).
   { method: "GET", pattern: /^auth\/mfa-policy$/ },
   { method: "PUT", pattern: /^auth\/mfa-policy$/ },
+  // AI09 (GAH-301): switch of the four eyes reset of the second factor.
+  { method: "GET", pattern: /^auth\/mfa-reset\/settings$/ },
+  { method: "PUT", pattern: /^auth\/mfa-reset\/settings$/ },
   // Platform: tenant and tenant administrator creation (platform admins only, checked by the API).
   { method: "POST", pattern: /^platform\/tenants$/ },
   { method: "POST", pattern: /^platform\/users$/ },
@@ -478,7 +488,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   {
     method: "GET",
     pattern: new RegExp(
-      `^accounting/ledgers/${ID}/reports/(monthly-matrix|target-actual|bank-statement|vat-overview|vat-overview-by-property|income-expense|revenue|payments-by-debtor|trial-balance|open-items|account-sheet|xlsx|line-property-drift)$`,
+      `^accounting/ledgers/${ID}/reports/(monthly-matrix|target-actual|bank-statement|vat-overview|vat-overview-by-property|income-expense|revenue|payments-by-debtor|trial-balance|open-items|account-sheet|xlsx|line-property-drift|liquidity)$`,
     ),
   },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/procedure-documentation$`) },
@@ -760,6 +770,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/mahnbescheid(-preview)?$`) },
   { method: "GET", pattern: /^accounting\/dunning-interest-rates$/ },
   { method: "POST", pattern: /^accounting\/dunning-interest-rates$/ },
+  { method: "GET", pattern: /^accounting\/dunning-interest$/ },
+  { method: "PUT", pattern: /^accounting\/dunning-interest$/ },
+  { method: "POST", pattern: /^accounting\/dunning-interest\/base-rate-checkpoints$/ },
   { method: "GET", pattern: new RegExp(`^accounting/dunning-cases/${ID}/delivery-proofs$`) },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/delivery-proofs$`) },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/interest-draft$`) },
@@ -1042,7 +1055,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tickets\/templates$/ },
   { method: "GET", pattern: new RegExp(`^tickets/templates/${ID}$`) },
   // Regel-Engine Stufe 1 (A38): Regeln, Aktivierung, Testlauf ohne Wirkung, Protokoll.
-  { method: "GET", pattern: /^automation\/(meta|rules|runs|rule-templates|job-schedules)$/ },
+  { method: "GET", pattern: /^automation\/(meta|rules|runs|rule-templates|event-types|job-schedules)$/ },
   // Standardjobs je Mandant (S15-03).
   { method: "PUT", pattern: /^automation\/job-schedules\/[a-z0-9-]+$/ },
   { method: "POST", pattern: /^automation\/rules$/ },

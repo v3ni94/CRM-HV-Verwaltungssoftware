@@ -4,6 +4,7 @@ import { CalendarFeedPanel } from "@/components/calendar/CalendarFeedPanel";
 import { CalendarView } from "@/components/workspace/CalendarView";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export default async function CalendarPage({
   searchParams,
@@ -18,11 +19,13 @@ export default async function CalendarPage({
   const now = match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : new Date();
   const feed = await serverFetch("/api/v1/workspace/calendar-feed/token");
   const feedActive = feed?.ok ? Boolean(((await feed.json()) as { active?: boolean }).active) : null;
+  const me = await getMe();
+  const canDownload = (me.data?.permissions ?? []).includes("tenant_settings:read");
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("calendar")} />
       <CalendarView initialYear={now.getFullYear()} initialMonth={now.getMonth()} focusId={typeof termin === "string" ? termin : null} />
-      {feedActive !== null ? <CalendarFeedPanel initialActive={feedActive} /> : null}
+      {feedActive !== null ? <CalendarFeedPanel initialActive={feedActive} canDownload={canDownload} /> : null}
     </div>
   );
 }

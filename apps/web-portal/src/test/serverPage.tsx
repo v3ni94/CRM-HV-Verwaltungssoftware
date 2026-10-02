@@ -18,7 +18,14 @@ export type FakeRoute = { status: number; body?: unknown };
 export const fakeRoutes = new Map<string, FakeRoute>();
 export const requestedPaths: string[] = [];
 
+/** Optional answer for every path without a route (GAH-304 axe sweep over all pages). */
+export let fallbackRoute: FakeRoute | null = null;
+export function setFallbackRoute(hit: FakeRoute | null): void {
+  fallbackRoute = hit;
+}
+
 export function resetRoutes(): void {
+  fallbackRoute = null;
   fakeRoutes.clear();
   requestedPaths.length = 0;
 }
@@ -30,6 +37,7 @@ export function route(path: string, status: number, body?: unknown): void {
 function lookup(path: string): FakeRoute {
   requestedPaths.push(path);
   const hit = fakeRoutes.get(path) ?? fakeRoutes.get(path.split("?")[0] ?? path);
+  if (!hit && fallbackRoute) return fallbackRoute;
   if (!hit) throw new Error(`unmocked API path: ${path}`);
   return hit;
 }

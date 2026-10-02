@@ -8,7 +8,14 @@ import { ui } from "@/lib/ui";
 
 /** Kalender-Abo für externe Kalender (M23-06): persönliche Adresse mit Token. Die Adresse wird
  *  nur einmal angezeigt; eine neue Adresse ersetzt die alte, Widerruf beendet das Abo. */
-export function CalendarFeedPanel({ initialActive }: { initialActive: boolean }) {
+export function CalendarFeedPanel({
+  initialActive,
+  canDownload = false,
+}: {
+  initialActive: boolean;
+  /** Download needs tenant_settings:read (GAH-405); without it the link would only give 403. */
+  canDownload?: boolean;
+}) {
   const t = useTranslations("CalendarFeed");
   const [active, setActive] = useState(initialActive);
   const [url, setUrl] = useState<string | null>(null);
@@ -63,12 +70,14 @@ export function CalendarFeedPanel({ initialActive }: { initialActive: boolean })
       {url ? (
         <span className={ui.help}>{t("once")}</span>
       ) : null}
-      <p className="text-sm">
-        <a className="underline" href="/api/bff/workspace/calendar.ics" download="kalender.ics">
-          {t("download")}
-        </a>{" "}
-        <span className={ui.help}>{t("downloadHint")}</span>
-      </p>
+      {canDownload ? (
+        <p className="text-sm">
+          <a className="underline" href="/api/bff/workspace/calendar.ics" download="kalender.ics">
+            {t("download")}
+          </a>{" "}
+          <span className={ui.help}>{t("downloadHint")}</span>
+        </p>
+      ) : null}
       <div className="flex gap-2">
         <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void create()}>
           {active ? t("renew") : t("create")}

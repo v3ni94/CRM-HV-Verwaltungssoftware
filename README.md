@@ -61,6 +61,7 @@ Details: `docs/runbooks/local-development.md`.
 - Architecture decisions: `docs/adr/`
 - Rule registry: `docs/rules/`
 - Acceptance cases: `docs/acceptance/D-cases.md`
-- Runbooks: `docs/runbooks/`
+- Runbooks: `docs/runbooks/` (Worker-Skalierung: `skalierung.md`; Beobachtbarkeit nach
+  ADR 0024: `monitoring.md`, Abschnitt 10 zur Abweichung von Abschnitt 17 der Spezifikation)
 - Handbook (German): `docs/handbuch/`
 - Integrations (German): `docs/integrations/`

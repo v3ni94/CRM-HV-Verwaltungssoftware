@@ -24,6 +24,9 @@ from mhvp.contracts import models as contract_models
 from mhvp.contracts import service_contracts as service_contract_models
 from mhvp.core import events, numbering, webhooks
 from mhvp.core.auth import mfa_policy as auth_mfa_policy
+from mhvp.core.auth import mfa_reset as auth_mfa_reset
+from mhvp.core.db.base import Base
+from mhvp.core.db.tenant_index import apply_tenant_indexes
 from mhvp.documents import models as document_models
 from mhvp.handover import models as handover_models
 from mhvp.hoa import inspection as hoa_inspection_models
@@ -64,6 +67,7 @@ __all__ = [
     "accounting_tax_models",
     "ai_models",
     "auth_mfa_policy",
+    "auth_mfa_reset",
     "automation_models",
     "banking_ebics_models",
     "banking_models",
@@ -115,3 +119,6 @@ __all__ = [
     "webhooks",
     "workspace_models",
 ]
+
+# GAH-308: leading tenant_id indexes of migration 0440 (declared after all tables exist).
+apply_tenant_indexes(Base.metadata)

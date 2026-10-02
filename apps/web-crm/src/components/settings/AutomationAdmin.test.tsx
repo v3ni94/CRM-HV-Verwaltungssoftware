@@ -567,3 +567,25 @@ describe("AutomationAdmin", () => {
     expect(body.test_mode).toBe(true);
   });
 });
+
+describe("AutomationAdmin event catalogue (GAH-307)", () => {
+  it("warns about an event type the system never emits and accepts a known one", async () => {
+    renderIntl(
+      <AutomationAdmin
+        initialRules={[]}
+        initialRuns={[]}
+        pickers={{ ...pickers, eventCatalog: ["ticket.created", "contract.created"] }}
+        canManage
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Neue Regel" }));
+    await userEvent.selectOptions(screen.getByLabelText("Ereignistyp"), "__custom__");
+    const input = screen.getByLabelText("Ereignistyp (Code)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "contract.craeted");
+    expect(screen.getByRole("alert")).toHaveTextContent(/nicht ausgelöst/);
+    await userEvent.clear(input);
+    await userEvent.type(input, "contract.created");
+    expect(screen.queryByText(/nicht ausgelöst/)).toBeNull();
+  });
+});

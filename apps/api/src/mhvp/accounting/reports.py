@@ -66,7 +66,10 @@ async def liquidity(session: AsyncSession, ledger: Ledger, as_of: date) -> dict[
     for account in accounts:
         value = await _balance(session, account.id, as_of)
         kind = "free"
+        # GAH-104: how the kind was derived, so the number convention fallback is visible.
+        basis = "default"
         if account.property_bank_account_id:
+            basis = "bank_account"
             bank = await session.get(PropertyBankAccount, account.property_bank_account_id)
             if bank is not None and bank.segregated:
                 kind = "deposit"
@@ -74,6 +77,7 @@ async def liquidity(session: AsyncSession, ledger: Ledger, as_of: date) -> dict[
                 kind = "reserve"
         elif account.number == "001201":
             kind = "reserve"
+            basis = "number_convention"
         if kind == "deposit":
             deposit += value
         elif kind == "reserve":
@@ -81,7 +85,13 @@ async def liquidity(session: AsyncSession, ledger: Ledger, as_of: date) -> dict[
         else:
             free += value
         lines.append(
-            {"number": account.number, "name": account.name, "balance": value, "kind": kind}
+            {
+                "number": account.number,
+                "name": account.name,
+                "balance": value,
+                "kind": kind,
+                "kind_basis": basis,
+            }
         )
     horizon = as_of + timedelta(days=HORIZON_DAYS)
     items = await acc.open_items(session, ledger, as_of)

@@ -374,10 +374,36 @@ def _is_connection_failure(exc: BaseException) -> bool:
     )
 
 
-def problem_for_exception(exc: BaseException, *, fints_url: str | None = None) -> ProblemError:
+def bank_messages(client: Any) -> list[tuple[str, str]]:
+    """Return messages (code, text) the bank sent in the current dialog, newest last."""
+    return list(getattr(client, "mhvp_responses", None) or [])
+
+
+def _format_bank_messages(messages: list[tuple[str, str]] | None) -> str:
+    rejections = [(c, t) for c, t in (messages or []) if c.startswith("9")]
+    if not rejections:
+        return ""
+    return " Rückmeldung der Bank: " + "; ".join(
+        f"{code} {text}".strip() for code, text in rejections[-3:]
+    )
+
+
+def is_dialog_init_rejection(exc: BaseException) -> bool:
+    """True for python-fints' generic error on return code 9010 during dialog
+    initialisation ("could not fetch BPD")."""
+    return type(exc).__name__ == "FinTSClientError" and "could not fetch BPD" in str(exc)
+
+
+def problem_for_exception(
+    exc: BaseException,
+    *,
+    fints_url: str | None = None,
+    messages: list[tuple[str, str]] | None = None,
+) -> ProblemError:
     """python-fints exception to registered problem. Never includes the PIN; python-fints
     masks it in its own messages. ``fints_url`` names the contacted host in the hint for an
-    unreachable bank."""
+    unreachable bank; ``messages`` are the bank's return messages of the dialog (see
+    `bank_messages`), whose 9xxx texts are appended to the detail."""
     if isinstance(exc, ProblemError):
         return exc
     name = type(exc).__name__
@@ -400,23 +426,29 @@ def problem_for_exception(exc: BaseException, *, fints_url: str | None = None) -
             return problem_for_code(match.group(1), message)
         return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=message)
     message = str(exc)
-    if "could not fetch BPD" in message:
-        # Dialog initialisation failed before any bank return code: either the FinTS URL of
-        # the institute list is wrong for this BLZ, or the bank's system does not yet know
-        # the product registration (the DK forwards new ids to the banks with a delay of
-        # several working days).
+    bank_text = _format_bank_messages(messages)
+    if is_dialog_init_rejection(exc):
+        # Return code 9010 during dialog initialisation. Seen causes: a stale stored dialog
+        # state (system id, BPD) after changes on the bank side (start_session retries once
+        # without it), a FinTS URL that does not match the BLZ, or a product registration
+        # the bank's system does not yet know (the DK forwards new ids with a delay of
+        # several working days). The bank's own text, when sent, is appended.
         return ProblemError(
             ErrorCodes.FINTS_BANK_REJECTED,
             detail=(
-                "Die Bank hat den Dialog nicht eröffnet (keine Bankparameter). Mögliche "
-                "Ursachen: FinTS-Adresse passt nicht zur Bankleitzahl, oder die "
+                "Die Bank hat den Dialog nicht eröffnet (Rückmeldecode 9010)."
+                + bank_text
+                + " Mögliche Ursachen: vorübergehende Störung bei der Bank, "
+                "FinTS-Adresse passt nicht zur Bankleitzahl, oder die "
                 "FinTS-Produktregistrierung ist bei der Bank noch nicht freigeschaltet "
                 "(die Deutsche Kreditwirtschaft verteilt neue Nummern erst nach mehreren "
                 "Werktagen). Bitte später erneut versuchen und die Adresse mit der Angabe "
                 "der Bank vergleichen."
-            ),
+            )[:900],
         )
-    return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=f"{name}: {message}"[:500])
+    return ProblemError(
+        ErrorCodes.FINTS_BANK_REJECTED, detail=(f"{name}: {message}" + bank_text)[:900]
+    )
 
 
 def problem_code(error: ErrorCode) -> str:
@@ -518,7 +550,24 @@ class TanRequired(Exception):  # noqa: N818 - control flow marker, not an error
 def _client_class() -> Any:
     from fints.client import FinTS3PinTanClient
 
-    return FinTS3PinTanClient
+    class RecordingClient(FinTS3PinTanClient):  # type: ignore[misc]
+        """Keeps the bank's return messages (HIRMG, HIRMS) of the current dialog so that a
+        rejection can be reported with the bank's own words; python-fints only raises
+        generic English texts (for example for return code 9010)."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.mhvp_responses: list[tuple[str, str]] = []
+            super().__init__(*args, **kwargs)
+
+        def _process_response(self, dialog: Any, segment: Any, response: Any) -> None:
+            code = str(getattr(response, "code", "") or "")
+            text = str(getattr(response, "text", "") or "")
+            if code[:1] in ("3", "9"):
+                self.mhvp_responses.append((code, text))
+                del self.mhvp_responses[:-20]
+            super()._process_response(dialog, segment, response)
+
+    return RecordingClient
 
 
 # Injection points for tests (a fake client class and fake retry blob restore).
@@ -928,49 +977,101 @@ def start_session(
     progress: Progress,
 ) -> StepResult:
     """Opens the dialog and runs the work until it is done or the bank asks for a TAN.
-    Raises `ProblemError` for bank rejections (registered codes)."""
+    Raises `ProblemError` for bank rejections (registered codes).
+
+    A stored dialog state (system id, bank parameters, TAN registration) that the bank
+    rejects at initialisation with return code 9010 is discarded and the dialog is opened
+    once more from scratch; the bank may then ask for a TAN again (SCA)."""
+    clients: list[Any] = []
     try:
-        client = _build_client(creds, client_data)
-        if client_data is None or not client.get_current_tan_mechanism():
-            client.fetch_tan_mechanisms()
-        mechanisms = _mechanisms(client)
-        if tan_mechanism and any(m.code == tan_mechanism for m in mechanisms):
-            client.set_tan_mechanism(tan_mechanism)
-        elif tan_mechanism:
-            raise ProblemError(
-                ErrorCodes.FINTS_STATE,
-                detail=f"TAN-Verfahren {tan_mechanism} wird von der Bank nicht angeboten.",
-            )
-        selected_medium = tan_medium or getattr(client, "selected_tan_medium", None)
-        if client.is_tan_media_required() and not selected_medium:
-            _usage, media = client.get_tan_media()
-            if media:
-                client.set_tan_medium(media[0])
-                selected_medium = getattr(client, "selected_tan_medium", None)
-        elif tan_medium and not getattr(client, "selected_tan_medium", None):
-            client.selected_tan_medium = tan_medium
-        result = StepResult(
-            status="done",
-            client_data=b"",
-            tan_mechanisms=mechanisms,
-            tan_mechanism=client.get_current_tan_mechanism(),
-            tan_medium=selected_medium,
+        return _start_session(
+            creds,
+            client_data=client_data,
+            tan_mechanism=tan_mechanism,
+            tan_medium=tan_medium,
+            progress=progress,
+            clients=clients,
         )
-        with client:
-            init_response = getattr(client, "init_tan_response", None)
-            if is_tan_request(init_response):
-                return _pause(client, init_response, result, progress)
-            try:
-                progress = _work(client, progress)
-            except TanRequired as tan:
-                return _pause(client, tan.response, result, progress)
-        result.client_data = bytes(client.deconstruct(including_private=True))
-        result.progress = progress
-        return result
     except ProblemError:
         raise
     except Exception as exc:
-        raise problem_for_exception(exc, fints_url=creds.fints_url) from None
+        if client_data and is_dialog_init_rejection(exc):
+            logger.warning(
+                "fints_dialog_init_rejected_with_stored_state blz=%s retry=fresh_state",
+                creds.blz,
+            )
+            fresh: list[Any] = []
+            try:
+                return _start_session(
+                    creds,
+                    client_data=None,
+                    tan_mechanism=tan_mechanism,
+                    tan_medium=tan_medium,
+                    progress=progress,
+                    clients=fresh,
+                )
+            except ProblemError:
+                raise
+            except Exception as exc2:
+                raise problem_for_exception(
+                    exc2,
+                    fints_url=creds.fints_url,
+                    messages=bank_messages(fresh[-1]) if fresh else None,
+                ) from None
+        raise problem_for_exception(
+            exc, fints_url=creds.fints_url, messages=bank_messages(clients[-1]) if clients else None
+        ) from None
+
+
+def _start_session(
+    creds: Credentials,
+    *,
+    client_data: bytes | None,
+    tan_mechanism: str | None,
+    tan_medium: str | None,
+    progress: Progress,
+    clients: list[Any],
+) -> StepResult:
+    """`start_session` without the exception mapping; appends the built client to
+    ``clients`` so the caller can read the bank's return messages after a failure."""
+    client = _build_client(creds, client_data)
+    clients.append(client)
+    if client_data is None or not client.get_current_tan_mechanism():
+        client.fetch_tan_mechanisms()
+    mechanisms = _mechanisms(client)
+    if tan_mechanism and any(m.code == tan_mechanism for m in mechanisms):
+        client.set_tan_mechanism(tan_mechanism)
+    elif tan_mechanism:
+        raise ProblemError(
+            ErrorCodes.FINTS_STATE,
+            detail=f"TAN-Verfahren {tan_mechanism} wird von der Bank nicht angeboten.",
+        )
+    selected_medium = tan_medium or getattr(client, "selected_tan_medium", None)
+    if client.is_tan_media_required() and not selected_medium:
+        _usage, media = client.get_tan_media()
+        if media:
+            client.set_tan_medium(media[0])
+            selected_medium = getattr(client, "selected_tan_medium", None)
+    elif tan_medium and not getattr(client, "selected_tan_medium", None):
+        client.selected_tan_medium = tan_medium
+    result = StepResult(
+        status="done",
+        client_data=b"",
+        tan_mechanisms=mechanisms,
+        tan_mechanism=client.get_current_tan_mechanism(),
+        tan_medium=selected_medium,
+    )
+    with client:
+        init_response = getattr(client, "init_tan_response", None)
+        if is_tan_request(init_response):
+            return _pause(client, init_response, result, progress)
+        try:
+            progress = _work(client, progress)
+        except TanRequired as tan:
+            return _pause(client, tan.response, result, progress)
+    result.client_data = bytes(client.deconstruct(including_private=True))
+    result.progress = progress
+    return result
 
 
 def continue_session(
@@ -1015,7 +1116,11 @@ def continue_session(
     except ProblemError:
         raise
     except Exception as exc:
-        raise problem_for_exception(exc, fints_url=creds.fints_url) from None
+        raise problem_for_exception(
+            exc,
+            fints_url=creds.fints_url,
+            messages=bank_messages(client) if "client" in locals() else None,
+        ) from None
 
 
 def _is_work_result(progress: Progress, answer: Any) -> bool:

@@ -432,3 +432,9 @@ become the latest numbered prompt. Rule: `docs/rules/AE28-01.md`.
   Abruf durch den stündlichen Beat-Task `mhvp.ai.batch_poll`), sonst wie bisher als Sammellauf.
 - `batch_price_factor` (0 < f <= 1, Standard 1) wirkt nur auf Läufe, die vollständig aus dem
   Stapel beantwortet wurden; der Listenpreis bleibt in `input_ref.batch.list_cost_eur`.
+
+### Welle 20 (AI06): Batch-Freigabeprüfung und Goldstandard reply_draft
+
+- GAH-203: `batch.batch_configs` und `batch.batch_config_usable` prüfen dieselben Bedingungen wie die Gateway-Route (aktiv, Batch-Schalter, Vier-Augen-Freigabe, AVV unterzeichnet, AVV-Dokument, Opt-out, Schlüssel), bei jedem Einreichen und Abruf. Fehlt eine Bedingung nachträglich, wird ein offener Stapel nicht abgerufen; die Läufe gehen mit `reason: release_withdrawn` und `aborted_batch_id` in die Nachtwarteschlange zurück, wo das Gateway sie sperrt.
+- GAH-204: Negativtests `tests/integration/test_ai06_withdrawn_release.py` (Gateway, Batch Einreichen und Abruf, Einbettungsroute; Fake-Anbieter zählt Aufrufe).
+- GAH-205: Goldstandard `tests/ai_eval/reply_draft` (20 Fälle, zwei Injektionsfälle), Bewertung über `suggest.reply_task_payload` in `evaluate._reply_draft`.

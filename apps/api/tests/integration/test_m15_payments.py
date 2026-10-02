@@ -948,3 +948,178 @@ def test_d52_payment_batch_only_from_leading_system(
     second = order("D52-2")
     again = gated.post(f"{B}/payment-batches", json={"order_ids": [second]}, headers=gh)
     assert again.status_code == 409
+
+
+def test_ai03_payment_approval_and_bank_status_concurrency(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """AI03 (GAH-112, 7.1 B08, rule 0.1.9): the second approval sent twice at the same time
+    from two app instances counts once (row lock on the order), and the same execution report
+    sent twice at the same time settles the payable once (row lock on the batch). Expected
+    values: invoice 500,00 without discount, order 500,00; two approvals; after both concurrent
+    reports no open item remains and both answers carry the same journal entry."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    client, gated = clients
+    settings = _settings(database, redis_url)
+    h = bearer(login(client, world, "m15admin"))
+    acc_user = bearer(login(client, world, "m15acc"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "759", "name": "Zahlhaus parallel", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    own_iban = "DE91100000000123456789"
+    bank = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": own_iban,
+                "holder": "GdWE Zahlhaus parallel",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/accounts",
+            json={
+                "number": "001210",
+                "name": "Bank",
+                "category": "bank",
+                "type": "asset",
+                "property_bank_account_id": bank,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    provider = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "company",
+                "company_name": f"Dienst parallel {RUN} GmbH",
+                "bank_accounts": [{"iban": PROVIDER, "valid_from": "2020-01-01"}],
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "m15approver")), provider)
+    inv = _ok(
+        client.post(
+            f"{A}/invoices",
+            json={
+                "ledger_id": ledger,
+                "provider_contact_id": provider,
+                "number": "ZP-1",
+                "invoice_date": "2026-02-01",
+                "due_date": "2026-02-20",
+                "service_from": "2026-01-01",
+                "net": "500.00",
+                "vat": "0.00",
+                "gross": "500.00",
+                "payee_iban": PROVIDER,
+                "lines": [{"account_id": acc["040300"], "net": "500.00"}],
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    for step in ("completeness", "factual", "arithmetic_tax"):
+        _ok(
+            client.post(
+                f"{A}/invoices/{inv}/reviews",
+                json={"step": step, "result": "ok", "reason": "geprüft"},
+                headers=h,
+            ),
+            201,
+        )
+    _ok(client.post(f"{A}/invoices/{inv}/release", headers=acc_user))
+    _ok(client.post(f"{A}/invoices/{inv}/post", headers=h))
+    order = _ok(
+        client.post(
+            f"{B}/payment-orders",
+            json={
+                "invoice_id": inv,
+                "property_bank_account_id": bank,
+                "execution_date": "2026-02-05",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert order["amount"] == "500.00"
+    _ok(client.post(f"{B}/payment-orders/{order['id']}/approve", headers=h))
+
+    def approve_in_own_client(_: int) -> tuple[int, Any]:
+        with TestClient(create_app(settings)) as own:
+            r = own.post(f"{B}/payment-orders/{order['id']}/approve", headers=acc_user)
+            return r.status_code, r.json()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(approve_in_own_client, range(2)))
+    assert [code for code, _ in results] == [200, 200], results
+    assert all(body["approvals"] == 2 and body["status"] == "approved" for _, body in results)
+
+    gh = bearer(login(gated, world, "m15acc"))
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=gh))
+    batch = _ok(
+        gated.post(f"{B}/payment-batches", json={"order_ids": [order["id"]]}, headers=gh), 201
+    )
+    _ok(
+        gated.post(
+            f"{B}/payment-batches/{batch['id']}/bank-status",
+            json={"status": "submitted"},
+            headers=gh,
+        )
+    )
+    stmt = _camt(
+        "PP-1", own_iban, "5000.00", "4500.00", [_debit("DP-1", "500.00", order["end_to_end_id"])]
+    )
+    _ok(
+        client.post(
+            f"{B}/imports", json={"document_id": _upload(client, h, "pp1.xml", stmt)}, headers=h
+        ),
+        201,
+    )
+    tx = next(
+        t for t in _ok(client.get(f"{B}/transactions", headers=h)) if t["bank_reference"] == "DP-1"
+    )
+
+    def execute_in_own_client(_: int) -> tuple[int, Any]:
+        with TestClient(create_app(settings, release_gate_resolver=OpenG1G2())) as own:
+            r = own.post(
+                f"{B}/payment-batches/{batch['id']}/bank-status",
+                json={"status": "executed", "bank_transaction_id": tx["id"]},
+                headers=gh,
+            )
+            return r.status_code, r.json()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        reports = list(pool.map(execute_in_own_client, range(2)))
+    assert [code for code, _ in reports] == [200, 200], reports
+    assert reports[0][1][0]["journal_entry_id"] == reports[1][1][0]["journal_entry_id"]
+    open_items = _ok(
+        client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-12-31"}, headers=h)
+    )
+    assert open_items == []  # settled exactly once, no negative remainder

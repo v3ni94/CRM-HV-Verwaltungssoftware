@@ -1188,6 +1188,17 @@
             ],
             "title": "Property Bank Account Id"
           },
+          "range_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Warning"
+          },
           "relevant_for_cash_report": {
             "title": "Relevant For Cash Report",
             "type": "boolean"
@@ -6590,6 +6601,157 @@
           "portal_required"
         ],
         "title": "AuthMfaPolicyUpdate",
+        "type": "object"
+      },
+      "AuthMfaResetDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "title": "AuthMfaResetDecisionIn",
+        "type": "object"
+      },
+      "AuthMfaResetRequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "membership_id",
+          "reason"
+        ],
+        "title": "AuthMfaResetRequestIn",
+        "type": "object"
+      },
+      "AuthMfaResetRequestOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Comment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_by": {
+            "format": "uuid",
+            "title": "Requested By",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_user_id": {
+            "format": "uuid",
+            "title": "Target User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "membership_id",
+          "target_user_id",
+          "reason",
+          "status",
+          "requested_by",
+          "created_at"
+        ],
+        "title": "AuthMfaResetRequestOut",
+        "type": "object"
+      },
+      "AuthMfaResetSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AuthMfaResetSettingIn",
+        "type": "object"
+      },
+      "AuthMfaResetSettingOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AuthMfaResetSettingOut",
         "type": "object"
       },
       "AuthMfaSetupConfirmRequest": {
@@ -13589,6 +13751,23 @@
             "title": "Material Amount",
             "type": "string"
           },
+          "paid": {
+            "default": false,
+            "title": "Paid",
+            "type": "boolean"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
           "text": {
             "anyOf": [
               {
@@ -13614,6 +13793,11 @@
       },
       "CertificateOut": {
         "properties": {
+          "basis": {
+            "default": "invoice_date",
+            "title": "Basis",
+            "type": "string"
+          },
           "contract_id": {
             "format": "uuid",
             "title": "Contract Id",
@@ -13648,10 +13832,33 @@
             "title": "Notice",
             "type": "string"
           },
+          "previous": {
+            "items": {
+              "$ref": "#/components/schemas/CertificatePreviousOut"
+            },
+            "title": "Previous",
+            "type": "array"
+          },
+          "repeat_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repeat Notice"
+          },
           "share_percent": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Share Percent",
             "type": "string"
+          },
+          "unpaid_lines": {
+            "default": 0,
+            "title": "Unpaid Lines",
+            "type": "integer"
           },
           "year": {
             "title": "Year",
@@ -13669,6 +13876,49 @@
           "notice"
         ],
         "title": "CertificateOut",
+        "type": "object"
+      },
+      "CertificatePreviousOut": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "labor_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Labor Total",
+            "type": "string"
+          },
+          "output": {
+            "title": "Output",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "output",
+          "basis",
+          "document_id",
+          "labor_total"
+        ],
+        "title": "CertificatePreviousOut",
         "type": "object"
       },
       "ChangeIn": {
@@ -24003,6 +24253,82 @@
         "title": "DeliveryOut",
         "type": "object"
       },
+      "DepositHintSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "deposit_limit_hint_enabled": {
+            "title": "Deposit Limit Hint Enabled",
+            "type": "boolean"
+          },
+          "factor_months": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 24.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,11}0*$)\\d{0,6}\\.\\d{0,4}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Factor Months"
+          },
+          "max_installments": {
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Max Installments",
+            "type": "integer"
+          },
+          "rent_payment_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Rent Payment Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "deposit_limit_hint_enabled",
+          "factor_months",
+          "max_installments",
+          "rent_payment_codes"
+        ],
+        "title": "DepositHintSettingIn",
+        "type": "object"
+      },
+      "DepositHintSettingOut": {
+        "description": "AI18 (GAH-111): tenant switch of the non blocking deposit hint (default off).",
+        "properties": {
+          "deposit_limit_hint_enabled": {
+            "default": false,
+            "title": "Deposit Limit Hint Enabled",
+            "type": "boolean"
+          },
+          "factor_months": {
+            "default": "3",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Factor Months",
+            "type": "string"
+          },
+          "max_installments": {
+            "default": 3,
+            "title": "Max Installments",
+            "type": "integer"
+          },
+          "rent_payment_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rent Payment Codes",
+            "type": "array"
+          }
+        },
+        "title": "DepositHintSettingOut",
+        "type": "object"
+      },
       "DepositIn": {
         "additionalProperties": false,
         "properties": {
@@ -24512,6 +24838,13 @@
           },
           "kind": {
             "$ref": "#/components/schemas/DepositKind"
+          },
+          "limit_hints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limit Hints",
+            "type": "array"
           },
           "movements": {
             "items": {
@@ -27504,6 +27837,24 @@
           "proof_date"
         ],
         "title": "DunningDeliveryProofIn",
+        "type": "object"
+      },
+      "DunningInterestDayCountIn": {
+        "additionalProperties": false,
+        "properties": {
+          "day_count": {
+            "enum": [
+              "act_365_fixed",
+              "act_act"
+            ],
+            "title": "Day Count",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day_count"
+        ],
+        "title": "DunningInterestDayCountIn",
         "type": "object"
       },
       "DunningInterestRateIn": {
@@ -74547,6 +74898,15 @@
             "title": "Input Tax Enabled",
             "type": "boolean"
           },
+          "section_35a_basis": {
+            "default": "invoice_date",
+            "enum": [
+              "invoice_date",
+              "payment_date"
+            ],
+            "title": "Section 35A Basis",
+            "type": "string"
+          },
           "section_35a_enabled": {
             "default": false,
             "title": "Section 35A Enabled",
@@ -74598,6 +74958,11 @@
           "input_tax_enabled": {
             "title": "Input Tax Enabled",
             "type": "boolean"
+          },
+          "section_35a_basis": {
+            "default": "invoice_date",
+            "title": "Section 35A Basis",
+            "type": "string"
           },
           "section_35a_enabled": {
             "title": "Section 35A Enabled",
@@ -80723,6 +81088,11 @@
             "title": "Active",
             "type": "boolean"
           },
+          "consecutive_failures": {
+            "default": 0,
+            "title": "Consecutive Failures",
+            "type": "integer"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -80745,6 +81115,17 @@
               }
             ],
             "title": "Description"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
           },
           "event_types": {
             "items": {
@@ -80791,6 +81172,18 @@
               }
             ],
             "title": "Last Delivery Status Code"
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
           },
           "secret": {
             "description": "Signaturschlüssel, wird nur einmal angezeigt",
@@ -80837,6 +81230,11 @@
             "title": "Active",
             "type": "boolean"
           },
+          "consecutive_failures": {
+            "default": 0,
+            "title": "Consecutive Failures",
+            "type": "integer"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -80859,6 +81257,17 @@
               }
             ],
             "title": "Description"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
           },
           "event_types": {
             "items": {
@@ -80906,6 +81315,18 @@
             ],
             "title": "Last Delivery Status Code"
           },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
+          },
           "url": {
             "title": "Url",
             "type": "string"
@@ -80934,6 +81355,18 @@
             ],
             "title": "Active"
           },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "event_types": {
             "anyOf": [
               {
@@ -80947,9 +81380,94 @@
               }
             ],
             "title": "Event Types"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
           }
         },
         "title": "WebhookPatch",
+        "type": "object"
+      },
+      "WebhookSettingsIn": {
+        "properties": {
+          "auto_disable_after": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Disable After"
+          },
+          "objektakte_require_timestamp": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objektakte Require Timestamp"
+          }
+        },
+        "title": "WebhookSettingsIn",
+        "type": "object"
+      },
+      "WebhookSettingsOut": {
+        "description": "GAH-206, GAH-202 tenant switches (questions AI07-01, AI07-02).",
+        "properties": {
+          "auto_disable_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Disable After"
+          },
+          "objektakte_require_timestamp": {
+            "default": false,
+            "title": "Objektakte Require Timestamp",
+            "type": "boolean"
+          }
+        },
+        "title": "WebhookSettingsOut",
+        "type": "object"
+      },
+      "WebhookTestOut": {
+        "properties": {
+          "delivery_id": {
+            "format": "uuid",
+            "title": "Delivery Id",
+            "type": "string"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "delivery_id",
+          "event_id"
+        ],
+        "title": "WebhookTestOut",
         "type": "object"
       },
       "WhatsAppConfigIn": {
@@ -86933,6 +87451,72 @@
         ]
       }
     },
+    "/api/v1/accounting/dunning-interest": {
+      "get": {
+        "operationId": "get_dunning_interest_api_v1_accounting_dunning_interest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Dunning Interest Api V1 Accounting Dunning Interest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Zinstagemethode und Hinweis zum Basiszinssatz",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      },
+      "put": {
+        "operationId": "put_dunning_interest_api_v1_accounting_dunning_interest_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DunningInterestDayCountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Dunning Interest Api V1 Accounting Dunning Interest Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zinstagemethode setzen (Mandantenschalter)",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/dunning-interest-rates": {
       "get": {
         "operationId": "dunning_interest_rates_api_v1_accounting_dunning_interest_rates_get",
@@ -87000,6 +87584,34 @@
         ]
       }
     },
+    "/api/v1/accounting/dunning-interest/base-rate-checkpoints": {
+      "post": {
+        "description": "Creates the check points of the next two change dates in the rule register (group\nPrüfpunkt); the lead time of the check point list is the Vorfrist. Idempotent per date.",
+        "operationId": "seed_base_rate_checkpoints_api_v1_accounting_dunning_interest_base_rate_checkpoints_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Seed Base Rate Checkpoints Api V1 Accounting Dunning Interest Base Rate Checkpoints Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prüfpunkte zum Basiszinssatz (01.01. und 01.07.) als Entwurf anlegen",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/dunning-runs": {
       "get": {
         "operationId": "dunning_runs_api_v1_accounting_dunning_runs_get",
@@ -87014,6 +87626,42 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `run_date` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[run_date]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, run_date.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -87698,6 +88346,42 @@
               ],
               "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
               "title": "Page Size"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+            "in": "query",
+            "name": "filter[feld]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend).",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Eingebettete Relationen, kommagetrennt.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -91478,6 +92162,69 @@
         ]
       }
     },
+    "/api/v1/accounting/ledgers/{ledger_id}/reports/liquidity": {
+      "get": {
+        "description": "GAH-104 (7.5, 7.7 Absatz 1): the 90 day preview with the common report header.",
+        "operationId": "report_liquidity_api_v1_accounting_ledgers__ledger_id__reports_liquidity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Report Liquidity Api V1 Accounting Ledgers  Ledger Id  Reports Liquidity Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Liquiditätsvorschau mit Kopfangaben",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/ledgers/{ledger_id}/reports/monthly-matrix": {
       "get": {
         "operationId": "report_monthly_matrix_api_v1_accounting_ledgers__ledger_id__reports_monthly_matrix_get",
@@ -92121,7 +92868,8 @@
                 "open_items",
                 "revenue",
                 "vat_overview",
-                "income_expense"
+                "income_expense",
+                "liquidity"
               ],
               "title": "Report",
               "type": "string"
@@ -98346,6 +99094,236 @@
         ]
       }
     },
+    "/api/v1/auth/mfa-reset/requests": {
+      "get": {
+        "operationId": "list_mfa_reset_requests_api_v1_auth_mfa_reset_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuthMfaResetRequestOut"
+                  },
+                  "title": "Response List Mfa Reset Requests Api V1 Auth Mfa Reset Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Anträge Zurücksetzen zweiter Faktor",
+        "tags": [
+          "Anmeldung"
+        ]
+      },
+      "post": {
+        "operationId": "create_mfa_reset_request_api_v1_auth_mfa_reset_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthMfaResetRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMfaResetRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zurücksetzen zweiter Faktor beantragen",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa-reset/requests/{request_id}/approve": {
+      "post": {
+        "operationId": "approve_mfa_reset_request_api_v1_auth_mfa_reset_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthMfaResetDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMfaResetRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zurücksetzen zweiter Faktor freigeben",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa-reset/requests/{request_id}/reject": {
+      "post": {
+        "operationId": "reject_mfa_reset_request_api_v1_auth_mfa_reset_requests__request_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthMfaResetDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMfaResetRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zurücksetzen zweiter Faktor ablehnen",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa-reset/settings": {
+      "get": {
+        "operationId": "get_mfa_reset_setting_api_v1_auth_mfa_reset_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMfaResetSettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Schalter Zurücksetzen zweiter Faktor (GAH-301)",
+        "tags": [
+          "Anmeldung"
+        ]
+      },
+      "put": {
+        "operationId": "put_mfa_reset_setting_api_v1_auth_mfa_reset_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthMfaResetSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMfaResetSettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schalter Zurücksetzen zweiter Faktor ändern (GAH-301)",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
     "/api/v1/auth/mfa/setup/confirm": {
       "post": {
         "description": "Confirms the pending secret with a matching code (wrong codes count towards the\nlockout), switches TOTP on and issues the session, like ``/auth/mfa/verify``.",
@@ -98982,6 +99960,29 @@
         ]
       }
     },
+    "/api/v1/automation/event-types": {
+      "get": {
+        "operationId": "event_types_api_v1_automation_event_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Event Types Api V1 Automation Event Types Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Katalog der emittierten Ereignistypen (GAH-307)",
+        "tags": [
+          "Automatisierung"
+        ]
+      }
+    },
     "/api/v1/automation/job-schedules": {
       "get": {
         "operationId": "list_job_schedules_api_v1_automation_job_schedules_get",
@@ -99276,6 +100277,62 @@
     "/api/v1/automation/rules": {
       "get": {
         "operationId": "list_rules_api_v1_automation_rules_get",
+        "parameters": [
+          {
+            "description": "Gleichheitsfilter auf `active` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[active]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `test_mode` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[test_mode]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `trigger_event_type` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[trigger_event_type]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `trigger_kind` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[trigger_kind]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, name.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -103692,6 +104749,78 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf `batch_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[batch_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `invoice_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[invoice_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `kind` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[kind]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `ledger_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[ledger_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `property_bank_account_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[property_bank_account_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: amount, created_at, execution_date.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -104086,6 +105215,71 @@
     "/api/v1/banking/rules": {
       "get": {
         "operationId": "list_rules_api_v1_banking_rules_get",
+        "parameters": [
+          {
+            "description": "Gleichheitsfilter auf `approval_state` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[approval_state]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `contract_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[contract_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `learned_from_ai` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[learned_from_ai]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `legal_entity_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[legal_entity_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `property_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[property_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, hit_count, last_hit_at, name, priority.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -104510,6 +105704,87 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `booking_date` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[booking_date]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `currency` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[currency]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `journal_entry_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[journal_entry_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `legal_entity_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[legal_entity_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `property_bank_account_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[property_bank_account_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `statement_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[statement_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: amount, booking_date, counterpart_name, created_at, value_date.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -108508,6 +109783,42 @@
               "title": "Page Size",
               "type": "integer"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+            "in": "query",
+            "name": "filter[feld]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend).",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Eingebettete Relationen, kommagetrennt.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -111029,6 +112340,42 @@
               "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
               "title": "Page Size"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+            "in": "query",
+            "name": "filter[feld]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend).",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Eingebettete Relationen, kommagetrennt.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -111618,6 +112965,25 @@
               "title": "Contract Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Stichtag: nur am Tag gültige Zeilen",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag: nur am Tag gültige Zeilen",
+              "title": "As Of"
+            }
           }
         ],
         "responses": {
@@ -112150,6 +113516,25 @@
               "format": "uuid",
               "title": "Contract Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Stichtag: nur am Tag gültige Zeilen",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag: nur am Tag gültige Zeilen",
+              "title": "As Of"
             }
           }
         ],
@@ -113389,6 +114774,66 @@
         "summary": "Löschvorschlag ablehnen",
         "tags": [
           "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/deposit-hint-settings": {
+      "get": {
+        "operationId": "get_deposit_hint_settings_api_v1_deposit_hint_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositHintSettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prüfhinweis Kaution: Mandantenschalter (Standard aus)",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "put": {
+        "operationId": "put_deposit_hint_settings_api_v1_deposit_hint_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositHintSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositHintSettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfhinweis Kaution setzen (nicht sperrend, keine Rechtsentscheidung)",
+        "tags": [
+          "Verträge"
         ]
       }
     },
@@ -115927,6 +117372,42 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+            "in": "query",
+            "name": "filter[feld]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend).",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Eingebettete Relationen, kommagetrennt.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -127002,6 +128483,69 @@
               "title": "Legal Entity Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf `decided_on` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[decided_on]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `kind` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[kind]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `meeting_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[meeting_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `subject_kind` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[subject_kind]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: decided_on, number, status.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -129626,6 +131170,44 @@
     "/api/v1/immoware/sync/runs": {
       "get": {
         "operationId": "sync_runs_api_v1_immoware_sync_runs_get",
+        "parameters": [
+          {
+            "description": "Gleichheitsfilter auf `kind` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[kind]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: finished_at, started_at.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -136622,6 +138204,51 @@
               ],
               "title": "Q"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf `object_type` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[object_type]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `publication_status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[publication_status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `unit_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[unit_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: available_from, created_at, price, title.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -137535,6 +139162,60 @@
             "schema": {
               "format": "uuid",
               "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `contact_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[contact_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `listing_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[listing_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `source` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[source]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, viewing_at.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -140538,6 +142219,51 @@
               ],
               "description": "Abgleichstand mit Gmail (Rückkanal M20-08)",
               "title": "Sync State"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `channel` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[channel]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `direction` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[direction]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `mailbox_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[mailbox_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -144590,6 +146316,60 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf `connection_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[connection_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `data_kind` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[data_kind]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `property_assignment_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[property_assignment_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, finished_at, started_at.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -145822,6 +147602,33 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, status.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -158222,6 +160029,8 @@
             "required": false,
             "schema": {
               "default": 200,
+              "maximum": 500,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }
@@ -159257,6 +161066,42 @@
               "title": "Page Size",
               "type": "integer"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+            "in": "query",
+            "name": "filter[feld]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend).",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Eingebettete Relationen, kommagetrennt.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -159654,6 +161499,25 @@
               "format": "uuid",
               "title": "Property Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Stichtag: nur Schlüssel mit einem am Tag gültigen Einheitenwert",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag: nur Schlüssel mit einem am Tag gültigen Einheitenwert",
+              "title": "As Of"
             }
           }
         ],
@@ -163847,6 +165711,25 @@
             }
           },
           {
+            "description": "Stichtag: unterschrieben bis zum Tag und nicht vor dem Tag abgelaufen",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag: unterschrieben bis zum Tag und nicht vor dem Tag abgelaufen",
+              "title": "As Of"
+            }
+          },
+          {
             "in": "query",
             "name": "limit",
             "required": false,
@@ -164289,6 +166172,51 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Gleichheitsfilter auf `channel` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[channel]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `level` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[level]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `ticket_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[ticket_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: level, sent_at.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -164479,6 +166407,60 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `color` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[color]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `rule_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[rule_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `state` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[state]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `ticket_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[ticket_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: due_resolution_at, due_response_at, started_at.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -170058,6 +172040,67 @@
         ]
       }
     },
+    "/api/v1/tenant/webhook-settings": {
+      "get": {
+        "operationId": "get_webhook_settings_api_v1_tenant_webhook_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Webhook-Einstellungen des Mandanten",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "put": {
+        "description": "GAH-206 (AI07-02): ``auto_disable_after`` NULL = only notify (default). GAH-202\n(AI07-01): ``objektakte_require_timestamp`` false = deliveries without timestamp header\nkeep the old behaviour (default).",
+        "operationId": "put_webhook_settings_api_v1_tenant_webhook_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Webhook-Einstellungen setzen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/webhooks": {
       "get": {
         "operationId": "list_webhooks_api_v1_tenant_webhooks_get",
@@ -170301,6 +172344,94 @@
           }
         },
         "summary": "Zustellprotokoll",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/webhooks/{hook_id}/rotate-secret": {
+      "post": {
+        "description": "GAH-207: new secret, shown once; the old one stops working immediately.",
+        "operationId": "rotate_webhook_secret_api_v1_tenant_webhooks__hook_id__rotate_secret_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Signaturschlüssel des Webhooks erneuern",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/webhooks/{hook_id}/test": {
+      "post": {
+        "description": "GAH-207: records the event ``webhook_subscription.test`` and queues one delivery to this\nsubscription only (signed like every delivery, sent by the minute job). The event type is\nnot in the subscription catalogue, so other subscriptions only receive it with ``*``.",
+        "operationId": "send_test_webhook_api_v1_tenant_webhooks__hook_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookTestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Testzustellung an den Webhook",
         "tags": [
           "Mandant"
         ]
@@ -170754,6 +172885,33 @@
               ],
               "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
               "title": "Page Size"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+            "in": "query",
+            "name": "filter[feld]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Eingebettete Relationen, kommagetrennt.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -174281,6 +176439,69 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `property_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[property_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `provider_contact_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[provider_contact_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `requires_board_approval` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[requires_board_approval]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `status` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[status]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Gleichheitsfilter auf `ticket_id` (mehrere Werte mit Komma).",
+            "in": "query",
+            "name": "filter[ticket_id]",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sortierung: `feld,-feld` (`-` absteigend). Erlaubt: created_at, scheduled_at, status.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sparantwort: `a,b` (`id` bleibt immer enthalten).",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],

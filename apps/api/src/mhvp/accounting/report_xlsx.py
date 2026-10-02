@@ -22,7 +22,7 @@ from openpyxl.utils import get_column_letter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting import report_views
+from mhvp.accounting import report_views, reports
 from mhvp.accounting import services as acc
 from mhvp.accounting.models import EntryStatus, JournalEntry, JournalLine, Ledger, LedgerAccount
 from mhvp.core.escaping import csv_safe_cell
@@ -168,6 +168,9 @@ REPORTS = (
     "vat_overview",
     "income_expense",
 )
+
+
+LIQUIDITY_KIND_LABELS = {"free": "Frei", "reserve": "Rücklage", "deposit": "Kaution"}
 
 
 async def build_report_xlsx(
@@ -319,5 +322,29 @@ async def build_report_xlsx(
                 rows,
             ),
             len(rows),
+        )
+    if report == "liquidity":
+        data = await reports.liquidity(session, ledger, as_of)
+        header = await report_views.report_header(
+            session, ledger, report=report, as_of=as_of, filters={"horizon": data["horizon"]}
+        )
+        liq_rows: list[list[Any]] = [
+            [a["number"], a["name"], LIQUIDITY_KIND_LABELS.get(a["kind"], a["kind"]), a["balance"]]
+            for a in data["accounts"]
+        ]
+        liq_rows += [
+            ["", label, "Summe", data[key]]
+            for key, label in (
+                ("free_funds", "Freie Mittel"),
+                ("reserve_funds", "Rücklagen"),
+                ("segregated_deposits", "Getrennt angelegte Kautionen"),
+                ("expected_inflows", "Erwartete Einzahlungen (nicht projiziert)"),
+                ("expected_outflows", "Erwartete Auszahlungen"),
+                ("projected_free_funds", "Freie Mittel nach Auszahlungen"),
+            )
+        ]
+        return (
+            build_xlsx("Liquidität", header, ["Konto", "Bezeichnung", "Art", "Betrag"], liq_rows),
+            len(data["accounts"]),
         )
     raise ValueError(report)

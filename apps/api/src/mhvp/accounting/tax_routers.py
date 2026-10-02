@@ -10,9 +10,9 @@ posted, withheld or sent here. The § 35a certificate is a PDF draft with the wa
 """
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -25,6 +25,7 @@ from mhvp.accounting.tax_models import (
     InvoiceLineSection35a,
     InvoiceTaxData,
     PropertyTaxProfile,
+    Section35aCertificateLog,
     SupplierTaxProfile,
 )
 from mhvp.contacts.models import Contact, Party, PartyMember
@@ -50,6 +51,33 @@ SETTINGS_READ = require_permission("tenant_settings:read")
 SETTINGS_UPDATE = require_permission("tenant_settings:update")
 
 DRAFT_NOTICE = "Entwurf, zu prüfen durch Steuerberater, keine steuerliche Bescheinigung"
+# AI18 (GAH-101): notice only, no lock (the criterion is an open decision, G3/G4).
+REPEAT_NOTICE = (
+    "Für diesen Vertrag und dieses Jahr wurde bereits ein Ausweis erzeugt. "
+    "Bitte prüfen, ob dieselben Aufwendungen erneut ausgewiesen werden."
+)
+
+
+async def _log_certificate(
+    session: AsyncSession,
+    principal: TenantPrincipal,
+    cert: "CertificateOut",
+    output: str,
+    document_id: uuid.UUID | None = None,
+) -> None:
+    session.add(
+        Section35aCertificateLog(
+            tenant_id=principal.tenant_id,
+            contract_id=cert.contract_id,
+            year=cert.year,
+            basis=cert.basis,
+            output=output,
+            document_id=document_id,
+            labor_total=cert.labor_total,
+            created_by=principal.user_id,
+        )
+    )
+    await session.flush()
 
 
 # Schemas ----------------------------------------------------------------------------------------
@@ -71,6 +99,7 @@ class TaxSettingsOut(BaseModel):
     approval_limits_enabled: bool
     approval_limits: list[dict[str, Any]]
     subledger_exclude_written_off: bool = True
+    section_35a_basis: str = "invoice_date"
 
 
 class TaxSettingsIn(BaseModel):
@@ -83,6 +112,8 @@ class TaxSettingsIn(BaseModel):
     approval_limits_enabled: bool = False
     approval_limits: list[ApprovalLimitIn] = Field(default_factory=list, max_length=50)
     subledger_exclude_written_off: bool = True
+    # AI18 (GAH-101): selection basis of the § 35a certificate, default unchanged.
+    section_35a_basis: Literal["invoice_date", "payment_date"] = "invoice_date"
 
 
 class PropertyProfileOut(BaseModel):
@@ -181,12 +212,26 @@ class CertificateLineOut(BaseModel):
     labor_amount: Decimal
     material_amount: Decimal
     text: str | None
+    paid: bool = False
+    paid_on: date | None = None
+
+
+class CertificatePreviousOut(BaseModel):
+    created_at: datetime
+    output: str
+    basis: str
+    document_id: uuid.UUID | None
+    labor_total: Decimal
 
 
 class CertificateOut(BaseModel):
     contract_id: uuid.UUID
     year: int
     share_percent: Decimal
+    basis: str = "invoice_date"
+    unpaid_lines: int = 0
+    previous: list[CertificatePreviousOut] = Field(default_factory=list)
+    repeat_notice: str | None = None
     lines: list[CertificateLineOut]
     labor_by_kind: dict[str, Decimal]
     labor_total: Decimal
@@ -260,6 +305,7 @@ async def put_settings(
         row.section_35a_enabled = body.section_35a_enabled
         row.approval_limits_enabled = body.approval_limits_enabled
         row.subledger_exclude_written_off = body.subledger_exclude_written_off
+        row.section_35a_basis = body.section_35a_basis
         row.approval_limits = [
             {"role_code": lim.role_code, "limit_amount": str(lim.limit_amount)}
             for lim in body.approval_limits
@@ -580,11 +626,35 @@ async def _certificate(
         year=year,
         unit_id=contract.unit_id,
         share_percent=share_percent,
+        basis=settings.section_35a_basis,
     )
+    previous = [
+        CertificatePreviousOut(
+            created_at=log.created_at,
+            output=log.output,
+            basis=log.basis,
+            document_id=log.document_id,
+            labor_total=log.labor_total,
+        )
+        for log in (
+            await session.scalars(
+                select(Section35aCertificateLog)
+                .where(
+                    Section35aCertificateLog.contract_id == contract_id,
+                    Section35aCertificateLog.year == year,
+                )
+                .order_by(Section35aCertificateLog.created_at)
+            )
+        ).all()
+    ]
     return contract, CertificateOut(
         contract_id=contract_id,
         year=year,
         share_percent=share_percent,
+        basis=settings.section_35a_basis,
+        unpaid_lines=sum(1 for ln in summary.lines if not ln.paid),
+        previous=previous,
+        repeat_notice=REPEAT_NOTICE if previous else None,
         lines=[CertificateLineOut(**vars(ln)) for ln in summary.lines],
         labor_by_kind=summary.share_by_kind(),
         labor_total=summary.labor_total,
@@ -641,19 +711,20 @@ async def _certificate_pdf(
             _de_date(ln.invoice_date),
             ln.invoice_number,
             KIND_LABELS.get(ln.kind, ln.kind),
-            (ln.text or "")[:60],
+            (ln.text or "")[:48],
+            _de_date(ln.paid_on) if ln.paid and ln.paid_on else "nein",
             _eur(ln.labor_amount),
             _eur(ln.material_amount),
         ]
         for ln in cert.lines
     ]
-    rows.append(["", "", "Summe", "", _eur(cert.labor_total), _eur(cert.material_total)])
+    rows.append(["", "", "Summe", "", "", _eur(cert.labor_total), _eur(cert.material_total)])
     table = letters.LetterTable(
-        header=["Datum", "Rechnung", "Art", "Leistung", "Lohnanteil", "Materialanteil"],
+        header=["Datum", "Rechnung", "Art", "Leistung", "Bezahlt", "Lohnanteil", "Materialanteil"],
         rows=rows,
-        right_aligned=(4, 5),
+        right_aligned=(5, 6),
         total_row=True,
-        widths=(0.13, 0.15, 0.22, 0.22, 0.14, 0.14),
+        widths=(0.12, 0.13, 0.19, 0.18, 0.12, 0.13, 0.13),
     )
     kinds = (
         ", ".join(f"{KIND_LABELS[k]} {_eur(v)}" for k, v in cert.labor_by_kind.items() if v)
@@ -717,6 +788,7 @@ async def certificate_pdf(
             session, contract_id, year, share_percent, principal.tenant_id
         )
         pdf = await _certificate_pdf(session, request, contract, cert)
+        await _log_certificate(session, principal, cert, "pdf")
         filename = f"35a-{cert.year}-{contract.number}-entwurf.pdf"
         return Response(
             pdf,
@@ -760,4 +832,10 @@ async def certificate_document(
             scan_for_malware=False,
             settings=request.app.state.settings,
         )
-        return {"document_id": str(document.id), "contract_id": str(contract.id), "year": year}
+        await _log_certificate(session, principal, cert, "document", document.id)
+        return {
+            "document_id": str(document.id),
+            "contract_id": str(contract.id),
+            "year": year,
+            "repeat_notice": cert.repeat_notice,
+        }

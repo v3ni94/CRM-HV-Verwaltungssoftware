@@ -527,6 +527,10 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
             "ticket_reopen_window_days BETWEEN 0 AND 3650",
             name="ticket_reopen_window_days_range",
         ),
+        CheckConstraint(
+            "webhook_auto_disable_after IS NULL OR webhook_auto_disable_after BETWEEN 1 AND 100",
+            name="webhook_auto_disable_after_range",
+        ),
         # Gmail back channel (rule M20-08, migration 0224).
         CheckConstraint(
             "gmail_done_sync_mode IN ('off', 'record_only', 'done')",
@@ -605,6 +609,14 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # je Anhang genau einen ``extract_invoice``-Lauf (nur Vorschlag). Standard aus; Aktivierung
     # und Kostenrahmen entscheidet der Betreiber.
     invoice_intake_auto: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # GAH-206 (migration 0441, question AI07-02): deactivate an outgoing webhook after this many
+    # consecutive final failures. NULL (default) = only notify, never deactivate.
+    webhook_auto_disable_after: Mapped[int | None] = mapped_column(Integer)
+    # GAH-202 (migration 0441, question AI07-01): the objektakte webhook demands the header
+    # X-MHVP-Timestamp. Default off: a delivery without the header keeps the old behaviour.
+    objektakte_webhook_require_timestamp: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     # M7-09, M12-01 KI-Kontierung (``propose_posting``): Bankumsätze enthalten Personenbezug;

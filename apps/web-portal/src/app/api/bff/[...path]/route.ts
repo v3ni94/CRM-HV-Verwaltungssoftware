@@ -27,6 +27,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^auth\/webauthn\/(status|credentials)$/ },
   { method: "POST", pattern: /^auth\/webauthn\/register\/verify$/ },
   { method: "DELETE", pattern: new RegExp(`^auth/webauthn/credentials/${ID}$`) },
+  // GAH-305: Passwort ändern und aktive Sitzungen des eigenen Kontos.
+  { method: "POST", pattern: /^auth\/password$/ },
+  { method: "GET", pattern: /^auth\/sessions$/ },
+  { method: "DELETE", pattern: new RegExp(`^auth/sessions/${ID}$`) },
   // Benachrichtigungen mit Sprung zum Betreff (operator 26.09.2026).
   { method: "GET", pattern: /^portal\/notifications$/ },
   { method: "POST", pattern: /^portal\/notifications\/read$/ },

@@ -46,6 +46,9 @@ export default async function BankPage() {
         <Link href="/bank/nachkontrolle" className="hover:underline">
           {t("reviewLink")}
         </Link>
+        <Link href="/bank/kennzahlen" className="hover:underline">
+          {t("kpiLink")}
+        </Link>
         <Link href="/einstellungen/buchhaltung/automatik" className="hover:underline">
           {t("levelsLink")}
         </Link>

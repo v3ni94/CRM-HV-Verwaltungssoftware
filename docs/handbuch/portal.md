@@ -295,6 +295,8 @@ reduzierte Bewegung (`prefers-reduced-motion`) angelegt. Neue Benachrichtigungen
 im `html`-Tag der Anwendung. Das Layout bleibt bis 200 Prozent Zoom ohne horizontalen
 Verlust nutzbar (Fließlayout, Umbruch der Navigation unterhalb `md`).
 
+Seit GAH-304 prüft ESLint zusätzlich das Regelset `jsx-a11y` (recommended) und `pages.axe.test.tsx` lässt axe über alle Seiten unter `app/(portal)` laufen (gesperrter und leerer Zustand). `@axe-core/playwright` für Browserläufe ist offline nicht installierbar und bleibt offen.
+
 Die Erklärung zur Barrierefreiheit nach dem Barrierefreiheitsstärkungsgesetz (BFSG) steht ohne
 Anmeldung unter `/barrierefreiheit`; sie ist als Entwurf gekennzeichnet, offene Pflichtangaben
 (Ergebnis der externen Prüfung, Feedback-Kontakt, zuständige Überwachungsstelle) sind mit
@@ -450,3 +452,47 @@ Unter Umlaufbeschlüsse sehen Eigentümer laufende Umlaufverfahren ihrer Gemeins
 ## Reporting für Kapitalanleger (AG08, GAF-34)
 
 Eigentümer mit Sondereigentumsverwaltung sehen unter Reporting je Einheit und Abrechnungszeitraum die vereinbarte Monatsmiete, die auf Mieter umlagefähigen Kosten, die Leerstandstage und den Leerstandsanteil des Objekts. Die Seite ist nur sichtbar gefüllt, wenn der Mandantenschalter "Mieterträge im Portal" (owner_rental_income_enabled) eingeschaltet und die Freigabestufe G3 offen ist; sonst erscheint ein Hinweis. Mieternamen und Zahlungsstatus werden nicht angezeigt.
+
+## SEPA-Lastschriftmandat erteilen (GAH-309)
+
+Mieter und Eigentümer mit Vertrag erteilen unter Lastschrift (`/lastschrift`) der Verwaltung ein SEPA-Lastschriftmandat für wiederkehrende Zahlungen. Ablauf:
+
+1. Vertrag wählen. Mit "Mandatstext anzeigen" erscheinen Gläubiger-Identifikationsnummer, Mandatsreferenz und die Zahlungsart "wiederkehrende Zahlung".
+2. Kontoinhaber (Vor- und Nachname) und IBAN eingeben, die BIC ist optional. Die IBAN wird auf Gültigkeit geprüft.
+3. Die Bestätigung "Ich bin Kontoinhaber und erteile das oben stehende SEPA-Lastschriftmandat" setzen und "Mandat erteilen" wählen.
+
+Das Mandat wird nur als Vorschlag übermittelt. Es steht unter "Ihre Mandate" mit dem Status "in Prüfung", wird nach Prüfung und Freigabe durch die Verwaltung "übernommen" oder "abgelehnt". Der Textform-Nachweis liegt als PDF unter Dokumente. Erst ein übernommenes Mandat kann die Verwaltung verwenden; Einzüge löst das Portal nicht aus, sie bleiben hinter der Freigabestufe für Zahlungsausgang (G2) und der Freigabe der Verwaltung.
+
+Häufige Rückfragen: Fehlt die Seite oder ist die Vertragsliste leer, hat das Konto keinen Vertrag; dann in der Kontaktakte im CRM den Portalzugang und die Verträge prüfen.
+
+## Passkeys als zweiter Faktor (GAH-309)
+
+Unter Sicherheit können Portalnutzer Passkeys (Fingerabdruck, Gesichtserkennung, Gerätesperre oder Sicherheitsschlüssel) als zweiten Faktor registrieren. Ein Passkey ersetzt bei der Anmeldung den Code der Authenticator-App, das Passwort bleibt erforderlich; es gibt keine Anmeldung allein per Passkey.
+
+* **Registrieren:** Unter Sicherheit im Abschnitt "Passkeys (zweiter Faktor)" eine Bezeichnung eingeben (zum Beispiel "Handy privat"), "Passkey hinzufügen" wählen und die Abfrage des Geräts bestätigen. Danach erscheint der Passkey in der Liste.
+* **Anmelden:** Bei der Anmeldung steht "Passkey verwenden" zur Wahl; der Code der Authenticator-App bleibt als Weg erhalten.
+* **Entfernen:** In der Liste "Entfernen" wählen. Geht ein Gerät verloren, den Passkey von einem anderen Gerät aus entfernen; bei Problemen die Verwaltung ansprechen.
+* **Nicht sichtbar oder nicht nutzbar:** Zeigt die Seite "Passkeys sind nicht freigeschaltet", ist die Funktion für den Mandanten nicht aktiv. Meldet der Browser "Dieser Browser unterstützt keine Passkeys", hilft ein aktueller Browser mit HTTPS-Zugang.
+
+## Reporting für Kapitalanleger: warum die Seite leer bleibt (GAH-311)
+
+Die Seite Reporting (`/reporting`) zeigt nur dann Zahlen, wenn zwei Bedingungen zugleich erfüllt sind:
+
+1. Der Mandantenschalter "Mieterträge im Portal" (`owner_rental_income_enabled`) ist eingeschaltet. Er steht im CRM unter Einstellungen, Fachliche Regeln, und ist im Standard aus.
+2. Die Freigabestufe G3 (Mietabrechnungen) ist für den Mandanten geöffnet. Solange sie geschlossen ist, erscheint der Hinweis zur Sperre statt der Zahlen.
+
+Bleibt die Seite leer oder zeigt nur den Hinweis, zuerst Schalter und Freigabestufe prüfen, danach, ob dem Eigentümer eine Einheit mit Sondereigentumsverwaltung zugeordnet ist. Nicht-Eigentümer sehen den Hinweis "nur für Eigentümer". Die Seite enthält weder Mieternamen noch Zahlungsstatus; sie ersetzt keine Abrechnung.
+
+## Sicherheit: Passwort ändern und aktive Sitzungen
+
+Unter Sicherheit ändern Portalnutzer ihr Passwort: aktuelles Passwort, neues Passwort und
+Wiederholung eingeben, dann Passwort ändern wählen. Danach enden alle Sitzungen des Kontos,
+auch auf anderen Geräten; die Anmeldung erfolgt mit dem neuen Passwort.
+
+Die Liste Aktive Sitzungen zeigt Gerät oder Browser, Beginn und letzte Aktivität jeder
+Sitzung. Mit Sitzung beenden wird eine unbekannte oder nicht mehr benötigte Sitzung sofort
+widerrufen. Anmeldungen, Fehlversuche, Sperren, Passwortänderungen und beendete Sitzungen
+werden im Protokoll der Verwaltung festgehalten, ohne Passwörter oder Codes.
+
+Ist der zweite Faktor verloren (Smartphone verloren), kann die Verwaltung ihn nur zurücksetzen,
+wenn sie das Verfahren freigeschaltet hat (Standard aus); zwei Mitarbeitende müssen zustimmen.

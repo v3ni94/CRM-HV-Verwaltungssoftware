@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(), payment=()",
           },
+        ],
+      },
+      {
+        // GAH-303: pages get a nonce based CSP from src/middleware.ts. Only the static offline
+        // shell bypasses the middleware; its inline script cannot carry a request nonce, so it
+        // keeps the former policy.
+        source: "/offline.html",
+        headers: [
           {
             key: "Content-Security-Policy",
             value:

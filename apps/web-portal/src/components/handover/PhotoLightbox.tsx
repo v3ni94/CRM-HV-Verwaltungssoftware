@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions -- backdrop/stop-propagation clicks and swipe are pointer shortcuts only; the keyboard path is Escape, focus trap and the labelled buttons */
 "use client";
 
 import { useTranslations } from "next-intl";

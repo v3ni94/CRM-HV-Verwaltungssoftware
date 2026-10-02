@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core import crypto
-from mhvp.core.auth import passwords, tokens, totp
+from mhvp.core.auth import audit, passwords, tokens, totp
 from mhvp.core.auth.permissions import effective_permissions
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -57,12 +57,40 @@ def normalise_email(email: str) -> str:
     return email.strip().lower()
 
 
-async def _register_failure(session: AsyncSession, user: User, now: datetime) -> None:
+async def _register_failure(session: AsyncSession, user: User, now: datetime) -> bool:
+    """Counts a failure; returns True when this failure locked the account."""
     user.failed_logins += 1
+    locked = False
     if user.failed_logins >= passwords.MAX_FAILED_LOGINS:
         user.locked_until = now + timedelta(minutes=passwords.LOCKOUT_MINUTES)
         user.failed_logins = 0
+        locked = True
     await session.flush()
+    return locked
+
+
+async def _audit_failure(
+    factory: async_sessionmaker[AsyncSession],
+    user_id: uuid.UUID,
+    *,
+    factor: str,
+    reason: str,
+    locked: bool,
+) -> None:
+    """GAH-302: failed identity check and, if it locked the account, the lockout."""
+    await audit.record(
+        factory,
+        user_id=user_id,
+        type=audit.LOGIN_FAILED,
+        payload={"factor": factor, "reason": reason},
+    )
+    if locked:
+        await audit.record(
+            factory,
+            user_id=user_id,
+            type=audit.ACCOUNT_LOCKED,
+            payload={"factor": factor, "lockout_minutes": passwords.LOCKOUT_MINUTES},
+        )
 
 
 async def register_failed_attempt(session: AsyncSession, user: User, now: datetime) -> None:
@@ -81,18 +109,28 @@ async def check_password(
         if user is None:
             passwords.verify_password(None, password)  # equalise timing
             raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+        uid = user.id
         if user.locked_until is not None and user.locked_until > now:
-            raise ProblemError(ErrorCodes.ACCOUNT_LOCKED)
-        if not user.active or not passwords.verify_password(user.password_hash, password):
-            await _register_failure(session, user, now)
+            failure = ProblemError(ErrorCodes.ACCOUNT_LOCKED)
+            audit_reason: str | None = "locked"
+            locked = False
+        elif not user.active or not passwords.verify_password(user.password_hash, password):
+            locked = await _register_failure(session, user, now)
             failure = ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+            audit_reason = "inactive" if not user.active else "wrong_password"
         else:
             failure = None
+            audit_reason = None
+            locked = False
             user.failed_logins = 0
             if user.password_hash and passwords.needs_rehash(user.password_hash):
                 user.password_hash = passwords.hash_password(password)
             result = (user.id, user.totp_enabled)
     if failure is not None:
+        if audit_reason is not None:
+            await _audit_failure(
+                factory, uid, factor="password", reason=audit_reason, locked=locked
+            )
         raise failure
     return result
 
@@ -126,8 +164,9 @@ async def verify_totp(
             if user.totp_secret
             else None
         )
+        locked = False
         if step is None:
-            await _register_failure(session, user, now)
+            locked = await _register_failure(session, user, now)
             failure: ProblemError | None = ProblemError(ErrorCodes.INVALID_CREDENTIALS)
         else:
             failure = None
@@ -136,6 +175,7 @@ async def verify_totp(
             user.failed_logins = 0
             user.last_login_at = now
     if failure is not None:
+        await _audit_failure(factory, user_id, factor="totp", reason="wrong_code", locked=locked)
         raise failure
 
 

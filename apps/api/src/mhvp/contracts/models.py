@@ -421,6 +421,37 @@ class Deposit(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
 
+class DepositHintSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AI18 (GAH-111, migration 0443): non blocking review hint on residential deposits.
+    Off by default (no row means off). ``factor_months`` monthly rents of the payment types in
+    ``rent_payment_codes`` (default ``rent``, i.e. without operating costs) and
+    ``max_installments`` instalments are configurable comparison values, not a legal rule;
+    the hint never blocks saving (open decision, G3)."""
+
+    __tablename__ = "deposit_hint_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint("factor_months > 0 AND factor_months <= 24", name="factor_months"),
+        CheckConstraint("max_installments BETWEEN 1 AND 12", name="max_installments"),
+    )
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    factor_months: Mapped[Decimal] = mapped_column(
+        RATE, nullable=False, default=Decimal(3), server_default="3"
+    )
+    max_installments: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default="3"
+    )
+    rent_payment_codes: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: ["rent"],
+        server_default=text("""'["rent"]'::jsonb"""),
+    )
+
+
 class DepositMovement(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "deposit_movement"
 

@@ -91,6 +91,23 @@ def test_templates_list_permissions_and_validation(client: TestClient, world: Wo
     assert client.get(f"{A}/rule-templates?foo=1", headers=admin).status_code == 422
 
 
+def test_event_type_catalogue_permissions_and_validation(client: TestClient, world: World) -> None:
+    """GAH-307: GET /automation/event-types lists the emitted types to authorised readers."""
+    from mhvp.automation.event_catalog import EVENT_CATALOG
+
+    res = client.get(f"{A}/event-types", headers=_h(client, world, "ah20admin"))
+    assert res.status_code == 200, res.text
+    assert res.json()["event_types"] == list(EVENT_CATALOG)
+    assert "contract.created" in EVENT_CATALOG
+    care = _h(client, world, "ah20care")
+    assert client.get(f"{A}/event-types", headers=care).status_code == 200
+    assert (
+        client.get(f"{A}/event-types", headers=_h(client, world, "ah20broker")).status_code == 403
+    )
+    assert client.get(f"{A}/event-types").status_code == 401
+    assert client.get(f"{A}/event-types?x=1", headers=care).status_code == 422
+
+
 def test_template_copy_is_inactive_tenant_bound_and_unique(
     client: TestClient, world: World
 ) -> None:

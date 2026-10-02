@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -675,7 +675,7 @@ async def list_jobs(
     provider: str | None = None,
     contact_id: uuid.UUID | None = None,
     dunning_only: bool = False,
-    limit: int = 200,
+    limit: int = Query(default=200, ge=1, le=500),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         query = select(PostalJob)

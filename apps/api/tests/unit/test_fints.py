@@ -5,6 +5,7 @@ stable dedup key. Fake client only (`tests.fints_fake`), never a live bank."""
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from decimal import Decimal
 
@@ -457,3 +458,54 @@ def test_parse_report_balances_reads_clbd_only() -> None:
     assert bal.iban == "DE02120300000000202051"
     assert bal.balance_date is not None
     assert bal.balance_date.isoformat() == "2026-09-30"
+
+
+def test_stored_state_rejected_with_9010_is_retried_from_scratch() -> None:
+    """Production 02.10.2026: a bank answered 9010 at dialog initialisation to a client built
+    from the stored state of an earlier dialog. The state is discarded and the dialog is
+    opened once more from scratch (the init TAN may be asked again)."""
+    fake.Scenario.init_tan = False
+    fake.Scenario.init_rejected = "stored"
+    stored = json.dumps({"mechanism": "912", "medium": "Handy 1"}).encode()
+    done = fints_mod.start_session(
+        CREDS,
+        client_data=stored,
+        tan_mechanism="912",
+        tan_medium="Handy 1",
+        progress=fints_mod.Progress(with_transactions=False),
+    )
+    assert done.status == "done"
+    assert done.progress is not None
+    assert done.progress.accounts is not None
+    built = fake.Scenario.constructed[-2:]
+    assert built[0]["from_data"] is not None
+    assert built[1]["from_data"] is None
+    assert done.client_data  # the new state replaces the rejected one
+
+
+def test_9010_without_stored_state_reports_the_bank_text() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.init_rejected = "always"
+    with pytest.raises(ProblemError) as info:
+        _start()
+    assert info.value.error is ErrorCodes.FINTS_BANK_REJECTED
+    assert "9010" in (info.value.detail or "")
+    assert "Verarbeitung zur Zeit nicht möglich" in (info.value.detail or "")
+    # a fresh client is not retried a second time
+    assert len(fake.Scenario.constructed) == 1
+
+
+def test_9010_with_stored_state_fails_twice_reports_once() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.init_rejected = "always"
+    stored = json.dumps({"mechanism": "912", "medium": "Handy 1"}).encode()
+    with pytest.raises(ProblemError) as info:
+        fints_mod.start_session(
+            CREDS,
+            client_data=stored,
+            tan_mechanism="912",
+            tan_medium="Handy 1",
+            progress=fints_mod.Progress(with_transactions=False),
+        )
+    assert info.value.error is ErrorCodes.FINTS_BANK_REJECTED
+    assert len(fake.Scenario.constructed) == 2

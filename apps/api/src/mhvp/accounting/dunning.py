@@ -108,6 +108,8 @@ class EffectiveSettings:
     interest_base_rate: Decimal | None = None
     interest_spread: Decimal | None = None
     default_start_mode: str | None = None
+    # AI03 (GAH-110): tenant switch, not inherited per object; default as before (days/365).
+    interest_day_count: str = "act_365_fixed"
     sources: dict[str, str] = field(default_factory=dict)
     tenant_row: DunningSettings | None = None
     property_row: DunningSettings | None = None
@@ -182,7 +184,10 @@ async def settings_for(
     """Effective settings for a property (tenant default merged with the object override)."""
     tenant_row = await settings_row(session, None)
     property_row = await settings_row(session, property_id) if property_id is not None else None
-    return resolve(tenant_row, property_row, property_id)
+    eff = resolve(tenant_row, property_row, property_id)
+    if eff is not None:
+        eff.interest_day_count = await interest_day_count(session)
+    return eff
 
 
 def level_config(settings: EffectiveSettings, level: int) -> dict[str, Any] | None:
@@ -255,6 +260,85 @@ def interest_amount_for(settings: EffectiveSettings, total: Decimal, days: int) 
     return amount.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+# Day count of the default interest (AI03, GAH-110, docs/rules/AI03-01.md, question AI03-01).
+# ``act_365_fixed`` keeps the former calculation (days/365, also in leap years); ``act_act``
+# divides the days of each calendar year by its actual length (365 or 366). Which method a
+# claim requires is an open legal question; the software only computes the chosen variant.
+DAY_COUNT_FIXED = "act_365_fixed"
+DAY_COUNT_ACTUAL = "act_act"
+DAY_COUNTS = (DAY_COUNT_FIXED, DAY_COUNT_ACTUAL)
+DAY_COUNT_LABELS: dict[str, str] = {
+    DAY_COUNT_FIXED: "Tage durch 365 (fest, auch im Schaltjahr)",
+    DAY_COUNT_ACTUAL: "Tage durch tatsächliche Jahrestage (365 oder 366)",
+}
+DAY_COUNT_KEY = "dunning_interest_day_count"
+
+
+async def interest_day_count(session: AsyncSession) -> str:
+    """Tenant switch from ``tenant_settings.sources`` (RLS scoped); unknown values fall back to
+    the default ``act_365_fixed``."""
+    from mhvp.platform.models import TenantSettings
+
+    sources = await session.scalar(select(TenantSettings.sources))
+    value = (sources or {}).get(DAY_COUNT_KEY)
+    return value if value in DAY_COUNTS else DAY_COUNT_FIXED
+
+
+def _days_of_year(year: int) -> int:
+    return 366 if date(year, 12, 31).timetuple().tm_yday == 366 else 365
+
+
+def year_fraction(start: date, end: date, day_count: str = DAY_COUNT_FIXED) -> Decimal:
+    """Fraction of a year from ``start`` (inclusive) to ``end`` (exclusive)."""
+    if end <= start:
+        return Decimal("0")
+    if day_count != DAY_COUNT_ACTUAL:
+        return Decimal((end - start).days) / Decimal("365")
+    fraction = Decimal("0")
+    cursor = start
+    while cursor < end:
+        year_end = date(cursor.year + 1, 1, 1)
+        stop = min(end, year_end)
+        fraction += Decimal((stop - cursor).days) / Decimal(_days_of_year(cursor.year))
+        cursor = stop
+    return fraction
+
+
+def base_rate_boundary(today: date) -> date:
+    """Start of the current half year (01.01. or 01.07.), the date of the Basiszinssatz
+    change (7.5); the value itself is always maintained by the operator."""
+    return date(today.year, 7, 1) if today.month >= 7 else date(today.year, 1, 1)
+
+
+def next_base_rate_dates(today: date, count: int = 2) -> list[date]:
+    """The next ``count`` half year boundaries after ``today``."""
+    out: list[date] = []
+    cursor = base_rate_boundary(today)
+    while len(out) < count:
+        cursor = date(cursor.year, 7, 1) if cursor.month == 1 else date(cursor.year + 1, 1, 1)
+        out.append(cursor)
+    return out
+
+
+def base_rate_hint(rates: list[tuple[date, Decimal]], today: date) -> str | None:
+    """AI03 (GAH-113): hint, never a lock, when no Basiszinssatz is maintained for the current
+    half year. Interest of later periods then continues with the last maintained rate."""
+    boundary = base_rate_boundary(today)
+    latest = max((d for d, _ in rates), default=None)
+    if latest is not None and latest >= boundary:
+        return None
+    since = (
+        f"Neuester gepflegter Basiszinssatz gilt ab {latest.strftime('%d.%m.%Y')}"
+        if latest is not None
+        else "Kein Basiszinssatz gepflegt"
+    )
+    return (
+        f"{since}; für das Halbjahr ab {boundary.strftime('%d.%m.%Y')} ist kein Satz hinterlegt. "
+        "Bitte den amtlich veröffentlichten Satz prüfen und pflegen; bis dahin rechnet die "
+        "Vorschau mit dem zuletzt gepflegten Satz."
+    )
+
+
 @dataclass
 class InterestResult:
     """Interest over the default period split by Basiszinssatz periods (M16-02)."""
@@ -262,6 +346,7 @@ class InterestResult:
     amount: Decimal
     periods: list[dict[str, Any]]
     note: str | None = None
+    day_count: str = DAY_COUNT_FIXED
 
 
 def interest_over_periods(
@@ -270,6 +355,7 @@ def interest_over_periods(
     total: Decimal,
     start: date,
     end: date,
+    day_count: str = DAY_COUNT_FIXED,
 ) -> InterestResult:
     """Pro rata interest from ``start`` (inclusive) to ``end`` (exclusive), one period per
     Basiszinssatz validity (``rates`` sorted or not, each valid until the day before the next
@@ -278,7 +364,7 @@ def interest_over_periods(
     assumed, 0.1.3). Same day count as before (days/365), rounded per period; not a legal
     certification (0.2)."""
     if end <= start or total <= 0:
-        return InterestResult(Decimal("0.00"), [])
+        return InterestResult(Decimal("0.00"), [], day_count=day_count)
     ordered = sorted(rates)
     if not ordered or ordered[0][0] > start:
         return InterestResult(
@@ -286,6 +372,7 @@ def interest_over_periods(
             [],
             f"Kein Basiszinssatz für den Zeitraum ab {start.strftime('%d.%m.%Y')} gepflegt: "
             "Zinsen nicht berechnet",
+            day_count=day_count,
         )
     extra = spread or Decimal("0")
     periods: list[dict[str, Any]] = []
@@ -297,9 +384,8 @@ def interest_over_periods(
             continue
         days = (seg_to - seg_from).days
         rate = base + extra
-        part = (total * rate / Decimal("100") * Decimal(days) / Decimal("365")).quantize(
-            CENT, rounding=ROUND_HALF_UP
-        )
+        fraction = year_fraction(seg_from, seg_to, day_count)
+        part = (total * rate / Decimal("100") * fraction).quantize(CENT, rounding=ROUND_HALF_UP)
         amount += part
         periods.append(
             {
@@ -310,9 +396,11 @@ def interest_over_periods(
                 "spread": str(extra),
                 "rate": str(rate),
                 "amount": str(part),
+                "day_count": day_count,
+                "day_count_label": DAY_COUNT_LABELS.get(day_count, day_count),
             }
         )
-    return InterestResult(amount, periods)
+    return InterestResult(amount, periods, day_count=day_count)
 
 
 async def interest_rates(session: AsyncSession) -> list[tuple[date, Decimal]]:
@@ -334,11 +422,18 @@ def interest_for(
     if not settings.interest_enabled or start is None or end <= start:
         return InterestResult(Decimal("0.00"), [])
     if rates:
-        return interest_over_periods(rates, settings.interest_spread, total, start, end)
+        return interest_over_periods(
+            rates, settings.interest_spread, total, start, end, settings.interest_day_count
+        )
     if settings.interest_base_rate is None:
         return InterestResult(Decimal("0.00"), [])
     return interest_over_periods(
-        [(start, settings.interest_base_rate)], settings.interest_spread, total, start, end
+        [(start, settings.interest_base_rate)],
+        settings.interest_spread,
+        total,
+        start,
+        end,
+        settings.interest_day_count,
     )
 
 

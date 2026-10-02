@@ -10,8 +10,9 @@ import { ui } from "@/lib/ui";
 
 /** Outgoing webhook subscriptions (section 12, A69): list with last delivery, create (https
  *  only, event types from the catalogue, secret shown once), activate/deactivate, delete with
- *  confirmation, delivery log (last 20) with manual redelivery. The API offers no test
- *  delivery, so none is offered here. */
+ *  confirmation, delivery log (last 20) with manual redelivery. AI07 (GAH-206, GAH-207):
+ *  warning on consecutive final failures or automatic deactivation, test delivery, secret
+ *  rotation (new secret shown once) and editing of URL and description. */
 export type WebhookSubscription = {
   id: string;
   url: string;
@@ -22,6 +23,9 @@ export type WebhookSubscription = {
   last_delivery_status?: string | null;
   last_delivery_status_code?: number | null;
   last_delivery_at?: string | null;
+  consecutive_failures?: number;
+  last_failure_at?: string | null;
+  disabled_reason?: string | null;
 };
 
 export type WebhookEventType = { type: string; description: string };
@@ -98,6 +102,49 @@ export function WebhookSubscriptionsAdmin({
     const res = await bff<WebhookSubscription>(`/api/bff/tenant/webhooks/${hook.id}`, {
       method: "PATCH",
       body: JSON.stringify({ active: !hook.active }),
+    });
+    setBusy(false);
+    if (res.ok) setHooks((prev) => prev.map((x) => (x.id === hook.id ? { ...x, ...res.data } : x)));
+    else setError(res.message);
+  }
+
+  async function sendTest(hook: WebhookSubscription) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const res = await bff<{ delivery_id: string }>(`/api/bff/tenant/webhooks/${hook.id}/test`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) {
+      setMessage(t("ai07.testQueued"));
+      if (openLog === hook.id) await loadLog(hook.id);
+    } else setError(res.message);
+  }
+
+  async function rotate(hook: WebhookSubscription) {
+    if (!window.confirm(t("ai07.rotateConfirm"))) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const res = await bff<Created>(`/api/bff/tenant/webhooks/${hook.id}/rotate-secret`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) {
+      setCopied(false);
+      setCreated(res.data);
+      setHooks((prev) => prev.map((x) => (x.id === hook.id ? { ...x, ...res.data } : x)));
+    } else setError(res.message);
+  }
+
+  async function edit(hook: WebhookSubscription) {
+    const url = window.prompt(t("ai07.editUrl"), hook.url);
+    if (url === null) return;
+    const description = window.prompt(t("ai07.editDescription"), hook.description ?? "");
+    if (description === null) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const res = await bff<WebhookSubscription>(`/api/bff/tenant/webhooks/${hook.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ url: url.trim(), description: description.trim() || null }),
     });
     setBusy(false);
     if (res.ok) setHooks((prev) => prev.map((x) => (x.id === hook.id ? { ...x, ...res.data } : x)));
@@ -216,6 +263,9 @@ export function WebhookSubscriptionsAdmin({
                   statusLabel={statusLabel}
                   onToggleLog={() => toggleLog(hook.id)}
                   onToggleActive={() => toggleActive(hook)}
+                  onTest={() => sendTest(hook)}
+                  onRotate={() => rotate(hook)}
+                  onEdit={() => edit(hook)}
                   onRemove={() => remove(hook)}
                   onRedeliver={(d) => redeliver(hook.id, d)}
                 />
@@ -239,6 +289,9 @@ function WebhookRow({
   statusLabel,
   onToggleLog,
   onToggleActive,
+  onTest,
+  onRotate,
+  onEdit,
   onRemove,
   onRedeliver,
 }: {
@@ -251,6 +304,9 @@ function WebhookRow({
   statusLabel: (status: string | null | undefined) => string;
   onToggleLog: () => void;
   onToggleActive: () => void;
+  onTest: () => void;
+  onRotate: () => void;
+  onEdit: () => void;
   onRemove: () => void;
   onRedeliver: (delivery: WebhookDelivery) => void;
 }) {
@@ -262,6 +318,15 @@ function WebhookRow({
         <td className="max-w-[20rem] break-all">
           <span className="font-medium">{hook.url}</span>
           {hook.description ? <p className="text-xs text-muted">{hook.description}</p> : null}
+          {hook.disabled_reason ? (
+            <p role="alert" className="text-xs text-danger-fg" data-testid={`webhook-disabled-${hook.id}`}>
+              {t("ai07.autoDisabled", { count: hook.consecutive_failures ?? 0 })}
+            </p>
+          ) : (hook.consecutive_failures ?? 0) > 0 ? (
+            <p role="alert" className="text-xs text-warning-fg" data-testid={`webhook-failures-${hook.id}`}>
+              {t("ai07.failures", { count: hook.consecutive_failures ?? 0, at: formatDateTime(hook.last_failure_at) })}
+            </p>
+          ) : null}
         </td>
         <td>
           {all ? (
@@ -297,6 +362,19 @@ function WebhookRow({
               <button type="button" className={ui.buttonSm} disabled={busy} onClick={onToggleActive}>
                 {hook.active ? t("list.deactivate") : t("list.activate")}
               </button>
+            ) : null}
+            {canManage ? (
+              <>
+                <button type="button" className={ui.buttonSm} disabled={busy} onClick={onTest}>
+                  {t("ai07.test")}
+                </button>
+                <button type="button" className={ui.buttonSm} disabled={busy} onClick={onEdit}>
+                  {t("ai07.edit")}
+                </button>
+                <button type="button" className={ui.buttonSm} disabled={busy} onClick={onRotate}>
+                  {t("ai07.rotate")}
+                </button>
+              </>
             ) : null}
             {canDelete ? (
               <button type="button" className={`${ui.buttonSm} text-danger-fg`} disabled={busy} onClick={onRemove}>

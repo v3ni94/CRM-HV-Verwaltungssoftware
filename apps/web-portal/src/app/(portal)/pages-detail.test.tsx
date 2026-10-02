@@ -325,6 +325,7 @@ describe("sicherheit", () => {
   function base(consent: unknown, consentStatus = 200, passkeys: unknown = { available: true }) {
     route("/api/v1/auth/me", 200, { totp_enabled: true, mfa_required: true });
     route("/api/v1/auth/trusted-devices", 200, [{ id: "dv1" }]);
+    route("/api/v1/auth/sessions", 200, []);
     route("/api/v1/portal/support-consent", consentStatus, consent);
     route("/api/v1/auth/webauthn/status", 200, passkeys);
   }
@@ -357,6 +358,7 @@ describe("sicherheit", () => {
   it("ends the session on 401", async () => {
     base({ available: false });
     route("/api/v1/auth/me", 401);
+    route("/api/v1/auth/sessions", 401);
     await expect(show(SicherheitPage)).rejects.toThrow("NEXT_REDIRECT:/anmelden");
   });
 });

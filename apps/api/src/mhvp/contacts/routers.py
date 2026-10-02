@@ -1770,7 +1770,9 @@ async def get_party(
 
 @router.get("/parties", summary="Parteien eines Kontakts", dependencies=[Depends(strict_query)])
 async def list_parties(
-    contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    contact_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[schemas.PartyOut]:
     async with tenant_tx(request, principal) as session:
         parties = (

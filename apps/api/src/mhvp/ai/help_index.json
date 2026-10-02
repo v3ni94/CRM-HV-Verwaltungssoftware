@@ -3355,6 +3355,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Ereigniskatalog",
+  "source": "Handbuch: Automatisierung (Regel-Engine)",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Auslöser \"Anderer Ereignistyp\" schlägt die Maske alle im System ausgelösten Ereignistypen vor (Katalog aus GET /automation/event-types). Ein Typ, der nicht im Katalog steht, wird mit einem Hinweis markiert: Die Regel würde nie feuern, meist liegt ein Tippfehler vor. Die Eing",
+  "file": "docs/handbuch/automatisierung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Banking",
   "href": "/bank",
@@ -3791,6 +3801,36 @@
   "keywords": [],
   "permission": null,
   "excerpt": "In der Umsatzliste (Bank) zeigt ein ignorierter Umsatz die Schaltfläche „Wieder eröffnen“, sofern Sie Umsätze bearbeiten dürfen. Nach Eingabe einer Begründung (mindestens 3 Zeichen) steht der Umsatz wieder im Status „neu“ zur Bearbeitung bereit. Ein Umsatz mit wirksamer Buchung b",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Automatik-Kennzahlen (GAH-107, GAH-211, Welle 20)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, \"Automatik-Kennzahlen\" (/bank/kennzahlen) stehen zwei reine Berichte. Sie buchen nichts und sind keine Freigabe der Automatik. 1. Kennzahlen Bankabgleich: Abdeckungsgrad (automatisch eindeutig zugeordnete Umsätze im Verhältnis zu allen Umsätzen) und Fehlerquote (storn",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Objektsperre und Kontoart \"Sonstiges Konto\" (GAH-401, GAH-404, Welle 20)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist der Objektzeitraum eines Umsatzes gesperrt, zeigen Buchungsdialog, Vorschlagsliste und Massenbestätigung den Hinweis mit dem Fehlercode MHVP-ACC-0030. Die Schaltfläche Buchen ist dann deaktiviert, in der Massenbestätigung erscheint der Umsatz unter den Ausnahmen. Im Formular ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kettenprüfung in der Bankabstimmung",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Bankabstimmung zeigt je Auszug in der Spalte \"Kette zum Vorauszug\", ob der Anfangssaldo zum Endsaldo des vorherigen Auszugs passt, und meldet Kettenbrüche mit Betrag sowie Zeitraumlücken und Überschneidungen. Auszüge ohne Salden, etwa aus CSV, werden als nicht prüfbar gezählt",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -4451,6 +4491,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Buchungskreis zeigt der Abschnitt \"Führendes System je Vorgangstyp\", welches System für Sollstellung, Mahnung, Lastschrift und Zahlungsauftrag heute führt und ob dies aus einer Umschaltung oder aus der Einstellung des Buchungskreises stammt. Wer Freigaberechte hat, beantragt e",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Liquiditätsvorschau mit Kopfangaben und Freigabeverlauf (Welle 20, AI02)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Liquiditätsvorschau auf der Seite Auswertungen zeigt jetzt die gemeinsamen Kopfangaben (Rechtsträger, Stichtag, Datenstand, Status Entwurf) und lässt sich über \"Als Excel herunterladen\" als Arbeitsmappe speichern (Recht Export). Ein Rücklagenkonto, das nur über die Kontonumme",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Hinweis zum Nummernkreis Bank und Kasse",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Neue Konten mit Nummer 001200 bis 001999 sind nur als Bank, Kasse, technisches Konto oder Geldtransit möglich, eine Bankkontoverknüpfung nur an Bank- oder Kassenkonten. Bestehende abweichende Konten bleiben erhalten und zeigen in der Kontenliste einen Hinweis unter der Kategorie.",
   "file": "docs/handbuch/buchhaltung.md"
  },
  {
@@ -5445,6 +5505,36 @@
  },
  {
   "kind": "handbook",
+  "title": "Ausgehende Webhooks: Testzustellung, Schlüssel, Fehlschläge (AI07)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Webhooks bietet jede Zeile zusätzlich Testzustellung (plant das Ereignis webhooksubscription.test nur für dieses Abonnement ein, das Ergebnis steht im Protokoll), Bearbeiten (Ziel-URL und Beschreibung) und Schlüssel erneuern (der neue Signaturschlüssel wird e",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Ausweis haushaltsnaher Leistungen und Prüfhinweis Kaution (Welle 20)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln stehen zwei Schalter. \"Ausweis haushaltsnaher Leistungen, Auswahl der Rechnungen\" wählt zwischen Rechnungsdatum (Standard) und nur bezahlten Rechnungen nach Zahlungsdatum. Jede Zeile des Ausweises zeigt, ob und wann die Rechnung bezahlt wurde",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zweiten Faktor eines Benutzers zurücksetzen (Vier-Augen)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Hat ein Benutzer seinen zweiten Faktor verloren, kann ein Administrator mit dem Recht Mitglieder ändern einen Antrag stellen (Schnittstelle POST /auth/mfa-reset/requests mit Mitgliedschaft und Begründung, mindestens 10 Zeichen). Voraussetzung ist der Mandantenschalter mfaadminres",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -6051,6 +6141,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Ist bei einem Auftrag im Status Terminiert oder In Arbeit ein Termin eingetragen, legt der Tagesjob einen internen Kalendereintrag \"Auftragstermin\" mit Uhrzeit und Ticketnummer an. Der Eintrag ist für alle Mitarbeiter sichtbar, springt auf den Auftrag und erinnert einen Tag vorhe",
+  "file": "docs/handbuch/kalender.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "ICS-Download",
+  "source": "Handbuch: Kalender",
+  "href": "/kalender",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Link \"ICS-Datei herunterladen\" erscheint nur für Nutzer mit dem Recht tenantsettings:read. Ohne dieses Recht bleibt das Kalender-Abo (Adresse erzeugen) nutzbar, der Direktdownload ist ausgeblendet.",
   "file": "docs/handbuch/kalender.md"
  },
  {
@@ -7651,6 +7751,46 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Eigentümer mit Sondereigentumsverwaltung sehen unter Reporting je Einheit und Abrechnungszeitraum die vereinbarte Monatsmiete, die auf Mieter umlagefähigen Kosten, die Leerstandstage und den Leerstandsanteil des Objekts. Die Seite ist nur sichtbar gefüllt, wenn der Mandantenschal",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "SEPA-Lastschriftmandat erteilen (GAH-309)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mieter und Eigentümer mit Vertrag erteilen unter Lastschrift (/lastschrift) der Verwaltung ein SEPA-Lastschriftmandat für wiederkehrende Zahlungen. Ablauf: 1. Vertrag wählen. Mit \"Mandatstext anzeigen\" erscheinen Gläubiger-Identifikationsnummer, Mandatsreferenz und die Zahlungsar",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Passkeys als zweiter Faktor (GAH-309)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Sicherheit können Portalnutzer Passkeys (Fingerabdruck, Gesichtserkennung, Gerätesperre oder Sicherheitsschlüssel) als zweiten Faktor registrieren. Ein Passkey ersetzt bei der Anmeldung den Code der Authenticator-App, das Passwort bleibt erforderlich; es gibt keine Anmeldun",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Reporting für Kapitalanleger: warum die Seite leer bleibt (GAH-311)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Seite Reporting (/reporting) zeigt nur dann Zahlen, wenn zwei Bedingungen zugleich erfüllt sind: 1. Der Mandantenschalter \"Mieterträge im Portal\" (ownerrentalincomeenabled) ist eingeschaltet. Er steht im CRM unter Einstellungen, Fachliche Regeln, und ist im Standard aus. 2. D",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sicherheit: Passwort ändern und aktive Sitzungen",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Sicherheit ändern Portalnutzer ihr Passwort: aktuelles Passwort, neues Passwort und Wiederholung eingeben, dann Passwort ändern wählen. Danach enden alle Sitzungen des Kontos, auch auf anderen Geräten; die Anmeldung erfolgt mit dem neuen Passwort. Die Liste Aktive Sitzungen",
   "file": "docs/handbuch/portal.md"
  },
  {

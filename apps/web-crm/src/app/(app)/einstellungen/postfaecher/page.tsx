@@ -10,7 +10,7 @@ import {
   type MailApprovalDeputy,
   type MailApprovalMode,
 } from "@/components/mail/MailApprovalSettings";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -38,10 +38,9 @@ export default async function MailboxSettingsPage({
     api.GET("/api/v1/tenant/settings"),
   ]);
   const callAssistant = await api.GET("/api/v1/mail/call-assistant");
-  // Not yet in the generated api-client types until the next `make openapi` (run centrally,
-  // M20-04a); a plain fetch avoids a stale-type mismatch while the backend already serves it.
-  const deputiesRes = await serverFetch("/api/v1/mail/mail-approval/deputies");
-  const deputies: MailApprovalDeputy[] = deputiesRes.ok ? await deputiesRes.json() : [];
+  // GAH-214: the path is in the generated client, no plain fetch any more.
+  const deputiesRes = await api.GET("/api/v1/mail/mail-approval/deputies");
+  const deputies: MailApprovalDeputy[] = (deputiesRes.data ?? []) as MailApprovalDeputy[];
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />

@@ -1039,3 +1039,177 @@ Gate: G1 bis G4 (Voraussetzung jeder Öffnung).
 | A Alle Fälle in einem Termin | hoch | gering |
 | B Gestuft je Gate | mittel | gering |
 | C Nur Betreiber | gering | hoch |
+
+## Welle 20: Entscheidungsvorlagen AI17 (02.10.2026)
+
+Hinweis: Die folgenden Vorlagen entscheiden nichts. Alle Schalter bleiben auf dem konservativen Standard, die Gates G1 bis G5 bleiben geschlossen. Normen sind nur genannt, soweit Anhang C sie führt. Die Fragen stehen zusätzlich in docs/OPEN_QUESTIONS.md (AI17-01 bis AI17-13).
+
+### AI17-01 Zahlungskriterium und Mehrfachbescheinigung § 35a EStG (GAH-101, H06, D44, R24, P03) (Eigentümer Steuerberater)
+Sachverhalt: Der Ausweis nimmt alle markierten Rechnungszeilen nach Rechnungsdatum; Zahlungsstatus, Zahlungsdatum und Kostenträger werden nicht geprüft. Der Anteil `share_percent` ist frei eingebbar. Mehrere Ausweise für dieselbe Einheit und dasselbe Jahr sind möglich. AI18 bereitet den Schalter `tax_35a_basis` (invoice_date Standard, payment_date) technisch vor.
+Varianten: A Rechnungsdatum (heutiges Verhalten); B nur bezahlte Rechnungen mit Zahlungsdatum im Jahr; C wie B und zusätzlich Anteil aus der Verteilung abgeleitet, Sperre gegen zweiten Ausweis ohne Stornovermerk.
+Risiko: Recht und Steuer (unzutreffende Bescheinigung gegenüber Mietern und Eigentümern, Haftung).
+Empfehlung: Variante C nach Bestätigung durch den Steuerberater (R24 nennt Zahlung als Unterscheidungsmerkmal, P03 die WEG-Bescheinigung und zeitliche Zuordnung); bis dahin Ausweis nur als Entwurf.
+Gate: G3, G4.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Rechnungsdatum | keiner | hoch |
+| B Zahlungsdatum | mittel | mittel |
+| C Zahlungsdatum, Anteil aus Verteilung, Sperre | hoch | gering |
+
+### AI17-02 Pflichtanteil Verbrauch HeizkostenV (GAH-108, H02, R11, R13) (Eigentümer Rechtsanwalt)
+Sachverhalt: Der Verbrauchsanteil ist frei zwischen 50 und 70 Prozent wählbar. Anwendbarkeit, Ausnahmen und Fälle mit verpflichtendem Verbrauchsanteil (§ 7 HeizkostenV nach R11) werden nicht erfasst.
+Varianten: A Status quo mit Hinweis im Handbuch; B Pflichtfeld Begründung des gewählten Anteils, Prüfhinweis ohne Sperre; C Erfassung der Gebäudemerkmale je Anlage mit Sperre unzulässiger Anteile nach geprüftem Regelwerk.
+Risiko: Recht (fehlerhafte Heizkostenabrechnung, Kürzungsrecht nach R13).
+Empfehlung: Variante B sofort als Produktschutz, Variante C nach Bestätigung der Fallgruppen und Ausnahmen durch den Rechtsanwalt (R11 verlangt Ergänzung der für die Anlage relevanten Vorschriften).
+Gate: G3.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | hoch |
+| B Begründungspflicht, Hinweis | gering | mittel |
+| C Merkmale und Sperre | hoch | gering |
+
+### AI17-03 CO2-Aufteilung Nichtwohngebäude und Teiljahre (GAH-109, H04, H05, D27, R15, R16) (Eigentümer Rechtsanwalt, Messdienst)
+Sachverhalt: Nichtwohngebäude, gemischte Nutzung und Selbstversorgung liefern nur den Status "prüfen"; bei Teiljahren wird keine Hochrechnung gerechnet.
+Varianten: A Status quo (kein freigebbarer Rechenweg, manuelle Aufteilung außerhalb); B manuelle Eingabe des Aufteilungsergebnisses mit Belegpflicht und Vier-Augen-Freigabe; C eigene Regelgruppe mit Hochrechnung nach bestätigter Quelle und Rundung.
+Risiko: Recht (falsche Kostenaufteilung Vermieter und Mieter).
+Empfehlung: Variante B als Übergang, Variante C erst nach Quellenbestätigung (R15, R16; H05 verbietet vorzeitige Anwendung späterer Regeln) und Eintrag im Regelregister.
+Gate: G3.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | gering |
+| B Manuelle Eingabe mit Beleg | mittel | gering |
+| C Regelgruppe | hoch | mittel |
+
+### AI17-04 Prüfhinweis Kaution § 551 BGB (GAH-111, Anhang C) (Eigentümer Rechtsanwalt)
+Sachverhalt: Kautionsbetrag und Ratenzahl (1 bis 12) werden nicht gegen die Grenzen für Wohnraum geprüft. AI18 bereitet den Schalter `deposit_limit_hint_enabled` (Standard aus) mit konfigurierbarem Faktor und Hinweistext ohne Normzitat vor.
+Varianten: A kein Hinweis; B nicht sperrender Prüfhinweis bei Wohnraum mit vom Rechtsanwalt freigegebenem Wortlaut; C Sperre oberhalb der Grenze.
+Risiko: Recht (unzulässige Sicherheit, Rückforderung).
+Empfehlung: Variante B, Wortlaut und Werte nur nach Freigabe; Variante C nicht empfohlen, weil Sonderfälle (Bürgschaft, Gewerbe, Mischmietverhältnis) eine starre Sperre falsch machen können.
+Gate: G3.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Kein Hinweis | keiner | mittel |
+| B Prüfhinweis | gering | gering |
+| C Sperre | gering | mittel |
+
+### AI17-05 Zeitstempel im Webhook der Objektakte (GAH-202) (Eigentümer Timo Müller, Betreiber Objektakte)
+Sachverhalt: Der Webhook prüft nur HMAC über den Body, ohne Zeitstempel und Zeitfenster; Replay bleibt möglich. Die Größenprüfung liest den Body vor der Prüfung.
+Varianten: A Status quo; B Header X-MHVP-Timestamp wie bei Paperless, signiert, Zeitfenster, Übergangszeit mit Annahme alter Aufrufe hinter Schalter; C sofortige Pflicht ohne Übergang.
+Risiko: Sicherheit (Wiederholung von Ereignissen wie `object.taken_over`); Vertragsänderung mit dem externen Dienst.
+Empfehlung: Variante B nach Abstimmung mit dem Dienst; Content-Length-Vorabprüfung unabhängig davon umsetzen.
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B Zeitstempel mit Übergang | mittel | gering |
+| C Sofortige Pflicht | gering | mittel (Ausfall der Integration) |
+
+### AI17-06 Dauerhaft fehlschlagende ausgehende Webhooks (GAH-206) (Eigentümer Timo Müller)
+Sachverhalt: Endgültig fehlgeschlagene Zustellungen lösen keine Meldung aus, das Abonnement bleibt aktiv, ein Zähler aufeinanderfolgender Fehlschläge fehlt.
+Varianten: A Status quo; B Zähler und Benachrichtigung an Administratoren ab Schwellwert, Abonnement bleibt aktiv; C wie B und automatische Deaktivierung ab zweitem Schwellwert.
+Risiko: Betrieb (unbemerkter Ausfall von Integrationen); kein Geldbezug.
+Empfehlung: Variante B; Schwellwerte als Mandanteneinstellung, Werte vom Betreiber festzulegen. Variante C erst nach Erfahrung mit B.
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B Melden | mittel | gering |
+| C Melden und deaktivieren | mittel | gering (Datenlücke beim Empfänger) |
+
+### AI17-07 Obergrenze der Seitengröße (GAH-208, Abschnitt 12) (Eigentümer Timo Müller)
+Sachverhalt: 44 Parameter `limit` oder `page_size` erlauben mehr als 200, `/postal/jobs` hat keine Obergrenze; nur ein kleiner Teil der Listen bietet `page_size`.
+Varianten: A Status quo; B einheitlich höchstens 200, Ausnahmen je Endpunkt (Exporte) dokumentiert; C höchstens 200 ohne Ausnahme, Exporte über eigene Exportjobs.
+Risiko: Robustheit (Last, Zeitüberschreitung); Rückwirkung auf CRM-Aufrufe mit höheren Limits.
+Empfehlung: Variante B mit Ausnahmeliste und Abgleich der CRM-Aufrufe vorab; `/postal/jobs` sofort begrenzen.
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B 200 mit Ausnahmeliste | mittel | gering |
+| C 200 ohne Ausnahme | hoch | mittel (Bruch von Aufrufen) |
+
+### AI17-08 Pflicht zu If-Match und ETag (GAH-210, Abschnitt 12) (Eigentümer Timo Müller)
+Sachverhalt: If-Match ist bei 23 von 237 PUT/PATCH-Operationen deklariert, ETag auf GET-Antworten in OpenAPI nirgends. Beispiele ohne Sperre: `PATCH /parties/{id}`, `DELETE /contacts/{id}`, `DELETE /documents/{id}`, Einstellungen.
+Varianten: A Status quo; B Pflicht zuerst für Ressourcen mit Geld-, Rechts- oder Stammdatenbezug (Parteien, Verträge, Bankverbindungen, Einstellungen), übrige in Stufen, Header zunächst optional und dann Pflicht; C sofortige Pflicht für alle Änderungen.
+Risiko: Recht und Geld (verlorene Änderungen bei parallelem Bearbeiten).
+Empfehlung: Variante B mit Ressourcenliste und Zeitplan durch den Betreiber; CRM sendet If-Match vor Umstellung auf Pflicht.
+Gate: keins (Voraussetzung für G1 bei Finanzressourcen zu prüfen).
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B Gestuft nach Ressourcenliste | hoch | gering |
+| C Sofort für alle | hoch | mittel (Bruch von Clients) |
+
+### AI17-09 Verlust des zweiten Faktors (GAH-301, Abschnitt 3.4 und 16) (Eigentümer Timo Müller, Datenschutz)
+Sachverhalt: Es gibt keine Wiederherstellungscodes und kein Zurücksetzen von TOTP durch Administratoren; bei Mandantenpflicht bleibt ein Benutzer dauerhaft ausgesperrt.
+Varianten: A Status quo (Rücksetzung nur über Datenbank durch Betreiber); B Wiederherstellungscodes bei Einrichtung, einmalig nutzbar, gehasht; C zusätzlich Zurücksetzen durch Administrator mit Identitätsprüfung, Vier-Augen-Freigabe und Protokoll.
+Risiko: Datenschutz und Sicherheit (Kontoübernahme bei schwacher Rücksetzung, Aussperrung).
+Empfehlung: Variante B und C kombiniert; Administrator-Rücksetzung nur mit zweiter Person und Benachrichtigung des Benutzers.
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B Wiederherstellungscodes | mittel | gering |
+| C B plus Administrator-Rücksetzung | mittel | gering |
+
+### AI17-10 Abgleich Abschnitt 17 mit ADR 0024 (GAH-314) (Eigentümer Timo Müller)
+Sachverhalt: Abschnitt 17 nennt `infra/grafana/`, `infra/prometheus/`, `infra/loki/` und GlitchTip; ADR 0024 entscheidet auf OTel und Uptime-Kuma. Eine Sentry-kompatible Fehlererfassung ist weder in Compose noch im Runbook beschrieben.
+Varianten: A ADR 0024 gilt, Abweichung im Abschnitt 17 per Vermerk und in docs/runbooks/monitoring.md dokumentieren, Fehlererfassung über OTel; B zusätzlich GlitchTip in Compose aufnehmen; C Stack nach Abschnitt 17 vollständig nachbauen.
+Risiko: Betrieb (Fehler bleiben unbemerkt); kein Geldbezug.
+Empfehlung: Variante A, Variante B nur bei Bedarf nach Betriebserfahrung. Änderung des Master-Prompts nur durch den Betreiber (Regel 0.3).
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Dokumentieren | gering | gering |
+| B GlitchTip ergänzen | mittel | gering |
+| C Vollständiger Stack | hoch | gering |
+
+### AI17-11 Anzeigegenauigkeit Zählerstände (GAH-411, AH17) (Eigentümer Timo Müller, Messdienst)
+Sachverhalt: Die CRM-Anzeige rundet Zählerstände per `formatDecimal` auf drei Nachkommastellen. Ob gespeicherte Werte mehr Stellen haben dürfen, ist nicht geprüft; Anzeige und gespeicherter Wert können abweichen.
+Varianten: A Status quo; B Anzeige mit der gespeicherten Genauigkeit ohne Rundung; C Anzeige gerundet mit Hinweis und vollem Wert im Tooltip.
+Risiko: Recht und Geld (Nachvollziehbarkeit der Verbrauchsabrechnung).
+Empfehlung: Variante B nach Prüfung der Speichergenauigkeit im Modell; keine Änderung der gespeicherten Werte.
+Gate: keins (Bezug G3).
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B Volle Genauigkeit | gering | gering |
+| C Tooltip | gering | gering |
+
+### AI17-12 OCR-Cache je Importlauf und Rechtestufe (GAH-414, AH08) (Eigentümer Timo Müller)
+Sachverhalt: Der OCR-Cache wird mandantenweit geleert, weil `ImportRun.document_ids` leer ist; die Zuordnung Dokument zu Lauf braucht eine Schemaänderung. Die Rechtestufe ist `objektakte:update` statt `write`.
+Varianten: A Status quo (mandantenweit, Hinweis in der Maske); B Zuordnungstabelle Lauf zu Dokument (neue Migration), Leeren nur je Lauf; C Leeren nur je Einzeldokument.
+Risiko: Verlust abgeleiteter Texte anderer Läufe (Originale bleiben unberührt); kein Geldbezug.
+Empfehlung: Variante B in einer Welle mit reservierter Migrationsnummer; Rechtestufe `update` beibehalten und im Rechtekatalog dokumentieren.
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | mittel |
+| B Zuordnungstabelle | mittel | gering |
+| C Je Dokument | gering | gering |
+
+### AI17-13 Zahler-IBAN in propose_posting und Rundung ohne Verfahren (GAH-2 Zusatz, 9.1, R25; GAH-115) (Eigentümer Timo Müller, Datenschutz)
+Sachverhalt: `propose_posting` übermittelt die Zahler-IBAN im Klartext an den KI-Anbieter (bewusste Ausnahme in `ai/gateway.py:70-76`); 9.1 verlangt Pseudonymisierung, wo die Aufgabe es zulässt. Daneben runden rund 100 `quantize`-Aufrufe ohne ausdrückliches Verfahren (docs/rules/RUNDUNG.md).
+Varianten IBAN: A Status quo; B Platzhalter statt IBAN, lokaler Abgleich der IBAN mit dem Kontaktstamm vor und nach dem Anbieteraufruf; C Aufruf ohne IBAN-Feld.
+Varianten Rundung: A Status quo; B ausdrückliches Verfahren je Fundstelle nach fachlicher Festlegung mit Test.
+Risiko: Datenschutz (Übermittlung personenbezogener Daten, R25 Art. 5 und 28); Geld (Centabweichung).
+Empfehlung: IBAN Variante B, weil die Zuordnung lokal deterministisch erfolgen kann; KI-Schalter bleiben aus. Rundung Variante B.
+Gate: keins (Datenschutzfreigabe); Rundung Bezug G1, G3, G4.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| IBAN A Status quo | keiner | hoch |
+| IBAN B Platzhalter, lokaler Abgleich | mittel | gering |
+| IBAN C Ohne IBAN | gering | mittel (schlechtere Vorschläge) |

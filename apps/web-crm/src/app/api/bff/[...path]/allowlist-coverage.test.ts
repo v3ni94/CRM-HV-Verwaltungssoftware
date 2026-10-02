@@ -141,23 +141,55 @@ function collectCalls(): Call[] {
   return calls;
 }
 
+/** GAH-410: the source scan runs once (beforeAll), calls are deduplicated by method and path and
+ *  checked in one test per area (first path segment), so no single test needs a longer timeout. */
+let scanned: Call[] | null = null;
+function scanOnce(): Call[] {
+  scanned ??= collectCalls();
+  return scanned;
+}
+
+function dedupe(calls: Call[]): Call[] {
+  const seen = new Map<string, Call>();
+  for (const call of calls) {
+    const key = `${call.method} ${call.path}`;
+    if (!seen.has(key)) seen.set(key, call);
+  }
+  return [...seen.values()];
+}
+
+const area = (call: Call) => call.path.split("/")[0]!;
+
 describe("BFF allowlist coverage", () => {
+  let calls: Call[] = [];
+  let areas: string[] = [];
+
+  beforeAll(() => {
+    calls = dedupe(scanOnce());
+    areas = [...new Set(calls.map(area))].sort();
+  });
+
   beforeEach(() => {
     serverFetch.mockReset();
     serverFetch.mockImplementation(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
   });
 
   it("finds the calls it is meant to check", () => {
-    const calls = collectCalls();
     expect(calls.length).toBeGreaterThan(150);
     expect(calls).toContainEqual(expect.objectContaining({ method: "GET", path: "tickets/resolution-kinds" }));
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", path: "mail/mail-approval/deputies" }));
     expect(calls).toContainEqual(expect.objectContaining({ method: "GET", path: "accounting/datev/sample-batch" }));
+    expect(new Set(calls.map((c) => `${c.method} ${c.path}`)).size).toBe(calls.length);
   });
 
-  it("forwards every resolvable CRM call instead of answering 404", async () => {
+  it("splits the calls into several areas", () => {
+    expect(areas.length).toBeGreaterThan(10);
+    expect(areas).toEqual(expect.arrayContaining(["accounting", "banking", "tickets"]));
+  });
+
+  it.each([...new Set(collectAreas())].sort())("forwards every resolvable CRM call of area %s instead of answering 404", async (name) => {
     const blocked: string[] = [];
-    for (const call of collectCalls()) {
+    for (const call of calls.filter((c) => area(c) === name)) {
       const variants = [SAMPLE_ID, SAMPLE_NUMERIC_ID].map((id) => call.path.split(ID_SLOT).join(id));
       let ok = false;
       for (const path of variants) ok = ok || (await forwarded(call.method, path));
@@ -166,3 +198,9 @@ describe("BFF allowlist coverage", () => {
     expect(blocked).toEqual([]);
   });
 });
+
+/** Test titles need the areas at collection time; the scan result is cached, so the source
+ *  files are read only once per file. */
+function collectAreas(): string[] {
+  return dedupe(scanOnce()).map(area);
+}

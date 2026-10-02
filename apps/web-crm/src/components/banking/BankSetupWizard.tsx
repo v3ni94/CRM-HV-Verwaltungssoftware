@@ -30,7 +30,13 @@ export const OWNER_KINDS: Record<SetupKind, string[]> = {
   deposit: ["rental_owner", "sev_owner"],
 };
 
-export function ownersFor(kind: SetupKind, entities: LegalEntity[]): LegalEntity[] {
+/** Inline form of the FinTS table also offers `other` (any legal entity kind may hold it,
+ *  `ACCOUNT_OWNERS[OTHER]` in `properties.services`, GAH-404). */
+export type InlineKind = SetupKind | "other";
+export const INLINE_KINDS: InlineKind[] = [...KINDS, "other"];
+
+export function ownersFor(kind: InlineKind, entities: LegalEntity[]): LegalEntity[] {
+  if (kind === "other") return entities;
   return entities.filter((e) => OWNER_KINDS[kind].includes(e.kind));
 }
 

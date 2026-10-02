@@ -648,3 +648,24 @@ Unter Einstellungen, KI-Anbieter, lässt sich je Anbieter die Stapelverarbeitung
 an den Anbieter gesendet und stündlich abgerufen; das Ergebnis erscheint wie bisher als
 Vorschlag. Der Preisfaktor wird aus der Preisliste des Anbieters übernommen (1 bedeutet kein
 Abschlag). Jede Änderung hebt die Freigabe auf; die zweite Person muss erneut freigeben.
+
+## Ausgehende Webhooks: Testzustellung, Schlüssel, Fehlschläge (AI07)
+
+Unter Einstellungen, Webhooks bietet jede Zeile zusätzlich Testzustellung (plant das Ereignis webhook_subscription.test nur für dieses Abonnement ein, das Ergebnis steht im Protokoll), Bearbeiten (Ziel-URL und Beschreibung) und Schlüssel erneuern (der neue Signaturschlüssel wird einmal angezeigt, der alte ist sofort ungültig). Schlagen Zustellungen endgültig fehl, zeigt die Zeile einen Warnhinweis mit Anzahl und Zeitpunkt, und Benutzer mit dem Recht webhooks:update erhalten eine Benachrichtigung. Ein automatisches Deaktivieren erfolgt nur, wenn unter Fachliche Regeln der Wert Webhooks nach Fehlschlägen in Folge deaktivieren größer als 0 ist (Standard 0, nur melden). Beim erneuten Aktivieren beginnt die Zählung neu. Dort steht auch der Schalter Objektakte-Webhook nur mit Zeitstempel annehmen (Standard aus).
+
+## Ausweis haushaltsnaher Leistungen und Prüfhinweis Kaution (Welle 20)
+
+Unter Einstellungen, Fachliche Regeln stehen zwei Schalter. "Ausweis haushaltsnaher Leistungen, Auswahl der Rechnungen" wählt zwischen Rechnungsdatum (Standard) und nur bezahlten Rechnungen nach Zahlungsdatum. Jede Zeile des Ausweises zeigt, ob und wann die Rechnung bezahlt wurde. Wird für denselben Vertrag und dasselbe Jahr erneut ein Ausweis erzeugt, erscheint ein Hinweis; gesperrt wird nichts. "Prüfhinweis zur Kautionshöhe und Ratenzahl" (Standard aus) zeigt in der Kautionsübersicht des Vertrags einen Hinweis, wenn die Kaution einer Wohnung über dem Vergleichswert liegt. Beide Schalter treffen keine steuerliche oder rechtliche Festlegung.
+
+## Zweiten Faktor eines Benutzers zurücksetzen (Vier-Augen)
+
+Hat ein Benutzer seinen zweiten Faktor verloren, kann ein Administrator mit dem Recht
+Mitglieder ändern einen Antrag stellen (Schnittstelle `POST /auth/mfa-reset/requests` mit
+Mitgliedschaft und Begründung, mindestens 10 Zeichen). Voraussetzung ist der Mandantenschalter
+`mfa_admin_reset_enabled` (Standard aus, `PUT /auth/mfa-reset/settings`). Ein zweiter
+Administrator gibt den Antrag frei oder lehnt ihn ab; der Antragsteller selbst und der
+betroffene Benutzer können nicht freigeben. Mit der Freigabe werden TOTP, Passkeys, gemerkte
+Geräte und alle Sitzungen des Benutzers widerrufen; er meldet sich mit dem Passwort an und
+richtet den zweiten Faktor neu ein. Benutzer und Antragsteller erhalten eine Benachrichtigung.
+Die Identität des Benutzers prüfen die Administratoren vorher selbst. Eine Maske im CRM folgt;
+die Variantenwahl ist offen (Frage AI09-01).

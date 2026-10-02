@@ -481,6 +481,8 @@ class DepositOut(_Out):
     balance: Money = Money("0.00")
     outstanding: Money = Money("0.00")
     movements: list[DepositMovementOut] = Field(default_factory=list)
+    # AI18 (GAH-111): non blocking review hints (switch deposit_limit_hint_enabled, default off).
+    limit_hints: list[str] = Field(default_factory=list)
 
 
 class DepositListRow(BaseModel):
@@ -627,3 +629,19 @@ class DepositPatch(_In):
     interest_rule: str | None = None
     documents: list[uuid.UUID] | None = Field(default=None, max_length=50)
     status: Literal["open", "active", "settled"] | None = None
+
+
+class DepositHintSettingOut(BaseModel):
+    """AI18 (GAH-111): tenant switch of the non blocking deposit hint (default off)."""
+
+    deposit_limit_hint_enabled: bool = False
+    factor_months: Decimal = Decimal(3)
+    max_installments: int = 3
+    rent_payment_codes: list[str] = Field(default_factory=lambda: ["rent"])
+
+
+class DepositHintSettingIn(_In):
+    deposit_limit_hint_enabled: bool
+    factor_months: Decimal = Field(gt=0, le=24, max_digits=10, decimal_places=4)
+    max_installments: int = Field(ge=1, le=12)
+    rent_payment_codes: list[str] = Field(min_length=1, max_length=20)

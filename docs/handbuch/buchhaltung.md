@@ -291,6 +291,8 @@ Der Kontenplan eines Buchungskreises wird unter Buchhaltung, Buchungskreis, Kont
 
 Im Mahnlauf öffnet der Aufklapper "Prüfhinweise, Zins, Zustellnachweise und Sperren" je Fall die Prüfhinweise zu Verjährung und Fristen (nur Hinweise, die Plattform berechnet kein Verjährungsdatum), den Vorschlag für den Zinsaufschlag aus dem Verbraucherkennzeichen (die Einstellung ändert sich nicht), die Zinsberechnung je Basiszinssatzzeitraum und den Knopf "Zinsentwurf anlegen". Der Zinsentwurf ist keine Buchung; Freigabe nur über die Vier-Augen-Buchung bei geöffnetem Gate G1, Zinssatz und Anspruchsgrundlage sind anwaltlich zu prüfen. Zustellnachweise (Einschreiben, Posteinlieferung, E-Mail, Portal) werden mit Datum und Referenz am Fall erfasst. Je Posten lässt sich eine Mahnsperre mit Grund (Ratenplan, bestrittener Posten, Aufrechnung, Prozess, Insolvenz) setzen und aufheben. Auf der Startseite des Mahnwesens steht die Basiszinssatzhistorie; Sätze sind Betreibereingaben mit Quelle, ohne Satz für den Zeitraum wird kein Zins berechnet.
 
+Unter der Basiszinssatzhistorie zeigt die Startseite des Mahnwesens die gewählte Zinstagemethode. Ist für das laufende Halbjahr (ab 01.01. oder 01.07.) noch kein Satz gepflegt, erscheint der Hinweis "Basiszinssatz prüfen" mit den nächsten Änderungsterminen; die Vorschau rechnet bis zur Pflege mit dem zuletzt gepflegten Satz. Der Knopf "Prüfpunkte 01.01. und 01.07. anlegen" legt für die nächsten zwei Termine je einen Prüfpunkt im Fristenregister an (Vorfrist laut Prüfpunktliste, Standard 30 Tage). Die Zinstagemethode (Tage durch 365 fest oder durch die tatsächlichen Jahrestage) stellen Sie unter Einstellungen, Fachliche Regeln ein; der Standard bleibt 365, die Entscheidung ist offen (AI03-01) und anwaltlich zu klären. Jede Zinsberechnung nennt die verwendete Methode.
+
 ## Honorarlauf, Rechnungsdokument und Jahreswechsel (Q15)
 
 - Honorarlauf: "Fällige Honorare ausstellen" zeigt zuerst die Vorschau aller fälligen Leistungszeiträume. Erst mit Bestätigung wird je Honorar eine Rechnung mit eigener, lückenloser Nummer ausgestellt; ein Fehler bei einem Honorar stoppt die übrigen nicht und verbraucht keine Nummer. Bereits abgerechnete Zeiträume werden übersprungen. Nichts wird versendet oder gebucht.
@@ -412,3 +414,13 @@ Die Kontenmaske zeigt über dem Formular die bereits hinterlegten Zuordnungen Za
 ## Führendes System je Vorgangstyp (Welle 18, AG02)
 
 Im Buchungskreis zeigt der Abschnitt "Führendes System je Vorgangstyp", welches System für Sollstellung, Mahnung, Lastschrift und Zahlungsauftrag heute führt und ob dies aus einer Umschaltung oder aus der Einstellung des Buchungskreises stammt. Wer Freigaberechte hat, beantragt eine Umschaltung mit Vorgangstyp, führendem System, Gültig-ab und optional einem Objekt. Freigeben oder ablehnen muss eine andere Person; die Plattform als führendes System lässt sich nur mit geöffneter Freigabestufe G1 freigeben. Ohne Umschaltung arbeiten alle Läufe wie bisher.
+
+## Liquiditätsvorschau mit Kopfangaben und Freigabeverlauf (Welle 20, AI02)
+
+Die Liquiditätsvorschau auf der Seite Auswertungen zeigt jetzt die gemeinsamen Kopfangaben (Rechtsträger, Stichtag, Datenstand, Status Entwurf) und lässt sich über "Als Excel herunterladen" als Arbeitsmappe speichern (Recht Export). Ein Rücklagenkonto, das nur über die Kontonummer 001201 und nicht über ein verknüpftes Bankkonto erkannt wurde, trägt einen Hinweis; die Verknüpfung mit dem Bankkonto des Objekts ist der verlässliche Weg.
+
+Auf der Rechnungsseite und in der Liste der Zahlungsaufträge öffnet "Freigabeverlauf anzeigen" die Freigabeentscheidungen des Vorgangs mit Schritt, Zeitpunkt, Status und Prüfsumme des freigegebenen Stands. Eine entwertete Freigabe nennt Zeitpunkt und Grund (zum Beispiel geänderter Betrag); Personenhinweise aus der Identitätsprüfung erscheinen als Hinweis. Die Ansicht ist reine Anzeige, eine Freigabe wird an der bisherigen Stelle erteilt.
+
+## Hinweis zum Nummernkreis Bank und Kasse
+
+Neue Konten mit Nummer 001200 bis 001999 sind nur als Bank, Kasse, technisches Konto oder Geldtransit möglich, eine Bankkontoverknüpfung nur an Bank- oder Kassenkonten. Bestehende abweichende Konten bleiben erhalten und zeigen in der Kontenliste einen Hinweis unter der Kategorie.

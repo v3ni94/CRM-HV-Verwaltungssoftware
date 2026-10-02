@@ -28,6 +28,7 @@ type Proposals = {
   stage1: Proposal[];
   ai: AiProposal[];
   ai_stage: { enabled: boolean; blocked_reason: string | null };
+  object_period_lock?: { locked: boolean; code: string | null };
   note: string;
   ledger_id?: string | null;
 };
@@ -156,7 +157,7 @@ export function TransactionMatcher({
           type="button"
           className={ui.button}
           onClick={() => book(splits)}
-          disabled={busy}
+          disabled={busy || data?.object_period_lock?.locked === true}
         >
           {t("book")}
         </button>
@@ -194,6 +195,11 @@ export function TransactionMatcher({
       {error ? (
         <span role="alert" className={ui.error}>
           {error}
+        </span>
+      ) : null}
+      {data?.object_period_lock?.locked ? (
+        <span role="alert" className={ui.error} data-testid="period-lock-hint">
+          {t("periodLocked", { code: data.object_period_lock.code ?? "MHVP-ACC-0030" })}
         </span>
       ) : null}
       {data ? (

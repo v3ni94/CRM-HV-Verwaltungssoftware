@@ -25,6 +25,8 @@ export type DepositOut = {
   balance: string;
   outstanding: string;
   movements: DepositMovementOut[];
+  /** AI18 (GAH-111): non blocking review hints, empty while the switch is off. */
+  limit_hints?: string[];
 };
 export type InterestMode = "individual" | "reference_rate" | "deposit_rates" | "none";
 export type DepositSettlementOut = {
@@ -423,6 +425,13 @@ export function DepositPanel({
                   </button>
                 ) : null}
               </div>
+              {d.limit_hints && d.limit_hints.length > 0 ? (
+                <ul className="text-xs text-amber-700" data-testid="deposit-limit-hints">
+                  {d.limit_hints.map((hint) => (
+                    <li key={hint}>{hint}</li>
+                  ))}
+                </ul>
+              ) : null}
               {d.movements.length > 0 ? (
                 <ul className="text-xs text-muted">
                   {d.movements.map((m) => (

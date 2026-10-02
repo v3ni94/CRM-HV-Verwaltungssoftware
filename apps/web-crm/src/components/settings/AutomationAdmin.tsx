@@ -95,6 +95,8 @@ export type Pickers = {
   replyTemplates: Option[];
   letterTemplates: Option[];
   eventTypes: string[];
+  /** All emitted event types (GET /automation/event-types, GAH-307); empty disables the check. */
+  eventCatalog?: string[];
   aiTasks: string[];
 };
 
@@ -839,7 +841,7 @@ function ActionEditor({
               className={ui.input}
               value={String(action.title ?? "")}
               onChange={(e) => set({ title: e.target.value })}
-              placeholder="Ticket {payload.number}: {entity.title}"
+              placeholder={t("notifyTitlePlaceholder", { number: "{payload.number}", title: "{entity.title}" })}
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -879,7 +881,7 @@ function ActionEditor({
               className={ui.input}
               value={String(action.title ?? "")}
               onChange={(e) => set({ title: e.target.value || null })}
-              placeholder="Folgeauftrag zu {entity.title}"
+              placeholder={t("ticketTitlePlaceholder", { title: "{entity.title}" })}
             />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -1590,13 +1592,28 @@ function RuleForm({
                   </select>
                 </label>
                 {customEvent ? (
-                  <input
-                    aria-label={t("eventTypeCode")}
-                    className={ui.input}
-                    placeholder="bereich.ereignis"
-                    value={eventType}
-                    onChange={(e) => setEventType(e.target.value)}
-                  />
+                  <>
+                    <input
+                      aria-label={t("eventTypeCode")}
+                      className={ui.input}
+                      placeholder="bereich.ereignis"
+                      list="automation-event-catalog"
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value)}
+                    />
+                    <datalist id="automation-event-catalog">
+                      {(pickers.eventCatalog ?? []).map((et) => (
+                        <option key={et} value={et} />
+                      ))}
+                    </datalist>
+                    {(pickers.eventCatalog?.length ?? 0) > 0 &&
+                    eventType.trim() !== "" &&
+                    !pickers.eventCatalog?.includes(eventType.trim()) ? (
+                      <p role="alert" className={ui.help}>
+                        {t("unknownEventWarning")}
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
               </>
             ) : null}

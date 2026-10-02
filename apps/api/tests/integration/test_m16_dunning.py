@@ -932,3 +932,87 @@ def test_a32_manager_entity_setup_and_tenancy_fee(
     assert draft["recipient_legal_entity_id"] == landlord
     assert draft["amount"] == "7.50"
     assert draft["status"] == "draft"  # G1 closed: nothing released, nothing sent
+
+
+def test_ai03_dunning_approval_concurrency_posts_fee_once(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """AI03 (GAH-112, 7.1 B08): the same level 2 run approved twice at the same time from two
+    app instances is approved once (row lock on the run, the loser gets 409) and creates
+    exactly one fee draft of 6,00 EUR; the ledger gains exactly one entry."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    _, gated = clients
+    settings = _settings(database, redis_url)
+    h = bearer(login(gated, world, "m16admin"))
+    acc_user = bearer(login(gated, world, "m16acc"))
+    prop = _ok(
+        gated.post(
+            "/api/v1/properties",
+            json={"number": "768", "name": "Mahnhaus parallel", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    c1 = _contract(gated, h, prop["id"], "01", "2020-01-01")
+    template = _ok(gated.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        gated.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    acc = {
+        a["number"]: a["id"] for a in _ok(gated.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    for code, number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            gated.put(
+                f"{A}/ledgers/{ledger}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[number]},
+                headers=h,
+            )
+        )
+    run = _ok(
+        gated.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=h), 201
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    levels = [
+        {"level": 1, "min_days_overdue": 5, "text": "Zahlungserinnerung"},
+        {"level": 2, "min_days_overdue": 5, "text": "Mahnung", "fee_amount": "6.00"},
+    ]
+    if _ok(gated.get(f"{A}/dunning-settings", headers=h))["id"] is None:
+        _ok(gated.put(f"{A}/dunning-settings", json={"levels": levels}, headers=h))
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "property_id": prop["id"],
+                "levels": levels,
+                "threshold_amount": "20.00",
+                "fee_from_level": 2,
+            },
+            headers=h,
+        )
+    )
+    asyncio.run(_seed_manager_ledger(settings, world.tenant_a))
+    second, case = _fee_level_case(gated, h, acc_user, c1["id"], "2026-03-20", "2026-04-10")
+    assert case["fee_amount"] == "6.00"
+    before = len(_ok(gated.get(f"{A}/ledgers/{ledger}/entries", headers=h)))
+
+    def approve_in_own_client(_: int) -> tuple[int, Any]:
+        with TestClient(create_app(settings, release_gate_resolver=OpenG1())) as own:
+            r = own.post(f"{A}/dunning-runs/{second['id']}/approve", headers=acc_user)
+            return r.status_code, r.json()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(approve_in_own_client, range(2)))
+    assert sorted(code for code, _ in results) == [200, 409], results
+    winner = next(body for code, body in results if code == 200)
+    fee_case = next(c for c in winner["cases"] if c["contract_id"] == c1["id"])
+    assert fee_case["fee_entry_id"] is not None
+    after = _ok(gated.get(f"{A}/ledgers/{ledger}/entries", headers=h))
+    assert len(after) == before + 1  # one fee draft, never two
+    assert _ok(gated.get(f"{A}/dunning-runs/{second['id']}", headers=h))["status"] == "approved"

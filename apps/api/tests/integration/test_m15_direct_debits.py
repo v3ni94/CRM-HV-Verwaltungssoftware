@@ -716,3 +716,105 @@ def test_direct_debit_batch_feedback(clients: tuple[TestClient, TestClient], wor
     assert {o["reason_code"] for o in done["orders"]} == {"AC04"}
     again = _ok(client.post(f"{D}/{run_id}/bank-status", json=body, headers=h))
     assert {o["bank_status"] for o in again["orders"]} == {"rejected"}
+
+
+def _ai03_draft_run(
+    client: TestClient, world: World, number: str, months: tuple[str, ...] = ("2026-03-01",)
+) -> tuple[dict[str, str], str, str]:
+    """Same single-payer run as ``_setup_run`` but left as a draft (AI03 concurrency)."""
+    h = bearer(login(client, world, "ddadmin"))
+    approver = bearer(login(client, world, "ddapprover"))
+    acc_user = bearer(login(client, world, "ddacc"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": number, "name": f"Haus {number}", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    bank = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": OWN,
+                "holder": f"GdWE {number}",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.put(
+            f"{D}/creditor-ids/legal-entities/{hoa}",
+            json={"sepa_creditor_id": CREDITOR_ID},
+            headers=h,
+        )
+    )
+    party, _ = _payer(client, h, f"P{number}", PAYER_A, {}, approver)
+    _contract(client, h, prop["id"], "01", party)
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(client.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    for code, acc_number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            client.put(
+                f"{A}/ledgers/{ledger}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[acc_number]},
+                headers=h,
+            )
+        )
+    for month in months:
+        _receivables(client, h, ledger, month)
+    collection = (local_today() + timedelta(days=7)).isoformat()
+    run = _ok(
+        client.post(
+            f"{D}",
+            json={
+                "ledger_id": ledger,
+                "collection_date": collection,
+                "lead_days": 5,
+                "property_bank_account_id": bank,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    return h, acc_user, str(run["id"])
+
+
+def test_ai03_direct_debit_approval_concurrency(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """AI03 (GAH-112, 7.1 B08): the second approval sent twice at the same time from two app
+    instances counts once (row lock on the run): both answers 200, two approvals, status
+    approved; the file is generated once afterwards."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    client, _ = clients
+    settings = _settings(database, redis_url)
+    h, acc_user, run_id = _ai03_draft_run(client, world, "779")
+    assert _ok(client.post(f"{D}/{run_id}/approve", headers=h))["approvals"] == 1
+
+    def approve_in_own_client(_: int) -> tuple[int, Any]:
+        with TestClient(create_app(settings, release_gate_resolver=OpenG1())) as own:
+            r = own.post(f"{D}/{run_id}/approve", headers=acc_user)
+            return r.status_code, r.json()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(approve_in_own_client, range(2)))
+    assert [code for code, _ in results] == [200, 200], results
+    assert all(b["approvals"] == 2 and b["status"] == "approved" for _, b in results)
+    assert _ok(client.get(f"{D}/{run_id}", headers=h))["approvals"] == 2

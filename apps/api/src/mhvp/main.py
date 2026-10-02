@@ -73,11 +73,13 @@ from mhvp.contracts.routers_p16 import router as contracts_p16_router
 from mhvp.contracts.service_contract_routers import router as service_contracts_router
 from mhvp.core import crypto, health
 from mhvp.core.auth import oidc
+from mhvp.core.auth.mfa_reset import router as auth_mfa_reset_router
 from mhvp.core.auth.routers import router as auth_router
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.health import ReadinessCheck
 from mhvp.core.idempotency import IdempotencyMiddleware
+from mhvp.core.listparams import declare_list_parameters
 from mhvp.core.logging import configure_logging
 from mhvp.core.middleware import CorrelationIdMiddleware
 from mhvp.core.problems import install_problem_handlers
@@ -299,6 +301,7 @@ def create_app(
     install_problem_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(auth_router, prefix=API_PREFIX)
+    app.include_router(auth_mfa_reset_router, prefix=API_PREFIX)
     app.include_router(oidc.router, prefix=API_PREFIX)
     app.include_router(oidc.well_known)
     app.include_router(platform_router, prefix=API_PREFIX)
@@ -491,6 +494,7 @@ def create_app(
     app.add_middleware(CorrelationIdMiddleware)
     app.state.tracer_provider = setup_tracing(settings)
     instrument_app(app, app.state.tracer_provider)
+    declare_list_parameters(app)
     return app
 
 

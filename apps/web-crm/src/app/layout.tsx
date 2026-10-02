@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { MaintenanceBanner } from "@/components/shell/MaintenanceBanner";
+import { NONCE_HEADER } from "@/lib/csp";
 import { THEME_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
@@ -34,10 +36,12 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
+  // GAH-303: nonce of this request from the middleware (CSP without script unsafe-inline).
+  const nonce = (await headers()).get(NONCE_HEADER) ?? undefined;
   return (
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body
         className="min-h-screen antialiased"

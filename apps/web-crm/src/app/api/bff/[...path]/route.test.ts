@@ -375,3 +375,82 @@ describe("BFF proxy", () => {
     expect(serverFetch).not.toHaveBeenCalled();
   });
 });
+
+/** GAH-409: Uprotokoll-Import, Objektakte-Importläufe und OCR-Cache (Allowlist, Methoden, Verbote). */
+describe("BFF proxy, Uprotokoll and Objektakte import paths (GAH-409)", () => {
+  const headers = { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" };
+  const handlers = { GET, POST, PUT, PATCH, DELETE } as const;
+  const call = (method: keyof typeof handlers, path: string) => {
+    const init: RequestInit = { method, headers };
+    if (method === "POST" || method === "PUT" || method === "PATCH") init.body = "{}";
+    return handlers[method](new Request(`http://crm.localhost/api/bff/${path}`, init), ctx(path));
+  };
+
+  beforeEach(() => {
+    serverFetch.mockReset();
+    serverFetch.mockImplementation(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+  });
+
+  it.each([
+    ["POST", "handover/imports/uprotokoll"],
+    ["POST", "handover/imports/uprotokoll/files"],
+    ["GET", "handover/imports/uprotokoll/files"],
+    ["DELETE", `handover/imports/uprotokoll/files/${ID}`],
+    ["GET", "objektakte/import-runs"],
+    ["DELETE", `objektakte/import-runs/${ID}/ocr-cache`],
+  ] as const)("forwards %s %s", async (method, path) => {
+    const res = await call(method, path);
+    expect(res.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
+  it("forwards the OCR cache reset POST as multipart only", async () => {
+    const path = `objektakte/imports/${ID}/ocr-cache`;
+    expect((await call("POST", path)).status).toBe(415);
+    expect(serverFetch).not.toHaveBeenCalled();
+    const form = new FormData();
+    form.set("file", new Blob(["x"], { type: "text/plain" }), "a.txt");
+    const encoded = new Request("http://x", { method: "POST", body: form });
+    const req = new Request(`http://crm.localhost/api/bff/${path}`, {
+      method: "POST",
+      headers: { host: "crm.localhost", origin: "http://crm.localhost", "content-type": encoded.headers.get("content-type")! },
+      body: await encoded.arrayBuffer(),
+    });
+    expect((await POST(req, ctx(path))).status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
+  it.each([
+    ["PUT", "handover/imports/uprotokoll"],
+    ["DELETE", "handover/imports/uprotokoll"],
+    ["GET", "handover/imports/uprotokoll"],
+    ["PATCH", "handover/imports/uprotokoll/files"],
+    ["DELETE", "handover/imports/uprotokoll/files"],
+    ["POST", `handover/imports/uprotokoll/files/${ID}`],
+    ["GET", `handover/imports/uprotokoll/files/${ID}`],
+    ["DELETE", "handover/imports/uprotokoll/files/not-a-uuid"],
+    ["POST", "objektakte/import-runs"],
+    ["DELETE", "objektakte/import-runs"],
+    ["GET", `objektakte/import-runs/${ID}`],
+    ["GET", `objektakte/import-runs/${ID}/ocr-cache`],
+    ["POST", `objektakte/import-runs/${ID}/ocr-cache`],
+    ["DELETE", "objektakte/import-runs/not-a-uuid/ocr-cache"],
+    ["DELETE", `objektakte/imports/${ID}/ocr-cache`],
+    ["GET", `objektakte/imports/${ID}/ocr-cache`],
+    ["POST", "objektakte/imports/not-a-uuid/ocr-cache"],
+  ] as const)("rejects %s %s with 404", async (method, path) => {
+    expect((await call(method, path)).status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+
+  it("requires a same-origin Origin header for the destructive calls", async () => {
+    for (const path of [`handover/imports/uprotokoll/files/${ID}`, `objektakte/import-runs/${ID}/ocr-cache`]) {
+      const req = new Request(`http://crm.localhost/api/bff/${path}`, {
+        method: "DELETE",
+        headers: { host: "crm.localhost", origin: "http://evil.example" },
+      });
+      expect((await DELETE(req, ctx(path))).status).toBe(403);
+    }
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+});

@@ -189,3 +189,7 @@ logged as event `automation.webhook_data_withheld`. Rule: docs/rules/AC06-einwil
 ## AH20 (GAG-31)
 
 `GET /automation/rule-templates` (Leserecht `tenant_settings:read` oder `tickets:read`, unbekannte Query-Parameter 422) liefert die Beispielvorlagen aus `templates.py`. Das CRM (`AutomationAdmin.tsx`, Schaltfläche Regelvorlagen) übernimmt eine Vorlage über den bestehenden `POST /automation/rules`; die Regel ist inaktiv. Tests: `tests/integration/test_ah20_automation_templates.py`, Vitest `AutomationAdmin.test.tsx`.
+
+## Ereigniskatalog (GAH-307)
+
+`event_catalog.EVENT_CATALOG` listet alle per `emit(..., type="x.y")` ausgelösten Ereignistypen; `GET /automation/event-types` liefert ihn (Recht `tenant_settings:read` oder `tickets:read`). `tests/unit/test_automation_event_catalog.py` vergleicht den Katalog mit dem Quelltext, neue Ereignisse müssen eingetragen werden. Die Regelmaske warnt bei unbekannten Typen.

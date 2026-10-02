@@ -11,9 +11,8 @@ import { ui } from "@/lib/ui";
 import { ImportResult } from "./ImportResult";
 
 type Action = "create" | "link" | "skip";
-type RoleCode = "eigentuemer" | "mieter" | "verwalter" | "dienstleister" | "bank" | "sonstiges";
-/** The generated client type gains `role` and `merge_fields` with the next `make openapi`. */
-type ContactChoiceIn = ContactChoice & { role?: RoleCode; merge_fields?: boolean };
+/** Role codes straight from the generated client type (GAH-214). */
+type RoleCode = NonNullable<ContactChoice["role"]>;
 type RowChoice = { action: Action; contactId: string | null; role: RoleCode | ""; merge: boolean };
 const ROLES: RoleCode[] = ["eigentuemer", "mieter", "verwalter", "dienstleister", "bank", "sonstiges"];
 
@@ -48,7 +47,7 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
   const apply = async () => {
     setBusy(true);
     setError(null);
-    const contacts: ContactChoiceIn[] = preview.rows.map((row, i) => {
+    const contacts: ContactChoice[] = preview.rows.map((row, i) => {
       const c = choices[i]!;
       const role = c.role ? { role: c.role } : {};
       return c.action === "link"

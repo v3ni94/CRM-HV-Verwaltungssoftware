@@ -19,7 +19,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from mhvp.core.auth import service, tokens
+from mhvp.core.auth import audit, service, tokens
 from mhvp.core.auth.principal import Principal, get_principal, sessions
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction
@@ -189,6 +189,13 @@ async def token(
         name=name,
         nonce=nonce,
         tenant_id=tenant_id,
+    )
+    await audit.record(
+        sessions(request),
+        user_id=user_id,
+        type=audit.OIDC_TOKEN_ISSUED,
+        tenant_id=tenant_id,
+        payload={"client_id": client_id},
     )
     return OidcTokenResponse(
         access_token=access, id_token=id_token, expires_in=settings.access_token_ttl_seconds

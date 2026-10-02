@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { appBuild, appVersion } from "@/lib/version";
 import { getTranslations } from "next-intl/server";
@@ -16,6 +17,7 @@ import { NotificationBell } from "@/components/workspace/NotificationBell";
 import { ThemeController } from "@/components/workspace/ThemeToggle";
 import { redirectIfUnauthenticated, sessionContext } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
+import { NONCE_HEADER } from "@/lib/csp";
 import { serverThemeScript } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -105,7 +107,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col bg-bg lg:flex-row">
       {themePreference !== undefined ? (
-        <script dangerouslySetInnerHTML={{ __html: serverThemeScript(themePreference) }} />
+        <script
+          nonce={(await headers()).get(NONCE_HEADER) ?? undefined}
+          dangerouslySetInnerHTML={{ __html: serverThemeScript(themePreference) }}
+        />
       ) : null}
       <ThemeController serverPreference={themePreference} />
       <PwaRegister />

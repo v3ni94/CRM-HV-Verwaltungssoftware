@@ -177,6 +177,19 @@ async def rule_templates(
     return [dict(t) for t in RULE_TEMPLATES]
 
 
+@router.get(
+    "/event-types",
+    summary="Katalog der emittierten Ereignistypen (GAH-307)",
+    dependencies=[Depends(strict_query)],
+)
+async def event_types(
+    principal: TenantPrincipal = Depends(_read_principal),
+) -> dict[str, Any]:
+    from mhvp.automation.event_catalog import EVENT_CATALOG
+
+    return {"event_types": list(EVENT_CATALOG)}
+
+
 @router.get("/meta", summary="Bekannte Ereignistypen, Auslöser und Aktionen")
 async def meta(principal: TenantPrincipal = Depends(_read_principal)) -> dict[str, Any]:
     return {

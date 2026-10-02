@@ -119,4 +119,28 @@ describe("CreditPayables", () => {
     const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/withdraw"));
     expect(JSON.parse(String((call?.[1] as RequestInit).body))).toEqual({ reason: "Verrechnung statt Auszahlung" });
   });
+
+  it("sends contract_id with source_type deposit_settlement when proposing (GAH-406)", async () => {
+    const deposit: CreditPayableCandidate = {
+      ...candidate,
+      source_type: "deposit_settlement",
+      label: "Kautionsabrechnung Guthaben",
+      payout_reason: "deposit_credit",
+    } as CreditPayableCandidate;
+    const fetchMock = route({
+      "/api/bff/accounting/credit-payables/settings": { ...settingsOff, mode: "subledger" },
+      "/api/bff/accounting/credit-payables/candidates": [deposit],
+      "/api/bff/accounting/credit-payables": [],
+      "POST /api/bff/accounting/credit-payables": row({ status: "proposed", state: "proposed" }),
+    });
+    renderIntl(<CreditPayables />);
+    await userEvent.click(await screen.findByRole("button", { name: "Vorschlagen" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(true));
+    const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST")!;
+    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({
+      source_type: "deposit_settlement",
+      source_id: deposit.source_id,
+      contract_id: deposit.contract_id,
+    });
+  });
 });

@@ -49,7 +49,8 @@ export default async function LedgerReportsPage({
   }
 
   const [liquidity, paymentsByDebtor, revenue, auditExports, accounts, checks, propertyList] = await Promise.all([
-    api.GET("/api/v1/accounting/ledgers/{ledger_id}/liquidity", {
+    // GAH-104: report variant with the common header.
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/reports/liquidity", {
       params: { path: { ledger_id: id }, query: { as_of: asOf } },
     }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/payments-by-debtor", {
@@ -113,7 +114,7 @@ export default async function LedgerReportsPage({
             {problemMessage(liquidity.error as Problem | undefined, liquidity.response.status)}
           </p>
         ) : (
-          <LiquidityReport data={liquidity.data as unknown as LiquiditySnapshot} />
+          <LiquidityReport data={liquidity.data as unknown as LiquiditySnapshot} ledgerId={id} />
         )}
       </section>
 

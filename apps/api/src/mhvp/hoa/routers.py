@@ -1429,6 +1429,13 @@ async def new_version(
         )
         if body is not None and body.resolution_id is not None and basis_resolution is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if basis_resolution is not None:
+            # GAH-403: the correcting resolution must belong to the GdWE of the ledger.
+            from mhvp.accounting.models import Ledger as _NvLedger
+
+            nv_ledger = await session.get(_NvLedger, old.ledger_id)
+            if nv_ledger is None or nv_ledger.legal_entity_id != basis_resolution.legal_entity_id:
+                raise ProblemError(ErrorCodes.HOA_CORRECTION_RESOLUTION_FOREIGN)
         # GAG-15 (GAF-16): the correcting resolution runs through the majority check of
         # M25-01 (display and protocol note only, no status change, no block).
         majority = (

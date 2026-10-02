@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from mhvp.accounting.models import (
     AccountCategory,
@@ -118,6 +118,18 @@ class AccountOut(BaseModel):
     unit_id: uuid.UUID | None
     property_bank_account_id: uuid.UUID | None
     is_system: bool
+    # GAH-105: hint for existing accounts that break the bank range rule of 7.2; existing
+    # accounts stay unchanged, new ones are refused with MHVP-ACC-0032.
+    range_warning: str | None = None
+
+    @model_validator(mode="after")
+    def _range_warning(self) -> "AccountOut":
+        from mhvp.accounting.chart_rules import account_range_problem
+
+        self.range_warning = account_range_problem(
+            self.number, self.category, self.property_bank_account_id
+        )
+        return self
 
 
 class LineSchema(_In):

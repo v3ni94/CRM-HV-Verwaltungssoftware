@@ -195,7 +195,11 @@ class StatementCostItem(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 class StatementSnapshot(IdMixin, TenantMixin, Base):
-    """Immutable result of a calculation: inputs, keys, rule version, results, hash (6.9.3)."""
+    """Immutable result of a calculation: inputs, keys, rule version, results, hash (6.9.3).
+
+    Insert only: trigger ``statement_snapshot_insert_only`` (migration 0439) refuses UPDATE
+    and DELETE; a recalculation writes a new snapshot.
+    """
 
     __tablename__ = "statement_snapshot"
 

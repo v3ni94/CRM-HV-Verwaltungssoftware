@@ -9,3 +9,5 @@
 | Acceptance case | D08, `tests/integration/test_m17_operating_costs.py::test_d08_d10_units` |
 | Implementation | `mhvp.billing.calc.distribute`: floor to cents, largest remainder, ties by stable key (unit number, occupant key) |
 | Change reason | M17, 23.09.2026 |
+
+Querverweis (02.10.2026, GAH-115): Die Rundungsverfahren aller übrigen Rechenwerte stehen im Rundungsregister `docs/rules/RUNDUNG.md`.

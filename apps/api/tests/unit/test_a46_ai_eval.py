@@ -16,6 +16,7 @@ NEW_TASKS = (
     AiTask.DRAFT_REPLY,
     AiTask.MAP_COLUMNS,
     AiTask.CONTACT_MASTER_DATA_CHANGE,
+    AiTask.REPLY_DRAFT,
 )
 
 

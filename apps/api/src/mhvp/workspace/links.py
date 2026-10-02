@@ -39,6 +39,8 @@ CRM_LIST_ROUTES: dict[str, str] = {
     "platform_scale": "/plattform/betrieb",
     # User created deadlines (rule WS-01) are listed on the deadline page.
     "deadline_entry": "/fristen",
+    # GAH-206: failed outgoing webhook deliveries (settings page Webhooks).
+    "webhook_subscription": "/einstellungen/webhooks",
 }
 # Portal: tickets are "Meldungen"; work orders and handovers have detail pages.
 PORTAL_DETAIL_ROUTES: dict[str, str] = {

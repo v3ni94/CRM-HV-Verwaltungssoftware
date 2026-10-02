@@ -156,3 +156,9 @@ Tenant switch `statement_advance_rule.open_advance_mode` (migration 0371): `info
 ## CRM masks for existing endpoints (AF14, GAE-19/20, GAF-12/13)
 
 No new endpoints and no schema change (migration 0408 is a noop). CRM: check points can be confirmed (`POST /accounting/rule-versions/{id}/confirm`, name and date required, no rule change), `/einstellungen/abrechnung` maintains `heating-rule-tables` (no prefilled values, source required, status default `zu_pruefen`) and the cost account to BetrKV type mapping (`/billing/operating-cost-types/accounts`), the statement workbench records Belegeinsicht (`/statements/{id}/inspections`) and creates result entry drafts (`/result-entries`, status due, gate G3 enforced by the API). The deviation report of the heating comparison is shown as a table (CSV stays available). Test: `tests/integration/test_af14_deadline_snapshot.py` (`/deadlines` and `watch_tenant` with a real snapshot).
+
+## Snapshot guard (wave 20, AI02, GAH-103)
+
+`statement_snapshot` is insert only: trigger `statement_snapshot_insert_only` (migration 0439,
+function `mhvp_insert_only` from 0010) refuses UPDATE and DELETE. Deleting a statement that owns a
+snapshot is refused as well (the cascade hits the guard). Rule B03.

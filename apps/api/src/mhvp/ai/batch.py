@@ -178,7 +178,9 @@ def _is_pending(exc: BaseException) -> bool:
 
 
 async def batch_configs(session: AsyncSession) -> dict[AiProvider, AiProviderConfig]:
-    """Released provider configurations with the batch switch on (tenant scoped)."""
+    """Released provider configurations with the batch switch on (tenant scoped). Same data
+    protection conditions as the gateway route (GAH-203): DPA signed, DPA document linked,
+    training opt-out confirmed and an API key; checked again on every submit and poll."""
     rows = (
         await session.scalars(
             select(AiProviderConfig).where(
@@ -188,7 +190,20 @@ async def batch_configs(session: AsyncSession) -> dict[AiProvider, AiProviderCon
             )
         )
     ).all()
-    return {r.provider: r for r in rows if r.api_key}
+    return {r.provider: r for r in rows if batch_config_usable(r)}
+
+
+def batch_config_usable(config: AiProviderConfig) -> bool:
+    """Gateway conditions (``gateway.py`` route selection) for the batch path (GAH-203)."""
+    return bool(
+        config.enabled
+        and config.batch_enabled
+        and config.released_at is not None
+        and config.data_processing_agreement_signed
+        and config.dpa_document_id
+        and config.training_opt_out_confirmed
+        and config.api_key
+    )
 
 
 async def _run_once(
@@ -363,9 +378,20 @@ async def poll_submitted(
         provider = AiProvider(members[0][1]["provider"])
         config = configs.get(provider)
         if config is None:
-            # Switch turned off or release withdrawn: the runs go back to the nightly queue.
+            # Switch off, release, DPA, document or opt-out withdrawn (GAH-203): no provider
+            # call; the runs go back to the nightly queue, where the gateway blocks them.
             for run_id, _state in members:
-                await _mark(factory, tenant_id, run_id, {"mode": MODE, "state": "deferred"})
+                await _mark(
+                    factory,
+                    tenant_id,
+                    run_id,
+                    {
+                        "mode": MODE,
+                        "state": "deferred",
+                        "aborted_batch_id": batch_id,
+                        "reason": "release_withdrawn",
+                    },
+                )
             continue
         client = providers.client_for(provider, config.api_key or "", config.endpoint_region)
         try:

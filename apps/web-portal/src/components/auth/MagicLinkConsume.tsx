@@ -124,6 +124,7 @@ export function MagicLinkConsume({ token }: { token?: string }) {
           id="magic-link-code"
           className={ui.input}
           autoComplete="one-time-code"
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- sign-in step: the single input is the intended focus target
           autoFocus
           value={code}
           onChange={(e) => setCode(e.target.value)}

@@ -17,7 +17,7 @@ parameters only narrow further.
 
 import enum
 import uuid
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -400,3 +400,138 @@ def _route_authenticates(request: Request) -> bool:
             return True
         stack.extend(dep.dependencies)
     return False
+
+
+# Validity day filter (GAH-213) -----------------------------------------------------------
+
+
+def valid_on(
+    query: Select[Any],
+    day: date | None,
+    valid_from: InstrumentedAttribute[Any],
+    valid_to: InstrumentedAttribute[Any] | None,
+) -> Select[Any]:
+    """Keeps rows valid on ``day`` (``valid_from <= day`` and ``valid_to`` open or ``>= day``;
+    an empty bound is open). Without ``day`` the query stays unchanged."""
+    if day is None:
+        return query
+    query = query.where(valid_from.is_(None) | (valid_from <= day))
+    if valid_to is not None:
+        query = query.where(valid_to.is_(None) | (valid_to >= day))
+    return query
+
+
+# OpenAPI declaration of the generic parameters (GAH-209) --------------------------------
+
+_GENERIC_PARAMS: tuple[tuple[str, str], ...] = (
+    ("sort", "Sortierung: `feld,-feld` (`-` absteigend)."),
+    ("fields", "Sparantwort: `a,b` (`id` bleibt immer enthalten)."),
+    ("include", "Eingebettete Relationen, kommagetrennt."),
+)
+
+
+def _list_spec_of(dependant: Any) -> tuple[bool, ListSpec | None]:
+    """(uses generic parameters, its ListSpec) for a route dependant tree."""
+    stack = [dependant]
+    while stack:
+        dep = stack.pop()
+        call = dep.call
+        if call is list_params:
+            return True, None
+        owner = getattr(call, "__self__", None)
+        if isinstance(owner, ListSpec):
+            return True, owner
+        stack.extend(dep.dependencies)
+    return False, None
+
+
+def _query_param(name: str, description: str, schema: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": name,
+        "in": "query",
+        "required": False,
+        "description": description,
+        "schema": schema,
+    }
+
+
+def _walk_routes(routes: Any, prefix: str = "") -> Iterator[tuple[str, Any]]:
+    from fastapi.routing import APIRoute
+
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield prefix + route.path_format, route
+        elif hasattr(route, "original_router"):
+            ctx = getattr(route, "include_context", None)
+            yield from _walk_routes(
+                route.original_router.routes, prefix + (getattr(ctx, "prefix", "") or "")
+            )
+        elif hasattr(route, "routes"):
+            yield from _walk_routes(route.routes, prefix)
+
+
+def declare_list_parameters(app: Any) -> None:
+    """Adds ``filter[feld]``, ``sort``, ``fields``, ``include`` (and ``as_of`` where the list
+    offers it) to the generated OpenAPI document of every list that parses them. Purely
+    declarative: the parsing and the strict 422 behaviour stay as they are."""
+    original = app.openapi
+    done: list[bool] = []
+
+    def custom_openapi() -> dict[str, Any]:
+        schema: dict[str, Any] = original()
+        if done:
+            return schema
+        done.append(True)
+        for path, route in _walk_routes(app.routes):
+            if "GET" not in route.methods:
+                continue
+            generic, spec = _list_spec_of(route.dependant)
+            if not generic:
+                continue
+            operation = schema.get("paths", {}).get(path, {}).get("get")
+            if operation is None:
+                continue
+            existing = {p["name"] for p in operation.get("parameters", [])}
+            extra: list[dict[str, Any]] = []
+            if spec is not None:
+                for name in sorted(spec.filters):
+                    extra.append(
+                        _query_param(
+                            f"filter[{name}]",
+                            f"Gleichheitsfilter auf `{name}` (mehrere Werte mit Komma).",
+                            {"type": "string"},
+                        )
+                    )
+            else:
+                extra.append(
+                    _query_param(
+                        "filter[feld]",
+                        "Gleichheitsfilter auf ein von der Liste angebotenes Feld.",
+                        {"type": "string"},
+                    )
+                )
+            for name, text in _GENERIC_PARAMS:
+                if spec is not None and name == "sort" and not spec.sort:
+                    continue
+                if spec is not None and name == "include" and not spec.includes:
+                    continue
+                suffix = ""
+                if spec is not None and name == "sort":
+                    suffix = f" Erlaubt: {', '.join(sorted(spec.sort))}."
+                if spec is not None and name == "include":
+                    suffix = f" Angeboten: {', '.join(spec.includes)}."
+                extra.append(_query_param(name, text + suffix, {"type": "string"}))
+            if spec is not None and spec.valid_from is not None:
+                extra.append(
+                    _query_param(
+                        "as_of",
+                        "Stichtag JJJJ-MM-TT: nur am Tag gültige Zeilen.",
+                        {"type": "string", "format": "date"},
+                    )
+                )
+            fresh = [p for p in extra if p["name"] not in existing]
+            if fresh:
+                operation.setdefault("parameters", []).extend(fresh)
+        return schema
+
+    app.openapi = custom_openapi

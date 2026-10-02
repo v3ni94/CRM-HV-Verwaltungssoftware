@@ -60,6 +60,7 @@ export function MagicLinkForm() {
           id="magic-link-email"
           type="email"
           autoComplete="username"
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- sign-in step: the single input is the intended focus target
           autoFocus
           className={ui.input}
           value={email}

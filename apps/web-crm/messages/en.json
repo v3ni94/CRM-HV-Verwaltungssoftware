@@ -1,4 +1,24 @@
 {
+  "HoaNewVersion": {
+    "open": "New version",
+    "title": "New version of the annual statement",
+    "reason": "Correction reason",
+    "reasonNone": "Not specified",
+    "reasons": {
+      "resolution_changed": "Resolution changed",
+      "court_invalid": "Declared invalid by court",
+      "calculation_error": "Calculation error",
+      "other": "Other reason"
+    },
+    "basis": "Basis (description)",
+    "resolution": "Correcting resolution",
+    "resolutionNone": "No correcting resolution",
+    "resolutionHint": "Only resolutions of the same community. The majority check is a display note and changes no status.",
+    "submit": "Create new version",
+    "cancel": "Cancel",
+    "created": "Version {version} created.",
+    "loadFailed": "Resolutions could not be loaded."
+  },
   "Metadata": {
     "title": "MH Verwaltungsplattform · Administration",
     "description": "Administration interface of the MH Verwaltungsplattform"
@@ -1690,6 +1710,30 @@
     "entriesTitle": "Custom deadlines"
   },
   "Accounting": {
+    "approvalHistory": {
+      "title": "Approval history",
+      "show": "Show approval history",
+      "hide": "Hide approval history",
+      "loading": "Loading approval history.",
+      "empty": "No approval decision recorded yet.",
+      "step": "Step",
+      "decidedAt": "Decided at",
+      "status": "Status",
+      "hash": "Checksum",
+      "steps": {
+        "approval": "Payment approval",
+        "release": "Invoice release",
+        "second_approval": "Second approval"
+      },
+      "statuses": {
+        "valid": "valid",
+        "invalidated": "invalidated"
+      },
+      "invalidated": "Invalidated on {at}: {reason}",
+      "noReason": "no reason given",
+      "personWarning": "Person check: {text}",
+      "note": "An approval only covers the checked state. If the subject changes, it is invalidated and must be granted again."
+    },
     "title": "Accounting",
     "parallelNotice": "Parallel operation: Immoware24 remains the leading system. Postings in the platform are not the leading bookkeeping as long as release gate G1 has not been granted.",
     "ruleCheckpointsManage": {
@@ -1753,6 +1797,8 @@
         "expectedOutflows": "Expected outflows",
         "projectedFreeFunds": "Projected free funds",
         "horizon": "Reference date {asOf}, forecast horizon until {horizon}",
+        "xlsx": "Download as Excel",
+        "numberConvention": "Reserve detected by account number 001201 only, no bank account linked",
         "kind": "Type",
         "kinds": {
           "free": "free",
@@ -2254,6 +2300,23 @@
   "Bank": {
     "automationSwitch": {"title": "Automation switch", "help": "Switching the automation on requires gate G1 to be open, a request with reason and the approval of a second person. Switching off is possible at any time. The run still checks levels, rules and gate itself.", "on": "Automation on", "off": "Automation off", "g1Open": "G1 open", "g1Closed": "G1 closed", "reason": "Reason of the request", "request": "Request switch on", "requested": "Request filed. A second person approves it.", "switchOff": "Switch off now", "offReason": "Reason for switching off", "switchedOff": "The automation is switched off.", "approve": "Approve", "reject": "Reject", "approved": "Request approved, the automation is on.", "rejected": "Request rejected.", "blockedG1": "Locked while gate G1 is closed.", "alreadyOn": "The automation is on.", "pendingOrNoRight": "A request is pending or the right to request is missing.", "status": {"requested": "Requested", "approved": "Approved", "rejected": "Rejected"}, "target": {"main": "Main switch", "outgoing": "Outgoing automation"}, "outgoing": {"title": "Outgoing automation", "help": "Automatic posting of outgoing payments. Switching on only through a request approved by a second person while gate G1 is open, effective only while the main switch is on. Switching off is immediate.", "on": "Outgoing automation on", "off": "Outgoing automation off", "request": "Request outgoing automation", "switchOff": "Switch outgoing automation off now", "switchedOff": "The outgoing automation is off."}, "comparison": {"title": "Comparison run automation against manual booking", "help": "Report from the decision log: per closed decision whether the best automation proposal matches the manual booking. The report posts nothing and is no proof of safety.", "summary": "Compared bookings: {compared}, match rate: {rate}", "noRate": "no data", "caseKind": "Case class", "total": "Total", "outcome": {"match": "Match", "other_proposal": "Other proposal", "modified": "Booked modified", "no_proposal": "No proposal", "rejected": "Rejected", "auto_posted": "Auto posted", "reversed": "Reversed"}}},
     "title": "Bank",
+    "kpi": {
+      "title": "Automation metrics",
+      "description": "Coverage and error rate of the bank automation and comparison of proposals with manual bookings. Reports only, nothing is booked.",
+      "backToBank": "Back to bank",
+      "comparisonTitle": "Automation versus manual booking",
+      "comparisonIntro": "Per completed decision: does the best automation proposal match the manual booking?",
+      "from": "From",
+      "to": "To",
+      "loading": "Loading comparison.",
+      "summary": "Compared bookings: {compared}, match rate: {rate}",
+      "noRate": "no basis",
+      "caseKind": "Case class",
+      "total": "Total",
+      "lastDecision": "Latest decision in the period: {date}",
+      "note": "The report books nothing and is no safety proof. The automation rate is an operating metric, not a release.",
+      "outcome": {"match": "Match", "other_proposal": "Other proposal", "modified": "Booked modified", "no_proposal": "No proposal", "rejected": "Rejected", "auto_posted": "Auto-posted", "reversed": "Reversed"}
+    },
     "metrics": {
       "title": "Matching key figures",
       "intro": "Coverage and error rate of the automation reported apart, per period, from existing data.",
@@ -2287,6 +2350,7 @@
     "noCandidates": "No matching open item.",
     "unambiguous": "unambiguous",
     "openItemLink": "Open item",
+    "periodLocked": "The object period is locked ({code}). Booking is not possible.",
     "contractLink": "Contract",
     "sourceRule": "Rule",
     "sourceMatch": "Match",
@@ -2420,6 +2484,7 @@
       "unconfirmed": "unconfirmed"
     },
     "dialog": {
+      "periodLocked": "The object period is locked ({code}). This transaction cannot be booked until the lock is lifted.",
       "title": "Book transaction",
       "close": "Close",
       "loading": "Loading proposals, accounts and open items.",
@@ -2469,6 +2534,7 @@
       "confirmText": "Booking of {amount}. After posting the record is immutable; corrections only by reversal and a new posting (B03)."
     },
     "bulk": {
+      "periodLocked": "Object period locked (MHVP-ACC-0030), not booked",
       "title": "Bulk confirmation",
       "intro": "Only deterministically verified proposals (unambiguous full settlement or hit of an approved rule) are prepared. Each transaction is booked completely or not at all.",
       "loading": "Loading proposals and computing the preview.",
@@ -2541,6 +2607,14 @@
       "statementDifference": "Statement difference",
       "ledgerBalance": "Ledger balance",
       "ledgerDifference": "Ledger difference",
+      "chain": "Chain to previous statement",
+      "chainOk": "Opening balance matches",
+      "chainBreak": "Chain break {amount}",
+      "chainNotCheckable": "Chain not checkable (balances missing)",
+      "periodGap": "Gap {from} to {to}",
+      "periodOverlap": "Period overlaps",
+      "chainFindings": "{count, plural, one {# statement with chain break or period gap.} other {# statements with chain break or period gap.}}",
+      "notCheckable": "{count, plural, one {# statement without balances, not checkable (e.g. CSV).} other {# statements without balances, not checkable (e.g. CSV).}}",
       "na": "not available",
       "note": "A difference is a finding to clear; it is not corrected here. Without a ledger account or statement balances the column stays empty."
     },
@@ -2603,6 +2677,7 @@
       "gated": "Display only. Switching on only through a request approved by a second person while gate G1 is open. The runner posts only case classes at level L2 or L3 (Settings, Accounting, Automation levels) under an active rule with deterministic verification and review; before G1 only in the non leading ledger (ADR 0014, operator decision of 28.09.2026).",
       "outgoingOn": "Outgoing automation on", "outgoingOff": "Outgoing automation off (default)", "requestPath": "Request, approval and immediate switch off:", "requestLink": "Automation switch"
     },
+    "kpiLink": "Automation metrics",
     "reviewLink": "Review queue",
     "levelsLink": "Automation levels",
     "levels": {
@@ -4502,12 +4577,14 @@
     },
     "none": "None",
     "notifyTitle": "Title (placeholders in curly braces allowed, for example ticket number or ticket title)",
+    "notifyTitlePlaceholder": "Ticket {number}: {title}",
     "notifyBody": "Text",
     "roles": "Roles",
     "users": "Users",
     "template": "Ticket template",
     "noTemplates": "No template available",
     "ticketTitle": "Title (empty = template title)",
+    "ticketTitlePlaceholder": "Follow-up order for {title}",
     "fromTemplate": "from template",
     "copyFromEvent": {
       "property_id": "Copy property from event",
@@ -4572,6 +4649,7 @@
       "schedule": "Schedule"
     },
     "customEvent": "Other event type",
+    "unknownEventWarning": "The system never emits this event type, so the rule would never fire. Please check the spelling.",
     "eventTypeCode": "Event type (code)",
     "events": {
       "ticket_created": "Ticket created",
@@ -6438,6 +6516,7 @@
       "reconciliation": "Bank reconciliation",
       "rules": "Bank rules",
       "review": "Review queue",
+      "kpi": "Automation metrics",
       "merge": "Merge",
       "reserves": "Reserves",
       "rentIndex": "Rent index",
@@ -10805,6 +10884,17 @@
     }
   },
   "Webhooks": {
+    "ai07": {
+      "test": "Test delivery",
+      "testQueued": "Test delivery queued, it appears in the log.",
+      "edit": "Edit",
+      "editUrl": "Target URL",
+      "editDescription": "Description (leave empty to remove)",
+      "rotate": "Rotate secret",
+      "rotateConfirm": "Create a new signing secret? The previous secret stops working immediately.",
+      "failures": "{count} consecutive deliveries failed finally, last at {at}.",
+      "autoDisabled": "Deactivated automatically after {count} consecutive failed deliveries."
+    },
     "card": {
       "title": "Webhooks",
       "description": "Outgoing event notifications to third party systems: subscriptions, delivery log, redelivery."
@@ -10871,7 +10961,7 @@
       "redelivered": "Redelivery scheduled.",
       "loadError": "The delivery log could not be loaded."
     },
-    "testDelivery": "The API offers no test delivery. Creating a subscription emits the event webhook_subscription.created, which is delivered to existing subscriptions and can be checked in the log."
+    "testDelivery": "A test delivery queues the event webhook_subscription.test for this subscription only; the result appears in the log. When a delivery finally fails, authorised users are notified."
   },
   "ContractForm": {
     "notesSection": {
@@ -12041,6 +12131,7 @@
     }
   },
   "Common": {
+    "breadcrumbNav": "Breadcrumb",
     "links": {
       "title": "Links",
       "contact": "Contact",
@@ -15429,7 +15520,12 @@
     "baseRateInput": "Base rate in percent",
     "source": "Source",
     "add": "Record rate",
-    "added": "Base rate recorded."
+    "added": "Base rate recorded.",
+    "dayCount": "Day count method (tenant switch, decision open AI03-01): {label}",
+    "staleTitle": "Check the base rate",
+    "seedCheckpoints": "Create check points 1 January and 1 July",
+    "seeded": "{count} check points created in the deadline register.",
+    "nextChange": "Next change dates: {dates}"
   },
   "DirectDebitFeedback": {
     "selectAll": "Select all direct debits",
@@ -16754,6 +16850,14 @@
         "title": "Property takeover, threshold for suggestions in percent",
         "description": "Between this threshold and the linking threshold a hit is only suggested, below it an incomplete new contact is created. Default 60 percent."
       },
+      "webhook-auto-disable": {
+        "title": "Deactivate webhooks after consecutive failures",
+        "description": "0 means notify only, never deactivate (default). A value from 1 deactivates a subscription once that many deliveries in a row failed finally."
+      },
+      "objektakte-webhook-timestamp": {
+        "title": "Accept the objektakte webhook only with timestamp",
+        "description": "When on, the webhook refuses calls without the header X-MHVP-Timestamp. Off (default), older callers keep the previous body signature."
+      },
       "invoice-intake-auto": {
         "title": "Receipt capture after filing an invoice",
         "description": "On, confirming an intake proposal recognised as invoice starts the invoice extraction as a proposal in the receipt inbox. Nothing is booked, approved or paid. Off, the hint offers the action Capture receipt."
@@ -16765,6 +16869,14 @@
       "subledger-exclude-written-off": {
         "title": "Subledger check hides written off items",
         "description": "Written off items and items of cancelled postings do not appear in the difference of the subledger check and are counted separately. The export nebenbuchabgleich.csv names the reason."
+      },
+      "tax-35a-basis": {
+        "title": "Household services certificate, invoice selection",
+        "description": "Invoice date in the year (previous behaviour) or only paid invoices with a payment date in the year. Each line shows its payment state, a second certificate of the same year gets a notice. The tax decision stays open."
+      },
+      "deposit-limit-hint": {
+        "title": "Review hint on deposit amount and instalments",
+        "description": "For residential units a non blocking hint appears when the deposit exceeds the set multiple of the rent without operating costs (default 3) or the instalments exceed the comparison value (default 3). No legal assessment."
       },
       "period-lock-mode": {
         "title": "Period lock: scope",
@@ -16791,6 +16903,10 @@
         "title": "Tax withheld on credit interest",
         "description": "Capital gains tax, solidarity surcharge and church tax per interest posting as amounts from the bank document. You set the tax accounts per ledger; only a posting draft is created.",
         "defaultText": "No tax accounts, deductions 0,00 EUR"
+      },
+      "dunning-day-count": {
+        "title": "Default interest: day count method",
+        "description": "Whether interest days are divided by 365 (fixed, also in leap years) or by the actual days of the year (365 or 366). Every interest result states the method. Your legal advisor decides which method applies."
       },
       "rule-checkpoints": {
         "title": "Check points for heating cost ordinance deadlines",
@@ -16974,6 +17090,10 @@
         "title": "Second factor in the portal",
         "description": "Whether portal users must set up a second factor. Off means: voluntary."
       },
+      "mfa-admin-reset": {
+        "title": "Reset second factor (four eyes)",
+        "description": "Whether administrators may reset a user's lost second factor by request and approval of a second person. Off means: not possible."
+      },
       "access-export-third-party": {
         "title": "Access export: other persons",
         "description": "How other persons appear in an access export. The choice applies to exports prepared afterwards, a prepared export keeps its scope."
@@ -17017,6 +17137,10 @@
         "regular_numbers": "Regular invoice number MR also for a draft",
         "reject_when_g1_closed": "Reject the output while G1 is closed"
       },
+      "tax-35a-basis": {
+        "invoice_date": "By invoice date",
+        "payment_date": "Only paid invoices by payment date"
+      },
       "period-lock-mode": {
         "ledger_only": "Lock of the ledger only",
         "object_period": "Lock per property and period"
@@ -17025,6 +17149,10 @@
         "info_only": "Information only, balance against paid advances",
         "offset_reversal": "Offset open items against the statement by reversal",
         "balance_against_due": "Balance against due advances"
+      },
+      "dunning-day-count": {
+        "act_365_fixed": "Days by 365 (fixed)",
+        "act_act": "Days by actual days of the year"
       },
       "deadline-policy": {
         "block_claims": "Block additional claims",

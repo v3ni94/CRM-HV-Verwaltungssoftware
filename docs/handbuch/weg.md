@@ -526,3 +526,7 @@ Beim Bereitstellen einer Hausgeldabrechnung (Status ausgegeben oder fällig) leg
 ## Zuordnungsvorschlag bei Eigentümerwechsel (Welle 18, AG20)
 
 Unter Einstellungen, Fachliche Regeln, schaltet der Schalter "Zuordnungsvorschlag bei Eigentümerwechsel" (Standard aus) einen Hinweis frei: Die Vorschau der Planübernahme zeigt je Zeile den Eigentümer, den die Regel je Erwerbsart vorschlagen würde, und markiert Abweichungen vom verwendeten Eigentümer. Für eine Abrechnung mit Beschluss liefert die Schnittstelle dieselbe Gegenüberstellung je Einheit. Übernommen und gebucht wird weiterhin beim bisherigen Eigentümer; der Vorschlag bucht nichts und versendet nichts. Die Rechtsfrage bleibt offen (W07, P01).
+
+### Neue Version einer Jahresabrechnung mit Korrekturbeschluss
+
+Die Schaltfläche "Neue Version" öffnet einen Dialog. Dort wählen Sie optional den Korrekturgrund, beschreiben die Grundlage und wählen einen Korrekturbeschluss derselben Gemeinschaft. Nach dem Anlegen zeigt die Maske die Mehrheitsprüfung des Beschlusses an. Die Prüfung ist nur ein Vermerk und ändert keinen Status. Ein Beschluss einer anderen Gemeinschaft wird abgelehnt (Fehler MHVP-HOA-0038).

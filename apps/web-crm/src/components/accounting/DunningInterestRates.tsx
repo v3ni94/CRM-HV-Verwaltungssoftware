@@ -7,6 +7,13 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+type InterestInfo = {
+  day_count: string;
+  day_counts: Record<string, string>;
+  base_rate_stale: boolean;
+  base_rate_hint: string | null;
+  next_change_dates: string[];
+};
 type Rate = { id: string; valid_from: string; valid_to: string | null; base_rate: string; source: string };
 
 /** M16-02: Basiszinssatzhistorie mit Gültigkeitszeitraum und Quelle. Die Sätze sind
@@ -17,11 +24,22 @@ export function DunningInterestRates() {
   const [f, setF] = useState({ valid_from: "", base_rate: "", source: "" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [info, setInfo] = useState<InterestInfo | null>(null);
   const load = useCallback(async () => {
     const res = await bff<Rate[]>("/api/bff/accounting/dunning-interest-rates");
     if (res.ok) setRows(res.data);
     else setError(res.message);
+    // AI03 (GAH-110, GAH-113): day count switch and hint when the newest rate is outdated.
+    const inf = await bff<InterestInfo>("/api/bff/accounting/dunning-interest");
+    if (inf.ok) setInfo(inf.data);
   }, []);
+  const seed = async () => {
+    setError(null);
+    setMessage(null);
+    const res = await bff<unknown[]>("/api/bff/accounting/dunning-interest/base-rate-checkpoints", { method: "POST" });
+    if (!res.ok) return setError(res.message);
+    setMessage(t("seeded", { count: res.data.length }));
+  };
   useEffect(() => {
     void load();
   }, [load]);
@@ -42,6 +60,20 @@ export function DunningInterestRates() {
     <section className="flex flex-col gap-2" data-testid="dunning-rates">
       <h2 className={ui.h2}>{t("title")}</h2>
       <p className={ui.notice}>{t("notice")}</p>
+      {info ? (
+        <p className={ui.help} data-testid="dunning-day-count">
+          {t("dayCount", { label: info.day_counts[info.day_count] ?? info.day_count })}
+        </p>
+      ) : null}
+      {info?.base_rate_stale ? (
+        <div role="status" className={ui.notice} data-testid="dunning-rate-stale">
+          <strong>{t("staleTitle")}</strong> {info.base_rate_hint}{" "}
+          {t("nextChange", { dates: info.next_change_dates.map((d) => formatDate(d)).join(", ") })}{" "}
+          <button type="button" className={ui.button} onClick={seed}>
+            {t("seedCheckpoints")}
+          </button>
+        </div>
+      ) : null}
       {rows === null ? null : rows.length === 0 ? (
         <p className={ui.help}>{t("empty")}</p>
       ) : (

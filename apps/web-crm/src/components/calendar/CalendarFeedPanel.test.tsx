@@ -30,9 +30,14 @@ describe("CalendarFeedPanel", () => {
   });
 
   it("links the ICS download through the BFF (GAG-34)", () => {
-    renderIntl(<CalendarFeedPanel initialActive />);
+    renderIntl(<CalendarFeedPanel initialActive canDownload />);
     const link = screen.getByRole("link", { name: "ICS-Datei herunterladen" });
     expect(link).toHaveAttribute("href", "/api/bff/workspace/calendar.ics");
     expect(link).toHaveAttribute("download", "kalender.ics");
+  });
+
+  it("hides the ICS download without tenant_settings:read (GAH-405)", () => {
+    renderIntl(<CalendarFeedPanel initialActive />);
+    expect(screen.queryByRole("link", { name: "ICS-Datei herunterladen" })).toBeNull();
   });
 });

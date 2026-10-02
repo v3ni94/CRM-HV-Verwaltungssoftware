@@ -602,3 +602,20 @@ Lehnt die Plattform ab (zum Beispiel Rechtsträger passt nicht zur Kontoart, feh
 ## Ignorierten Umsatz wieder eröffnen
 
 In der Umsatzliste (Bank) zeigt ein ignorierter Umsatz die Schaltfläche „Wieder eröffnen“, sofern Sie Umsätze bearbeiten dürfen. Nach Eingabe einer Begründung (mindestens 3 Zeichen) steht der Umsatz wieder im Status „neu“ zur Bearbeitung bereit. Ein Umsatz mit wirksamer Buchung bleibt gebucht; eine Korrektur erfolgt dann nur per Storno.
+
+## Automatik-Kennzahlen (GAH-107, GAH-211, Welle 20)
+
+Unter Bank, "Automatik-Kennzahlen" (`/bank/kennzahlen`) stehen zwei reine Berichte. Sie buchen nichts und sind keine Freigabe der Automatik.
+
+1. Kennzahlen Bankabgleich: Abdeckungsgrad (automatisch eindeutig zugeordnete Umsätze im Verhältnis zu allen Umsätzen) und Fehlerquote (stornierte automatische Zuordnungen im Verhältnis zu allen automatischen Zuordnungen), getrennt, je Zeitraum.
+2. Vergleich Automatik gegen manuelle Buchung: je Fallklasse die Ergebnisse Übereinstimmung, anderer Vorschlag, geändert gebucht und ohne Vorschlag, dazu die Übereinstimmungsquote. Der Zeitraum ist wählbar. Ohne verglichene Buchungen steht "keine Basis".
+
+Beide Berichte zeigen Betriebskennzahlen und ersetzen weder die Freigabestufe G1 noch die Prüfung der Buchungen durch eine zweite Person.
+
+## Objektsperre und Kontoart "Sonstiges Konto" (GAH-401, GAH-404, Welle 20)
+
+Ist der Objektzeitraum eines Umsatzes gesperrt, zeigen Buchungsdialog, Vorschlagsliste und Massenbestätigung den Hinweis mit dem Fehlercode MHVP-ACC-0030. Die Schaltfläche Buchen ist dann deaktiviert, in der Massenbestätigung erscheint der Umsatz unter den Ausnahmen. Im Formular "Internes Konto anlegen" der FinTS-Zeile steht zusätzlich die Kontoart "Sonstiges Konto"; als Rechtsträger kommt jeder Rechtsträger der Plattform in Frage.
+
+## Kettenprüfung in der Bankabstimmung
+
+Die Bankabstimmung zeigt je Auszug in der Spalte "Kette zum Vorauszug", ob der Anfangssaldo zum Endsaldo des vorherigen Auszugs passt, und meldet Kettenbrüche mit Betrag sowie Zeitraumlücken und Überschneidungen. Auszüge ohne Salden, etwa aus CSV, werden als nicht prüfbar gezählt. Befunde werden hier nur angezeigt und nicht korrigiert.

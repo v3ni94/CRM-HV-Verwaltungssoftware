@@ -49,6 +49,7 @@ ReportName = Literal[
     "revenue",
     "vat_overview",
     "income_expense",
+    "liquidity",
 ]
 
 
@@ -303,6 +304,31 @@ async def report_account_sheet(
                 filters={"account": f"{account.number} {account.name}"},
             ),
             **await acc.account_sheet(session, account, start, end),
+        }
+
+
+@router.get("/ledgers/{ledger_id}/reports/liquidity", summary="Liquiditätsvorschau mit Kopfangaben")
+async def report_liquidity(
+    ledger_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """GAH-104 (7.5, 7.7 Absatz 1): the 90 day preview with the common report header."""
+    key_date = as_of or local_today()
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        reports.ensure_ledger_in_scope(session, ledger)
+        data = await reports.liquidity(session, ledger, key_date)
+        return {
+            "header": await report_views.report_header(
+                session,
+                ledger,
+                report="liquidity",
+                as_of=key_date,
+                filters={"horizon": data["horizon"]},
+            ),
+            **data,
         }
 
 

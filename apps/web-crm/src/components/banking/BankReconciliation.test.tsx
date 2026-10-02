@@ -53,6 +53,26 @@ describe("BankReconciliation", () => {
     await waitFor(() => expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("2 Auszüge mit Differenz."));
   });
 
+  it("shows chain breaks, period gaps and statements without balances (GAH-102)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/reconciliation")) {
+        return jsonResponse([
+          { statement_id: "s1", statement_ref: "2026/01", closing_date: "2026-01-31", opening_balance: "1000.00", movements: "100.00", closing_balance: "1100.00", statement_difference: "0.00", ledger_balance: null, ledger_difference: null, status: "ok", chain_status: "first", chain_difference: null, period_status: "first", gap_from: null, gap_to: null },
+          { statement_id: "s2", statement_ref: "2026/02", closing_date: "2026-02-28", opening_balance: "1150.00", movements: "50.00", closing_balance: "1200.00", statement_difference: "0.00", ledger_balance: null, ledger_difference: null, status: "ok", chain_status: "break", chain_difference: "50.00", period_status: "ok", gap_from: null, gap_to: null },
+          { statement_id: "s3", statement_ref: "CSV", closing_date: null, opening_balance: null, movements: "10.00", closing_balance: null, statement_difference: null, ledger_balance: null, ledger_difference: null, status: "not_checkable", chain_status: "not_checkable", chain_difference: null, period_status: "gap", gap_from: "2026-03-01", gap_to: "2026-03-31" },
+        ]);
+      }
+      return jsonResponse(accounts);
+    });
+    renderIntl(<BankReconciliation />);
+    await userEvent.selectOptions(await screen.findByLabelText("Bankkonto"), PBA);
+    await waitFor(() => expect(screen.getByTestId("reconciliation-chain-summary")).toHaveTextContent("2 Auszüge mit Kettenbruch oder Zeitraumlücke."));
+    expect(screen.getByText("Kettenbruch 50,00 EUR")).toHaveClass("text-danger-fg");
+    expect(screen.getByText("Kette nicht prüfbar (Salden fehlen), Lücke 01.03.2026 bis 31.03.2026")).toBeInTheDocument();
+    expect(screen.getByTestId("reconciliation-not-checkable")).toHaveTextContent("1 Auszug ohne Salden, nicht prüfbar (z. B. CSV).");
+  });
+
   it("reports an empty account", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);

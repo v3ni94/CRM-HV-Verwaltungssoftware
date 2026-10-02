@@ -37,4 +37,45 @@ describe("LiquidityReport", () => {
     expect(screen.getByText(/Girokonto/)).toBeInTheDocument();
     expect(screen.getByText(/Kautionskonto/)).toBeInTheDocument();
   });
+
+  it("shows the report header, the Excel link and the number convention hint (GAH-104)", () => {
+    renderIntl(
+      <LiquidityReport
+        ledgerId="led-1"
+        data={{
+          as_of: "2026-09-25",
+          horizon: "2026-12-24",
+          accounts: [
+            { number: "001201", name: "Rücklage", balance: "500.00", kind: "reserve", kind_basis: "number_convention" },
+          ],
+          free_funds: "0.00",
+          reserve_funds: "500.00",
+          segregated_deposits: "0.00",
+          expected_inflows: "0.00",
+          expected_outflows: "0.00",
+          projected_free_funds: "0.00",
+          note: "Hinweis",
+          header: {
+            report: "liquidity",
+            legal_entity_name: "WEG Musterstraße",
+            ledger_name: "Buchungskreis",
+            period_start: null,
+            period_end: null,
+            as_of: "2026-09-25",
+            generated_at: "2026-09-25T08:00:00+00:00",
+            filters: { horizon: "2026-12-24" },
+            status: "draft",
+            status_note: "Entwurf, keine Abrechnung",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("liquidity-header")).toHaveTextContent("WEG Musterstraße");
+    expect(screen.getByText("Entwurf")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Als Excel herunterladen" })).toHaveAttribute(
+      "href",
+      "/api/bff/accounting/ledgers/led-1/reports/xlsx?report=liquidity&as_of=2026-09-25",
+    );
+    expect(screen.getByText(/nur nach Kontonummer 001201/)).toBeInTheDocument();
+  });
 });

@@ -54,6 +54,7 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
   const t = useTranslations("Bank.bulk");
   const [items, setItems] = useState<Item[] | null>(null);
   const [skipped, setSkipped] = useState<Transaction[]>([]);
+  const [locked, setLocked] = useState<Transaction[]>([]);
   const [preview, setPreview] = useState<PreviewOut | null>(null);
   const [result, setResult] = useState<ResultOut | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,15 +65,21 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
     (async () => {
       const built: Item[] = [];
       const none: Transaction[] = [];
+      const lockedTx: Transaction[] = [];
       for (const tx of transactions) {
         const res = await bff<Proposals>(`/api/bff/banking/transactions/${tx.id}/posting-proposals`);
         if (cancelled) return;
+        if (res.ok && res.data.object_period_lock?.locked) {
+          lockedTx.push(tx);
+          continue;
+        }
         const splits = res.ok ? verifiedSplits(res.data) : null;
         if (splits) built.push({ transaction_id: tx.id, settlements: splits.map((s) => ({ open_item_id: s.open_item_id, amount: s.amount })) });
         else none.push(tx);
       }
       setItems(built);
       setSkipped(none);
+      setLocked(lockedTx);
       if (built.length === 0) return;
       const pv = await bff<PreviewOut>("/api/bff/banking/bulk-confirm", {
         method: "POST",
@@ -152,10 +159,15 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
               ))}
             </ul>
             <h3 className={ui.h3}>{t("exceptions")}</h3>
-            {skipped.length === 0 && (preview?.exceptions.length ?? 0) === 0 ? (
+            {skipped.length === 0 && locked.length === 0 && (preview?.exceptions.length ?? 0) === 0 ? (
               <p className="text-muted">{t("noExceptions")}</p>
             ) : (
               <ul className="list-disc pl-5" data-testid="bulk-exceptions">
+                {locked.map((tx) => (
+                  <li key={tx.id} data-testid="bulk-period-locked">
+                    {tx.counterpart_name ?? tx.id} {formatEur(tx.amount)}: {t("periodLocked")}
+                  </li>
+                ))}
                 {skipped.map((tx) => (
                   <li key={tx.id}>
                     {tx.counterpart_name ?? tx.id} {formatEur(tx.amount)}: {t("noVerifiedProposal")}

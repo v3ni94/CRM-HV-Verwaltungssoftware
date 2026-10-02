@@ -89,6 +89,7 @@ export function MfaSetupForm({ next }: { next?: string }) {
                 id="setup-code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- sign-in step: the single input is the intended focus target
                 autoFocus
                 maxLength={8}
                 className={`${ui.input} font-mono tracking-widest`}

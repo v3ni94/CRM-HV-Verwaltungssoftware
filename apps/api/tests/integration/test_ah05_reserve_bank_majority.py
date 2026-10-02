@@ -373,3 +373,39 @@ def test_gag15_new_version_majority_check(client: TestClient, world: World) -> N
         ).status_code
         == 404
     )
+
+
+def test_gah403_correction_resolution_of_other_gdwe(client: TestClient, world: World) -> None:
+    """GAH-403: a resolution of another GdWE of the same tenant is refused with 422."""
+    c = client
+    h = bearer(login(c, world, "ah05admin"))
+    w1 = _hoa_ledger(c, h, "981")
+    w2 = _hoa_ledger(c, h, "982")
+    foreign = _ok(
+        c.post(
+            f"{H}/resolutions",
+            json={
+                "legal_entity_id": w2["hoa"],
+                "decided_on": "2026-05-10",
+                "subject": "Korrektur fremde GdWE",
+                "wording": "Die korrigierte Jahresabrechnung 2025 wird beschlossen.",
+                "status": "positive",
+                "subject_kind": "annual_statement",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    st = _ok(
+        c.post(f"{H}/statements", json={"ledger_id": w1["ledger"], "year": 2025}, headers=h), 201
+    )
+    res = c.post(
+        f"{H}/statements/{st['id']}/new-version",
+        json={"resolution_id": foreign["id"]},
+        headers=h,
+    )
+    assert res.status_code == 422
+    assert res.json()["code"] == "MHVP-HOA-0038"
+    # Nothing was created: the next valid call still yields version 2.
+    nv = _ok(c.post(f"{H}/statements/{st['id']}/new-version", headers=h), 201)
+    assert nv["version"] == st["version"] + 1

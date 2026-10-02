@@ -314,8 +314,21 @@ jobs:
           fi
           bash infra/scripts/tests/test-release.sh
 
+  dependency-audit:
+    # GAH-310: pip-audit and pnpm audit --prod against the lockfiles before the image build.
+    # Tool or network failures only warn; findings need an entry in .github/audit-allowlist.txt.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - run: python3 scripts/dependency_audit.py
+
   images:
-    needs: [api, web]
+    needs: [api, web, dependency-audit]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

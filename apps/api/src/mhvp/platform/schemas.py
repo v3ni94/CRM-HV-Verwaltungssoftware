@@ -566,6 +566,9 @@ class WebhookCreate(BaseModel):
 class WebhookPatch(BaseModel):
     active: bool | None = None
     event_types: list[str] | None = None
+    # GAH-207: target and description are editable; the URL passes the same SSRF check.
+    url: str | None = Field(default=None, max_length=2000)
+    description: str | None = Field(default=None, max_length=200)
 
     @field_validator("event_types")
     @classmethod
@@ -585,6 +588,28 @@ class WebhookOut(BaseModel):
     last_delivery_status: str | None = None
     last_delivery_status_code: int | None = None
     last_delivery_at: datetime | None = None
+    # GAH-206: consecutive final failures, time of the last one and the reason of an automatic
+    # deactivation (``consecutive_failures``), shown as warning on the settings page.
+    consecutive_failures: int = 0
+    last_failure_at: datetime | None = None
+    disabled_reason: str | None = None
+
+
+class WebhookTestOut(BaseModel):
+    delivery_id: uuid.UUID
+    event_id: uuid.UUID
+
+
+class WebhookSettingsOut(BaseModel):
+    """GAH-206, GAH-202 tenant switches (questions AI07-01, AI07-02)."""
+
+    auto_disable_after: int | None = None
+    objektakte_require_timestamp: bool = False
+
+
+class WebhookSettingsIn(BaseModel):
+    auto_disable_after: int | None = Field(default=None, ge=1, le=100)
+    objektakte_require_timestamp: bool | None = None
 
 
 class WebhookEventTypeOut(BaseModel):

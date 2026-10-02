@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { ApprovalHistory } from "@/components/accounting/ApprovalHistory";
 import { InvoiceFactualPanel } from "@/components/invoices/InvoiceFactualPanel";
 import { InvoiceActions } from "@/components/invoices/InvoiceForms";
 import { ReverseChargeGate } from "@/components/invoices/ReverseChargeGate";
@@ -72,6 +73,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
         </table>
       </div>
       <InvoiceFactualPanel invoiceId={invoiceId} />
+      <ApprovalHistory subjectType="invoice" subjectId={invoiceId} />
       <section className="flex flex-col gap-1">
         <h2 className={ui.h2}>{t("reviews")}</h2>
         {reviews.length === 0 ? <p className={ui.help}>{t("noReviews")}</p> : null}

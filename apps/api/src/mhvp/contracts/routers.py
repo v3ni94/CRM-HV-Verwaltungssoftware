@@ -24,6 +24,7 @@ from mhvp.contracts.models import (
     ContractTerminationReading,
     DebtorAccountReservation,
     Deposit,
+    DepositHintSetting,
     DepositMovement,
     MandateStatus,
     PaymentSchedule,
@@ -47,6 +48,7 @@ from mhvp.core.listparams import (
     embed,
     list_params,
     strict_query,
+    valid_on,
 )
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
@@ -60,6 +62,8 @@ CREATE = require_permission("contracts:create")
 UPDATE = require_permission("contracts:update")
 # Management approval of imported contracts (tenant_admin and administrator only).
 APPROVE = require_permission("contracts:approve")
+SETTINGS_READ_DEPOSIT = require_permission("tenant_settings:read")
+SETTINGS_UPDATE_DEPOSIT = require_permission("tenant_settings:update")
 
 
 def _nf() -> ProblemError:
@@ -977,7 +981,10 @@ async def _allocation_values_out(
     dependencies=[Depends(strict_query)],
 )
 async def list_allocation_values(
-    contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    contract_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = Query(default=None, description="Stichtag: nur am Tag gültige Zeilen"),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[s.ContractAllocationValueOut]:
     """Vertragsbezogene Umlagewerte mit Zeitraum (z. B. Personen), alle Versionen der
     Vertragsnummer."""
@@ -988,9 +995,14 @@ async def list_allocation_values(
         ).all()
         rows = (
             await session.scalars(
-                select(ContractAllocationValue)
-                .where(ContractAllocationValue.contract_id.in_(ids))
-                .order_by(
+                valid_on(
+                    select(ContractAllocationValue).where(
+                        ContractAllocationValue.contract_id.in_(ids)
+                    ),
+                    as_of,
+                    ContractAllocationValue.valid_from,
+                    ContractAllocationValue.valid_to,
+                ).order_by(
                     ContractAllocationValue.allocation_key_id, ContractAllocationValue.valid_from
                 )
             )
@@ -1216,18 +1228,25 @@ async def add_payment(
     dependencies=[Depends(strict_query)],
 )
 async def payment_history(
-    contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    contract_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = Query(default=None, description="Stichtag: nur am Tag gültige Zeilen"),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[s.PaymentOut]:
     async with tenant_tx(request, principal) as session:
         contract = await _get(session, Contract, contract_id)
         ids = (
             await session.scalars(select(Contract.id).where(Contract.number == contract.number))
         ).all()
+        query = valid_on(
+            select(ContractPayment).where(ContractPayment.contract_id.in_(ids)),
+            as_of,
+            ContractPayment.valid_from,
+            ContractPayment.valid_to,
+        )
         rows = (
             await session.scalars(
-                select(ContractPayment)
-                .where(ContractPayment.contract_id.in_(ids))
-                .order_by(ContractPayment.valid_from, ContractPayment.payment_type_code)
+                query.order_by(ContractPayment.valid_from, ContractPayment.payment_type_code)
             )
         ).all()
         return [s.PaymentOut.model_validate(r) for r in rows]
@@ -1296,6 +1315,10 @@ async def list_mandates(
         default=None, description="Aktive Mandate mit valid_until bis zu diesem Datum (M5-05)"
     ),
     unused: bool | None = Query(default=None, description="true: noch nie verwendet"),
+    as_of: date | None = Query(
+        default=None,
+        description="Stichtag: unterschrieben bis zum Tag und nicht vor dem Tag abgelaufen",
+    ),
     limit: int = Query(default=200, ge=1, le=1000),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
@@ -1322,6 +1345,7 @@ async def list_mandates(
             )
         if unused is not None:
             query = query.where(SepaMandate.last_used_at.is_(None) == unused)
+        query = valid_on(query, as_of, SepaMandate.signed_at, SepaMandate.valid_until)
         rows = await paginate(
             session,
             query.order_by(SepaMandate.signed_at, SepaMandate.id),
@@ -1406,6 +1430,7 @@ async def _deposits_out(session: Any, deposits: Sequence[Deposit]) -> list[s.Dep
         )
     ).all():
         movements.setdefault(m.deposit_id, []).append(m)
+    hints = await svc.deposit_limit_hints(session, list(deposits))
     out = []
     for deposit in deposits:
         rows = movements.get(deposit.id, [])
@@ -1414,6 +1439,7 @@ async def _deposits_out(session: Any, deposits: Sequence[Deposit]) -> list[s.Dep
         item.received = received
         item.balance = balance
         item.outstanding = max(deposit.amount_due - received, Decimal("0.00"))
+        item.limit_hints = hints.get(deposit.id, [])
         item.movements = []
         for m in rows:
             row = s.DepositMovementOut.model_validate(m)
@@ -1421,6 +1447,62 @@ async def _deposits_out(session: Any, deposits: Sequence[Deposit]) -> list[s.Dep
             item.movements.append(row)
         out.append(item)
     return out
+
+
+def _hint_setting_out(row: Any) -> s.DepositHintSettingOut:
+    if row is None:
+        return s.DepositHintSettingOut()
+    return s.DepositHintSettingOut(
+        deposit_limit_hint_enabled=row.enabled,
+        factor_months=row.factor_months,
+        max_installments=row.max_installments,
+        rent_payment_codes=list(row.rent_payment_codes),
+    )
+
+
+@router.get(
+    "/deposit-hint-settings",
+    summary="Prüfhinweis Kaution: Mandantenschalter (Standard aus)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_deposit_hint_settings(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ_DEPOSIT)
+) -> s.DepositHintSettingOut:
+    async with tenant_tx(request, principal) as session:
+        return _hint_setting_out(await svc.deposit_hint_setting(session))
+
+
+@router.put(
+    "/deposit-hint-settings",
+    summary="Prüfhinweis Kaution setzen (nicht sperrend, keine Rechtsentscheidung)",
+)
+async def put_deposit_hint_settings(
+    body: s.DepositHintSettingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS_UPDATE_DEPOSIT),
+) -> s.DepositHintSettingOut:
+    async with tenant_tx(request, principal) as session:
+        row = await svc.deposit_hint_setting(session)
+        if row is None:
+            row = DepositHintSetting(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+        row.enabled = body.deposit_limit_hint_enabled
+        row.factor_months = body.factor_months
+        row.max_installments = body.max_installments
+        row.rent_payment_codes = list(dict.fromkeys(body.rent_payment_codes))
+        row.updated_by = principal.user_id
+        await session.flush()
+        out = _hint_setting_out(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_hint_setting.updated",
+            entity_type="deposit_hint_setting",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload=out.model_dump(mode="json"),
+        )
+        return out
 
 
 @router.post("/contracts/{contract_id}/deposits", status_code=201, summary="Kaution erfassen")

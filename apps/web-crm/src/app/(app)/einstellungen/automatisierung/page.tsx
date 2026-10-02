@@ -47,6 +47,7 @@ export default async function AutomationPage() {
     replyRes,
     lettersRes,
     jobsRes,
+    catalogRes,
   ] = await Promise.all([
     serverFetch("/api/v1/automation/rules"),
     serverFetch("/api/v1/automation/runs?limit=50"),
@@ -62,8 +63,12 @@ export default async function AutomationPage() {
       ? serverFetch("/api/v1/document-templates")
       : Promise.resolve(null),
     serverFetch("/api/v1/automation/job-schedules"),
+    serverFetch("/api/v1/automation/event-types"),
   ]);
   const jobSchedules = jobsRes.ok ? ((await jobsRes.json()) as JobSchedule[]) : [];
+  const eventCatalog = catalogRes.ok
+    ? ((await catalogRes.json()) as { event_types: string[] }).event_types
+    : [];
   const rules = rulesRes.ok ? ((await rulesRes.json()) as Rule[]) : [];
   const runs = runsRes.ok
     ? ((await runsRes.json()) as { items: Run[] }).items
@@ -133,6 +138,7 @@ export default async function AutomationPage() {
           replyTemplates,
           letterTemplates,
           eventTypes: meta.event_types,
+          eventCatalog,
           aiTasks: meta.ai_tasks ?? [],
         }}
         canManage={canManage}

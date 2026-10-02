@@ -7,6 +7,7 @@ over the raw body using ``MHVP_WHATSAPP_APP_SECRET`` (``X-Hub-Signature-256``). 
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 
 from fastapi import APIRouter, Query, Request, Response
@@ -19,7 +20,12 @@ from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.sla.models import WhatsAppConfig
-from mhvp.sla.whatsapp import apply_status_update, verify_webhook_signature
+from mhvp.sla.whatsapp import (
+    KNOWN_STATUSES,
+    apply_status_update,
+    status_timestamp_ok,
+    verify_webhook_signature,
+)
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +68,18 @@ async def receive(request: Request) -> dict[str, str]:
     except ValueError:
         return {"status": "ignored"}
     updates: list[tuple[str, str]] = []
+    now = time.time()
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
             for status in change.get("value", {}).get("statuses", []):
                 message_id = status.get("id")
                 new_status = status.get("status")
-                if message_id and new_status:
-                    updates.append((message_id, new_status))
+                if not message_id or new_status not in KNOWN_STATUSES:
+                    continue
+                if not status_timestamp_ok(status.get("timestamp"), now=now):
+                    log.warning("whatsapp webhook: status outside the replay window ignored")
+                    continue
+                updates.append((message_id, new_status))
     if updates:
         await _apply_updates(settings, updates)
     return {"status": "ok"}
@@ -88,7 +99,8 @@ async def _apply_updates(settings: Settings, updates: list[tuple[str, str]]) -> 
             tenant_ids: list[uuid.UUID] = list(
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
-        remaining = dict(updates)
+        # Kept in payload order so "delivered" then "read" in one delivery both apply (GAH-212).
+        remaining = list(updates)
         for tenant_id in tenant_ids:
             if not remaining:
                 break
@@ -98,9 +110,11 @@ async def _apply_updates(settings: Settings, updates: list[tuple[str, str]]) -> 
                 )
                 if config is None:
                     continue
-                for message_id, new_status in list(remaining.items()):
+                found: set[str] = set()
+                for message_id, new_status in remaining:
                     delivery = await apply_status_update(session, message_id, new_status)
                     if delivery is not None:
-                        del remaining[message_id]
+                        found.add(message_id)
+                remaining = [u for u in remaining if u[0] not in found]
     finally:
         await engine.dispose()

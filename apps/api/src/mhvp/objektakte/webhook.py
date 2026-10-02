@@ -4,7 +4,11 @@ objektakte sends ``document.filed`` and ``object.taken_over`` (contract in
 docs/integrations/objektakte.md) with
 
 * ``X-Objektakte-Signature: sha256=<hex HMAC-SHA256 of the raw body with the secret>``,
-* ``X-Objektakte-Event: <event>`` (must equal ``event`` in the body).
+* ``X-Objektakte-Event: <event>`` (must equal ``event`` in the body),
+* optional ``X-MHVP-Timestamp: <unix seconds>`` (GAH-202): when sent, the signature is the
+  HMAC over ``"{timestamp}." + body`` and the timestamp must lie within
+  ``WINDOW_SECONDS``; without the header the body-only signature still applies unless the
+  tenant switch ``objektakte_webhook_require_timestamp`` is on (default off, AI07-01).
 
 The secret comes from ``OBJEKTAKTE_WEBHOOK_SECRET`` (environment, never the database); without
 it every delivery is refused (401). Deliveries belong to the tenant named in
@@ -22,6 +26,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 import uuid
 from datetime import datetime
 from typing import Any
@@ -30,6 +35,7 @@ from fastapi import APIRouter, Request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from mhvp.core import hmac_signature
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
@@ -43,6 +49,8 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/integrations/objektakte", tags=["objektakte-dms"])
 
 SIGNATURE_HEADER = "X-Objektakte-Signature"
+TIMESTAMP_HEADER = "X-MHVP-Timestamp"
+WINDOW_SECONDS = 300
 EVENT_HEADER = "X-Objektakte-Event"
 MAX_BODY_BYTES = 256 * 1024
 EVENT_DOCUMENT_FILED = "document.filed"
@@ -54,10 +62,41 @@ def sign(secret: str, body: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
 
+def sign_timestamped(secret: str, timestamp: int | str, body: bytes) -> str:
+    """Header value with ``X-MHVP-Timestamp`` (GAH-202)."""
+    return "sha256=" + hmac_signature.mac_hex(secret, timestamp, body)
+
+
 def verify(secret: str, signature: str | None, body: bytes) -> bool:
     if not secret or not signature or not signature.startswith("sha256="):
         return False
-    return hmac.compare_digest(sign(secret, body), signature.strip())
+    return hmac_signature.equal(sign(secret, body), signature.strip())
+
+
+def verify_timestamped(
+    secret: str, timestamp: str | None, signature: str | None, body: bytes, *, now: float
+) -> str | None:
+    """``None`` when valid, otherwise ``missing``, ``stale`` or ``bad``."""
+    if not secret:
+        return "missing"
+    return hmac_signature.check(secret, body, timestamp, signature, now=now, window=WINDOW_SECONDS)
+
+
+async def _require_timestamp(request: Request, tenant_id: uuid.UUID) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    factory = request.app.state.resources.session_factory
+    async with tenant_transaction(factory, tenant_id) as session:
+        value = await session.scalar(select(TenantSettings.objektakte_webhook_require_timestamp))
+    return bool(value)
+
+
+def _declared_too_large(request: Request) -> bool:
+    raw = request.headers.get("content-length")
+    try:
+        return raw is not None and int(raw) > MAX_BODY_BYTES
+    except ValueError:
+        return False
 
 
 def _occurred_at(raw: object) -> datetime | None:
@@ -76,6 +115,9 @@ def _invalid(detail: str) -> ProblemError:
 @router.post("/webhook", summary="Webhook objektakte (HMAC, idempotent)")
 async def receive(request: Request) -> dict[str, Any]:
     settings: Settings = request.app.state.settings
+    # Size check before reading (GAH-202): a declared oversized body is refused unread.
+    if _declared_too_large(request):
+        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
     raw = await request.body()
     if len(raw) > MAX_BODY_BYTES:
         raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
@@ -84,12 +126,22 @@ async def receive(request: Request) -> dict[str, Any]:
         if settings.objektakte_webhook_secret
         else ""
     )
-    if not verify(secret, request.headers.get(SIGNATURE_HEADER), raw):
+    signature = request.headers.get(SIGNATURE_HEADER)
+    timestamp = request.headers.get(TIMESTAMP_HEADER)
+    if timestamp is not None:
+        reason = verify_timestamped(secret, timestamp, signature, raw, now=time.time())
+        if reason is not None:
+            log.warning("objektakte webhook: timestamped signature refused (%s)", reason)
+            raise ProblemError(ErrorCodes.WEBHOOK_SIGNATURE)
+    elif not verify(secret, signature, raw):
         log.warning("objektakte webhook: invalid or missing signature")
         raise ProblemError(ErrorCodes.WEBHOOK_SIGNATURE)
     tenant_id = await configured_tenant_id(request)
     if tenant_id is None:
         raise ProblemError(ErrorCodes.OBJEKTAKTE_NOT_CONFIGURED)
+    if timestamp is None and await _require_timestamp(request, tenant_id):
+        log.warning("objektakte webhook: timestamp header required by tenant switch")
+        raise ProblemError(ErrorCodes.WEBHOOK_SIGNATURE)
 
     try:
         payload = json.loads(raw)
