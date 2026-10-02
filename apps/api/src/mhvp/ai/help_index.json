@@ -1884,7 +1884,10 @@
    "klassifikation",
    "regel dokument",
    "dreistufig",
-   "regelstufe"
+   "regelstufe",
+   "importlauf",
+   "ocr cache",
+   "vorschaubilder"
   ],
   "permission": [
    "documents:read"
@@ -2178,6 +2181,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Die Werkbank zeigt lesend die aktiven Periodensperren des Objekts der Abrechnung. Setzen und Aufheben erfolgt weiterhin in der Buchhaltung.",
+  "file": "docs/handbuch/abrechnung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Periodensperre und CO2-Kostenaufteilung in der Abrechnung (Welle 19)",
+  "source": "Handbuch: abrechnung",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Abrechnungsmaske zeigt der Bereich \"Periodensperren des Objekts\" die aktiven Sperren des Objekts und den Sperrstand dieser Abrechnung samt Schalter \"Sperre beim Abschluss\". Mit einem Grund (mindestens drei Zeichen) lässt sich der Abrechnungszeitraum direkt sperren; dafür i",
   "file": "docs/handbuch/abrechnung.md"
  },
  {
@@ -3752,6 +3765,36 @@
  },
  {
   "kind": "handbook",
+  "title": "Umsatzabruf ohne MT940",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Manche Banken bieten im FinTS Abruf einzelne Geschäftsvorfälle nicht mehr an. Der Abruf läuft dann trotzdem weiter: - Kein MT940 (Kontoumsätze HKKAZ): die Umsätze werden als CAMT Bericht (camt.052) abgerufen. Vorgemerkte Umsätze werden nicht übernommen. - Kein Saldoabruf (HKSAL):",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "FinTS-Konto zuordnen (GAG-01, GAG-02, Welle 19)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Kontentabelle einer FinTS-Verbindung (Bank, FinTS) zeigt jede noch nicht zugeordnete Zeile den Hinweis \"Kein passendes internes Konto vorhanden?\" mit zwei Wegen: 1. \"Im Assistenten einrichten\" öffnet die Einrichtung in drei Schritten mit diesem Bankkonto vorbelegt und spri",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Ignorierten Umsatz wieder eröffnen",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Umsatzliste (Bank) zeigt ein ignorierter Umsatz die Schaltfläche „Wieder eröffnen“, sofern Sie Umsätze bearbeiten dürfen. Nach Eingabe einer Begründung (mindestens 3 Zeichen) steht der Umsatz wieder im Status „neu“ zur Bearbeitung bereit. Ein Umsatz mit wirksamer Buchung b",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4848,6 +4891,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Ist für ein Dokument noch kein Text erkannt, zeigt die Detailseite den Hinweis \"Texterkennung ausstehend\". Sobald Paperless das Dokument verarbeitet hat, übernimmt die Plattform den Volltext beim nächsten Spiegellauf; danach ist das Dokument durchsuchbar und für den Assistenten l",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Löschungssperre im Dokumentdetail setzen und aufheben (Welle 19, GAG-26)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mit dem Recht Dokumente bearbeiten zeigt die Karte \"Aufbewahrung und Sperren\" das Feld \"Löschungssperre setzen\": Art der Sperre (Rechtsstreit, Steuerverfahren, Beweissicherung, Rechtssache, Sonstiges) und Begründung mit 5 bis 500 Zeichen. Die Sperre wird protokolliert und gilt so",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Importläufe der Objektakte, OCR-Cache leeren, Vorschaubilder übernehmen (Welle 19, GAG-12)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Objektakte zeigt die Karte \"Importläufe der objektakte-Übernahme\" den Verlauf mit Datum, Status, Zahl der angelegten, geänderten und doppelten Datensätze sowie der Dokumente, die Text aus dem OCR-Cache tragen. Die Liste ist seitenweise (10 je Seite) und brauc",
   "file": "docs/handbuch/dokumente-dms.md"
  },
  {
@@ -6272,6 +6335,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Portalberechtigungen neu ableiten",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Abschnitt \"Portalzugang\" eines Kontakts mit Portalkonto leitet die Schaltfläche \"Berechtigungen neu ableiten\" die Portalfreigaben aus Verträgen, Eigentum und Gremienzugehörigkeit neu ab, etwa nach einem Eigentümer- oder Mieterwechsel. Manuell erteilte Freigaben bleiben erhalte",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Einrichtung",
   "source": "Handbuch: Lexware Office",
   "href": "/einstellungen/schnittstellen/lexware-office",
@@ -6807,7 +6880,17 @@
   "href": "/importe/migration",
   "keywords": [],
   "permission": null,
-  "excerpt": "Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Vollimport, Exporttypen, Verlauf und offene Posten h",
+  "excerpt": "Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Darunter zeigt der Bereich Altdaten (nur lesend) je ",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Abnahmeprotokoll bearbeiten (Welle 19, 02.10.2026)",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ein Abnahmeprotokoll im Status Entwurf ändern Sie auf der Seite Importe, Migration über Bearbeiten und Änderungen speichern (Recht accounting:update). Nach der Unterzeichnung durch die zweite Person ist das Protokoll gesperrt: die Schaltfläche Bearbeiten entfällt, die Schnittstel",
   "file": "docs/handbuch/migration-immoware.md"
  },
  {
@@ -8082,12 +8165,32 @@
  },
  {
   "kind": "handbook",
+  "title": "Stammdatenänderung aus der E-Mail auf Anforderung prüfen",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Ticket steht im Bereich \"Vorschläge aus der E-Mail\" die Schaltfläche \"Vorschlag aus letzter E-Mail berechnen\". Sie prüft die letzte eingehende E-Mail des Tickets auf eine Stammdatenänderung (Name, Anschrift, Telefon, E-Mail) und legt höchstens einen Vorschlag je E-Mail an. Es ",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Mängel als Tickets, Ein- und Auszugsdatum",
   "source": "Handbuch: uebergabeprotokoll",
   "href": null,
   "keywords": [],
   "permission": null,
   "excerpt": "- Im Schritt Mängel legt die Funktion Tickets anlegen je neuem oder ungeklärtem Mangel ein Ticket mit Verweis auf das Protokoll an. Ein zweiter Aufruf legt keine Doppelten an. - Ist bei einer Vermietungsübergabe Richtung Einzug oder Auszug gesetzt, übernimmt der verbindliche Absc",
+  "file": "docs/handbuch/uebergabeprotokoll.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Dateizuordnungen aus U-Protokoll ansehen und lösen",
+  "source": "Handbuch: uebergabeprotokoll",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Maklerfunktionen, Übergabe, Karte \"Dateien aus U-Protokoll zuordnen\": Lauf ID eingeben und \"Zuordnungen laden\" wählen. Die Liste zeigt je Datei die Anzahl der Verknüpfungen zu Protokoll, Raum, Mangel, Zähler oder Position sowie die Dateien, die noch nicht zugeordnet sind. \"",
   "file": "docs/handbuch/uebergabeprotokoll.md"
  },
  {

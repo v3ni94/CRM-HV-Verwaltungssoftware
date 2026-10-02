@@ -66,6 +66,23 @@ export function BankSetupWizard() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ ibanMasked: string } | null>(null);
 
+  /** Deep link from the FinTS account table (GAG-01): `?setup=fints&link=<id>` opens the
+   *  wizard with that bank account preselected and jumps to step 3. */
+  const [deepLink, setDeepLink] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const link = q.get("link");
+      if (q.get("setup") === "fints" && link) {
+        setDeepLink(link);
+        setSource("fints");
+        setOpen(true);
+      }
+    } catch {
+      /* no location (tests, SSR) */
+    }
+  }, []);
+
   const loadConnections = useCallback(async () => {
     const res = await bff<FinTsConnection[]>("/api/bff/banking/fints/connections");
     setConnections(res.ok ? res.data : []);
@@ -105,6 +122,15 @@ export function BankSetupWizard() {
     () => (connections ?? []).flatMap((c) => c.accounts.filter((a) => !a.property_bank_account_id).map((a) => ({ link: a, bank: c.bank_name }))),
     [connections],
   );
+  useEffect(() => {
+    if (!deepLink || connections === null) return;
+    const hit = unassigned.find((u) => u.link.id === deepLink);
+    setDeepLink(null);
+    if (hit) {
+      setAccount(hit);
+      setStep(3);
+    }
+  }, [deepLink, connections, unassigned]);
   const ibanClean = normaliseIban(iban);
   const ibanValid = IBAN.test(ibanClean);
   const stepTwoReady = source === "fints" ? account !== null : ibanValid;

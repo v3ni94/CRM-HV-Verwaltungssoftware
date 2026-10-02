@@ -87,3 +87,7 @@ alle Mitarbeiter sichtbar, springt auf den Auftrag und erinnert einen Tag vorher
 Einladung an den Dienstleister oder in einen externen Kalender gesendet. Ändert sich der Termin oder
 wird der Auftrag erledigt, folgt der Eintrag beim nächsten Lauf. Die Ticketfälligkeit erscheint wie
 bisher als "Ticketfrist".
+
+### Kalender als ICS-Datei laden
+
+Auf der Seite Kalender lädt der Link "ICS-Datei herunterladen" einen einmaligen Stand Ihrer eigenen und geteilten Termine sowie der Fristen als Datei kalender.ics, die sich in jedem Kalenderprogramm importieren lässt. Die Datei aktualisiert sich nicht. Für laufend aktuelle Daten richten Sie darunter das Kalender-Abo ein (Abo-Adresse erzeugen); die Adresse wird nur einmal angezeigt und gilt wie ein Passwort.

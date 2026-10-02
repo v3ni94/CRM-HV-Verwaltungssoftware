@@ -228,3 +228,45 @@ def parse_report_entries(data: bytes) -> list[RawTransaction]:
             except ValueError as exc:
                 raise ValueError(f"Umsatz {number}: {exc}") from None
     return entries
+
+
+@dataclass(frozen=True)
+class ReportBalance:
+    """Closing booked balance (``Bal`` with code CLBD) of one camt.052/053 container."""
+
+    iban: str | None
+    amount: Decimal
+    currency: str
+    balance_date: date | None
+
+
+def parse_report_balances(data: bytes) -> list[ReportBalance]:
+    """CLBD balances of a camt.052 report or camt.053 statement, one per container that
+    carries one. Used by the FinTS session when the bank refuses HKSAL; containers
+    without CLBD are left out (no balance is derived from entries)."""
+    try:
+        root = ElementTree.fromstring(data)
+    except ElementTree.ParseError:
+        raise ValueError("Die Bank hat kein lesbares CAMT-XML geliefert.") from None
+    body = _child(root, "BkToCstmrAcctRpt")
+    containers = _children(body, "Rpt") if body is not None else []
+    if body is None:
+        body = _child(root, "BkToCstmrStmt")
+        containers = _children(body, "Stmt") if body is not None else []
+    out: list[ReportBalance] = []
+    for container in containers:
+        for bal in _children(container, "Bal"):
+            if _text(bal, "Tp", "CdOrPrtry", "Cd") != "CLBD":
+                continue
+            value, currency = _amount(bal)
+            iban = _text(container, "Acct", "Id", "IBAN")
+            out.append(
+                ReportBalance(
+                    iban=iban.replace(" ", "").upper() if iban else None,
+                    amount=_signed(bal, value),
+                    currency=currency or _text(container, "Acct", "Ccy") or "EUR",
+                    balance_date=_date(_child(bal, "Dt")),
+                )
+            )
+            break
+    return out

@@ -185,3 +185,7 @@ Geschlossene Liste `models.RECORD_FIELDS`: Auftrag (`status` nur `requested` ode
 A rule webhook for `contact.updated` is queued without `event.payload` and `entity` (flag
 `personal_data_withheld`) when the contact has no valid `data_sharing` consent; the reason is
 logged as event `automation.webhook_data_withheld`. Rule: docs/rules/AC06-einwilligungen.md.
+
+## AH20 (GAG-31)
+
+`GET /automation/rule-templates` (Leserecht `tenant_settings:read` oder `tickets:read`, unbekannte Query-Parameter 422) liefert die Beispielvorlagen aus `templates.py`. Das CRM (`AutomationAdmin.tsx`, Schaltfläche Regelvorlagen) übernimmt eine Vorlage über den bestehenden `POST /automation/rules`; die Regel ist inaktiv. Tests: `tests/integration/test_ah20_automation_templates.py`, Vitest `AutomationAdmin.test.tsx`.

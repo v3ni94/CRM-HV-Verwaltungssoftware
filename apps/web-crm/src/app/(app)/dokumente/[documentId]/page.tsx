@@ -90,6 +90,8 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
       <RetentionStatusCard
         documentId={documentId}
         legalEntityId={(data.links ?? []).find((l) => l.entity_type === "legal_entity")?.entity_id ?? null}
+        canSetHold={canEditVisibility}
+        canClearHold={me.data?.permissions.includes("documents:approve") ?? false}
       />
       {filing?.routed ? (
         <div className={ui.card} data-testid="document-filing">

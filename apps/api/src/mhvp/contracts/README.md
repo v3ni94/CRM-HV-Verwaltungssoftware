@@ -178,3 +178,7 @@ for the collection after G2. New columns in migration 0265: `contract.custom_fie
 ## AE17 Umlagevereinbarungen
 
 `allocation_routers.py`: `allocation_agreement` je Mietvertrag und Betriebskostenart mit Klauselbezug, Dokument und Gültigkeit (keine Überlappung), CRUD unter `/contracts/{id}/allocation-agreements`, Massenerfassung `POST /properties/{id}/allocation-agreements/bulk` (Vorschau als Standard, kein Überschreiben). Regel `docs/rules/AE17-01.md`.
+
+## Settlement PDF preview (GAG-29)
+
+`GET /contracts/{id}/deposit-settlements/{settlement_id}/document-preview` (`contracts:read`) renders the stored settlement draft as PDF without filing, sending or posting (`Cache-Control: no-store`). CRM: `DepositSettlementPreviewButton` in `DepositPanel` (BFF allowlist entry). Tests: `tests/integration/test_ah18_deposit_settlement_preview.py` (read permission, 403 without role, foreign tenant 404, unknown or mismatching ids 404, 422).

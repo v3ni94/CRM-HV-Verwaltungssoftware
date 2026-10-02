@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
@@ -1788,6 +1788,79 @@ function triggerBadge(rule: Rule, t: T): string {
   return rule.trigger_event_type ?? "";
 }
 
+export type RuleTemplate = Omit<Rule, "id" | "active" | "created_at" | "updated_at" | "test_mode"> & {
+  key: string;
+};
+
+/** Regelvorlagen (GAG-31, 15.2): Beispiele aus GET /automation/rule-templates. Übernehmen legt
+ *  über den bestehenden POST eine inaktive Regel an; nichts wird automatisch aktiviert. */
+function TemplatePanel({ onCreated }: { onCreated: (r: Rule) => void }) {
+  const t = useTranslations("Automation");
+  const [items, setItems] = useState<RuleTemplate[] | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void bff<RuleTemplate[]>("/api/bff/automation/rule-templates").then((res) => {
+      if (!alive) return;
+      if (res.ok) setItems(res.data);
+      else setError(res.message);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function use(template: RuleTemplate) {
+    setBusyKey(template.key);
+    setError(null);
+    setNotice(null);
+    const { key: _key, ...body } = template;
+    void _key;
+    const res = await bff<Rule>("/api/bff/automation/rules", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    setBusyKey(null);
+    if (res.ok) {
+      setNotice(t("templatesUsed", { name: res.data.name }));
+      onCreated(res.data);
+    } else setError(res.message);
+  }
+
+  return (
+    <section className={`${ui.card} flex flex-col gap-2`} data-testid="rule-templates">
+      <p className={ui.help}>{t("templatesHint")}</p>
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+      {notice ? <p role="status">{notice}</p> : null}
+      {items && items.length === 0 ? <p className={ui.help}>{t("templatesEmpty")}</p> : null}
+      <ul className="flex flex-col gap-2">
+        {(items ?? []).map((tpl) => (
+          <li key={tpl.key} className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{tpl.name}</span>
+            {tpl.description ? <span className="text-sm text-muted">{tpl.description}</span> : null}
+            <span className="flex-1" />
+            <button
+              type="button"
+              className={ui.buttonSm}
+              disabled={busyKey === tpl.key}
+              onClick={() => void use(tpl)}
+            >
+              {t("templatesUse")}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function AutomationAdmin({
   initialRules,
   initialRuns,
@@ -1810,6 +1883,7 @@ export function AutomationAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -1971,6 +2045,21 @@ export function AutomationAdmin({
             </button>
           </div>
         )
+      ) : null}
+      {canManage ? (
+        <div className="flex flex-col gap-2">
+          <div>
+            <button
+              type="button"
+              className={ui.buttonSm}
+              aria-expanded={showTemplates}
+              onClick={() => setShowTemplates((v) => !v)}
+            >
+              {showTemplates ? t("templatesHide") : t("templatesShow")}
+            </button>
+          </div>
+          {showTemplates ? <TemplatePanel onCreated={upsert} /> : null}
+        </div>
       ) : null}
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">

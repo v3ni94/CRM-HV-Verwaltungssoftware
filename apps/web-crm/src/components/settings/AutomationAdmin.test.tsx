@@ -466,6 +466,48 @@ describe("AutomationAdmin", () => {
     expect(screen.getByText(/Feld würde gesetzt/)).toBeInTheDocument();
   });
 
+  it("lists rule templates and copies one as inactive rule (GAG-31)", async () => {
+    const template = {
+      key: "damage-escalate",
+      name: "Schadensmeldung hoch priorisieren",
+      description: "Setzt die Priorität auf hoch.",
+      trigger_kind: "event",
+      trigger_event_type: "ticket.created",
+      schedule: null,
+      conditions: {},
+      actions: [{ type: "set_ticket_field", field: "priority", value: "high" }],
+    };
+    const created: Rule = { ...rule, id: "r-9", name: template.name, active: false };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) =>
+      init?.method === "POST" ? jsonResponse(created, 201) : jsonResponse([template]),
+    );
+    renderIntl(
+      <AutomationAdmin initialRules={[]} initialRuns={[]} pickers={pickers} canManage={true} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Regelvorlagen" }));
+    expect(await screen.findByText("Setzt die Priorität auf hoch.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Als inaktive Regel angelegt: Schadensmeldung hoch priorisieren",
+      ),
+    );
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(String(post?.[0])).toBe("/api/bff/automation/rules");
+    const sent = JSON.parse(String(post?.[1]?.body));
+    expect(sent.key).toBeUndefined();
+    expect(sent.name).toBe(template.name);
+    expect(sent.actions).toEqual(template.actions);
+    expect(sent.active).toBeUndefined();
+  });
+
+  it("offers no rule templates without manage permission", () => {
+    renderIntl(
+      <AutomationAdmin initialRules={[]} initialRuns={[]} pickers={pickers} canManage={false} />,
+    );
+    expect(screen.queryByRole("button", { name: "Regelvorlagen" })).toBeNull();
+  });
+
   it("hides management actions without manage permission", () => {
     renderIntl(
       <AutomationAdmin

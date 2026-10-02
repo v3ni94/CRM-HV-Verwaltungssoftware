@@ -147,3 +147,7 @@ Hinweise zur Verarbeitung:
 ### Feld setzen für Aufträge und Dokumente
 
 Die Aktion "Feld setzen (Auftrag, Dokument)" wirkt auf das Objekt des auslösenden Ereignisses. Beim Auftrag sind wählbar: Status (nur "angefragt" oder "in Arbeit", entlang des normalen Ablaufs), Termin (mit Zeitzone, zum Beispiel 2026-10-05T09:00:00+02:00) und Zuständiger (gesetzt wird der Zuständige des zugehörigen Tickets). Beim Dokument sind wählbar: Kategorie und Verknüpfung mit einem Objekt. Freigabe, Rechnung, Abnahme, Beträge und Aufbewahrungssperren sind nicht wählbar; ein Dokument mit Sperre behält seine Kategorie. Der Testlauf zeigt, was geändert würde. Die Information externer Dienstleister bleibt der Entwurf an den Dienstleister, der nie automatisch versendet wird.
+
+### Regelvorlagen übernehmen
+
+Unter Einstellungen, Automatisierung zeigt die Schaltfläche "Regelvorlagen" (nur mit Recht zur Pflege von Regeln) die mitgelieferten Beispiele, zum Beispiel "Dringendes Ticket melden". "Übernehmen" legt daraus eine neue Regel an. Die Regel ist immer inaktiv: sie löst erst etwas aus, wenn Sie sie prüfen, im Testlauf ansehen und selbst aktivieren. Existiert bereits eine Regel mit demselben Namen, meldet das System einen Konflikt, die vorhandene Regel bleibt unverändert.

@@ -269,3 +269,11 @@ Vorprüfung meldet dann den Blocker "Schriften nicht eingebettet" mit Installati
 ## AF21 (GAB-16)
 
 `POST /documents/bulk-link` verknüpft viele Dokumente mit einem Objekt als Anlage (Teilerfolgsbericht, Savepoint je Dokument, Ereignis `document.linked`). Original, Beleg und erzeugte Rollen werden nicht gesammelt gesetzt.
+
+## AH16 (GAG-26, wave 19)
+
+`POST/DELETE /documents/{id}/hold` now have a CRM screen in `RetentionStatusCard.tsx`
+(set: `documents:update`, lift: `documents:approve`; the API keeps the second person check).
+The BFF forwards a JSON body on DELETE when one is present (needed for the lift reason).
+API coverage: `tests/integration/test_u11_retention_procedure_holds.py` (422, 403, 404, 409,
+second person) and `test_q03_documents_w3.py`.

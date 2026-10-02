@@ -1,5 +1,6 @@
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
@@ -108,3 +109,27 @@ def test_problem_error_with_custom_status(settings: Settings) -> None:
         response = client.get("/teapot")
     assert response.status_code == 418
     assert response.json()["detail"] == "Kein Kaffee."
+
+
+def test_error_code_constants_have_no_duplicate_codes() -> None:
+    """GAG-09: every ErrorCode constant carries its own code (e.g. MHVP-BANK-0057 once)."""
+    from collections import Counter
+
+    from mhvp.core.problems import ErrorCode
+
+    codes = [v.code for v in vars(ErrorCodes).values() if isinstance(v, ErrorCode)]
+    duplicates = [code for code, n in Counter(codes).items() if n > 1]
+    assert duplicates == []
+    assert len(codes) == len(REGISTRY)
+    assert REGISTRY["MHVP-BANK-0057"] is ErrorCodes.FINTS_QUEUE_UNAVAILABLE
+
+
+def test_build_registry_rejects_duplicate_codes(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mhvp.core import problems
+
+    clone = problems.ErrorCode(
+        "MHVP-BANK-0057", 503, "Doppelt", "duplicate of FINTS_QUEUE_UNAVAILABLE"
+    )
+    monkeypatch.setattr(problems.ErrorCodes, "ZZ_GAG09_DUPLICATE", clone, raising=False)
+    with pytest.raises(ValueError, match="duplicate error code: MHVP-BANK-0057"):
+        problems._build_registry()

@@ -221,3 +221,7 @@ Die Übersicht zeigt alle SEPA Mandate der Verträge mit Referenz, IBAN, Art und
 Am Mietvertrag zeigt die Karte Verzinsung und Zinsgutschrift je Kaution den Zinssatzverlauf: Der Satz gilt ab dem genannten Datum, bis ein neuerer Eintrag folgt. Sätze trägt der Betreiber nach Bankbestätigung ein, das System ruft keinen Satz ab und belegt keinen vor. Für Versicherung, Bürgschaft und Patronatserklärung wird keine Verzinsung geführt.
 
 Mit Entwurf berechnen entsteht für ein abgeschlossenes Jahr die Zinsgutschrift als Entwurf (Berechnung taggenau, je Jahr auf den Cent gerundet). Bestätigen erfasst eine Zinsbewegung am 31.12. auf dem Kautionskonto, Verwerfen lässt den Entwurf ohne Wirkung. Es wird nichts gebucht und nichts gezahlt. In der Kautionsabrechnung rechnet die Zinsart Zinssatz der Kaution mit diesem Verlauf; die Abrechnung bleibt ein Entwurf.
+
+### PDF-Vorschau der Kautionsabrechnung
+
+Bei jedem gespeicherten Abrechnungsentwurf im Bereich Kautionen öffnet die Schaltfläche "PDF-Vorschau" das Schreiben in einem neuen Tab. Die Vorschau wird weder abgelegt noch versendet und bucht nichts; dafür genügt das Leserecht für Verträge. Zum dauerhaften Ablegen dient weiterhin "Abrechnung als PDF erzeugen und ablegen".

@@ -64,6 +64,9 @@ export function PortalAccessSection({
   const [letterBusy, setLetterBusy] = useState(false);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [renewBusy, setRenewBusy] = useState(false);
+  // GAG-32: result of POST /portal-admin/accounts/{id}/sync-grants (number of derived grants).
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncResult, setSyncResult] = useState<number | null>(null);
   // AB08 (6.2): false creates the account as not_invited, the invitation follows later.
   const [sendInvitation, setSendInvitation] = useState(true);
   const [createdOnly, setCreatedOnly] = useState(false);
@@ -171,6 +174,22 @@ export function PortalAccessSection({
     setError(res.message);
   }
 
+  async function syncGrants() {
+    if (!account) return;
+    setSyncBusy(true);
+    setError(null);
+    setSyncResult(null);
+    const res = await bff<{ grants: number }>(`/api/bff/portal-admin/accounts/${account.id}/sync-grants`, {
+      method: "POST",
+    });
+    setSyncBusy(false);
+    if (res.ok) {
+      setSyncResult(res.data.grants);
+      return;
+    }
+    setError(res.message);
+  }
+
   const account = loaded.state === "ready" ? (loaded.accounts[0] ?? null) : null;
   const hasAccount = account !== null || exists;
   const expired =
@@ -260,7 +279,22 @@ export function PortalAccessSection({
             />
             {t("twoFactorEmail")}
           </label>
+          <button
+            type="button"
+            className={ui.button}
+            disabled={syncBusy}
+            onClick={() => void syncGrants()}
+            title={t("syncGrantsHint")}
+            data-testid="contact-portal-sync-grants"
+          >
+            {syncBusy ? t("syncGrantsBusy") : t("syncGrants")}
+          </button>
         </div>
+      ) : null}
+      {syncResult !== null ? (
+        <p className={ui.success} data-testid="contact-portal-sync-result">
+          {t("syncGrantsResult", { count: syncResult })}
+        </p>
       ) : null}
       {expired && canInvite ? <p className={ui.help}>{t("expiredHint")}</p> : null}
       {notInvited && canInvite ? <p className={ui.help}>{t("notInvitedHint")}</p> : null}

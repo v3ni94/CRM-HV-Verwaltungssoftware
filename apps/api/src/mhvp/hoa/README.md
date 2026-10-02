@@ -355,3 +355,9 @@ statement value changes. Tests: `tests/integration/test_af11_statement_archive.p
   (default off, 403 MHVP-HOA-0037) and G4. CRM: `GET/PUT /hoa/portal-circular-settings`,
   `GET /hoa/portal-circular-votes?legal_entity_id=`, `GET /hoa/meetings/{id}/portal-circular-votes`
   (read only). Majority check unchanged. Test `tests/integration/test_ag07_portal_circular.py`.
+
+## Welle 19 (AH05): Rücklagenzahlung über Bank, Mehrheitsprüfung bei Korrekturversion
+
+- GAG-08 (GAE-11): `tests/integration/test_ah05_reserve_bank_majority.py` prüft die Jahresabrechnung Ende zu Ende mit CAMT.053-Import, Bankbuchung gegen die offenen Posten und zweckgebundener Rücklagenzahlung (`contributions_paid_by_reserve`, Saldo 001210, Restforderung, kein Doppelbuchen).
+- GAG-15 (GAF-16): `POST /hoa/statements/{id}/new-version` mit `resolution_id` führt die Mehrheitsprüfung (M25-01) für den Korrekturbeschluss aus und liefert sie als `correction_majority_check` zurück. Nur Anzeige und Protokollvermerk, keine Statusänderung, keine Sperre. `GET /hoa/resolutions/{id}/majority-check` lehnt unbekannte Query-Parameter mit 422 ab.
+- GAG-22 (GAE-12): Planübernahme an `calc.allocation_owner` ist über `allocation_proposal.proposal_for` in `_plan_apply_preview` angebunden (Schalter, Standard aus); verifiziert mit `test_ag20_allocation.py`.

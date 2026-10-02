@@ -560,3 +560,4 @@ Modul-README `apps/api/src/mhvp/objektakte/README.md`.
   objektakte, Modellvorschlag hinter Flag), Vitest `ReconciliationReport`.
 - Offen bleibt: alle sieben Entscheidungen (siehe OPEN_QUESTIONS), außerdem die Wahl eines
   PDF-Renderers, die gepinnte scikit-learn-Version, das tatsächliche Drive-Kontingent.
+- Welle 19 (AH08, GAG-12): Verlauf der Importläufe, OCR-Cache leeren und Vorschaubild-Übernahme als Maske in Einstellungen, Objektakte (Regel AH08-01).

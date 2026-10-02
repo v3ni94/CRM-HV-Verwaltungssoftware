@@ -408,4 +408,15 @@ Wechsel (`POST /banking/ebics/subscribers/{id}/keys` mit Grund) und Sperre (`...
 
 ### Objektsperre im Verifier (GAE-02, Welle 18 AG10)
 
-`banking/object_lock.py` ermittelt vor jeder automatischen Buchung die Objekte der auszugleichenden Posten (Zeilen der Ursprungsbuchung, `period_lock.property_ids_of_lines`). Läuft der Mandant im Modus `object_period` und deckt eine aktive Objektsperre den Buchungstag ab, setzt der Runner `Context.object_locked`; der Verifier überspringt den Fall wie bei der Ledgersperre (`skipped=period_locked`, Zähler `auto_period_locked`). Es wird nichts gebucht. Die manuelle Buchung bleibt durch `period_lock.ensure_open_for_entry` in `services.post` gesperrt. Ein Hinweis am reinen Buchungsvorschlag (ohne Buchung) ist nicht umgesetzt.
+`banking/object_lock.py` ermittelt vor jeder automatischen Buchung die Objekte der auszugleichenden Posten (Zeilen der Ursprungsbuchung, `period_lock.property_ids_of_lines`). Läuft der Mandant im Modus `object_period` und deckt eine aktive Objektsperre den Buchungstag ab, setzt der Runner `Context.object_locked`; der Verifier überspringt den Fall wie bei der Ledgersperre (`skipped=period_locked`, Zähler `auto_period_locked`). Es wird nichts gebucht. Die manuelle Buchung bleibt durch `period_lock.ensure_open_for_entry` in `services.post` gesperrt. Seit Welle 19 (GAG-06) liefert `GET /banking/transactions/{tx_id}/posting-proposals` zusätzlich `object_period_lock` (`locked`, `code` MHVP-ACC-0030), damit die Sperre schon am Vorschlag sichtbar ist; gelesen wird nur. Integrationstests: `tests/integration/test_ah03_bank_object_lock.py` (Vorschlag und Buchung) und `tests/integration/test_t04_admin_fee_posting.py` (Vorabprüfung der Buchungsentwürfe der Verwaltervergütung).
+
+### FinTS robustness (wave 19, AH02, GAG-03 to GAG-05)
+
+* `FinTSUnsupportedOperation` on HKSAL (`_fetch_balance`): balance stays empty, warning
+  `fints_hksal_unsupported` is logged, transactions are still fetched. A camt.052 CLBD balance
+  of the same IBAN (`camt.parse_report_balances`) fills an empty balance, never an HKSAL one.
+* `FinTSUnsupportedOperation` on HKSPA (`_fetch_accounts`): accounts from the UPD
+  (`client.get_information()["accounts"]`, python-fints 4.2.x), entries without IBAN skipped,
+  BIC empty, BLZ from `bank_identifier.bank_code`.
+* An empty MT940 answer yields no transactions and no CAMT fallback (fallback only on the
+  exception); `None` and blank CAMT documents are accepted.

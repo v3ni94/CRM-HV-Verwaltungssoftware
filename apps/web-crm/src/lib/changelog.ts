@@ -17,6 +17,30 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.64.0",
+    date: "02.10.2026",
+    title: "Welle 19, Befunde der Lückenanalyse GAG: FinTS-Kontoeinrichtung aus der Bankzeile, Fallbacks im Bankabruf, Periodensperren und CO2-Aufteilung in der Abrechnung, Zählerstände, Löschungssperren, Importverläufe und breite Testabdeckung",
+    changes: [
+      "Übersicht: Welle 19 mit 20 Paketen AH01 bis AH20 zu den 39 Befunden der Lückenanalyse GAG (38 done, 1 partial, GAG-35 vom Koordinator als Paket AH21 ergänzt); keine Migration, kein Schemaeingriff; die Freigabestufen G1 bis G5 bleiben geschlossen.",
+      "Bank: Nicht zugeordnete FinTS-Konten zeigen einen Sprung in den Einrichtungsassistenten, der das Konto vorbelegt und direkt Schritt 3 öffnet; ein internes Konto lässt sich direkt in der FinTS-Zeile anlegen und zuordnen, der Rechtsträger folgt aus Objekt und Kontoart.",
+      "Bank FinTS: Der Abruf bricht ohne Saldoabruf (HKSAL) nicht mehr ab, fehlt der Saldo wird der Schlusssaldo aus dem camt.052-Bericht übernommen, ein Banksaldo wird nie überschrieben; Banken ohne SEPA-Kontenliste (HKSPA) werden über die Kontodaten der Bank (UPD) gelesen; leere MT940-Antworten gelten als keine Umsätze.",
+      "Bank: Kontierungsvorschläge eines Umsatzes zeigen eine aktive Objekt-Periodensperre an (object_period_lock, MHVP-ACC-0030); ignorierte Umsätze lassen sich in der Umsatzliste mit Begründung wieder eröffnen.",
+      "Bank: Das Speichern eines CSV-Mappings prüft das Bankkonto unter Mandantentrennung und lehnt fremde oder unbekannte Konten mit 404 ab (Befund aus den neuen Endpunkttests, zuvor umging die Fremdschlüsselprüfung die Zeilensicherheit).",
+      "Betriebskosten: Die Abrechnungsmaske zeigt den Sperrstand samt Schalter Sperre beim Abschluss und sperrt den Abrechnungszeitraum mit Grund; neuer Bereich CO2-Kostenaufteilung berechnet Mieter- und Vermieteranteil nach Stufentabelle ohne Speicherung und ohne Buchung.",
+      "WEG: Eine neue Abrechnungsversion mit Korrekturbeschluss liefert die Mehrheitsprüfung des Beschlusses mit (nur Anzeige, keine Statusänderung); die Mehrheitsprüfung lehnt unbekannte Abfrageparameter ab; Integrationstest Jahresabrechnung mit zweckgebundener Rücklagenzahlung über Kontoauszugsimport und Bankbuchung.",
+      "Kautionen: Gespeicherte Abrechnungsentwürfe lassen sich im Vertrag als PDF-Vorschau öffnen, ohne Ablage, Versand oder Buchung; Integrationstest der Kautionsabrechnung mit Umbuchung im Gesamtablauf (Freigabe hinter G3, Buchung und Storno hinter G1).",
+      "Objekte: Der Abschnitt Zähler zeigt je Zähler die Zählerstände und erlaubt mit Schreibrecht das Erfassen mit Datum, Wert, Quelle und Kennzeichen Geschätzt; unplausible Stände werden markiert.",
+      "Dokumente: Die Karte Aufbewahrung und Sperren setzt eine Löschungssperre mit Art und Begründung und hebt sie mit Begründung auf (Vier-Augen-Prüfung der API); das BFF leitet bei DELETE einen vorhandenen JSON-Body an die API weiter.",
+      "Objektakte: Neue Liste der Importläufe mit Status, Datum und Zahlen, neuer Endpunkt zum Leeren des übernommenen OCR-Textes (protokolliert), Verlauf und Vorschaubild-Übernahme in den Einstellungen.",
+      "Übergabe und Altdaten: Zuordnungen der U-Protokoll-Dateien lassen sich je Importlauf auflisten und lösen (Dokument bleibt erhalten); der Bereich Altdaten zeigt je Buchungskreis die Summen der übernommenen Einzelposten je Art.",
+      "Tickets und Kontakte: Im Ticketdetail lässt sich ein Stammdatenvorschlag aus der letzten eingehenden E-Mail berechnen, er bleibt ein prüfbarer Vorschlag; der Abschnitt Portalzugang bietet Berechtigungen neu ableiten mit Anzeige der aktiven abgeleiteten Freigaben.",
+      "Automatisierung und Kalender: Regelvorlagen werden in den Einstellungen als inaktive Regel übernommen; die Kalenderseite bietet den Download als ICS-Datei.",
+      "Plattform: Ein Test stellt sicher, dass jeder Fehlercode im Problemregister nur einmal vergeben ist; der Fristen-Snapshot-Test (AF14) und die Tests zu sachlicher Prüfung und SEPA-Mandaten (AF07) laufen gegen die vollständige Migrationskette.",
+      "Tests: Endpunkttests für KI-Kontierung, CSV-Mappings, Magic-Link-Bestätigungscode, OIDC userinfo, Messdienstbestätigung und Verbrauchsimport, lexoffice push-batch und link-recipient, Abnahmeprotokoll der Migration, Demo-Kennzeichen in /auth/me; Komponententests für die übrigen Masken in Bank, Buchhaltung, Objekte und WEG sowie Seitentests für alle Portalseiten.",
+      "Dokumentation: Sieben Entscheidungsvorlagen AH14-01 bis AH14-07 (Versicherungs-Router, Zahlungslaufmasken, B2B-Sperrcode, Vier-Augen-Antrag der Ausgangsautomatik, download-url und mirror, KI-Vorqualifizierung im Portal, Abnahmeprotokoll Anhang D) und die Protokollvorlage PROTOKOLL-ANHANG-D-VORLAGE.md mit den Fällen D01 bis D58.",
+    ],
+  },
+  {
     version: "1.63.2",
     date: "02.10.2026",
     title: "Korrektur Bankabruf FinTS: Umsätze per CAMT, wenn die Bank kein MT940 mehr anbietet",

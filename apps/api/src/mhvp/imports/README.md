@@ -236,3 +236,8 @@ contract end (`contract.end_date`), never open ended on an ended contract. Test:
 ### Verwaltungsansicht gemerkter Zuordnungen (AF24, GAE-36)
 
 Die Seite `/importe/immoware24` zeigt unter den benötigten Exporten die gemerkten Spaltenzuordnungen des Mandanten (`GET /imports/immoware24/column-assignments`) mit Entfernen je Eintrag (`DELETE .../column-assignments/{id}`, mit Rückfrage). Ein entfernter Eintrag wird bei der nächsten Datei von der Kopfzeilen-Heuristik neu vorgeschlagen, es wird nichts importiert oder geändert. Komponente: `apps/web-crm/src/components/imports/ColumnAssignments.tsx`.
+
+## Welle 19, AH10 (GAG-14)
+
+* `PUT /imports/migration/acceptance/{id}` bearbeitet nur Entwürfe; nach der Unterzeichnung 409 `MHVP-MIG-0002`. Test um Leserecht 403, fremder Mandant 404, Validierung 422 und unveränderten Inhalt nach 409 ergänzt (`test_m8_year_acceptance.py`).
+* CRM: Bearbeiten in `MigrationExtras`, Exporttypen in `ExportKinds` (Seite Importe, Vollimport), Summen je Art (`/history/open-items/summary`) in `MigrationHistory`; Vitest `MigrationAcceptanceEdit.test.tsx`.

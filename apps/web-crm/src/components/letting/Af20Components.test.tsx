@@ -99,8 +99,8 @@ describe("AG14 Oberflächen", () => {
 
   it("U-Protokoll Dateien: Zuordnung zeigt Ergebnis", async () => {
     const { UprotokollFiles } = await import("@/components/handover/UprotokollFiles");
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ matched: [{ filename: "a.jpg", document_id: "d1" }], unmatched_in_zip: ["b.jpg"], staged_without_file: [] }),
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(jsonResponse({ matched: [{ filename: "a.jpg", document_id: "d1" }], unmatched_in_zip: ["b.jpg"], staged_without_file: [] })),
     );
     vi.stubGlobal("fetch", fetchMock);
     renderIntl(<UprotokollFiles canMatch />);

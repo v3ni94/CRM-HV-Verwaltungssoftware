@@ -718,6 +718,13 @@ async def posting_proposals(
         # with the booking or rejection. Reading never writes a row.
         learning = await proposals.learning_enabled(session)
         pending = await proposals.pending_for(session, row.id) if learning else None
+        # GAG-06 (GAE-02, P06-02): the object period lock is shown at the proposal already;
+        # the booking itself stays refused by ``services.post`` (MHVP-ACC-0030). Read only.
+        from mhvp.banking import object_lock
+
+        obj_locked = await object_lock.object_locked(
+            session, ledger, row.booking_date, object_lock.settled_item_ids(stage1)
+        )
         return {
             "bank_transaction_id": tx_id,
             "amount": row.amount,
@@ -731,6 +738,10 @@ async def posting_proposals(
                 "round": pending.round if pending is not None else None,
                 "features_hash": pending.features_hash if pending is not None else None,
                 "proposals": pending.proposals if pending is not None else None,
+            },
+            "object_period_lock": {
+                "locked": obj_locked,
+                "code": ErrorCodes.ACC_PERIOD_LOCKED_OBJECT.code if obj_locked else None,
             },
             "note": "Vorschläge, keine Buchung. Buchung nur nach Prüfung und Freigabe.",
         }
@@ -4039,6 +4050,12 @@ async def create_csv_mapping(
     body: CsvMappingIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> CsvMappingOut:
     async with tenant_tx(request, principal) as session:
+        from mhvp.properties.models import PropertyBankAccount
+
+        # GAG-24: the foreign key check bypasses RLS, so the account is loaded under RLS first;
+        # another tenant's (or an unknown) account answers 404.
+        if await session.get(PropertyBankAccount, body.property_bank_account_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         row = BankCsvMapping(
             tenant_id=principal.tenant_id,
             property_bank_account_id=body.property_bank_account_id,

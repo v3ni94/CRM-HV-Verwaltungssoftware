@@ -126,4 +126,10 @@ Bericht zum Stichtag mit Nulldifferenz) und Umgestellt.
 
 ## Migrationsmasken in der Oberfläche (AF18)
 
-Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Vollimport, Exporttypen, Verlauf und offene Posten haben noch keine Maske und sind über die Schnittstelle erreichbar. Die Seite Dokumente, Eingangsvorschläge zeigt Vorschläge des Dokumenteingangs mit Annehmen, Ablehnen und Zurücknehmen einer automatischen Ablage; gebucht wird dort nichts.
+Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Darunter zeigt der Bereich Altdaten (nur lesend) je Buchungskreis die übernommenen Einzelposten, die Summen je Art (Anzahl, Ursprung, gezahlt, offen) und die historischen Tickets. Die bekannten Exporttypen mit ihren erwarteten Spalten (Pflichtspalten mit Stern) stehen auf der Seite Importe, Vollimport. Die Seite Dokumente, Eingangsvorschläge zeigt Vorschläge des Dokumenteingangs mit Annehmen, Ablehnen und Zurücknehmen einer automatischen Ablage; gebucht wird dort nichts.
+
+## Abnahmeprotokoll bearbeiten (Welle 19, 02.10.2026)
+
+* Ein Abnahmeprotokoll im Status Entwurf ändern Sie auf der Seite Importe, Migration über Bearbeiten und Änderungen speichern (Recht accounting:update).
+* Nach der Unterzeichnung durch die zweite Person ist das Protokoll gesperrt: die Schaltfläche Bearbeiten entfällt, die Schnittstelle (`PUT /api/v1/imports/migration/acceptance/{id}`) antwortet mit 409 (MHVP-MIG-0002).
+* Jede Änderung setzt die bearbeitende Person neu; unterzeichnen darf danach nur eine andere Person.

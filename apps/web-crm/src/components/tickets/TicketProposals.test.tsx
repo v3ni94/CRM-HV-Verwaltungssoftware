@@ -244,3 +244,43 @@ test("call proposal shows caller number, property and unit and approves with rep
     expect(calls.some((c) => c.method === "POST" && c.url.endsWith(`/proposals/${PROPOSAL}/accept-and-reply`))).toBe(true),
   );
 });
+
+test("computes a contact change proposal on demand from the latest e-mail (GAG-30)", async () => {
+  const calls: { url: string; method: string; body: string | null }[] = [];
+  let created = false;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    calls.push({ url, method, body: null });
+    if (url === `/api/bff/tickets/${TICKET}/proposals`) return jsonResponse(created ? [proposal()] : []);
+    if (url === `/api/bff/tickets/${TICKET}/proposals/contact-change`) {
+      created = true;
+      return jsonResponse(proposal(), 201);
+    }
+    return jsonResponse({ title: "Fehler" }, 404);
+  });
+  renderIntl(<TicketProposals ticketId={TICKET} />);
+  await userEvent.click(await screen.findByTestId("ticket-proposals-compute"));
+  await screen.findByText(/Kontakt Jacqueline Kampmeier ändern zu Jacqueline Müller/);
+  expect(screen.getByText("Vorschlag angelegt, bitte prüfen.")).toBeInTheDocument();
+  expect(calls.some((c) => c.url.endsWith("/proposals/contact-change") && c.method === "POST")).toBe(true);
+  // Nothing was accepted automatically: the proposal stays pending with its actions.
+  expect(calls.some((c) => c.url.endsWith("/accept"))).toBe(false);
+  expect(screen.getByRole("button", { name: "Akzeptieren" })).toBeInTheDocument();
+});
+
+test("reports when no change was detected and shows API errors", async () => {
+  let fail = false;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = String(input);
+    if (url === `/api/bff/tickets/${TICKET}/proposals`) return jsonResponse([]);
+    if (fail) return jsonResponse({ title: "Konflikt", detail: "Das Ticket hat keine eingehende E-Mail." }, 409);
+    return jsonResponse(null, 201);
+  });
+  renderIntl(<TicketProposals ticketId={TICKET} />);
+  await userEvent.click(await screen.findByTestId("ticket-proposals-compute"));
+  await screen.findByText("Keine Stammdatenänderung erkannt.");
+  fail = true;
+  await userEvent.click(screen.getByTestId("ticket-proposals-compute"));
+  await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+});

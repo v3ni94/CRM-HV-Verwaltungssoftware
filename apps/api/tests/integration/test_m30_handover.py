@@ -971,6 +971,43 @@ def test_uprotokoll_import_preview_apply_and_files(client: TestClient, world: Wo
     assert len(matched["matched"]) == 1
     assert matched["unmatched_in_zip"] == []
 
+    # GAG-13: list the assignments, release one (document stays), RLS and permissions.
+    files_url = f"{H.rsplit('/', 1)[0]}/imports/uprotokoll/files"
+    listing = _ok(client.get(files_url, params={"import_run_id": run_id}, headers=h))
+    assert listing["total"] == 1
+    entry = listing["items"][0]
+    assert entry["document_id"] == matched["matched"][0]["document_id"]
+    assert any(t == "handover_protocol" for t, _ in entry["linked"])
+    other = bearer(login(client, world, "m30other"))
+    reader = bearer(login(client, world, "m30reader"))
+    doc_id = entry["document_id"]
+    assert client.get(files_url, params={"import_run_id": run_id}, headers=other).status_code == 404
+    assert (
+        client.delete(
+            f"{files_url}/{doc_id}", params={"import_run_id": run_id}, headers=other
+        ).status_code
+        == 404
+    )
+    assert (
+        client.delete(
+            f"{files_url}/{doc_id}", params={"import_run_id": run_id}, headers=reader
+        ).status_code
+        == 403
+    )
+    assert client.get(files_url, params={"import_run_id": "x"}, headers=h).status_code == 422
+    unknown = "00000000-0000-0000-0000-000000000000"
+    assert (
+        client.delete(
+            f"{files_url}/{unknown}", params={"import_run_id": run_id}, headers=h
+        ).status_code
+        == 404
+    )
+    released = client.delete(f"{files_url}/{doc_id}", params={"import_run_id": run_id}, headers=h)
+    assert released.status_code == 204
+    after = _ok(client.get(files_url, params={"import_run_id": run_id}, headers=h))
+    assert after["total"] == 0
+    assert _ok(client.get(f"/api/v1/documents/{doc_id}", headers=h))["id"] == doc_id
+
 
 def test_handover_portal_staff_lists_all_protocols(client: TestClient, world: World) -> None:
     """M2-08 entschieden (docs/rules/M2-07.md): staff members with the portal permission

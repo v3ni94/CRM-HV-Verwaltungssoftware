@@ -155,6 +155,38 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
     await load();
   }
 
+  // GAG-30: compute a contact change proposal from the latest incoming ticket mail on demand
+  // (POST /tickets/{id}/proposals/contact-change). The result is only a proposal; accepting or
+  // rejecting it runs through the existing decision endpoints below.
+  async function compute() {
+    setBusy("compute");
+    setError(null);
+    setNotice(null);
+    const res = await bff<Proposal | null>(`/api/bff/tickets/${ticketId}/proposals/contact-change`, {
+      method: "POST",
+    });
+    setBusy(null);
+    if (!res.ok) {
+      setError(res.message);
+      return;
+    }
+    setNotice(res.data ? t("computeCreated") : t("computeNone"));
+    await load();
+  }
+
+  const computeButton = (
+    <button
+      type="button"
+      className={ui.buttonSm}
+      disabled={busy === "compute"}
+      onClick={() => void compute()}
+      title={t("computeHint")}
+      data-testid="ticket-proposals-compute"
+    >
+      {t("compute")}
+    </button>
+  );
+
   function startEdit(proposal: Proposal) {
     setEditing(proposal.id);
     setDraft(proposal.proposed.changes.map((c) => ({ ...c })));
@@ -163,11 +195,26 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
   }
 
   if (rows === null) return error ? <p role="alert" className={ui.alert}>{error}</p> : null;
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return (
+      <section className="flex flex-col gap-2" data-testid="ticket-proposals-empty">
+        <div className="flex items-center gap-2">{computeButton}</div>
+        {notice ? <p className={ui.success}>{notice}</p> : null}
+        {error ? (
+          <p role="alert" className={ui.alert}>
+            {error}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-2" data-testid="ticket-proposals">
-      <h2 className={ui.h2}>{t("title")}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className={ui.h2}>{t("title")}</h2>
+        {computeButton}
+      </div>
       {rows.map((p) => {
         const changes = p.decision === "pending" ? p.proposed.changes : (p.final?.changes ?? p.proposed.changes);
         const isEditing = editing === p.id;

@@ -10,6 +10,14 @@ const ID = "01920000-0000-7000-8000-00000000000a";
 describe("BFF proxy", () => {
   beforeEach(() => serverFetch.mockReset());
 
+  it("forwards the calendar ICS download and keeps the text/calendar body (AH20)", async () => {
+    serverFetch.mockResolvedValue(new Response("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", { status: 200, headers: { "content-type": "text/calendar" } }));
+    const res = await GET(new Request("http://crm.localhost/api/bff/workspace/calendar.ics"), ctx("workspace/calendar.ics"));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("BEGIN:VCALENDAR");
+    expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/workspace/calendar.ics");
+  });
+
   it("rejects operations outside the allowlist", async () => {
     const res = await GET(new Request("http://crm.localhost/api/bff/platform/tenants"), ctx("platform/tenants"));
     expect(res.status).toBe(404);
@@ -92,6 +100,7 @@ describe("BFF proxy", () => {
     ["GET", `banking/transactions/${ID}/candidates`],
     ["POST", `banking/transactions/${ID}/book`],
     ["POST", `banking/transactions/${ID}/ignore`],
+    ["POST", `banking/transactions/${ID}/reopen`], // GAG-25
     ["POST", `banking/payment-orders/${ID}/approve`],
     ["GET", "banking/payment-batches"],
     ["GET", `banking/payment-batches/${ID}`],
@@ -263,7 +272,6 @@ describe("BFF proxy", () => {
     ["POST", "banking/automation"],
     ["DELETE", `banking/rules/${ID}`],
     ["POST", `banking/transactions/${ID}/reject`],
-    ["POST", `banking/transactions/${ID}/reopen`],
     ["POST", "banking/csv-mappings/import"],
     ["DELETE", `platform/licenses/${ID}`], // M27-03: licences are ended, never deleted
     ["POST", `accounting/receivable-runs/${ID}/reverse`],
@@ -290,6 +298,14 @@ describe("BFF proxy", () => {
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}?range=week&mailbox_kind=personal`);
   });
 
+  it("forwards the deposit settlement PDF preview (GAG-29)", async () => {
+    serverFetch.mockResolvedValue(new Response("%PDF", { status: 200, headers: { "content-type": "application/pdf" } }));
+    const path = `contracts/${ID}/deposit-settlements/${ID}/document-preview`;
+    const res = await GET(new Request(`http://crm.localhost/api/bff/${path}`), ctx(path));
+    expect(res.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
   it("forwards the handover change after signature (M30-09) and the date filters of the list", async () => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 201, headers: { "content-type": "application/json" } }));
     const path = `handover/protocols/${ID}/changes`;
@@ -312,6 +328,23 @@ describe("BFF proxy", () => {
     const res = await GET(new Request(`http://crm.localhost/api/bff/${path}?status=invalid&limit=50`), ctx(path));
     expect(res.status).toBe(200);
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}?status=invalid&limit=50`);
+  });
+
+  it("forwards the reason of DELETE documents/{id}/hold and no body for a plain DELETE (GAG-26)", async () => {
+    serverFetch.mockImplementation(() => Promise.resolve(new Response("{}", { status: 200, headers: { "content-type": "application/json" } })));
+    const headers = { host: "crm.localhost", origin: "http://crm.localhost" };
+    const req = new Request(`http://crm.localhost/api/bff/documents/${ID}/hold`, {
+      method: "DELETE",
+      headers,
+      body: JSON.stringify({ reason: "Verfahren beendet" }),
+    });
+    expect((await DELETE(req, ctx(`documents/${ID}/hold`))).status).toBe(200);
+    const [path, init] = serverFetch.mock.calls[0]!;
+    expect(path).toBe(`/api/v1/documents/${ID}/hold`);
+    expect(init.body).toBe('{"reason":"Verfahren beendet"}');
+    expect(new Headers(init.headers).get("content-type")).toBe("application/json");
+    await DELETE(new Request(`http://crm.localhost/api/bff/contacts/${ID}`, { method: "DELETE", headers }), ctx(`contacts/${ID}`));
+    expect(serverFetch.mock.calls[1]![1].body).toBeUndefined();
   });
 
   it("forwards document uploads as multipart with the original boundary", async () => {

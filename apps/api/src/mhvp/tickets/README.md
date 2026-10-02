@@ -271,3 +271,7 @@ necessity, tenant switch `consent_policy.data_sharing`. `POST /work-orders` retu
 `contact_share` and logs `work_order.contact_data_shared` or `work_order.contact_data_withheld`;
 the portal order list carries `resident_contact` (checked on every read, revocation applies
 at once). Rule: docs/rules/AC06-einwilligungen.md.
+
+## Vorschlag auf Anforderung (GAG-30, Welle 19)
+
+`POST /tickets/{id}/proposals/contact-change` berechnet den Stammdatenvorschlag aus der letzten eingehenden Mail (höchstens einer je Mail, 201 mit `null`, wenn nichts erkannt wird, 409 ohne eingehende Mail). Das CRM-Ticketdetail (TicketProposals) bietet dafür die Schaltfläche "Vorschlag aus letzter E-Mail berechnen"; Entscheidung nur über die bestehenden Endpunkte accept, correct, reject. Test: `tests/integration/test_ah19_ticket_contact_change.py`.

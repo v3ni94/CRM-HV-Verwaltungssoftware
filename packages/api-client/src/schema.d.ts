@@ -10765,7 +10765,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List File Assignments
+         * @description Lists the files that `/files` assigned for one import run (GAG-13): document, protocol
+         *     and the handover records each is linked to. Entries whose document link was released show
+         *     `linked` as an empty list; the staged files without an assignment are listed as pending.
+         */
+        get: operations["list_file_assignments_api_v1_handover_imports_uprotokoll_files_get"];
         put?: never;
         /**
          * Dateien aus dem Speicherordner von U-Protokoll zuordnen (ZIP)
@@ -10777,6 +10783,29 @@ export interface paths {
          */
         post: operations["match_files_api_v1_handover_imports_uprotokoll_files_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/imports/uprotokoll/files/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Release File Assignment
+         * @description Releases one assignment: the links of the document to the handover records are removed,
+         *     the document itself stays in the document store (retention, no deletion). A signature file
+         *     that already created a `handover_signature` is evidence and cannot be released (409). The
+         *     file can be assigned again by repeating `/files` with the ZIP.
+         */
+        delete: operations["release_file_assignment_api_v1_handover_imports_uprotokoll_files__document_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -19221,6 +19250,45 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/objektakte/import-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Importläufe der objektakte-Übernahme (Verlauf)
+         * @description Newest first; total, page and page size in `X-Total-Count`, `X-Page`, `X-Page-Size`.
+         *     `cache_documents` is the number of documents that currently hold OCR text from the
+         *     cache (the same for every run, since a cache upload is matched per tenant).
+         */
+        get: operations["list_import_runs_api_v1_objektakte_import_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/objektakte/import-runs/{import_run_id}/ocr-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Aus dem OCR-Cache übernommene Texte entfernen */
+        delete: operations["clear_ocr_cache_api_v1_objektakte_import_runs__import_run_id__ocr_cache_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -78349,6 +78417,39 @@ export interface operations {
             };
         };
     };
+    list_file_assignments_api_v1_handover_imports_uprotokoll_files_get: {
+        parameters: {
+            query: {
+                import_run_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     match_files_api_v1_handover_imports_uprotokoll_files_post: {
         parameters: {
             query: {
@@ -78374,6 +78475,37 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_file_assignment_api_v1_handover_imports_uprotokoll_files__document_id__delete: {
+        parameters: {
+            query: {
+                import_run_id: string;
+            };
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -96591,6 +96723,71 @@ export interface operations {
             header?: never;
             path: {
                 document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_import_runs_api_v1_objektakte_import_runs_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_ocr_cache_api_v1_objektakte_import_runs__import_run_id__ocr_cache_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_run_id: string;
             };
             cookie?: never;
         };

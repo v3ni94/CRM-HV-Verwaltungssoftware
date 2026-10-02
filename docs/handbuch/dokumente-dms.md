@@ -222,3 +222,15 @@ Ist für ein Dokument noch kein Text erkannt, zeigt die Detailseite den Hinweis 
 Wird ein Eingangsvorschlag bestätigt und als Rechnung erkannt, erscheint die Schaltfläche "Beleg erfassen". Sie startet die Rechnungsauslesung als Vorschlag im Belegeingang. Unter Einstellungen, Fachliche Regeln lässt sich mit "Belegerfassung nach Ablage einer Rechnung" festlegen, dass dies bei der Bestätigung automatisch geschieht (Standard aus). Gebucht, freigegeben oder bezahlt wird dabei nichts.
 
 Ein erneuter Import aus der Objektakte stellt ein Dokument, das im Papierkorb liegt, wieder her und protokolliert dies.
+
+## Löschungssperre im Dokumentdetail setzen und aufheben (Welle 19, GAG-26)
+
+* Mit dem Recht Dokumente bearbeiten zeigt die Karte "Aufbewahrung und Sperren" das Feld "Löschungssperre setzen": Art der Sperre (Rechtsstreit, Steuerverfahren, Beweissicherung, Rechtssache, Sonstiges) und Begründung mit 5 bis 500 Zeichen. Die Sperre wird protokolliert und gilt sofort.
+* Besteht eine manuelle Sperre, erscheint stattdessen mit dem Recht Freigabe Dokumente das Feld "Löschungssperre aufheben" mit Pflichtbegründung. Hebt die Person auf, die die Sperre gesetzt hat, lehnt das System ab (Vier-Augen-Prinzip); die Meldung erscheint in der Karte.
+* Sperren am Vorgang und automatische Sperren bei Rechtsstreit oder Insolvenz werden hier nur angezeigt, nicht aufgehoben.
+
+## Importläufe der Objektakte, OCR-Cache leeren, Vorschaubilder übernehmen (Welle 19, GAG-12)
+
+* Unter Einstellungen, Objektakte zeigt die Karte "Importläufe der objektakte-Übernahme" den Verlauf mit Datum, Status, Zahl der angelegten, geänderten und doppelten Datensätze sowie der Dokumente, die Text aus dem OCR-Cache tragen. Die Liste ist seitenweise (10 je Seite) und braucht das Leserecht Dokumente.
+* "OCR-Cache leeren" (Recht Objektakte bearbeiten) entfernt nach einer Bestätigung den aus dem Cache übernommenen Text und setzt den Textstatus auf "ausstehend". Dokumente und Dateien bleiben unverändert; ein erneuter Cache-Upload füllt den Text wieder. Der Vorgang wird protokolliert.
+* "Übernahme starten" (Recht Objektakte freigeben) startet die Übernahme der Vorschaubilder im Hintergrund; ein fehlgeschlagener Lauf wird fortgesetzt. Optional werden fehlende Bilder aus dem Original erzeugt (nur Bilddateien). Fortschritt und Zähler stehen darunter und lassen sich mit "Aktualisieren" nachladen.

@@ -28,4 +28,11 @@ describe("CalendarFeedPanel", () => {
     expect(confirm).toHaveBeenCalledTimes(2);
     expect(screen.queryByLabelText("Abo-Adresse")).toBeNull();
   });
+
+  it("links the ICS download through the BFF (GAG-34)", () => {
+    renderIntl(<CalendarFeedPanel initialActive />);
+    const link = screen.getByRole("link", { name: "ICS-Datei herunterladen" });
+    expect(link).toHaveAttribute("href", "/api/bff/workspace/calendar.ics");
+    expect(link).toHaveAttribute("download", "kalender.ics");
+  });
 });

@@ -72,3 +72,36 @@ describe("StatementWorkbench period locks", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/bff/accounting/period-locks?property_id=0192abcd-0000-7000-8000-000000000099&active=true");
   });
 });
+
+describe("StatementWorkbench period lock of the statement (GAG-11)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const PROP = "0192abcd-0000-7000-8000-000000000099";
+  const LEDGER = "0192abcd-0000-7000-8000-000000000098";
+
+  it("shows the statement lock and creates a lock for the statement period", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes(`/statements/${ID}/period-lock`)) return jsonResponse({ locks: [], auto_lock_on_close: false, lock_mode: "hard" });
+      if (init?.method === "POST") return jsonResponse({ id: "l2" }, 201);
+      return jsonResponse([]);
+    });
+    renderIntl(
+      <StatementWorkbench id={ID} status="issued" keys={KEYS} propertyId={PROP} ledgerId={LEDGER} periodFrom="2025-01-01" periodTo="2025-12-31" />,
+    );
+    await waitFor(() => expect(screen.getByTestId("statement-period-lock")).toHaveTextContent("noch keine Periodensperre"));
+    const create = screen.getByText("Zeitraum 01.01.2025 bis 31.12.2025 sperren");
+    expect(create).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Grund der Sperre"), "Abrechnung 2025");
+    await userEvent.click(create);
+    await waitFor(() => expect(screen.getByText("Periodensperre angelegt.")).toBeInTheDocument());
+    const post = fetchMock.mock.calls.find((c) => c[1]?.method === "POST");
+    expect(String(post?.[0])).toContain("/api/bff/accounting/period-locks");
+    expect(JSON.parse(post?.[1]?.body as string)).toEqual({
+      ledger_id: LEDGER,
+      property_id: PROP,
+      period_from: "2025-01-01",
+      period_to: "2025-12-31",
+      reason: "Abrechnung 2025",
+    });
+  });
+});

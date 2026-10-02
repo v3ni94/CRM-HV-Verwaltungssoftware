@@ -118,4 +118,72 @@ describe("MetersPanel", () => {
     expect(post?.url).toBe(`/api/bff/meters/${METER.id}/changes`);
     expect(post?.body).toMatchObject({ old_final_value: "1234.5", new_initial_value: "0", new_number: "KW-2" });
   });
+
+  it("lists readings for readers without the entry form", async () => {
+    const calls: Call[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method ?? "GET", body: null });
+      if (url.startsWith("/api/bff/catalogs/")) return jsonResponse([]);
+      return jsonResponse([
+        { id: "r1", meter_id: METER.id, read_at: "2026-01-31", value: "12.5", estimated: true, source: "portal", notes: null, photo_document_id: null },
+      ]);
+    });
+    const user = userEvent.setup();
+    renderIntl(<MetersPanel propertyId={PID} rows={[METER]} units={[UNIT]} canEdit={false} canCreate={false} />);
+    await user.click(screen.getByRole("button", { name: "Zählerstände" }));
+    await waitFor(() => expect(screen.getByText("31.01.2026")).toBeInTheDocument());
+    expect(screen.getByText("12,500")).toBeInTheDocument();
+    expect(screen.getByText("Portal (Geschätzt)")).toBeInTheDocument();
+    expect(calls.some((c) => c.url === `/api/bff/meters/${METER.id}/readings` && c.method === "GET")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Zählerstand erfassen" })).toBeNull();
+  });
+
+  it("records a reading and shows the implausibility flag from the API", async () => {
+    const calls: Call[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : null });
+      if (url.startsWith("/api/bff/catalogs/")) return jsonResponse([]);
+      if (method === "POST")
+        return jsonResponse({ id: "r2", meter_id: METER.id, read_at: "2026-02-28", value: "10", estimated: false, source: "manual", notes: "Kontrolle", implausible: true }, 201);
+      return jsonResponse([{ id: "r1", meter_id: METER.id, read_at: "2026-01-31", value: "12.5", estimated: false, source: "manual", notes: null }]);
+    });
+    const user = userEvent.setup();
+    renderIntl(<MetersPanel propertyId={PID} rows={[METER]} units={[UNIT]} canEdit canCreate={false} />);
+    await user.click(screen.getByRole("button", { name: "Zählerstände" }));
+    await waitFor(() => expect(screen.getByText("31.01.2026")).toBeInTheDocument());
+    const submit = screen.getByRole("button", { name: "Zählerstand erfassen" });
+    expect(submit).toBeDisabled();
+    const date = screen.getByLabelText("Ablesedatum");
+    await user.clear(date);
+    await user.type(date, "2026-02-28");
+    await user.type(screen.getByLabelText("Zählerstand"), "10,0");
+    await user.type(screen.getByLabelText("Bemerkung"), "Kontrolle");
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    await waitFor(() => expect(screen.getByText("Unplausibel: niedriger als ein früherer Stand")).toBeInTheDocument());
+    const post = calls.find((c) => c.method === "POST");
+    expect(post?.url).toBe(`/api/bff/meters/${METER.id}/readings`);
+    expect(post?.body).toEqual({ read_at: "2026-02-28", value: "10.0", source: "manual", estimated: false, notes: "Kontrolle" });
+    expect(screen.getByText("28.02.2026")).toBeInTheDocument();
+  });
+
+  it("shows the API validation message when a reading is rejected", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.startsWith("/api/bff/catalogs/")) return jsonResponse([]);
+      if ((init?.method ?? "GET") === "POST")
+        return jsonResponse({ type: "about:blank", title: "Validierungsfehler", status: 422, detail: "Ablesedatum liegt in der Zukunft." }, 422);
+      return jsonResponse([]);
+    });
+    const user = userEvent.setup();
+    renderIntl(<MetersPanel propertyId={PID} rows={[METER]} units={[UNIT]} canEdit canCreate={false} />);
+    await user.click(screen.getByRole("button", { name: "Zählerstände" }));
+    await waitFor(() => expect(screen.getByText("Keine Zählerstände erfasst.")).toBeInTheDocument());
+    await user.type(screen.getByLabelText("Zählerstand"), "5");
+    await user.click(screen.getByRole("button", { name: "Zählerstand erfassen" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
 });

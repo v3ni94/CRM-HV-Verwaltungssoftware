@@ -63,6 +63,12 @@ export function CalendarFeedPanel({ initialActive }: { initialActive: boolean })
       {url ? (
         <span className={ui.help}>{t("once")}</span>
       ) : null}
+      <p className="text-sm">
+        <a className="underline" href="/api/bff/workspace/calendar.ics" download="kalender.ics">
+          {t("download")}
+        </a>{" "}
+        <span className={ui.help}>{t("downloadHint")}</span>
+      </p>
       <div className="flex gap-2">
         <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void create()}>
           {active ? t("renew") : t("create")}

@@ -944,3 +944,98 @@ Vermerk: technisch vorbereitet (Welle 16, AE30): Die 20 Elementtypen sind final 
 | A Typenliste liefern und abgleichen | gering | gering |
 | B Typen belassen | keiner | gering |
 | C Typen nach Rückmeldung der Nutzer anpassen | gering | gering |
+
+## Welle 19, Paket AH14: Entscheidungsvorlagen für die Geschäftsführung (02.10.2026)
+
+Hinweis: Die folgenden Vorlagen entscheiden nichts. Alle Schalter bleiben auf dem konservativen Standard, die Gates G1 bis G5 bleiben geschlossen. Die Fragen stehen zusätzlich in docs/OPEN_QUESTIONS.md (AH14-01 bis AH14-07).
+
+### AH14-01 Umfang Versicherungs-Router (GAG-18, GAC-07) (Eigentümer Timo Müller)
+Sachverhalt: Die Rolle Versicherungsmakler hält `insurance:read` und `claims:read` nur bei gesetztem Mandantenschalter `insurance_broker_access` (Standard aus). Es gibt keinen eigenen Fach-Router für Versicherungsverträge und Schadenfälle; der Umfang dessen, was ein Makler sehen darf, ist nicht festgelegt.
+Varianten: A kein eigener Router, Makler bleibt ohne Zugriff (Schalter aus); B lesender Router nur für Verträge und Schadenfälle der zugeordneten Objekte, ohne Personendaten der Mieter; C lesender Router einschließlich Schadenbeteiligter und Dokumente.
+Risiko: Datenschutz (Weitergabe personenbezogener Daten an Dritte braucht Rechtsgrundlage und gegebenenfalls Vertrag mit dem Makler); kein Geldbezug.
+Empfehlung: Variante A bis zur Klärung der Rechtsgrundlage, danach B mit Objektbindung und Datenminimierung.
+Gate: keins (Datenschutzfreigabe durch den Betreiber).
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Kein Router, Schalter aus | keiner | gering |
+| B Lesend, objektgebunden, ohne Mieterdaten | mittel | gering |
+| C Lesend mit Beteiligten und Dokumenten | mittel | hoch (Datenschutz) |
+
+### AH14-02 Masken für Zahlungsläufe (GAG-19, M15-01) (Eigentümer Timo Müller)
+Sachverhalt: Die Endpunkte payment-batches (Erzeugen, Download, Einreichung) und payment-bank-config haben keine CRM-Maske. Zahlungsformat, Zeichensatz und Einreichungsweg mit den Banken sind nach M15-01 nicht bestätigt; ein Schema-Abgleich gegen das offizielle XSD fehlt.
+Varianten: A keine Maske bis M15-01 entschieden; B Maske nur lesend (Liste, Vorschau, Status), Erzeugen und Einreichen hinter G2 gesperrt; C vollständige Maske mit Erzeugen und Download, Einreichung hinter G2.
+Risiko: Geld (fehlerhafte oder doppelte Zahlungsdateien, falsches Auftraggeberkonto, Rechtsträgertrennung).
+Empfehlung: Variante B; Variante C erst nach Bankbestätigung und XSD-Prüfung (P05).
+Gate: G2.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Keine Maske | keiner | gering |
+| B Nur lesend, Aktionen hinter G2 | mittel | gering |
+| C Vollständig, Einreichung hinter G2 | hoch | mittel |
+
+### AH14-03 Eigener Sperrcode für B2B-Lastschriftläufe (GAG-20, AF07-01) (Eigentümer Timo Müller)
+Sachverhalt: B2B-Mandate werden bei Erfassung mit `MHVP-CONT-0033` abgewiesen. Ein Lastschriftlauf mit Instrument B2B hat keinen eigenen 409-Code; ob B2B-Läufe überhaupt angeboten werden, ist nach AF07-01 offen (Bankvereinbarung, Vorlauffrist, kein Erstattungsanspruch des Zahlers).
+Varianten: A beim Status quo bleiben (Abweisung schon bei Mandatserfassung genügt); B zusätzlicher 409-Code im Lastschriftlauf als zweite Sperre; C B2B-Läufe nach Bankvereinbarung technisch umsetzen.
+Risiko: Geld und Recht (Lastschrift ohne wirksames B2B-Mandat, Rückgabe, Haftung gegenüber dem Zahler).
+Empfehlung: Variante B als reine Schutzsperre ohne Rechtsentscheidung; Variante C erst nach Bankvereinbarung und rechtlicher Prüfung.
+Gate: G2.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Status quo | keiner | gering |
+| B Zweite Sperre im Lauf (409) | gering | gering |
+| C B2B umsetzen | hoch | mittel |
+
+### AH14-04 Vier-Augen-Antrag der Ausgangsautomatik (GAG-21, M12-05) (Eigentümer Timo Müller, Buchhaltung)
+Sachverhalt: Seit Welle 18 (AG19) läuft das Einschalten der Ausgangsautomatik nur über einen Antrag mit Ziel `outgoing`, Freigabe durch eine zweite Person und G1; `PUT /banking/automation/outgoing` schaltet nur aus (`MHVP-BANK-0064`). Offen ist die fachliche Freigabe der Ausgangsautomatik selbst (Stufe L2b, Regel M12-05) und ob der bestehende Antrag als eigener Vier-Augen-Antrag genügt.
+Varianten: A bestehenden Antrag als ausreichend festlegen; B eigenen Antragstyp je Regel (Kreditor, Sachkonto, Höchstbetrag) mit getrennter Freigabe; C Ausgangsautomatik bis nach G1 nicht freigeben, nur Vorschläge.
+Risiko: Geld und Recht (automatische Buchungen gegen Sachkonto ohne Einzelprüfung, Nachvollziehbarkeit, B01 bis B09).
+Empfehlung: Variante C bis G1; danach Variante B, weil der Höchstbetrag und die Regel selbst freigabepflichtig sein sollten.
+Gate: G1.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Bestehender Antrag genügt | keiner | mittel |
+| B Antrag je Regel | mittel | gering |
+| C Nur Vorschläge bis G1 | keiner | gering |
+
+### AH14-05 download-url und mirror als Integrations-API (GAG-27) (Eigentümer Timo Müller)
+Sachverhalt: `GET /documents/{id}/download-url` (signierte Download-URL) und `POST /documents/{id}/mirror` (Spiegelung erneut anstoßen) werden weder im CRM noch im Portal aufgerufen. Offen ist, ob beide nur als Integrations-API für externe Systeme dienen.
+Varianten: A als reine Integrations-API dokumentieren, kein UI; B Spiegelung erneut anstoßen als Aktion im CRM (Dokumentdetail), Download-URL nur Integration; C beides im CRM und Portal anbieten.
+Risiko: Datenschutz (signierte URLs sind ohne Anmeldung nutzbar, Weitergabe außerhalb der Mandantentrennung bis zum Ablauf); kein Geldbezug.
+Empfehlung: Variante B mit kurzer Gültigkeit der URL und Protokollierung jedes Abrufs.
+Gate: keins.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Nur Integrations-API | gering | gering |
+| B Mirror im CRM, URL nur Integration | gering | gering |
+| C Beides in CRM und Portal | mittel | mittel (Datenschutz) |
+
+### AH14-06 KI-Vorqualifizierung von Portalanliegen (GAG-33) (Eigentümer Timo Müller, Datenschutz)
+Sachverhalt: `POST /portal/tickets/{id}/prequalify` hat keinen Aufruf im Portal; der Schalter `chat_ai_prequalification_enabled` existiert nur in portal/types.ts. Die Vorqualifizierung würde Inhalte von Mietern und Eigentümern an einen KI-Anbieter geben.
+Varianten: A nicht im Portal anbieten, nur CRM-seitig als Vorschlag für Mitarbeitende; B im Portal mit ausdrücklichem Hinweis und Einwilligung, Ergebnis nur als Vorschlag; C automatisch für jedes Anliegen.
+Risiko: Datenschutz (Übermittlung an Anbieter, AVV, Maskierung, Transparenz gegenüber Betroffenen); Recht, falls Vorqualifizierung Fristen oder Mängelanzeigen beeinflusst.
+Empfehlung: Variante A; Variante B erst nach geprüftem AVV und Datenschutzhinweis. Variante C nicht empfohlen (Regel 0.1.6, nur Vorschläge).
+Gate: keins (Datenschutzfreigabe, KI-Freigabeschalter bleiben aus).
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Nur CRM, Portal ohne KI | keiner | gering |
+| B Portal mit Einwilligung | mittel | mittel |
+| C Automatisch | gering | hoch |
+
+### AH14-07 Ausführungsprotokoll Anhang D (GAG-37) (Eigentümer Timo Müller, fachkundige Person V16)
+Sachverhalt: docs/acceptance/abnahme-anhang-d.md führt D01 bis D58 ohne Ergebnis, Datum und Name. Testbezug in apps/api/tests ist nach Regel 0.1.8 kein bestandener Fall. Für die Abnahme liegt jetzt die Vorlage docs/acceptance/PROTOKOLL-ANHANG-D-VORLAGE.md mit den Spalten Ergebnis, Datum, Name und Nachweis vor.
+Varianten: A Abnahme aller 58 Fälle in einem Termin; B gestuft je Gate, zuerst die 23 G1-Fälle samt D50, D51, D57; C Abnahme nur durch den Betreiber ohne fachkundige Person.
+Risiko: Geld und Recht (Öffnung von G1 bis G4 ohne nachgewiesene fachliche Abnahme).
+Empfehlung: Variante B; Variante C nicht empfohlen, weil Anhang D.3 die fachkundige Bestätigung der Sollwerte verlangt.
+Gate: G1 bis G4 (Voraussetzung jeder Öffnung).
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Alle Fälle in einem Termin | hoch | gering |
+| B Gestuft je Gate | mittel | gering |
+| C Nur Betreiber | gering | hoch |

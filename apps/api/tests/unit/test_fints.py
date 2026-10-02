@@ -358,3 +358,102 @@ def test_queue_step_maps_broker_outage_to_registered_problem(monkeypatch) -> Non
     with pytest.raises(ProblemError) as info:
         fints_routers._queue_step(uuid.uuid4(), uuid.uuid4())
     assert info.value.error is ErrorCodes.FINTS_QUEUE_UNAVAILABLE
+
+
+def test_bank_without_hksal_keeps_balance_empty_and_still_fetches_transactions() -> None:
+    """GAG-03: HKSAL refused (FinTSUnsupportedOperation) leaves the balance empty and the
+    session continues with the MT940 transactions instead of aborting."""
+    fake.Scenario.init_tan = False
+    fake.Scenario.balance_unsupported = True
+    progress = fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None)
+    done = _start(progress)
+    assert done.status == "done"
+    assert done.progress is not None
+    assert done.progress.accounts is not None
+    assert [a["balance"] for a in done.progress.accounts] == [None, None]
+    assert len(done.progress.transactions[fake.IBAN_1]) == 2
+
+
+def test_balance_only_run_without_hksal_completes() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.balance_unsupported = True
+    done = _start()
+    assert done.status == "done"
+    assert done.progress is not None
+    assert done.progress.accounts is not None
+    assert all(a["balance"] is None for a in done.progress.accounts)
+
+
+def test_camt_clbd_balance_fills_missing_hksal_balance() -> None:
+    """GAG-03: without HKSAL and MT940 the CLBD balance of the camt.052 report of the same
+    IBAN becomes the account balance; accounts without a CLBD stay empty."""
+    fake.Scenario.init_tan = False
+    fake.Scenario.balance_unsupported = True
+    fake.Scenario.mt940_unsupported = True
+    fake.Scenario.camt_with_balance = True
+    progress = fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None)
+    done = _start(progress)
+    assert done.progress is not None
+    assert done.progress.accounts is not None
+    first, second = done.progress.accounts
+    assert first["iban"] == fake.IBAN_1
+    assert first["balance"] == "800.00"
+    assert first["currency"] == "EUR"
+    assert first["balance_date"] == "2026-09-30"
+    assert second["balance"] is None
+    assert len(done.progress.transactions[fake.IBAN_1]) == 1
+
+
+def test_camt_balance_never_overwrites_hksal_balance() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_unsupported = True
+    fake.Scenario.camt_with_balance = True
+    progress = fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None)
+    done = _start(progress)
+    assert done.progress is not None
+    assert done.progress.accounts is not None
+    assert done.progress.accounts[0]["balance"] == "1234.56"
+
+
+def test_bank_without_hkspa_reads_accounts_from_upd() -> None:
+    """GAG-04: HKSPA refused, accounts come from the UPD (get_information); entries without
+    IBAN are skipped, the BIC stays empty, the BLZ comes from the bank identifier."""
+    fake.Scenario.init_tan = False
+    fake.Scenario.sepa_unsupported = True
+    done = _start()
+    assert done.status == "done"
+    assert done.progress is not None
+    assert done.progress.accounts is not None
+    assert [a["iban"] for a in done.progress.accounts] == [fake.IBAN_1, fake.IBAN_2]
+    assert done.progress.accounts[0]["bic"] is None
+    assert done.progress.accounts[0]["blz"] == fake.Scenario.constructed[-1]["blz"]
+    assert done.progress.accounts[0]["balance"] == "1234.56"
+
+
+def test_empty_mt940_answer_is_no_error_and_no_camt_fallback() -> None:
+    """GAG-05: an empty MT940 answer means no transactions; it is not an error and does
+    not trigger the CAMT variant (the fallback runs only on FinTSUnsupportedOperation)."""
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_empty = True
+    progress = fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None)
+    done = _start(progress)
+    assert done.status == "done"
+    assert done.progress is not None
+    assert done.progress.transactions == {fake.IBAN_1: [], fake.IBAN_2: []}
+
+
+def test_rows_to_raw_accepts_none_and_blank_camt_documents() -> None:
+    assert fints_mod._rows_to_raw(None, "ref") == []
+    assert fints_mod._rows_to_raw(([], [b""]), "ref") == []
+    assert fints_mod._rows_to_raw([b"  "], "ref") == []
+
+
+def test_parse_report_balances_reads_clbd_only() -> None:
+    from mhvp.banking.camt import parse_report_balances
+
+    assert parse_report_balances(fake.CAMT052_DOC) == []
+    (bal,) = parse_report_balances(fake.CAMT052_DOC_WITH_BALANCE)
+    assert bal.amount == Decimal("800.00")
+    assert bal.iban == "DE02120300000000202051"
+    assert bal.balance_date is not None
+    assert bal.balance_date.isoformat() == "2026-09-30"

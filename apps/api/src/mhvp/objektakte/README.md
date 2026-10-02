@@ -243,3 +243,7 @@ bound. Name masking is unchanged.
 ### Oberfläche Objektakte und Migration (AF18, Handbuch einstellungen.md, migration-immoware.md)
 
 CRM-Maske Einstellungen, Objektakte: Pflichtdokumente (CRUD) und Status des lokalen Modells. Seite Importe, Migration: Abnahme je Objekt, Journalspalten, Jahresausgaben. Ohne Maske (Schnittstelle): Importlauf, ocr-cache, previews/import, vollimport, exporttypen, history, open-items.
+
+### Importlauf-Verlauf und OCR-Cache leeren (Welle 19, AH08, GAG-12, Regel AH08-01)
+
+`import_runs_routers.py`: `GET /objektakte/import-runs` (Recht `documents:read`, ListSpec mit `filter[status]`, `sort`, `page`/`page_size`, Kopfzeilen `X-Total-Count`, `X-Page`, `X-Page-Size`; je Lauf Datum, Status, Summen aus dem Importbericht und `cache_documents`). `DELETE /objektakte/import-runs/{id}/ocr-cache` (Recht `objektakte:update`; die Aktion `objektakte:write` existiert im Rechtekatalog nicht, `update` ist die Prüfebene aus M35-03) setzt `ocr_text` aller objektakte-Dokumente mit `source_meta.ocr_cache_key` auf leer und `text_status=pending`, schreibt ein Ereignis `objektakte.ocr_cache_cleared`, berührt weder Dokument noch Datei noch Finanzinhalt. Der Cache ist mandantenweit, nicht je Lauf (ein Lauf kennt seine Dokumente nicht, `document_ids` ist leer). CRM: `ImportRunHistory.tsx` in Einstellungen, Objektakte, inklusive Start der Vorschaubild-Übernahme (`POST /objektakte/previews/import`).

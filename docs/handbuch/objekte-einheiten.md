@@ -182,6 +182,17 @@ Zusatzfelder vom Typ Verknüpfung. In der Oberfläche sichtbar sind davon die
 Dienstleisterverhältnisse (Objektdetail) und die Zählerwechsel (Objektseite und
 Einheitenseite).
 
+### Zählerstände erfassen
+
+Im Abschnitt Zähler der Objektseite öffnet die Schaltfläche Zählerstände je Zähler die Liste
+der Ablesungen mit Ablesedatum, Zählerstand, Quelle (Manuell, Portal, Messdienstimport,
+KI-Vorschlag), Kennzeichen Geschätzt und Bemerkung. Lesen genügt das Leserecht Objekte; das
+Formular zum Erfassen (Ablesedatum, Zählerstand mit Komma oder Punkt, Quelle, Geschätzt,
+Bemerkung) erscheint nur mit dem Schreibrecht Objekte. Liegt ein neuer Stand unter einem
+früheren Stand desselben Zählers, wird er gespeichert und in der Liste als unplausibel markiert;
+der Stand ist dann zu prüfen und bei Bedarf über einen Zählerwechsel zu erklären. Fehler der
+Prüfung (zum Beispiel ein ungültiger Wert) zeigt der Abschnitt als Meldung an.
+
 ## Dienstleister/Handwerker
 
 Der Reiter Dienstleister/Handwerker der Objektseite listet alle Kreditoren des Objekts mit

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { ImportRunHistory } from "@/components/objektakte/ImportRunHistory";
 import { LocalModelStatus } from "@/components/objektakte/LocalModelStatus";
 import { RequiredDocuments } from "@/components/objektakte/RequiredDocuments";
 import { RulesSettings, type CategoryOption, type ClassificationRule } from "@/components/objektakte/RulesSettings";
@@ -41,6 +42,7 @@ export default async function ObjektakteRulesSettingsPage() {
       <RulesSettings initial={rules} categories={categories} />
       <RequiredDocuments categories={categories} canManage={can("objektakte:approve")} canDelete={can("objektakte:delete")} />
       <LocalModelStatus canPropose={can("objektakte:update")} />
+      <ImportRunHistory canClear={can("objektakte:update")} canStartPreviews={can("objektakte:approve")} />
       {sync ? <SyncStatus initial={sync} canEdit={can("tenant_settings:update")} canRun={can("documents:create")} /> : null}
     </div>
   );

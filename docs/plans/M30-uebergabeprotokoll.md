@@ -287,3 +287,4 @@ und `::test_change_after_signature_locks_content_and_records_history`,
 Nicht gebaut (Betreiberfragen, Plan M31): Offline Erfassung (ADR 0016), Autosave je Feld,
 Browser Cache für Vorschaubilder, Zugriffsprotokollierung für Vorschaubilder, eingeschränkter
 Signiermodus, Idempotenz wiederholter Uploads, Sitzungsdauer.
+- GAG-13 (Welle 19, AH09): GET /handover/imports/uprotokoll/files und DELETE .../files/{document_id} mit CRM Liste; Zuordnungen stehen in ImportRun.summary.assigned_files, kein Schema.

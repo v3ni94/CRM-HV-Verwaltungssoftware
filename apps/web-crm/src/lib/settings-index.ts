@@ -948,7 +948,7 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     title: "Klassifikationsregeln",
     breadcrumb: [ROOT, "Objektakte"],
     href: "/einstellungen/objektakte",
-    keywords: ["objektakte", "klassifikation", "regel dokument", "dreistufig", "regelstufe"],
+    keywords: ["objektakte", "klassifikation", "regel dokument", "dreistufig", "regelstufe", "importlauf", "ocr cache", "vorschaubilder"],
     permission: ["documents:read"],
   },
 

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import type { ReferenceRate } from "@/components/settings/DepositInterestRatesAdmin";
+import { DepositSettlementPreviewButton } from "@/components/contracts/DepositSettlementPreviewButton";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -441,6 +442,11 @@ export function DepositPanel({
                     {s.status === "draft" ? ` (${t("settlement.draft")})` : ""}
                   </summary>
                   <SettlementView s={s} />
+                  {s.id ? (
+                    <div className="mt-2">
+                      <DepositSettlementPreviewButton contractId={contractId} settlementId={s.id} />
+                    </div>
+                  ) : null}
                   {canUpdate && s.id ? (
                     <div className="mt-2 flex flex-col gap-1">
                       <button

@@ -256,6 +256,29 @@ def test_fee_posting_drafts(clients: tuple[TestClient, TestClient], world: World
     assert c.post(f"{A}/admin-fee-invoices/{invoice}/release", headers=h).status_code == 409
     credit_url = f"{A}/admin-fee-invoices/{credit['id']}/posting-drafts"
     _ok(c.post(f"{A}/admin-fee-invoices/{credit['id']}/release", headers=h))
+    # GAG-06 (GAE-02, P06-02): object period lock of the payer property covering the credit
+    # note date refuses the drafts up front (409 MHVP-ACC-0030), only in mode object_period.
+    locks = f"{A}/period-locks"
+    _ok(
+        c.post(
+            locks,
+            json={
+                "ledger_id": payer_ledger,
+                "property_id": prop["id"],
+                "period_from": "2026-04-01",
+                "period_to": "2026-04-30",
+                "reason": "Abschluss April",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(c.put(f"{locks}/settings", json={"lock_mode": "object_period"}, headers=h))
+    locked = c.post(credit_url, headers=h)
+    assert locked.status_code == 409, locked.text
+    assert locked.json()["code"] == "MHVP-ACC-0030"
+    assert _ok(c.get(f"{A}/admin-fee-invoices/{credit['id']}", headers=h))["payer_entry_id"] is None
+    _ok(c.put(f"{locks}/settings", json={"lock_mode": "ledger_only"}, headers=h))
     mirrored = _ok(c.post(credit_url, headers=h), 201)
     assert _lines(c, h, payer_ledger, mirrored["payer_entry_id"]) == sorted(
         [(expense, z, g), (payable, g, z)]

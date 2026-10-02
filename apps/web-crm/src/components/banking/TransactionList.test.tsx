@@ -41,6 +41,7 @@ function mockApi(rows: Transaction[]) {
     if (url.includes("/banking/accounts")) return jsonResponse(accounts);
     if (url.includes("/banking/transactions?")) return jsonResponse(rows);
     if (url.includes("/review") || url.includes("/ignore")) return jsonResponse(tx(1, { status: "ignored" }));
+    if (url.includes("/reopen")) return jsonResponse(tx(1));
     if (url.includes("/learn")) return jsonResponse({ id: "r1", name: "Gelernt: Zahler 3" }, 201);
     return jsonResponse({}, 404);
   });
@@ -114,11 +115,32 @@ describe("TransactionList", () => {
     expect(calls.some((c) => c.url.endsWith(`/banking/transactions/${ids(3)}/learn`) && c.init?.method === "POST")).toBe(true);
   });
 
-  it("keeps reopening of ignored transactions as a marked hook and hides booking without permission", async () => {
+  it("reopens an ignored transaction with a reason", async () => {
+    const calls = mockApi([tx(1, { status: "ignored" }), tx(2)]);
+    vi.spyOn(window, "prompt").mockReturnValue("Fehlerhaft ignoriert");
+    renderIntl(<TransactionList canBook canUpdate />);
+    const rows = await screen.findAllByTestId("transaction-row");
+    expect(within(rows[1]!).queryByRole("button", { name: "Wieder eröffnen" })).not.toBeInTheDocument();
+    await userEvent.click(within(rows[0]!).getByRole("button", { name: "Wieder eröffnen" }));
+    await waitFor(() => expect(screen.getByTestId("list-notice")).toHaveTextContent("wieder eröffnet"));
+    const call = calls.find((c) => c.url.endsWith(`/banking/transactions/${ids(1)}/reopen`));
+    expect(call?.init?.method).toBe("POST");
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ reason: "Fehlerhaft ignoriert" });
+  });
+
+  it("sends no reopen request for a too short reason", async () => {
+    const calls = mockApi([tx(1, { status: "ignored" })]);
+    vi.spyOn(window, "prompt").mockReturnValue("ab");
+    renderIntl(<TransactionList canBook canUpdate />);
+    await userEvent.click(await screen.findByRole("button", { name: "Wieder eröffnen" }));
+    expect(calls.some((c) => c.url.endsWith("/reopen"))).toBe(false);
+  });
+
+  it("hides reopening and booking without permission", async () => {
     mockApi([tx(1, { status: "ignored" }), tx(2)]);
     renderIntl(<TransactionList canBook={false} canUpdate={false} />);
     const rows = await screen.findAllByTestId("transaction-row");
-    expect(REOPEN_PATH).toBeNull();
+    expect(REOPEN_PATH?.("x")).toBe("/api/bff/banking/transactions/x/reopen");
     expect(within(rows[0]!).queryByRole("button", { name: "Wieder eröffnen" })).not.toBeInTheDocument();
     expect(within(rows[1]!).queryByRole("button", { name: "Buchen" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Massenbestätigung/ })).not.toBeInTheDocument();

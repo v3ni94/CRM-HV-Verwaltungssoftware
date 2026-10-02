@@ -96,11 +96,22 @@ def test_acceptance_record_lifecycle(client: TestClient, world: World) -> None:
     assert incomplete.status_code == 409
     assert _code(incomplete) == "MHVP-MIG-0002"
     body["archive_concept"] = "Archivierung der Exporte im DMS"
-    _ok(client.put(f"{M}/acceptance/{item['id']}", json=body, headers=h))
+    edit = f"{M}/acceptance/{item['id']}"
+    # GAG-14: edit only with update permission, inside the tenant, with a valid body.
+    assert client.put(edit, json=body, headers=reader).status_code == 403
+    assert client.put(edit, json=body, headers=other).status_code == 404
+    assert client.put(edit, json={**body, "x": 1}, headers=h).status_code == 422
+    assert client.put(edit, json={**body, "review_scope": None}, headers=h).status_code == 422
+    edited = _ok(client.put(edit, json=body, headers=h))
+    assert edited["archive_concept"] == "Archivierung der Exporte im DMS"
+    assert edited["status"] == "draft"
     same_person = client.post(sign, headers=h)
     assert same_person.status_code == 403
     assert _code(same_person) == "MHVP-GATE-0002"
     signed = _ok(client.post(sign, headers=second))
     assert signed["status"] == "signed"
-    assert client.put(f"{M}/acceptance/{item['id']}", json=body, headers=h).status_code == 409
+    locked = client.put(edit, json={**body, "review_scope": "Nachtrag"}, headers=h)
+    assert locked.status_code == 409
+    assert _code(locked) == "MHVP-MIG-0002"
+    assert _ok(client.get(url, headers=reader))[0]["review_scope"] == body["review_scope"]
     assert len(_ok(client.get(url, headers=reader))) == 1

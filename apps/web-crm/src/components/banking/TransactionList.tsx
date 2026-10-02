@@ -16,10 +16,10 @@ import { BookingDialog } from "./BookingDialog";
 import { PayerIbanButton } from "./PayerIbanButton";
 import { BulkConfirm } from "./BulkConfirm";
 
-/** HOOK (plan M12 step S1): reopening an ignored transaction with a reason needs a new API
- *  operation (`ignore` is terminal today, `review` only accepts `needs_review`). Set the path
- *  builder once the backend package ships it; until then no reopen button is rendered. */
-export const REOPEN_PATH: ((txId: string) => string) | null = null;
+/** Reopening an ignored transaction with a reason (GAG-25, 7.4 Rückweg): the API sets the
+ *  status back to `new`; a transaction with an effective posting stays booked (correction by
+ *  reversal only, B03), the API answers with a conflict in that case. */
+export const REOPEN_PATH: ((txId: string) => string) | null = (txId) => `/api/bff/banking/transactions/${txId}/reopen`;
 
 export const PAGE_SIZE = 50;
 export const BULK_MAX = 200;
@@ -127,6 +127,18 @@ export function TransactionList({ canBook, canUpdate }: TransactionListProps) {
     setBusyId(null);
     if (res.ok) load();
     else setError(res.message);
+  };
+  const reopen = async (tx: Transaction) => {
+    if (!REOPEN_PATH) return;
+    const reason = window.prompt(tl("reopenReason"));
+    if (!reason || reason.trim().length < 3) return;
+    setBusyId(tx.id);
+    const res = await bff(REOPEN_PATH(tx.id), { method: "POST", body: JSON.stringify({ reason: reason.trim() }) });
+    setBusyId(null);
+    if (res.ok) {
+      setNotice(tl("reopened"));
+      load();
+    } else setError(res.message);
   };
   const review = async (tx: Transaction, decision: "keep" | "ignore") => {
     if (reviewReason.trim().length < 3) return;
@@ -336,7 +348,7 @@ export function TransactionList({ canBook, canUpdate }: TransactionListProps) {
                       ) : null}
                       {tx.status === "booked" && canUpdate && Number(tx.amount) > 0 ? <PayerIbanButton txId={tx.id} /> : null}
                       {tx.status === "ignored" && canUpdate && REOPEN_PATH ? (
-                        <button type="button" className={ui.buttonSm} disabled>
+                        <button type="button" className={ui.buttonSm} onClick={() => reopen(tx)} disabled={busyId === tx.id}>
                           {tl("reopen")}
                         </button>
                       ) : null}

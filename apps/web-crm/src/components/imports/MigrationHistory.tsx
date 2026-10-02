@@ -20,6 +20,7 @@ export type HistoryItem = {
   open_amount: string;
   description: string | null;
 };
+export type HistorySummary = { ledger_id: string; kinds: Record<string, { count: number; original: string; paid: string; open: string }> };
 export type HistoryTicket = { id: string; source_ticket_id: string; title: string; status_text: string | null; created_on: string; closed_on: string | null };
 
 /** Nur lesende Ansicht der übernommenen Altdaten: Einzelposten je Buchungskreis (Summe offen je Art)
@@ -30,6 +31,7 @@ export function MigrationHistory({ ledgers, canTickets }: { ledgers: { id: strin
   const [kind, setKind] = useState("");
   const [items, setItems] = useState<HistoryItem[] | null>(null);
   const [tickets, setTickets] = useState<HistoryTicket[] | null>(null);
+  const [summary, setSummary] = useState<HistorySummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadItems = async () => {
@@ -38,6 +40,13 @@ export function MigrationHistory({ ledgers, canTickets }: { ledgers: { id: strin
     if (kind) q.set("kind", kind);
     const res = await bff<HistoryItem[]>(`${API}/open-items?${q.toString()}`);
     if (res.ok) setItems(res.data);
+    else setError(res.message);
+  };
+  const loadSummary = async () => {
+    setError(null);
+    setSummary(null);
+    const res = await bff<HistorySummary>(`${API}/open-items/summary?ledger_id=${encodeURIComponent(ledgerId)}`);
+    if (res.ok) setSummary(res.data);
     else setError(res.message);
   };
   const loadTickets = async () => {
@@ -83,6 +92,9 @@ export function MigrationHistory({ ledgers, canTickets }: { ledgers: { id: strin
         <button type="button" className={ui.buttonSm} disabled={!ledgerId} onClick={() => void loadItems()}>
           {t("loadItems")}
         </button>
+        <button type="button" className={ui.buttonSm} disabled={!ledgerId} onClick={() => void loadSummary()}>
+          {t("loadSummary")}
+        </button>
         {canTickets ? (
           <button type="button" className={ui.buttonSm} onClick={() => void loadTickets()}>
             {t("loadTickets")}
@@ -109,6 +121,32 @@ export function MigrationHistory({ ledgers, canTickets }: { ledgers: { id: strin
               </tbody>
             </table>
           </div>
+        </div>
+      ) : null}
+      {summary ? (
+        <div className={`mt-2 ${ui.tableScroll}`} data-testid="history-summary">
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("kindLabel")}</th>
+                <th className="text-right">{t("summaryCount")}</th>
+                <th className="text-right">{t("summaryOriginal")}</th>
+                <th className="text-right">{t("summaryPaid")}</th>
+                <th className="text-right">{t("summaryOpen")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(summary.kinds).map(([k, v]) => (
+                <tr key={k}>
+                  <td>{KINDS.includes(k as (typeof KINDS)[number]) ? t(`kind.${k as (typeof KINDS)[number]}`) : k}</td>
+                  <td className="text-right">{v.count}</td>
+                  <td className="text-right">{formatEur(v.original)}</td>
+                  <td className="text-right">{formatEur(v.paid)}</td>
+                  <td className="text-right">{formatEur(v.open)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : null}
       {tickets ? (

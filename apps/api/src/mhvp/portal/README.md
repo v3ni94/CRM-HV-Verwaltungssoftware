@@ -309,3 +309,7 @@ Belegsuche für Eigentümer: `GET /portal/owner/receipts?year=&q=` (Modul `porta
 ### Eigentümerreporting (AG08, GAF-34)
 
 `GET /portal/owner/rental-reporting` (optional `unit_id`) liefert je eigener SEV-Einheit und ausgegebener Betriebskostenabrechnung Monatsmiete brutto, umlagefähige Kosten (Einheit, Objekt), Leerstandstage und Leerstandsanteil aus dem Snapshot. Hinter `owner_rental_income_enabled` (Standard aus) und G3, lesend, fremde Einheit 404. Portalseite `/reporting`. Regel AG08-01, Frage P13-01 technisch vorbereitet.
+
+## Endpunkttest Magic-Link-Code (GAG-36, Welle 19)
+
+`tests/integration/test_ah19_magic_link_verify_code.py` prüft `POST /portal/magic-link/verify-code` über HTTP: richtiger Code stellt die Sitzung aus, falscher Code wird mit MHVP-AUTH-0011 abgewiesen ohne den Code zu verbrauchen, abgelaufener Code, fremder Mandant und unbekannte Link-Id ergeben 401, der Code ist einmalig, fehlerhafte Eingaben 422, die anonyme Ratenbegrenzung antwortet mit 429. Die CRM-Kontaktseite bietet "Berechtigungen neu ableiten" (`POST /portal-admin/accounts/{id}/sync-grants`, GAG-32).

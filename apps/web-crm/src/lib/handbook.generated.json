@@ -1161,6 +1161,20 @@
     {
      "t": "p",
      "text": "Die Werkbank zeigt lesend die aktiven Periodensperren des Objekts der Abrechnung. Setzen und Aufheben erfolgt weiterhin in der Buchhaltung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Periodensperre und CO2-Kostenaufteilung in der Abrechnung (Welle 19)",
+     "id": "periodensperre-und-co2-kostenaufteilung-in-der-abrechnung-welle-19"
+    },
+    {
+     "t": "p",
+     "text": "In der Abrechnungsmaske zeigt der Bereich \"Periodensperren des Objekts\" die aktiven Sperren des Objekts und den Sperrstand dieser Abrechnung samt Schalter \"Sperre beim Abschluss\". Mit einem Grund (mindestens drei Zeichen) lässt sich der Abrechnungszeitraum direkt sperren; dafür ist das Freigaberecht der Buchhaltung nötig. Die Aufhebung erfolgt weiterhin mit Vier-Augen-Freigabe in der Buchhaltung."
+    },
+    {
+     "t": "p",
+     "text": "Der Bereich \"CO2-Kostenaufteilung\" berechnet aus spezifischem CO2-Ausstoß (kg/m² und Jahr) und CO2-Kosten den Anteil von Mieter und Vermieter nach der hinterlegten Stufentabelle für Wohngebäude. Die Berechnung wird nicht gespeichert und nicht gebucht; Anwendbarkeit und Eingangswerte sind je Gebäude zu prüfen. Die Ausgabe der Abrechnung bleibt an die Freigabestufe G3 gebunden."
     }
    ]
   },
@@ -5456,6 +5470,16 @@
     {
      "t": "p",
      "text": "Die Aktion \"Feld setzen (Auftrag, Dokument)\" wirkt auf das Objekt des auslösenden Ereignisses. Beim Auftrag sind wählbar: Status (nur \"angefragt\" oder \"in Arbeit\", entlang des normalen Ablaufs), Termin (mit Zeitzone, zum Beispiel 2026-10-05T09:00:00+02:00) und Zuständiger (gesetzt wird der Zuständige des zugehörigen Tickets). Beim Dokument sind wählbar: Kategorie und Verknüpfung mit einem Objekt. Freigabe, Rechnung, Abnahme, Beträge und Aufbewahrungssperren sind nicht wählbar; ein Dokument mit Sperre behält seine Kategorie. Der Testlauf zeigt, was geändert würde. Die Information externer Dienstleister bleibt der Entwurf an den Dienstleister, der nie automatisch versendet wird."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Regelvorlagen übernehmen",
+     "id": "regelvorlagen-uebernehmen"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Automatisierung zeigt die Schaltfläche \"Regelvorlagen\" (nur mit Recht zur Pflege von Regeln) die mitgelieferten Beispiele, zum Beispiel \"Dringendes Ticket melden\". \"Übernehmen\" legt daraus eine neue Regel an. Die Regel ist immer inaktiv: sie löst erst etwas aus, wenn Sie sie prüfen, im Testlauf ansehen und selbst aktivieren. Existiert bereits eine Regel mit demselben Namen, meldet das System einen Konflikt, die vorhandene Regel bleibt unverändert."
     }
    ]
   },
@@ -6291,6 +6315,78 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, Buchhaltung, Automatik steht unter dem Hauptschalter der Abschnitt Ausgangsautomatik. Eingeschaltet wird sie wie die Buchungsautomatik nur über einen Antrag mit Grund und die Freigabe durch eine zweite Person bei offener Freigabestufe G1. In der Antragsliste zeigt ein Kennzeichen, ob ein Antrag den Hauptschalter oder die Ausgangsautomatik betrifft. Ausschalten ist mit Pflichtgrund jederzeit sofort möglich. Die Ausgangsautomatik wirkt nur bei eingeschalteter Buchungsautomatik."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Umsatzabruf ohne MT940",
+     "id": "umsatzabruf-ohne-mt940"
+    },
+    {
+     "t": "p",
+     "text": "Manche Banken bieten im FinTS Abruf einzelne Geschäftsvorfälle nicht mehr an. Der Abruf läuft dann trotzdem weiter:"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Kein MT940 (Kontoumsätze HKKAZ): die Umsätze werden als CAMT Bericht (camt.052) abgerufen. Vorgemerkte Umsätze werden nicht übernommen."
+      },
+      {
+       "depth": 0,
+       "text": "Kein Saldoabruf (HKSAL): der Saldo bleibt leer, der Abruf bricht nicht ab, die Umsätze werden weiter abgerufen. Liefert der CAMT Bericht desselben Kontos einen Schlusssaldo (CLBD), wird dieser als Saldo übernommen. Ein von der Bank gemeldeter Saldo wird nie überschrieben, ein Saldo wird nie aus Einzelumsätzen errechnet."
+      },
+      {
+       "depth": 0,
+       "text": "Keine SEPA Kontenliste (HKSPA): die Konten werden aus den Kontodaten der Bank (UPD) gelesen. Konten ohne IBAN werden übersprungen, die BIC bleibt leer und kann im Bankkonto ergänzt werden."
+      },
+      {
+       "depth": 0,
+       "text": "Leere Antwort: liefert die Bank für den Zeitraum keine Umsätze, ist das kein Fehler. Es werden keine Umsätze angelegt."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Ein leerer Saldo ist kein Nullsaldo. Für die Bankabstimmung muss der Saldo dann aus dem Kontoauszug geprüft werden."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "FinTS-Konto zuordnen (GAG-01, GAG-02, Welle 19)",
+     "id": "fints-konto-zuordnen-gag-01-gag-02-welle-19"
+    },
+    {
+     "t": "p",
+     "text": "In der Kontentabelle einer FinTS-Verbindung (Bank, FinTS) zeigt jede noch nicht zugeordnete Zeile den Hinweis \"Kein passendes internes Konto vorhanden?\" mit zwei Wegen:"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "\"Im Assistenten einrichten\" öffnet die Einrichtung in drei Schritten mit diesem Bankkonto vorbelegt und springt direkt zu Schritt 3 (Objekt und Kontoart). Der Link hat die Form `/bank?setup=fints&link=<Konto-Id>`."
+      },
+      {
+       "depth": 0,
+       "text": "\"Internes Konto anlegen\" öffnet ein Formular in der Zeile: Objekt wählen, Kontoart wählen; der Rechtsträger folgt aus Objekt und Kontoart (WEG-Konto und Rücklagenkonto der GdWE, Mietkonto und Kautionskonto dem Eigentümer, 6.9.1), der Kontoinhaber wird mit dem Namen des Rechtsträgers vorbelegt. \"Anlegen und zuordnen\" legt das interne Konto mit der IBAN der Bank an und ordnet es zu."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Lehnt die Plattform ab (zum Beispiel Rechtsträger passt nicht zur Kontoart, fehlende Berechtigung), erscheint der Fehlertext der Plattform im Formular. Nötig ist das Recht zur Freigabe im Bankbereich. Es wird nichts gezahlt und nichts gebucht."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ignorierten Umsatz wieder eröffnen",
+     "id": "ignorierten-umsatz-wieder-eroeffnen"
+    },
+    {
+     "t": "p",
+     "text": "In der Umsatzliste (Bank) zeigt ein ignorierter Umsatz die Schaltfläche „Wieder eröffnen“, sofern Sie Umsätze bearbeiten dürfen. Nach Eingabe einer Begründung (mindestens 3 Zeichen) steht der Umsatz wieder im Status „neu“ zur Bearbeitung bereit. Ein Umsatz mit wirksamer Buchung bleibt gebucht; eine Korrektur erfolgt dann nur per Storno."
     }
    ]
   },
@@ -8743,6 +8839,52 @@
     {
      "t": "p",
      "text": "Ein erneuter Import aus der Objektakte stellt ein Dokument, das im Papierkorb liegt, wieder her und protokolliert dies."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Löschungssperre im Dokumentdetail setzen und aufheben (Welle 19, GAG-26)",
+     "id": "loeschungssperre-im-dokumentdetail-setzen-und-aufheben-welle-19-gag-26"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Mit dem Recht Dokumente bearbeiten zeigt die Karte \"Aufbewahrung und Sperren\" das Feld \"Löschungssperre setzen\": Art der Sperre (Rechtsstreit, Steuerverfahren, Beweissicherung, Rechtssache, Sonstiges) und Begründung mit 5 bis 500 Zeichen. Die Sperre wird protokolliert und gilt sofort."
+      },
+      {
+       "depth": 0,
+       "text": "Besteht eine manuelle Sperre, erscheint stattdessen mit dem Recht Freigabe Dokumente das Feld \"Löschungssperre aufheben\" mit Pflichtbegründung. Hebt die Person auf, die die Sperre gesetzt hat, lehnt das System ab (Vier-Augen-Prinzip); die Meldung erscheint in der Karte."
+      },
+      {
+       "depth": 0,
+       "text": "Sperren am Vorgang und automatische Sperren bei Rechtsstreit oder Insolvenz werden hier nur angezeigt, nicht aufgehoben."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Importläufe der Objektakte, OCR-Cache leeren, Vorschaubilder übernehmen (Welle 19, GAG-12)",
+     "id": "importlaeufe-der-objektakte-ocr-cache-leeren-vorschaubilder-uebernehmen-welle-19-gag-12"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Unter Einstellungen, Objektakte zeigt die Karte \"Importläufe der objektakte-Übernahme\" den Verlauf mit Datum, Status, Zahl der angelegten, geänderten und doppelten Datensätze sowie der Dokumente, die Text aus dem OCR-Cache tragen. Die Liste ist seitenweise (10 je Seite) und braucht das Leserecht Dokumente."
+      },
+      {
+       "depth": 0,
+       "text": "\"OCR-Cache leeren\" (Recht Objektakte bearbeiten) entfernt nach einer Bestätigung den aus dem Cache übernommenen Text und setzt den Textstatus auf \"ausstehend\". Dokumente und Dateien bleiben unverändert; ein erneuter Cache-Upload füllt den Text wieder. Der Vorgang wird protokolliert."
+      },
+      {
+       "depth": 0,
+       "text": "\"Übernahme starten\" (Recht Objektakte freigeben) startet die Übernahme der Vorschaubilder im Hintergrund; ein fehlgeschlagener Lauf wird fortgesetzt. Optional werden fehlende Bilder aus dem Original erzeugt (nur Bilddateien). Fortschritt und Zähler stehen darunter und lassen sich mit \"Aktualisieren\" nachladen."
+      }
+     ]
     }
    ]
   },
@@ -12073,6 +12215,16 @@
     {
      "t": "p",
      "text": "Ist bei einem Auftrag im Status Terminiert oder In Arbeit ein Termin eingetragen, legt der Tagesjob einen internen Kalendereintrag \"Auftragstermin\" mit Uhrzeit und Ticketnummer an. Der Eintrag ist für alle Mitarbeiter sichtbar, springt auf den Auftrag und erinnert einen Tag vorher. Es wird keine Einladung an den Dienstleister oder in einen externen Kalender gesendet. Ändert sich der Termin oder wird der Auftrag erledigt, folgt der Eintrag beim nächsten Lauf. Die Ticketfälligkeit erscheint wie bisher als \"Ticketfrist\"."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Kalender als ICS-Datei laden",
+     "id": "kalender-als-ics-datei-laden"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Kalender lädt der Link \"ICS-Datei herunterladen\" einen einmaligen Stand Ihrer eigenen und geteilten Termine sowie der Fristen als Datei kalender.ics, die sich in jedem Kalenderprogramm importieren lässt. Die Datei aktualisiert sich nicht. Für laufend aktuelle Daten richten Sie darunter das Kalender-Abo ein (Abo-Adresse erzeugen); die Adresse wird nur einmal angezeigt und gilt wie ein Passwort."
     }
    ]
   },
@@ -12950,6 +13102,16 @@
     {
      "t": "p",
      "text": "Die Annahme der Portal-Nutzungsbedingungen wird mit Zeitpunkt, Fassung und einem Hash der Verbindungsadresse nachgewiesen. In der Kontaktakte sehen Sie Fassung und den Hinweis, dass ein Nachweis gespeichert ist; die Adresse selbst wird nicht gespeichert."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Portalberechtigungen neu ableiten",
+     "id": "portalberechtigungen-neu-ableiten"
+    },
+    {
+     "t": "p",
+     "text": "Im Abschnitt \"Portalzugang\" eines Kontakts mit Portalkonto leitet die Schaltfläche \"Berechtigungen neu ableiten\" die Portalfreigaben aus Verträgen, Eigentum und Gremienzugehörigkeit neu ab, etwa nach einem Eigentümer- oder Mieterwechsel. Manuell erteilte Freigaben bleiben erhalten. Anschließend wird die Zahl der aktiven abgeleiteten Freigaben angezeigt. Berechtigung: Kontakte bearbeiten."
     }
    ]
   },
@@ -14143,7 +14305,30 @@
     },
     {
      "t": "p",
-     "text": "Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Vollimport, Exporttypen, Verlauf und offene Posten haben noch keine Maske und sind über die Schnittstelle erreichbar. Die Seite Dokumente, Eingangsvorschläge zeigt Vorschläge des Dokumenteingangs mit Annehmen, Ablehnen und Zurücknehmen einer automatischen Ablage; gebucht wird dort nichts."
+     "text": "Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Darunter zeigt der Bereich Altdaten (nur lesend) je Buchungskreis die übernommenen Einzelposten, die Summen je Art (Anzahl, Ursprung, gezahlt, offen) und die historischen Tickets. Die bekannten Exporttypen mit ihren erwarteten Spalten (Pflichtspalten mit Stern) stehen auf der Seite Importe, Vollimport. Die Seite Dokumente, Eingangsvorschläge zeigt Vorschläge des Dokumenteingangs mit Annehmen, Ablehnen und Zurücknehmen einer automatischen Ablage; gebucht wird dort nichts."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Abnahmeprotokoll bearbeiten (Welle 19, 02.10.2026)",
+     "id": "abnahmeprotokoll-bearbeiten-welle-19-02-10-2026"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Ein Abnahmeprotokoll im Status Entwurf ändern Sie auf der Seite Importe, Migration über Bearbeiten und Änderungen speichern (Recht accounting:update)."
+      },
+      {
+       "depth": 0,
+       "text": "Nach der Unterzeichnung durch die zweite Person ist das Protokoll gesperrt: die Schaltfläche Bearbeiten entfällt, die Schnittstelle (`PUT /api/v1/imports/migration/acceptance/{id}`) antwortet mit 409 (MHVP-MIG-0002)."
+      },
+      {
+       "depth": 0,
+       "text": "Jede Änderung setzt die bearbeitende Person neu; unterzeichnen darf danach nur eine andere Person."
+      }
+     ]
     }
    ]
   },
@@ -14409,6 +14594,16 @@
     {
      "t": "p",
      "text": "Zähler, Wartungen und Prüfpflichten sowie Zusatzfelder werden seit dem 28.09.2026 auf der Objektseite gepflegt (Handlungsanweisung Stammdaten, Abschnitte Zähler, Wartungen und Zusatzfelder). Über die Schnittstelle stehen je Objekt außerdem bereit: Zählerstände (Ablesungen), Dienstleisterverhältnisse (Anlage), ein Katalog für Ausstattungsmerkmale und Zusatzfelder vom Typ Verknüpfung. In der Oberfläche sichtbar sind davon die Dienstleisterverhältnisse (Objektdetail) und die Zählerwechsel (Objektseite und Einheitenseite)."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Zählerstände erfassen",
+     "id": "zaehlerstaende-erfassen"
+    },
+    {
+     "t": "p",
+     "text": "Im Abschnitt Zähler der Objektseite öffnet die Schaltfläche Zählerstände je Zähler die Liste der Ablesungen mit Ablesedatum, Zählerstand, Quelle (Manuell, Portal, Messdienstimport, KI-Vorschlag), Kennzeichen Geschätzt und Bemerkung. Lesen genügt das Leserecht Objekte; das Formular zum Erfassen (Ablesedatum, Zählerstand mit Komma oder Punkt, Quelle, Geschätzt, Bemerkung) erscheint nur mit dem Schreibrecht Objekte. Liegt ein neuer Stand unter einem früheren Stand desselben Zählers, wird er gespeichert und in der Liste als unplausibel markiert; der Stand ist dann zu prüfen und bei Bedarf über einen Zählerwechsel zu erklären. Fehler der Prüfung (zum Beispiel ein ungültiger Wert) zeigt der Abschnitt als Meldung an."
     },
     {
      "t": "h",
@@ -17002,6 +17197,16 @@
     {
      "t": "p",
      "text": "Auf der Startseite listet der Arbeitsvorrat Rückfragen zur Zuordnung von Tickets und E-Mails zu Kontakt, Objekt und Einheit. Ein Eintrag führt zum Ticket beziehungsweise zur E-Mail, dort wird entschieden. Die Statusänderung mehrerer Tickets steht in der Ticketliste als Sammelaktion zur Verfügung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Stammdatenänderung aus der E-Mail auf Anforderung prüfen",
+     "id": "stammdatenaenderung-aus-der-e-mail-auf-anforderung-pruefen"
+    },
+    {
+     "t": "p",
+     "text": "Im Ticket steht im Bereich \"Vorschläge aus der E-Mail\" die Schaltfläche \"Vorschlag aus letzter E-Mail berechnen\". Sie prüft die letzte eingehende E-Mail des Tickets auf eine Stammdatenänderung (Name, Anschrift, Telefon, E-Mail) und legt höchstens einen Vorschlag je E-Mail an. Es wird nichts am Kontakt geändert: der Vorschlag erscheint mit Vergleich alt und neu und wird wie gewohnt akzeptiert, korrigiert oder abgelehnt. Wird keine Änderung erkannt, erscheint der Hinweis \"Keine Stammdatenänderung erkannt.\" Bankverbindungen werden nie übernommen. Berechtigung: Tickets bearbeiten; die Übernahme verlangt zusätzlich das Recht, Kontakte zu bearbeiten."
     }
    ]
   },
@@ -17027,6 +17232,16 @@
        "text": "Ist bei einer Vermietungsübergabe Richtung Einzug oder Auszug gesetzt, übernimmt der verbindliche Abschluss das Übergabedatum in den Vertrag, sofern dort noch kein Datum steht."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Dateizuordnungen aus U-Protokoll ansehen und lösen",
+     "id": "dateizuordnungen-aus-u-protokoll-ansehen-und-loesen"
+    },
+    {
+     "t": "p",
+     "text": "Unter Maklerfunktionen, Übergabe, Karte \"Dateien aus U-Protokoll zuordnen\": Lauf ID eingeben und \"Zuordnungen laden\" wählen. Die Liste zeigt je Datei die Anzahl der Verknüpfungen zu Protokoll, Raum, Mangel, Zähler oder Position sowie die Dateien, die noch nicht zugeordnet sind. \"Lösen\" entfernt nur die Verknüpfungen, das Dokument bleibt im Dokumentenspeicher erhalten. Unterschriftsdateien lassen sich nicht lösen, sie gehören zum Nachweis des Protokolls (Meldung mit Konflikt). Eine gelöste Datei lässt sich durch erneutes Zuordnen mit demselben ZIP wieder verknüpfen. Zum Lösen ist das Recht zum Ändern von Verträgen nötig, zum Ansehen das Leserecht."
     }
    ]
   },
@@ -18170,6 +18385,16 @@
     {
      "t": "p",
      "text": "Mit Entwurf berechnen entsteht für ein abgeschlossenes Jahr die Zinsgutschrift als Entwurf (Berechnung taggenau, je Jahr auf den Cent gerundet). Bestätigen erfasst eine Zinsbewegung am 31.12. auf dem Kautionskonto, Verwerfen lässt den Entwurf ohne Wirkung. Es wird nichts gebucht und nichts gezahlt. In der Kautionsabrechnung rechnet die Zinsart Zinssatz der Kaution mit diesem Verlauf; die Abrechnung bleibt ein Entwurf."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "PDF-Vorschau der Kautionsabrechnung",
+     "id": "pdf-vorschau-der-kautionsabrechnung"
+    },
+    {
+     "t": "p",
+     "text": "Bei jedem gespeicherten Abrechnungsentwurf im Bereich Kautionen öffnet die Schaltfläche \"PDF-Vorschau\" das Schreiben in einem neuen Tab. Die Vorschau wird weder abgelegt noch versendet und bucht nichts; dafür genügt das Leserecht für Verträge. Zum dauerhaften Ablegen dient weiterhin \"Abrechnung als PDF erzeugen und ablegen\"."
     }
    ]
   },

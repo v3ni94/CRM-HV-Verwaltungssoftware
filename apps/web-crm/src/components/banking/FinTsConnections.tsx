@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { BankAccountSelect } from "@/components/banking/BankAccountSelect";
@@ -9,6 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { KINDS, ownersFor, type SetupKind } from "./BankSetupWizard";
 import { DisconnectedToggle, isDisconnected, useShowDisconnected } from "./DisconnectedToggle";
 
 export type FinTsInstitute = {
@@ -513,6 +514,7 @@ export function FinTsConnectDialog({ onClose, onChanged }: { onClose: () => void
 function FinTsAccountTable({ connection, onChanged }: { connection: FinTsConnection; onChanged: () => Promise<void> | void }) {
   const t = useTranslations("FinTs");
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState<string | null>(null);
 
   async function assign(linkId: string, accountId: string) {
     setError(null);
@@ -562,7 +564,28 @@ function FinTsAccountTable({ connection, onChanged }: { connection: FinTsConnect
                     if (opt) assign(a.id, opt.id);
                   }}
                 />
-                {!a.property_bank_account_id ? <p className={ui.help}>{t("assignHelp")}</p> : null}
+                {!a.property_bank_account_id ? (
+                  <>
+                    <p className={ui.help}>{t("assignHelp")}</p>
+                    <p className="mt-1 flex flex-wrap gap-2 text-sm" data-testid={`fints-unassigned-${a.id}`}>
+                      <span>{t("noMatchHint")}</span>
+                      <a className="text-accent underline" href={`/bank?setup=fints&link=${encodeURIComponent(a.id)}`}>{t("openWizard")}</a>
+                      <button type="button" className={ui.buttonSm} onClick={() => setCreating(creating === a.id ? null : a.id)}>
+                        {creating === a.id ? t("createCancel") : t("createInternal")}
+                      </button>
+                    </p>
+                    {creating === a.id ? (
+                      <FinTsCreateInternalForm
+                        link={a}
+                        defaultHolder=""
+                        onDone={async () => {
+                          setCreating(null);
+                          await onChanged();
+                        }}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
               </td>
               <td className="text-xs text-muted">
                 {a.last_transactions_fetch_at ? formatDateTime(a.last_transactions_fetch_at) : t("neverFetched")}
@@ -572,6 +595,120 @@ function FinTsAccountTable({ connection, onChanged }: { connection: FinTsConnect
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+type FinTsPropertyOption = { id: string; number: string; name: string };
+type FinTsEntityOption = { id: string; kind: string; name: string };
+
+/** Inline "Internes Konto anlegen" (GAG-02): creates the internal account for the bank's IBAN
+ *  via `POST /banking/fints/accounts/{id}/assign` with property, legal entity (owner kinds per
+ *  ACCOUNT_OWNERS, 6.9.1), kind and holder. Read only towards the bank; no payment, no posting. */
+export function FinTsCreateInternalForm({
+  link,
+  defaultHolder,
+  onDone,
+}: {
+  link: FinTsAccount;
+  defaultHolder: string;
+  onDone: () => Promise<void> | void;
+}) {
+  const t = useTranslations("FinTs");
+  const tk = useTranslations("BankAccounts.kind");
+  const te = useTranslations("Properties.entityKind");
+  const [properties, setProperties] = useState<FinTsPropertyOption[]>([]);
+  const [propertyId, setPropertyId] = useState("");
+  const [entities, setEntities] = useState<FinTsEntityOption[]>([]);
+  const [kind, setKind] = useState<SetupKind>("hoa");
+  const [legalEntityId, setLegalEntityId] = useState("");
+  const [holder, setHolder] = useState(defaultHolder);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    bff<{ items: FinTsPropertyOption[] }>("/api/bff/properties?page_size=200").then((r) => {
+      if (r.ok) setProperties(r.data.items);
+    });
+  }, []);
+  useEffect(() => {
+    if (!propertyId) {
+      setEntities([]);
+      return;
+    }
+    bff<FinTsEntityOption[]>(`/api/bff/properties/${propertyId}/legal-entities`).then((r) => setEntities(r.ok ? r.data : []));
+  }, [propertyId]);
+  const owners = useMemo(() => ownersFor(kind, entities), [kind, entities]);
+  useEffect(() => {
+    const first = owners[0];
+    if (!first) {
+      if (legalEntityId) setLegalEntityId("");
+      return;
+    }
+    if (!owners.some((o) => o.id === legalEntityId)) setLegalEntityId(first.id);
+  }, [owners, legalEntityId]);
+  useEffect(() => {
+    const entity = owners.find((o) => o.id === legalEntityId);
+    if (entity && !holder) setHolder(entity.name);
+  }, [owners, legalEntityId, holder]);
+
+  const ready = Boolean(propertyId && legalEntityId && holder.trim().length >= 2);
+
+  async function submit() {
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff(`/api/bff/banking/fints/accounts/${link.id}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ property_id: propertyId, legal_entity_id: legalEntityId, kind, holder: holder.trim() }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.status === 403 ? t("createNoPermission") : res.message);
+      return;
+    }
+    await onDone();
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded border p-2" data-testid={`fints-create-${link.id}`}>
+      <p className="text-xs text-muted">{t("createIntro", { suffix: link.iban_suffix })}</p>
+      <label className={ui.label}>
+        {t("createProperty")}
+        <select className={ui.input} value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+          <option value="">{t("createPropertyChoose")}</option>
+          {properties.map((p) => (
+            <option key={p.id} value={p.id}>{p.number} {p.name}</option>
+          ))}
+        </select>
+      </label>
+      <label className={ui.label}>
+        {t("createKind")}
+        <select className={ui.input} value={kind} onChange={(e) => setKind(e.target.value as SetupKind)}>
+          {KINDS.map((k) => (
+            <option key={k} value={k}>{tk(k)}</option>
+          ))}
+        </select>
+      </label>
+      <label className={ui.label}>
+        {t("createEntity")}
+        <select className={ui.input} value={legalEntityId} onChange={(e) => setLegalEntityId(e.target.value)} disabled={owners.length === 0}>
+          {owners.map((o) => (
+            <option key={o.id} value={o.id}>{o.name} ({te(o.kind)})</option>
+          ))}
+        </select>
+      </label>
+      {propertyId && owners.length === 0 ? <p className={ui.help}>{t("createNoOwner")}</p> : null}
+      <label className={ui.label}>
+        {t("createHolder")}
+        <input className={ui.input} value={holder} onChange={(e) => setHolder(e.target.value)} maxLength={200} />
+      </label>
+      {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
+      <div className={ui.formActions}>
+        <button type="button" className={ui.primary} disabled={!ready || busy} onClick={submit}>
+          {busy ? t("createBusy") : t("createSubmit")}
+        </button>
+      </div>
     </div>
   );
 }

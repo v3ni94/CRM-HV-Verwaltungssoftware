@@ -1422,12 +1422,20 @@ async def new_version(
         old = await session.get(HoaStatement, statement_id)
         if old is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        if (
-            body is not None
-            and body.resolution_id is not None
-            and await session.get(Resolution, body.resolution_id) is None
-        ):
+        basis_resolution = (
+            await session.get(Resolution, body.resolution_id)
+            if body is not None and body.resolution_id is not None
+            else None
+        )
+        if body is not None and body.resolution_id is not None and basis_resolution is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        # GAG-15 (GAF-16): the correcting resolution runs through the majority check of
+        # M25-01 (display and protocol note only, no status change, no block).
+        majority = (
+            await check_resolution(session, principal, basis_resolution)
+            if basis_resolution is not None
+            else None
+        )
         new = HoaStatement(
             tenant_id=old.tenant_id,
             created_by=principal.user_id,
@@ -1469,7 +1477,7 @@ async def new_version(
                 )
             )
         await session.flush()
-        return _st_out(new)
+        return _st_out(new) | {"correction_majority_check": majority}
 
 
 # Read endpoints for the CRM screens -------------------------------------------------------

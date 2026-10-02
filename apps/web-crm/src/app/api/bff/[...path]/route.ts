@@ -116,6 +116,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^deposits/${ID}/settlements(/preview)?$`) },
   // Kautionsabrechnung als PDF-Entwurf ablegen (offener Restpunkt M5-02, PDF-Ausgabe).
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/deposit-settlements/${ID}/document$`) },
+  // PDF-Vorschau der Kautionsabrechnung (GAG-29): nicht abgelegt, kein Versand, keine Buchung.
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/deposit-settlements/${ID}/document-preview$`) },
   // Mietrechnung mit Umsatzsteuerausweis (M13-03 Folgepunkt, Regel M13-04): Liste, Erzeugen,
   // PDF (Entwurf mit Wasserzeichen hinter G1), Storno nur durch Gutschrift.
   { method: "GET", pattern: /^accounting\/rent-invoices\/numbering-mode$/ },
@@ -288,6 +290,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Magic-Link-Anmeldung (M21-01): zweiter Faktor per E-Mail-Code an/aus, Einladungsbrief als
   // PDF mit QR-Code (Einladung als Anschreiben, 90 Tage gültiger Code).
   { method: "PATCH", pattern: new RegExp(`^portal-admin/accounts/${ID}/security$`) },
+  { method: "POST", pattern: new RegExp(`^portal-admin/accounts/${ID}/sync-grants$`) },
   { method: "POST", pattern: new RegExp(`^portal-admin/accounts/${ID}/invitation-letter$`) },
   // Vorschläge aus dem Portal (M21-02 Adressänderung, M3-02 Portalstufe SEPA-Mandat): Liste je
   // Kontakt und Entscheidung; das Annehmen eines Mandats legt nur eine Bankverbindung mit
@@ -300,6 +303,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^documents/${ID}$`) },
   // Aufbewahrungs- und Sperrstatus je Dokument (U11-01): Lesen, Anzeige im Dokumentdetail.
   { method: "GET", pattern: new RegExp(`^documents/${ID}/retention-status$`) },
+  // Löschungssperre setzen und aufheben (GAG-26, 7.11 S05); Aufheben mit zweiter Person (API).
+  { method: "POST", pattern: new RegExp(`^documents/${ID}/hold$`) },
+  { method: "DELETE", pattern: new RegExp(`^documents/${ID}/hold$`) },
   // Dokumentauswahl (V05) und Beschlussauswahl für die Startregel Beschluss (V03): nur Lesen.
   { method: "GET", pattern: /^documents$/ },
   { method: "GET", pattern: /^hoa\/resolutions$/ },
@@ -535,6 +541,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^banking\/auto-posting\/digests\/build$/ },
   { method: "POST", pattern: new RegExp(`^banking/auto-posting/digests/${ID}/confirm$`) },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
+  // GAG-25: reopen an ignored transaction with a reason (status back to new, never a posting).
+  { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/reopen$`) },
   // BK-2 (plan M12 step S2): daily bank work in the CRM against the existing API. Transaction
   // list with filters and pagination, duplicate clarification (keep or ignore with reason),
   // "Regel lernen" from a booked transaction, bulk confirmation with preview, MT940 and CSV
@@ -726,6 +734,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^meters/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^meters/${ID}/changes$`) },
   { method: "POST", pattern: new RegExp(`^meters/${ID}/changes$`) },
+  { method: "GET", pattern: new RegExp(`^meters/${ID}/readings$`) },
+  { method: "POST", pattern: new RegExp(`^meters/${ID}/readings$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/maintenance$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/maintenance$`) },
   { method: "PATCH", pattern: new RegExp(`^maintenance/${ID}$`) },
@@ -1156,6 +1166,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^objektakte\/reconciliation$/ },
   { method: "POST", pattern: /^objektakte\/imports$/ },
   { method: "GET", pattern: new RegExp(`^objektakte/imports/${ID}$`) },
+  // GAG-12: Verlauf der Importläufe und OCR-Cache leeren.
+  { method: "GET", pattern: /^objektakte\/import-runs$/ },
+  { method: "DELETE", pattern: new RegExp(`^objektakte/import-runs/${ID}/ocr-cache$`) },
   { method: "POST", pattern: new RegExp(`^objektakte/imports/${ID}/ocr-cache$`) },
   { method: "GET", pattern: /^objektakte\/previews\/import$/ },
   { method: "POST", pattern: /^objektakte\/previews\/import$/ },
@@ -1298,6 +1311,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^workspace\/calendar-feed\/token$/ },
   { method: "POST", pattern: /^workspace\/calendar-feed\/token$/ },
   { method: "DELETE", pattern: /^workspace\/calendar-feed\/token$/ },
+  // AH20 (GAG-34): Kalender als ICS-Datei (Download aus der Kalenderseite).
+  { method: "GET", pattern: /^workspace\/calendar\.ics$/ },
   { method: "PUT", pattern: new RegExp(`^letting/vacancies/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^letting/vacancies/${ID}/listing$`) },
   // Belegeingang (M14): KI-Entwürfe aus Upload, Mail-Anhang oder Paperless, Feldprüfung, Entscheidung.
@@ -1437,6 +1452,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/period-locks$/ },
   { method: "POST", pattern: /^accounting\/period-locks\/[0-9a-f-]{36}\/(release-request|release)$/ },
   { method: "GET", pattern: /^statements\/[0-9a-f-]{36}\/period-lock$/ },
+  { method: "POST", pattern: /^statements\/co2-split$/ },
   { method: "GET", pattern: /^accounting\/g1-opening$/ },
   { method: "PUT", pattern: /^accounting\/g1-opening\/items\/[A-Za-z0-9_]{1,32}$/ },
   { method: "POST", pattern: /^accounting\/g1-opening\/request$/ },
@@ -1538,6 +1554,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^letting\/openimmo-import\/preview$/ },
   { method: "POST", pattern: new RegExp(`^letting/openimmo-import/${ID}/rows/${ID}/apply$`) },
   { method: "POST", pattern: /^handover\/imports\/uprotokoll(\/files)?$/ },
+  { method: "GET", pattern: /^handover\/imports\/uprotokoll\/files$/ },
+  { method: "DELETE", pattern: new RegExp(`^handover/imports/uprotokoll/files/${ID}$`) },
   { method: "GET", pattern: /^accounting\/invoices$/ }, // AG14: Auswahl für den Lexware Export
   { method: "POST", pattern: /^integrations\/lexoffice\/(import\/receipts|export\/contacts|export\/invoices)$/ },
   { method: "GET", pattern: /^ai\/fast-table-import$/ },
@@ -1583,6 +1601,13 @@ async function proxy(request: Request, context: Context): Promise<Response> {
   } else if (method === "POST" || method === "PUT" || method === "PATCH") {
     body = await request.text();
     headers.set("content-type", "application/json");
+  } else if (method === "DELETE") {
+    // GAG-26: DELETE /documents/{id}/hold carries the reason; forwarded only when present.
+    const text = await request.text();
+    if (text) {
+      body = text;
+      headers.set("content-type", "application/json");
+    }
   }
   const search = new URL(request.url).search;
   let upstream: Response;

@@ -578,3 +578,27 @@ Checkliste Testsystem-Abnahme (Betreiber, vor dem produktiven Einsatz):
 ### Ausgangsautomatik beantragen
 
 Unter Einstellungen, Buchhaltung, Automatik steht unter dem Hauptschalter der Abschnitt Ausgangsautomatik. Eingeschaltet wird sie wie die Buchungsautomatik nur über einen Antrag mit Grund und die Freigabe durch eine zweite Person bei offener Freigabestufe G1. In der Antragsliste zeigt ein Kennzeichen, ob ein Antrag den Hauptschalter oder die Ausgangsautomatik betrifft. Ausschalten ist mit Pflichtgrund jederzeit sofort möglich. Die Ausgangsautomatik wirkt nur bei eingeschalteter Buchungsautomatik.
+
+## Umsatzabruf ohne MT940
+
+Manche Banken bieten im FinTS Abruf einzelne Geschäftsvorfälle nicht mehr an. Der Abruf läuft dann trotzdem weiter:
+
+- Kein MT940 (Kontoumsätze HKKAZ): die Umsätze werden als CAMT Bericht (camt.052) abgerufen. Vorgemerkte Umsätze werden nicht übernommen.
+- Kein Saldoabruf (HKSAL): der Saldo bleibt leer, der Abruf bricht nicht ab, die Umsätze werden weiter abgerufen. Liefert der CAMT Bericht desselben Kontos einen Schlusssaldo (CLBD), wird dieser als Saldo übernommen. Ein von der Bank gemeldeter Saldo wird nie überschrieben, ein Saldo wird nie aus Einzelumsätzen errechnet.
+- Keine SEPA Kontenliste (HKSPA): die Konten werden aus den Kontodaten der Bank (UPD) gelesen. Konten ohne IBAN werden übersprungen, die BIC bleibt leer und kann im Bankkonto ergänzt werden.
+- Leere Antwort: liefert die Bank für den Zeitraum keine Umsätze, ist das kein Fehler. Es werden keine Umsätze angelegt.
+
+Ein leerer Saldo ist kein Nullsaldo. Für die Bankabstimmung muss der Saldo dann aus dem Kontoauszug geprüft werden.
+
+## FinTS-Konto zuordnen (GAG-01, GAG-02, Welle 19)
+
+In der Kontentabelle einer FinTS-Verbindung (Bank, FinTS) zeigt jede noch nicht zugeordnete Zeile den Hinweis "Kein passendes internes Konto vorhanden?" mit zwei Wegen:
+
+1. "Im Assistenten einrichten" öffnet die Einrichtung in drei Schritten mit diesem Bankkonto vorbelegt und springt direkt zu Schritt 3 (Objekt und Kontoart). Der Link hat die Form `/bank?setup=fints&link=<Konto-Id>`.
+2. "Internes Konto anlegen" öffnet ein Formular in der Zeile: Objekt wählen, Kontoart wählen; der Rechtsträger folgt aus Objekt und Kontoart (WEG-Konto und Rücklagenkonto der GdWE, Mietkonto und Kautionskonto dem Eigentümer, 6.9.1), der Kontoinhaber wird mit dem Namen des Rechtsträgers vorbelegt. "Anlegen und zuordnen" legt das interne Konto mit der IBAN der Bank an und ordnet es zu.
+
+Lehnt die Plattform ab (zum Beispiel Rechtsträger passt nicht zur Kontoart, fehlende Berechtigung), erscheint der Fehlertext der Plattform im Formular. Nötig ist das Recht zur Freigabe im Bankbereich. Es wird nichts gezahlt und nichts gebucht.
+
+## Ignorierten Umsatz wieder eröffnen
+
+In der Umsatzliste (Bank) zeigt ein ignorierter Umsatz die Schaltfläche „Wieder eröffnen“, sofern Sie Umsätze bearbeiten dürfen. Nach Eingabe einer Begründung (mindestens 3 Zeichen) steht der Umsatz wieder im Status „neu“ zur Bearbeitung bereit. Ein Umsatz mit wirksamer Buchung bleibt gebucht; eine Korrektur erfolgt dann nur per Storno.

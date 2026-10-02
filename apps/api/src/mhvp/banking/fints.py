@@ -37,11 +37,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from functools import lru_cache
 from importlib import resources
+from types import SimpleNamespace
 from typing import Any
 from urllib.parse import urlsplit
 
 from mhvp.banking import mt940 as mt940_norm
-from mhvp.banking.camt import RawTransaction, parse_report_entries
+from mhvp.banking.camt import RawTransaction, parse_report_balances, parse_report_entries
 from mhvp.core.problems import ErrorCode, ErrorCodes, ProblemError
 
 logger = logging.getLogger(__name__)
@@ -770,7 +771,7 @@ def _work(client: Any, progress: Progress, pending: Any = None) -> Progress:
     """Runs (or resumes) the work of a session inside an open dialog. ``pending`` is the
     result of the command that had asked for a TAN and has now been answered."""
     if progress.accounts is None:
-        accounts = _guard(pending if pending is not None else client.get_sepa_accounts())
+        accounts = _guard(pending if pending is not None else _fetch_accounts(client))
         pending = None
         progress.accounts = [asdict(_snapshot(a)) for a in accounts]
         progress.stage, progress.next_index = "balance", 0
@@ -778,7 +779,7 @@ def _work(client: Any, progress: Progress, pending: Any = None) -> Progress:
         snap = progress.accounts[progress.next_index]
         sepa = _sepa_account(snap)
         if progress.stage == "balance":
-            balance = _guard(pending if pending is not None else client.get_balance(sepa))
+            balance = _guard(pending if pending is not None else _fetch_balance(client, sepa))
             pending = None
             _apply_balance(snap, balance)
             progress.stage = "transactions" if progress.with_transactions else "balance"
@@ -790,10 +791,10 @@ def _work(client: Any, progress: Progress, pending: Any = None) -> Progress:
             until = date.fromisoformat(progress.until) if progress.until else None
             statement_ref = f"{snap['iban']}/{since or ''}/{until or ''}"
             if pending is not None:
-                raws = _rows_to_raw(pending, statement_ref)
+                raws = _rows_to_raw(pending, statement_ref, snap)
                 pending = None
             else:
-                raws = _fetch_transactions(client, sepa, since, until, statement_ref)
+                raws = _fetch_transactions(client, sepa, since, until, statement_ref, snap)
             if since is not None:
                 raws = [r for r in raws if r.booking_date >= since]
             if until is not None:
@@ -803,14 +804,85 @@ def _work(client: Any, progress: Progress, pending: Any = None) -> Progress:
     return progress
 
 
-def _rows_to_raw(rows: Any, statement_ref: str) -> list[RawTransaction]:
+def _is_unsupported(exc: BaseException) -> bool:
+    return type(exc).__name__ == "FinTSUnsupportedOperation"
+
+
+def _fetch_accounts(client: Any) -> Any:
+    """HKSPA first; a bank that does not offer it (python-fints raises
+    FinTSUnsupportedOperation) is read from the UPD accounts (HIUPD, `get_information`)
+    that every dialog delivers. UPD entries without IBAN are skipped; the BIC stays empty."""
+    try:
+        return client.get_sepa_accounts()
+    except Exception as exc:
+        if not _is_unsupported(exc):
+            raise
+    info = client.get_information() or {}
+    accounts = []
+    for acc in info.get("accounts") or []:
+        iban = acc.get("iban")
+        if not iban:
+            continue
+        ident = acc.get("bank_identifier")
+        accounts.append(
+            SimpleNamespace(
+                iban=str(iban),
+                bic=None,
+                accountnumber=acc.get("account_number") or None,
+                subaccount=acc.get("subaccount_number") or None,
+                blz=getattr(ident, "bank_code", None) or None,
+            )
+        )
+    logger.warning("fints_hkspa_unsupported fallback=upd accounts=%d", len(accounts))
+    return accounts
+
+
+def _fetch_balance(client: Any, sepa: Any) -> Any:
+    """HKSAL; a bank without it leaves the balance empty (a later camt.052 CLBD balance
+    may fill it) instead of aborting the session, so transactions are still fetched."""
+    try:
+        return client.get_balance(sepa)
+    except Exception as exc:
+        if not _is_unsupported(exc):
+            raise
+    logger.warning("fints_hksal_unsupported balance=empty")
+    return None
+
+
+def _apply_camt_balance(snap: dict[str, Any] | None, doc: bytes) -> None:
+    """Fills an empty balance from the CLBD balance of a camt.052 document of the same
+    IBAN. An HKSAL balance is never overwritten."""
+    if snap is None or snap.get("balance") is not None:
+        return
+    try:
+        balances = parse_report_balances(doc)
+    except ValueError:
+        return
+    for bal in balances:
+        if bal.iban is not None and bal.iban != snap.get("iban"):
+            continue
+        snap["balance"] = str(bal.amount.quantize(Decimal("0.01")))
+        snap["currency"] = bal.currency
+        snap["balance_date"] = bal.balance_date.isoformat() if bal.balance_date else None
+        return
+
+
+def _rows_to_raw(
+    rows: Any, statement_ref: str, snap: dict[str, Any] | None = None
+) -> list[RawTransaction]:
     """MT940 rows (python-fints `get_transactions`) or CAMT documents (`get_transactions_xml`,
-    a tuple of booked and pending byte lists or a plain list of bytes) to `RawTransaction`."""
+    a tuple of booked and pending byte lists or a plain list of bytes) to `RawTransaction`.
+    An empty answer (no rows, None) yields no transactions and is no error."""
+    if rows is None:
+        return []
     if isinstance(rows, tuple):
         rows = rows[0]
     out: list[RawTransaction] = []
     for item in rows:
         if isinstance(item, bytes | bytearray):
+            if not item.strip():
+                continue
+            _apply_camt_balance(snap, bytes(item))
             out.extend(parse_report_entries(bytes(item)))
         else:
             out.append(mt940_transaction_to_raw(item, statement_ref))
@@ -818,18 +890,23 @@ def _rows_to_raw(rows: Any, statement_ref: str) -> list[RawTransaction]:
 
 
 def _fetch_transactions(
-    client: Any, sepa: Any, since: date | None, until: date | None, statement_ref: str
+    client: Any,
+    sepa: Any,
+    since: date | None,
+    until: date | None,
+    statement_ref: str,
+    snap: dict[str, Any] | None = None,
 ) -> list[RawTransaction]:
     """MT940 (HKKAZ) first; banks that no longer offer it (Atruvia institutes since 2025
     report an empty HIKAZS list) are read with the CAMT variant (HKCAZ, camt.052)."""
     try:
         rows = client.get_transactions(sepa, since, until)
     except Exception as exc:
-        if type(exc).__name__ != "FinTSUnsupportedOperation":
+        if not _is_unsupported(exc):
             raise
         logger.info("fints_mt940_unsupported fallback=camt")
         rows = client.get_transactions_xml(sepa, since, until)
-    return _rows_to_raw(_guard(rows), statement_ref)
+    return _rows_to_raw(_guard(rows), statement_ref, snap)
 
 
 def _pause(client: Any, response: Any, result: StepResult, progress: Progress) -> StepResult:

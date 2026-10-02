@@ -213,4 +213,28 @@ describe("PortalAccessSection", () => {
     await screen.findByTestId("contact-portal-account");
     expect(screen.getByTestId("contact-portal-status")).toHaveTextContent(label);
   });
+
+  it("re-derives the portal grants of the account and shows the result (GAG-32)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([{ ...ACCOUNT, status: "active", activated_at: "2026-09-27T08:00:00Z" }]))
+      .mockResolvedValueOnce(jsonResponse({ grants: 3 }))
+      .mockResolvedValueOnce(jsonResponse({ title: "Keine Berechtigung", detail: "Keine Berechtigung" }, 403));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    const button = await screen.findByTestId("contact-portal-sync-grants");
+    await userEvent.click(button);
+    await waitFor(() => expect(screen.getByTestId("contact-portal-sync-result")).toHaveTextContent("3 abgeleitete Freigaben aktiv."));
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(String(url)).toBe("/api/bff/portal-admin/accounts/acc/sync-grants");
+    expect(init?.method).toBe("POST");
+    await userEvent.click(screen.getByTestId("contact-portal-sync-grants"));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(screen.queryByTestId("contact-portal-sync-result")).not.toBeInTheDocument();
+  });
+
+  it("hides the sync button without update permission", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([ACCOUNT]));
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite={false} />);
+    await waitFor(() => expect(screen.getByText("Eingeladen, Passwort noch nicht gesetzt")).toBeInTheDocument());
+    expect(screen.queryByTestId("contact-portal-sync-grants")).not.toBeInTheDocument();
+  });
 });

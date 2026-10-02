@@ -238,3 +238,7 @@ Für E-Mail-Zustellung, Weitergabe an Dienstleister, Werbung und Portal-Nutzungs
 - Werbung kann nie auf Vertrag gestützt werden.
 
 Die Annahme der Portal-Nutzungsbedingungen wird mit Zeitpunkt, Fassung und einem Hash der Verbindungsadresse nachgewiesen. In der Kontaktakte sehen Sie Fassung und den Hinweis, dass ein Nachweis gespeichert ist; die Adresse selbst wird nicht gespeichert.
+
+## Portalberechtigungen neu ableiten
+
+Im Abschnitt "Portalzugang" eines Kontakts mit Portalkonto leitet die Schaltfläche "Berechtigungen neu ableiten" die Portalfreigaben aus Verträgen, Eigentum und Gremienzugehörigkeit neu ab, etwa nach einem Eigentümer- oder Mieterwechsel. Manuell erteilte Freigaben bleiben erhalten. Anschließend wird die Zahl der aktiven abgeleiteten Freigaben angezeigt. Berechtigung: Kontakte bearbeiten.

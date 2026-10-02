@@ -16,9 +16,11 @@ allowlist (`src/app/api/bff/[...path]/route.ts`); authorization stays with the A
 | `AutomationSwitchCard` | Tenant automation switch, read only (activation gated by ADR 0014 and step S6) | `GET /tenant/settings` |
 | `MatchingMetricsCard`, `BankAccountOverview`, `FinApiConnections`, `FinTsConnections`, `OrderActions`, `DirectDebitRunActions`, `PropertyBankAccounts`, `BankAccountSelect` | Earlier bank components (metrics, accounts, connections, payment and direct debit runs) | see the component headers |
 
+`TransactionList` reopens an ignored transaction with a reason via `POST /banking/transactions/{id}/reopen` (GAG-25); a booked transaction stays booked (reversal only).
+
 Marked hooks waiting for API operations of plan M12 step S1 (docs/OPEN_QUESTIONS.md BK2-01):
-`STAGE1_REJECT_PATH` and `API_SUPPORTS_DISCOUNT` in `BookingDialog.tsx`, `REOPEN_PATH` in
-`TransactionList.tsx`. Money is handled as integer cents (`bankTypes.toCents`, `fromCents`)
+`STAGE1_REJECT_PATH` and `API_SUPPORTS_DISCOUNT` in `BookingDialog.tsx` (`REOPEN_PATH` in
+`TransactionList.tsx` is now set). Money is handled as integer cents (`bankTypes.toCents`, `fromCents`)
 and sent as two decimal strings; every typed amount goes through `bankTypes.parseAmount`,
 which reads the displayed notation (`1.250,00`), plain German and the API notation and
 returns null for unreadable input instead of 0 or a guess; nothing is booked without an explicit confirmation of the
@@ -39,3 +41,5 @@ Zinsdetail und Zinsentwurf, Zustellnachweise, Sperren je Posten) und `DunningInt
 Prüfangaben in `InvoiceForms.tsx`.
 
 Sammelrückmeldung (R01): `DirectDebitReconciliation.tsx` markiert mehrere Lastschriften und sendet eine Rückmeldung mit `order_ids` in einem Aufruf (alles oder nichts, Betrag nur bei einer Lastschrift).
+
+FinTS-Kontozuordnung (GAG-01, GAG-02): `FinTsConnections.tsx` zeigt in nicht zugeordneten Zeilen einen Sprung in `BankSetupWizard` (`/bank?setup=fints&link=<id>`, der Assistent liest die Query und springt zu Schritt 3) und das Inline-Formular `FinTsCreateInternalForm` (Objekt, Kontoart, Rechtsträger per `ownersFor`, Inhaber) über `POST /banking/fints/accounts/{id}/assign`. Test: `FinTsAccountAssign.test.tsx`.

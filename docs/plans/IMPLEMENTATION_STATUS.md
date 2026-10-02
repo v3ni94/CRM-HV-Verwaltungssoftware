@@ -223,6 +223,59 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 19 (Stand 1.64.0, 02.10.2026)
+
+Befunde der Lückenanalyse GAG (Prüfung der Masken, Endpunkte und Tests nach Welle 18), Pakete AH01 bis AH20 plus AH21 des Koordinators. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.64.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.
+
+- Keine Migration und keine Schemaänderung in dieser Welle (letzte Migration bleibt 0438).
+- Fachliche Korrektur aus den Tests: POST /banking/csv-mappings akzeptierte das Bankkonto eines fremden Mandanten, weil die Fremdschlüsselprüfung der Datenbank die Zeilensicherheit umgeht; das Konto wird jetzt vorab unter Mandantentrennung geladen (404).
+- Neue offene Entscheidungen: AH14-01 bis AH14-07 (Vorlagen in `docs/plans/ENTSCHEIDUNGEN-2026-10-01.md`, Fragen in `docs/OPEN_QUESTIONS.md`).
+- Zählung: 39 Befunde, davon 38 done und 1 partial (GAG-16 in AH11 partial, in AH12 done; zusammen abgedeckt). GAG-35 war in keinem Paket enthalten und wurde vom Koordinator als AH21 ergänzt.
+- Vom Koordinator bei der Integration erledigt: tsc-Fehler in `apps/web-portal/src/test/serverPage.tsx` behoben, OpenAPI-Export und api-client neu erzeugt (neue Antwortfelder object_period_lock und correction_majority_check, neue Endpunkte objektakte/import-runs, ocr-cache, uprotokoll/files), Hilfeindex und Handbuch neu gebaut, ruff, mypy, eslint, tsc, Gesamtsuiten API, CRM und Portal ausgeführt (Ergebnis siehe Versionsverlauf und Ergebnisbericht). Hinweis aus AH19: Redis bietet nur die Datenbanken 0 bis 15, die Zuweisungen 16 bis 20 im Brief waren ungültig; für die nächste Welle werden Redis-Datenbanken nur im gültigen Bereich vergeben.
+
+| Befund-ID | Paket | Status | Hinweis |
+| --- | --- | --- | --- |
+| GAG-01 | AH01 | done | Hinweis erscheint an jeder nicht zugeordneten Zeile (IBAN-Abgleich nur serverseitig) |
+| GAG-02 | AH01 | done | Kontoart other im Inline-Formular nicht angeboten (wie im Assistenten) |
+| GAG-03 | AH02 | done |  |
+| GAG-04 | AH02 | done | UPD-Fallback mit echter Bank ungeprüft, BIC bleibt im Fallback leer |
+| GAG-05 | AH02 | done |  |
+| GAG-06 | AH03 | done | CRM zeigt object_period_lock noch nicht an |
+| GAG-07 | AH04 | done | Beobachtung: erneutes Buchen einer gebuchten Buchung liefert 200 (idempotent); CRM muss contract_id mitsenden |
+| GAG-08 | AH05 | done |  |
+| GAG-09 | AH06 | done |  |
+| GAG-10 | AH20 | done |  |
+| GAG-11 | AH07 | done | Aufhebung der Sperre bewusst nur in der Buchhaltung (Vier Augen) |
+| GAG-12 | AH08 | done | Recht objektakte:update statt des nicht vorhandenen objektakte:write; OCR-Cache wird mandantenweit geleert (Zuordnung Dokument zu Lauf bräuchte Schemaänderung) |
+| GAG-13 | AH09 | done | Zuordnungen in ImportRun.summary.assigned_files, Läufe vor Welle 19 ohne Liste |
+| GAG-14 | AH10 | done | bank-links und balance-check weiterhin ohne eigene Anzeige |
+| GAG-15 | AH05 | done | Anbindung am Aufrufer statements/{id}/new-version; Prüfung gleiche GdWE wie Buchungskreis offen (422 als Folgeschritt); CRM zeigt correction_majority_check nicht an |
+| GAG-16 | AH11 | partial | AH11 Teil Bank und Buchhaltung, AH12 Teil Objekte und WEG; JournalEntryForm-Test mit 20 s Timeout unter Last |
+| GAG-16 | AH12 | done | AH11 Teil Bank und Buchhaltung, AH12 Teil Objekte und WEG; JournalEntryForm-Test mit 20 s Timeout unter Last |
+| GAG-17 | AH13 | done | Kindkomponenten in Seitentests gestubbt |
+| GAG-18 | AH14 | done | Entscheidung AH14-01 offen |
+| GAG-19 | AH14 | done | Entscheidung AH14-02 offen (G2, M15-01) |
+| GAG-20 | AH14 | done | Entscheidung AH14-03 offen (G2, AF07-01) |
+| GAG-21 | AH14 | done | Entscheidung AH14-04 offen (M12-05) |
+| GAG-22 | AH05 | done |  |
+| GAG-23 | AH15 | done |  |
+| GAG-24 | AH15 | done | Mandantentrennung bei POST csv-mappings korrigiert (404 statt Übernahme fremder Konten) |
+| GAG-25 | AH15 | done |  |
+| GAG-26 | AH16 | done | BFF leitet DELETE-Body weiter (route.test.ts) |
+| GAG-27 | AH14 | done | Entscheidung AH14-05 offen |
+| GAG-28 | AH17 | done | Anzeige rundet auf 3 Nachkommastellen; kein Bearbeiten einzelner Stände (API ohne Endpunkt) |
+| GAG-29 | AH18 | done |  |
+| GAG-30 | AH19 | done |  |
+| GAG-31 | AH20 | done |  |
+| GAG-32 | AH19 | done | nur in PortalAccessSection (Kontaktdetail), PortalManagement listet keine Konten |
+| GAG-33 | AH14 | done | Entscheidung AH14-06 offen |
+| GAG-34 | AH20 | done | Download verlangt tenant_settings:read, Link nicht nach Recht ausgeblendet |
+| GAG-35 | AH21 (Koordinator) | done | test_ah21_oidc_userinfo.py: Token, Claims, Mandant nach Wechsel, Token aus dem OIDC-Token-Endpunkt |
+| GAG-36 | AH19 | done |  |
+| GAG-37 | AH14 | done | Entscheidung AH14-07 offen, Protokollvorlage angelegt |
+| GAG-38 | AH17 | done |  |
+| GAG-39 | AH20 | done |  |
+
 ## Korrektur 1.63.1 (02.10.2026): Hintergrundverarbeitung aus der API
 
 Produktionsbefund nach dem Deploy von 1.63.0: Der Start eines FinTS-Bankdialogs scheiterte mit MHVP-BANK-0057. Ursache war kein Betriebsfehler (Redis und Worker liefen), sondern ein Fehler im API-Prozess: Aufgaben, die ein Endpunkt über `.delay` anstößt, lösen die aktuelle Celery-App auf, und die API hatte die konfigurierte App nie prozessweit gebunden. Der Aufruf ging an die eingebaute Standard-App von Celery (amqp://localhost). Betroffen waren alle Endpunkte mit `.delay` (FinTS-Schritt, finAPI-Abruf, EBICS-Abruf, Mandanten- und Objektakten-Export, Prüfexport, Zählersynchronisation, Belegeingang Paperless); Endpunkte mit `send_task` über `get_celery()` waren nicht betroffen. Korrektur: `get_celery` installiert die konfigurierte App als Standard-App, die API ruft sie beim Start auf, `create_celery` bindet die Thread-lokale App nur noch auf Anforderung. Regressionstest in `tests/unit/test_worker.py`, Testfixtures für FinTS und finAPI patchen nach dem Start der API. Nach dem Deploy ist die Verbindung in der Bankmaske neu zu starten.

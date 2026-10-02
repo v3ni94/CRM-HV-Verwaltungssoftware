@@ -68,12 +68,18 @@ class Scenario:
     polls: ClassVar[int] = 0
     transactions_tan_done: ClassVar[bool] = False
     mt940_unsupported: ClassVar[bool] = False
+    balance_unsupported: ClassVar[bool] = False
+    sepa_unsupported: ClassVar[bool] = False
+    mt940_empty: ClassVar[bool] = False
+    camt_with_balance: ClassVar[bool] = False
 
     @classmethod
     def reset(cls) -> None:
         cls.init_tan, cls.decoupled, cls.decoupled_polls_until_confirmed = True, False, 1
         cls.tan_for_transactions = cls.reject_pin = cls.lock_account = cls.matrix = False
         cls.unreachable = cls.mt940_unsupported = False
+        cls.balance_unsupported = cls.sepa_unsupported = False
+        cls.mt940_empty = cls.camt_with_balance = False
         cls.transactions = [
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-1"),
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-2"),
@@ -217,6 +223,8 @@ class FakeClient:
     # --- data ---
     def get_sepa_accounts(self) -> list[Any]:
         assert self._in_dialog
+        if Scenario.sepa_unsupported:
+            raise FinTSUnsupportedOperation("No supported HISPAS version found.")
         return [
             SimpleNamespace(
                 iban=iban,
@@ -228,8 +236,26 @@ class FakeClient:
             for iban in Scenario.accounts
         ]
 
+    def get_information(self) -> dict[str, Any]:
+        assert self._in_dialog
+        return {
+            "bank": {},
+            "accounts": [
+                {
+                    "iban": iban,
+                    "account_number": iban[-10:],
+                    "subaccount_number": None,
+                    "bank_identifier": SimpleNamespace(bank_code=self.blz),
+                }
+                for iban in Scenario.accounts
+            ]
+            + [{"iban": None, "account_number": "999"}],
+        }
+
     def get_balance(self, account: Any) -> Any:
         assert self._in_dialog
+        if Scenario.balance_unsupported:
+            raise FinTSUnsupportedOperation("No supported HISALS version found.")
         value = Scenario.balances.get(account.iban)
         if value is None:
             return None
@@ -245,7 +271,7 @@ class FakeClient:
             )
         if Scenario.tan_for_transactions and not Scenario.transactions_tan_done:
             return FakeTan("transactions", False)
-        if account.iban != IBAN_1:
+        if account.iban != IBAN_1 or Scenario.mt940_empty:
             return []
         return list(Scenario.transactions)
 
@@ -253,6 +279,8 @@ class FakeClient:
         assert self._in_dialog
         if account.iban != IBAN_1:
             return ([], [])
+        if Scenario.camt_with_balance:
+            return ([CAMT052_DOC_WITH_BALANCE], [b""])
         return ([CAMT052_DOC], [b""])
 
 
@@ -291,6 +319,16 @@ CAMT052_DOC = b"""<?xml version="1.0" encoding="UTF-8"?>
   </BkToCstmrAcctRpt>
 </Document>
 """
+
+CAMT052_DOC_WITH_BALANCE = CAMT052_DOC.replace(
+    b"      <Ntry>",
+    b"""      <Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="EUR">100.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-09-01</Dt></Dt></Bal>
+      <Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="EUR">800.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-09-30</Dt></Dt></Bal>
+      <Ntry>""",
+    1,
+)
 
 
 def install(monkeypatch: Any) -> None:

@@ -3,13 +3,16 @@
  *  Einheit, Standort, Gültigkeit, Eichfrist. Anlegen über POST /properties/{id}/meters
  *  (`properties:create`), Ändern über PATCH /meters/{id} (`properties:update`, ohne Nummer),
  *  Zählerwechsel über POST /meters/{id}/changes mit Endstand alt und Anfangsstand neu; der
- *  Zählersatz behält seine Historie, die Nummer wechselt nur über den Wechselsatz. */
+ *  Zählersatz behält seine Historie, die Nummer wechselt nur über den Wechselsatz.
+ *  Zählerstände je Zähler: GET/POST /meters/{id}/readings (Lesen `properties:read`, Erfassen
+ *  `properties:update`); die API speichert einen Stand unter einem früheren Stand und meldet
+ *  `implausible`, Validierungsfehler (422) erscheinen als Meldung (GAG-28). */
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDecimal } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { loadCatalogOptions, todayIso } from "./ContactPersonsPicker";
@@ -44,9 +47,52 @@ type Draft = {
   remote_readable: boolean;
 };
 
-type ChangeDraft = { changed_on: string; old_final_value: string; new_initial_value: string; new_number: string };
+type ChangeDraft = {
+  changed_on: string;
+  old_final_value: string;
+  new_initial_value: string;
+  new_number: string;
+};
 
-const EMPTY: Draft = { number: "", meter_type_code: "", unit_id: "", location: "", connection: "sub", calibration_due_date: "", valid_from: todayIso(), valid_to: "", remote_readable: false };
+export type ReadingRow = {
+  id: string;
+  meter_id: string;
+  read_at: string;
+  value: string;
+  estimated: boolean;
+  source: string;
+  notes: string | null;
+  implausible?: boolean;
+};
+
+type ReadingDraft = {
+  read_at: string;
+  value: string;
+  source: string;
+  estimated: boolean;
+  notes: string;
+};
+
+const READING_SOURCES = ["manual", "portal", "provider_import", "ai"] as const;
+const EMPTY_READING = (): ReadingDraft => ({
+  read_at: todayIso(),
+  value: "",
+  source: "manual",
+  estimated: false,
+  notes: "",
+});
+
+const EMPTY: Draft = {
+  number: "",
+  meter_type_code: "",
+  unit_id: "",
+  location: "",
+  connection: "sub",
+  calibration_due_date: "",
+  valid_from: todayIso(),
+  valid_to: "",
+  remote_readable: false,
+};
 
 function draftOf(row: MeterRow): Draft {
   return {
@@ -64,7 +110,19 @@ function draftOf(row: MeterRow): Draft {
 
 const DECIMAL = /^\d{1,12}([.,]\d{1,8})?$/;
 
-export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { propertyId: string; rows: MeterRow[]; units: UnitOption[]; canEdit: boolean; canCreate: boolean }) {
+export function MetersPanel({
+  propertyId,
+  rows,
+  units,
+  canEdit,
+  canCreate,
+}: {
+  propertyId: string;
+  rows: MeterRow[];
+  units: UnitOption[];
+  canEdit: boolean;
+  canCreate: boolean;
+}) {
   const t = useTranslations("Properties.metersPanel");
   const router = useRouter();
   const [types, setTypes] = useState<{ code: string; label: string }[]>([]);
@@ -73,9 +131,63 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
   const [editing, setEditing] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Draft | null>(null);
   const [changing, setChanging] = useState<string | null>(null);
-  const [change, setChange] = useState<ChangeDraft>({ changed_on: todayIso(), old_final_value: "", new_initial_value: "", new_number: "" });
+  const [change, setChange] = useState<ChangeDraft>({
+    changed_on: todayIso(),
+    old_final_value: "",
+    new_initial_value: "",
+    new_number: "",
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [readingsOf, setReadingsOf] = useState<string | null>(null);
+  const [readings, setReadings] = useState<ReadingRow[]>([]);
+  const [flagged, setFlagged] = useState<Set<string>>(new Set());
+  const [reading, setReading] = useState<ReadingDraft>(EMPTY_READING());
+  const [readingError, setReadingError] = useState<string | null>(null);
+
+  const openReadings = async (id: string) => {
+    setEditing(null);
+    setChanging(null);
+    setReadingsOf(id);
+    setReadings([]);
+    setFlagged(new Set());
+    setReading(EMPTY_READING());
+    setReadingError(null);
+    const res = await bff<ReadingRow[]>(`/api/bff/meters/${id}/readings`);
+    if (res.ok) setReadings(res.data ?? []);
+    else setReadingError(t("loadFailed"));
+  };
+
+  const addReading = async (id: string) => {
+    setBusy(true);
+    setReadingError(null);
+    const payload: Record<string, unknown> = {
+      read_at: reading.read_at,
+      value: reading.value.trim().replace(",", "."),
+      source: reading.source,
+      estimated: reading.estimated,
+    };
+    if (reading.notes.trim()) payload.notes = reading.notes.trim();
+    const res = await bff<ReadingRow>(`/api/bff/meters/${id}/readings`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setReadingError(res.message);
+      return;
+    }
+    const created = res.data;
+    setReadings((prev) =>
+      [...prev, created].sort((a, b) => a.read_at.localeCompare(b.read_at)),
+    );
+    if (created.implausible)
+      setFlagged((prev) => new Set(prev).add(created.id));
+    setReading(EMPTY_READING());
+  };
+
+  const readingValid =
+    reading.read_at !== "" && DECIMAL.test(reading.value.trim());
 
   useEffect(() => {
     let active = true;
@@ -87,14 +199,19 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
     };
   }, []);
 
-  const typeLabel = (code: string) => types.find((c) => c.code === code)?.label ?? code;
+  const typeLabel = (code: string) =>
+    types.find((c) => c.code === code)?.label ?? code;
   const unitLabel = (id: string | null) => {
     if (!id) return t("wholeProperty");
     const unit = units.find((u) => u.id === id);
     return unit ? [unit.number, unit.label].filter(Boolean).join(" ") : id;
   };
 
-  const run = async (path: string, method: "POST" | "PATCH", payload: Record<string, unknown>) => {
+  const run = async (
+    path: string,
+    method: "POST" | "PATCH",
+    payload: Record<string, unknown>,
+  ) => {
     setBusy(true);
     setError(null);
     const res = await bff(path, { method, body: JSON.stringify(payload) });
@@ -119,7 +236,12 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
   });
 
   const add = async () => {
-    if (await run(`/api/bff/properties/${propertyId}/meters`, "POST", { number: draft.number.trim(), ...common(draft) })) {
+    if (
+      await run(`/api/bff/properties/${propertyId}/meters`, "POST", {
+        number: draft.number.trim(),
+        ...common(draft),
+      })
+    ) {
       setAdding(false);
       setDraft(EMPTY);
     }
@@ -142,24 +264,44 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
     if (change.new_number.trim()) payload.new_number = change.new_number.trim();
     if (await run(`/api/bff/meters/${id}/changes`, "POST", payload)) {
       setChanging(null);
-      setChange({ changed_on: todayIso(), old_final_value: "", new_initial_value: "", new_number: "" });
+      setChange({
+        changed_on: todayIso(),
+        old_final_value: "",
+        new_initial_value: "",
+        new_number: "",
+      });
     }
   };
 
-  const changeValid = change.changed_on !== "" && DECIMAL.test(change.old_final_value.trim()) && DECIMAL.test(change.new_initial_value.trim());
-  const draftValid = (d: Draft) => d.meter_type_code !== "" && d.valid_from !== "";
+  const changeValid =
+    change.changed_on !== "" &&
+    DECIMAL.test(change.old_final_value.trim()) &&
+    DECIMAL.test(change.new_initial_value.trim());
+  const draftValid = (d: Draft) =>
+    d.meter_type_code !== "" && d.valid_from !== "";
 
   const form = (d: Draft, set: (d: Draft) => void, withNumber: boolean) => (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {withNumber ? (
         <label className={ui.label}>
           {t("number")}
-          <input className={ui.input} value={d.number} onChange={(e) => set({ ...d, number: e.target.value })} maxLength={100} required />
+          <input
+            className={ui.input}
+            value={d.number}
+            onChange={(e) => set({ ...d, number: e.target.value })}
+            maxLength={100}
+            required
+          />
         </label>
       ) : null}
       <label className={ui.label}>
         {t("type")}
-        <select className={ui.input} value={d.meter_type_code} onChange={(e) => set({ ...d, meter_type_code: e.target.value })} required>
+        <select
+          className={ui.input}
+          value={d.meter_type_code}
+          onChange={(e) => set({ ...d, meter_type_code: e.target.value })}
+          required
+        >
           <option value="">{t("chooseType")}</option>
           {types.map((c) => (
             <option key={c.code} value={c.code}>
@@ -170,7 +312,11 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
       </label>
       <label className={ui.label}>
         {t("unit")}
-        <select className={ui.input} value={d.unit_id} onChange={(e) => set({ ...d, unit_id: e.target.value })}>
+        <select
+          className={ui.input}
+          value={d.unit_id}
+          onChange={(e) => set({ ...d, unit_id: e.target.value })}
+        >
           <option value="">{t("wholeProperty")}</option>
           {units.map((u) => (
             <option key={u.id} value={u.id}>
@@ -181,40 +327,78 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
       </label>
       <label className={ui.label}>
         {t("location")}
-        <input className={ui.input} value={d.location} onChange={(e) => set({ ...d, location: e.target.value })} maxLength={200} />
+        <input
+          className={ui.input}
+          value={d.location}
+          onChange={(e) => set({ ...d, location: e.target.value })}
+          maxLength={200}
+        />
       </label>
       <label className={ui.label}>
         {t("connection")}
-        <select className={ui.input} value={d.connection} onChange={(e) => set({ ...d, connection: e.target.value })}>
+        <select
+          className={ui.input}
+          value={d.connection}
+          onChange={(e) => set({ ...d, connection: e.target.value })}
+        >
           <option value="main">{t("connections.main")}</option>
           <option value="sub">{t("connections.sub")}</option>
         </select>
       </label>
       <label className={ui.label}>
         {t("validFrom")}
-        <input type="date" className={ui.input} value={d.valid_from} onChange={(e) => set({ ...d, valid_from: e.target.value })} required />
+        <input
+          type="date"
+          className={ui.input}
+          value={d.valid_from}
+          onChange={(e) => set({ ...d, valid_from: e.target.value })}
+          required
+        />
       </label>
       <label className={ui.label}>
         {t("validTo")}
-        <input type="date" className={ui.input} value={d.valid_to} onChange={(e) => set({ ...d, valid_to: e.target.value })} />
+        <input
+          type="date"
+          className={ui.input}
+          value={d.valid_to}
+          onChange={(e) => set({ ...d, valid_to: e.target.value })}
+        />
       </label>
       <label className={ui.label}>
         {t("calibrationDue")}
-        <input type="date" className={ui.input} value={d.calibration_due_date} onChange={(e) => set({ ...d, calibration_due_date: e.target.value })} />
+        <input
+          type="date"
+          className={ui.input}
+          value={d.calibration_due_date}
+          onChange={(e) => set({ ...d, calibration_due_date: e.target.value })}
+        />
       </label>
       <label className="inline-flex items-center gap-2 self-end text-sm">
-        <input type="checkbox" checked={d.remote_readable} onChange={(e) => set({ ...d, remote_readable: e.target.checked })} />
+        <input
+          type="checkbox"
+          checked={d.remote_readable}
+          onChange={(e) => set({ ...d, remote_readable: e.target.checked })}
+        />
         {t("remoteReadable")}
       </label>
     </div>
   );
 
   return (
-    <section id="zaehler" className={ui.card} data-testid="property-meters" aria-label={t("title")}>
+    <section
+      id="zaehler"
+      className={ui.card}
+      data-testid="property-meters"
+      aria-label={t("title")}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={ui.subtitle}>{t("title")}</h2>
         {canCreate && !adding ? (
-          <button type="button" className={ui.buttonSm} onClick={() => setAdding(true)}>
+          <button
+            type="button"
+            className={ui.buttonSm}
+            onClick={() => setAdding(true)}
+          >
             {t("add")}
           </button>
         ) : null}
@@ -233,56 +417,292 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
                 <th>{t("location")}</th>
                 <th>{t("validity")}</th>
                 <th>{t("calibrationDue")}</th>
-                {canEdit ? <th /> : null}
+                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className={row.valid_to && row.valid_to < todayIso() ? "text-muted" : undefined}>
+                <tr
+                  key={row.id}
+                  className={
+                    row.valid_to && row.valid_to < todayIso()
+                      ? "text-muted"
+                      : undefined
+                  }
+                >
                   <td>
-                    <span className={`${ui.mono} font-medium`}>{row.number}</span>
+                    <span className={`${ui.mono} font-medium`}>
+                      {row.number}
+                    </span>
                     {editing === row.id && editDraft ? (
-                      <div className="mt-2 flex flex-col gap-3 border-t border-border pt-3" data-testid="meter-edit">
+                      <div
+                        className="mt-2 flex flex-col gap-3 border-t border-border pt-3"
+                        data-testid="meter-edit"
+                      >
                         {form(editDraft, setEditDraft, false)}
                         <div className={ui.formActions}>
-                          <button type="button" className={ui.primary} disabled={busy || !draftValid(editDraft)} onClick={() => void save(row.id)}>
+                          <button
+                            type="button"
+                            className={ui.primary}
+                            disabled={busy || !draftValid(editDraft)}
+                            onClick={() => void save(row.id)}
+                          >
                             {t("save")}
                           </button>
-                          <button type="button" className={ui.button} onClick={() => setEditing(null)}>
+                          <button
+                            type="button"
+                            className={ui.button}
+                            onClick={() => setEditing(null)}
+                          >
                             {t("cancel")}
                           </button>
                         </div>
                       </div>
                     ) : null}
                     {changing === row.id ? (
-                      <div className="mt-2 flex flex-col gap-3 border-t border-border pt-3" data-testid="meter-change">
-                        <p className="text-sm">{t("changeHint", { number: row.number })}</p>
+                      <div
+                        className="mt-2 flex flex-col gap-3 border-t border-border pt-3"
+                        data-testid="meter-change"
+                      >
+                        <p className="text-sm">
+                          {t("changeHint", { number: row.number })}
+                        </p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <label className={ui.label}>
                             {t("changedOn")}
-                            <input type="date" className={ui.input} value={change.changed_on} onChange={(e) => setChange({ ...change, changed_on: e.target.value })} required />
+                            <input
+                              type="date"
+                              className={ui.input}
+                              value={change.changed_on}
+                              onChange={(e) =>
+                                setChange({
+                                  ...change,
+                                  changed_on: e.target.value,
+                                })
+                              }
+                              required
+                            />
                           </label>
                           <label className={ui.label}>
                             {t("newNumber")}
-                            <input className={ui.input} value={change.new_number} onChange={(e) => setChange({ ...change, new_number: e.target.value })} maxLength={100} />
+                            <input
+                              className={ui.input}
+                              value={change.new_number}
+                              onChange={(e) =>
+                                setChange({
+                                  ...change,
+                                  new_number: e.target.value,
+                                })
+                              }
+                              maxLength={100}
+                            />
                           </label>
                           <label className={ui.label}>
                             {t("oldFinalValue")}
-                            <input className={ui.input} inputMode="decimal" value={change.old_final_value} onChange={(e) => setChange({ ...change, old_final_value: e.target.value })} required />
+                            <input
+                              className={ui.input}
+                              inputMode="decimal"
+                              value={change.old_final_value}
+                              onChange={(e) =>
+                                setChange({
+                                  ...change,
+                                  old_final_value: e.target.value,
+                                })
+                              }
+                              required
+                            />
                           </label>
                           <label className={ui.label}>
                             {t("newInitialValue")}
-                            <input className={ui.input} inputMode="decimal" value={change.new_initial_value} onChange={(e) => setChange({ ...change, new_initial_value: e.target.value })} required />
+                            <input
+                              className={ui.input}
+                              inputMode="decimal"
+                              value={change.new_initial_value}
+                              onChange={(e) =>
+                                setChange({
+                                  ...change,
+                                  new_initial_value: e.target.value,
+                                })
+                              }
+                              required
+                            />
                           </label>
                         </div>
                         <div className={ui.formActions}>
-                          <button type="button" className={ui.primary} disabled={busy || !changeValid} onClick={() => void replace(row.id)}>
+                          <button
+                            type="button"
+                            className={ui.primary}
+                            disabled={busy || !changeValid}
+                            onClick={() => void replace(row.id)}
+                          >
                             {t("recordChange")}
                           </button>
-                          <button type="button" className={ui.button} onClick={() => setChanging(null)}>
+                          <button
+                            type="button"
+                            className={ui.button}
+                            onClick={() => setChanging(null)}
+                          >
                             {t("cancel")}
                           </button>
                         </div>
+                      </div>
+                    ) : null}
+                    {readingsOf === row.id ? (
+                      <div
+                        className="mt-2 flex flex-col gap-3 border-t border-border pt-3"
+                        data-testid="meter-readings"
+                        aria-label={t("readingsTitle", { number: row.number })}
+                      >
+                        <p className="text-sm font-medium">
+                          {t("readingsTitle", { number: row.number })}
+                        </p>
+                        {readings.length === 0 ? (
+                          <p className="text-sm text-muted">
+                            {t("readingsEmpty")}
+                          </p>
+                        ) : (
+                          <div className={ui.tableScroll}>
+                            <table className={ui.table}>
+                              <thead>
+                                <tr>
+                                  <th>{t("readAt")}</th>
+                                  <th className="text-right">{t("value")}</th>
+                                  <th>{t("source")}</th>
+                                  <th>{t("readingNotes")}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {readings.map((r) => (
+                                  <tr key={r.id}>
+                                    <td className="whitespace-nowrap">
+                                      {formatDate(r.read_at)}
+                                    </td>
+                                    <td className={`${ui.mono} text-right`}>
+                                      {formatDecimal(r.value, 3)}
+                                    </td>
+                                    <td>
+                                      {t(
+                                        `sources.${(READING_SOURCES as readonly string[]).includes(r.source) ? r.source : "manual"}`,
+                                      )}
+                                      {r.estimated
+                                        ? ` (${t("estimated")})`
+                                        : ""}
+                                    </td>
+                                    <td>
+                                      {r.notes ?? ""}
+                                      {r.implausible || flagged.has(r.id) ? (
+                                        <span
+                                          role="status"
+                                          className="ml-1 text-warning-fg"
+                                        >
+                                          {t("implausible")}
+                                        </span>
+                                      ) : null}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        {canEdit ? (
+                          <>
+                            <p className={ui.help}>{t("readingsHint")}</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className={ui.label}>
+                                {t("readAt")}
+                                <input
+                                  type="date"
+                                  className={ui.input}
+                                  value={reading.read_at}
+                                  onChange={(e) =>
+                                    setReading({
+                                      ...reading,
+                                      read_at: e.target.value,
+                                    })
+                                  }
+                                  required
+                                />
+                              </label>
+                              <label className={ui.label}>
+                                {t("value")}
+                                <input
+                                  className={ui.input}
+                                  inputMode="decimal"
+                                  value={reading.value}
+                                  onChange={(e) =>
+                                    setReading({
+                                      ...reading,
+                                      value: e.target.value,
+                                    })
+                                  }
+                                  required
+                                />
+                              </label>
+                              <label className={ui.label}>
+                                {t("source")}
+                                <select
+                                  className={ui.input}
+                                  value={reading.source}
+                                  onChange={(e) =>
+                                    setReading({
+                                      ...reading,
+                                      source: e.target.value,
+                                    })
+                                  }
+                                >
+                                  {READING_SOURCES.map((code) => (
+                                    <option key={code} value={code}>
+                                      {t(`sources.${code}`)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className={ui.label}>
+                                {t("readingNotes")}
+                                <input
+                                  className={ui.input}
+                                  value={reading.notes}
+                                  onChange={(e) =>
+                                    setReading({
+                                      ...reading,
+                                      notes: e.target.value,
+                                    })
+                                  }
+                                  maxLength={500}
+                                />
+                              </label>
+                              <label className="inline-flex items-center gap-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={reading.estimated}
+                                  onChange={(e) =>
+                                    setReading({
+                                      ...reading,
+                                      estimated: e.target.checked,
+                                    })
+                                  }
+                                />
+                                {t("estimated")}
+                              </label>
+                            </div>
+                            <div className={ui.formActions}>
+                              <button
+                                type="button"
+                                className={ui.primary}
+                                disabled={busy || !readingValid}
+                                onClick={() => void addReading(row.id)}
+                              >
+                                {t("addReading")}
+                              </button>
+                            </div>
+                          </>
+                        ) : null}
+                        {readingError ? (
+                          <p role="alert" className={ui.alert}>
+                            {readingError}
+                          </p>
+                        ) : null}
                       </div>
                     ) : null}
                   </td>
@@ -291,36 +711,58 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
                   <td>{row.location ?? ""}</td>
                   <td className="whitespace-nowrap">
                     {formatDate(row.valid_from)}
-                    {row.valid_to ? ` ${t("until")} ${formatDate(row.valid_to)}` : ""}
+                    {row.valid_to
+                      ? ` ${t("until")} ${formatDate(row.valid_to)}`
+                      : ""}
                   </td>
-                  <td className="whitespace-nowrap">{row.calibration_due_date ? formatDate(row.calibration_due_date) : ""}</td>
-                  {canEdit ? (
-                    <td className="whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          className={ui.buttonSm}
-                          onClick={() => {
-                            setChanging(null);
-                            setEditing(row.id);
-                            setEditDraft(draftOf(row));
-                          }}
-                        >
-                          {t("edit")}
-                        </button>
-                        <button
-                          type="button"
-                          className={ui.buttonSm}
-                          onClick={() => {
-                            setEditing(null);
-                            setChanging(row.id);
-                          }}
-                        >
-                          {t("change")}
-                        </button>
-                      </div>
-                    </td>
-                  ) : null}
+                  <td className="whitespace-nowrap">
+                    {row.calibration_due_date
+                      ? formatDate(row.calibration_due_date)
+                      : ""}
+                  </td>
+                  <td className="whitespace-nowrap">
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        className={ui.buttonSm}
+                        aria-expanded={readingsOf === row.id}
+                        onClick={() =>
+                          readingsOf === row.id
+                            ? setReadingsOf(null)
+                            : void openReadings(row.id)
+                        }
+                      >
+                        {t("readings")}
+                      </button>
+                      {canEdit ? (
+                        <>
+                          <button
+                            type="button"
+                            className={ui.buttonSm}
+                            onClick={() => {
+                              setChanging(null);
+                              setReadingsOf(null);
+                              setEditing(row.id);
+                              setEditDraft(draftOf(row));
+                            }}
+                          >
+                            {t("edit")}
+                          </button>
+                          <button
+                            type="button"
+                            className={ui.buttonSm}
+                            onClick={() => {
+                              setEditing(null);
+                              setReadingsOf(null);
+                              setChanging(row.id);
+                            }}
+                          >
+                            {t("change")}
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -328,13 +770,28 @@ export function MetersPanel({ propertyId, rows, units, canEdit, canCreate }: { p
         </div>
       )}
       {adding ? (
-        <div role="dialog" aria-modal="false" aria-label={t("add")} className="mt-3 flex flex-col gap-3 border-t border-border pt-3" data-testid="meter-add">
+        <div
+          role="dialog"
+          aria-modal="false"
+          aria-label={t("add")}
+          className="mt-3 flex flex-col gap-3 border-t border-border pt-3"
+          data-testid="meter-add"
+        >
           {form(draft, setDraft, true)}
           <div className={ui.formActions}>
-            <button type="button" className={ui.primary} disabled={busy || !draft.number.trim() || !draftValid(draft)} onClick={() => void add()}>
+            <button
+              type="button"
+              className={ui.primary}
+              disabled={busy || !draft.number.trim() || !draftValid(draft)}
+              onClick={() => void add()}
+            >
               {t("create")}
             </button>
-            <button type="button" className={ui.button} onClick={() => setAdding(false)}>
+            <button
+              type="button"
+              className={ui.button}
+              onClick={() => setAdding(false)}
+            >
               {t("cancel")}
             </button>
           </div>

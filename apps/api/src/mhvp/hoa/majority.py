@@ -466,6 +466,7 @@ async def delete_subject_rule(
 @router.get(
     "/resolutions/{resolution_id}/majority-check",
     summary="Mehrheitsprüfung eines Beschlusses (nur Anzeige, keine Statusänderung)",
+    dependencies=[Depends(strict_query)],
 )
 async def resolution_majority_check(
     resolution_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
