@@ -345,6 +345,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^tenant/webhook-deliveries/${ID}/redeliver$`) },
   { method: "GET", pattern: /^tenant\/settings$/ },
   { method: "PATCH", pattern: /^tenant\/settings$/ },
+  // AG03 (GAF-11): platform wide switches (platform administrators only, checked by the API).
+  { method: "GET", pattern: /^platform\/settings$/ },
+  { method: "PATCH", pattern: /^platform\/settings$/ },
   // Rechnungsstellung und Steuer (M13-04/M18-01, operator decision 25.09.2026).
   { method: "GET", pattern: /^tenant\/billing-settings$/ },
   { method: "PATCH", pattern: /^tenant\/billing-settings$/ },
@@ -457,6 +460,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^accounting/open-items/${ID}/notice-received$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/liquidity$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payment-type-accounts$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/revenue$`) },
   { method: "GET", pattern: /^accounting\/rule-versions\/due-checkpoints$/ },
   { method: "GET", pattern: /^accounting\/rule-versions\/checkpoints$/ },
@@ -584,6 +588,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/notes$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/notes$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/(lock|sync-creditors)$`) },
+  // AG02 (GAC-05): leading system per process kind (read, request, decision by a second person).
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/leading-switches$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/leading-switches$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/leading-switches/${ID}/decide$`) },
   // AF05 (GAF-05): tax flags per account, revenue account per payment type, debtor accounts from contracts.
   { method: "PUT", pattern: new RegExp(`^accounting/ledgers/${ID}/accounts/${ID}/tax-flags$`) },
   { method: "PUT", pattern: new RegExp(`^accounting/ledgers/${ID}/payment-type-accounts$`) },
@@ -835,6 +843,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Umlaufbeschluss mit abgesenkter Mehrheit (M25-02): recording and the per tenant switch.
   { method: "POST", pattern: /^hoa\/circular-resolutions$/ },
   { method: "GET", pattern: /^hoa\/circular-lower-majority$/ },
+  // AG07 (GAF-32): portal circular votes (read only) and the portal switch.
+  { method: "GET", pattern: /^hoa\/(portal-circular-votes|portal-circular-settings)$/ },
+  { method: "GET", pattern: new RegExp(`^hoa/meetings/${ID}/portal-circular-votes$`) },
+  { method: "PUT", pattern: /^hoa\/portal-circular-settings$/ },
   // M14-02 (U01): Auswahl für Beschluss und Wirtschaftsplanposition in der Rechnungserfassung.
   { method: "GET", pattern: /^hoa\/(plans|resolutions)$/ },
   { method: "GET", pattern: new RegExp(`^hoa/plans/${ID}$`) },
@@ -886,6 +898,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^hoa\/reserve-payment-settings$/ },
   { method: "GET", pattern: /^hoa\/correction-report-settings$/ },
   { method: "PUT", pattern: /^hoa\/correction-report-settings$/ },
+  { method: "GET", pattern: /^hoa\/allocation-proposal-settings$/ },
+  { method: "PUT", pattern: /^hoa\/allocation-proposal-settings$/ },
+  { method: "GET", pattern: /^hoa\/statements\/[0-9a-f-]{36}\/allocation-proposal$/ },
   { method: "POST", pattern: new RegExp(`^hoa/inspection-requests/ownership-transfers/scan$`) },
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements$`) },
   { method: "DELETE", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements/${ID}$`) },
@@ -1076,6 +1091,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
   // Arbeitsaufträge (A74): Terminvorschläge je Auftrag für die Kurzanzeige im Ticket und die Auftragsseite.
   { method: "GET", pattern: new RegExp(`^work-orders/${ID}/appointment-proposals$`) },
+  { method: "GET", pattern: new RegExp(`^work-orders/${ID}/rating$`) },
+  { method: "POST", pattern: new RegExp(`^work-orders/${ID}/rating$`) },
   // Auftragsliste und Auftragsdetail, Teams, Kommentarliste (M19-01, M19-02, M19-07).
   { method: "GET", pattern: /^work-orders$/ },
   { method: "GET", pattern: new RegExp(`^work-orders/${ID}$`) },
@@ -1137,6 +1154,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^objektakte\/ai-calls\/summary$/ },
   // M35 Parallelbetrieb: Abgleichbericht objektakte gegen CRM, Vorschaubild-Übernahme, lokales Modell.
   { method: "GET", pattern: /^objektakte\/reconciliation$/ },
+  { method: "POST", pattern: /^objektakte\/imports$/ },
+  { method: "GET", pattern: new RegExp(`^objektakte/imports/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^objektakte/imports/${ID}/ocr-cache$`) },
   { method: "GET", pattern: /^objektakte\/previews\/import$/ },
   { method: "POST", pattern: /^objektakte\/previews\/import$/ },
   { method: "GET", pattern: new RegExp(`^objektakte/previews/documents/${ID}$`) },
@@ -1518,6 +1538,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^letting\/openimmo-import\/preview$/ },
   { method: "POST", pattern: new RegExp(`^letting/openimmo-import/${ID}/rows/${ID}/apply$`) },
   { method: "POST", pattern: /^handover\/imports\/uprotokoll(\/files)?$/ },
+  { method: "GET", pattern: /^accounting\/invoices$/ }, // AG14: Auswahl für den Lexware Export
   { method: "POST", pattern: /^integrations\/lexoffice\/(import\/receipts|export\/contacts|export\/invoices)$/ },
   { method: "GET", pattern: /^ai\/fast-table-import$/ },
   { method: "PUT", pattern: /^ai\/fast-table-import$/ },
@@ -1527,7 +1548,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|mail/messages/${ID}/attachments/upload|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|imports/migration/ledgers/${ID}/opening-balances/import|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
+  `^(documents|mail/messages/${ID}/attachments/upload|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|imports/migration/ledgers/${ID}/opening-balances/import|objektakte/imports(/${ID}/ocr-cache)?|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;

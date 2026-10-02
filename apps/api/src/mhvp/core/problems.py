@@ -790,6 +790,16 @@ class ErrorCodes:
             "release gate G1 is open (AE03, BK2-03)."
         ),
     )
+    OUTGOING_SWITCH_REQUEST_REQUIRED = ErrorCode(
+        "MHVP-BANK-0064",
+        409,
+        "Einschalten der Ausgangsautomatik nur über Antrag",
+        (
+            "PUT /banking/automation/outgoing only switches off. Switching on needs a request "
+            "with target outgoing (POST /banking/automation/switch-requests) approved by a "
+            "second person while release gate G1 is open (AG19, AF25-01)."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,
@@ -1456,6 +1466,13 @@ class ErrorCodes:
         403,
         "Online-Versammlung im Eigentümerportal ist für diesen Mandanten nicht freigeschaltet",
         "hoa_online_meeting_setting.enabled is false or missing (default off, AD06).",
+    )
+    # AG07 / GAF-32: circular resolution votes in the owner portal, tenant switch (default off).
+    HOA_PORTAL_CIRCULAR_DISABLED = ErrorCode(
+        "MHVP-HOA-0037",
+        403,
+        "Umlaufbeschluss im Eigentümerportal ist für diesen Mandanten nicht freigeschaltet",
+        "hoa_online_meeting_setting.portal_circular_resolution_enabled is false (AG07).",
     )
     HOA_RESERVE_OPENING_LOCKED = ErrorCode(
         "MHVP-HOA-0005",

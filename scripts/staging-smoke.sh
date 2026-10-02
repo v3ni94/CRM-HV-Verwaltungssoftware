@@ -4,12 +4,16 @@
 #   STAGING_API_URL   e.g. https://api.staging.mueller-holding.ag   (required)
 #   STAGING_CRM_URL   e.g. https://crm.staging.mueller-holding.ag   (required)
 #   STAGING_PORTAL_URL optional
+#   MHVP_AVAILABILITY_*_URL optional (Verfügbarkeitsprüfung je Dienst, nur lesend)
 # Refuses production hosts by name so that the target cannot be mixed up.
 set -euo pipefail
 
 : "${STAGING_API_URL:?STAGING_API_URL must be set}"
 : "${STAGING_CRM_URL:?STAGING_CRM_URL must be set}"
-for url in "$STAGING_API_URL" "$STAGING_CRM_URL" "${STAGING_PORTAL_URL:-}"; do
+avail_vars="$(compgen -A variable | grep -E '^MHVP_AVAILABILITY_.*_URL$' || true)"
+avail_urls=()
+for v in $avail_vars; do avail_urls+=("${!v}"); done
+for url in "$STAGING_API_URL" "$STAGING_CRM_URL" "${STAGING_PORTAL_URL:-}" "${avail_urls[@]:-}"; do
   [[ -z "$url" ]] && continue
   case "$url" in
     *staging*|*localhost*|*127.0.0.1*) ;;
@@ -35,6 +39,9 @@ check "api ready (database, redis, storage)" "$API/health/ready" '^200$'
 check "api rejects anonymous access" "$API/platform/ops/metrics" '^(401|403)$'
 check "crm login page (anmelden)" "${STAGING_CRM_URL%/}/anmelden" '^(200|307|308)$'
 [[ -z "${STAGING_PORTAL_URL:-}" ]] || check "portal" "${STAGING_PORTAL_URL%/}/" '^(200|307|308)$'
+for v in $avail_vars; do
+  [[ -z "${!v}" ]] || check "availability $v" "${!v}" '^(200|204)$'
+done
 version="$(curl -sS --max-time 15 "$API/health/ready" 2>/dev/null | head -c 300 || true)"
 echo "info  ready answer: ${version:-none}"
 exit "$failed"

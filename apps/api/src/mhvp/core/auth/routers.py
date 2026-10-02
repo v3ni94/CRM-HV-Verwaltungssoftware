@@ -250,6 +250,8 @@ class MeOut(BaseModel):
     # UI preferences (operator 27.09.2026, migration 0182), served with getMe so the main
     # navigation renders its stored state without a flash of the wrong layout.
     ui_preferences: dict[str, Any] = Field(default_factory=dict)
+    # AF19-R: the tenant carries the demo flag (migration 0392); drives the demo banner.
+    is_demo: bool = False
 
 
 # Accepted keys of ``User.ui_preferences`` (rule: only these are ever written, unknown keys are
@@ -1148,6 +1150,16 @@ async def put_mfa_policy(
     return _policy_out(policy, known)
 
 
+async def _tenant_is_demo(request: Request, principal: Principal) -> bool:
+    """Demo flag of the principal's tenant (``tenant`` has no RLS); False without a tenant."""
+    if principal.tenant_id is None:
+        return False
+    from mhvp.platform.demo import is_demo_tenant
+
+    async with platform_transaction(sessions(request)) as session:
+        return await is_demo_tenant(session, principal.tenant_id)
+
+
 @router.get("/me", summary="Aktueller Benutzer und Berechtigungen")
 async def me(request: Request, principal: Principal = Depends(get_principal)) -> MeOut:
     email = name = None
@@ -1173,6 +1185,7 @@ async def me(request: Request, principal: Principal = Depends(get_principal)) ->
         totp_enabled=totp_enabled,
         mfa_required=await _mfa_required_here(request, principal),
         ui_preferences=ui_preferences,
+        is_demo=await _tenant_is_demo(request, principal),
     )
 
 
@@ -1213,4 +1226,5 @@ async def update_my_preferences(
         totp_enabled=totp_enabled,
         mfa_required=await _mfa_required_here(request, principal),
         ui_preferences=ui_preferences,
+        is_demo=await _tenant_is_demo(request, principal),
     )

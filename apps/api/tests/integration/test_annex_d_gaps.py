@@ -1051,29 +1051,58 @@ def test_d24_open_advances_shown_apart_calculation_creates_no_claim_and_issue_is
     assert len(_entries(client, h, ledger)) == entries_before
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Defekt D24 (Anhang D: kein doppelter wirtschaftlicher Anspruch), Behandlung hängt an "
-        "M17-03 und AC10-01 (Rechtsberatung, G3, docs/rules/AC10-d24.md): der Abrechnungssaldo wird gegen die "
-        "gezahlten Vorauszahlungen gerechnet (mhvp.billing.services, balance = costs - paid), "
-        "der offene Vorauszahlungsposten bleibt daneben unverändert offen. Ausgewiesene "
-        "Ansprüche 20,00 + 100,00 = 120,00 statt 20,00."
-    ),
+@pytest.mark.parametrize(
+    ("mode", "number"),
+    [("offset_reversal", "435"), ("balance_against_due", "436")],
 )
 def test_d24_statement_balance_and_open_advance_items_claim_the_open_amount_once(
-    client: TestClient, world: World
+    client: TestClient, world: World, mode: str, number: str
 ) -> None:
-    """D24 forbidden error (double economic claim), arithmetic only: costs 120,00 minus paid
-    advances 100,00 = 20,00 is all the tenant owes for the period, whatever advance rule is
-    released. The statement balance plus the advance items still open must not exceed it."""
+    """D24 forbidden error (double economic claim), per variant of the tenant switch
+    open_advance_mode (AC10-01, M17-03 open, switch default info_only, effect behind G3):
+    costs 120,00 minus paid advances 100,00 = 20,00 is all the tenant owes for the period.
+
+    * offset_reversal (A): balance 120,00 - 100,00 = 20,00; the open item 100,00 is offset
+      against the result (draft entry at result booking, behind G3) -> 20,00 + 100,00 - 100,00.
+    * balance_against_due (B): balance 120,00 - 200,00 = -80,00; the open item 100,00 stays
+      with its own legal ground -> -80,00 + 100,00 = 20,00.
+    Posting of the offset behind G3: test_ae15_open_advance_mode."""
     h = bearer(login(client, world, "gapadmin"))
-    w = _d24_world(client, h, "434")
-    result = _ok(client.post(f"{S}/{w['statement']['id']}/calculate", headers=h))
+    put = client.put("/api/v1/billing/advance-rule", json={"open_advance_mode": mode}, headers=h)
+    assert put.status_code == 200, put.text
+    try:
+        w = _d24_world(client, h, number)
+        result = _ok(client.post(f"{S}/{w['statement']['id']}/calculate", headers=h))
+    finally:
+        reset = client.put(
+            "/api/v1/billing/advance-rule", json={"open_advance_mode": "info_only"}, headers=h
+        )
+        assert reset.status_code == 200, reset.text
     (row,) = result["snapshot"]["results"]
     owed = Decimal(row["costs"]) - Decimal(row["advances_paid"])
     assert owed == Decimal("20.00")
-    visible = max(Decimal(row["balance"]), Decimal("0.00")) + _open_remaining(
-        client, h, w["ledger"]
+    open_now = _open_remaining(client, h, w["ledger"])
+    assert open_now == Decimal("100.00")  # calculation posts nothing
+    offset = sum((Decimal(i["remaining"]) for i in row["offset_items"]), Decimal("0.00"))
+    assert Decimal(row["balance"]) + open_now - offset == owed
+    assert Decimal(row["net_claim"]) == owed
+    expected_balance = {"offset_reversal": "20.00", "balance_against_due": "-80.00"}[mode]
+    assert row["balance"] == expected_balance
+    assert row["calculation_steps"]  # calculation disclosed
+
+
+def test_d24_default_info_only_keeps_double_view_until_ac10_01(
+    client: TestClient, world: World
+) -> None:
+    """Default info_only (decision AC10-01 open): today's behaviour stays, the combined view
+    20,00 + 100,00 = 120,00 is disclosed, not offset; no automatic treatment."""
+    h = bearer(login(client, world, "gapadmin"))
+    w = _d24_world(client, h, "437")
+    result = _ok(client.post(f"{S}/{w['statement']['id']}/calculate", headers=h))
+    (row,) = result["snapshot"]["results"]
+    assert (row["open_advance_mode"], row["balance"], row["net_claim"]) == (
+        "info_only",
+        "20.00",
+        "120.00",
     )
-    assert visible == owed
+    assert row["offset_items"] == []

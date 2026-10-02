@@ -378,6 +378,10 @@ class Vote(IdMixin, TenantMixin, Base):
     # "proxy against own vote" rule; null on votes recorded before the migration (own).
     proxy_id: Mapped[uuid.UUID | None] = _fk("meeting_proxy.id", ondelete="SET NULL")
     cast_source: Mapped[str | None] = mapped_column(String(8))
+    # AG07 (GAF-32, migration 0425): evidence of a portal circular vote, the portal user and
+    # the SHA-256 of the item text (title and proposal) the owner voted on.
+    portal_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    wording_sha256: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
@@ -779,6 +783,10 @@ class HoaOnlineMeetingSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     proxy_conflict_mode: Mapped[str] = mapped_column(
         String(16), nullable=False, default="flag", server_default="flag"
     )
+    # AG07 (GAF-32, migration 0425): circular resolution votes in the owner portal, default off.
+    portal_circular_resolution_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     __table_args__ = (
         UniqueConstraint("tenant_id"),
         CheckConstraint(
@@ -1019,6 +1027,19 @@ class HoaCorrectionReportSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     only, no posting, no claim, no dispatch."""
 
     __tablename__ = "hoa_correction_report_setting"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+
+class HoaAllocationProposalSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AG20 / GAE-12 (W07, P01, migration 0438): tenant switch for the allocation proposal of
+    ``calc.allocation_owner`` in the plan takeover preview and per statement. Default off (no
+    row means off); display only, the takeover and the result posting stay unchanged."""
+
+    __tablename__ = "hoa_allocation_proposal_setting"
     __table_args__ = (UniqueConstraint("tenant_id"),)
 
     enabled: Mapped[bool] = mapped_column(

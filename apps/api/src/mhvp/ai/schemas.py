@@ -51,6 +51,11 @@ class ProviderIn(_In):
     training_opt_out_confirmed: bool = False
     endpoint_region: str | None = Field(default=None, max_length=32)
     enabled: bool = False
+    # Provider batch for deferred runs (GAB-09); None leaves the stored value unchanged.
+    batch_enabled: bool | None = None
+    batch_price_factor: Decimal | None = Field(
+        default=None, gt=0, le=1, max_digits=20, decimal_places=8
+    )
 
 
 class ProviderOut(_Out):
@@ -66,6 +71,8 @@ class ProviderOut(_Out):
     enabled: bool
     released_at: datetime | None
     released_by: uuid.UUID | None
+    batch_enabled: bool
+    batch_price_factor: Decimal
 
 
 class TierTestOut(BaseModel):

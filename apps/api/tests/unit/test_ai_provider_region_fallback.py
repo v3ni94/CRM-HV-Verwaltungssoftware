@@ -233,6 +233,42 @@ async def test_openai_complete_parses_structured_output_and_usage() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         seen["url"] = str(request.url)
         seen["body"] = json.loads(request.content)
+        if seen["url"].endswith("/responses"):  # Responses API (GAB-10), recorded shape
+            return httpx.Response(
+                200,
+                json={
+                    "id": "resp_x",
+                    "object": "response",
+                    "created_at": 0,
+                    "status": "completed",
+                    "model": "m-configured",
+                    "output": [
+                        {
+                            "id": "msg_x",
+                            "type": "message",
+                            "role": "assistant",
+                            "status": "completed",
+                            "content": [
+                                {
+                                    "type": "output_text",
+                                    "text": '{"summary": "ok"}',
+                                    "annotations": [],
+                                }
+                            ],
+                        }
+                    ],
+                    "parallel_tool_calls": True,
+                    "tool_choice": "auto",
+                    "tools": [],
+                    "usage": {
+                        "input_tokens": 12,
+                        "input_tokens_details": {"cached_tokens": 0},
+                        "output_tokens": 3,
+                        "output_tokens_details": {"reasoning_tokens": 0},
+                        "total_tokens": 15,
+                    },
+                },
+            )
         return httpx.Response(
             200,
             json={
@@ -267,7 +303,9 @@ async def test_openai_complete_parses_structured_output_and_usage() -> None:
     assert (result.tokens_in, result.tokens_out) == (12, 3)
     assert seen["url"].startswith("https://eu.api.openai.com/v1/")
     assert seen["body"]["model"] == "m-configured"
-    assert seen["body"]["response_format"]["type"] == "json_schema"
+    assert seen["url"].endswith("/responses")
+    assert seen["body"]["text"]["format"]["type"] == "json_schema"
+    assert seen["body"]["text"]["format"]["strict"] is True
 
 
 @pytest.mark.parametrize(("status", "retryable"), [(429, True), (503, True), (400, False)])

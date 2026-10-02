@@ -58,7 +58,7 @@ test.describe("CRM core paths GA01-06 @backend", () => {
     await expect(page).toHaveURL(/\/vertraege\/neu/);
     await expect(page.getByRole("combobox", { name: "Objekt", exact: true })).toHaveValue(property!.id, { timeout: 30_000 });
     // Without partner and unit the form must not create a contract.
-    await page.getByRole("button", { name: /Speichern|Anlegen/ }).first().click();
+    await page.getByRole("button", { name: /Speichern|Anlegen/i }).first().click();
     await expect(page).toHaveURL(/\/vertraege\/neu/);
   });
 

@@ -26,12 +26,16 @@ MANUAL_BASES = frozenset(
 # the active ``PortalRepresentation`` rows; they are read only and end with the power of attorney.
 REPRESENTATION_BASIS = "representation"
 STAFF_ACCESS_LEGAL_BASIS = "staff_access"
+# AG12 (AF15-R): owner of a rental property (Mietverwaltung, ``property_owner``) without an
+# ownership contract: read access to the own ``rental_owner`` legal entity only, for the
+# owner's period. Derived again on every resync, so an owner change revokes it.
+RENTAL_OWNER_BASIS = "rental_owner_right"
 
 
 async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
     from mhvp.contacts.models import PartyMember
     from mhvp.contracts.models import Contract, ContractKind
-    from mhvp.properties.models import LegalEntity, LegalEntityKind
+    from mhvp.properties.models import LegalEntity, LegalEntityKind, PropertyOwner
 
     await session.execute(
         delete(AccessGrant).where(
@@ -78,6 +82,36 @@ async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
             )
             if hoa is not None:
                 grant(("legal_entity", hoa), "download", "hoa_member_right", "owner", c)
+    owners = (
+        (
+            await session.scalars(select(PropertyOwner).where(PropertyOwner.party_id.in_(parties)))
+        ).all()
+        if parties
+        else []
+    )
+    for po in owners:
+        entity = await session.scalar(
+            select(LegalEntity.id).where(
+                LegalEntity.property_id == po.property_id,
+                LegalEntity.party_id == po.party_id,
+                LegalEntity.kind == LegalEntityKind.RENTAL_OWNER,
+            )
+        )
+        if entity is None:
+            continue
+        rows.append(
+            AccessGrant(
+                tenant_id=account.tenant_id,
+                account_id=account.id,
+                scope_type="legal_entity",
+                scope_id=entity,
+                right="download",
+                legal_basis=RENTAL_OWNER_BASIS,
+                role="owner",
+                valid_from=po.valid_from,
+                valid_to=po.valid_to,
+            )
+        )
     rows.extend(await _representation_grants(session, account))
     session.add_all(rows)
     # GA02-07: roles of the account follow the access matrix (tenant, owner).
@@ -197,7 +231,7 @@ async def grants(session: AsyncSession, account: PortalAccount, today: date) -> 
 
 def roles(active: list[AccessGrant], is_provider: bool) -> set[str]:
     out = set()
-    if any(g.legal_basis == "hoa_member_right" for g in active):
+    if any(g.legal_basis in ("hoa_member_right", RENTAL_OWNER_BASIS) for g in active):
         out.add("owner")
     if any(g.legal_basis == "contract" and g.scope_type == "contract" for g in active):
         out.add("tenant_or_owner")

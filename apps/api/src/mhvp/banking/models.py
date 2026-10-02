@@ -1120,6 +1120,7 @@ class AutoPostingSwitchRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "auto_posting_switch_request"
     __table_args__ = (
         CheckConstraint("status IN ('requested', 'approved', 'rejected')", name="status"),
+        CheckConstraint("target IN ('main', 'outgoing')", name="target"),
         Index("ix_auto_posting_switch_request_status", "tenant_id", "status"),
     )
 
@@ -1129,6 +1130,11 @@ class AutoPostingSwitchRequest(IdMixin, TimestampMixin, TenantMixin, Base):
         nullable=False,
         default=SwitchRequestStatus.REQUESTED.value,
         server_default="requested",
+    )
+    # AG19 (AF25-01, migration 0437): ``main`` sets auto_posting_enabled, ``outgoing`` sets
+    # auto_posting_outgoing_enabled; both need G1 and a second person.
+    target: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="main", server_default="main"
     )
     requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

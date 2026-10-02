@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import or_, select
 
 from mhvp.core.auth.principal import tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.portal.owner import _owner_scope
 from mhvp.portal.routers import Portal, portal_user
 from mhvp.workspace.services import local_today
@@ -180,6 +181,161 @@ async def rental_income(request: Request, ctx: Portal = Depends(portal_user)) ->
                 entry["total_gross"] += gross
         items = [{**v, "total_gross": str(v["total_gross"])} for v in per_property.values()]
         return {"items": items, "currency": "EUR", "note": INCOME_NOTE, "enabled": True}
+
+
+REPORTING_NOTE = (
+    "Berichte zu den von uns für Sie verwalteten Einheiten: vereinbarte Miete, auf Mieter "
+    "umlagefähige Kosten laut ausgegebener Betriebskostenabrechnung und Leerstandstage je "
+    "Abrechnungszeitraum. Keine Mieternamen, kein Zahlungsstatus."
+)
+REPORTING_GATE_NOTE = (
+    "Das Eigentümerreporting ist für diesen Mandanten noch nicht freigegeben "
+    "(Freigabestufe G3). Bitte wenden Sie sich an die Verwaltung."
+)
+REPORTING_STATUSES = ("issued", "due", "posted", "locked")
+
+
+def _days_between(start: str, end: str, period_from: Any, period_to: Any) -> int:
+    from datetime import date as _date
+
+    lo = max(_date.fromisoformat(start), period_from)
+    hi = min(_date.fromisoformat(end), period_to)
+    return int(max((hi - lo).days + 1, 0))
+
+
+@router.get(
+    "/rental-reporting",
+    summary="Eigentümerreporting Kapitalanleger: Mieterträge, Umlagefähigkeit, Leerstand",
+    dependencies=[Depends(strict_query)],
+)
+async def rental_reporting(
+    request: Request, unit_id: uuid.UUID | None = None, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """Read only report per own special-administration unit and settlement period (GAF-34).
+
+    Off by default (``owner_rental_income_enabled``, question P13-01) and behind release gate
+    G3. Amounts come from the issued operating cost statement snapshot; nothing is recomputed
+    and nothing is posted. A foreign unit answers 404 without a hint."""
+    from mhvp.billing.models import Statement, StatementSnapshot
+    from mhvp.contracts.models import Contract, ContractKind, ContractPayment
+    from mhvp.core.problems import ErrorCodes, ProblemError
+    from mhvp.core.release_gates import (
+        ReleaseGate,
+        ReleaseGateClosedError,
+        ensure_release_gate_open,
+    )
+    from mhvp.portal import features as portal_features
+    from mhvp.properties.models import Property, Unit
+
+    principal, account = ctx
+    today = local_today()
+    async with tenant_tx(request, principal) as session:
+        _, ownership = await _owner_scope(session, account, today)
+        flags = await portal_features.get_or_default(session)
+        own_units: dict[uuid.UUID, Unit] = {}
+        if ownership:
+            rows = (
+                await session.scalars(
+                    select(Unit)
+                    .join(Contract, Contract.unit_id == Unit.id)
+                    .where(Contract.id.in_(ownership), Contract.sev_enabled.is_(True))
+                )
+            ).all()
+            own_units = {u.id: u for u in rows}
+        if unit_id is not None and unit_id not in own_units:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if not flags.owner_rental_income_enabled:
+            return {"items": [], "note": INCOME_LOCKED, "enabled": False, "currency": "EUR"}
+        try:
+            await ensure_release_gate_open(
+                ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
+            )
+        except ReleaseGateClosedError:
+            return {"items": [], "note": REPORTING_GATE_NOTE, "enabled": False, "currency": "EUR"}
+        items: list[dict[str, Any]] = []
+        selected = [u for u in own_units.values() if unit_id in (None, u.id)]
+        for unit in sorted(selected, key=lambda u: (str(u.property_id), u.number)):
+            prop = await session.get(Property, unit.property_id)
+            statements = (
+                await session.scalars(
+                    select(Statement)
+                    .where(
+                        Statement.property_id == unit.property_id,
+                        Statement.snapshot_id.is_not(None),
+                        Statement.status.in_(REPORTING_STATUSES),
+                    )
+                    .order_by(Statement.period_to.desc(), Statement.version.desc())
+                )
+            ).all()
+            superseded = {r.supersedes_id for r in statements if r.supersedes_id}
+            periods: list[dict[str, Any]] = []
+            for st in statements:
+                if st.id in superseded:
+                    continue
+                snap = await session.get(StatementSnapshot, st.snapshot_id)
+                if snap is None:
+                    continue
+                costs = Decimal("0.00")
+                for r in snap.results.get("results", []):
+                    if r.get("unit_number") == unit.number:
+                        costs += Decimal(r["costs"])
+                vacancy_days = sum(
+                    _days_between(o["from"], o["to"], st.period_from, st.period_to)
+                    for o in snap.inputs.get("occupants", [])
+                    if o.get("unit_id") == str(unit.id) and o.get("contract_id") is None
+                )
+                payments = (
+                    await session.scalars(
+                        select(ContractPayment)
+                        .join(Contract, Contract.id == ContractPayment.contract_id)
+                        .where(
+                            Contract.unit_id == unit.id,
+                            Contract.kind == ContractKind.TENANCY,
+                            Contract.start_date <= st.period_to,
+                            or_(Contract.end_date.is_(None), Contract.end_date >= st.period_to),
+                            ContractPayment.valid_from <= st.period_to,
+                            or_(
+                                ContractPayment.valid_to.is_(None),
+                                ContractPayment.valid_to >= st.period_to,
+                            ),
+                        )
+                    )
+                ).all()
+                periods.append(
+                    {
+                        "statement_id": st.id,
+                        "period_from": st.period_from,
+                        "period_to": st.period_to,
+                        "status": st.status.value,
+                        "agreed_rent_monthly_gross": str(
+                            sum((p.gross for p in payments), Decimal("0.00"))
+                        ),
+                        "allocable_costs_tenant": str(costs),
+                        "allocable_costs_property": snap.results.get("total", "0.00"),
+                        "vacancy_days": vacancy_days,
+                        "vacancy_owner_share_property": snap.results.get(
+                            "vacancy_owner_share", "0.00"
+                        ),
+                    }
+                )
+            items.append(
+                {
+                    "unit_id": unit.id,
+                    "unit_number": unit.number,
+                    "property_name": prop.name if prop else None,
+                    "periods": periods,
+                }
+            )
+        return {
+            "items": items,
+            "currency": "EUR",
+            "enabled": True,
+            "note": REPORTING_NOTE,
+            "allocability_note": (
+                "Nicht umlagefähige Kosten (zum Beispiel Verwaltung und Instandsetzung) sind "
+                "nicht Teil der Betriebskostenabrechnung und werden hier nicht ausgewiesen."
+            ),
+        }
 
 
 TAKEOVER_NOTE = (

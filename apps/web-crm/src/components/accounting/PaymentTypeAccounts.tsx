@@ -1,11 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+type Mapping = { payment_type_code: string; account_id: string; account_number: string; account_name: string };
 type Option = { id: string; number: string; name: string; category: string; active: boolean };
 
 /** GAF-05: revenue account per payment type (PUT payment-type-accounts). The API accepts
@@ -17,6 +18,16 @@ export function PaymentTypeAccounts({ ledgerId, accounts }: { ledgerId: string; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [mappings, setMappings] = useState<Mapping[]>([]);
+  useEffect(() => {
+    let alive = true;
+    void bff<Mapping[]>(`/api/bff/accounting/ledgers/${ledgerId}/payment-type-accounts`).then((res) => {
+      if (alive && res.ok && Array.isArray(res.data)) setMappings(res.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId]);
   const wanted = code.trim() === "vat_output" ? "tax" : "revenue";
   const choices = accounts.filter((a) => a.active && a.category === wanted);
   const submit = async (e: React.FormEvent) => {
@@ -31,11 +42,27 @@ export function PaymentTypeAccounts({ ledgerId, accounts }: { ledgerId: string; 
     setBusy(false);
     if (!res.ok) return setError(res.message);
     setSaved(true);
+    const acc = accounts.find((a) => a.id === accountId);
+    if (acc) {
+      const row = { payment_type_code: code.trim(), account_id: acc.id, account_number: acc.number, account_name: acc.name };
+      setMappings((m) => [...m.filter((x) => x.payment_type_code !== row.payment_type_code), row].sort((a, b) => a.payment_type_code.localeCompare(b.payment_type_code)));
+    }
   };
   return (
     <form onSubmit={submit} className={`${ui.card} flex flex-col gap-3`} aria-label={t("title")}>
       <h3 className="text-sm font-semibold">{t("title")}</h3>
       <p className={ui.help}>{t("help")}</p>
+      {mappings.length ? (
+        <ul className="text-sm" aria-label={t("existing")} data-testid="payment-type-mappings">
+          {mappings.map((m) => (
+            <li key={m.payment_type_code}>
+              {m.payment_type_code}: {m.account_number} {m.account_name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={ui.help}>{t("noneYet")}</p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("code")}</span>

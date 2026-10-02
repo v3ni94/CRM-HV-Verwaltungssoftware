@@ -80,6 +80,7 @@
       "audit": "Prüfungsraum",
       "resolutions": "Beschlüsse",
       "meetings": "Versammlungen",
+      "circulars": "Umlaufbeschlüsse",
       "contacts": "Ansprechpartner",
       "hoaAccount": "Hausgeldkonto",
       "representation": "Vertretung",
@@ -96,7 +97,9 @@
       "handover": "Übergabe",
       "ownerStatements": "Hausgeldabrechnung",
       "ownerPlans": "Wirtschaftsplan",
-      "ownerRentalStatements": "Eigentümerabrechnung"
+      "ownerReceipts": "Belegeinsicht",
+      "ownerRentalStatements": "Eigentümerabrechnung",
+      "ownerReporting": "Reporting"
     },
     "notifications": {
       "title": "Benachrichtigungen",
@@ -239,6 +242,14 @@
     "appointmentAccept": "Diesen Termin bestätigen",
     "appointmentAccepted": "Der Termin wurde bestätigt.",
     "appointmentConfirmed": "Bestätigter Termin",
+    "rating": "Auftrag bewerten",
+    "ratingHint": "Wie zufrieden waren Sie mit der Ausführung? Ihre Bewertung ist intern und wird nicht an den Handwerker weitergegeben.",
+    "ratingStars": "Sterne",
+    "ratingComment": "Anmerkung (optional)",
+    "ratingSubmit": "Bewertung abgeben",
+    "ratingDone": "Vielen Dank, Ihre Bewertung wurde gespeichert.",
+    "ratingOwn": "Ihre Bewertung: {stars} von 5 Sternen",
+    "ratingSummary": "Durchschnitt des Dienstleisters: {average} von 5 Sternen ({count} Bewertungen)",
     "appointmentsOpen": "Terminvorschlag liegt vor",
     "attachmentsList": "Anhänge der Meldung"
   },
@@ -749,6 +760,23 @@
       "photos": "Fotos"
     }
   },
+  "PortalCircular": {
+    "title": "Umlaufbeschlüsse",
+    "intro": "Laufende Umlaufverfahren Ihrer Gemeinschaft. Je Einheit und Beschlussantrag eine Stimme; die Verwaltung stellt das Ergebnis fest.",
+    "ownersOnly": "Nur für Eigentümer verfügbar.",
+    "disabled": "Die Stimmabgabe im Umlaufverfahren ist im Portal derzeit nicht freigeschaltet.",
+    "empty": "Derzeit laufen keine Umlaufverfahren.",
+    "deadline": "Frist: {date}",
+    "unit": "Einheit {id}",
+    "yes": "Ja",
+    "no": "Nein",
+    "abstain": "Enthaltung",
+    "voted": "Abgestimmt: {choice} am {at}",
+    "evidence": "Nachweis: Prüfsumme des Beschlusstexts {hash}",
+    "closed": "Abstimmung beendet.",
+    "confirm": "Stimme abgegeben.",
+    "error": "Fehler: {message}"
+  },
   "Meetings": {
     "title": "Versammlungen",
     "intro": "Eigentümerversammlungen Ihrer Gemeinschaft. Maßgeblich bleibt die Einladung der Verwaltung.",
@@ -1168,6 +1196,20 @@
     "revoke": "Einwilligung widerrufen",
     "active": "Die Verwaltung darf lesend Einsicht nehmen bis {until}."
   },
+  "OwnerReceipts": {
+    "title": "Belegeinsicht",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "year": "Abrechnungsjahr",
+    "allYears": "Alle Jahre",
+    "search": "Suche in der Bezeichnung",
+    "submit": "Anzeigen",
+    "empty": "Keine Belege gefunden.",
+    "disabled": "Die Belegeinsicht ist derzeit nicht freigeschaltet.",
+    "row": "{label}, Abrechnung {year}, Version {version}",
+    "open": "Beleg herunterladen",
+    "unavailable": "Für Sie nicht abrufbar",
+    "truncated": "Die Liste ist gekürzt, bitte Suche oder Jahr eingrenzen."
+  },
   "OwnerStatements": {
     "title": "Hausgeldabrechnung",
     "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
@@ -1203,10 +1245,23 @@
     "hoaFee": "Hausgeld",
     "reserve": "Erhaltungsrücklage"
   },
+  "OwnerReporting": {
+    "title": "Reporting Mieterträge",
+    "ownersOnly": "Das Reporting steht nur Eigentümern zur Verfügung.",
+    "empty": "Es liegt noch keine ausgegebene Betriebskostenabrechnung für Ihre Einheiten vor.",
+    "unit": "Einheit {unit}, {property}",
+    "period": "Zeitraum {from} bis {to}",
+    "rent": "Vereinbarte Miete monatlich (brutto)",
+    "allocableTenant": "Auf Mieter umlagefähige Kosten dieser Einheit",
+    "allocableProperty": "Umlagefähige Kosten des Objekts",
+    "vacancyDays": "Leerstandstage",
+    "vacancyShare": "Leerstandsanteil des Objekts zu Ihren Lasten"
+  },
   "OwnerRentalStatements": {
     "title": "Eigentümerabrechnung",
     "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
     "empty": "Es liegt keine ausgegebene Eigentümerabrechnung vor.",
+    "scope": "Angezeigt werden die Abrechnungen, die die Verwaltung für Sie als Eigentümer ausgegeben hat. Abrechnungen Ihrer Gemeinschaft als Vermieterin erscheinen nur, wenn die Verwaltung sie freigeschaltet hat.",
     "row": "{kind}, {from} bis {to}",
     "kind": {
       "rental_owner": "Mietverwaltung",

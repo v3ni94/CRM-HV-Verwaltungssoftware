@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-_IBAN = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}[0-9]{2}(?:[ ]?[A-Z0-9]{1,4}){2,7}(?![A-Za-z0-9])")
+_IBAN = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}[0-9]{2}(?:[ ]?[A-Z0-9]{1,4}){2,8}(?![A-Za-z0-9])")
 _BIC = re.compile(r"\b(?:BIC|SWIFT)\s*[:.]?\s*([A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b")
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[A-Za-z]{2,}\b")
 _PHONE = re.compile(r"(?<![\w])(?:\+49|0049|0)[ /()\-]?(?:\d[ /()\-]?){5,13}\d(?![\w])")
@@ -45,6 +45,27 @@ BIC_PLACEHOLDER = "[BIC]"
 EMAIL_PLACEHOLDER = "[E-MAIL]"
 PHONE_PLACEHOLDER = "[TELEFON]"
 NAME_PLACEHOLDER = "[NAME]"
+
+
+# An IBAN has 15 to 34 alphanumeric characters without separators (ISO 13616): country code,
+# two check digits, the BBAN. Shorter IBAN-shaped tokens (file names such as ``WE12.pdf``, run
+# ids such as ``bd27d253``) are not masked; anything in range is masked even with a wrong
+# checksum (data protection before classification, AG15).
+_IBAN_MIN_LEN = 15
+_IBAN_MAX_LEN = 34
+
+
+def _iban_len_ok(token: str) -> bool:
+    return _IBAN_MIN_LEN <= len(re.sub(r"[^A-Za-z0-9]", "", token)) <= _IBAN_MAX_LEN
+
+
+def _sub_iban(text: str) -> str:
+    return _IBAN.sub(lambda m: IBAN_PLACEHOLDER if _iban_len_ok(m.group(0)) else m.group(0), text)
+
+
+def _has_iban(text: str) -> bool:
+    return any(_iban_len_ok(m.group(0)) for m in _IBAN.finditer(text))
+
 
 _IBAN_LENGTHS = {"DE": 22, "AT": 20, "CH": 21, "NL": 18, "FR": 27, "BE": 16, "LU": 20, "IT": 27}
 
@@ -74,7 +95,7 @@ def iban_candidates(text: str | None) -> list[str]:
     seen: list[str] = []
     for match in _IBAN.finditer(text):
         value = normalize_iban(match.group(0))
-        if value not in seen:
+        if _iban_len_ok(value) and value not in seen:
             seen.append(value)
     return seen
 
@@ -275,7 +296,7 @@ def mask_text(
     objektakte masker so a later pattern cannot re-expose what an earlier one hid."""
     if not text:
         return ""
-    masked = _IBAN.sub(IBAN_PLACEHOLDER, text)
+    masked = _sub_iban(text)
     masked = _BIC.sub(lambda m: m.group(0).replace(m.group(1), BIC_PLACEHOLDER), masked)
     masked = _EMAIL.sub(EMAIL_PLACEHOLDER, masked)
     masked = _PHONE.sub(PHONE_PLACEHOLDER, masked)
@@ -292,4 +313,4 @@ def mask_text(
 
 
 def contains_iban(text: str) -> bool:
-    return bool(_IBAN.search(text))
+    return _has_iban(text)

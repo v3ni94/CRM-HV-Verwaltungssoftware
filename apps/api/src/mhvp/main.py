@@ -98,6 +98,7 @@ from mhvp.handover.portal import staff_router as handover_staff_portal_router
 from mhvp.handover.routers import router as handover_router
 from mhvp.hoa.acquisition import router as hoa_acquisition_router
 from mhvp.hoa.acquisition_rule import router as hoa_acquisition_rule_router
+from mhvp.hoa.allocation_proposal import router as hoa_allocation_proposal_router
 from mhvp.hoa.assets import router as hoa_assets_router
 from mhvp.hoa.board import router as hoa_board_router
 from mhvp.hoa.finance import router as hoa_finance_router
@@ -109,6 +110,8 @@ from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.online_meeting import router as hoa_online_meeting_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.plan_change import router as hoa_plan_change_router
+from mhvp.hoa.portal_circular import crm_router as hoa_portal_circular_router
+from mhvp.hoa.portal_circular import portal_router as portal_circular_router
 from mhvp.hoa.reserve_split import router as hoa_reserve_split_router
 from mhvp.hoa.reserve_statement import router as hoa_reserve_statement_router
 from mhvp.hoa.reserves import router as hoa_reserves_router
@@ -173,6 +176,7 @@ from mhvp.portal.owner_assets import router as portal_owner_assets_router
 from mhvp.portal.owner_extra import router as portal_owner_extra_router
 from mhvp.portal.owner_meetings import router as portal_owner_meetings_router
 from mhvp.portal.owner_overview import router as portal_owner_overview_router
+from mhvp.portal.owner_receipts import router as portal_owner_receipts_router
 from mhvp.portal.owner_reports import router as portal_owner_reports_router
 from mhvp.portal.owner_statements import router as portal_owner_statements_router
 from mhvp.portal.provider_einvoice import router as portal_provider_einvoice_router
@@ -377,6 +381,8 @@ def create_app(
     app.include_router(hoa_router, prefix=API_PREFIX)
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)
     app.include_router(hoa_online_meeting_router, prefix=API_PREFIX)
+    app.include_router(hoa_portal_circular_router, prefix=API_PREFIX)
+    app.include_router(portal_circular_router, prefix=API_PREFIX)
     app.include_router(hoa_plan_change_router, prefix=API_PREFIX)
     app.include_router(hoa_meeting_rules_router, prefix=API_PREFIX)
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
@@ -388,6 +394,7 @@ def create_app(
     app.include_router(hoa_assets_router, prefix=API_PREFIX)
     app.include_router(hoa_acquisition_router, prefix=API_PREFIX)
     app.include_router(hoa_acquisition_rule_router, prefix=API_PREFIX)
+    app.include_router(hoa_allocation_proposal_router, prefix=API_PREFIX)
     app.include_router(hoa_reserve_statement_router, prefix=API_PREFIX)
     app.include_router(hoa_reserves_router, prefix=API_PREFIX)
     app.include_router(hoa_reserve_split_router, prefix=API_PREFIX)
@@ -457,6 +464,7 @@ def create_app(
     app.include_router(portal_owner_reports_router, prefix=API_PREFIX)
     app.include_router(portal_tenant_statements_router, prefix=API_PREFIX)
     app.include_router(portal_owner_assets_router, prefix=API_PREFIX)
+    app.include_router(portal_owner_receipts_router, prefix=API_PREFIX)
     app.include_router(portal_provider_einvoice_router, prefix=API_PREFIX)
     app.include_router(portal_provider_info_router, prefix=API_PREFIX)
     app.include_router(portal_provider_info_admin_router, prefix=API_PREFIX)

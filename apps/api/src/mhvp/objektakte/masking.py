@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 
 _IBAN = re.compile(
-    r"(?<![A-Za-z0-9-])[A-Z]{2}[0-9]{2}(?:[ .\-]?[A-Z0-9]{1,4}){2,7}(?![A-Za-z0-9-])", re.IGNORECASE
+    r"(?<![A-Za-z0-9-])[A-Z]{2}[0-9]{2}(?:[ .\-]?[A-Z0-9]{1,4}){2,8}(?![A-Za-z0-9-])", re.IGNORECASE
 )
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[A-Za-z]{2,}\b")
 _PHONE = re.compile(r"(?<![\w])(?:\+\d{1,3}|00\d{1,3}|0)[ /()\-]?(?:\d[ /()\-]?){5,13}\d(?![\w])")
@@ -42,6 +42,26 @@ PHONE_PLACEHOLDER = "[TELEFON]"
 NAME_PLACEHOLDER = "[NAME]"
 
 
+# An IBAN has 15 to 34 alphanumeric characters without separators (ISO 13616): country code,
+# two check digits, the BBAN. Shorter IBAN-shaped tokens (file names such as ``WE12.pdf``, run
+# ids such as ``bd27d253``) are not masked; anything in range is masked even with a wrong
+# checksum (data protection before classification, AG15).
+_IBAN_MIN_LEN = 15
+_IBAN_MAX_LEN = 34
+
+
+def _iban_len_ok(token: str) -> bool:
+    return _IBAN_MIN_LEN <= len(re.sub(r"[^A-Za-z0-9]", "", token)) <= _IBAN_MAX_LEN
+
+
+def _sub_iban(text: str) -> str:
+    return _IBAN.sub(lambda m: IBAN_PLACEHOLDER if _iban_len_ok(m.group(0)) else m.group(0), text)
+
+
+def _has_iban(text: str) -> bool:
+    return any(_iban_len_ok(m.group(0)) for m in _IBAN.finditer(text))
+
+
 def mask_text(text: str | None) -> str:
     """Replace IBANs, e-mail addresses, phone numbers and probable person names with a fixed
     placeholder. Order matters: e-mail, IBAN and phone first, so a name-shaped fragment inside one
@@ -52,7 +72,7 @@ def mask_text(text: str | None) -> str:
     # E-mail before IBAN: a local part such as ``max.ab12cd34ef56@`` would otherwise be cut
     # into an IBAN placeholder and the rest never matched as an address (flaky test 30.09.2026).
     masked = _EMAIL.sub(EMAIL_PLACEHOLDER, text)
-    masked = _IBAN.sub(IBAN_PLACEHOLDER, masked)
+    masked = _sub_iban(masked)
     masked = _PHONE.sub(PHONE_PLACEHOLDER, masked)
     masked = _NAME.sub(NAME_PLACEHOLDER, masked)
     return masked
@@ -62,7 +82,7 @@ def mask_ibans(text: str | None) -> str:
     """IBAN masking only; everything else (names, e-mail, phone) stays for classification."""
     if not text:
         return ""
-    return _IBAN.sub(IBAN_PLACEHOLDER, text)
+    return _sub_iban(text)
 
 
 def mask_identifiers(text: str | None) -> str:
@@ -73,10 +93,10 @@ def mask_identifiers(text: str | None) -> str:
     if not text:
         return ""
     masked = _EMAIL.sub(EMAIL_PLACEHOLDER, text)
-    masked = _IBAN.sub(IBAN_PLACEHOLDER, masked)
+    masked = _sub_iban(masked)
     return _PHONE.sub(PHONE_PLACEHOLDER, masked)
 
 
 def contains_iban(text: str) -> bool:
     """Used only by tests/assertions that no IBAN reached a provider call."""
-    return bool(_IBAN.search(text))
+    return _has_iban(text)

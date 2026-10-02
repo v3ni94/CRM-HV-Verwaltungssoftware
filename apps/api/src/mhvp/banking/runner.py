@@ -39,12 +39,14 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting.models import EntrySource, LeadingSystem, Ledger, LedgerAccount
+from mhvp.accounting import leading
+from mhvp.accounting.models import EntrySource, Ledger, LedgerAccount
 from mhvp.banking import (
     clarifications,
     decisions,
     levels,
     matching,
+    object_lock,
     proposals,
     review,
     verifiers,
@@ -247,7 +249,9 @@ async def auto_post_transaction(
     if ctx.blocked.get(case_kind):
         return "auto_blocked", None
     ledger, _bank = await matching.ledger_for(session, tx)
-    if ledger.leading_system is not LeadingSystem.IMMOWARE24 and not ctx.gate_open:
+    if not ctx.gate_open and await leading.is_leading(
+        session, ledger, leading.LeadingKind.RECEIVABLE_POSTING, tx.booking_date
+    ):
         # Leading ledger and G1 closed: nothing productive (18.0, ADR 0003).
         return "auto_gate_closed", None
     rules = await _active_rules(session, tx)
@@ -256,6 +260,12 @@ async def auto_post_transaction(
     accounts = await _account_flags(session, ledger)
     verification: verifiers.Verification | None = None
     rule_row: BankRule | None = None
+    obj_locked = await object_lock.object_locked(
+        session,
+        ledger,
+        pp._date(collected.tx.get("booking_date")),
+        object_lock.settled_item_ids(snapshot),
+    )
     for candidate in rules:
         if ctx.rule_hits_today.get(candidate.id, 0) >= RULE_DAY_LIMIT:
             ctx.stopped = f"Fallgrenze je Regel und Tag ({RULE_DAY_LIMIT}) erreicht"
@@ -267,6 +277,7 @@ async def auto_post_transaction(
             rule_version=collected.rule_version,
             features_hash=collected.hash(),
             locked_until=ledger.locked_until,
+            object_locked=obj_locked,
             outgoing_enabled=ctx.outgoing_enabled,
         )
         verification = verifiers.verify(

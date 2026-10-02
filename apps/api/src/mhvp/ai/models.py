@@ -111,6 +111,9 @@ class AiProviderConfig(IdMixin, TimestampMixin, TenantMixin, Base):
         UniqueConstraint("tenant_id", "provider"),
         CheckConstraint("monthly_budget_eur >= 0", name="budget_positive"),
         CheckConstraint("(released_at IS NULL) = (released_by IS NULL)", name="release_complete"),
+        CheckConstraint(
+            "batch_price_factor > 0 AND batch_price_factor <= 1", name="batch_price_factor_range"
+        ),
     )
 
     provider: Mapped[AiProvider] = mapped_column(_enum(AiProvider, "ai_provider"), nullable=False)
@@ -129,6 +132,14 @@ class AiProviderConfig(IdMixin, TimestampMixin, TenantMixin, Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Provider batch for deferred runs (9.3, GAB-09, ADR 0025): off by default; the price
+    # factor is entered by the operator from the provider's price list (1 = no discount).
+    batch_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    batch_price_factor: Mapped[Decimal] = mapped_column(
+        RATE, nullable=False, default=Decimal("1"), server_default="1.00"
+    )
 
 
 class AiConversation(IdMixin, TimestampMixin, TenantMixin, Base):

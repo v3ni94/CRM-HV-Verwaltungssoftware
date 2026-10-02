@@ -11,6 +11,8 @@ writes nothing and posts nothing; it is evidence for the G1 opening, not a proof
 Switch requests: switching the tenant automation on needs gate G1 open, a request with reason
 by one person and the approval by another person (never a platform admin). Only the approval
 writes ``tenant_settings.auto_posting_enabled``; the runner keeps its own checks.
+AG19 (AF25-01): the same path with ``target="outgoing"`` switches the outgoing automation
+(``auto_posting_outgoing_enabled``) on; one open request per target.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.banking import event_types as ev
 from mhvp.banking.models import (
     AutoPostingSwitchRequest,
     PostingDecision,
@@ -41,6 +44,8 @@ OUTCOMES = (
     "auto_posted",
     "reversed",
 )
+# Request target -> tenant_settings column switched on by the approval (AG19).
+TARGETS = {"main": "auto_posting_enabled", "outgoing": "auto_posting_outgoing_enabled"}
 _SKIPPED = {
     PostingDecisionStatus.PENDING.value,
     PostingDecisionStatus.IGNORED.value,
@@ -122,6 +127,7 @@ def switch_out(row: AutoPostingSwitchRequest) -> dict[str, Any]:
     return {
         "id": row.id,
         "reason": row.reason,
+        "target": row.target,
         "status": row.status,
         "requested_by": row.requested_by,
         "decided_by": row.decided_by,
@@ -147,8 +153,12 @@ async def request_switch_on(
     user_id: uuid.UUID | None,
     reason: str,
     gate_open: bool,
+    target: str = "main",
 ) -> AutoPostingSwitchRequest:
     from mhvp.platform.models import TenantSettings
+
+    if target not in TARGETS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekanntes Ziel des Antrags.")
 
     if user_id is None:
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Needs a person.")
@@ -157,17 +167,22 @@ async def request_switch_on(
             ErrorCodes.RELEASE_GATE_CLOSED,
             detail="Die Automatik kann erst nach Freigabe G1 eingeschaltet werden.",
         )
-    if await session.scalar(select(TenantSettings.auto_posting_enabled)):
+    if await session.scalar(select(getattr(TenantSettings, TARGETS[target]))):
         raise ProblemError(ErrorCodes.CONFLICT, detail="Die Automatik ist bereits eingeschaltet.")
     pending = await session.scalar(
         select(AutoPostingSwitchRequest.id).where(
-            AutoPostingSwitchRequest.status == SwitchRequestStatus.REQUESTED.value
+            AutoPostingSwitchRequest.status == SwitchRequestStatus.REQUESTED.value,
+            AutoPostingSwitchRequest.target == target,
         )
     )
     if pending is not None:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Es liegt bereits ein offener Antrag vor.")
     row = AutoPostingSwitchRequest(
-        tenant_id=tenant_id, reason=reason, requested_by=user_id, created_by=user_id
+        tenant_id=tenant_id,
+        reason=reason,
+        target=target,
+        requested_by=user_id,
+        created_by=user_id,
     )
     session.add(row)
     await session.flush()
@@ -178,7 +193,7 @@ async def request_switch_on(
         entity_type="auto_posting_switch_request",
         entity_id=row.id,
         actor_user_id=user_id,
-        payload={"reason": reason},
+        payload={"reason": reason, "target": target},
     )
     return row
 
@@ -221,15 +236,22 @@ async def decide(
         settings = await session.scalar(select(TenantSettings).with_for_update())
         if settings is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        settings.auto_posting_enabled = True
+        column = TARGETS.get(row.target, "auto_posting_enabled")
+        before = getattr(settings, column)
+        setattr(settings, column, True)
         await emit(
             session,
             tenant_id=tenant_id,
-            type="tenant.auto_posting_changed",
+            type=(
+                ev.TENANT_AUTO_POSTING_OUTGOING_CHANGED
+                if row.target == "outgoing"
+                else "tenant.auto_posting_changed"
+            ),
             entity_type="tenant_settings",
             entity_id=settings.id,
             actor_user_id=user_id,
             payload={"enabled": True, "reason": row.reason, "switch_request_id": str(row.id)},
+            changes={column: {"old": before, "new": True}},
         )
     await session.flush()
     return row

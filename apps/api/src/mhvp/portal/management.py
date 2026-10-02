@@ -67,8 +67,10 @@ class PortalFeaturesPatch(_In):
     chat_bot_enabled: bool | None = None
     privacy_feature_enabled: bool | None = None
     tenant_statement_enabled: bool | None = None
+    portal_owner_receipts_enabled: bool | None = None
+    owner_hoa_rental_statements_enabled: bool | None = None
     owner_ticket_scope: Literal["none", "released", "property"] | None = None
-    provider_rating_display: Literal["off", "staff"] | None = None
+    provider_rating_display: Literal["off", "staff", "all"] | None = None
 
 
 class PortalRepresentationIn(_In):

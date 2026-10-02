@@ -1149,6 +1149,22 @@
    ]
   },
   {
+   "slug": "abrechnung",
+   "title": "abrechnung",
+   "blocks": [
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Periodensperren in der Abrechnungswerkbank",
+     "id": "periodensperren-in-der-abrechnungswerkbank"
+    },
+    {
+     "t": "p",
+     "text": "Die Werkbank zeigt lesend die aktiven Periodensperren des Objekts der Abrechnung. Setzen und Aufheben erfolgt weiterhin in der Buchhaltung."
+    }
+   ]
+  },
+  {
    "slug": "anleitung-bankverbindung",
    "title": "Handlungsanweisung: Bankverbindung neu anlegen oder ändern",
    "blocks": [
@@ -6187,6 +6203,84 @@
     {
      "t": "p",
      "text": "Eingeschaltet wird die Buchungsautomatik nur unter Einstellungen, Buchhaltung, Automatik: Antrag mit Grund, Freigabe durch eine zweite Person, Freigabestufe G1 offen. Ein direktes Einschalten über die Schnittstelle wird abgelehnt. Ist die Automatik eingeschaltet, steht dort die Schaltfläche \"Sofort ausschalten\" mit Pflichtgrund bereit; das Ausschalten wirkt sofort und ohne Antrag. Die Karte auf der Seite Bankregeln zeigt den Stand der Automatik und der Ausgangsautomatik und verweist auf den Antragsweg."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "EBICS: Schlüsselwechsel und Sperre, Testsystem-Abnahme ist Betreiberaufgabe (GAE-24, Welle 18)",
+     "id": "ebics-schluesselwechsel-und-sperre-testsystem-abnahme-ist-betreiberaufgabe-gae-24-welle-18"
+    },
+    {
+     "t": "p",
+     "text": "Ort: Bank, Abschnitt \"EBICS (Grundgerüst)\", beim Teilnehmer. Die Software führt Schlüsselwechsel und Sperre nur lokal. Sie sendet keinen Schlüsselwechselauftrag und keine Sperre (SPR) an die Bank. Die Abnahme gegen das Testsystem der Bank und die Sperre auf Bankseite (SPR oder telefonisch laut Vertrag) sind Aufgaben des Betreibers."
+    },
+    {
+     "t": "p",
+     "text": "Lokales Verhalten:"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Schlüsselwechsel (\"Schlüssel erzeugen\" bei vorhandenen Schlüsseln): Ein Grund ist Pflicht. Die alten Teilnehmerschlüssel werden stillgelegt, der private Anteil wird gelöscht. Die Initialisierung beginnt neu (INI, HIA, Freischaltung, Bankschlüssel abholen und prüfen). Bis zur erneuten Prüfung der Bankschlüssel durch eine zweite Person ist der Abruf von Kontoauszügen, auch der tägliche Abruf um 06:40 Uhr, gesperrt (Fehler MHVP-BANK-0052)."
+      },
+      {
+       "depth": 0,
+       "text": "Der Status gilt je Teilnehmer. Ein Wechsel oder eine Sperre bei einem Teilnehmer ändert nichts bei anderen Teilnehmern."
+      },
+      {
+       "depth": 0,
+       "text": "Sperre: Grund ist Pflicht, die Sperre ist endgültig, alle privaten Schlüssel werden gelöscht. Danach sind Schlüsselwechsel, INI, HIA, Freischaltung, Bankschlüssel, Abruf und der tägliche Abruf nicht mehr möglich (MHVP-BANK-0052). Ein neuer Teilnehmer muss angelegt werden."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Checkliste Testsystem-Abnahme (Betreiber, vor dem produktiven Einsatz):"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "[ ] Testzugang der Bank (Host-ID, Partner-ID, Teilnehmer-ID, URL des Testsystems) liegt vor."
+      },
+      {
+       "depth": 0,
+       "text": "[ ] Teilnehmer mit Testdaten angelegt, Schlüssel erzeugt, INI und HIA gegen das Testsystem gesendet."
+      },
+      {
+       "depth": 0,
+       "text": "[ ] Freischaltung durch die Bank bestätigt, Bankschlüssel abgeholt, Hash-Werte durch eine zweite Person gegen den Bankbrief geprüft."
+      },
+      {
+       "depth": 0,
+       "text": "[ ] Kontoauszugsabruf (C53) gegen das Testsystem erfolgreich, Import geprüft."
+      },
+      {
+       "depth": 0,
+       "text": "[ ] Schlüsselwechsel gegen das Testsystem durchgespielt, neue Initialisierung bis Status bereit abgeschlossen."
+      },
+      {
+       "depth": 0,
+       "text": "[ ] Sperre auf Bankseite (SPR oder telefonisch laut Vertrag) getestet und der Ablauf dokumentiert."
+      },
+      {
+       "depth": 0,
+       "text": "[ ] Ergebnis mit Datum und Verantwortlichem im Runbook `docs/runbooks/ebics-setup.md` vermerkt."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Ausgangsautomatik beantragen",
+     "id": "ausgangsautomatik-beantragen"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Buchhaltung, Automatik steht unter dem Hauptschalter der Abschnitt Ausgangsautomatik. Eingeschaltet wird sie wie die Buchungsautomatik nur über einen Antrag mit Grund und die Freigabe durch eine zweite Person bei offener Freigabestufe G1. In der Antragsliste zeigt ein Kennzeichen, ob ein Antrag den Hauptschalter oder die Ausgangsautomatik betrifft. Ausschalten ist mit Pflichtgrund jederzeit sofort möglich. Die Ausgangsautomatik wirkt nur bei eingeschalteter Buchungsautomatik."
     }
    ]
   },
@@ -7657,6 +7751,26 @@
        "text": "Zahllauf: Schalter der wöchentlichen Vorschau (Recht Mandanteneinstellungen ändern). Der Nummernmodus der Mietrechnungsentwürfe wird unter Fachliche Regeln geändert, am Vertrag nur angezeigt."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Bestehende Zuordnungen, Gläubiger-ID und Objektfilter im Excel-Export",
+     "id": "bestehende-zuordnungen-glaeubiger-id-und-objektfilter-im-excel-export"
+    },
+    {
+     "t": "p",
+     "text": "Die Kontenmaske zeigt über dem Formular die bereits hinterlegten Zuordnungen Zahlungsart zu Erlöskonto. Unter Einstellungen, Buchhaltung, Gläubiger-ID und unter Bank, Verbindungen steht die hinterlegte Gläubiger-ID je Rechtsträger (nur Anzeige, Änderung in den Einstellungen). Der Excel-Export von Journal, Monatsmatrix und Einnahmen Ausgaben kann auf ein Objekt eingeschränkt werden (Parameter property_id). Die Sachprüfung einer Rechnung zeigt beim Budgetabgleich zusätzlich die Teilbeträge Rechnungen, Gutschriften und Buchungszeilen mit Plankonto."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Führendes System je Vorgangstyp (Welle 18, AG02)",
+     "id": "fuehrendes-system-je-vorgangstyp-welle-18-ag02"
+    },
+    {
+     "t": "p",
+     "text": "Im Buchungskreis zeigt der Abschnitt \"Führendes System je Vorgangstyp\", welches System für Sollstellung, Mahnung, Lastschrift und Zahlungsauftrag heute führt und ob dies aus einer Umschaltung oder aus der Einstellung des Buchungskreises stammt. Wer Freigaberechte hat, beantragt eine Umschaltung mit Vorgangstyp, führendem System, Gültig-ab und optional einem Objekt. Freigeben oder ablehnen muss eine andere Person; die Plattform als führendes System lässt sich nur mit geöffneter Freigabestufe G1 freigeben. Ohne Umschaltung arbeiten alle Läufe wie bisher."
     }
    ]
   },
@@ -9819,6 +9933,59 @@
     {
      "t": "p",
      "text": "Nicht auf dieser Seite stehen Einstellungen, die keine fachlich offene Entscheidung betreffen, und Werte, die je Datensatz gelten (zum Beispiel die Steuerkonten für Zinsabzüge je Buchungskreis, der Zugangsnachweis je Abrechnung oder die Prüfpunkte der Heizkostenverordnung selbst); dafür führt der Link zur Fachmaske."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Objektakte: Pflichtdokumente und lokales Modell (AF18)",
+     "id": "objektakte-pflichtdokumente-und-lokales-modell-af18"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Objektakte pflegen Sie die Pflichtdokumente je Objektart (Anlegen, Ändern, Löschen) und sehen den Status des lokalen Modells für die Dokumentprüfung samt Vorschlag je Prüffall. Das Modell liefert nur Vorschläge; eine Person übernimmt oder lehnt ab. Importlauf, Texterkennungs-Cache und Importvorschau haben noch keine Bedienmaske und laufen über die Schnittstelle."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Demo-Band, Mailquellen und API-Schlüssel (AF19)",
+     "id": "demo-band-mailquellen-und-api-schluessel-af19"
+    },
+    {
+     "t": "p",
+     "text": "Gehört der angemeldete Benutzer zu einem Demo-Mandanten, zeigt die Kopfzeile ein Demo-Band. Das Kennzeichen liefert die Schnittstelle `GET /auth/me` im Feld `is_demo`. Unter Einstellungen, Mailquellen legen Sie Eingangs-Webhooks an, aktivieren sie, erneuern das Geheimnis (Anzeige nur einmal) und sehen das Empfangsprotokoll. Unter Einstellungen, API-Schlüssel legen Sie Schlüssel an (Klartext nur einmal sichtbar, danach nur das Präfix) und widerrufen sie. Branding-Vorschau steht in den Mandanteneinstellungen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Plattformeinstellungen und Zuordnungsschwellen (Welle 18, AG03)",
+     "id": "plattformeinstellungen-und-zuordnungsschwellen-welle-18-ag03"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Plattformadministratoren sehen unter Plattform den Kasten Plattformeinstellungen mit dem Schalter für die Umgehung des Vier-Augen-Prinzips (Standard aus). Eine Änderung verlangt eine Bestätigung und wird protokolliert; sie öffnet keine Freigabestufe."
+      },
+      {
+       "depth": 0,
+       "text": "Unter Einstellungen, Fachliche Regeln stehen die Schwellen des Personenabgleichs der Objektübernahme in Prozent (Zuordnung 90, Vorschlag 60). Die Zuordnungsschwelle darf nicht unter der Vorschlagsschwelle liegen."
+      },
+      {
+       "depth": 0,
+       "text": "Die Rolle Versicherungsmakler hat ohne den Schalter \"Zugriff der Rolle Versicherungsmakler\" keine Rechte und ist in der Rollenauswahl entsprechend gekennzeichnet."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Stapelverarbeitung beim KI-Anbieter (Welle 18, AG04)",
+     "id": "stapelverarbeitung-beim-ki-anbieter-welle-18-ag04"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, KI-Anbieter, lässt sich je Anbieter die Stapelverarbeitung einschalten (Standard aus, derzeit nur Anthropic). Zurückgestellte nächtliche Läufe werden dann gesammelt an den Anbieter gesendet und stündlich abgerufen; das Ergebnis erscheint wie bisher als Vorschlag. Der Preisfaktor wird aus der Preisliste des Anbieters übernommen (1 bedeutet kein Abschlag). Jede Änderung hebt die Freigabe auf; die zweite Person muss erneut freigeben."
     }
    ]
   },
@@ -11747,6 +11914,26 @@
     {
      "t": "p",
      "text": "Auf der Seite Immoware24 Import steht unter den benötigten Exporten die Liste der gemerkten Spaltenzuordnungen. Mit Entfernen löschen Sie eine einzelne Zuordnung nach Rückfrage. Bei der nächsten Datei schlägt die Plattform die Zuordnung neu vor, es wird nichts importiert oder geändert."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Übernahme aus objektakte (Importlauf, OCR-Cache, Vorschaubilder)",
+     "id": "uebernahme-aus-objektakte-importlauf-ocr-cache-vorschaubilder"
+    },
+    {
+     "t": "p",
+     "text": "Unter Importe, Übernahme aus objektakte: Exportdatei zuerst prüfen (Vorschau, ändert nichts), danach übernehmen. Zu einem Importlauf lässt sich das Ergebnis abrufen und der OCR-Textcache (ZIP) zuordnen; nicht zugeordnete Schlüssel werden aufgelistet. Die Vorschaubild-Übernahme zeigt den Stand des letzten Laufs und lässt sich mit der Freigaberolle starten oder nach einem Abbruch fortsetzen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Migration: Abnahme bearbeiten, Altdaten, Exporttypen",
+     "id": "migration-abnahme-bearbeiten-altdaten-exporttypen"
+    },
+    {
+     "t": "p",
+     "text": "Ein Abnahmeprotokoll im Status Entwurf lässt sich bearbeiten, bis es unterzeichnet ist. Unter Migration zeigt der Abschnitt Altdaten die übernommenen Einzelposten je Buchungskreis mit der Summe offen und die historischen Tickets (nur lesend). Auf der Seite Vollimport listet die Aufklappliste die bekannten Exporttypen mit erwarteten Spalten."
     }
    ]
   },
@@ -13937,6 +14124,16 @@
        "text": "Abnahmeprotokoll je Objekt: Prüfumfang, verantwortliche Personen, nicht migrierbare Daten, Rückfallplan und Archivkonzept erfassen, danach durch eine zweite Person unterzeichnen. Ein unterzeichnetes Protokoll bleibt unverändert. Das Protokoll ersetzt keine Freigabe des Wechsels des führenden Systems."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Migrationsmasken in der Oberfläche (AF18)",
+     "id": "migrationsmasken-in-der-oberflaeche-af18"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Vollimport, Exporttypen, Verlauf und offene Posten haben noch keine Maske und sind über die Schnittstelle erreichbar. Die Seite Dokumente, Eingangsvorschläge zeigt Vorschläge des Dokumenteingangs mit Annehmen, Ablehnen und Zurücknehmen einer automatischen Ablage; gebucht wird dort nichts."
     }
    ]
   },
@@ -14605,6 +14802,10 @@
     {
      "t": "p",
      "text": "Ein Demo-Mandant ist aus der Plattformabrechnung (Lizenz, Nutzungszählung, Abrechnungsvorschau), aus Exporten (Mandantenexport, Journal-Export, DATEV, Prüfexport) und aus den Betriebsstatistiken ausgeschlossen. Ein Export im Demo-Mandanten endet mit der Meldung, dass die Funktion im Demo-Mandanten nicht möglich ist. Nehmen Sie keine echten Daten in einem Demo-Mandanten auf."
+    },
+    {
+     "t": "p",
+     "text": "Das Demo-Band in der Kopfzeile des CRM erscheint für Mandantenbenutzer, sobald der Mandant das Demo-Kennzeichen trägt (`GET /auth/me`, Feld `is_demo`, AF19)."
     }
    ]
   },
@@ -15437,6 +15638,60 @@
     {
      "t": "p",
      "text": "Eigentümer sehen unter \"Eigentümerabrechnung\" (`/eigentuemerabrechnungen`) die ausgegebenen Abrechnungen ihrer Mietverwaltung oder Sondereigentumsverwaltung mit Einnahmen, Ausgaben, Auszahlungen und PDF. Die Anzeige schaltet die Verwaltung unter Portalfunktionen ein (Standard aus); zusätzlich ist die Freigabestufe G3 nötig. Unter \"Hausgeldabrechnung\" steht je Einheit eine Erläuterung mit Kostenanteil, Vorschüssen (Soll und Ist), Abrechnungsspitze und Rücklage, unter \"Wirtschaftsplan\" (`/wirtschaftsplaene`) der beschlossene Plan mit Jahresbetrag und monatlichem Vorschuss der eigenen Einheiten; beides erst mit Freigabestufe G4. Die Erklärtexte lassen sich als Textbausteine `portal_owner_explain_*` freigeben. Auf der Seite \"Eigentum\" erscheint bei leerer Mieterträge-Liste ein Hinweis, die Annahme der Nutzungsbedingungen verlinkt direkt die veröffentlichte Fassung."
+    },
+    {
+     "t": "p",
+     "text": "Eigentümer reiner Mietverwaltungen (ohne Wohnungseigentum) erhalten den Zugang zur Eigentümerabrechnung über ihren eigenen Rechtsträger, solange ihr Eigentum im Objekt läuft; nach einem Eigentümerwechsel entfällt der Zugang mit der nächsten Neuableitung der Zugriffsrechte. Angezeigt werden nur Abrechnungen des eigenen Rechtsträgers. Abrechnungen, deren Rechtsträger die Gemeinschaft selbst ist, sehen deren Eigentümer nur, wenn die Verwaltung den Schalter \"Abrechnungen der Gemeinschaft als Vermieterin im Eigentümerportal\" einschaltet (Standard aus, Entscheidung AF25-02 offen)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Abgrenzung zum CRM-Handbuch (AG13)",
+     "id": "abgrenzung-zum-crm-handbuch-ag13"
+    },
+    {
+     "t": "p",
+     "text": "Dieses Kapitel beschreibt ausschließlich die Anwendung `apps/web-portal` für Mieter, Eigentümer, Beirat und Dienstleister. Einstellungen, die die Verwaltung im CRM vornimmt (Fachliche Regeln, Portalfunktionen, Textbausteine, Freigabestufen), stehen in den CRM-Kapiteln, vor allem Einstellungen und Plattform, und sind hier nur dort erwähnt, wo sie das Portal sichtbar steuern. Das Demo-Band und die API-Schlüssel-Seite gehören zum CRM und erscheinen im Portal nicht."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Aufträge bewerten (AG06)",
+     "id": "auftraege-bewerten-ag06"
+    },
+    {
+     "t": "p",
+     "text": "Nach Abschluss eines Auftrags kann der betroffene Bewohner in der Meldung unter Auftrag bewerten Sterne (1 bis 5) und eine Anmerkung abgeben, einmalig; ebenso die Verwaltung auf der Auftragsseite im CRM. Die Bewertungen sind intern und werden dem Dienstleister nie gezeigt. Wer sie sieht, steuert die Verwaltung unter Einstellungen, Bewertungen von Dienstleistern: aus (Standard), nur Verwaltung oder zusätzlich der Durchschnitt des Dienstleisters für Bewohner. Regel `docs/rules/AG06-01.md`."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Belegeinsicht für Eigentümer (AG09)",
+     "id": "belegeinsicht-fuer-eigentuemer-ag09"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Fachliche Regeln, Schalter \"Belegeinsicht im Eigentümerportal\" einschalten (Standard aus, zusätzlich Freigabestufe G4). Eigentümer finden die Seite \"Belegeinsicht\" im Portal, filtern nach Abrechnungsjahr und Bezeichnung und laden Belege herunter, für die sie nach der Dokumentberechtigung zugelassen sind. Jeder Abruf wird als Indiz vermerkt. Hinweis: Die Einsicht in Kostenbelege ist eine Entscheidung der Verwaltung, vor dem Einschalten mit Datenschutz und Gemeinschaftsordnung abstimmen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Umlaufbeschlüsse (AG07)",
+     "id": "umlaufbeschluesse-ag07"
+    },
+    {
+     "t": "p",
+     "text": "Unter Umlaufbeschlüsse sehen Eigentümer laufende Umlaufverfahren ihrer Gemeinschaft und stimmen je eigener Einheit und Beschlussantrag einmal mit Ja, Nein oder Enthaltung ab. Nach der Stimmabgabe zeigt die Seite Zeitpunkt und Prüfsumme des Beschlusstexts als Nachweis. Die Funktion ist nur aktiv, wenn die Verwaltung den Schalter Umlaufbeschluss im Eigentümerportal eingeschaltet hat und die Freigabestufe G4 offen ist. Das Ergebnis stellt die Verwaltung im CRM fest; dort erscheinen die Portalstimmen lesend im Formular Umlaufbeschluss erfassen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Reporting für Kapitalanleger (AG08, GAF-34)",
+     "id": "reporting-fuer-kapitalanleger-ag08-gaf-34"
+    },
+    {
+     "t": "p",
+     "text": "Eigentümer mit Sondereigentumsverwaltung sehen unter Reporting je Einheit und Abrechnungszeitraum die vereinbarte Monatsmiete, die auf Mieter umlagefähigen Kosten, die Leerstandstage und den Leerstandsanteil des Objekts. Die Seite ist nur sichtbar gefüllt, wenn der Mandantenschalter \"Mieterträge im Portal\" (owner_rental_income_enabled) eingeschaltet und die Freigabestufe G3 offen ist; sonst erscheint ein Hinweis. Mieternamen und Zahlungsstatus werden nicht angezeigt."
     }
    ]
   },
@@ -18710,6 +18965,16 @@
     {
      "t": "p",
      "text": "Beim Bereitstellen einer Hausgeldabrechnung (Status ausgegeben oder fällig) legt die Plattform jede Einzelabrechnung einmalig im Dokumentenarchiv ab und verknüpft sie mit Abrechnung, Objekt, Gemeinschaft, Einheit und Eigentümer. Die Gesamtabrechnung wird bei der ersten Ausgabe abgelegt. Jeder spätere Abruf im CRM und im Eigentümerportal liefert genau die abgelegte Datei, auch Briefdatum und Layout bleiben unverändert. Eine neue Version der Abrechnung erzeugt ein neues Dokument, das alte bleibt erhalten. Voraussetzung bleibt die Freigabestufe G4."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zuordnungsvorschlag bei Eigentümerwechsel (Welle 18, AG20)",
+     "id": "zuordnungsvorschlag-bei-eigentuemerwechsel-welle-18-ag20"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Fachliche Regeln, schaltet der Schalter \"Zuordnungsvorschlag bei Eigentümerwechsel\" (Standard aus) einen Hinweis frei: Die Vorschau der Planübernahme zeigt je Zeile den Eigentümer, den die Regel je Erwerbsart vorschlagen würde, und markiert Abweichungen vom verwendeten Eigentümer. Für eine Abrechnung mit Beschluss liefert die Schnittstelle dieselbe Gegenüberstellung je Einheit. Übernommen und gebucht wird weiterhin beim bisherigen Eigentümer; der Vorschlag bucht nichts und versendet nichts. Die Rechtsfrage bleibt offen (W07, P01)."
     }
    ]
   }

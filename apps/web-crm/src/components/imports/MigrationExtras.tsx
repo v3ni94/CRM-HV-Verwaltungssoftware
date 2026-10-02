@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { MigrationHistory } from "./MigrationHistory";
+
 const API = "/api/bff/imports/migration";
 
 type Ledger = { id: string; name: string };
@@ -36,12 +38,13 @@ type YearExpenses = {
 /** Migrationsabnahme je Objekt (6.9.10, V19), Spaltenzuordnung des Journal-Exports (M8) und
  *  Jahresausgaben je Buchungskreis. Unterzeichnen verlangt eine zweite Person (Vier-Augen-Prinzip,
  *  serverseitig geprüft); hier wird nichts gebucht. */
-export function MigrationExtras({ canUpdate, canApprove }: { canUpdate: boolean; canApprove: boolean }) {
+export function MigrationExtras({ canUpdate, canApprove, canTickets = false }: { canUpdate: boolean; canApprove: boolean; canTickets?: boolean }) {
   const t = useTranslations("MigrationExtras");
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState("");
   const [acceptances, setAcceptances] = useState<Acceptance[]>([]);
   const [form, setForm] = useState({ review_scope: "", persons: "", non_migratable_data: "", fallback_plan: "", archive_concept: "" });
+  const [editId, setEditId] = useState<string | null>(null);
   const [columns, setColumns] = useState<Columns | null>(null);
   const [ledgerId, setLedgerId] = useState("");
   const [year, setYear] = useState(String(new Date().getFullYear() - 1));
@@ -78,11 +81,28 @@ export function MigrationExtras({ canUpdate, canApprove }: { canUpdate: boolean;
         const [name = "", ...role] = l.split(",");
         return { name: name.trim(), role: role.join(",").trim() || "-" };
       });
-  const createAcceptance = () =>
-    run(`${API}/properties/${propertyId}/acceptance`, "POST", { ...form, responsible_persons: persons(), persons: undefined }, async () => {
-      setForm({ review_scope: "", persons: "", non_migratable_data: "", fallback_plan: "", archive_concept: "" });
-      await loadAcceptances(propertyId);
+  const emptyForm = { review_scope: "", persons: "", non_migratable_data: "", fallback_plan: "", archive_concept: "" };
+  const saveAcceptance = () =>
+    run(
+      editId ? `${API}/acceptance/${editId}` : `${API}/properties/${propertyId}/acceptance`,
+      editId ? "PUT" : "POST",
+      { ...form, responsible_persons: persons(), persons: undefined },
+      async () => {
+        setForm(emptyForm);
+        setEditId(null);
+        await loadAcceptances(propertyId);
+      },
+    );
+  const startEdit = (a: Acceptance) => {
+    setEditId(a.id);
+    setForm({
+      review_scope: a.review_scope,
+      persons: a.responsible_persons.map((p) => `${p.name}, ${p.role}`).join("\n"),
+      non_migratable_data: a.non_migratable_data,
+      fallback_plan: a.fallback_plan,
+      archive_concept: a.archive_concept,
     });
+  };
   const loadExpenses = async () => {
     setError(null);
     const res = await bff<YearExpenses>(`${API}/ledgers/${ledgerId}/year-expenses?year=${encodeURIComponent(year)}`);
@@ -118,6 +138,11 @@ export function MigrationExtras({ canUpdate, canApprove }: { canUpdate: boolean;
               <div className="flex flex-wrap items-center gap-2">
                 <span className={a.status === "signed" ? ui.badgeSuccess : ui.badgeWarning}>{t(`status.${a.status}`)}</span>
                 <span className={ui.help}>{formatDateTime(a.created_at)}</span>
+                {a.status === "draft" && canUpdate ? (
+                  <button type="button" className={ui.buttonSm} onClick={() => startEdit(a)}>
+                    {t("edit")}
+                  </button>
+                ) : null}
                 {a.status === "draft" && canApprove ? (
                   <button type="button" className={ui.buttonSm} onClick={() => void run(`${API}/acceptance/${a.id}/sign`, "POST", {}, () => loadAcceptances(propertyId))}>
                     {t("sign")}
@@ -134,7 +159,7 @@ export function MigrationExtras({ canUpdate, canApprove }: { canUpdate: boolean;
             className="mt-3 flex flex-col gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              void createAcceptance();
+              void saveAcceptance();
             }}
           >
             {(["review_scope", "persons", "non_migratable_data", "fallback_plan", "archive_concept"] as const).map((k) => (
@@ -144,8 +169,13 @@ export function MigrationExtras({ canUpdate, canApprove }: { canUpdate: boolean;
               </label>
             ))}
             <button type="submit" className={ui.buttonSm} disabled={!form.review_scope.trim()}>
-              {t("create")}
+              {editId ? t("saveEdit") : t("create")}
             </button>
+            {editId ? (
+              <button type="button" className={ui.buttonSm} onClick={() => { setEditId(null); setForm(emptyForm); }}>
+                {t("cancelEdit")}
+              </button>
+            ) : null}
           </form>
         ) : null}
       </section>
@@ -229,6 +259,7 @@ export function MigrationExtras({ canUpdate, canApprove }: { canUpdate: boolean;
           </div>
         ) : null}
       </section>
+      <MigrationHistory ledgers={ledgers} canTickets={canTickets} />
     </div>
   );
 }

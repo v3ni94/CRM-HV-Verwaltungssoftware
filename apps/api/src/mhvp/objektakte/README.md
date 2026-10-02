@@ -233,3 +233,13 @@ Einstellungen: `MHVP_OBJEKTAKTE_PREVIEWS_DIR` (Standard `/data/previews`), `MHVP
 ## Objektzuordnung (T14, R08-01)
 
 `export_routers`, `completeness_routers` und `lists_routers` tragen `property_path_guard` (fremdes `{property_id}` 404); die Gesamtliste fehlender Unterlagen filtert nach `Membership.property_ids`.
+
+## IBAN masking length bound (AG15, rule AI-MASK-03)
+
+`_IBAN` matches are masked only when the token has 15 to 34 alphanumeric characters without
+separators; shorter tokens (`WE12.pdf`, run ids) stay. `receipts/masking.py` applies the same
+bound. Name masking is unchanged.
+
+### Oberfläche Objektakte und Migration (AF18, Handbuch einstellungen.md, migration-immoware.md)
+
+CRM-Maske Einstellungen, Objektakte: Pflichtdokumente (CRUD) und Status des lokalen Modells. Seite Importe, Migration: Abnahme je Objekt, Journalspalten, Jahresausgaben. Ohne Maske (Schnittstelle): Importlauf, ocr-cache, previews/import, vollimport, exporttypen, history, open-items.

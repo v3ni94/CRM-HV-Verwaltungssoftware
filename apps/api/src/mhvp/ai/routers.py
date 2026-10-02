@@ -119,7 +119,13 @@ async def put_provider(
         if row is None:
             row = AiProviderConfig(tenant_id=principal.tenant_id, provider=provider)
             session.add(row)
-        data = body.model_dump(mode="json", exclude={"api_key"})
+        data = body.model_dump(
+            mode="json", exclude={"api_key", "batch_enabled", "batch_price_factor"}
+        )
+        if body.batch_enabled is not None:
+            row.batch_enabled = body.batch_enabled
+        if body.batch_price_factor is not None:
+            row.batch_price_factor = body.batch_price_factor
         data["monthly_budget_eur"] = body.monthly_budget_eur
         data["dpa_document_id"] = body.dpa_document_id
         data["endpoint_region"] = region

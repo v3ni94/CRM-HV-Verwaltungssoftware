@@ -208,7 +208,7 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
             name="owner_ticket_scope",
         ),
         CheckConstraint(
-            "provider_rating_display IN ('off', 'staff')",
+            "provider_rating_display IN ('off', 'staff', 'all')",
             name="provider_rating_display",
         ),
     )
@@ -233,6 +233,17 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     # AF15 (GAC-01, migration 0409): owner statements rental/SEV in the portal, off by default;
     # the output additionally needs release gate G3.
     owner_rental_statements_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AG12 (AF25-02, migration 0430): owner statements whose legal entity is the community
+    # itself (rental of common property) are shown to its owners only with this switch;
+    # default off, decision AF25-02 open.
+    owner_hoa_rental_statements_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AG09 (GAF-36, migration 0427): receipt search of the owner per statement period, off by
+    # default; the list additionally needs release gate G4.
+    portal_owner_receipts_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
     # AE30 (AA14-02, migration 0386): display of the ratings of service providers (rating of a

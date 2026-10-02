@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
@@ -28,7 +28,7 @@ describe("AutomationSwitch", () => {
     });
     renderIntl(<AutomationSwitch canApprove userId="u1" />);
     await waitFor(() => expect(screen.getByTestId("ae03-comparison-summary")).toHaveTextContent("Verglichene Buchungen: 4, Übereinstimmungsquote: 75,0 %"));
-    expect(screen.getByText("Gesperrt, solange die Freigabestufe G1 geschlossen ist.")).toBeInTheDocument();
+    expect(screen.getAllByText("Gesperrt, solange die Freigabestufe G1 geschlossen ist.")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Einschalten beantragen" })).toBeNull();
   });
 
@@ -82,5 +82,35 @@ describe("AutomationSwitch", () => {
     expect(puts[0]!.url).toMatch(/\/banking\/automation$/);
     expect(JSON.parse(puts[0]!.body)).toEqual({ enabled: false, reason: "Stopp" });
     await screen.findByRole("button", { name: "Einschalten beantragen" });
+  }, 20000);
+
+  it("requests the outgoing automation and switches it off only with PUT (AG19)", async () => {
+    let state: SwitchState = { enabled: true, outgoing_enabled: false, g1_open: true, can_request: false, can_request_outgoing: true, items: [] };
+    const calls: { method: string; url: string; body: string }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST" || init?.method === "PUT") {
+        calls.push({ method: init.method, url, body: String(init.body) });
+        state = init.method === "POST" ? { ...state, outgoing_enabled: true, can_request_outgoing: false } : { ...state, outgoing_enabled: false };
+        return jsonResponse({}, 201);
+      }
+      if (url.endsWith("/switch-requests")) return jsonResponse(state);
+      if (url.endsWith("/comparison")) return jsonResponse(report);
+      return jsonResponse({}, 500);
+    });
+    renderIntl(<AutomationSwitch canApprove userId="u1" />);
+    const user = userEvent.setup();
+    const box = within(await screen.findByTestId("ag19-outgoing"));
+    await user.type(box.getByLabelText("Grund des Antrags"), "Ausgang");
+    await user.click(box.getByRole("button", { name: "Ausgangsautomatik beantragen" }));
+    expect(calls[0]).toMatchObject({ method: "POST" });
+    expect(calls[0]?.url).toMatch(/switch-requests$/);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({ reason: "Ausgang", target: "outgoing" });
+    const on = within(await screen.findByTestId("ag19-outgoing"));
+    await user.type(await on.findByLabelText("Grund für das Ausschalten"), "Stopp");
+    await user.click(on.getByRole("button", { name: "Ausgangsautomatik sofort ausschalten" }));
+    expect(calls[1]).toMatchObject({ method: "PUT" });
+    expect(calls[1]?.url).toMatch(/automation\/outgoing$/);
+    expect(JSON.parse(calls[1]?.body ?? "{}")).toEqual({ enabled: false, reason: "Stopp" });
   }, 20000);
 });

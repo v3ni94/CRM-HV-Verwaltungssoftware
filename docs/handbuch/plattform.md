@@ -179,3 +179,5 @@ Die Entscheidung über Zielgrößen und Zeitpunkt der Partitionierung bleibt bei
 Ein Demo-Mandant enthält nur erfundene Daten (`make seed-demo`, Runbook `demo-mandant.md`). Auf der Startseite Plattform trägt er das Merkmal "Demo-Mandant". Mit der Schaltfläche am Mandanten kennzeichnen Sie einen Mandanten als Demo-Mandanten oder entfernen das Kennzeichen; das Setzen ist nicht möglich, solange eine Freigabestufe des Mandanten geöffnet ist.
 
 Ein Demo-Mandant ist aus der Plattformabrechnung (Lizenz, Nutzungszählung, Abrechnungsvorschau), aus Exporten (Mandantenexport, Journal-Export, DATEV, Prüfexport) und aus den Betriebsstatistiken ausgeschlossen. Ein Export im Demo-Mandanten endet mit der Meldung, dass die Funktion im Demo-Mandanten nicht möglich ist. Nehmen Sie keine echten Daten in einem Demo-Mandanten auf.
+
+Das Demo-Band in der Kopfzeile des CRM erscheint für Mandantenbenutzer, sobald der Mandant das Demo-Kennzeichen trägt (`GET /auth/me`, Feld `is_demo`, AF19).

@@ -491,6 +491,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
             if (row.sources or {}).get("notification_mail_content") == "hinweis"
             else "voll"
         ),
+        insurance_broker_access=(row.sources or {}).get("insurance_broker_access") == "true",
         ticket_reply_approval_all=row.ticket_reply_approval_all,
         ticket_reopen_window_days=row.ticket_reopen_window_days,
         portal_second_factor=row.portal_second_factor,
@@ -590,6 +591,7 @@ async def patch_settings(
             "notification_mail_content": (row.sources or {}).get(
                 "notification_mail_content", "voll"
             ),
+            "insurance_broker_access": (row.sources or {}).get("insurance_broker_access") == "true",
             "inspection_package_default_days": row.inspection_package_default_days,
             "export_retention_days": row.export_retention_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
@@ -619,6 +621,13 @@ async def patch_settings(
                 **(row.sources or {}),
                 "notification_mail_content": body.notification_mail_content,
             }
+        if body.insurance_broker_access is not None:
+            # GAC-07: Zugriff der Systemrolle Versicherungsmakler, Änderung protokolliert.
+            row.sources = {
+                **(row.sources or {}),
+                "insurance_broker_access": "true" if body.insurance_broker_access else "false",
+            }
+            invalidate_permissions(principal.tenant_id)
         if body.ticket_reply_approval_all is not None:
             # M20-03 Notbremse: Änderung wird mit Nutzer im Ereignis protokolliert.
             row.ticket_reply_approval_all = body.ticket_reply_approval_all
@@ -701,6 +710,7 @@ async def patch_settings(
             "notification_mail_content": (row.sources or {}).get(
                 "notification_mail_content", "voll"
             ),
+            "insurance_broker_access": (row.sources or {}).get("insurance_broker_access") == "true",
             "inspection_package_default_days": row.inspection_package_default_days,
             "export_retention_days": row.export_retention_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,

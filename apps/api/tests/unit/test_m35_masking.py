@@ -64,3 +64,21 @@ def test_email_with_iban_shaped_local_part_is_masked_as_email() -> None:
         assert "[E-MAIL]" in out
         assert "@" not in out
         assert out.count("[IBAN]") == 1
+
+
+def test_ag15_short_iban_shaped_tokens_not_masked() -> None:
+    from mhvp.objektakte.masking import contains_iban, mask_ibans, mask_text
+
+    for text in ("Mietvertrag_WE12.pdf", "Lauf bd27d253", "AB12 CD34"):
+        assert "[IBAN]" not in mask_text(text)
+        assert "[IBAN]" not in mask_ibans(text)
+        assert not contains_iban(text)
+    for iban in (
+        "DE89370400440532013000",
+        "DE89 3704 0044 0532 0130 00",
+        "de89-3704-0044-0532-0130-00",
+    ):
+        assert mask_ibans(f"IBAN {iban}, bitte") == "IBAN [IBAN], bitte"
+        assert contains_iban(iban)
+    # Wrong checksum, still IBAN length: masked (data protection first).
+    assert mask_ibans("DE00370400440532013000") == "[IBAN]"

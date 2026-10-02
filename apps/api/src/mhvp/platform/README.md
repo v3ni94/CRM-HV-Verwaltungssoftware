@@ -132,3 +132,13 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 ### Eigenmessung: Deploy-Variablen und HTTP-Test (AF24, GAE-33)
 
 `warn_missing_probe_urls` schreibt beim Start der API und beim ersten Messlauf je Prozess eine Logzeile mit den nicht gesetzten Variablen `MHVP_AVAILABILITY_{API,CRM,PORTAL}_URL` (Warnung in staging und prod, Info in dev und test). `tests/integration/test_af24_availability_http.py` prüft `check_url` gegen einen echten uvicorn Server in einem Thread, ausschließlich auf 127.0.0.1 (Status 200, 503, Weiterleitung, Zeitüberschreitung, geschlossener Port).
+
+### Demo-Kennzeichen in /auth/me (AF19-R, AG13)
+
+`MeOut.is_demo` (core/auth/routers.py) liest `tenant.is_demo` des Mandanten des Principals über `platform.demo.is_demo_tenant` (Tabelle `tenant` ohne RLS); ohne Mandant false. Das CRM-Demo-Band (`DemoBanner`) wertet das Feld aus. Test: `tests/integration/test_ag13_me_is_demo.py`.
+
+## AG03: Schalter insurance_broker_access (GAC-07)
+
+`PATCH /tenant/settings` kennt `insurance_broker_access` (Standard aus, gespeichert in
+`tenant_settings.sources`, keine Migration). Nur bei gesetztem Schalter erhält die Systemrolle
+`insurance_broker` die Rechte `insurance:read` und `claims:read` (Regel GAC-07).

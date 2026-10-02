@@ -1997,6 +1997,252 @@
         "title": "AccountingInterestTaxSummaryOut",
         "type": "object"
       },
+      "AccountingLeadingEffectiveOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "leading_system": {
+            "title": "Leading System",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "switch",
+              "ledger"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "leading_system",
+          "source"
+        ],
+        "title": "AccountingLeadingEffectiveOut",
+        "type": "object"
+      },
+      "AccountingLeadingSwitchDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "approve": {
+            "title": "Approve",
+            "type": "boolean"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "required": [
+          "approve"
+        ],
+        "title": "AccountingLeadingSwitchDecisionIn",
+        "type": "object"
+      },
+      "AccountingLeadingSwitchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "kind": {
+            "enum": [
+              "receivable_posting",
+              "dunning",
+              "direct_debit",
+              "payment_order"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leading_system": {
+            "$ref": "#/components/schemas/LeadingSystem"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "leading_system",
+          "valid_from"
+        ],
+        "title": "AccountingLeadingSwitchIn",
+        "type": "object"
+      },
+      "AccountingLeadingSwitchListOut": {
+        "properties": {
+          "effective": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingLeadingEffectiveOut"
+            },
+            "title": "Effective",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingLeadingSwitchOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "ledger_leading_system": {
+            "title": "Ledger Leading System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "effective",
+          "ledger_leading_system"
+        ],
+        "title": "AccountingLeadingSwitchListOut",
+        "type": "object"
+      },
+      "AccountingLeadingSwitchOut": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Comment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "leading_system": {
+            "title": "Leading System",
+            "type": "string"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "requested_by": {
+            "format": "uuid",
+            "title": "Requested By",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ledger_id",
+          "property_id",
+          "kind",
+          "leading_system",
+          "valid_from",
+          "status",
+          "comment",
+          "requested_by",
+          "decided_by",
+          "decided_at",
+          "decision_comment"
+        ],
+        "title": "AccountingLeadingSwitchOut",
+        "type": "object"
+      },
       "AccountsIn": {
         "additionalProperties": false,
         "properties": {
@@ -8765,6 +9011,15 @@
             "maxLength": 2000,
             "minLength": 3,
             "title": "Reason",
+            "type": "string"
+          },
+          "target": {
+            "default": "main",
+            "enum": [
+              "main",
+              "outgoing"
+            ],
+            "title": "Target",
             "type": "string"
           }
         },
@@ -20792,6 +21047,42 @@
           }
         },
         "title": "CreditorIdIn",
+        "type": "object"
+      },
+      "CreditorIdOut": {
+        "properties": {
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sepa_creditor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Creditor Id"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreditorIdOut",
         "type": "object"
       },
       "CreditorOut": {
@@ -34619,6 +34910,20 @@
         "title": "HoaAcqRuleIn",
         "type": "object"
       },
+      "HoaAllocationProposalSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaAllocationProposalSettingIn",
+        "type": "object"
+      },
       "HoaCorrectionReportSettingIn": {
         "additionalProperties": false,
         "properties": {
@@ -35067,6 +35372,20 @@
           "allocation_key_id"
         ],
         "title": "HoaPlanItemIn",
+        "type": "object"
+      },
+      "HoaPortalCircularSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaPortalCircularSettingIn",
         "type": "object"
       },
       "HoaReserveIn": {
@@ -48530,6 +48849,11 @@
             ],
             "title": "Email"
           },
+          "is_demo": {
+            "default": false,
+            "title": "Is Demo",
+            "type": "boolean"
+          },
           "is_platform_admin": {
             "title": "Is Platform Admin",
             "type": "boolean"
@@ -56375,6 +56699,35 @@
         "title": "PaymentTypeMappingIn",
         "type": "object"
       },
+      "PaymentTypeMappingOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "payment_type_code": {
+            "title": "Payment Type Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_type_code",
+          "account_id",
+          "account_number",
+          "account_name"
+        ],
+        "title": "PaymentTypeMappingOut",
+        "type": "object"
+      },
       "PendingContractOut": {
         "description": "Imported contract awaiting management approval before the receivable run.",
         "properties": {
@@ -57941,6 +58294,33 @@
         "title": "PortalChatReplyIn",
         "type": "object"
       },
+      "PortalCircularVoteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "agenda_item_id": {
+            "format": "uuid",
+            "title": "Agenda Item Id",
+            "type": "string"
+          },
+          "choice": {
+            "pattern": "^(yes|no|abstain)$",
+            "title": "Choice",
+            "type": "string"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agenda_item_id",
+          "contract_id",
+          "choice"
+        ],
+        "title": "PortalCircularVoteIn",
+        "type": "object"
+      },
       "PortalCommentIn": {
         "additionalProperties": false,
         "properties": {
@@ -58183,6 +58563,17 @@
             ],
             "title": "Chat Enabled"
           },
+          "owner_hoa_rental_statements_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Hoa Rental Statements Enabled"
+          },
           "owner_rental_income_enabled": {
             "anyOf": [
               {
@@ -58221,6 +58612,17 @@
             ],
             "title": "Owner Ticket Scope"
           },
+          "portal_owner_receipts_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portal Owner Receipts Enabled"
+          },
           "privacy_feature_enabled": {
             "anyOf": [
               {
@@ -58237,7 +58639,8 @@
               {
                 "enum": [
                   "off",
-                  "staff"
+                  "staff",
+                  "all"
                 ],
                 "type": "string"
               },
@@ -75110,6 +75513,11 @@
             ],
             "title": "Inspection Package Default Days"
           },
+          "insurance_broker_access": {
+            "default": false,
+            "title": "Insurance Broker Access",
+            "type": "boolean"
+          },
           "learning_bookkeeper_enabled": {
             "default": false,
             "title": "Learning Bookkeeper Enabled",
@@ -75454,6 +75862,17 @@
               }
             ],
             "title": "Inspection Package Default Days"
+          },
+          "insurance_broker_access": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance Broker Access"
           },
           "mail_approval_mode": {
             "anyOf": [
@@ -80690,6 +81109,34 @@
         "title": "WorkOrderIn",
         "type": "object"
       },
+      "WorkOrderRatingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "stars": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Stars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stars"
+        ],
+        "title": "WorkOrderRatingIn",
+        "type": "object"
+      },
       "WorkspaceBulkIn": {
         "additionalProperties": false,
         "properties": {
@@ -80793,6 +81240,34 @@
             "description": "nur schreibbar",
             "title": "Api Key"
           },
+          "batch_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Enabled"
+          },
+          "batch_price_factor": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Price Factor"
+          },
           "data_processing_agreement_signed": {
             "default": false,
             "title": "Data Processing Agreement Signed",
@@ -80882,6 +81357,15 @@
       },
       "mhvp__ai__schemas__ProviderOut": {
         "properties": {
+          "batch_enabled": {
+            "title": "Batch Enabled",
+            "type": "boolean"
+          },
+          "batch_price_factor": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Batch Price Factor",
+            "type": "string"
+          },
           "data_processing_agreement_signed": {
             "title": "Data Processing Agreement Signed",
             "type": "boolean"
@@ -80978,7 +81462,9 @@
           "endpoint_region",
           "enabled",
           "released_at",
-          "released_by"
+          "released_by",
+          "batch_enabled",
+          "batch_price_factor"
         ],
         "title": "ProviderOut",
         "type": "object"
@@ -85067,6 +85553,31 @@
           }
         },
         "summary": "Lastschriftlauf anlegen (Entwurf)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/creditor-ids": {
+      "get": {
+        "operationId": "list_creditor_ids_api_v1_accounting_direct_debits_creditor_ids_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CreditorIdOut"
+                  },
+                  "title": "Response List Creditor Ids Api V1 Accounting Direct Debits Creditor Ids Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Hinterlegte Gläubiger-Identifikationsnummern (Rechtsträger und Mandant)",
         "tags": [
           "Buchhaltung"
         ]
@@ -89850,6 +90361,163 @@
         ]
       }
     },
+    "/api/v1/accounting/ledgers/{ledger_id}/leading-switches": {
+      "get": {
+        "operationId": "leading_switches_api_v1_accounting_ledgers__ledger_id__leading_switches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingLeadingSwitchListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Führendes System je Vorgangstyp (Umschaltungen, GAC-05)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "request_leading_switch_api_v1_accounting_ledgers__ledger_id__leading_switches_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountingLeadingSwitchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingLeadingSwitchOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umschaltung des führenden Systems beantragen (zweite Person, GAC-05)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/leading-switches/{switch_id}/decide": {
+      "post": {
+        "operationId": "decide_leading_switch_api_v1_accounting_ledgers__ledger_id__leading_switches__switch_id__decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "switch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Switch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountingLeadingSwitchDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingLeadingSwitchOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umschaltung freigeben oder ablehnen (andere Person, G1 bei Plattform)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/ledgers/{ledger_id}/liquidity": {
       "get": {
         "operationId": "liquidity_api_v1_accounting_ledgers__ledger_id__liquidity_get",
@@ -90268,6 +90936,51 @@
       }
     },
     "/api/v1/accounting/ledgers/{ledger_id}/payment-type-accounts": {
+      "get": {
+        "operationId": "list_mappings_api_v1_accounting_ledgers__ledger_id__payment_type_accounts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentTypeMappingOut"
+                  },
+                  "title": "Response List Mappings Api V1 Accounting Ledgers  Ledger Id  Payment Type Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bestehende Zuordnungen Zahlungsart zu Konto",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
       "put": {
         "operationId": "set_mapping_api_v1_accounting_ledgers__ledger_id__payment_type_accounts_put",
         "parameters": [
@@ -91463,6 +92176,25 @@
                 }
               ],
               "title": "As Of"
+            }
+          },
+          {
+            "description": "Nur Zeilen dieses Objekts",
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Zeilen dieses Objekts",
+              "title": "Property Id"
             }
           }
         ],
@@ -99935,7 +100667,7 @@
     },
     "/api/v1/banking/automation/outgoing": {
       "put": {
-        "description": "``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):\naccounting:approve plus tenant_settings:update, reason and event.",
+        "description": "``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):\naccounting:approve plus tenant_settings:update, reason and event. AG19 (AF25-01): only\nswitches off; switching on needs a request with ``target=\"outgoing\"``, a second person\nand G1 (409 ``MHVP-BANK-0064``).",
         "operationId": "set_outgoing_api_v1_banking_automation_outgoing_put",
         "requestBody": {
           "content": {
@@ -119741,6 +120473,70 @@
         ]
       }
     },
+    "/api/v1/hoa/allocation-proposal-settings": {
+      "get": {
+        "operationId": "get_allocation_proposal_setting_api_v1_hoa_allocation_proposal_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Allocation Proposal Setting Api V1 Hoa Allocation Proposal Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Zuordnungsvorschlag Eigentümerwechsel (Schalter)",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "put": {
+        "operationId": "put_allocation_proposal_setting_api_v1_hoa_allocation_proposal_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaAllocationProposalSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Allocation Proposal Setting Api V1 Hoa Allocation Proposal Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnungsvorschlag Eigentümerwechsel (setzen)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
     "/api/v1/hoa/asset-reports": {
       "get": {
         "operationId": "list_asset_reports_api_v1_hoa_asset_reports_get",
@@ -123982,6 +124778,54 @@
         ]
       }
     },
+    "/api/v1/hoa/meetings/{meeting_id}/portal-circular-votes": {
+      "get": {
+        "operationId": "portal_votes_api_v1_hoa_meetings__meeting_id__portal_circular_votes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Portal Votes Api V1 Hoa Meetings  Meeting Id  Portal Circular Votes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalstimmen eines Umlaufverfahrens (lesend)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/meetings/{meeting_id}/protocol-draft": {
       "post": {
         "description": "Renders the minutes template (agenda, attendance with voting rights, resolution text,\ntally, announcement, signature lines) on the tenant letterhead and files it as a draft\ndocument linked to the meeting (`minutes_draft_document_id`). The signed minutes in\n`minutes_document_id` are never replaced. Permission: the write right of the HOA module\n(accounting:create, as for every other meeting action).",
@@ -124914,6 +125758,119 @@
         "summary": "Statuswechsel (Beschluss an Snapshot gebunden)",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/portal-circular-settings": {
+      "get": {
+        "operationId": "get_setting_api_v1_hoa_portal_circular_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Setting Api V1 Hoa Portal Circular Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Umlaufbeschluss im Eigentümerportal (Schalter)",
+        "tags": [
+          "hoa"
+        ]
+      },
+      "put": {
+        "description": "Operator decision after legal review (AE31-01); the vote additionally needs G4.",
+        "operationId": "put_setting_api_v1_hoa_portal_circular_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaPortalCircularSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Setting Api V1 Hoa Portal Circular Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlaufbeschluss im Eigentümerportal setzen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/portal-circular-votes": {
+      "get": {
+        "operationId": "portal_votes_by_entity_api_v1_hoa_portal_circular_votes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Legal Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Portal Votes By Entity Api V1 Hoa Portal Circular Votes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalstimmen laufender Umlaufverfahren einer Gemeinschaft (lesend)",
+        "tags": [
+          "hoa"
         ]
       }
     },
@@ -126917,6 +127874,52 @@
         "summary": "KI-Plausibilität der Hausgeldabrechnung anstoßen (nur Hinweise)",
         "tags": [
           "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/allocation-proposal": {
+      "get": {
+        "description": "Per unit with a result: owner used by the result posting (owner at the resolution date,\nM24-01) and the proposal of the tenant rule. 409 while the switch is off or the statement\nhas no snapshot or no resolution.",
+        "operationId": "statement_allocation_proposal_api_v1_hoa_statements__statement_id__allocation_proposal_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Statement Allocation Proposal Api V1 Hoa Statements  Statement Id  Allocation Proposal Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnungsvorschlag des Abrechnungsergebnisses (W07, P01)",
+        "tags": [
+          "WEG"
         ]
       }
     },
@@ -152519,6 +153522,85 @@
         ]
       }
     },
+    "/api/v1/portal/circular-resolutions": {
+      "get": {
+        "operationId": "list_circulars_api_v1_portal_circular_resolutions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Circulars Api V1 Portal Circular Resolutions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Laufende Umlaufbeschlüsse der eigenen Einheiten (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/circular-resolutions/{meeting_id}/vote": {
+      "post": {
+        "description": "One vote per own unit and item; a second vote is 409. Proxies are not accepted here.",
+        "operationId": "cast_vote_api_v1_portal_circular_resolutions__meeting_id__vote_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCircularVoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cast Vote Api V1 Portal Circular Resolutions  Meeting Id  Vote Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stimme im Umlaufverfahren abgeben (Eigentümer, G4)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/consumption-info": {
       "get": {
         "operationId": "list_own_api_v1_portal_consumption_info_get",
@@ -154917,6 +155999,78 @@
         ]
       }
     },
+    "/api/v1/portal/owner/receipts": {
+      "get": {
+        "operationId": "owner_receipts_api_v1_portal_owner_receipts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 2000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "description": "Suche in der Bezeichnung",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Suche in der Bezeichnung",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Owner Receipts Api V1 Portal Owner Receipts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Belegsuche je Abrechnungsperiode (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/owner/rental-income": {
       "get": {
         "operationId": "rental_income_api_v1_portal_owner_rental_income_get",
@@ -154935,6 +156089,59 @@
           }
         },
         "summary": "Vereinbarte Mieterträge je Objekt (Kapitalanleger)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/rental-reporting": {
+      "get": {
+        "description": "Read only report per own special-administration unit and settlement period (GAF-34).\n\nOff by default (``owner_rental_income_enabled``, question P13-01) and behind release gate\nG3. Amounts come from the issued operating cost statement snapshot; nothing is recomputed\nand nothing is posted. A foreign unit answers 404 without a hint.",
+        "operationId": "rental_reporting_api_v1_portal_owner_rental_reporting_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unit_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rental Reporting Api V1 Portal Owner Rental Reporting Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerreporting Kapitalanleger: Mieterträge, Umlagefähigkeit, Leerstand",
         "tags": [
           "Portal"
         ]
@@ -156601,6 +157808,105 @@
           }
         },
         "summary": "Angebot abgeben",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders/{order_id}/rating": {
+      "get": {
+        "description": "The resident sees whether the order can be rated and the own stars. The provider\naverage appears only with the tenant switch ``provider_rating_display`` = all, never the\nfree text of any rating, and never for the provider.",
+        "operationId": "resident_rating_state_api_v1_portal_work_orders__order_id__rating_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resident Rating State Api V1 Portal Work Orders  Order Id  Rating Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bewertung des Auftrags (betroffener Bewohner)",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "post": {
+        "operationId": "resident_rate_order_api_v1_portal_work_orders__order_id__rating_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderRatingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resident Rate Order Api V1 Portal Work Orders  Order Id  Rating Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auftrag bewerten (betroffener Bewohner, nach Abschluss, einmalig)",
         "tags": [
           "Portal"
         ]
@@ -173002,6 +174308,107 @@
           }
         },
         "summary": "Freigabe-Workflow des Auftrags",
+        "tags": [
+          "Tickets und Aufträge",
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/work-orders/{order_id}/rating": {
+      "get": {
+        "description": "Off (default): no ratings in the answer, only the flag whether staff has rated.",
+        "operationId": "get_work_order_rating_api_v1_work_orders__order_id__rating_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Work Order Rating Api V1 Work Orders  Order Id  Rating Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bewertungen des Auftrags (nur gemäß Schalter provider_rating_display)",
+        "tags": [
+          "Tickets und Aufträge",
+          "Tickets und Aufträge"
+        ]
+      },
+      "post": {
+        "operationId": "rate_work_order_api_v1_work_orders__order_id__rating_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderRatingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rate Work Order Api V1 Work Orders  Order Id  Rating Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auftrag bewerten (Verwaltung, nach Abschluss, einmalig)",
         "tags": [
           "Tickets und Aufträge",
           "Tickets und Aufträge"

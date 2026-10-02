@@ -286,6 +286,26 @@ units from the snapshot and `GET /portal/owner/plans` lists resolved economic pl
 units' amounts, both behind G4. Closed gate or switch off: empty list with a note; foreign ids
 404. Rule `docs/rules/AF15-01.md`.
 
+AG12 (AF15-R, AF25-02, migration 0430): `access.sync_grants` derives for a rental owner
+(`property_owner`, Mietverwaltung) a `legal_entity` grant on the own `rental_owner` entity
+(basis `rental_owner_right`, role `owner`, valid for the owner period, revoked on resync after an
+owner change). The rental statements match only the own legal entity; a statement whose legal
+entity is the community itself needs the switch `owner_hoa_rental_statements_enabled` (default
+off, decision AF25-02 open). Pure rental owners get no WEG view (403). Rule
+`docs/rules/AG12-01.md`.
+
 ## AF21 (GAC-08)
 
 Die Annahme einer Portaländerung (E-Mail, Telefon, Bankverbindung, Adresse) erzeugt zusätzlich `contact.updated` mit den Feldnamen (`emails`, `phones`, `bank_accounts`, `addresses`), `source=portal` und der Änderungs-ID, ohne Werte. Zusätzlich bleibt `contact.address_changed` für Adressen bestehen.
+
+## AG06 (GAF-35)
+
+Bewertung abgeschlossener Aufträge je Partei (`work_order_rating`, Migration 0424): `POST` und `GET /portal/work-orders/{id}/rating` für den betroffenen Bewohner (einmalig, 409 bei Wiederholung oder vor Abschluss, Dienstleister und Fremde 404), Verwaltung unter `/work-orders/{id}/rating` (Modul `tickets.work_order_rating`). Schalter `provider_rating_display` kennt jetzt `off`, `staff`, `all`; im Modus `all` sieht der Bewohner Anzahl und Durchschnitt des Dienstleisters, nie Freitexte. Regel `docs/rules/AG06-01.md`.
+
+## AG09 (GAF-36)
+
+Belegsuche für Eigentümer: `GET /portal/owner/receipts?year=&q=` (Modul `portal.owner_receipts`, Migration 0427) listet je Abrechnungsjahr die Belege zu den Kostenpositionen der jeweils neuesten freigegebenen Hausgeldabrechnung der eigenen Gemeinschaft. Quelle sind die Kostenpositionen der Abrechnung (`hoa_cost_item.document_id`), weil der eingefrorene Snapshot die Beleg-Id nicht enthält. Hinter dem Mandantenschalter `portal_owner_receipts_enabled` (Standard aus) und Freigabestufe G4, sonst leere Liste mit Hinweis. Die Liste öffnet kein Dokument: der Abruf läuft über `/portal/documents/{id}/download` (bestehende Dokumentberechtigung, Lesevermerk als Indiz). Belege ohne Berechtigung erscheinen ohne Titel und ohne Abruf (`available` false). Regel `docs/rules/AG09-01.md`.
+
+### Eigentümerreporting (AG08, GAF-34)
+
+`GET /portal/owner/rental-reporting` (optional `unit_id`) liefert je eigener SEV-Einheit und ausgegebener Betriebskostenabrechnung Monatsmiete brutto, umlagefähige Kosten (Einheit, Objekt), Leerstandstage und Leerstandsanteil aus dem Snapshot. Hinter `owner_rental_income_enabled` (Standard aus) und G3, lesend, fremde Einheit 404. Portalseite `/reporting`. Regel AG08-01, Frage P13-01 technisch vorbereitet.

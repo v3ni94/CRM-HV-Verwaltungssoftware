@@ -17,6 +17,7 @@ import inspect
 import json
 import re
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -24,6 +25,9 @@ import anthropic
 import openai
 
 from mhvp.ai.models import AiProvider
+
+# Set by ``ai.batch`` while a deferred run is captured for or replayed from a provider batch.
+batch_capture: ContextVar[Any] = ContextVar("mhvp_ai_batch_capture", default=None)
 
 
 class ProviderError(Exception):
@@ -103,6 +107,24 @@ class Completion:
     # Lookups the model asked for (empty without tool use). Filled from ``data`` by the
     # adapters; recorded test clients may set it directly.
     tool_calls: list[ToolCall] = field(default_factory=list)
+
+
+@dataclass
+class BatchRequest:
+    """One request of a provider batch; same parameters as ``ProviderClient.complete``."""
+
+    custom_id: str
+    model: str
+    system: str
+    messages: list[dict[str, str]]
+    schema: dict[str, Any]
+    max_tokens: int
+
+
+@dataclass
+class BatchPoll:
+    ended: bool
+    results: dict[str, "Completion | ProviderError"] = field(default_factory=dict)
 
 
 class ProviderClient(Protocol):
@@ -199,6 +221,97 @@ def base_url_for(provider: AiProvider, region: str | None) -> str | None:
     return REGION_BASE_URLS.get(provider, {}).get(normalized)
 
 
+# Strict schema normalization (OpenAI Structured Outputs, GAB-10) ---------------------------
+_NESTED_SCHEMA_KEYS = ("items", "additionalItems", "not")
+_SCHEMA_LIST_KEYS = ("anyOf", "oneOf", "allOf", "prefixItems")
+
+
+def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Copy of ``schema`` in the form strict mode accepts: every object closed
+    (``additionalProperties`` false) with all properties required; a property that was not
+    required becomes ``anyOf [original, {"type": "null"}]``. ``default`` is dropped (strict
+    mode has no defaults; the task model applies its own after ``drop_added_nulls``)."""
+
+    def walk(node: Any) -> Any:
+        if isinstance(node, list):
+            return [walk(n) for n in node]
+        if not isinstance(node, dict):
+            return node
+        out = {k: v for k, v in node.items() if k != "default"}
+        for key in _NESTED_SCHEMA_KEYS:
+            if isinstance(out.get(key), dict):
+                out[key] = walk(out[key])
+        for key in _SCHEMA_LIST_KEYS:
+            if isinstance(out.get(key), list):
+                out[key] = walk(out[key])
+        for key in ("$defs", "definitions"):
+            if isinstance(out.get(key), dict):
+                out[key] = {name: walk(sub) for name, sub in out[key].items()}
+        props = out.get("properties")
+        if out.get("type") == "object" or isinstance(props, dict):
+            props = props if isinstance(props, dict) else {}
+            required = set(out.get("required") or [])
+            new_props: dict[str, Any] = {}
+            for name, sub in props.items():
+                walked = walk(sub)
+                if name not in required and not _is_nullable(walked):
+                    walked = {"anyOf": [walked, {"type": "null"}]}
+                new_props[name] = walked
+            out["properties"] = new_props
+            out["required"] = list(new_props)
+            out["additionalProperties"] = False
+        return out
+
+    result: dict[str, Any] = walk(schema)
+    return result
+
+
+def _is_nullable(node: Any) -> bool:
+    if not isinstance(node, dict):
+        return False
+    kind = node.get("type")
+    if kind == "null" or (isinstance(kind, list) and "null" in kind):
+        return True
+    return any(_is_nullable(n) for n in node.get("anyOf") or [])
+
+
+def drop_added_nulls(data: Any, schema: dict[str, Any]) -> Any:
+    """Removes the ``null`` values strict mode forces for properties that the original schema
+    did not require, so the task model treats them as absent (its defaults apply)."""
+    defs = {**(schema.get("definitions") or {}), **(schema.get("$defs") or {})}
+
+    def resolve(node: Any) -> Any:
+        ref = node.get("$ref") if isinstance(node, dict) else None
+        if isinstance(ref, str) and ref.rsplit("/", 1)[-1] in defs:
+            return defs[ref.rsplit("/", 1)[-1]]
+        return node
+
+    def walk(value: Any, node: Any, depth: int = 0) -> Any:
+        node = resolve(node)
+        if depth > 32 or not isinstance(node, dict):
+            return value
+        if isinstance(value, dict) and isinstance(node.get("properties"), dict):
+            required = set(node.get("required") or [])
+            props = node["properties"]
+            return {
+                k: walk(v, props.get(k), depth + 1)
+                for k, v in value.items()
+                if not (v is None and k in props and k not in required)
+            }
+        if isinstance(value, list) and isinstance(node.get("items"), dict):
+            return [walk(v, node["items"], depth + 1) for v in value]
+        for option in node.get("anyOf") or []:
+            option = resolve(option)
+            if isinstance(option, dict) and option.get("type") != "null":
+                if isinstance(value, dict) and "properties" in option:
+                    return walk(value, option, depth + 1)
+                if isinstance(value, list) and "items" in option:
+                    return walk(value, option, depth + 1)
+        return value
+
+    return walk(data, schema)
+
+
 class AnthropicClient:
     """Messages API with structured output (``output_config.format`` json_schema).
     ``inference_geo`` is the region of the tenant configuration (M7-07); ``None`` leaves the
@@ -217,37 +330,28 @@ class AnthropicClient:
     async def aclose(self) -> None:
         await self._client.close()
 
-    async def complete(
+    def _request(
         self,
-        *,
         model: str,
         system: str,
         messages: list[dict[str, str]],
         schema: dict[str, Any],
         max_tokens: int,
-    ) -> Completion:
-        try:
-            request: dict[str, Any] = {
-                "model": model,
-                "max_tokens": max_tokens,
-                # Stable system prompt first so the prefix can be cached (9.3).
-                "system": [
-                    {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
-                ],
-                "messages": messages,
-                "output_config": {"format": {"type": "json_schema", "schema": schema}},
-            }
-            if self._inference_geo is not None:
-                request["inference_geo"] = self._inference_geo
-            response = await self._client.messages.create(**request)
-        except anthropic.RateLimitError as exc:
-            raise ProviderError("rate limited", retryable=True) from exc
-        except anthropic.APIStatusError as exc:
-            raise ProviderError(
-                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
-            ) from exc
-        except anthropic.APIConnectionError as exc:
-            raise ProviderError("connection failed", retryable=True) from exc
+    ) -> dict[str, Any]:
+        request: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            # Stable system prompt first so the prefix can be cached (9.3).
+            "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            "messages": messages,
+            "output_config": {"format": {"type": "json_schema", "schema": schema}},
+        }
+        if self._inference_geo is not None:
+            request["inference_geo"] = self._inference_geo
+        return request
+
+    @staticmethod
+    def _completion(response: Any) -> Completion:
         if response.stop_reason == "refusal":
             raise ProviderError("refusal")
         if response.stop_reason == "max_tokens":
@@ -268,10 +372,99 @@ class AnthropicClient:
             tool_calls=tool_calls_of(data),
         )
 
+    async def complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: list[dict[str, str]],
+        schema: dict[str, Any],
+        max_tokens: int,
+    ) -> Completion:
+        try:
+            request = self._request(model, system, messages, schema, max_tokens)
+            response = await self._client.messages.create(**request)
+        except anthropic.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except anthropic.APIStatusError as exc:
+            raise ProviderError(
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
+            ) from exc
+        except anthropic.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+        return self._completion(response)
+
+    # Message Batches API (9.3, GAB-09) ----------------------------------------------------
+    async def submit_batch(self, requests: list[BatchRequest]) -> str:
+        """Creates one message batch (``messages.batches.create``); returns its id. Each
+        request carries the same parameters as ``complete`` and a ``custom_id``."""
+        try:
+            batch = await self._client.messages.batches.create(
+                requests=[
+                    {
+                        "custom_id": r.custom_id,
+                        "params": self._request(  # type: ignore[typeddict-item]
+                            r.model, r.system, r.messages, r.schema, r.max_tokens
+                        ),
+                    }
+                    for r in requests
+                ]
+            )
+        except anthropic.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except anthropic.APIStatusError as exc:
+            raise ProviderError(
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
+            ) from exc
+        except anthropic.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+        return str(batch.id)
+
+    async def poll_batch(self, batch_id: str) -> BatchPoll:
+        """Status of a batch (``messages.batches.retrieve``); once ``processing_status`` is
+        ``ended`` the results (``messages.batches.results``) are mapped per ``custom_id`` to a
+        ``Completion`` or a ``ProviderError`` (errored, canceled, expired)."""
+        try:
+            batch = await self._client.messages.batches.retrieve(batch_id)
+            if batch.processing_status != "ended":
+                return BatchPoll(ended=False)
+            results: dict[str, Completion | ProviderError] = {}
+            async for entry in await self._client.messages.batches.results(batch_id):
+                result = entry.result
+                if result.type == "succeeded":
+                    try:
+                        results[entry.custom_id] = self._completion(result.message)
+                    except ProviderError as exc:
+                        results[entry.custom_id] = exc
+                else:
+                    results[entry.custom_id] = ProviderError(f"batch result {result.type}")
+        except anthropic.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except anthropic.APIStatusError as exc:
+            raise ProviderError(
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
+            ) from exc
+        except anthropic.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+        return BatchPoll(ended=True, results=results)
+
+
+def supports_batch(client: object) -> bool:
+    return callable(getattr(client, "submit_batch", None)) and callable(
+        getattr(client, "poll_batch", None)
+    )
+
 
 class OpenAIClient:
-    """Chat Completions with structured output (``response_format`` json_schema, strict).
-    ``base_url`` allows an EU endpoint or a compatible gateway (9.4, endpoint_region)."""
+    """Responses API with Structured Outputs (``text.format`` json_schema, ``strict`` true, 9.1).
+
+    Strict mode needs a normalized schema (``strict_schema``: ``additionalProperties`` false,
+    every property required, optional ones nullable via ``anyOf``); the ``null`` the model
+    then sends for an optional field is removed again (``drop_added_nulls``) so the task's
+    Pydantic model sees the field as absent. When the Responses call is rejected with a client
+    error (HTTP 4xx other than 429, for example a compatible gateway without ``/responses``)
+    the call falls back once to Chat Completions (``response_format`` json_schema, not strict;
+    ADR 0025). ``base_url`` allows an EU endpoint or a compatible gateway (9.4)."""
 
     def __init__(
         self,
@@ -296,6 +489,69 @@ class OpenAIClient:
         schema: dict[str, Any],
         max_tokens: int,
     ) -> Completion:
+        responses = getattr(self._client, "responses", None)
+        if responses is None:
+            return await self._complete_chat(model, system, messages, schema, max_tokens)
+        request: dict[str, Any] = {
+            "model": model,
+            "instructions": system,
+            "input": messages,
+            "max_output_tokens": max_tokens,
+            "store": False,
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": "output",
+                    "schema": strict_schema(schema),
+                    "strict": True,
+                }
+            },
+        }
+        try:
+            response = await responses.create(**request)
+        except openai.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except openai.APIStatusError as exc:
+            if exc.status_code >= 500:
+                raise ProviderError(status_detail(exc, exc.status_code), retryable=True) from exc
+            return await self._complete_chat(model, system, messages, schema, max_tokens)
+        except openai.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+        for item in getattr(response, "output", None) or []:
+            if getattr(item, "type", None) != "message":
+                continue
+            if any(getattr(c, "type", None) == "refusal" for c in item.content or []):
+                raise ProviderError("refusal")
+        details = getattr(response, "incomplete_details", None)
+        if getattr(response, "status", None) == "incomplete":
+            reason = getattr(details, "reason", None)
+            if reason == "max_output_tokens":
+                raise ProviderError("output truncated (max_tokens)")
+            raise ProviderError(f"incomplete ({reason or 'unknown'})")
+        text = response.output_text or ""
+        try:
+            data = drop_added_nulls(json.loads(text), schema)
+        except ValueError:
+            data = None
+        usage = response.usage
+        return Completion(
+            data=data,
+            raw_text=text,
+            tokens_in=usage.input_tokens if usage else 0,
+            tokens_out=usage.output_tokens if usage else 0,
+            model=response.model,
+            tool_calls=tool_calls_of(data),
+        )
+
+    async def _complete_chat(
+        self,
+        model: str,
+        system: str,
+        messages: list[dict[str, str]],
+        schema: dict[str, Any],
+        max_tokens: int,
+    ) -> Completion:
+        """Fallback: Chat Completions with ``response_format`` json_schema (not strict)."""
         request: dict[str, Any] = {
             "model": model,
             "max_completion_tokens": max_tokens,
@@ -415,4 +671,9 @@ def client_for(
     provider: AiProvider, api_key: str, endpoint_region: str | None = None
 ) -> ProviderClient:
     client: ProviderClient = _factory(provider, api_key, normalize_region(endpoint_region))
+    capture = batch_capture.get()
+    if capture is not None:
+        # Provider batch (``ai.batch``, GAB-09): the active recorder may route the call.
+        wrapped: ProviderClient = capture.wrap(provider, client)
+        return wrapped
     return client

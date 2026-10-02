@@ -1,24 +1,51 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 type Row = { row_id: string; title: string | null; ort: string | null; strasse: string | null; status: string; is_duplicate: boolean; structure_errors: string[] };
+type Option = { id: string; label: string };
 type Preview = { run_id: string; filename: string; row_count: number; rows: Row[] };
 
 /** OpenImmo Import (GAF-17): Vorschau der Datei, Übernahme je Zeile nach Auswahl von Objekt und Einheit
- *  (IDs aus der Einheitenansicht). Die Vorschau legt nichts an. */
+ *  (Auswahllisten). Die Vorschau legt nichts an. */
 export function OpenImmoImport({ canApply }: { canApply: boolean }) {
   const t = useTranslations("Af20.openimmo");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [propertyId, setPropertyId] = useState("");
   const [unitId, setUnitId] = useState("");
+  const [properties, setProperties] = useState<Option[]>([]);
+  const [units, setUnits] = useState<Option[]>([]);
   const [applied, setApplied] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!canApply) return;
+    let active = true;
+    void bff<{ items?: { id: string; number?: string; name?: string }[] } | { id: string; number?: string; name?: string }[]>("/api/bff/properties?page_size=200").then((res) => {
+      if (!active || !res.ok) return;
+      const rows = Array.isArray(res.data) ? res.data : (res.data.items ?? []);
+      setProperties(rows.map((p) => ({ id: p.id, label: [p.number, p.name].filter(Boolean).join(" ") || p.id })));
+    });
+    return () => {
+      active = false;
+    };
+  }, [canApply]);
+  useEffect(() => {
+    setUnitId("");
+    setUnits([]);
+    if (!propertyId) return;
+    let active = true;
+    void bff<{ id: string; number: string; label: string | null }[]>(`/api/bff/properties/${propertyId}/units`).then((res) => {
+      if (active && res.ok) setUnits(res.data.map((u) => ({ id: u.id, label: u.label ? `${u.number} (${u.label})` : u.number })));
+    });
+    return () => {
+      active = false;
+    };
+  }, [propertyId]);
   const upload = async (file: File | undefined) => {
     if (!file) return;
     setBusy(true);
@@ -56,12 +83,22 @@ export function OpenImmoImport({ canApply }: { canApply: boolean }) {
           {canApply ? (
             <div className="flex flex-wrap gap-2">
               <label className="flex flex-col gap-1">
-                <span className={ui.label}>{t("propertyId")}</span>
-                <input className={ui.input} value={propertyId} onChange={(e) => setPropertyId(e.target.value)} />
+                <span className={ui.label}>{t("property")}</span>
+                <select className={ui.input} value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+                  <option value="">{t("choose")}</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className={ui.label}>{t("unitId")}</span>
-                <input className={ui.input} value={unitId} onChange={(e) => setUnitId(e.target.value)} />
+                <span className={ui.label}>{t("unit")}</span>
+                <select className={ui.input} value={unitId} disabled={!propertyId} onChange={(e) => setUnitId(e.target.value)}>
+                  <option value="">{t("choose")}</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>{u.label}</option>
+                  ))}
+                </select>
               </label>
             </div>
           ) : null}

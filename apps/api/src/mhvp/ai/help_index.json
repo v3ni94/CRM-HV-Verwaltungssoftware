@@ -2172,6 +2172,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Periodensperren in der Abrechnungswerkbank",
+  "source": "Handbuch: abrechnung",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Werkbank zeigt lesend die aktiven Periodensperren des Objekts der Abrechnung. Setzen und Aufheben erfolgt weiterhin in der Buchhaltung.",
+  "file": "docs/handbuch/abrechnung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Handlungsanweisung: Bankverbindung neu anlegen oder ändern",
   "href": "/kontakte",
@@ -3722,6 +3732,16 @@
  },
  {
   "kind": "handbook",
+  "title": "EBICS: Schlüsselwechsel und Sperre, Testsystem-Abnahme ist Betreiberaufgabe (GAE-24, Welle 18)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ort: Bank, Abschnitt \"EBICS (Grundgerüst)\", beim Teilnehmer. Die Software führt Schlüsselwechsel und Sperre nur lokal. Sie sendet keinen Schlüsselwechselauftrag und keine Sperre (SPR) an die Bank. Die Abnahme gegen das Testsystem der Bank und die Sperre auf Bankseite (SPR oder te",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4358,6 +4378,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "G1 Öffnung zeigt den Stand des Abnahmeregisters (nur Anzeige, Link zum Register). Die Ergebnisse der Checkliste bleiben unverändert. Dauerrechnung erzeugen liefert weiterhin nur einen Entwurf mit Planentwurfsnummer. Im Schalter \"Ausgabe bei geschlossenem G1 ablehnen\" wird die Erz",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bestehende Zuordnungen, Gläubiger-ID und Objektfilter im Excel-Export",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Kontenmaske zeigt über dem Formular die bereits hinterlegten Zuordnungen Zahlungsart zu Erlöskonto. Unter Einstellungen, Buchhaltung, Gläubiger-ID und unter Bank, Verbindungen steht die hinterlegte Gläubiger-ID je Rechtsträger (nur Anzeige, Änderung in den Einstellungen). Der",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Führendes System je Vorgangstyp (Welle 18, AG02)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Buchungskreis zeigt der Abschnitt \"Führendes System je Vorgangstyp\", welches System für Sollstellung, Mahnung, Lastschrift und Zahlungsauftrag heute führt und ob dies aus einer Umschaltung oder aus der Einstellung des Buchungskreises stammt. Wer Freigaberechte hat, beantragt e",
   "file": "docs/handbuch/buchhaltung.md"
  },
  {
@@ -5292,6 +5332,46 @@
  },
  {
   "kind": "handbook",
+  "title": "Objektakte: Pflichtdokumente und lokales Modell (AF18)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Objektakte pflegen Sie die Pflichtdokumente je Objektart (Anlegen, Ändern, Löschen) und sehen den Status des lokalen Modells für die Dokumentprüfung samt Vorschlag je Prüffall. Das Modell liefert nur Vorschläge; eine Person übernimmt oder lehnt ab. Importlauf",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Demo-Band, Mailquellen und API-Schlüssel (AF19)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Gehört der angemeldete Benutzer zu einem Demo-Mandanten, zeigt die Kopfzeile ein Demo-Band. Das Kennzeichen liefert die Schnittstelle GET /auth/me im Feld isdemo. Unter Einstellungen, Mailquellen legen Sie Eingangs-Webhooks an, aktivieren sie, erneuern das Geheimnis (Anzeige nur ",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Plattformeinstellungen und Zuordnungsschwellen (Welle 18, AG03)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Plattformadministratoren sehen unter Plattform den Kasten Plattformeinstellungen mit dem Schalter für die Umgehung des Vier-Augen-Prinzips (Standard aus). Eine Änderung verlangt eine Bestätigung und wird protokolliert; sie öffnet keine Freigabestufe. - Unter Einstellungen, Fach",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Stapelverarbeitung beim KI-Anbieter (Welle 18, AG04)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, KI-Anbieter, lässt sich je Anbieter die Stapelverarbeitung einschalten (Standard aus, derzeit nur Anthropic). Zurückgestellte nächtliche Läufe werden dann gesammelt an den Anbieter gesendet und stündlich abgerufen; das Ergebnis erscheint wie bisher als Vorsch",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -5768,6 +5848,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Auf der Seite Immoware24 Import steht unter den benötigten Exporten die Liste der gemerkten Spaltenzuordnungen. Mit Entfernen löschen Sie eine einzelne Zuordnung nach Rückfrage. Bei der nächsten Datei schlägt die Plattform die Zuordnung neu vor, es wird nichts importiert oder geä",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Übernahme aus objektakte (Importlauf, OCR-Cache, Vorschaubilder)",
+  "source": "Handbuch: Importe (Imports)",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Importe, Übernahme aus objektakte: Exportdatei zuerst prüfen (Vorschau, ändert nichts), danach übernehmen. Zu einem Importlauf lässt sich das Ergebnis abrufen und der OCR-Textcache (ZIP) zuordnen; nicht zugeordnete Schlüssel werden aufgelistet. Die Vorschaubild-Übernahme ze",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Migration: Abnahme bearbeiten, Altdaten, Exporttypen",
+  "source": "Handbuch: Importe (Imports)",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ein Abnahmeprotokoll im Status Entwurf lässt sich bearbeiten, bis es unterzeichnet ist. Unter Migration zeigt der Abschnitt Altdaten die übernommenen Einzelposten je Buchungskreis mit der Summe offen und die historischen Tickets (nur lesend). Auf der Seite Vollimport listet die A",
   "file": "docs/handbuch/importe.md"
  },
  {
@@ -6692,6 +6792,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Migrationsmasken in der Oberfläche (AF18)",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Vollimport, Exporttypen, Verlauf und offene Posten h",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Objekte und Einheiten",
   "href": "/objekte",
@@ -7398,6 +7508,56 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Eigentümer sehen unter \"Eigentümerabrechnung\" (/eigentuemerabrechnungen) die ausgegebenen Abrechnungen ihrer Mietverwaltung oder Sondereigentumsverwaltung mit Einnahmen, Ausgaben, Auszahlungen und PDF. Die Anzeige schaltet die Verwaltung unter Portalfunktionen ein (Standard aus);",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Abgrenzung zum CRM-Handbuch (AG13)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Dieses Kapitel beschreibt ausschließlich die Anwendung apps/web-portal für Mieter, Eigentümer, Beirat und Dienstleister. Einstellungen, die die Verwaltung im CRM vornimmt (Fachliche Regeln, Portalfunktionen, Textbausteine, Freigabestufen), stehen in den CRM-Kapiteln, vor allem Ei",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Aufträge bewerten (AG06)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nach Abschluss eines Auftrags kann der betroffene Bewohner in der Meldung unter Auftrag bewerten Sterne (1 bis 5) und eine Anmerkung abgeben, einmalig; ebenso die Verwaltung auf der Auftragsseite im CRM. Die Bewertungen sind intern und werden dem Dienstleister nie gezeigt. Wer si",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Belegeinsicht für Eigentümer (AG09)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln, Schalter \"Belegeinsicht im Eigentümerportal\" einschalten (Standard aus, zusätzlich Freigabestufe G4). Eigentümer finden die Seite \"Belegeinsicht\" im Portal, filtern nach Abrechnungsjahr und Bezeichnung und laden Belege herunter, für die sie ",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Umlaufbeschlüsse (AG07)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Umlaufbeschlüsse sehen Eigentümer laufende Umlaufverfahren ihrer Gemeinschaft und stimmen je eigener Einheit und Beschlussantrag einmal mit Ja, Nein oder Enthaltung ab. Nach der Stimmabgabe zeigt die Seite Zeitpunkt und Prüfsumme des Beschlusstexts als Nachweis. Die Funktio",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Reporting für Kapitalanleger (AG08, GAF-34)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Eigentümer mit Sondereigentumsverwaltung sehen unter Reporting je Einheit und Abrechnungszeitraum die vereinbarte Monatsmiete, die auf Mieter umlagefähigen Kosten, die Leerstandstage und den Leerstandsanteil des Objekts. Die Seite ist nur sichtbar gefüllt, wenn der Mandantenschal",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -8538,6 +8698,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Wird ein Eigentümerwechsel erfasst, erhält jede offene Einsichtsanfrage der bisherigen Eigentümerseite derselben Liegenschaft innerhalb einer Stunde einen Prüfhinweis im Verlauf (Eigentümerprüfung). Die Anfrage bleibt offen; ob eine Bereitstellung widerrufen wird, entscheidet der",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zuordnungsvorschlag bei Eigentümerwechsel (Welle 18, AG20)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln, schaltet der Schalter \"Zuordnungsvorschlag bei Eigentümerwechsel\" (Standard aus) einen Hinweis frei: Die Vorschau der Planübernahme zeigt je Zeile den Eigentümer, den die Regel je Erwerbsart vorschlagen würde, und markiert Abweichungen vom v",
   "file": "docs/handbuch/weg.md"
  }
 ]

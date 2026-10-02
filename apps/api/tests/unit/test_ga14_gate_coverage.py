@@ -53,6 +53,7 @@ GATED_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("POST", "/api/v1/statements/{statement_id}/info-sheet", "G3"),
     ("POST", "/api/v1/billing/owner-statements/{statement_id}/outputs", "G3"),
     ("POST", "/api/v1/hoa/asset-reports/{report_id}/dispatch", "G4"),
+    # AG07 (GAF-32): circular resolution vote in the owner portal.
 )
 
 # AC03: routes that belong to the gate procedure itself (request, decision on a request).
@@ -72,12 +73,19 @@ GATE_CONDITIONAL_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("POST", "/api/v1/contracts/{contract_id}/rent-invoices", "G1"),
     ("POST", "/api/v1/contracts/{contract_id}/rent-invoices/{invoice_id}/credit-note", "G1"),
     ("POST", "/api/v1/banking/auto-post", "G1"),
+    # AG02 (GAC-05): approval of a switch to the platform as leading system needs G1.
+    ("POST", "/api/v1/accounting/ledgers/{ledger_id}/leading-switches/{switch_id}/decide", "G1"),
     # AF06 (GAA-06): plan draft number, never an MR number; reject mode refuses while G1 is closed.
     ("POST", "/api/v1/accounting/recurring-invoices/{plan_id}/generate", "G1"),
+    # AG07 (GAF-32): portal user route, staff tokens answer 403 before the gate; the closed G4
+    # branch (403, nothing stored) is proven in test_ag07_portal_circular.py.
+    ("POST", "/api/v1/portal/circular-resolutions/{meeting_id}/vote", "G4"),
 )
 
 REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(
     {
+        # AG02 (GAC-05): request of a leading switch, decided by a second person (G1 there).
+        ("POST", "/api/v1/accounting/ledgers/{ledger_id}/leading-switches"),
         ("PATCH", "/api/v1/banking/payment-orders/{order_id}"),
         ("POST", "/api/v1/accounting/admin-fee-invoices/{invoice_id}/release"),
         # Wave 16: approval flows without money movement (register, period lock, text blocks).

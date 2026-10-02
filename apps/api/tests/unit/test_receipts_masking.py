@@ -228,3 +228,12 @@ def test_two_header_names_get_two_stable_placeholders() -> None:
 def test_known_name_takes_precedence_over_header_placeholder() -> None:
     out = mask_text("Max Mustermann", ["Max Mustermann"], header_names=["Max Mustermann"])
     assert out == NAME_PLACEHOLDER
+
+
+def test_ag15_short_iban_shaped_tokens_not_masked_receipts() -> None:
+    from mhvp.receipts.masking import contains_iban, iban_candidates, mask_text
+
+    assert "[IBAN]" not in mask_text("Datei WE12.pdf Lauf BD27D253")
+    assert not contains_iban("WE12 34AB")
+    assert iban_candidates("WE12.pdf DE89 3704 0044 0532 0130 00") == ["DE89370400440532013000"]
+    assert "[IBAN]" in mask_text("IBAN DE89 3704 0044 0532 0130 00")

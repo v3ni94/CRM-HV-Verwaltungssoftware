@@ -21,6 +21,9 @@ type ProviderTest = { provider: string; tiers: TierTest[] };
 const DECIMAL = /^\d+([.,]\d{1,8})?$/;
 const norm = (v: string) => v.trim().replace(",", ".");
 
+/** Provider batch fields (GAB-09); optional until the generated client knows them. */
+type BatchFields = { batch_enabled?: boolean | null; batch_price_factor?: string | null };
+
 function tierOf(models: Record<string, unknown>, tier: Tier): TierForm {
   const m = (models[tier] ?? {}) as Record<string, unknown>;
   const s = (v: unknown) => (v === undefined || v === null ? "" : String(v));
@@ -41,6 +44,9 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
   const [dpaName, setDpaName] = useState<string | null>(null);
   const [optOut, setOptOut] = useState(initial?.training_opt_out_confirmed ?? false);
   const [enabled, setEnabled] = useState(initial?.enabled ?? false);
+  const initialBatch = (initial ?? {}) as BatchFields;
+  const [batchEnabled, setBatchEnabled] = useState(initialBatch.batch_enabled ?? false);
+  const [batchFactor, setBatchFactor] = useState(String(initialBatch.batch_price_factor ?? "1"));
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,6 +58,8 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
 
   const validate = (): string | null => {
     if (!DECIMAL.test(norm(budget))) return t("budgetInvalid");
+    const factor = norm(batchFactor);
+    if (!DECIMAL.test(factor) || Number(factor) <= 0 || Number(factor) > 1) return t("batchFactorInvalid");
     for (const tier of TIERS) {
       const f = tiers[tier];
       const any = f.model || f.input || f.output;
@@ -96,7 +104,7 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
         };
       }
     }
-    const body: ProviderIn = {
+    const body: ProviderIn & BatchFields = {
       models,
       task_tiers: (saved?.task_tiers ?? {}) as ProviderIn["task_tiers"],
       monthly_budget_eur: norm(budget),
@@ -105,6 +113,8 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
       training_opt_out_confirmed: optOut,
       endpoint_region: saved?.endpoint_region ?? null,
       enabled,
+      batch_enabled: batchEnabled,
+      batch_price_factor: norm(batchFactor),
       ...(apiKey ? { api_key: apiKey } : {}),
     };
     setBusy(true);
@@ -250,6 +260,21 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
           {t("optOut")}
         </label>
         <p className="text-xs text-muted">{t("dataProtectionHint")}</p>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">{t("batchTitle")}</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={batchEnabled} onChange={(e) => setBatchEnabled(e.target.checked)} />
+          {t("batchEnabled")}
+        </label>
+        <div className="max-w-xs">
+          <label htmlFor={`batch-factor-${name}`} className={ui.label}>
+            {t("batchFactor")}
+          </label>
+          <input id={`batch-factor-${name}`} inputMode="decimal" className={ui.input} value={batchFactor} onChange={(e) => setBatchFactor(e.target.value)} />
+        </div>
+        <p className="text-xs text-muted">{t("batchHint")}</p>
       </fieldset>
 
       <label className="flex items-center gap-2 text-sm">

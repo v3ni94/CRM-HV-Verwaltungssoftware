@@ -54,6 +54,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^portal/meetings/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^portal/meetings/${ID}/(participation|speaker-requests)$`) },
   { method: "POST", pattern: new RegExp(`^portal/meetings/${ID}/agenda/${ID}/votes$`) },
+  // AG07 (GAF-32): circular resolution votes of owners (switch and G4 checked by the API).
+  { method: "GET", pattern: /^portal\/circular-resolutions$/ },
+  { method: "POST", pattern: new RegExp(`^portal/circular-resolutions/${ID}/vote$`) },
   { method: "GET", pattern: /^portal\/meeting-proxies$/ },
   { method: "POST", pattern: /^portal\/meeting-proxies$/ },
   { method: "POST", pattern: new RegExp(`^portal/meeting-proxies/${ID}/revoke$`) },
@@ -87,6 +90,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals/${ID}/accept$`) },
+  { method: "GET", pattern: new RegExp(`^portal/work-orders/${ID}/rating$`) },
+  { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/rating$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/complete$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/invoice$`) },
   // M22-01: XML e-invoice upload (multipart), read into a proposal.

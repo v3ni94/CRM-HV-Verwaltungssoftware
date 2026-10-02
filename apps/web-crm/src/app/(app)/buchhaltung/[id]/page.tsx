@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { EntryActions } from "@/components/accounting/EntryActions";
 import { InterestTaxConfig } from "@/components/accounting/InterestTaxConfig";
+import { LeadingSwitchPanel } from "@/components/accounting/LeadingSwitchPanel";
 import { JournalPropertyFilter } from "@/components/accounting/JournalPropertyFilter";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
@@ -184,6 +185,7 @@ export default async function LedgerPage({
         <TicketsPagination page={page} pageSize={PAGE_SIZE} total={journalCount} shown={journalRows.length} buildHref={pageHref} />
       </section>
       {canCreate ? <YearCarryoverPanel ledgerId={id} defaultYear={new Date().getFullYear() - 1} /> : null}
+      <LeadingSwitchPanel ledgerId={id} canApprove={canApprove} properties={propertyOptions} today={today} />
       {canApprove ? <LedgerLockForm ledgerId={id} lockedUntil={ledger.data.locked_until ?? null} /> : null}
     </div>
   );

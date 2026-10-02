@@ -11,6 +11,7 @@ export, not a DATEV or GoBD data carrier.
 from __future__ import annotations
 
 import io
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -25,6 +26,7 @@ from mhvp.accounting import report_views
 from mhvp.accounting import services as acc
 from mhvp.accounting.models import EntryStatus, JournalEntry, JournalLine, Ledger, LedgerAccount
 from mhvp.core.escaping import csv_safe_cell
+from mhvp.core.problems import ErrorCodes, ProblemError
 
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 MONEY_FORMAT = "#,##0.00"
@@ -100,7 +102,11 @@ def build_xlsx(
 
 
 async def journal_rows(
-    session: AsyncSession, ledger: Ledger, start: date, end: date
+    session: AsyncSession,
+    ledger: Ledger,
+    start: date,
+    end: date,
+    property_id: uuid.UUID | None = None,
 ) -> list[list[Any]]:
     rows = (
         await session.execute(
@@ -111,6 +117,7 @@ async def journal_rows(
                 JournalEntry.ledger_id == ledger.id,
                 JournalEntry.status == EntryStatus.POSTED,
                 JournalEntry.booking_date.between(start, end),
+                *([JournalLine.property_id == property_id] if property_id else []),
             )
             .order_by(JournalEntry.fiscal_year, JournalEntry.number, JournalLine.line_no)
         )
@@ -133,6 +140,8 @@ async def journal_rows(
         for entry, line, account in rows
     ]
 
+
+PROPERTY_FILTER_REPORTS = frozenset({"journal", "monthly_matrix", "income_expense"})
 
 JOURNAL_COLUMNS = [
     "Jahr",
@@ -169,16 +178,28 @@ async def build_report_xlsx(
     start: date,
     end: date,
     as_of: date,
+    property_id: uuid.UUID | None = None,
 ) -> tuple[bytes, int]:
-    """Builds the workbook of ``report``; returns the file and the number of data rows."""
+    """Builds the workbook of ``report``; returns the file and the number of data rows.
+
+    ``property_id`` filters journal, monthly matrix and income/expense by the line's object;
+    other reports have no object axis and reject the filter.
+    """
+    if property_id is not None and report not in PROPERTY_FILTER_REPORTS:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Der Objektfilter gilt nur für Journal, Monatsmatrix und Einnahmen Ausgaben.",
+        )
     if report == "journal":
         header = await report_views.report_header(
             session, ledger, report=report, start=start, end=end
         )
-        rows = await journal_rows(session, ledger, start, end)
+        rows = await journal_rows(session, ledger, start, end, property_id)
         return build_xlsx("Journal", header, JOURNAL_COLUMNS, rows), len(rows)
     if report == "monthly_matrix":
-        data = await report_views.monthly_matrix(session, ledger, start, end)
+        data = await report_views.monthly_matrix(
+            session, ledger, start, end, None, False, property_id
+        )
         months = data["months"]
         rows = [
             [a["number"], a["name"], a["category"], *[a["months"][m] for m in months], a["total"]]
@@ -286,7 +307,7 @@ async def build_report_xlsx(
             len(rows),
         )
     if report == "income_expense":
-        data = await report_views.income_expense(session, ledger, start, end)
+        data = await report_views.income_expense(session, ledger, start, end, False, property_id)
         rows = [["Einnahme", a["number"], a["name"], a["total"]] for a in data["revenue"]] + [
             ["Ausgabe", a["number"], a["name"], a["total"]] for a in data["cost"]
         ]

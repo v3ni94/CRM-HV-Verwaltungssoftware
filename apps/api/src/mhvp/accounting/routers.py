@@ -6,7 +6,7 @@ Declaring the platform as leading system requires release gate G1 (18.0, 6.9.10)
 
 import uuid
 from collections.abc import Sequence
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any, Literal, Self
 from urllib.parse import quote
@@ -391,6 +391,186 @@ async def set_leading(
         )
         await session.flush()
         return LedgerOut.model_validate(ledger)
+
+
+class AccountingLeadingSwitchIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["receivable_posting", "dunning", "direct_debit", "payment_order"]
+    leading_system: LeadingSystem
+    valid_from: date
+    property_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class AccountingLeadingSwitchDecisionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    approve: bool
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class AccountingLeadingSwitchOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    ledger_id: uuid.UUID
+    property_id: uuid.UUID | None
+    kind: str
+    leading_system: str
+    valid_from: date
+    status: str
+    comment: str | None
+    requested_by: uuid.UUID
+    decided_by: uuid.UUID | None
+    decided_at: datetime | None
+    decision_comment: str | None
+
+
+class AccountingLeadingEffectiveOut(BaseModel):
+    kind: str
+    leading_system: str
+    source: Literal["switch", "ledger"]
+
+
+class AccountingLeadingSwitchListOut(BaseModel):
+    items: list[AccountingLeadingSwitchOut]
+    effective: list[AccountingLeadingEffectiveOut]
+    ledger_leading_system: str
+
+
+@router.get(
+    "/ledgers/{ledger_id}/leading-switches",
+    summary="Führendes System je Vorgangstyp (Umschaltungen, GAC-05)",
+    dependencies=[Depends(strict_query)],
+)
+async def leading_switches(
+    ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> AccountingLeadingSwitchListOut:
+    from mhvp.accounting import leading as lead
+    from mhvp.accounting.models import LedgerLeadingSwitch
+
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        rows = (
+            await session.scalars(
+                select(LedgerLeadingSwitch)
+                .where(LedgerLeadingSwitch.ledger_id == ledger.id)
+                .order_by(LedgerLeadingSwitch.valid_from.desc(), LedgerLeadingSwitch.created_at)
+            )
+        ).all()
+        today = local_today()
+        effective = []
+        for kind in lead.LeadingKind:
+            found = await lead.explicit(session, ledger, kind, today)
+            effective.append(
+                AccountingLeadingEffectiveOut(
+                    kind=kind.value,
+                    leading_system=(found or ledger.leading_system).value,
+                    source="switch" if found is not None else "ledger",
+                )
+            )
+        return AccountingLeadingSwitchListOut(
+            items=[AccountingLeadingSwitchOut.model_validate(r) for r in rows],
+            effective=effective,
+            ledger_leading_system=ledger.leading_system.value,
+        )
+
+
+@router.post(
+    "/ledgers/{ledger_id}/leading-switches",
+    status_code=201,
+    summary="Umschaltung des führenden Systems beantragen (zweite Person, GAC-05)",
+)
+async def request_leading_switch(
+    ledger_id: uuid.UUID,
+    body: AccountingLeadingSwitchIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> AccountingLeadingSwitchOut:
+    from mhvp.accounting import leading as lead
+    from mhvp.properties.models import Property
+
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.GATE_FOUR_EYES, detail="Antrag nur durch eine Person.")
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        if body.property_id is not None:
+            prop = await session.get(Property, body.property_id)
+            if prop is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            if ledger.property_id is not None and ledger.property_id != prop.id:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT, detail="Das Objekt gehört nicht zu diesem Buchungskreis."
+                )
+        row = lead.request_switch(
+            ledger,
+            kind=lead.LeadingKind(body.kind),
+            leading=body.leading_system,
+            valid_from=body.valid_from,
+            property_id=body.property_id,
+            comment=body.comment,
+            user_id=principal.user_id,
+        )
+        session.add(row)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ledger.leading_switch_requested",
+            entity_type="ledger_leading_switch",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"kind": row.kind, "leading_system": row.leading_system},
+        )
+        await session.refresh(row)
+        return AccountingLeadingSwitchOut.model_validate(row)
+
+
+@router.post(
+    "/ledgers/{ledger_id}/leading-switches/{switch_id}/decide",
+    summary="Umschaltung freigeben oder ablehnen (andere Person, G1 bei Plattform)",
+)
+async def decide_leading_switch(
+    ledger_id: uuid.UUID,
+    switch_id: uuid.UUID,
+    body: AccountingLeadingSwitchDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> AccountingLeadingSwitchOut:
+    from mhvp.accounting import leading as lead
+    from mhvp.accounting.models import LedgerLeadingSwitch
+
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        row = await session.scalar(
+            select(LedgerLeadingSwitch)
+            .where(LedgerLeadingSwitch.id == switch_id, LedgerLeadingSwitch.ledger_id == ledger.id)
+            .with_for_update()
+        )
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if body.approve and lead.needs_g1(row):
+            await _ensure_gate_for_ledger(request, principal, session, ledger.id)
+        lead.decide(
+            row,
+            approve=body.approve,
+            user_id=principal.user_id,
+            is_platform_admin=principal.is_platform_admin,
+            comment=body.comment,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ledger.leading_switch_" + row.status,
+            entity_type="ledger_leading_switch",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"kind": row.kind, "leading_system": row.leading_system},
+        )
+        await session.flush()
+        await session.refresh(row)
+        return AccountingLeadingSwitchOut.model_validate(row)
 
 
 # Accounts -----------------------------------------------------------------------------
@@ -1490,6 +1670,45 @@ async def set_mapping(
             row.account_id = body.account_id
         await session.flush()
         return {"payment_type_code": row.payment_type_code, "account_id": row.account_id}
+
+
+class PaymentTypeMappingOut(BaseModel):
+    payment_type_code: str
+    account_id: uuid.UUID
+    account_number: str
+    account_name: str
+
+
+@router.get(
+    "/ledgers/{ledger_id}/payment-type-accounts",
+    summary="Bestehende Zuordnungen Zahlungsart zu Konto",
+    response_model=list[PaymentTypeMappingOut],
+    dependencies=[Depends(strict_query)],
+)
+async def list_mappings(
+    ledger_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[PaymentTypeMappingOut]:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        rows = (
+            await session.execute(
+                select(PaymentTypeAccount, LedgerAccount)
+                .join(LedgerAccount, LedgerAccount.id == PaymentTypeAccount.account_id)
+                .where(PaymentTypeAccount.ledger_id == ledger.id)
+                .order_by(PaymentTypeAccount.payment_type_code)
+            )
+        ).all()
+        return [
+            PaymentTypeMappingOut(
+                payment_type_code=m.payment_type_code,
+                account_id=a.id,
+                account_number=a.number,
+                account_name=a.name,
+            )
+            for m, a in rows
+        ]
 
 
 @router.post("/receivable-runs", status_code=201, summary="Sollstellungslauf: Vorschau")

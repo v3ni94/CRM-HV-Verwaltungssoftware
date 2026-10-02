@@ -256,7 +256,10 @@ def test_provider_ratings_behind_switch(client: TestClient, world: World) -> Non
     assert SECRET_COMMENT not in str(off)
 
     # validation, permission, unknown parameter
-    assert client.patch(F, json={"provider_rating_display": "all"}, headers=ha).status_code == 422
+    # AG06: "all" is a valid mode since 1.63.0; an unknown value is still refused.
+    assert client.patch(F, json={"provider_rating_display": "all"}, headers=ha).status_code == 200
+    assert client.patch(F, json={"provider_rating_display": "off"}, headers=ha).status_code == 200
+    assert client.patch(F, json={"provider_rating_display": "bogus"}, headers=ha).status_code == 422
     assert client.patch(F, json={"provider_rating_display": "staff"}, headers=ro).status_code == 403
     assert client.get(f"{RATINGS}?x=1", headers=ha).status_code == 422
     assert client.get(RATINGS).status_code == 401

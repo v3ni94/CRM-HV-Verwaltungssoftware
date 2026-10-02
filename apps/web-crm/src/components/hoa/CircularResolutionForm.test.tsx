@@ -33,3 +33,23 @@ describe("CircularResolutionForm", () => {
     expect(screen.getByLabelText("Stimme WE 01")).toBeInTheDocument();
   });
 });
+
+describe("CircularPortalVotes (AG07)", () => {
+  it("lists portal votes read only with the text checksum", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify([{ id: "v1", meeting_id: "m", item_title: "Fassadenanstrich", contract_id: "c1", choice: "yes", cast_at: "2026-11-05T10:00:00Z", wording_sha256: "ab12" }]),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+        ),
+      ),
+    );
+    renderIntl(<CircularResolutionForm legalEntityId="e" owners={owners} resolutions={basis} lowerMajorityEnabled={false} />);
+    expect(await screen.findByText(/WE 01: Fassadenanstrich, Ja/)).toBeInTheDocument();
+    expect(screen.getByText("Prüfsumme des Beschlusstexts: ab12")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+});

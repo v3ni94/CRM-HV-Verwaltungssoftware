@@ -2062,9 +2062,27 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
                     # ticket; the resident accepts one via
                     # POST /portal/work-orders/{id}/appointment-proposals/{pid}/accept.
                     "appointment_proposals": await _ticket_proposals(session, t.id),
+                    # GAF-35: completed orders of the ticket; the affected resident rates them
+                    # via POST /portal/work-orders/{id}/rating (switch applies to display only).
+                    "completed_work_order_ids": await _completed_order_ids(session, t.id),
                 }
             )
         return out
+
+
+async def _completed_order_ids(session: AsyncSession, ticket_id: uuid.UUID) -> list[uuid.UUID]:
+    from mhvp.tickets.models import WorkOrder
+    from mhvp.tickets.work_order_rating import RATABLE
+
+    return list(
+        (
+            await session.scalars(
+                select(WorkOrder.id)
+                .where(WorkOrder.ticket_id == ticket_id, WorkOrder.status.in_(RATABLE))
+                .order_by(WorkOrder.created_at)
+            )
+        ).all()
+    )
 
 
 async def _ticket_proposals(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:

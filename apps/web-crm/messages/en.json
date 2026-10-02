@@ -928,6 +928,7 @@
     "reconciliationLink": "Parallel operation reconciliation",
     "fullImportLink": "Full import with cut-off date and reconciliation",
     "migrationLink": "Migration from Immoware24 (journal, opening balances, reconciliation, switch)",
+    "objektakteLink": "Import from objektakte (import run, OCR cache, preview images)",
     "listImportLink": "Immoware24 list import",
     "roleTitle": "Set role afterwards",
     "roleLabel": "Role for all created contacts",
@@ -990,6 +991,11 @@
     "dpaStored": "Stored: {name}",
     "dpaMissing": "No DPA document stored.",
     "optOut": "Exclusion from use for training confirmed",
+    "batchTitle": "Provider batch processing",
+    "batchEnabled": "Send deferred runs as a provider batch (Anthropic Message Batches only)",
+    "batchFactor": "Price factor for batch runs (1 = no discount)",
+    "batchFactorInvalid": "The price factor must be greater than 0 and at most 1.",
+    "batchHint": "Off by default. Take the factor from the provider's price list; it applies only to runs answered entirely from the batch. Results stay with the provider until retrieved; the operator checks coverage by the DPA.",
     "dataProtectionHint": "These details do not replace a review of the contract. The release requires DPA, DPA document, training opt-out, API key and budget.",
     "enabled": "Provider active",
     "save": "Save",
@@ -2242,7 +2248,7 @@
     "skippedPending": "{count} contracts skipped, approval pending"
   },
   "Bank": {
-    "automationSwitch": {"title": "Automation switch", "help": "Switching the automation on requires gate G1 to be open, a request with reason and the approval of a second person. Switching off is possible at any time. The run still checks levels, rules and gate itself.", "on": "Automation on", "off": "Automation off", "g1Open": "G1 open", "g1Closed": "G1 closed", "reason": "Reason of the request", "request": "Request switch on", "requested": "Request filed. A second person approves it.", "switchOff": "Switch off now", "offReason": "Reason for switching off", "switchedOff": "The automation is switched off.", "approve": "Approve", "reject": "Reject", "approved": "Request approved, the automation is on.", "rejected": "Request rejected.", "blockedG1": "Locked while gate G1 is closed.", "alreadyOn": "The automation is on.", "pendingOrNoRight": "A request is pending or the right to request is missing.", "status": {"requested": "Requested", "approved": "Approved", "rejected": "Rejected"}, "comparison": {"title": "Comparison run automation against manual booking", "help": "Report from the decision log: per closed decision whether the best automation proposal matches the manual booking. The report posts nothing and is no proof of safety.", "summary": "Compared bookings: {compared}, match rate: {rate}", "noRate": "no data", "caseKind": "Case class", "total": "Total", "outcome": {"match": "Match", "other_proposal": "Other proposal", "modified": "Booked modified", "no_proposal": "No proposal", "rejected": "Rejected", "auto_posted": "Auto posted", "reversed": "Reversed"}}},
+    "automationSwitch": {"title": "Automation switch", "help": "Switching the automation on requires gate G1 to be open, a request with reason and the approval of a second person. Switching off is possible at any time. The run still checks levels, rules and gate itself.", "on": "Automation on", "off": "Automation off", "g1Open": "G1 open", "g1Closed": "G1 closed", "reason": "Reason of the request", "request": "Request switch on", "requested": "Request filed. A second person approves it.", "switchOff": "Switch off now", "offReason": "Reason for switching off", "switchedOff": "The automation is switched off.", "approve": "Approve", "reject": "Reject", "approved": "Request approved, the automation is on.", "rejected": "Request rejected.", "blockedG1": "Locked while gate G1 is closed.", "alreadyOn": "The automation is on.", "pendingOrNoRight": "A request is pending or the right to request is missing.", "status": {"requested": "Requested", "approved": "Approved", "rejected": "Rejected"}, "target": {"main": "Main switch", "outgoing": "Outgoing automation"}, "outgoing": {"title": "Outgoing automation", "help": "Automatic posting of outgoing payments. Switching on only through a request approved by a second person while gate G1 is open, effective only while the main switch is on. Switching off is immediate.", "on": "Outgoing automation on", "off": "Outgoing automation off", "request": "Request outgoing automation", "switchOff": "Switch outgoing automation off now", "switchedOff": "The outgoing automation is off."}, "comparison": {"title": "Comparison run automation against manual booking", "help": "Report from the decision log: per closed decision whether the best automation proposal matches the manual booking. The report posts nothing and is no proof of safety.", "summary": "Compared bookings: {compared}, match rate: {rate}", "noRate": "no data", "caseKind": "Case class", "total": "Total", "outcome": {"match": "Match", "other_proposal": "Other proposal", "modified": "Booked modified", "no_proposal": "No proposal", "rejected": "Rejected", "auto_posted": "Auto posted", "reversed": "Reversed"}}},
     "title": "Bank",
     "metrics": {
       "title": "Matching key figures",
@@ -6378,6 +6384,7 @@
       "immoware": "Immoware24",
       "full": "Full import",
       "migration": "Immoware24 migration",
+      "objektakteImport": "objektakte import",
       "learning": "Learning phase",
       "platformAudit": "Platform audit",
       "domains": "Customer domains",
@@ -8845,7 +8852,7 @@
     }
   },
   "InvoiceFactual": {
-    "budget": { "title": "Budget comparison {label} ({year})", "planned": "Planned amount", "booked_before": "Assigned so far", "invoice": "This invoice", "remaining": "Remaining", "exceeded": "Planned amount including tolerance exceeded (hint)." },
+    "budget": { "title": "Budget comparison {label} ({year})", "planned": "Planned amount", "booked_before": "Assigned so far", "invoices_before": "of which invoices", "credit_notes_before": "of which credit notes", "journal_lines_net": "of which journal lines on the plan account", "invoice": "This invoice", "remaining": "Remaining", "exceeded": "Planned amount including tolerance exceeded (hint)." },
     "resolutionCoverage": "Resolution no. {number} of {date}: {subject}.",
     "resolutionEffective": "Resolution is recorded as effective.",
     "resolutionNotEffective": "Check the resolution status.",
@@ -10556,6 +10563,18 @@
     "noRenewal": "none"
   },
   "WorkOrders": {
+    "ratingTitle": "Rating of the order",
+    "ratingOff": "Display of ratings is switched off (setting ratings of service providers). A submitted rating stays stored internally.",
+    "ratingNone": "No rating yet.",
+    "ratingParty_staff": "Management",
+    "ratingParty_resident": "Resident",
+    "ratingStarsValue": "{stars} of 5 stars",
+    "ratingStars": "Stars",
+    "ratingComment": "Comment (optional)",
+    "ratingSubmit": "Save rating",
+    "ratingSaved": "The rating has been saved.",
+    "ratingNotYet": "A rating is possible only after the order is completed.",
+    "ratingDone": "The management has already rated this order.",
     "listTitle": "Work orders",
     "listDescription": "All work orders to service providers with status and ticket reference.",
     "listError": "Work orders could not be loaded.",
@@ -12712,6 +12731,52 @@
     "caseId": "Review case (ID)",
     "propose": "Request proposal"
   },
+  "ObjektakteImportRun": {
+    "title": "Import from objektakte",
+    "pageIntro": "Check and import the objektakte export, assign the OCR text cache and import preview images. The check changes nothing.",
+    "back": "Back to imports",
+    "noPermission": "No permission for the objektakte import.",
+    "runTitle": "Import run",
+    "runIntro": "Check first (preview), then import. Import is enabled only after a preview.",
+    "dumpFile": "Export file (SQL dump, UTF-8)",
+    "check": "Check (preview)",
+    "apply": "Import",
+    "applyHint": "The file has not been checked yet.",
+    "historyTitle": "History: result of a run",
+    "runId": "Import run ID",
+    "load": "Load",
+    "ocrTitle": "OCR text cache",
+    "ocrIntro": "Assign a ZIP of the ocr-cache directory to an import run. Unmatched keys are listed, nothing is silently dropped.",
+    "ocrFile": "ZIP file",
+    "ocrApply": "Import OCR cache",
+    "ocrResult": "{matched} documents matched, {unmatched} keys without a match.",
+    "previewTitle": "Preview image import",
+    "previewIntro": "State of the last preview image import run. Start and resume require the approval role.",
+    "previewNone": "No run yet.",
+    "previewCounts": "{processed} of {total} processed: {imported} imported, {rendered} rendered, {missing} missing, {skipped} skipped, {failed} failed.",
+    "renderMissing": "Render missing previews",
+    "previewStart": "Start run",
+    "previewResume": "Resume after failure",
+    "queued": "The run was queued.",
+    "startedInline": "The run was executed."
+  },
+  "MigrationHistory": {
+    "title": "Legacy data (read only)",
+    "intro": "Imported open items and historical tickets. Nothing is posted or changed.",
+    "ledger": "Ledger",
+    "chooseLedger": "Choose ledger",
+    "kindLabel": "Kind",
+    "allKinds": "All kinds",
+    "loadItems": "Load open items",
+    "loadTickets": "Load tickets",
+    "none": "No entries.",
+    "openSum": "{count} open items, total open {sum}.",
+    "kind": { "receivable": "Receivable", "credit": "Credit", "deposit": "Deposit", "reserve": "Reserve", "loan": "Loan", "special_levy": "Special levy" }
+  },
+  "ExportKinds": {
+    "title": "Known export types and expected columns",
+    "reconciled": "reconciled"
+  },
   "MigrationExtras": {
     "acceptanceTitle": "Migration acceptance per property",
     "acceptanceIntro": "Acceptance record with review scope, responsible persons, fallback plan and archive concept. A second person must sign.",
@@ -12719,6 +12784,9 @@
     "chooseProperty": "Choose property",
     "status": { "draft": "Draft", "signed": "Signed" },
     "sign": "Sign",
+    "edit": "Edit",
+    "saveEdit": "Save changes",
+    "cancelEdit": "Cancel",
     "create": "Create acceptance record",
     "field": {
       "review_scope": "Review scope",
@@ -12794,6 +12862,11 @@
     }
   },
   "HoaCircular": {
+    "portalVotes": "Votes from the owner portal",
+    "portalVotesHint": "Read only. The management takes the votes over into the result determination.",
+    "portalVoteLine": "{owner}: {item}, {choice}, {at}",
+    "portalVoteHash": "Checksum of the motion text: {hash}",
+    "portalChoice": { "yes": "Yes", "no": "No", "abstain": "Abstain" },
     "title": "Record circular resolution",
     "hint": "The system counts the votes received in text form and determines the result. Whether a lowered majority is admissible in the circular procedure is a legal assessment to be checked by legal counsel (M25-02).",
     "disabled": "Circular resolutions with a simple majority are not enabled for this tenant. Unanimity in text form applies.",
@@ -14108,8 +14181,9 @@
       "intro": "The preview creates nothing. Each row is released individually, property and unit are required.",
       "file": "OpenImmo file (XML or ZIP)",
       "count": "{file}: {count} rows",
-      "propertyId": "Property ID",
-      "unitId": "Unit ID",
+      "property": "Property",
+      "unit": "Unit",
+      "choose": "Please choose",
       "untitled": "Untitled",
       "duplicate": "Already exists",
       "errors": "{count} structure hints",
@@ -14133,6 +14207,37 @@
       "exportHint": "Exports of contacts and invoices run via the API because they need an explicit selection of records.",
       "empty": "No runs yet.",
       "errors": "{count} errors"
+    },
+    "lexExport": {
+      "title": "Export to Lexware Office",
+      "intro": "Select records, check the preview, then export. The export only runs while the accounting gate is open.",
+      "kind": "Data type",
+      "contacts": "Contacts",
+      "invoices": "Invoices",
+      "search": "Search",
+      "from": "Invoice date from",
+      "to": "Invoice date to",
+      "load": "Load list",
+      "empty": "No records found.",
+      "payload": "Voucher data as JSON (applies to all selected records)",
+      "payloadInvalid": "The voucher data must be a valid JSON object.",
+      "preview": "Preview",
+      "previewText": "{count} records would be exported. Nothing has been transferred yet.",
+      "export": "Start export ({count})",
+      "resultText": "{ok} transferred, {failed} failed.",
+      "download": "Download result"
+    },
+    "uprotokollFiles": {
+      "title": "Match files from U-Protokoll",
+      "intro": "Match the ZIP of the storage folder to the import run. The run ID is part of the apply result.",
+      "runId": "Run ID",
+      "file": "ZIP file",
+      "match": "Match",
+      "matched": "Matched ({count})",
+      "unmatched": "No match in the run ({count})",
+      "missing": "Expected but not in the archive ({count})",
+      "unnamed": "No file name",
+      "unlinkHint": "A match is only undone by deleting the document, the API has no separate unlink function."
     },
     "fastTable": {
       "label": "Fast table import",
@@ -14600,6 +14705,42 @@
     "balance": "Balance"
   },
   "Bookkeeping": {
+    "leadingSwitch": {
+      "title": "Leading system per process kind",
+      "help": "Without an approved switch the ledger setting applies. One person requests a switch, another approves it; the platform as leading system needs G1.",
+      "kind": "Process kind",
+      "leading": "Leading",
+      "source": "Source",
+      "sourceSwitch": "Switch",
+      "sourceLedger": "Ledger",
+      "validFrom": "Valid from",
+      "property": "Property (optional)",
+      "allProperties": "All properties",
+      "status": "Status",
+      "comment": "Comment",
+      "request": "Request switch",
+      "requested": "Request saved. Another person approves it.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "decided": "Decision saved.",
+      "history": "Requests and switches",
+      "empty": "No switches.",
+      "kinds": {
+        "receivable_posting": "Receivable posting",
+        "dunning": "Dunning",
+        "direct_debit": "Direct debit",
+        "payment_order": "Payment order"
+      },
+      "systems": {
+        "immoware24": "Legacy system (Immoware24)",
+        "mhvp": "Platform"
+      },
+      "statuses": {
+        "requested": "Requested",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      }
+    },
     "notes": {
       "toggle": "Notes",
       "empty": "No notes yet.",
@@ -14895,6 +15036,8 @@
       "support_login_enabled": "Read only support view with consent",
       "owner_rental_income_enabled": "Rental income for investors in the owner portal",
       "owner_rental_statements_enabled": "Owner statement rental and SEV in the owner portal",
+      "portal_owner_receipts_enabled": "Receipt access for owners in the owner portal",
+      "owner_hoa_rental_statements_enabled": "Statements of the community as landlord in the owner portal",
       "chat_bot_enabled": "Assistant for the own documents (chat bot)",
       "privacy_feature_enabled": "Privacy feature for AI answers"
     },
@@ -14904,13 +15047,15 @@
       "support_login_enabled": "The management can view read only with the user's valid consent, every access is logged.",
       "owner_rental_income_enabled": "Shows owners with special property administration the agreed rent of their own units without tenant names. Check data protection approval before switching on.",
       "owner_rental_statements_enabled": "Shows owners the issued owner statements of their own legal entities with PDF. Release gate G3 is also required.",
+      "portal_owner_receipts_enabled": "Shows owners the receipts behind the cost positions of the released statements of their community with a search per statement period. Retrieval uses the existing document authorisation and is logged as an indication. Release gate G4 is also required.",
+      "owner_hoa_rental_statements_enabled": "Shows all owners of a community the issued owner statements whose legal entity is the community itself (letting of common property). Decision AF25-02 is open; the owner statement switch and release gate G3 are also required.",
       "chat_bot_enabled": "Tenants and owners can ask questions about the documents released for them. Without further releases the assistant only shows matches in these documents; answers never come from foreign documents.",
       "privacy_feature_enabled": "Prerequisite for AI answers in the assistant: a released privacy notice (text block portal_chat_privacy_notice, released by a second person) and acknowledgement per account. The AI answer also needs the released AI provider with a data processing agreement. The tenant maintains the text; the software ships no legal text."
     },
     "ticketScope": "Tickets in the owner portal",
     "ticketScopes": { "none": "no tickets", "released": "only tickets released for owners", "property": "all tickets of the own properties (number, title, status)" },
     "ratingDisplay": "Ratings of service providers",
-    "ratingModes": { "off": "do not show (default, internal)", "staff": "show to the management only as an overview" },
+    "ratingModes": { "off": "do not show (default, internal)", "staff": "show to the management only as an overview", "all": "additionally the contractor average for residents in the portal (never for contractors)" },
     "ratingHelp": "Ratings are internal assessments by the management of completed orders. The overview shows only the count, mean and distribution of the stars per provider, without free text. Providers and third parties do not see the ratings. A display for providers stays excluded until decision AA14-02 and a data protection review.",
     "statistics": "Usage in the last {days} days",
     "accountsTotal": "Portal accounts in total: {count}",
@@ -16489,6 +16634,18 @@
       "security": "Security and data protection"
     },
     "rules": {
+      "insurance-broker-access": {
+        "title": "Access of the insurance broker role",
+        "description": "When on, the insurance broker role gets read access to insurance contracts and claims (insurance:read, claims:read), limited by the member's property assignment. When off the role has no access. The decision on the scope is open (GAC-07)."
+      },
+      "onboarding-link-threshold": {
+        "title": "Property takeover, threshold for automatic linking in percent",
+        "description": "From this match the person match of the property takeover links a hit to the address book. Default 90 percent. The threshold must not be below the suggestion threshold."
+      },
+      "onboarding-suggest-threshold": {
+        "title": "Property takeover, threshold for suggestions in percent",
+        "description": "Between this threshold and the linking threshold a hit is only suggested, below it an incomplete new contact is created. Default 60 percent."
+      },
       "invoice-intake-auto": {
         "title": "Receipt capture after filing an invoice",
         "description": "On, confirming an intake proposal recognised as invoice starts the invoice extraction as a proposal in the receipt inbox. Nothing is booked, approved or paid. Off, the hint offers the action Capture receipt."
@@ -16570,6 +16727,10 @@
         "description": "Placeholder field per reserve plan with the approval status not approved. The tax advisor determines the classification.",
         "defaultText": "Not approved"
       },
+      "allocation-proposal": {
+        "title": "Allocation proposal on owner change",
+        "description": "Whether the plan takeover preview and the statement show the owner according to the rule per acquisition kind as a proposal. The owner used stays unchanged, nothing is posted."
+      },
       "correction-report": {
         "title": "Correction report per owner",
         "description": "Whether the correction report between two statement versions is shown. The report is a display only, nothing is posted or sent; the legal effect of a correction stays open."
@@ -16615,6 +16776,10 @@
         "title": "Cut-off date of the transition rule",
         "description": "Date you enter as the cut-off date of the transition rule. It is no legal text and has no locking effect, the deadline notices only mention it."
       },
+      "portal-circular-resolution": {
+        "title": "Circular resolution in the owner portal",
+        "description": "Whether owners vote in running circular procedures in the portal. Voting additionally needs release gate G4; the software does not check admissibility."
+      },
       "online-meeting": {
         "title": "Online meeting in the portal",
         "description": "Whether owners take part and vote online in hybrid or virtual meetings in the portal. The software does not check admissibility."
@@ -16627,9 +16792,17 @@
         "title": "Rental income in the owner portal",
         "description": "Shows owners the agreed rent of their units with separate property management, without the tenant name. The data protection approval is open."
       },
+      "portal-owner-receipts": {
+        "title": "Receipt access in the owner portal",
+        "description": "Shows owners the receipts of the released statements of their community. Only receipts the owner may see under the document authorisation can be retrieved. Release gate G4 is also required."
+      },
       "owner-rental-statements-portal": {
         "title": "Owner statement in the owner portal",
         "description": "Shows owners the issued owner statements of their own legal entities with PDF. Release gate G3 is also required."
+      },
+      "owner-hoa-rental-statements-portal": {
+        "title": "Community statements in the owner portal",
+        "description": "Also shows the owners of a community owner statements whose legal entity is the community. Without the switch owners see only statements of their own legal entity. Decision AF25-02 open."
       },
       "tenant-statement-portal": {
         "title": "Service charge statement in the tenant portal",
@@ -16781,7 +16954,8 @@
       },
       "provider-rating-display": {
         "off": "Off, internal only",
-        "staff": "Shown to the management only"
+        "staff": "Shown to the management only",
+        "all": "Management and residents (average, never contractors)"
       },
       "terms-version-mode": {
         "manual": "Maintain by hand",
@@ -16897,7 +17071,9 @@
       "account": "Account",
       "choose": "Choose account",
       "save": "Save mapping",
-      "saved": "Mapping saved."
+      "saved": "Mapping saved.",
+      "existing": "Existing mappings",
+      "noneYet": "No mapping stored yet."
     },
     "approval": {
       "title": "Second approval",
@@ -16956,6 +17132,7 @@
       "channels": {"letter": "Letter", "email": "Email", "phone": "Phone", "portal": "Portal", "in_person": "In person"},
       "provisions": {"electronic": "electronic", "copies": "copies", "appointment": "appointment"}
     },
+    "periodLocks": {"title": "Period locks of the property", "none": "No active period lock for this property."},
     "resultEntries": {
       "title": "Result entries",
       "notice": "Creates drafts for receivable and credit. Nothing is posted; release gate G3 and management approval remain required.",
@@ -16997,7 +17174,9 @@
     "save": "Save",
     "saved": "Creditor ID saved.",
     "removed": "Creditor ID removed.",
-    "noPermission": "Missing permission for this selection."
+    "noPermission": "Missing permission for this selection.",
+    "current": "Stored creditor IDs",
+    "notSet": "not set"
   },
   "DirectDebitPreview": {
     "title": "Preview of collectable receivables",
@@ -17007,5 +17186,16 @@
     "show": "Preview",
     "result": "{count} receivables collectable, control sum {sum}, collection on {date}. The preview creates nothing.",
     "noCreditorId": "No creditor ID is stored for the legal entity."
+  },
+  "AG03": {
+    "roleNoAccess": "no access (decision open)",
+    "platformTitle": "Platform settings",
+    "platformHint": "Bypassing the four eyes principle weakens the control of release gates G1 to G5 and stays off for productive tenants. The liability assessment is open (M2-02).",
+    "bypassLabel": "Superadmin may approve release gates alone",
+    "on": "On",
+    "off": "Off",
+    "version": "Version {version}",
+    "confirm": "Really change the four eyes bypass?",
+    "loadFailed": "Platform settings could not be loaded."
   }
 }

@@ -67,6 +67,9 @@ describe("InvoiceFactualPanel", () => {
           year: 2026,
           planned: "2000.00",
           booked_before: "952.00",
+          invoices_before: "1000.00",
+          credit_notes_before: "100.00",
+          journal_lines_net: "52.00",
           invoice: "1190.00",
           remaining: "-142.00",
           exceeded: true,
@@ -86,6 +89,9 @@ describe("InvoiceFactualPanel", () => {
     expect(table).toHaveTextContent("Budgetabgleich Instandhaltung (2026)");
     expect(table).toHaveTextContent("952,00");
     expect(table).toHaveTextContent("-142,00");
+    expect(table).toHaveTextContent("davon Gutschriften");
+    expect(table).toHaveTextContent("1.000,00");
+    expect(table).toHaveTextContent("52,00");
     expect(screen.getByText(/überschritten \(Hinweis\)/)).toBeInTheDocument();
     expect(screen.getByTestId("invoice-resolution-coverage")).toHaveTextContent("Beschluss Nr. 3 vom 01.11.2025");
   });

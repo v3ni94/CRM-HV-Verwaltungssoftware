@@ -34,6 +34,7 @@ from mhvp.tickets.models import (
     WorkOrder,
     WorkOrderEvent,
 )
+from mhvp.tickets.work_order_rating import WorkOrderRatingIn
 
 router = APIRouter(tags=["Tickets und Aufträge"])
 READ = require_permission("tickets:read")
@@ -376,3 +377,67 @@ async def archive_comment(
             )
             await session.flush()
     return Response(status_code=204)
+
+
+@router.post(
+    "/work-orders/{order_id}/rating",
+    status_code=201,
+    summary="Auftrag bewerten (Verwaltung, nach Abschluss, einmalig)",
+)
+async def rate_work_order(
+    order_id: uuid.UUID,
+    body: WorkOrderRatingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.tickets.work_order_rating import add_rating, rating_out
+
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id, with_for_update=True)
+        if order is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await add_rating(
+            session,
+            order,
+            "staff",
+            body,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            contact_id=None,
+        )
+        return rating_out(row, with_comment=True)
+
+
+@router.get(
+    "/work-orders/{order_id}/rating",
+    summary="Bewertungen des Auftrags (nur gemäß Schalter provider_rating_display)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_work_order_rating(
+    order_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Off (default): no ratings in the answer, only the flag whether staff has rated."""
+    from mhvp.portal import features as portal_features
+    from mhvp.tickets.models import WorkOrderRating
+    from mhvp.tickets.work_order_rating import RATABLE, rating_out
+
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id)
+        if order is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        mode = (await portal_features.get_or_default(session)).provider_rating_display or "off"
+        rows = (
+            await session.scalars(
+                select(WorkOrderRating)
+                .where(WorkOrderRating.work_order_id == order.id)
+                .order_by(WorkOrderRating.created_at)
+            )
+        ).all()
+        return {
+            "mode": mode,
+            "can_rate": order.status in RATABLE,
+            "staff_rated": any(r.party == "staff" for r in rows),
+            "ratings": [rating_out(r, with_comment=True) for r in rows]
+            if mode in ("staff", "all")
+            else [],
+        }

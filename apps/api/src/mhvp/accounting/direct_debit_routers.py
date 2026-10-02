@@ -153,6 +153,36 @@ async def _ledger(session: Any, ledger_id: uuid.UUID) -> Ledger:
     return ledger  # type: ignore[no-any-return]
 
 
+class CreditorIdOut(BaseModel):
+    legal_entity_id: uuid.UUID | None = None
+    name: str
+    sepa_creditor_id: str | None = None
+
+
+@router.get(
+    "/creditor-ids",
+    summary="Hinterlegte Gläubiger-Identifikationsnummern (Rechtsträger und Mandant)",
+    response_model=list[CreditorIdOut],
+    dependencies=[Depends(strict_query)],
+)
+async def list_creditor_ids(
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[CreditorIdOut]:
+    from mhvp.platform.models import TenantBillingSettings
+    from mhvp.properties.models import LegalEntity
+
+    async with tenant_tx(request, principal) as session:
+        entities = (await session.scalars(select(LegalEntity).order_by(LegalEntity.name))).all()
+        fallback = await session.scalar(select(TenantBillingSettings.sepa_creditor_id).limit(1))
+        out = [
+            CreditorIdOut(legal_entity_id=e.id, name=e.name, sepa_creditor_id=e.sepa_creditor_id)
+            for e in entities
+        ]
+        out.append(CreditorIdOut(name="Mandant (Rückfall)", sepa_creditor_id=fallback))
+        return out
+
+
 @router.put(
     "/creditor-ids/legal-entities/{legal_entity_id}",
     summary="Gläubiger-Identifikationsnummer des Rechtsträgers hinterlegen",

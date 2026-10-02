@@ -28,6 +28,9 @@ const SCOPED_ROLES = ["tax_advisor"];
 export type PropertyOption = { id: string; number: string; name: string };
 /** Rollen, die die Objektzuordnung nie einschränkt (Backend
  * `mhvp.core.auth.scope.PROPERTY_UNSCOPED_ROLES`). */
+/** GAC-07: the role has no rights until the tenant switch `insurance_broker_access` is set. */
+const NO_ACCESS_ROLES = ["insurance_broker"];
+
 const PROPERTY_UNSCOPED_ROLES = ["tenant_admin", "administrator"];
 
 function StatusBadge({ status }: { status: string }) {
@@ -37,6 +40,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function RolesEditor({ member, roles, onSaved }: { member: Member; roles: Role[]; onSaved: (roleCodes: string[]) => void }) {
   const t = useTranslations("Members");
+  const tg = useTranslations("AG03");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(member.roles);
   const [busy, setBusy] = useState(false);
@@ -77,6 +81,7 @@ function RolesEditor({ member, roles, onSaved }: { member: Member; roles: Role[]
             }
           />
           {r.name}
+          {NO_ACCESS_ROLES.includes(r.code) ? <span className="text-muted">({tg("roleNoAccess")})</span> : null}
         </label>
       ))}
       {error ? <p className={ui.error}>{error}</p> : null}
@@ -516,6 +521,7 @@ function AddMemberForm({
   prefill?: MemberPrefill;
 }) {
   const t = useTranslations("Members");
+  const tg = useTranslations("AG03");
   const [email, setEmail] = useState(prefill?.email ?? "");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
@@ -581,6 +587,7 @@ function AddMemberForm({
               }
             />
             {r.name}
+            {NO_ACCESS_ROLES.includes(r.code) ? <span className="text-muted">({tg("roleNoAccess")})</span> : null}
           </label>
         ))}
       </fieldset>

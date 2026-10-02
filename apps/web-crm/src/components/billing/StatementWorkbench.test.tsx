@@ -59,3 +59,16 @@ describe("ResultTable", () => {
     expect(screen.getAllByText(/100,00/).length).toBe(2);
   });
 });
+
+describe("StatementWorkbench period locks", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("shows the active period locks of the property read only", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse([{ id: "l1", period_from: "2025-01-01", period_to: "2025-12-31", source: "manual", reason: "Abschluss 2025", active: true }]),
+    );
+    renderIntl(<StatementWorkbench id={ID} status="draft" keys={KEYS} propertyId="0192abcd-0000-7000-8000-000000000099" />);
+    await waitFor(() => expect(screen.getByTestId("period-locks")).toHaveTextContent("Abschluss 2025"));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/bff/accounting/period-locks?property_id=0192abcd-0000-7000-8000-000000000099&active=true");
+  });
+});

@@ -29,3 +29,28 @@ def seed_auto_posting(client: Any, headers: dict[str, str], on: bool = True) -> 
             )
     finally:
         engine.dispose()
+
+
+def seed_outgoing(client: Any, headers: dict[str, str], on: bool = True) -> None:
+    """AG19: simulates an approved outgoing request (``auto_posting_outgoing_enabled``)."""
+    me = client.get("/api/v1/auth/me", headers=headers)
+    assert me.status_code == 200, me.text
+    tenant_id = me.json()["tenant_id"]
+    url = client.app.state.settings.database_url.get_secret_value().replace(
+        "+psycopg_async", "+psycopg"
+    )
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant_id)}
+            )
+            conn.execute(
+                text(
+                    "UPDATE tenant_settings SET auto_posting_outgoing_enabled = :on "
+                    "WHERE tenant_id = :t"
+                ),
+                {"on": on, "t": tenant_id},
+            )
+    finally:
+        engine.dispose()

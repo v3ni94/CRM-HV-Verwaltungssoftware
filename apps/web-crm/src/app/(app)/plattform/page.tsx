@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { DemoFlagToggle } from "@/components/platform/DemoFlagToggle";
+import { PlatformSettingsAdmin } from "@/components/platform/PlatformSettingsAdmin";
 import { TenantAdmin } from "@/components/platform/TenantAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -82,6 +83,7 @@ export default async function PlatformPage() {
           {t("onboardingLink")}
         </Link>
       </nav>
+      <PlatformSettingsAdmin />
       <TenantAdmin initialTenants={tenants.data ?? []} />
       {rows.map(({ tenant, readiness }) => (
         <section key={tenant.id} className={ui.card}>

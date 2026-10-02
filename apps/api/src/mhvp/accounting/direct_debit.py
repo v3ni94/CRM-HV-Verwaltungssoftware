@@ -26,6 +26,7 @@ from defusedxml import ElementTree as SafeElementTree  # type: ignore[import-unt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting import leading
 from mhvp.accounting import services as acc
 from mhvp.accounting.direct_debit_models import (
     DirectDebitApproval,
@@ -34,7 +35,7 @@ from mhvp.accounting.direct_debit_models import (
     DirectDebitRunStatus,
     SequenceType,
 )
-from mhvp.accounting.models import LeadingSystem, Ledger, OpenItem, OpenItemKind
+from mhvp.accounting.models import Ledger, OpenItem, OpenItemKind
 from mhvp.core import crypto
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -405,7 +406,9 @@ async def create_run(
     from mhvp.properties.models import PropertyBankAccount
 
     check_lead_time(collection_date, lead_days, today)
-    if ledger.leading_system is not LeadingSystem.MHVP:
+    if not await leading.is_leading(
+        session, ledger, leading.LeadingKind.DIRECT_DEBIT, collection_date
+    ):
         raise ProblemError(
             ErrorCodes.CONFLICT,
             detail="Lastschriften löst nur das führende System aus (13.1, 6.9.10).",
@@ -824,7 +827,9 @@ async def generate_file(
             ErrorCodes.GATE_FOUR_EYES, detail="Nur vollständig freigegebene Lastschriftläufe."
         )
     ledger = await session.get(Ledger, run.ledger_id)
-    if ledger is None or ledger.leading_system is not LeadingSystem.MHVP:
+    if ledger is None or not await leading.is_leading(
+        session, ledger, leading.LeadingKind.DIRECT_DEBIT, run.collection_date
+    ):
         raise ProblemError(
             ErrorCodes.CONFLICT,
             detail="Lastschriften löst nur das führende System aus (13.1, 6.9.10).",

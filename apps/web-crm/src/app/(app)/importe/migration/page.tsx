@@ -30,7 +30,7 @@ export default async function MigrationPage() {
         />
       ) : null}
       {permissions.includes("accounting:read") ? (
-        <MigrationExtras canUpdate={permissions.includes("accounting:update")} canApprove={permissions.includes("accounting:approve")} />
+        <MigrationExtras canTickets={permissions.includes("tickets:read")} canUpdate={permissions.includes("accounting:update")} canApprove={permissions.includes("accounting:approve")} />
       ) : (
         <p role="alert" className="rounded-md border border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-fg" data-testid="migration-forbidden">
           {t("noPermission")}

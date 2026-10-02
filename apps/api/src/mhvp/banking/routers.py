@@ -4,7 +4,7 @@ no payment is initiated here (G2)."""
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -1387,6 +1387,8 @@ async def set_automation(
 
 class BankingSwitchRequestIn(_In):
     reason: str = Field(min_length=3, max_length=2000)
+    # AG19 (AF25-01): "outgoing" requests the outgoing automation (L2b) with the same path.
+    target: Literal["main", "outgoing"] = "main"
 
 
 class BankingSwitchDecisionIn(_In):
@@ -1447,12 +1449,17 @@ async def list_switch_requests(
     async with tenant_tx(request, principal) as session:
         rows = await automation_switch.list_requests(session)
         enabled = await session.scalar(select(TenantSettings.auto_posting_enabled))
+        outgoing = await session.scalar(select(TenantSettings.auto_posting_outgoing_enabled))
         return {
             "enabled": bool(enabled),
+            "outgoing_enabled": bool(outgoing),
             "g1_open": gate_open,
             "can_request": gate_open
             and not enabled
-            and not any(r.status == "requested" for r in rows),
+            and not any(r.status == "requested" and r.target == "main" for r in rows),
+            "can_request_outgoing": gate_open
+            and not outgoing
+            and not any(r.status == "requested" and r.target == "outgoing" for r in rows),
             "items": [automation_switch.switch_out(r) for r in rows],
         }
 
@@ -1476,6 +1483,7 @@ async def create_switch_request(
             user_id=principal.user_id,
             reason=body.reason,
             gate_open=gate_open,
+            target=body.target,
         )
         return automation_switch.switch_out(row)
 
@@ -1771,12 +1779,23 @@ async def set_outgoing(
     body: OutgoingSwitchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, bool]:
     """``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):
-    accounting:approve plus tenant_settings:update, reason and event."""
+    accounting:approve plus tenant_settings:update, reason and event. AG19 (AF25-01): only
+    switches off; switching on needs a request with ``target="outgoing"``, a second person
+    and G1 (409 ``MHVP-BANK-0064``)."""
     from mhvp.platform.models import TenantSettings
 
     if not principal.has("tenant_settings:update"):
         raise ProblemError(
             ErrorCodes.FORBIDDEN, developer_message="Missing tenant_settings:update."
+        )
+    if body.enabled:
+        raise ProblemError(
+            ErrorCodes.OUTGOING_SWITCH_REQUEST_REQUIRED,
+            detail=(
+                "Die Ausgangsautomatik wird nur über einen Antrag mit Freigabe durch eine "
+                "zweite Person eingeschaltet (POST /banking/automation/switch-requests, "
+                'Ziel "outgoing").'
+            ),
         )
     async with tenant_tx(request, principal) as session:
         settings = await session.scalar(select(TenantSettings).with_for_update())

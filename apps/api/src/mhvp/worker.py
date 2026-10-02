@@ -192,6 +192,12 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
                 "schedule": crontab(hour=1, minute=30),
                 "options": {"queue": "io"},
             },
+            # Hourly polling of submitted provider batches (9.3, GAB-09); no-op without any.
+            "ai-batch-poll": {
+                "task": "mhvp.ai.batch_poll",
+                "schedule": crontab(minute=40),
+                "options": {"queue": "io"},
+            },
             # Monthly deletion proposal (M6-04, V17): lists documents whose released retention
             # period ended; deletes nothing, approval and execution are two persons.
             "documents-deletion-proposals": {

@@ -123,3 +123,7 @@ Bericht zum Stichtag mit Nulldifferenz) und Umgestellt.
   Rückfallplan und Archivkonzept erfassen, danach durch eine zweite Person unterzeichnen. Ein
   unterzeichnetes Protokoll bleibt unverändert. Das Protokoll ersetzt keine Freigabe des
   Wechsels des führenden Systems.
+
+## Migrationsmasken in der Oberfläche (AF18)
+
+Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anlegen, Bearbeiten, Unterzeichnen durch eine zweite Person), ordnen die Spalten des Journal-Exports zu und sehen die Jahresausgaben je Buchungskreis. Vollimport, Exporttypen, Verlauf und offene Posten haben noch keine Maske und sind über die Schnittstelle erreichbar. Die Seite Dokumente, Eingangsvorschläge zeigt Vorschläge des Dokumenteingangs mit Annehmen, Ablehnen und Zurücknehmen einer automatischen Ablage; gebucht wird dort nichts.

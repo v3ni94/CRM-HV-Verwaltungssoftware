@@ -337,3 +337,21 @@ files a missing one. Every later output returns the filed bytes (SHA-256 checked
 letter date and layout of an issued document never change. The filename carries version and
 snapshot hash prefix: a new version files a new document. Gate G4 is checked before; no
 statement value changes. Tests: `tests/integration/test_af11_statement_archive.py`.
+
+## AG20 (wave 18): allocation proposal, GAE-11 and GAE-12 (migration 0438)
+
+* `hoa/allocation_proposal.py`: switch `hoa_allocation_proposal_setting.enabled` (default off,
+  `GET/PUT /hoa/allocation-proposal-settings`, `tenant_settings:*`). When on, the plan takeover
+  preview adds `allocation_proposal` (`proposed`, `differs`) per row from `calc.allocation_owner`
+  and `GET /hoa/statements/{id}/allocation-proposal` lists used owner (resolution date, M24-01)
+  and proposal per unit (409 while off or without snapshot and resolution). Display only.
+* `tests/integration/test_ag20_allocation.py`: statement with bound and unbound reserve payment
+  end to end, plan ratio proposal; takeover proposal per variant.
+* AG07 / GAF-32 (`portal_circular.py`, migration 0425): circular resolution in the owner
+  portal. `GET /portal/circular-resolutions` lists running procedures (meeting kind
+  `circular_resolution`, invited or held) of own units; `POST /portal/circular-resolutions/{id}/vote`
+  stores one vote per unit and item (channel circular) with `portal_user_id` and
+  `wording_sha256`, only with `hoa_online_meeting_setting.portal_circular_resolution_enabled`
+  (default off, 403 MHVP-HOA-0037) and G4. CRM: `GET/PUT /hoa/portal-circular-settings`,
+  `GET /hoa/portal-circular-votes?legal_entity_id=`, `GET /hoa/meetings/{id}/portal-circular-votes`
+  (read only). Majority check unchanged. Test `tests/integration/test_ag07_portal_circular.py`.

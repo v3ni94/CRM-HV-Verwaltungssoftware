@@ -123,3 +123,11 @@ Mit dem Haken „Zuordnung für diesen Berichtstyp merken“ merkt sich die Plat
 ## Gemerkte Spaltenzuordnungen verwalten
 
 Auf der Seite Immoware24 Import steht unter den benötigten Exporten die Liste der gemerkten Spaltenzuordnungen. Mit Entfernen löschen Sie eine einzelne Zuordnung nach Rückfrage. Bei der nächsten Datei schlägt die Plattform die Zuordnung neu vor, es wird nichts importiert oder geändert.
+
+## Übernahme aus objektakte (Importlauf, OCR-Cache, Vorschaubilder)
+
+Unter Importe, Übernahme aus objektakte: Exportdatei zuerst prüfen (Vorschau, ändert nichts), danach übernehmen. Zu einem Importlauf lässt sich das Ergebnis abrufen und der OCR-Textcache (ZIP) zuordnen; nicht zugeordnete Schlüssel werden aufgelistet. Die Vorschaubild-Übernahme zeigt den Stand des letzten Laufs und lässt sich mit der Freigaberolle starten oder nach einem Abbruch fortsetzen.
+
+## Migration: Abnahme bearbeiten, Altdaten, Exporttypen
+
+Ein Abnahmeprotokoll im Status Entwurf lässt sich bearbeiten, bis es unterzeichnet ist. Unter Migration zeigt der Abschnitt Altdaten die übernommenen Einzelposten je Buchungskreis mit der Summe offen und die historischen Tickets (nur lesend). Auf der Seite Vollimport listet die Aufklappliste die bekannten Exporttypen mit erwarteten Spalten.

@@ -85,7 +85,7 @@ test.describe("money paths against the API @backend", () => {
     await page.getByLabel("Bezeichnung").fill("Hausmeister");
     await page.getByLabel("Betrag").fill("1200,00");
     await page.getByLabel("Umlageschlüssel").selectOption(wfl);
-    await page.getByLabel("Grundlage").fill("Mietvertrag Anlage Betriebskosten");
+    await page.getByRole("textbox", { name: "Grundlage" }).fill("Mietvertrag Anlage Betriebskosten");
     await page.getByRole("button", { name: "Position hinzufügen" }).click();
     await expect(page.getByRole("cell", { name: "Hausmeister" })).toBeVisible();
     // exact: the heating panel on the statement page also offers "Vorschau berechnen".

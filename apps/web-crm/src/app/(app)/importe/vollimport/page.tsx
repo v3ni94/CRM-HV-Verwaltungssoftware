@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { ExportKinds } from "@/components/imports/ExportKinds";
 import { FullImport } from "@/components/imports/FullImport";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -25,7 +26,10 @@ export default async function FullImportPage() {
       </Link>
       <PageHeader title={t("title")} />
       {allowed ? (
-        <FullImport />
+        <>
+          <ExportKinds />
+          <FullImport />
+        </>
       ) : (
         <p role="alert" className={ui.alert} data-testid="fullimport-forbidden">
           {t("noPermission")}

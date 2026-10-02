@@ -314,6 +314,7 @@ async def report_xlsx_download(
     start: date | None = None,
     end: date | None = None,
     as_of: date | None = None,
+    property_id: uuid.UUID | None = Query(default=None, description="Nur Zeilen dieses Objekts"),
     principal: TenantPrincipal = Depends(EXPORT),
 ) -> Response:
     today = local_today()
@@ -330,6 +331,7 @@ async def report_xlsx_download(
             start=period_start,
             end=period_end,
             as_of=as_of or period_end,
+            property_id=property_id,
         )
         run = ExportRun(
             tenant_id=principal.tenant_id,

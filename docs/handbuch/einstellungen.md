@@ -621,3 +621,30 @@ Die Schalter im Überblick (Stand Welle 16):
 | Abnahmeregister | Kein Sollwert gilt ohne Freigabe durch eine zweite Person | keine Auswahl | V16, AE01-01 | nur in der Fachmaske |
 
 Nicht auf dieser Seite stehen Einstellungen, die keine fachlich offene Entscheidung betreffen, und Werte, die je Datensatz gelten (zum Beispiel die Steuerkonten für Zinsabzüge je Buchungskreis, der Zugangsnachweis je Abrechnung oder die Prüfpunkte der Heizkostenverordnung selbst); dafür führt der Link zur Fachmaske.
+
+## Objektakte: Pflichtdokumente und lokales Modell (AF18)
+
+Unter Einstellungen, Objektakte pflegen Sie die Pflichtdokumente je Objektart (Anlegen, Ändern, Löschen) und sehen den Status des lokalen Modells für die Dokumentprüfung samt Vorschlag je Prüffall. Das Modell liefert nur Vorschläge; eine Person übernimmt oder lehnt ab. Importlauf, Texterkennungs-Cache und Importvorschau haben noch keine Bedienmaske und laufen über die Schnittstelle.
+
+## Demo-Band, Mailquellen und API-Schlüssel (AF19)
+
+Gehört der angemeldete Benutzer zu einem Demo-Mandanten, zeigt die Kopfzeile ein Demo-Band. Das Kennzeichen liefert die Schnittstelle `GET /auth/me` im Feld `is_demo`. Unter Einstellungen, Mailquellen legen Sie Eingangs-Webhooks an, aktivieren sie, erneuern das Geheimnis (Anzeige nur einmal) und sehen das Empfangsprotokoll. Unter Einstellungen, API-Schlüssel legen Sie Schlüssel an (Klartext nur einmal sichtbar, danach nur das Präfix) und widerrufen sie. Branding-Vorschau steht in den Mandanteneinstellungen.
+
+## Plattformeinstellungen und Zuordnungsschwellen (Welle 18, AG03)
+
+- Plattformadministratoren sehen unter Plattform den Kasten Plattformeinstellungen mit dem
+  Schalter für die Umgehung des Vier-Augen-Prinzips (Standard aus). Eine Änderung verlangt eine
+  Bestätigung und wird protokolliert; sie öffnet keine Freigabestufe.
+- Unter Einstellungen, Fachliche Regeln stehen die Schwellen des Personenabgleichs der
+  Objektübernahme in Prozent (Zuordnung 90, Vorschlag 60). Die Zuordnungsschwelle darf nicht
+  unter der Vorschlagsschwelle liegen.
+- Die Rolle Versicherungsmakler hat ohne den Schalter "Zugriff der Rolle Versicherungsmakler"
+  keine Rechte und ist in der Rollenauswahl entsprechend gekennzeichnet.
+
+## Stapelverarbeitung beim KI-Anbieter (Welle 18, AG04)
+
+Unter Einstellungen, KI-Anbieter, lässt sich je Anbieter die Stapelverarbeitung einschalten
+(Standard aus, derzeit nur Anthropic). Zurückgestellte nächtliche Läufe werden dann gesammelt
+an den Anbieter gesendet und stündlich abgerufen; das Ergebnis erscheint wie bisher als
+Vorschlag. Der Preisfaktor wird aus der Preisliste des Anbieters übernommen (1 bedeutet kein
+Abschlag). Jede Änderung hebt die Freigabe auf; die zweite Person muss erneut freigeben.

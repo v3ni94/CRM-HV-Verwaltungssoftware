@@ -87,6 +87,14 @@ describe("PaymentTypeAccounts", () => {
   });
 });
 
+describe("PaymentTypeAccounts existing mappings", () => {
+  it("shows stored mappings from the GET list", async () => {
+    mockFetch(() => jsonResponse([{ payment_type_code: "hoa_fee", account_id: "r1", account_number: "060100", account_name: "Hausgeld" }]));
+    renderIntl(<PaymentTypeAccounts ledgerId="l1" accounts={[]} />);
+    expect(await screen.findByText(/hoa_fee: 060100 Hausgeld/)).toBeInTheDocument();
+  });
+});
+
 describe("InvoiceSecondApproval", () => {
   const state = { enabled: true, limit_amount: "5000.00", second_approval_required: true, second_approval_valid: false, second_approved_by: null };
   it("posts the second approval after confirmation", async () => {

@@ -419,3 +419,16 @@ become the latest numbered prompt. Rule: `docs/rules/AE28-01.md`.
 
 - `GET /imports/{id}/undo-preview` (`imports.undo_preview`): Trockenlauf der Rücknahme in einem immer zurückgerollten Savepoint, je Datensatz `removable` oder `kept_reason`. Schreibt nichts. Das CRM zeigt die Liste im Dialog `ImportUndoDialog` vor der Bestätigung.
 - `make ai-eval` deckt zusätzlich `classify_document` (Maskierung, Kategorie 01 bis 06, Klassencode, Schwelle der automatischen Stufe), `call_summary` (`call_assistant.merge_ai`) und `rent_increase_check` (`normalize_result`) mit je mindestens 20 synthetischen Fällen ab. Regel docs/rules/AF21-01.md.
+
+## AG04 (02.10.2026): Responses API und Anbieter-Stapel (GAB-10, GAB-09, ADR 0025)
+
+- `OpenAIClient` nutzt die Responses API (`responses.create`, `text.format` json_schema mit
+  `strict: true`); das Schema wird mit `providers.strict_schema` normalisiert, erzwungene
+  `null` für optionale Felder entfernt `drop_added_nulls`. Bei HTTP 4xx (außer 429) fällt der
+  Aufruf einmal auf Chat Completions zurück.
+- `AnthropicClient.submit_batch` und `poll_batch` (Message Batches API).
+- `batch.submit_deferred`: mit `ai_provider_config.batch_enabled` (Standard aus) laufen
+  zurückgestellte Läufe über den Anbieter-Stapel (Aufzeichnung im Gateway, Wiedergabe nach dem
+  Abruf durch den stündlichen Beat-Task `mhvp.ai.batch_poll`), sonst wie bisher als Sammellauf.
+- `batch_price_factor` (0 < f <= 1, Standard 1) wirkt nur auf Läufe, die vollständig aus dem
+  Stapel beantwortet wurden; der Listenpreis bleibt in `input_ref.batch.list_cost_eur`.

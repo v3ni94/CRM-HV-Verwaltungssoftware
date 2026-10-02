@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkOrderProposals, type WorkOrderProposalsData } from "@/components/workorders/WorkOrderProposals";
+import { WorkOrderRatingPanel } from "@/components/workorders/WorkOrderRatingPanel";
 import { WorkOrderWorkflowRef } from "@/components/workorders/WorkOrderWorkflowRef";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -30,6 +31,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ orde
         description={data.description}
       />
       <WorkOrderProposals initial={data} />
+      <WorkOrderRatingPanel orderId={orderId} canEdit={canEdit} />
       {order ? <WorkOrderWorkflowRef orderId={orderId} initial={order.approval_workflow_id ?? null} canEdit={canEdit} /> : null}
     </div>
   );

@@ -30,6 +30,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting import leading
 from mhvp.accounting import services as acc
 from mhvp.accounting.models import (
     AccountCategory,
@@ -45,7 +46,6 @@ from mhvp.accounting.models import (
     EntryKind,
     EntrySource,
     JournalEntry,
-    LeadingSystem,
     Ledger,
     LedgerAccount,
 )
@@ -594,7 +594,9 @@ async def preview(
                 # for a reminder; the case is excluded, never silently postponed.
                 reason = acc.UNREVIEWED_AUTO_REASON
                 counts["auto_review_pending"] = counts.get("auto_review_pending", 0) + 1
-            if reason is None and ledger.leading_system is not LeadingSystem.MHVP:
+            if reason is None and not await leading.is_leading(
+                session, ledger, leading.LeadingKind.DUNNING, run_date
+            ):
                 reason = "Buchungskreis nicht führend: gemahnt wird im führenden System (6.9.10)"
             fee_amount = Decimal("0.00")
             interest_amount = Decimal("0.00")
@@ -790,7 +792,9 @@ async def approve(
     ledgers: dict[uuid.UUID, Ledger] = {}
     for case in cases:
         ledger = ledgers.get(case.ledger_id) or await session.get(Ledger, case.ledger_id)
-        if ledger is None or ledger.leading_system is not LeadingSystem.MHVP:
+        if ledger is None or not await leading.is_leading(
+            session, ledger, leading.LeadingKind.DUNNING, run.run_date
+        ):
             raise ProblemError(ErrorCodes.CONFLICT, detail="Nur das führende System darf mahnen.")
         ledgers[case.ledger_id] = ledger
     for case in cases:
@@ -980,7 +984,9 @@ async def create_interest_draft(
             ErrorCodes.CONFLICT, detail="Mahnsperre an einem Posten des Falls: kein Zinsentwurf."
         )
     ledger = await session.get(Ledger, case.ledger_id)
-    if ledger is None or ledger.leading_system is not LeadingSystem.MHVP:
+    if ledger is None or not await leading.is_leading(
+        session, ledger, leading.LeadingKind.DUNNING, datetime.now(UTC).date()
+    ):
         raise ProblemError(ErrorCodes.CONFLICT, detail="Nur das führende System darf mahnen.")
     revenue = await _interest_revenue_account(session, ledger)
     entry = JournalEntry(

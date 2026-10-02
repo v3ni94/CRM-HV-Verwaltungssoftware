@@ -27,6 +27,7 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.models import ProviderAvailability
 from mhvp.portal.property_scope import portal_admin_guard
 from mhvp.portal.routers import Portal, portal_user
+from mhvp.tickets.work_order_rating import WorkOrderRatingIn
 
 router = APIRouter(prefix="/portal", tags=["Portal"])
 admin = APIRouter(
@@ -92,7 +93,7 @@ async def provider_ratings(
     and no work order text (data minimisation); a member with a property assignment sees only
     the work orders of the assigned properties."""
     from mhvp.portal import features as portal_features
-    from mhvp.tickets.models import WorkOrder
+    from mhvp.tickets.models import WorkOrder, WorkOrderRating
 
     async with tenant_tx(request, principal) as session:
         mode = (await portal_features.get_or_default(session)).provider_rating_display or "off"
@@ -103,12 +104,20 @@ async def provider_ratings(
             .where(WorkOrder.rating.is_not(None))
             .group_by(WorkOrder.provider_contact_id, WorkOrder.rating)
         )
+        new_query = (
+            select(WorkOrder.provider_contact_id, WorkOrderRating.stars, func.count())
+            .join(WorkOrder, WorkOrder.id == WorkOrderRating.work_order_id)
+            .group_by(WorkOrder.provider_contact_id, WorkOrderRating.stars)
+        )
         allowed = session_allowed_property_ids(session)
         if allowed is not None:
             query = query.where(WorkOrder.property_id.in_(allowed))
+            new_query = new_query.where(WorkOrder.property_id.in_(allowed))
         per_provider: dict[uuid.UUID, dict[int, int]] = {}
-        for contact_id, rating, n in (await session.execute(query)).all():
-            per_provider.setdefault(contact_id, {})[int(rating)] = int(n)
+        for result in (await session.execute(query), await session.execute(new_query)):
+            for contact_id, rating, n in result.all():
+                counts = per_provider.setdefault(contact_id, {})
+                counts[int(rating)] = counts.get(int(rating), 0) + int(n)
         names = {
             row.id: row.display_name
             for row in (
@@ -272,3 +281,93 @@ async def delete_availability(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await session.delete(row)
+
+
+# Rating of a completed work order by the affected resident (GAF-35, AE30-02) ---------------
+
+
+def _resident_rating_view(rows: list[Any], mode: str, order_status: Any) -> dict[str, Any]:
+    from mhvp.tickets.work_order_rating import RATABLE
+
+    own = next((r for r in rows if r.party == "resident"), None)
+    return {
+        "mode": mode,
+        "can_rate": order_status in RATABLE and own is None,
+        "own": {"stars": own.stars, "created_at": own.created_at} if own else None,
+    }
+
+
+@router.get(
+    "/work-orders/{order_id}/rating",
+    summary="Bewertung des Auftrags (betroffener Bewohner)",
+    dependencies=[Depends(strict_query)],
+)
+async def resident_rating_state(
+    order_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """The resident sees whether the order can be rated and the own stars. The provider
+    average appears only with the tenant switch ``provider_rating_display`` = all, never the
+    free text of any rating, and never for the provider."""
+    from mhvp.portal import features as portal_features
+    from mhvp.portal.routers import _resident_scope
+    from mhvp.tickets.models import WorkOrder, WorkOrderRating
+    from mhvp.tickets.work_order_rating import provider_counts
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id)
+        if order is None or not await _resident_scope(session, account, order):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        mode = (await portal_features.get_or_default(session)).provider_rating_display or "off"
+        rows = list(
+            (
+                await session.scalars(
+                    select(WorkOrderRating).where(
+                        WorkOrderRating.work_order_id == order.id,
+                        WorkOrderRating.party == "resident",
+                    )
+                )
+            ).all()
+        )
+        out = _resident_rating_view(rows, mode, order.status)
+        out["provider_summary"] = None
+        if mode == "all":
+            counts = await provider_counts(session, order.provider_contact_id)
+            out["provider_summary"] = {
+                "rated_count": sum(counts.values()),
+                "average": average_rating(counts),
+            }
+        return out
+
+
+@router.post(
+    "/work-orders/{order_id}/rating",
+    status_code=201,
+    summary="Auftrag bewerten (betroffener Bewohner, nach Abschluss, einmalig)",
+)
+async def resident_rate_order(
+    order_id: uuid.UUID,
+    body: WorkOrderRatingIn,
+    request: Request,
+    ctx: Portal = Depends(portal_user),
+) -> dict[str, Any]:
+    from mhvp.portal.routers import _resident_scope
+    from mhvp.tickets.models import WorkOrder
+    from mhvp.tickets.work_order_rating import add_rating
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id, with_for_update=True)
+        # Provider and everyone outside the resident scope get not found.
+        if order is None or not await _resident_scope(session, account, order):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await add_rating(
+            session,
+            order,
+            "resident",
+            body,
+            tenant_id=principal.tenant_id,
+            user_id=None,
+            contact_id=account.contact_id,
+        )
+        return {"id": row.id, "stars": row.stars, "created_at": row.created_at}

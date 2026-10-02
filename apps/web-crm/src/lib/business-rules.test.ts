@@ -96,6 +96,7 @@ describe("business rule registry", () => {
       "opening-lock-mode": "locked",
       "reserve-payment-mode": "bound_only",
       "correction-report": false,
+      "allocation-proposal": false,
       "plan-change-mode": "notice",
       "acquisition-purchase": "manual_release",
       "virtual-meetings": false,
@@ -289,5 +290,25 @@ describe("business rule helpers", () => {
     expect(leavesDefault(rule, "due_now")).toBe(true);
     expect(canChange(rule, ["tenant_settings:read"])).toBe(false);
     expect(canChange(rule, ["tenant_settings:update"])).toBe(true);
+  });
+});
+
+describe("AG03 rules (GAC-07, GAF-11)", () => {
+  it("shows the broker switch off by default and patches tenant/settings", () => {
+    const rule = BUSINESS_RULES.find((r) => r.id === "insurance-broker-access")!;
+    expect(rule.default).toBe(false);
+    const docs = { "tenant/settings": { insurance_broker_access: false } };
+    expect(currentValue(rule, docs)).toBe(false);
+    expect(buildWrite(rule, docs, true)).toEqual({ method: "PATCH", path: "tenant/settings", body: { insurance_broker_access: true } });
+  });
+
+  it("converts the match thresholds between percent and fraction and keeps the other one", () => {
+    const link = BUSINESS_RULES.find((r) => r.id === "onboarding-link-threshold")!;
+    const sug = BUSINESS_RULES.find((r) => r.id === "onboarding-suggest-threshold")!;
+    const docs = { "onboarding/match-settings": { link_threshold: "0.90", suggest_threshold: "0.60" } };
+    expect(currentValue(link, docs)).toBe(90);
+    expect(currentValue(sug, docs)).toBe(60);
+    expect(buildWrite(link, docs, 95)).toEqual({ method: "PUT", path: "onboarding/match-settings", body: { suggest_threshold: "0.60", link_threshold: "0.95" } });
+    expect(buildWrite(sug, docs, 50)).toEqual({ method: "PUT", path: "onboarding/match-settings", body: { link_threshold: "0.90", suggest_threshold: "0.50" } });
   });
 });

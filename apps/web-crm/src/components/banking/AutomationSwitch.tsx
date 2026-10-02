@@ -10,6 +10,8 @@ import { ui } from "@/lib/ui";
 export type SwitchRequest = {
   id: string;
   reason: string;
+  /** AG19 (AF25-01): "main" (auto_posting_enabled) or "outgoing" (auto_posting_outgoing_enabled). */
+  target?: "main" | "outgoing";
   status: "requested" | "approved" | "rejected";
   requested_by: string;
   decided_by: string | null;
@@ -17,7 +19,14 @@ export type SwitchRequest = {
   decision_comment: string | null;
   created_at: string;
 };
-export type SwitchState = { enabled: boolean; g1_open: boolean; can_request: boolean; items: SwitchRequest[] };
+export type SwitchState = {
+  enabled: boolean;
+  outgoing_enabled?: boolean;
+  g1_open: boolean;
+  can_request: boolean;
+  can_request_outgoing?: boolean;
+  items: SwitchRequest[];
+};
 export type ComparisonReport = {
   outcomes: string[];
   totals: Record<string, number>;
@@ -42,6 +51,7 @@ export function AutomationSwitch({ canApprove, userId }: { canApprove: boolean; 
   const [state, setState] = useState<SwitchState | null>(null);
   const [report, setReport] = useState<ComparisonReport | null>(null);
   const [reason, setReason] = useState("");
+  const [outReason, setOutReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,6 +81,7 @@ export function AutomationSwitch({ canApprove, userId }: { canApprove: boolean; 
       return;
     }
     setReason("");
+    setOutReason("");
     setMessage(done);
     await reload();
   }
@@ -136,11 +147,44 @@ export function AutomationSwitch({ canApprove, userId }: { canApprove: boolean; 
             ) : (
               <p className={ui.help}>{!state.g1_open ? t("blockedG1") : state.enabled ? t("alreadyOn") : t("pendingOrNoRight")}</p>
             )}
+            <div className="mt-4 flex flex-col gap-2" data-testid="ag19-outgoing">
+              <h3 className={ui.h3}>{t("outgoing.title")}</h3>
+              <p className={ui.help}>{t("outgoing.help")}</p>
+              <p className="text-sm" data-testid="ag19-outgoing-state">
+                <span className={state.outgoing_enabled ? ui.badgeWarning : ui.badge}>{state.outgoing_enabled ? t("outgoing.on") : t("outgoing.off")}</span>
+              </p>
+              {canApprove && (state.outgoing_enabled || state.can_request_outgoing) ? (
+                <form
+                  className="flex flex-col gap-2"
+                  data-testid={state.outgoing_enabled ? "ag19-outgoing-off" : "ag19-outgoing-request"}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const text = outReason.trim();
+                    // AG19: PUT /banking/automation/outgoing only switches off; on needs a request.
+                    if (state.outgoing_enabled) void act(`${BASE}/outgoing`, { enabled: false, reason: text }, t("outgoing.switchedOff"), "PUT");
+                    else void act(`${BASE}/switch-requests`, { reason: text, target: "outgoing" }, t("requested"));
+                  }}
+                >
+                  <label className="flex flex-col gap-1">
+                    <span className={ui.label}>{state.outgoing_enabled ? t("offReason") : t("reason")}</span>
+                    <textarea className={ui.input} rows={2} required minLength={3} value={outReason} onChange={(e) => setOutReason(e.target.value)} />
+                  </label>
+                  <div className={ui.formActions}>
+                    <button type="submit" className={state.outgoing_enabled ? ui.danger : ui.primary} disabled={busy || outReason.trim().length < 3}>
+                      {state.outgoing_enabled ? t("outgoing.switchOff") : t("outgoing.request")}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <p className={ui.help}>{!state.g1_open ? t("blockedG1") : t("pendingOrNoRight")}</p>
+              )}
+            </div>
             {state.items.length > 0 ? (
               <ul className="mt-3 flex flex-col gap-2 text-sm" data-testid="ae03-switch-requests">
                 {state.items.map((r) => (
                   <li key={r.id}>
-                    <span className={ui.badge}>{t(`status.${r.status}`)}</span> {r.reason}
+                    <span className={ui.badge}>{t(`status.${r.status}`)}</span>{" "}
+                    <span className={ui.badge}>{t(`target.${r.target ?? "main"}`)}</span> {r.reason}
                     {r.status === "requested" && canApprove && r.requested_by !== userId ? (
                       <span className="ml-2 inline-flex gap-2">
                         <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void act(`${BASE}/switch-requests/${r.id}/approve`, {}, t("approved"))}>

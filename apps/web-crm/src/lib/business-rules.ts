@@ -80,6 +80,19 @@ function fieldBody(field: string): (doc: unknown, value: RuleValue) => unknown {
   return (_doc, value) => ({ [field]: value });
 }
 
+/** AG03: thresholds of the onboarding person match are fractions (0,60) in the API, percent here. */
+function ratio(value: RuleValue): string {
+  return (Number(value) / 100).toFixed(2);
+}
+function percentOf(doc: unknown, field: string): RuleValue | undefined {
+  const raw = Number(rec(doc)[field]);
+  return Number.isFinite(raw) ? Math.round(raw * 100) : undefined;
+}
+function matchBody(doc: unknown, field: string, value: RuleValue): unknown {
+  const other = field === "link_threshold" ? "suggest_threshold" : "link_threshold";
+  return { [other]: Number(rec(doc)[other]).toFixed(2), [field]: ratio(value) };
+}
+
 function numberField(doc: unknown, field: string): RuleValue | undefined {
   const value = rec(doc)[field];
   return typeof value === "number" ? value : undefined;
@@ -641,6 +654,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
   },
   ...acquisitionRules,
   {
+    id: "allocation-proposal",
+    group: "hoa",
+    pkg: "AG20",
+    kind: "boolean",
+    default: false,
+    questions: ["AA07-01", "P01"],
+    href: "/weg",
+    permission: SETTINGS,
+    read: { path: "hoa/allocation-proposal-settings", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "hoa/allocation-proposal-settings",
+      permission: "tenant_settings:update",
+      body: fieldBody("enabled"),
+    },
+    field: "enabled",
+  },
+  {
     id: "virtual-meetings",
     group: "hoa",
     pkg: "AE12",
@@ -731,6 +762,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     },
     field: "proxy_conflict_mode",
   },
+  {
+    id: "portal-circular-resolution",
+    group: "hoa",
+    pkg: "AG07",
+    kind: "boolean",
+    default: false,
+    questions: ["AE31-01"],
+    href: "/weg",
+    permission: SETTINGS,
+    read: { path: "hoa/portal-circular-settings", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "hoa/portal-circular-settings",
+      permission: "tenant_settings:update",
+      body: fieldBody("enabled"),
+    },
+    field: "enabled",
+  },
   // --- Portal ---------------------------------------------------------------------------------
   {
     id: "owner-rental-income",
@@ -751,6 +800,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "owner_rental_income_enabled",
   },
   {
+    id: "portal-owner-receipts",
+    group: "portal",
+    pkg: "AG09",
+    kind: "boolean",
+    default: false,
+    questions: ["AG09-01"],
+    href: "/einstellungen/portalformulare",
+    permission: ["tickets:read"],
+    read: { path: "portal-admin/features", pick: fieldPick("portal_owner_receipts_enabled") },
+    write: {
+      method: "PATCH",
+      path: "portal-admin/features",
+      permission: "tenant_settings:update",
+      body: fieldBody("portal_owner_receipts_enabled"),
+    },
+    field: "portal_owner_receipts_enabled",
+  },
+  {
     id: "owner-rental-statements-portal",
     group: "portal",
     pkg: "AF15",
@@ -767,6 +834,27 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: fieldBody("owner_rental_statements_enabled"),
     },
     field: "owner_rental_statements_enabled",
+  },
+  {
+    id: "owner-hoa-rental-statements-portal",
+    group: "portal",
+    pkg: "AG12",
+    kind: "boolean",
+    default: false,
+    questions: ["AF25-02"],
+    href: "/einstellungen/portalformulare",
+    permission: ["tickets:read"],
+    read: {
+      path: "portal-admin/features",
+      pick: fieldPick("owner_hoa_rental_statements_enabled"),
+    },
+    write: {
+      method: "PATCH",
+      path: "portal-admin/features",
+      permission: "tenant_settings:update",
+      body: fieldBody("owner_hoa_rental_statements_enabled"),
+    },
+    field: "owner_hoa_rental_statements_enabled",
   },
   {
     id: "tenant-statement-portal",
@@ -810,9 +898,9 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     group: "portal",
     pkg: "AE30",
     kind: "enum",
-    options: ["off", "staff"],
+    options: ["off", "staff", "all"],
     default: "off",
-    questions: ["AA14-02"],
+    questions: ["AA14-02", "AE30-02"],
     href: "/einstellungen/portalformulare",
     permission: ["tickets:read"],
     read: { path: "portal-admin/features", pick: fieldPick("provider_rating_display") },
@@ -1109,6 +1197,62 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: fieldBody("enabled"),
     },
     field: "enabled",
+  },
+  {
+    id: "insurance-broker-access",
+    group: "security",
+    pkg: "AG03",
+    kind: "boolean",
+    default: false,
+    questions: ["GAC-07"],
+    href: "/einstellungen/benutzer",
+    permission: ["tenant_settings:read"],
+    read: { path: "tenant/settings", pick: fieldPick("insurance_broker_access") },
+    write: {
+      method: "PATCH",
+      path: "tenant/settings",
+      permission: "tenant_settings:update",
+      body: fieldBody("insurance_broker_access"),
+    },
+    field: "insurance_broker_access",
+  },
+  {
+    id: "onboarding-link-threshold",
+    group: "platform",
+    pkg: "AG03",
+    kind: "integer",
+    range: [1, 100],
+    default: 90,
+    questions: ["GAF-11"],
+    permission: ["tenant_settings:read"],
+    read: { path: "onboarding/match-settings", pick: (doc) => percentOf(doc, "link_threshold") },
+    write: {
+      method: "PUT",
+      path: "onboarding/match-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => matchBody(doc, "link_threshold", value),
+      apply: (doc, value) => ({ ...rec(doc), link_threshold: ratio(value) }),
+    },
+    field: "link_threshold",
+  },
+  {
+    id: "onboarding-suggest-threshold",
+    group: "platform",
+    pkg: "AG03",
+    kind: "integer",
+    range: [1, 100],
+    default: 60,
+    questions: ["GAF-11"],
+    permission: ["tenant_settings:read"],
+    read: { path: "onboarding/match-settings", pick: (doc) => percentOf(doc, "suggest_threshold") },
+    write: {
+      method: "PUT",
+      path: "onboarding/match-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => matchBody(doc, "suggest_threshold", value),
+      apply: (doc, value) => ({ ...rec(doc), suggest_threshold: ratio(value) }),
+    },
+    field: "suggest_threshold",
   },
 ];
 

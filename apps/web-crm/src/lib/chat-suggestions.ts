@@ -195,6 +195,7 @@ export const ROUTES: Rule[] = [
   { path: "/importe/immoware24", area: "imports", subArea: "immoware" },
   { path: "/importe/vollimport", area: "imports", subArea: "full" },
   { path: "/importe/migration", area: "imports", subArea: "migration" },
+  { path: "/importe/objektakte", area: "imports", subArea: "objektakteImport" },
   { path: "/importe/{id}", area: "imports", subArea: "detail", entityType: "import_run" },
   { path: "/importe", area: "imports" },
   { path: "/immoware/lernphase", area: "immoware", subArea: "learning" },

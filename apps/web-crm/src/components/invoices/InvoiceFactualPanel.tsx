@@ -18,6 +18,9 @@ type FactualCheck = {
     year: number;
     planned: string;
     booked_before: string;
+    invoices_before?: string | null;
+    credit_notes_before?: string | null;
+    journal_lines_net?: string | null;
     invoice: string;
     remaining: string;
     exceeded: boolean;
@@ -86,12 +89,14 @@ export function InvoiceFactualPanel({ invoiceId, managerName }: { invoiceId: str
                 {t("budget.title", { label: check.budget.label, year: check.budget.year })}
               </caption>
               <tbody>
-                {(["planned", "booked_before", "invoice", "remaining"] as const).map((k) => (
+                {(["planned", "booked_before", "invoices_before", "credit_notes_before", "journal_lines_net", "invoice", "remaining"] as const)
+                  .filter((k) => check.budget![k] != null)
+                  .map((k) => (
                   <tr key={k}>
                     <th scope="row" className="pr-4 text-left font-normal">
                       {t(`budget.${k}`)}
                     </th>
-                    <td className="text-right">{formatEur(check.budget![k])}</td>
+                    <td className="text-right">{formatEur(check.budget![k] as string)}</td>
                   </tr>
                 ))}
               </tbody>

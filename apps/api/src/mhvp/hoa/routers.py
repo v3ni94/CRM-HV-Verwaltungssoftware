@@ -699,13 +699,33 @@ async def _plan_apply_preview(session: AsyncSession, plan: EconomicPlan) -> dict
     from mhvp.accounting.models import ItemStatus, ReceivableItem
     from mhvp.contacts.models import Party
     from mhvp.contracts.models import ContractPayment
+    from mhvp.hoa.allocation_proposal import (
+        allocation_proposal_enabled,
+        plan_resolution_day,
+        proposal_for,
+    )
     from mhvp.hoa.plan_change import compute_differences, plan_change_mode
 
     rows: list[dict[str, Any]] = []
     posted_months = 0
+    # AG20 (GAE-12): proposal of calc.allocation_owner behind a switch, display only.
+    with_proposal = await allocation_proposal_enabled(session)
+    plan_res_day = await plan_resolution_day(session, plan.resolution_id) if with_proposal else None
     for unit in (plan.snapshot or {}).get("units", []):
         unit_id = uuid.UUID(unit["unit_id"])
         contract = await calc.owner_at(session, unit_id, plan.valid_from)
+        proposal = (
+            await proposal_for(
+                session,
+                unit_id,
+                contract,
+                default_day=plan.valid_from,
+                due_day=plan.valid_from,
+                resolution_day=plan_res_day,
+            )
+            if with_proposal
+            else None
+        )
         party_name = None
         if contract is not None:
             party_name = await session.scalar(
@@ -729,6 +749,8 @@ async def _plan_apply_preview(session: AsyncSession, plan: EconomicPlan) -> dict
                     new * {"monthly": 1, "quarterly": 3, "yearly": 12}[plan.payment_rhythm]
                 ),
             }
+            if proposal is not None:
+                row["allocation_proposal"] = proposal
             if contract is None:
                 row["action"] = "no_contract"
             elif new <= 0:

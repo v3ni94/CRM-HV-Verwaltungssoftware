@@ -230,6 +230,32 @@ def test_period_lock_is_skipped_not_refused() -> None:
     assert out.skipped == "period_locked"
 
 
+def test_object_lock_is_skipped_not_refused() -> None:
+    """GAE-02: an active property lock (object_period) skips the case like the ledger lock."""
+    out = v.verify(
+        "debtor_full",
+        _tx("250.00"),
+        [_full("oi-1", "250.00")],
+        open_items=[_item(1, "250.00", "2026-03-01")],
+        payables=[],
+        ctx=_ctx(object_locked=True),
+    )
+    assert out.ok is False
+    assert out.skipped == "period_locked"
+
+
+def test_object_lock_settled_item_ids() -> None:
+    import uuid
+
+    from mhvp.banking import object_lock
+
+    one = uuid.uuid4()
+    found = object_lock.settled_item_ids(
+        [{"splits": [{"open_item_id": str(one)}, {"open_item_id": "kein-uuid"}]}, {}]
+    )
+    assert found == {one}
+
+
 def test_account_lock_criteria_block_every_class() -> None:
     locked = {**ACCOUNTS, "100001": v.AccountFlags("100001", "debtor", section_35a_eligible=True)}
     ctx = _ctx()

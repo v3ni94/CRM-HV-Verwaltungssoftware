@@ -928,6 +928,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/direct-debits/creditor-ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hinterlegte Gläubiger-Identifikationsnummern (Rechtsträger und Mandant) */
+        get: operations["list_creditor_ids_api_v1_accounting_direct_debits_creditor_ids_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/direct-debits/creditor-ids/legal-entities/{legal_entity_id}": {
         parameters: {
             query?: never;
@@ -2233,6 +2250,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/ledgers/{ledger_id}/leading-switches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Führendes System je Vorgangstyp (Umschaltungen, GAC-05) */
+        get: operations["leading_switches_api_v1_accounting_ledgers__ledger_id__leading_switches_get"];
+        put?: never;
+        /** Umschaltung des führenden Systems beantragen (zweite Person, GAC-05) */
+        post: operations["request_leading_switch_api_v1_accounting_ledgers__ledger_id__leading_switches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/leading-switches/{switch_id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Umschaltung freigeben oder ablehnen (andere Person, G1 bei Plattform) */
+        post: operations["decide_leading_switch_api_v1_accounting_ledgers__ledger_id__leading_switches__switch_id__decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/ledgers/{ledger_id}/liquidity": {
         parameters: {
             query?: never;
@@ -2368,7 +2420,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Bestehende Zuordnungen Zahlungsart zu Konto */
+        get: operations["list_mappings_api_v1_accounting_ledgers__ledger_id__payment_type_accounts_get"];
         /** Erlöskonto je Zahlungsart */
         put: operations["set_mapping_api_v1_accounting_ledgers__ledger_id__payment_type_accounts_put"];
         post?: never;
@@ -5366,7 +5419,9 @@ export interface paths {
         /**
          * Ausgangsautomatik je Mandant (Standard aus)
          * @description ``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):
-         *     accounting:approve plus tenant_settings:update, reason and event.
+         *     accounting:approve plus tenant_settings:update, reason and event. AG19 (AF25-01): only
+         *     switches off; switching on needs a request with ``target="outgoing"``, a second person
+         *     and G1 (409 ``MHVP-BANK-0064``).
          */
         put: operations["set_outgoing_api_v1_banking_automation_outgoing_put"];
         post?: never;
@@ -11356,6 +11411,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/allocation-proposal-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zuordnungsvorschlag Eigentümerwechsel (Schalter) */
+        get: operations["get_allocation_proposal_setting_api_v1_hoa_allocation_proposal_settings_get"];
+        /** Zuordnungsvorschlag Eigentümerwechsel (setzen) */
+        put: operations["put_allocation_proposal_setting_api_v1_hoa_allocation_proposal_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/asset-reports": {
         parameters: {
             query?: never;
@@ -12569,6 +12642,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/meetings/{meeting_id}/portal-circular-votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portalstimmen eines Umlaufverfahrens (lesend) */
+        get: operations["portal_votes_api_v1_hoa_meetings__meeting_id__portal_circular_votes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/meetings/{meeting_id}/protocol-draft": {
         parameters: {
             query?: never;
@@ -12892,6 +12982,44 @@ export interface paths {
         put?: never;
         /** Statuswechsel (Beschluss an Snapshot gebunden) */
         post: operations["transition_plan_api_v1_hoa_plans__plan_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/portal-circular-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Umlaufbeschluss im Eigentümerportal (Schalter) */
+        get: operations["get_setting_api_v1_hoa_portal_circular_settings_get"];
+        /**
+         * Umlaufbeschluss im Eigentümerportal setzen
+         * @description Operator decision after legal review (AE31-01); the vote additionally needs G4.
+         */
+        put: operations["put_setting_api_v1_hoa_portal_circular_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/portal-circular-votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portalstimmen laufender Umlaufverfahren einer Gemeinschaft (lesend) */
+        get: operations["portal_votes_by_entity_api_v1_hoa_portal_circular_votes_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13453,6 +13581,28 @@ export interface paths {
         put?: never;
         /** KI-Plausibilität der Hausgeldabrechnung anstoßen (nur Hinweise) */
         post: operations["start_hoa_statement_check_api_v1_hoa_statements__statement_id__ai_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/statements/{statement_id}/allocation-proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Zuordnungsvorschlag des Abrechnungsergebnisses (W07, P01)
+         * @description Per unit with a result: owner used by the result posting (owner at the resolution date,
+         *     M24-01) and the proposal of the tenant rule. 409 while the switch is off or the statement
+         *     has no snapshot or no resolution.
+         */
+        get: operations["statement_allocation_proposal_api_v1_hoa_statements__statement_id__allocation_proposal_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -21748,6 +21898,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/circular-resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Laufende Umlaufbeschlüsse der eigenen Einheiten (Eigentümer) */
+        get: operations["list_circulars_api_v1_portal_circular_resolutions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/circular-resolutions/{meeting_id}/vote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stimme im Umlaufverfahren abgeben (Eigentümer, G4)
+         * @description One vote per own unit and item; a second vote is 409. Proxies are not accepted here.
+         */
+        post: operations["cast_vote_api_v1_portal_circular_resolutions__meeting_id__vote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/consumption-info": {
         parameters: {
             query?: never;
@@ -22733,6 +22920,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/owner/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Belegsuche je Abrechnungsperiode (Eigentümer) */
+        get: operations["owner_receipts_api_v1_portal_owner_receipts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/owner/rental-income": {
         parameters: {
             query?: never;
@@ -22742,6 +22946,30 @@ export interface paths {
         };
         /** Vereinbarte Mieterträge je Objekt (Kapitalanleger) */
         get: operations["rental_income_api_v1_portal_owner_rental_income_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/owner/rental-reporting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Eigentümerreporting Kapitalanleger: Mieterträge, Umlagefähigkeit, Leerstand
+         * @description Read only report per own special-administration unit and settlement period (GAF-34).
+         *
+         *     Off by default (``owner_rental_income_enabled``, question P13-01) and behind release gate
+         *     G3. Amounts come from the issued operating cost statement snapshot; nothing is recomputed
+         *     and nothing is posted. A foreign unit answers 404 without a hint.
+         */
+        get: operations["rental_reporting_api_v1_portal_owner_rental_reporting_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -23400,6 +23628,29 @@ export interface paths {
         put?: never;
         /** Angebot abgeben */
         post: operations["quote_api_v1_portal_work_orders__order_id__quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/work-orders/{order_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bewertung des Auftrags (betroffener Bewohner)
+         * @description The resident sees whether the order can be rated and the own stars. The provider
+         *     average appears only with the tenant switch ``provider_rating_display`` = all, never the
+         *     free text of any rating, and never for the provider.
+         */
+        get: operations["resident_rating_state_api_v1_portal_work_orders__order_id__rating_get"];
+        put?: never;
+        /** Auftrag bewerten (betroffener Bewohner, nach Abschluss, einmalig) */
+        post: operations["resident_rate_order_api_v1_portal_work_orders__order_id__rating_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -28014,6 +28265,27 @@ export interface paths {
         patch: operations["set_order_workflow_api_v1_work_orders__order_id__approval_workflow_patch"];
         trace?: never;
     };
+    "/api/v1/work-orders/{order_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bewertungen des Auftrags (nur gemäß Schalter provider_rating_display)
+         * @description Off (default): no ratings in the answer, only the flag whether staff has rated.
+         */
+        get: operations["get_work_order_rating_api_v1_work_orders__order_id__rating_get"];
+        put?: never;
+        /** Auftrag bewerten (Verwaltung, nach Abschluss, einmalig) */
+        post: operations["rate_work_order_api_v1_work_orders__order_id__rating_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-orders/{order_id}/steps": {
         parameters: {
             query?: never;
@@ -29348,6 +29620,91 @@ export interface components {
             ledgers_configured: number;
             /** Ledgers Total */
             ledgers_total: number;
+        };
+        /** AccountingLeadingEffectiveOut */
+        AccountingLeadingEffectiveOut: {
+            /** Kind */
+            kind: string;
+            /** Leading System */
+            leading_system: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "switch" | "ledger";
+        };
+        /** AccountingLeadingSwitchDecisionIn */
+        AccountingLeadingSwitchDecisionIn: {
+            /** Approve */
+            approve: boolean;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** AccountingLeadingSwitchIn */
+        AccountingLeadingSwitchIn: {
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "receivable_posting" | "dunning" | "direct_debit" | "payment_order";
+            leading_system: components["schemas"]["LeadingSystem"];
+            /** Property Id */
+            property_id?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+        };
+        /** AccountingLeadingSwitchListOut */
+        AccountingLeadingSwitchListOut: {
+            /** Effective */
+            effective: components["schemas"]["AccountingLeadingEffectiveOut"][];
+            /** Items */
+            items: components["schemas"]["AccountingLeadingSwitchOut"][];
+            /** Ledger Leading System */
+            ledger_leading_system: string;
+        };
+        /** AccountingLeadingSwitchOut */
+        AccountingLeadingSwitchOut: {
+            /** Comment */
+            comment: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Decision Comment */
+            decision_comment: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Leading System */
+            leading_system: string;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Property Id */
+            property_id: string | null;
+            /**
+             * Requested By
+             * Format: uuid
+             */
+            requested_by: string;
+            /** Status */
+            status: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
         };
         /** AccountsIn */
         AccountsIn: {
@@ -31544,6 +31901,12 @@ export interface components {
         BankingSwitchRequestIn: {
             /** Reason */
             reason: string;
+            /**
+             * Target
+             * @default main
+             * @enum {string}
+             */
+            target: "main" | "outgoing";
         };
         /** BankingSyncRunOut */
         BankingSyncRunOut: {
@@ -35268,6 +35631,15 @@ export interface components {
         };
         /** CreditorIdIn */
         CreditorIdIn: {
+            /** Sepa Creditor Id */
+            sepa_creditor_id?: string | null;
+        };
+        /** CreditorIdOut */
+        CreditorIdOut: {
+            /** Legal Entity Id */
+            legal_entity_id?: string | null;
+            /** Name */
+            name: string;
             /** Sepa Creditor Id */
             sepa_creditor_id?: string | null;
         };
@@ -39757,6 +40129,11 @@ export interface components {
             /** Variant */
             variant: string;
         };
+        /** HoaAllocationProposalSettingIn */
+        HoaAllocationProposalSettingIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** HoaCorrectionReportSettingIn */
         HoaCorrectionReportSettingIn: {
             /** Enabled */
@@ -39894,6 +40271,11 @@ export interface components {
             label: string;
             /** Reserve Id */
             reserve_id?: string | null;
+        };
+        /** HoaPortalCircularSettingIn */
+        HoaPortalCircularSettingIn: {
+            /** Enabled */
+            enabled: boolean;
         };
         /**
          * HoaReserveIn
@@ -44083,6 +44465,11 @@ export interface components {
             display_name: string | null;
             /** Email */
             email: string | null;
+            /**
+             * Is Demo
+             * @default false
+             */
+            is_demo: boolean;
             /** Is Platform Admin */
             is_platform_admin: boolean;
             /**
@@ -46806,6 +47193,20 @@ export interface components {
             /** Payment Type Code */
             payment_type_code: string;
         };
+        /** PaymentTypeMappingOut */
+        PaymentTypeMappingOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Name */
+            account_name: string;
+            /** Account Number */
+            account_number: string;
+            /** Payment Type Code */
+            payment_type_code: string;
+        };
         /**
          * PendingContractOut
          * @description Imported contract awaiting management approval before the receivable run.
@@ -47397,6 +47798,21 @@ export interface components {
             /** Body */
             body: string;
         };
+        /** PortalCircularVoteIn */
+        PortalCircularVoteIn: {
+            /**
+             * Agenda Item Id
+             * Format: uuid
+             */
+            agenda_item_id: string;
+            /** Choice */
+            choice: string;
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+        };
         /** PortalCommentIn */
         PortalCommentIn: {
             /** Body */
@@ -47486,16 +47902,20 @@ export interface components {
             chat_bot_enabled?: boolean | null;
             /** Chat Enabled */
             chat_enabled?: boolean | null;
+            /** Owner Hoa Rental Statements Enabled */
+            owner_hoa_rental_statements_enabled?: boolean | null;
             /** Owner Rental Income Enabled */
             owner_rental_income_enabled?: boolean | null;
             /** Owner Rental Statements Enabled */
             owner_rental_statements_enabled?: boolean | null;
             /** Owner Ticket Scope */
             owner_ticket_scope?: ("none" | "released" | "property") | null;
+            /** Portal Owner Receipts Enabled */
+            portal_owner_receipts_enabled?: boolean | null;
             /** Privacy Feature Enabled */
             privacy_feature_enabled?: boolean | null;
             /** Provider Rating Display */
-            provider_rating_display?: ("off" | "staff") | null;
+            provider_rating_display?: ("off" | "staff" | "all") | null;
             /** Support Login Enabled */
             support_login_enabled?: boolean | null;
             /** Tenant Statement Enabled */
@@ -52937,6 +53357,11 @@ export interface components {
             /** Inspection Package Default Days */
             inspection_package_default_days?: number | null;
             /**
+             * Insurance Broker Access
+             * @default false
+             */
+            insurance_broker_access: boolean;
+            /**
              * Learning Bookkeeper Enabled
              * @default false
              */
@@ -53045,6 +53470,8 @@ export interface components {
             handover_offline_enabled?: boolean | null;
             /** Inspection Package Default Days */
             inspection_package_default_days?: number | null;
+            /** Insurance Broker Access */
+            insurance_broker_access?: boolean | null;
             /** Mail Approval Mode */
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
@@ -54539,6 +54966,13 @@ export interface components {
             /** Ticket Id */
             ticket_id?: string | null;
         };
+        /** WorkOrderRatingIn */
+        WorkOrderRatingIn: {
+            /** Comment */
+            comment?: string | null;
+            /** Stars */
+            stars: number;
+        };
         /** WorkspaceBulkIn */
         WorkspaceBulkIn: {
             /** Action */
@@ -54563,6 +54997,10 @@ export interface components {
              * @description nur schreibbar
              */
             api_key?: string | null;
+            /** Batch Enabled */
+            batch_enabled?: boolean | null;
+            /** Batch Price Factor */
+            batch_price_factor?: number | string | null;
             /**
              * Data Processing Agreement Signed
              * @default false
@@ -54595,6 +55033,10 @@ export interface components {
         };
         /** ProviderOut */
         mhvp__ai__schemas__ProviderOut: {
+            /** Batch Enabled */
+            batch_enabled: boolean;
+            /** Batch Price Factor */
+            batch_price_factor: string;
             /** Data Processing Agreement Signed */
             data_processing_agreement_signed: boolean;
             /** Dpa Document Id */
@@ -56926,6 +57368,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_creditor_ids_api_v1_accounting_direct_debits_creditor_ids_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditorIdOut"][];
                 };
             };
         };
@@ -59975,6 +60437,108 @@ export interface operations {
             };
         };
     };
+    leading_switches_api_v1_accounting_ledgers__ledger_id__leading_switches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountingLeadingSwitchListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_leading_switch_api_v1_accounting_ledgers__ledger_id__leading_switches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingLeadingSwitchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountingLeadingSwitchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_leading_switch_api_v1_accounting_ledgers__ledger_id__leading_switches__switch_id__decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                switch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountingLeadingSwitchDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountingLeadingSwitchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     liquidity_api_v1_accounting_ledgers__ledger_id__liquidity_get: {
         parameters: {
             query?: {
@@ -60210,6 +60774,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mappings_api_v1_accounting_ledgers__ledger_id__payment_type_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentTypeMappingOut"][];
                 };
             };
             /** @description Validation Error */
@@ -60779,6 +61374,8 @@ export interface operations {
                 start?: string | null;
                 end?: string | null;
                 as_of?: string | null;
+                /** @description Nur Zeilen dieses Objekts */
+                property_id?: string | null;
             };
             header?: never;
             path: {
@@ -79153,6 +79750,63 @@ export interface operations {
             };
         };
     };
+    get_allocation_proposal_setting_api_v1_hoa_allocation_proposal_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_allocation_proposal_setting_api_v1_hoa_allocation_proposal_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaAllocationProposalSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_asset_reports_api_v1_hoa_asset_reports_get: {
         parameters: {
             query?: {
@@ -82014,6 +82668,39 @@ export interface operations {
             };
         };
     };
+    portal_votes_api_v1_hoa_meetings__meeting_id__portal_circular_votes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     protocol_draft_api_v1_hoa_meetings__meeting_id__protocol_draft_post: {
         parameters: {
             query?: never;
@@ -82667,6 +83354,96 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_setting_api_v1_hoa_portal_circular_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_setting_api_v1_hoa_portal_circular_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaPortalCircularSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portal_votes_by_entity_api_v1_hoa_portal_circular_votes_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -84090,6 +84867,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    statement_allocation_proposal_api_v1_hoa_statements__statement_id__allocation_proposal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -101174,6 +101984,65 @@ export interface operations {
             };
         };
     };
+    list_circulars_api_v1_portal_circular_resolutions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    cast_vote_api_v1_portal_circular_resolutions__meeting_id__vote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalCircularVoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_own_api_v1_portal_consumption_info_get: {
         parameters: {
             query?: never;
@@ -102889,6 +103758,41 @@ export interface operations {
             };
         };
     };
+    owner_receipts_api_v1_portal_owner_receipts_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                /** @description Suche in der Bezeichnung */
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     rental_income_api_v1_portal_owner_rental_income_get: {
         parameters: {
             query?: never;
@@ -102907,6 +103811,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    rental_reporting_api_v1_portal_owner_rental_reporting_get: {
+        parameters: {
+            query?: {
+                unit_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -104132,6 +105069,76 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resident_rating_state_api_v1_portal_work_orders__order_id__rating_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resident_rate_order_api_v1_portal_work_orders__order_id__rating_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderRatingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -114783,6 +115790,76 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_work_order_rating_api_v1_work_orders__order_id__rating_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_work_order_api_v1_work_orders__order_id__rating_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderRatingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

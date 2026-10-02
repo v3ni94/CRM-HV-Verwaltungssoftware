@@ -43,6 +43,7 @@ export default async function OwnerRentalStatementsPage() {
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       {enabled ? <p className="text-xs text-subtle">{note}</p> : <p className={ui.notice}>{note}</p>}
+      {enabled ? <p className="text-xs text-subtle">{t("scope")}</p> : null}
       {enabled && items.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
       <ul className="flex flex-col gap-3">
         {items.map((item) => (

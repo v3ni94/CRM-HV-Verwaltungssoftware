@@ -194,3 +194,17 @@ Grenzen und Hinweise:
 - Die Zahlen sind physisch und enthalten die Tabellen von Demo-Mandanten; nur die Mandantenzahl lässt sie weg.
 - Die Messung ersetzt nicht den Messplan aus ADR 0021 (1, 5 und 10 Millionen Zeilen, 10 und 50 Mandanten, mehrere Worker); sie zeigt, wann er fällig ist.
 - Nach einer Partitionierung zählt die Abfrage die Blätter der Partitionen; sie ist dafür vorbereitet, aber nicht an einer partitionierten Tabelle getestet.
+
+## Welle 18, Messlauf GAE-32 (02.10.2026)
+
+Messlauf mit `MHVP_PERF=1` auf der Entwicklungsmaschine (4 Kerne, PostgreSQL 16 lokal, keine parallelen Testläufe), Stand 1.63.0, Kette bis Migration 0438. Die Zahlen sind Orientierungswerte dieser Maschine, kein Nachweis für die Produktionsumgebung.
+
+| Messung (Test) | Ergebnis |
+| --- | --- |
+| Kontaktliste mit 10.000 Zeilen, 40 Stichproben (`test_p15_perf.py`) | Median 30 ms, P95 47 ms (Schwelle 300 ms) |
+| Anlage von 100 Einheiten und 100 Bankkonten | 6,5 s |
+| Abrechnung über 100 Einheiten berechnen | 0,7 s (Schwelle 60 s) |
+| Bankabruf 100 Konten mit 2.000 Umsätzen | 9,6 s |
+| Journalwächter aktiv, 200.000 Zeilen (`test_ad01_line_guard.py::test_bulk_load_200k_lines_with_guard_active`) | 16,0 s, also 0,08 ms je Zeile (Schwelle 300 s); Welle 15 hatte den Lauf nicht abgeschlossen |
+
+Der Beat-Eintrag `ops-scale-snapshot` ist über den Katalogabgleich `tests/unit/test_ag18_job_keys.py` und `test_ga12_jobs.py` geprüft (jeder Katalogschlüssel kommt in `worker.py` vor). Ein Lauf mit mehr als 1.000.000 Zeilen wurde weiterhin nicht gemessen; ab dieser Grenze schätzt die Kennzahl die Zeilenzahl aus `pg_class.reltuples` (Abschnitt AE36).

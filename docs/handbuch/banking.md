@@ -546,3 +546,27 @@ Auf der Seite Bank zeigt die Karte Sync-Protokoll die letzten Läufe mit Zeitpun
 ## Buchungsautomatik ein- und ausschalten (AF01, Welle 17)
 
 Eingeschaltet wird die Buchungsautomatik nur unter Einstellungen, Buchhaltung, Automatik: Antrag mit Grund, Freigabe durch eine zweite Person, Freigabestufe G1 offen. Ein direktes Einschalten über die Schnittstelle wird abgelehnt. Ist die Automatik eingeschaltet, steht dort die Schaltfläche "Sofort ausschalten" mit Pflichtgrund bereit; das Ausschalten wirkt sofort und ohne Antrag. Die Karte auf der Seite Bankregeln zeigt den Stand der Automatik und der Ausgangsautomatik und verweist auf den Antragsweg.
+
+## EBICS: Schlüsselwechsel und Sperre, Testsystem-Abnahme ist Betreiberaufgabe (GAE-24, Welle 18)
+
+Ort: Bank, Abschnitt "EBICS (Grundgerüst)", beim Teilnehmer. Die Software führt Schlüsselwechsel und Sperre nur lokal. Sie sendet keinen Schlüsselwechselauftrag und keine Sperre (SPR) an die Bank. Die Abnahme gegen das Testsystem der Bank und die Sperre auf Bankseite (SPR oder telefonisch laut Vertrag) sind Aufgaben des Betreibers.
+
+Lokales Verhalten:
+
+1. Schlüsselwechsel ("Schlüssel erzeugen" bei vorhandenen Schlüsseln): Ein Grund ist Pflicht. Die alten Teilnehmerschlüssel werden stillgelegt, der private Anteil wird gelöscht. Die Initialisierung beginnt neu (INI, HIA, Freischaltung, Bankschlüssel abholen und prüfen). Bis zur erneuten Prüfung der Bankschlüssel durch eine zweite Person ist der Abruf von Kontoauszügen, auch der tägliche Abruf um 06:40 Uhr, gesperrt (Fehler MHVP-BANK-0052).
+2. Der Status gilt je Teilnehmer. Ein Wechsel oder eine Sperre bei einem Teilnehmer ändert nichts bei anderen Teilnehmern.
+3. Sperre: Grund ist Pflicht, die Sperre ist endgültig, alle privaten Schlüssel werden gelöscht. Danach sind Schlüsselwechsel, INI, HIA, Freischaltung, Bankschlüssel, Abruf und der tägliche Abruf nicht mehr möglich (MHVP-BANK-0052). Ein neuer Teilnehmer muss angelegt werden.
+
+Checkliste Testsystem-Abnahme (Betreiber, vor dem produktiven Einsatz):
+
+- [ ] Testzugang der Bank (Host-ID, Partner-ID, Teilnehmer-ID, URL des Testsystems) liegt vor.
+- [ ] Teilnehmer mit Testdaten angelegt, Schlüssel erzeugt, INI und HIA gegen das Testsystem gesendet.
+- [ ] Freischaltung durch die Bank bestätigt, Bankschlüssel abgeholt, Hash-Werte durch eine zweite Person gegen den Bankbrief geprüft.
+- [ ] Kontoauszugsabruf (C53) gegen das Testsystem erfolgreich, Import geprüft.
+- [ ] Schlüsselwechsel gegen das Testsystem durchgespielt, neue Initialisierung bis Status bereit abgeschlossen.
+- [ ] Sperre auf Bankseite (SPR oder telefonisch laut Vertrag) getestet und der Ablauf dokumentiert.
+- [ ] Ergebnis mit Datum und Verantwortlichem im Runbook `docs/runbooks/ebics-setup.md` vermerkt.
+
+### Ausgangsautomatik beantragen
+
+Unter Einstellungen, Buchhaltung, Automatik steht unter dem Hauptschalter der Abschnitt Ausgangsautomatik. Eingeschaltet wird sie wie die Buchungsautomatik nur über einen Antrag mit Grund und die Freigabe durch eine zweite Person bei offener Freigabestufe G1. In der Antragsliste zeigt ein Kennzeichen, ob ein Antrag den Hauptschalter oder die Ausgangsautomatik betrifft. Ausschalten ist mit Pflichtgrund jederzeit sofort möglich. Die Ausgangsautomatik wirkt nur bei eingeschalteter Buchungsautomatik.

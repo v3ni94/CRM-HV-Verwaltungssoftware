@@ -24,7 +24,7 @@ from mhvp.banking.tasks import levels_refresh_once, process_events_once
 from mhvp.main import create_app
 from mhvp.platform import services
 from mhvp.platform.models import TenantSettings
-from tests.integration.af01_switch import seed_auto_posting
+from tests.integration.af01_switch import seed_auto_posting, seed_outgoing
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET
@@ -353,7 +353,11 @@ def test_levels_requests_four_eyes_and_one_click(
     acc = bearer(login(client, world, "lvacc"))
     switch = {"enabled": True, "reason": "Test L2b"}
     assert client.put(f"{B}/automation/outgoing", json=switch, headers=acc).status_code == 403
-    assert _ok(client.put(f"{B}/automation/outgoing", json=switch, headers=h)) == {"enabled": True}
+    # AG19 (AF25-01): switching on only via request; the approved state is seeded here.
+    on = client.put(f"{B}/automation/outgoing", json=switch, headers=h)
+    assert on.status_code == 409
+    assert on.json()["code"] == "MHVP-BANK-0064"
+    seed_outgoing(client, h)
     assert (
         _ok(client.get(f"{B}/automation/levels", headers=h))["auto_posting_outgoing_enabled"]
         is True

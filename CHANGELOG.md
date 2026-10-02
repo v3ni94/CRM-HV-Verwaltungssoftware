@@ -5,6 +5,61 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.63.0 (02.10.2026) Welle 18, Befunde der Lückenanalyse GAA bis GAF: führendes System je Vorgangstyp, Stapelverarbeitung der KI, Umlaufbeschluss und Belegeinsicht im Eigentümerportal, Ausgangsautomatik nur per Antrag
+
+- Betrieb: Messlauf GAE-32 mit MHVP_PERF=1 dokumentiert (Kontaktliste P95 47 ms, 200.000 Journalzeilen mit aktivem Wächter in 16,0 s), Playwright Kernpfade beider Apps gegen die API ausgeführt (GAE-39).
+- Übersicht: Welle 18 mit 20 Paketen AG01 bis AG20 zu den offenen Befunden der Lückenanalyse GAA bis GAF und den Rückständen aus Welle 17 (41 Befunde, davon 30 done und 11 partial); Migrationen 0419 bis 0438, real sind 8 (0420 führendes System, 0422 Stapelverarbeitung der KI, 0424 Auftragsbewertung, 0425 Umlaufbeschluss im Portal, 0427 Belegeinsicht, 0430 Abrechnungen der Gemeinschaft, 0437 Ziel des Automatikantrags, 0438 Zuordnungsvorschlag), die übrigen 12 sind Platzhalter ohne Schemaänderung; die Freigabestufen G1 bis G5 bleiben geschlossen.
+- Datenbank: Migration 0424 liest den Namen der Check-Constraint aus dem Katalog, weil die Namenskonvention den Namen verdoppelte und das Upgrade auf frischer Datenbank scheiterte.
+- Betriebskosten: Der Abnahmefall D24 ist je Variante des Schalters für offene Vorauszahlungen geprüft (Gesamtanspruch 20,00 EUR, kein doppelter Anspruch), der strikte Defekttest entfällt, der Standard bleibt Information; AC10-01 und M17-03 bleiben offen.
+- Buchhaltung: Führendes System je Buchungskreis, Objekt, Vorgangstyp (Sollstellung, Mahnung, Lastschrift, Zahlungsauftrag) und Gültig-ab, Umschaltung nur per Antrag mit Freigabe durch eine zweite Person und G1 für die Plattform (Migration 0420).
+- Buchhaltung: Mahnlauf, Lastschriftlauf, Zahllauf, automatische Bankbuchung und Sollstellungslauf prüfen das führende System über eine zentrale Funktion; ohne Umschaltung bleibt das Verhalten unverändert.
+- CRM Buchhaltung: Abschnitt Führendes System je Vorgangstyp im Buchungskreis mit Anzeige, Antrag und Freigabe.
+- Buchhaltung: Neue Leseliste der Zuordnungen von Zahlungsart zu Erlöskonto, die Kontenmaske zeigt die bestehenden Zuordnungen an.
+- Buchhaltung: Der Excel-Export von Journal, Monatsmatrix und Einnahmen Ausgaben unterstützt den Filter property_id.
+- Lastschrift: Neue Leseliste der Gläubiger-IDs, Anzeige unter Bank, Verbindungen und in den Einstellungen.
+- Rechnungen: Der Budgetabgleich der sachlichen Prüfung zeigt Rechnungen, Gutschriften und Buchungszeilen mit Plankonto als Teilbeträge.
+- Bank: Der automatische Buchungsverifier überspringt Umsätze, deren Objekt am Buchungstag durch eine aktive Objektsperre (Modus object_period) gesperrt ist.
+- Bank: Die Ausgangsautomatik lässt sich nur noch über einen Antrag mit Freigabe durch eine zweite Person bei offener G1 einschalten; PUT /banking/automation/outgoing schaltet nur aus und lehnt das Einschalten mit MHVP-BANK-0064 ab.
+- Bank: Anträge zum Automatikschalter tragen ein Ziel (Hauptschalter oder Ausgangsautomatik), je Ziel ist ein Antrag offen (Migration 0437).
+- CRM Bank: Die Seite Automatikschalter hat einen Abschnitt Ausgangsautomatik zum Beantragen und sofortigen Ausschalten.
+- Bank: EBICS Schlüsselwechsel und Sperre sind lokal per Integrationstest abgesichert (Status je Teilnehmer, Abruf und Aufträge bis zur erneuten Bankschlüsselprüfung oder dauerhaft gesperrt); die Abnahme am Testsystem der Bank bleibt Betreiberaufgabe mit Checkliste im Handbuch.
+- KI: Die OpenAI-Anbindung nutzt die Responses API mit strikten Structured Outputs und fällt bei Client-Fehlern einmal auf Chat Completions zurück.
+- KI: Zurückgestellte nächtliche Läufe können je Anbieterkonfiguration als Anthropic Message Batch gesendet und stündlich abgerufen werden (Schalter batch_enabled, Standard aus, Migration 0422, ADR 0025).
+- KI: Der Preisfaktor für Stapelläufe gilt je Anbieterkonfiguration (Standard 1, kein Abschlag) und nur für vollständig aus dem Stapel beantwortete Läufe.
+- CRM KI: Die Anbietereinstellungen enthalten Schalter Stapelverarbeitung und Preisfaktor.
+- KI: Die Maskierung in Objektakte und Belegen ersetzt IBAN-förmige Zeichenfolgen nur noch bei realer IBAN-Länge (15 bis 34 Zeichen ohne Trenner), Dateinamen wie WE12.pdf bleiben für die Klassifikation lesbar.
+- Berechtigungen: Der Mandantenschalter insurance_broker_access (Standard aus) gibt der Rolle Versicherungsmakler lesend insurance:read und claims:read; die Rollenauswahl kennzeichnet sie als ohne Zugriff, die Fachendpunkte sind noch nicht angeschlossen.
+- Plattform: Maske für die Plattformeinstellungen (Schalter gate_superadmin_bypass) unter /plattform.
+- Einstellungen: Die Zuordnungsschwellen des Personenabgleichs der Objektübernahme stehen als Regeln unter Fachliche Regeln.
+- Aufträge: Bewertung abgeschlossener Aufträge je Partei (Verwaltung und betroffener Bewohner), einmalig, über POST /work-orders/{id}/rating und POST /portal/work-orders/{id}/rating (Migration 0424, Doppelbewertung 409).
+- Portal: Bewertungsformular in der Meldung für abgeschlossene Aufträge; der Durchschnitt des Dienstleisters erscheint nur bei provider_rating_display = all und nie für Dienstleister.
+- CRM: Die Auftragsseite zeigt Bewertungen gemäß Schalter und erlaubt der Verwaltung die Bewertung.
+- WEG/Portal: Eigentümer stimmen in laufenden Umlaufverfahren im Portal je Einheit und Antrag einmal ab, mit Nachweis aus Zeitpunkt, Portalbenutzer und Prüfsumme des Antragstexts, nur mit Mandantenschalter portal_circular_resolution_enabled (Standard aus, Migration 0425) und G4.
+- Portal: Neue Seite Umlaufbeschlüsse mit Stimmabgabe und Nachweisanzeige; Portalstimmen fließen nicht automatisch in die Ergebnisfeststellung ein.
+- WEG/CRM: Das Formular Umlaufbeschluss erfassen zeigt die Stimmen aus dem Eigentümerportal lesend, der neue Schalter steht unter Fachliche Regeln.
+- Portal: Neue Seite Reporting mit Endpunkt /portal/owner/rental-reporting zeigt Eigentümern mit Sondereigentumsverwaltung Monatsmiete, umlagefähige Kosten und Leerstandstage je Abrechnungszeitraum, nur mit owner_rental_income_enabled und G3.
+- Portal: Neue Seite Belegeinsicht für Eigentümer mit Suche nach Abrechnungsjahr und Bezeichnung, hinter portal_owner_receipts_enabled (Standard aus, Migration 0427) und G4, Abruf über die bestehende Dokumentberechtigung mit Lesevermerk.
+- Portal: Eigentümer reiner Mietverwaltungen erhalten einen Zugriff auf ihren eigenen Rechtsträger und sehen ihre Eigentümerabrechnung; der Zugriff endet mit dem Eigentumszeitraum.
+- Portal: Die Eigentümerabrechnung zeigt nur Abrechnungen des eigenen Rechtsträgers, Abrechnungen der Gemeinschaft nur mit owner_hoa_rental_statements_enabled (Standard aus, Migration 0430); der Schalter steht in den Portalfunktionen und unter Fachliche Regeln.
+- Abrechnung: Die Abrechnungswerkbank zeigt lesend die aktiven Periodensperren des Objekts.
+- WEG: Der Mandantenschalter hoa_allocation_proposal_setting (Standard aus, Migration 0438) zeigt in der Vorschau der Planübernahme und je Abrechnung den Eigentümer nach der Regel je Erwerbsart neben dem verwendeten Eigentümer, ohne Buchung.
+- WEG: Integrationstest der Jahresabrechnung mit gebundener Rücklagenzahlung (200,00 EUR), ungebundener Zahlung (50,00 EUR) und Aufteilungsvorschlag nach Planverhältnis (30,00 EUR und 20,00 EUR).
+- Auth: GET /auth/me liefert is_demo aus dem Mandanten, das Demo-Band erscheint damit für Demo-Mandanten.
+- CRM Lexware Office: Export von Kontakten und Rechnungen mit Auswahl, Zeitraum, Vorschau und Download des Ergebnisses.
+- CRM Übergabe: Dateien aus dem Übergabeprotokoll lassen sich per ZIP dem Importlauf zuordnen; Liste und Lösen fehlen in der API.
+- CRM Vermietung: Die OpenImmo-Übernahme bietet Auswahllisten für Objekt und Einheit.
+- CRM Import: Neue Seite Übernahme aus objektakte mit Importlauf (Vorschau, Übernahme, Ergebnis), OCR-Cache-Zuordnung und Vorschaubild-Übernahme; das Leeren des OCR-Cache fehlt in der API.
+- CRM Migration: Abnahmeprotokolle im Entwurf lassen sich bearbeiten, Altdaten (Einzelposten und Tickets) sind lesend einsehbar, das Vollimport enthält die Liste der bekannten Exporttypen mit erwarteten Spalten.
+- Automation: Der Job-Schlüssel hoa-inspection-ownership-scan ist im Jobkatalog registriert.
+- Skripte: staging-smoke prüft optional die URLs MHVP_AVAILABILITY_*_URL.
+- Tests: 21 weitere Komponententests (CRM Bank, Buchhaltung, WEG, Objekte; Portal Einladung annehmen) mit Prüfung von BFF-Pfad, Fehleranzeige und Berechtigungsfall.
+- Handbuch: Kapitel zu Objektakte-Einstellungen, Migrationsmasken, Demo-Band, API-Schlüsseln und Mailquellen ergänzt, Portal-Kapitel vom CRM abgegrenzt.
+- Dokumentation: Entscheidungsfragen AG18-01 bis AG18-04 und Abschnitt Bewusst nicht umgesetzt in docs/plans/IMPLEMENTATION_STATUS.md.
+- Offen: AG02-01 (Zuordnung der Bank-Autobuchung zum Vorgangstyp Sollstellung, Frage A17), AG04-01 (AVV-Abdeckung für Stapelergebnisse beim KI-Anbieter und vertraglicher Preisfaktor) und AG07-01 (Zulässigkeit der Portal-Stimmabgabe als Textform, Übernahme in die Ergebnisfeststellung, G4).
+- Offen: AG09-01 (Umfang der Einsicht in Kostenbelege), AG12/AF25-02 (Abrechnungen der Gemeinschaft im Eigentümerportal, G3), AG14-01 (Mapping je Datensatz im Lexware Export, Liste und Lösen der Übergabedateien) und AG20-01 (Regel je Erwerbsart und Fälligkeitstag des Abrechnungsergebnisses, G4).
+- Offen: AG18-01 bis AG18-04 (Sonderumlagekonto, DMS als Primärspeicher, lokale Einbettung, Aggregator), GAC-07 (Umfang, Datenschutzgrundlage und Zugriffsweg des Versicherungsmaklers) und AF01-01-V (fachliche Freigabe der Ausgangsautomatik, M12-05, G1).
+- Bewusst nicht umgesetzt: GoCardless (vom Betreiber gestoppt, finAPI nach V3), DMS als Primärspeicher, lokale Einbettung, Sonderumlagekonto (Steuerberatung).
+
 ## 1.62.0 (02.10.2026) Welle 17, Befunde der Lückenanalyse GAA bis GAF und Prüfung: Buchungsautomatik nur per Antrag, Periodensperre über die Objektspalte, EBICS-Abruf, Abrechnungen im Eigentümer- und Mieterportal, asynchroner Portal-Assistent
 
 - Übersicht: Welle 17 mit 24 Paketen AF01 bis AF24 zu den Befunden der Lückenanalyse GAA bis GAF und Prüfbericht REVIEW-W17-2026-10-02 (AF25, 5 Prüfbefunde, 2 behoben); Migrationen 0395 bis 0418, real sind 5 (0398, 0402, 0409, 0410, 0411), Platzhalter ohne Schemaänderung sind 19 (0395, 0396, 0397, 0399, 0400, 0401, 0403, 0404, 0405, 0406, 0407, 0408, 0412, 0413, 0414, 0415, 0416, 0417, 0418); 95 Befunde, davon 74 done und 18 partial; neue offene Entscheidungen (9): AF01-01, AF02-01, AF06-01, AF06-02, AF07-01, AF08-01, AF10-01, AF15-01, AF16-01.

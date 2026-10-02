@@ -152,9 +152,10 @@ async def preview(
 ) -> dict[str, Any]:
     """Payable invoices due until ``as_of + horizon_days`` grouped by legal entity with the
     usable ordering accounts, and direct debit runs due in the same window (M15-03)."""
+    from mhvp.accounting import leading
     from mhvp.accounting.direct_debit import ACTIVE_RUN_STATUSES
     from mhvp.accounting.direct_debit_models import DirectDebitOrder, DirectDebitRun
-    from mhvp.accounting.models import Invoice, LeadingSystem, Ledger, OpenItem, PostingStatus
+    from mhvp.accounting.models import Invoice, Ledger, OpenItem, PostingStatus
     from mhvp.contacts.models import Contact
     from mhvp.properties.models import LegalEntity, PropertyBankAccount
 
@@ -186,7 +187,9 @@ async def preview(
             block = "Rechnung ohne Empfänger-IBAN"
         elif any("IBAN weicht" in f for f in invoice.findings):
             block = "Abweichende IBAN ist nicht bestätigt (PÜ04)"
-        elif ledger.leading_system is not LeadingSystem.MHVP:
+        elif not await leading.is_leading(
+            session, ledger, leading.LeadingKind.PAYMENT_ORDER, as_of
+        ):
             block = "Buchungskreis ist nicht im führenden System (13.1)"
         group = groups.get(ledger.legal_entity_id)
         if group is None:

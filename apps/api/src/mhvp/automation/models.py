@@ -159,6 +159,7 @@ JOB_CATALOG: dict[str, str] = {
     "banking-weekly-digest": "Wochenübersicht Bank",
     "billing-consumption-info": "Verbrauchsinformation",
     "billing-deadline-watch": "Warnung Abrechnungsfrist",
+    "hoa-inspection-ownership-scan": "Prüfhinweis Eigentümerwechsel in Einsichtsanfragen",
     "accounting-receivable-run": "Sollstellungslauf",
     "accounting-dunning-run": "Mahnlauf",
     "accounting-open-item-balance": "Offene Posten zum Stichtag (Lesekopie)",

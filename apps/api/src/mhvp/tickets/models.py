@@ -338,6 +338,31 @@ class WorkOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     rating_comment: Mapped[str | None] = mapped_column(Text)
 
 
+RATING_PARTIES = ("staff", "resident")
+
+
+class WorkOrderRating(IdMixin, TimestampMixin, TenantMixin, Base):
+    """GAF-35 (14 Dienstleister, AE30-02, migration 0424): rating of a completed work order,
+    one per party (``staff`` = management, ``resident`` = affected resident in the portal).
+    Internal evidence: never changed after saving, never shown to the provider; the display
+    follows the tenant switch ``provider_rating_display``."""
+
+    __tablename__ = "work_order_rating"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "work_order_id", "party", name="uq_work_order_rating_party"),
+        CheckConstraint("party IN ('staff', 'resident')", name="party"),
+        CheckConstraint("stars BETWEEN 1 AND 5", name="stars"),
+        Index("ix_work_order_rating_order", "tenant_id", "work_order_id"),
+    )
+
+    work_order_id: Mapped[uuid.UUID] = _fk("work_order.id", nullable=False, ondelete="CASCADE")
+    party: Mapped[str] = mapped_column(String(16), nullable=False)
+    stars: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text)
+    rated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    rated_by_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
+
+
 class WorkOrderEvent(IdMixin, TenantMixin, Base):
     __tablename__ = "work_order_event"
 

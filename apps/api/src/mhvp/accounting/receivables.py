@@ -27,6 +27,7 @@ from mhvp.accounting.models import (
     EntrySource,
     ItemStatus,
     JournalEntry,
+    LeadingSystem,
     Ledger,
     LedgerAccount,
     PaymentTypeAccount,
@@ -122,6 +123,22 @@ def due_date(rule: str, day: int, first: date) -> date | None:
     return None  # workday: holiday calendar not released (M13-02)
 
 
+NOT_LEADING = "Sollstellung führt für diesen Zeitraum das Altsystem (13.1, GAC-05)"
+
+
+async def _not_leading(
+    session: AsyncSession, ledger: Ledger, on_date: date, property_id: uuid.UUID | None
+) -> bool:
+    """Only an explicit approved switch to the old system blocks (GAC-05); without switch rows
+    the receivable run behaves as before."""
+    from mhvp.accounting import leading
+
+    found = await leading.explicit(
+        session, ledger, leading.LeadingKind.RECEIVABLE_POSTING, on_date, property_id
+    )
+    return found is LeadingSystem.IMMOWARE24
+
+
 async def compute(
     session: AsyncSession, period: date, scope: str, scope_id: uuid.UUID | None
 ) -> list[dict[str, Any]]:
@@ -165,6 +182,9 @@ async def compute(
     rules = await load_rules(session)
     for contract in contracts:
         ledger = ledgers.get(contract.legal_entity_id)
+        not_leading = ledger is not None and await _not_leading(
+            session, ledger, first, contract.property_id
+        )
         schedule = await session.scalar(
             select(PaymentSchedule).where(
                 PaymentSchedule.contract_id == contract.id,
@@ -208,11 +228,13 @@ async def compute(
             )
         )
         if rules["enabled"] and not ownership_partial:
-            items.extend(
-                _compute_with_rules(
-                    contract, list(payments), schedule, ledger, mapping, posted, first, rules
-                )
+            ruled = _compute_with_rules(
+                contract, list(payments), schedule, ledger, mapping, posted, first, rules
             )
+            for ruled_item in ruled:
+                if not_leading and ruled_item["status"] is ItemStatus.READY:
+                    ruled_item["status"], ruled_item["message"] = ItemStatus.BLOCKED, NOT_LEADING
+            items.extend(ruled)
             continue
         for p in sorted(payments, key=lambda x: (x.payment_type_code, x.valid_from)):
             item: dict[str, Any] = {
@@ -253,6 +275,8 @@ async def compute(
                 mark(ItemStatus.MANUAL, OWNERSHIP_CHANGE if ownership else PRORATION)
             if ledger is None:
                 mark(ItemStatus.BLOCKED, "Kein Buchungskreis für den Gläubiger")
+            elif not_leading:
+                mark(ItemStatus.BLOCKED, NOT_LEADING)
             elif (ledger.id, p.payment_type_code) not in mapping:
                 mark(ItemStatus.BLOCKED, f"Kein Erlöskonto für Zahlungsart {p.payment_type_code}")
             if schedule is None:

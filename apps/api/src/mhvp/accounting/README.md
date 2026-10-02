@@ -461,3 +461,20 @@ proposal; `GET /accounting/templates/{id}/coverage-report` lists gaps. Migration
 ### Mandantenweite Zusammenfassung Zinsabzug (AF24, GAE-38)
 
 `GET /accounting/interest-tax-config` (Leserecht, keine Parameter) liefert `ledgers_total` und `ledgers_configured` (Buchungskreise mit mindestens einem Steuerkonto). Rein lesend. Die Seite Fachliche Regeln zeigt damit den Zinsabzug und, über `GET /document-text-blocks/codes`, die freigegebenen Textbausteine als Zahl statt nur als Link.
+
+## AG11: Leselisten und Objektfilter (Welle 18)
+
+- `GET /accounting/ledgers/{id}/payment-type-accounts` liefert die bestehenden Zuordnungen Zahlungsart zu Konto (Recht `accounting:read`, nur eigener Mandant, unbekannte Query-Parameter 422).
+- `GET /accounting/direct-debits/creditor-ids` liefert die hinterlegten Gläubiger-IDs je Rechtsträger und den Rückfall des Mandanten (nur lesend).
+- `GET /accounting/ledgers/{id}/reports/xlsx` kennt den Filter `property_id` für Journal, Monatsmatrix und Einnahmen Ausgaben (Objekt der Buchungszeile); bei Auswertungen ohne Objektachse antwortet die API mit 422.
+
+## Leading system per process kind (AG02, GAC-05)
+
+`ledger_leading_switch` (migration 0420, RLS) holds switches per ledger, optional property,
+kind (`receivable_posting`, `dunning`, `direct_debit`, `payment_order`) and `valid_from`.
+`leading.is_leading(session, ledger, kind, on_date, property_id=None)` is the single check of
+the dunning run, direct debit run, payment run and bank auto posting; it falls back to
+`Ledger.leading_system`. The receivable run blocks only on an explicit approved switch to the
+legacy system (comparison postings stay, M10-05). Requests: `POST
+/accounting/ledgers/{id}/leading-switches`; decision by another person: `POST
+.../{switch_id}/decide` (G1 when the platform becomes leading). Rule AG02-01.

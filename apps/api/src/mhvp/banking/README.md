@@ -330,6 +330,14 @@ ergibt 409 `MHVP-BANK-0063` mit Verweis auf den Antragsweg, auch bei offener G1.
 bleibt sofort möglich (Grund, Ereignis `tenant.auto_posting_changed`) und ist in der BFF
 freigegeben.
 
+Ausgangsautomatik (AG19, Welle 18, AF25-01): `PUT /banking/automation/outgoing` schaltet nur
+noch aus; `enabled=true` ergibt 409 `MHVP-BANK-0064`. Eingeschaltet wird über denselben
+Antragsweg mit `target="outgoing"` (`POST /banking/automation/switch-requests`), zweite Person
+und G1 offen; die Freigabe setzt `auto_posting_outgoing_enabled` (Ereignis
+`tenant.auto_posting_outgoing_changed`). Spalte `target` (`main`, `outgoing`) an
+`auto_posting_switch_request` (Migration 0437), je Ziel höchstens ein offener Antrag; die
+Liste liefert zusätzlich `outgoing_enabled` und `can_request_outgoing`.
+
 Ereignis `bank_transaction.booked` (GAB-08): außer der manuellen Buchung melden auch der
 Automatiklauf (`origin` `auto`), die Ausführung eines Zahlungsauftrags (`payment_order`) und
 die Korrektur aus der Nachkontrolle (`review_correction`) die Buchung über
@@ -393,3 +401,11 @@ Rule M11-11 (`docs/rules/M11-11-ebics-connector.md`), migration 0379, runbook
 - `SyncRunOut` enthält zusätzlich `created_at` und `connection_id`; CRM-Komponente `BankSyncLog` auf /bank.
 - `GET /banking/ebics/subscribers/{id}/letters.pdf`: INI-/HIA-Brief auf dem Briefbogen des Mandanten (documents.letters). Hash-Werte nur aus der Übertragung; fehlt einer, trägt der Brief den Entwurfsvermerk und darf nicht versandt werden (AE23-02).
 - FinTS: `fints.check_fints_target` prüft im Worker vor dem Aufbau des echten Clients die aufgelösten Adressen; nicht öffentliche Bereiche (Loopback, privat, link local, CGNAT, Multicast, reserviert) ergeben MHVP-BANK-0062. Restrisiko DNS-Rebinding bleibt bei den Egress-Regeln des Betreibers.
+
+### EBICS Schlüsselwechsel und Sperre (GAE-24, Welle 18)
+
+Wechsel (`POST /banking/ebics/subscribers/{id}/keys` mit Grund) und Sperre (`.../suspend`) wirken nur lokal. Ein Wechsel stillt die alten Teilnehmerschlüssel still, setzt die Initialisierung zurück (Status `keys_ready`) und sperrt Abruf (manuell und Task) bis zur erneuten Prüfung der Bankschlüssel. Die Sperre ist endgültig und blockiert alle Aufträge (`MHVP-BANK-0052`). Der Status gilt je Teilnehmer. Abgesichert durch `tests/integration/test_ag05_ebics_keychange.py`. Die Abnahme am Testsystem der Bank ist Betreiberaufgabe (Handbuch Bank).
+
+### Objektsperre im Verifier (GAE-02, Welle 18 AG10)
+
+`banking/object_lock.py` ermittelt vor jeder automatischen Buchung die Objekte der auszugleichenden Posten (Zeilen der Ursprungsbuchung, `period_lock.property_ids_of_lines`). Läuft der Mandant im Modus `object_period` und deckt eine aktive Objektsperre den Buchungstag ab, setzt der Runner `Context.object_locked`; der Verifier überspringt den Fall wie bei der Ledgersperre (`skipped=period_locked`, Zähler `auto_period_locked`). Es wird nichts gebucht. Die manuelle Buchung bleibt durch `period_lock.ensure_open_for_entry` in `services.post` gesperrt. Ein Hinweis am reinen Buchungsvorschlag (ohne Buchung) ist nicht umgesetzt.

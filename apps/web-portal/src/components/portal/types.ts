@@ -139,6 +139,7 @@ export type Ticket = {
   comments: string[];
   attachments: Attachment[];
   appointment_proposals: AppointmentProposal[];
+  completed_work_order_ids?: string[];
 };
 
 export type AccountItem = {

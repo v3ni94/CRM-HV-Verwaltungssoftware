@@ -80,6 +80,7 @@
       "audit": "Audit room",
       "resolutions": "Resolutions",
       "meetings": "Meetings",
+      "circulars": "Circular resolutions",
       "contacts": "Contacts",
       "hoaAccount": "HOA fee account",
       "representation": "Representation",
@@ -96,7 +97,9 @@
       "handover": "Handover",
       "ownerStatements": "Annual statement",
       "ownerPlans": "Budget plan",
-      "ownerRentalStatements": "Owner statement"
+      "ownerReceipts": "Receipts",
+      "ownerRentalStatements": "Owner statement",
+      "ownerReporting": "Reporting"
     },
     "notifications": {
       "title": "Notifications",
@@ -239,6 +242,14 @@
     "appointmentAccept": "Confirm this appointment",
     "appointmentAccepted": "The appointment has been confirmed.",
     "appointmentConfirmed": "Confirmed appointment",
+    "rating": "Rate this job",
+    "ratingHint": "How satisfied were you with the work? Your rating is internal and is not passed on to the contractor.",
+    "ratingStars": "Stars",
+    "ratingComment": "Comment (optional)",
+    "ratingSubmit": "Submit rating",
+    "ratingDone": "Thank you, your rating has been saved.",
+    "ratingOwn": "Your rating: {stars} of 5 stars",
+    "ratingSummary": "Average of the contractor: {average} of 5 stars ({count} ratings)",
     "appointmentsOpen": "Appointment proposal available",
     "attachmentsList": "Attachments of the report"
   },
@@ -749,6 +760,23 @@
       "photos": "Photos"
     }
   },
+  "PortalCircular": {
+    "title": "Circular resolutions",
+    "intro": "Running circular procedures of your community. One vote per unit and motion; the management determines the result.",
+    "ownersOnly": "Available to owners only.",
+    "disabled": "Voting in circular procedures is currently not enabled in the portal.",
+    "empty": "There are no running circular procedures.",
+    "deadline": "Deadline: {date}",
+    "unit": "Unit {id}",
+    "yes": "Yes",
+    "no": "No",
+    "abstain": "Abstain",
+    "voted": "Voted: {choice} on {at}",
+    "evidence": "Evidence: checksum of the motion text {hash}",
+    "closed": "Voting closed.",
+    "confirm": "Vote cast.",
+    "error": "Error: {message}"
+  },
   "Meetings": {
     "title": "Meetings",
     "intro": "Owners' meetings of your community. The invitation sent by the management remains authoritative.",
@@ -1168,6 +1196,20 @@
     "revoke": "Withdraw consent",
     "active": "The management may view your account read only until {until}."
   },
+  "OwnerReceipts": {
+    "title": "Receipts",
+    "ownersOnly": "This page is available to owners only.",
+    "year": "Statement year",
+    "allYears": "All years",
+    "search": "Search in the description",
+    "submit": "Show",
+    "empty": "No receipts found.",
+    "disabled": "Receipt access is not enabled at the moment.",
+    "row": "{label}, statement {year}, version {version}",
+    "open": "Download receipt",
+    "unavailable": "Not available to you",
+    "truncated": "The list is truncated, please narrow the search or the year."
+  },
   "OwnerStatements": {
     "title": "Annual statement",
     "ownersOnly": "This page is for owners only.",
@@ -1203,10 +1245,23 @@
     "hoaFee": "Hoa fee",
     "reserve": "Maintenance reserve"
   },
+  "OwnerReporting": {
+    "title": "Rental income reporting",
+    "ownersOnly": "Reporting is only available to owners.",
+    "empty": "No issued operating cost statement for your units yet.",
+    "unit": "Unit {unit}, {property}",
+    "period": "Period {from} to {to}",
+    "rent": "Agreed monthly rent (gross)",
+    "allocableTenant": "Costs of this unit allocable to the tenant",
+    "allocableProperty": "Allocable costs of the property",
+    "vacancyDays": "Vacancy days",
+    "vacancyShare": "Vacancy share of the property borne by you"
+  },
   "OwnerRentalStatements": {
     "title": "Owner statement",
     "ownersOnly": "This page is only available to owners.",
     "empty": "There is no issued owner statement.",
+    "scope": "Shown are the statements the management has issued to you as owner. Statements of your community as landlord appear only when the management has enabled them.",
     "row": "{kind}, {from} to {to}",
     "kind": {
       "rental_owner": "Rental management",

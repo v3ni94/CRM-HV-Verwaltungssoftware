@@ -75,6 +75,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
 </div>
       <StatementWorkbench
         id={id}
+        propertyId={propertyId}
         status={String(data.status)}
         revision={[String(data.version), String(data.status), items.length, snap?.hash ?? ""].join(":")}
         contracts={(snap?.results ?? []).filter((r) => r.contract_id).map((r) => ({ contract_id: String(r.contract_id), unit_number: r.unit_number }))}

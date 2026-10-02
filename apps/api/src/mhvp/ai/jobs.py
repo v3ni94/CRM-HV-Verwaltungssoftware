@@ -372,3 +372,40 @@ async def batch_nightly_once(settings: Settings) -> dict[str, Any]:
 @shared_task(name="mhvp.ai.batch_nightly", acks_late=True)
 def batch_nightly() -> dict[str, Any]:
     return asyncio.run(batch_nightly_once(get_settings()))
+
+
+async def batch_poll_once(settings: Settings) -> dict[str, Any]:
+    """Polls the open provider batches of all active tenants (9.3, GAB-09)."""
+    from mhvp.ai import batch
+    from mhvp.platform.models import Tenant, TenantStatus
+
+    if settings.master_key is not None and not crypto.is_configured():
+        crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    report: dict[str, Any] = {"tenants": 0, "batches": 0, "runs": 0, "errors": []}
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            try:
+                summary = await batch.poll_submitted(factory, tenant_id, BlobStore(settings))
+            except Exception as exc:  # the other tenants must still run
+                log.exception("ai batch poll failed", tenant_id=str(tenant_id))
+                report["errors"].append(f"{tenant_id}: {failure_text(exc)}")
+                continue
+            report["tenants"] += 1
+            report["batches"] += summary["batches"]
+            report["runs"] += summary["runs"]
+    finally:
+        await engine.dispose()
+    return report
+
+
+@shared_task(name="mhvp.ai.batch_poll", acks_late=True)
+def batch_poll() -> dict[str, Any]:
+    return asyncio.run(batch_poll_once(get_settings()))

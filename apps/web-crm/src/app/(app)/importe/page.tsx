@@ -45,6 +45,9 @@ export default async function ImportsPage() {
         <Link href="/importe/migration" className="text-sm font-medium hover:underline">
           {t("migrationLink")}
         </Link>
+        <Link href="/importe/objektakte" className="text-sm font-medium hover:underline">
+          {t("objektakteLink")}
+        </Link>
       </p>
       {!data ? (
         <p role="alert" className={ui.alert}>

@@ -91,12 +91,19 @@ ACCEPTANCE_PERMISSIONS: frozenset[str] = frozenset(
 # Rechte).
 MAIL_INBOUND_INGEST = "mail_inbound:ingest"
 MAIL_INBOUND_PERMISSIONS: frozenset[str] = frozenset({MAIL_INBOUND_INGEST})
+# Versicherungsmakler (GAC-07, Anhang A.4, docs/rules/GAC-07.md): lesender Zugriff auf
+# Versicherungsverträge und Schadenfälle. Wirksam nur bei gesetztem Mandantenschalter
+# ``insurance_broker_access`` (Standard aus, Entscheidung offen); sonst bleibt die Rolle ohne
+# Recht. Gespeichert wie jedes andere Recht als Ressource/Aktion.
+INSURANCE_BROKER_PERMISSIONS: frozenset[str] = frozenset({"insurance:read", "claims:read"})
+INSURANCE_BROKER_ROLE = "insurance_broker"
 ALL_PERMISSIONS: frozenset[str] = (
     frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
     | METERING_PERMISSIONS
     | PRIVACY_PERMISSIONS
     | ACCEPTANCE_PERMISSIONS
     | MAIL_INBOUND_PERMISSIONS
+    | INSURANCE_BROKER_PERMISSIONS
     | {ACCOUNTING_REVIEW}
 )
 
@@ -286,4 +293,20 @@ async def effective_permissions(
             RolePermission.tenant_id == tenant_id, RolePermission.role_id.in_(role_ids)
         )
     )
-    return frozenset(f"{r.resource}:{r.action}" for r in rows), codes
+    granted = frozenset(f"{r.resource}:{r.action}" for r in rows)
+    if INSURANCE_BROKER_ROLE in codes and await _insurance_broker_access(session, tenant_id):
+        granted |= INSURANCE_BROKER_PERMISSIONS
+    return granted, codes
+
+
+async def _insurance_broker_access(session: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    """Tenant switch ``insurance_broker_access`` (GAC-07), default off."""
+    from sqlalchemy import text
+
+    value = await session.scalar(
+        text(
+            "SELECT sources ->> 'insurance_broker_access' FROM tenant_settings WHERE tenant_id = :t"
+        ),
+        {"t": tenant_id},
+    )
+    return bool(value == "true")

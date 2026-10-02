@@ -404,3 +404,11 @@ Unter "Honorarrechnungen" steht zu jeder Rechnung und Gutschrift:
 * Verwalterhonorar: Honorargutschriften haben XRechnung XML, Prüfung und Ablage.
 * Einstellungen, Buchhaltung, Steuern: Ausweis nach § 35a je Mietvertrag als Anzeige und PDF Entwurf (Einschätzung, Prüfung durch die Steuerberatung).
 * Zahllauf: Schalter der wöchentlichen Vorschau (Recht Mandanteneinstellungen ändern). Der Nummernmodus der Mietrechnungsentwürfe wird unter Fachliche Regeln geändert, am Vertrag nur angezeigt.
+
+## Bestehende Zuordnungen, Gläubiger-ID und Objektfilter im Excel-Export
+
+Die Kontenmaske zeigt über dem Formular die bereits hinterlegten Zuordnungen Zahlungsart zu Erlöskonto. Unter Einstellungen, Buchhaltung, Gläubiger-ID und unter Bank, Verbindungen steht die hinterlegte Gläubiger-ID je Rechtsträger (nur Anzeige, Änderung in den Einstellungen). Der Excel-Export von Journal, Monatsmatrix und Einnahmen Ausgaben kann auf ein Objekt eingeschränkt werden (Parameter property_id). Die Sachprüfung einer Rechnung zeigt beim Budgetabgleich zusätzlich die Teilbeträge Rechnungen, Gutschriften und Buchungszeilen mit Plankonto.
+
+## Führendes System je Vorgangstyp (Welle 18, AG02)
+
+Im Buchungskreis zeigt der Abschnitt "Führendes System je Vorgangstyp", welches System für Sollstellung, Mahnung, Lastschrift und Zahlungsauftrag heute führt und ob dies aus einer Umschaltung oder aus der Einstellung des Buchungskreises stammt. Wer Freigaberechte hat, beantragt eine Umschaltung mit Vorgangstyp, führendem System, Gültig-ab und optional einem Objekt. Freigeben oder ablehnen muss eine andere Person; die Plattform als führendes System lässt sich nur mit geöffneter Freigabestufe G1 freigeben. Ohne Umschaltung arbeiten alle Läufe wie bisher.

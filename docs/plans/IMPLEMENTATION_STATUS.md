@@ -168,3 +168,68 @@ Befunde der Lückenanalyse GAA bis GAF, Pakete AF01 bis AF24 und Prüfung AF25. 
 | GAF-30 | AF23 | partial | Ergebnisdatei AF23 | 17 CRM-Komponenten (banking 4, accounting 4, hoa 4, ai 3, documents 2) getestet; übrige banking/accounting/properties/hoa ohne Test |
 | GAF-31 | AF23 | partial | Ergebnisdatei AF23 | 8 Portal-Komponenten getestet; OnlineMeetingPanel, WorkOrderDetail, DataChangeForm, InvitationForm und Seiten ohne Einzeltest |
 | GAF-33 | AF15 | done | [AF15-01](../rules/AF15-01.md) |  |
+
+## Welle 18 (Stand 1.63.0, 02.10.2026)
+
+Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG01 bis AG20. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.63.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.
+
+- Migrationen 0419 bis 0438: 20 Nummern, davon 8 real (0420 ledger_leading_switch, 0422 ai_provider_config Stapel, 0424 work_order_rating, 0425 Umlaufbeschluss im Portal, 0427 Belegeinsicht Eigentümer, 0430 Abrechnungen der Gemeinschaft im Portal, 0437 Ziel des Automatikantrags, 0438 Zuordnungsvorschlag) und 12 Platzhalter ohne Schemaänderung (0419, 0421, 0423, 0426, 0428, 0429, 0431, 0432, 0433, 0434, 0435, 0436).
+- Korrektur in Migration 0424: Der Name der Check-Constraint wird aus dem Katalog gelesen, weil die Namenskonvention den Namen verdoppelte und das Upgrade auf frischer Datenbank scheiterte.
+- Neue offene Entscheidungen: AG02-01, AG04-01, AG07-01, AG09-01, AG14-01, AG18-01 bis AG18-04, AG20-01, GAC-07; fortgeschrieben AF25-02 (AG12) und AF01-01 (AG19, fachliche Freigabe M12-05).
+- Zählung: 41 Befunde in 20 Paketen, davon 30 done, 11 partial, 0 not_done. Die partial-Befunde GAA-04, GAB-12, GAB-15 und GAB-17 sind Entscheidungsfragen und stehen unter Bewusst nicht umgesetzt (Abschnitt unten, kein zweites Verzeichnis).
+- Vom Koordinator bei der Integration erledigt: OpenAPI-Export und api-client neu erzeugt, `test_migrations.py` über die Kette 0419 bis 0438 grün (Auf- und Rückweg bis 0418 geprüft), `test_af14_deadline_snapshot.py` (GAE-20) grün, Gesamtsuiten API (4.711 bestanden), CRM und Portal, Playwright Kernpfade beider Apps (GAE-39) und Messlauf MHVP_PERF=1 (GAE-32, docs/runbooks/leistungsmessung.md) ausgeführt. Einmal rot im Shard und isoliert grün: `test_m20_gmail_state_sync.py::test_reconcile_after_expired_history_and_preview` (Mail-Domäne in Welle 18 unverändert, reihenfolgeabhängig).
+
+| Befund-ID | Paket | Status | Hinweis |
+| --- | --- | --- | --- |
+| GAD-01 | AG01 | done |  |
+| GAC-05 | AG02 | done | AG02-01 offen (Bank-Autobuchung, A17); Zahllauf prüft Stichtag des Laufs, nicht Fälligkeit je Rechnung |
+| GAC-07 | AG03 | partial | Schalter und Rechte vorhanden, Fachendpunkte prüfen insurance:read und claims:read nicht (kein Router), Umfang offen |
+| GAF-11 | AG03 | done |  |
+| GAB-09 | AG04 | done | AG04-01 offen (AVV, Preisfaktor) |
+| GAB-10 | AG04 | done | OpenAI Batch API bewusst nachgelagert |
+| GAE-24 | AG05 | done | Abnahme am Testsystem der Bank bleibt Betreiberaufgabe |
+| GAF-35 | AG06 | done | AE30-02 bleibt offen, Datenschutzprüfung vor Modus all |
+| GAF-32 | AG07 | done | AG07-01 offen; Vollmachten im Portal-Umlauf nicht angenommen |
+| GAF-34 | AG08 | done | P13-01 offen; nicht umlagefähige Kosten nicht im Snapshot, Leerstandsanteil nur je Objekt |
+| GAF-36 | AG09 | done | AG09-01 offen; Quelle hoa_cost_item.document_id |
+| GAE-02 | AG10 | done |  |
+| GAE-20 | AG10 | done | Test test_af14_deadline_snapshot.py nach Behebung der Migration 0424 vom Koordinator ausgeführt (grün); Hinweis am reinen Buchungsvorschlag nicht umgesetzt |
+| GAF-13 | AG10 | done |  |
+| AF03-R | AG11 | partial | payment-batches und payment-bank-config ohne Maske (G2, M15-01 offen) |
+| AF05-R | AG11 | done | Anzeige der ersten Freigabe fehlt im Rechnungsmodell (fremde Domain) |
+| AF07-R | AG11 | partial | B2B-Lauf nur als Kandidat mit Sperrgrund, kein eigener 409-Code (G2, AF07-01) |
+| AF15-R | AG12 | done | Abrufvermerk für Eigentümerabrechnungs-PDF nicht ergänzt |
+| AF25-02 | AG12 | done | Entscheidung offen (Betreiber, G3) |
+| AF18-D | AG13 | done |  |
+| AF19-R | AG13 | done |  |
+| AF22-D | AG13 | done | Portal-Kapitel nur abgegrenzt |
+| GAF-17 | AG14 | done |  |
+| GAF-18 | AG14 | partial | Liste und Lösen nicht umsetzbar, API bietet nur das Zuordnen (AG14-01) |
+| GAF-24 | AG14 | done | Belegdaten als gemeinsame JSON-Vorlage, kein Mapping je Datensatz (AG14-01) |
+| AF21-R | AG15 | done | Angleichung banking/ai_posting.py optional |
+| GAF-14 | AG16 | partial | OCR-Cache leeren ohne API-Endpunkt, Verlauf der Importläufe nur per Lauf-ID |
+| GAF-23 | AG16 | done |  |
+| AF23-R | AG17 | done | Unter Last einzelne userEvent-Tests über 5 s, mit --testTimeout=30000 grün |
+| AF08-R | AG18 | partial | Job-Schlüssel registriert; GAE-11 und GAE-12 laut AG20 umgesetzt |
+| AF24-R | AG18 | done |  |
+| GAA-04 | AG18 | partial | Sonderumlagekonto, Entscheidung AG18-01 (Steuerberatung) |
+| GAB-12 | AG18 | partial | DMS als Primärspeicher, Entscheidung AG18-02 |
+| GAB-15 | AG18 | partial | Lokale Einbettung, Entscheidung AG18-03 |
+| GAB-17 | AG18 | partial | GoCardless gestoppt, Aggregator laut V3 finAPI, AG18-04 |
+| GAF-29 | AG18 | done | Negativbefund |
+| GAF-37 | AG18 | done | Negativbefund, Terminbestätigung bereits eingebunden |
+| AF25-01 | AG19 | done | fachliche Freigabe M12-05, AF01-01 offen |
+| GAF-10 | AG19 | done |  |
+| GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
+| GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
+
+## Bewusst nicht umgesetzt (Welle 18, AG18, 02.10.2026)
+
+- GAA-04 Konto Sonderumlage: wartet auf die Steuerberatung (P07-05, AG18-01). Die Prüfbericht-Warnung bleibt.
+- GAB-12 Externes DMS als Primärspeicher: nur Spiegelbetrieb, Entscheidung offen (AG18-02).
+- GAB-15 Lokale Einbettung über Ollama: nicht umgesetzt, nur auf Betreiberwunsch (AG18-03).
+- GAB-17 GoCardless: nicht umgesetzt, Paket AE24 vom Betreiber gestoppt, Aggregator laut V3 finAPI (AG18-04).
+- GAF-29 Platzhaltertexte im CRM: Negativbefund, keine Treffer für TODO, FIXME oder "coming soon" in `apps/web-crm/src`, keine Maßnahme nötig.
+- GAF-37 Portal Bestandsfunktionen: Negativbefund. Die Terminbestätigung durch Bewohner ist bereits eingebunden (`AppointmentProposals` in `apps/web-portal/src/app/(portal)/meldungen/[id]/page.tsx`), keine Änderung nötig.
+- AF08-R: Job-Schlüssel `hoa-inspection-ownership-scan` ist in `JOB_CATALOG` registriert (Mandanten-Zeitfenster möglich). Offen: GAE-11 (Ende zu Ende Test Jahresabrechnung mit gebundener Zahlung) und GAE-12 (Anbindung Planübernahme an `calc.allocation_owner`).
+- AF24-R: `scripts/staging-smoke.sh` prüft `MHVP_AVAILABILITY_*_URL` optional (nur lesend).

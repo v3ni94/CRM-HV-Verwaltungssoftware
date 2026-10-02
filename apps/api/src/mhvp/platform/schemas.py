@@ -168,6 +168,9 @@ class TenantSettingsOut(BaseModel):
     # U15-04: Inhaltsmodus der Benachrichtigungsmails, ``voll`` (Standard) oder ``hinweis``
     # (nur Anzahl und Link ins CRM). Gespeichert im JSON ``sources``, keine Migration.
     notification_mail_content: str = "voll"
+    # GAC-07: Versicherungsmakler erhält insurance:read und claims:read nur bei gesetztem
+    # Schalter (Standard aus, gespeichert im JSON ``sources``, keine Migration).
+    insurance_broker_access: bool = False
     gmail_done_closes_ticket: bool = False
     gmail_done_on_trash: bool = True
     gmail_reopen_on_unarchive: bool = True
@@ -224,6 +227,7 @@ class TenantSettingsPatch(BaseModel):
     branding: Branding | None = None
     ticket_reply_approval_all: bool | None = None
     notification_mail_content: str | None = Field(default=None, pattern="^(voll|hinweis)$")
+    insurance_broker_access: bool | None = None
     ticket_reopen_window_days: int | None = Field(default=None, ge=0, le=3650)
     portal_second_factor: str | None = Field(default=None, pattern="^(account_choice|required)$")
     # P08-04: Standardfrist in Tagen (1 bis 365); mit clear_inspection_package_default_days

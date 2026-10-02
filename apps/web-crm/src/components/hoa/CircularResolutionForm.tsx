@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { CircularPortalVotes } from "@/components/hoa/CircularPortalVotes";
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { SUBJECT_KINDS } from "@/components/settings/MajorityRulesAdmin";
 import { bff } from "@/lib/bff";
@@ -114,6 +115,7 @@ export function CircularResolutionForm({
       <h3 className={ui.title}>{t("title")}</h3>
       <p className={ui.notice}>{t("hint")}</p>
       {!lowerMajorityEnabled ? <p className={ui.help}>{t("disabled")}</p> : null}
+      <CircularPortalVotes legalEntityId={legalEntityId} owners={owners} />
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("subject")}</span>

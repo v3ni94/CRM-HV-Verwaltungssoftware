@@ -928,6 +928,7 @@
     "reconciliationLink": "Abgleichbericht Parallelbetrieb",
     "fullImportLink": "Vollimport mit Stichtag und Abgleichbericht",
     "migrationLink": "Migration von Immoware24 (Journal, Eröffnungssalden, Abgleich, Umstellung)",
+    "objektakteLink": "Übernahme aus objektakte (Importlauf, OCR-Cache, Vorschaubilder)",
     "listImportLink": "Immoware24 Listenimport",
     "roleTitle": "Rolle nachträglich setzen",
     "roleLabel": "Rolle für alle angelegten Kontakte",
@@ -990,6 +991,11 @@
     "dpaStored": "Hinterlegt: {name}",
     "dpaMissing": "Kein AVV-Dokument hinterlegt.",
     "optOut": "Ausschluss der Nutzung für Training bestätigt",
+    "batchTitle": "Stapelverarbeitung beim Anbieter",
+    "batchEnabled": "Zurückgestellte Läufe als Anbieter-Stapel senden (nur Anthropic Message Batches)",
+    "batchFactor": "Preisfaktor für Stapelläufe (1 = kein Abschlag)",
+    "batchFactorInvalid": "Der Preisfaktor muss größer als 0 und höchstens 1 sein.",
+    "batchHint": "Standard aus. Der Faktor wird aus der Preisliste des Anbieters übernommen und nur auf Läufe angewendet, die vollständig aus dem Stapel beantwortet wurden. Ergebnisse liegen bis zum Abruf beim Anbieter; die Abdeckung durch den AVV prüft der Betreiber.",
     "dataProtectionHint": "Die Angaben ersetzen keine Prüfung des Vertrags. Die Freigabe setzt AVV, AVV-Dokument, Trainings-Opt-out, API-Schlüssel und Budget voraus.",
     "enabled": "Anbieter aktiv",
     "save": "Speichern",
@@ -2242,7 +2248,7 @@
     "skippedPending": "{count} Verträge übersprungen, Freigabe ausstehend"
   },
   "Bank": {
-    "automationSwitch": {"title": "Automatikschalter", "help": "Das Einschalten der Automatik setzt die offene Freigabestufe G1 voraus und braucht einen Antrag mit Grund sowie die Freigabe durch eine zweite Person. Ausschalten ist jederzeit sofort möglich. Der Lauf prüft Stufen, Regeln und Gate weiterhin selbst.", "on": "Automatik eingeschaltet", "off": "Automatik ausgeschaltet", "g1Open": "G1 offen", "g1Closed": "G1 geschlossen", "reason": "Grund des Antrags", "request": "Einschalten beantragen", "requested": "Antrag gestellt. Die Freigabe erteilt eine zweite Person.", "switchOff": "Sofort ausschalten", "offReason": "Grund für das Ausschalten", "switchedOff": "Die Automatik ist ausgeschaltet.", "approve": "Freigeben", "reject": "Ablehnen", "approved": "Antrag freigegeben, die Automatik ist eingeschaltet.", "rejected": "Antrag abgelehnt.", "blockedG1": "Gesperrt, solange die Freigabestufe G1 geschlossen ist.", "alreadyOn": "Die Automatik ist eingeschaltet.", "pendingOrNoRight": "Ein Antrag ist offen oder das Recht zum Beantragen fehlt.", "status": {"requested": "Beantragt", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "comparison": {"title": "Vergleichslauf Automatik gegen manuelle Buchung", "help": "Bericht aus dem Entscheidungsspeicher: je abgeschlossener Entscheidung, ob der beste Vorschlag der Automatik der manuellen Buchung entspricht. Der Bericht bucht nichts und ist kein Sicherheitsnachweis.", "summary": "Verglichene Buchungen: {compared}, Übereinstimmungsquote: {rate}", "noRate": "keine Daten", "caseKind": "Fallklasse", "total": "Gesamt", "outcome": {"match": "Übereinstimmung", "other_proposal": "Anderer Vorschlag", "modified": "Geändert gebucht", "no_proposal": "Ohne Vorschlag", "rejected": "Abgelehnt", "auto_posted": "Automatisch gebucht", "reversed": "Storniert"}}},
+    "automationSwitch": {"title": "Automatikschalter", "help": "Das Einschalten der Automatik setzt die offene Freigabestufe G1 voraus und braucht einen Antrag mit Grund sowie die Freigabe durch eine zweite Person. Ausschalten ist jederzeit sofort möglich. Der Lauf prüft Stufen, Regeln und Gate weiterhin selbst.", "on": "Automatik eingeschaltet", "off": "Automatik ausgeschaltet", "g1Open": "G1 offen", "g1Closed": "G1 geschlossen", "reason": "Grund des Antrags", "request": "Einschalten beantragen", "requested": "Antrag gestellt. Die Freigabe erteilt eine zweite Person.", "switchOff": "Sofort ausschalten", "offReason": "Grund für das Ausschalten", "switchedOff": "Die Automatik ist ausgeschaltet.", "approve": "Freigeben", "reject": "Ablehnen", "approved": "Antrag freigegeben, die Automatik ist eingeschaltet.", "rejected": "Antrag abgelehnt.", "blockedG1": "Gesperrt, solange die Freigabestufe G1 geschlossen ist.", "alreadyOn": "Die Automatik ist eingeschaltet.", "pendingOrNoRight": "Ein Antrag ist offen oder das Recht zum Beantragen fehlt.", "status": {"requested": "Beantragt", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "target": {"main": "Hauptschalter", "outgoing": "Ausgangsautomatik"}, "outgoing": {"title": "Ausgangsautomatik", "help": "Automatische Buchung ausgehender Zahlungen. Einschalten nur über einen Antrag mit Freigabe durch eine zweite Person bei offener Freigabestufe G1, wirksam nur bei eingeschaltetem Hauptschalter. Ausschalten ist sofort möglich.", "on": "Ausgangsautomatik eingeschaltet", "off": "Ausgangsautomatik ausgeschaltet", "request": "Ausgangsautomatik beantragen", "switchOff": "Ausgangsautomatik sofort ausschalten", "switchedOff": "Die Ausgangsautomatik ist ausgeschaltet."}, "comparison": {"title": "Vergleichslauf Automatik gegen manuelle Buchung", "help": "Bericht aus dem Entscheidungsspeicher: je abgeschlossener Entscheidung, ob der beste Vorschlag der Automatik der manuellen Buchung entspricht. Der Bericht bucht nichts und ist kein Sicherheitsnachweis.", "summary": "Verglichene Buchungen: {compared}, Übereinstimmungsquote: {rate}", "noRate": "keine Daten", "caseKind": "Fallklasse", "total": "Gesamt", "outcome": {"match": "Übereinstimmung", "other_proposal": "Anderer Vorschlag", "modified": "Geändert gebucht", "no_proposal": "Ohne Vorschlag", "rejected": "Abgelehnt", "auto_posted": "Automatisch gebucht", "reversed": "Storniert"}}},
     "title": "Bank",
     "metrics": {
       "title": "Kennzahlen Bankabgleich",
@@ -6378,6 +6384,7 @@
       "immoware": "Immoware24",
       "full": "Vollimport",
       "migration": "Migration Immoware24",
+      "objektakteImport": "Übernahme objektakte",
       "learning": "Lernphase",
       "platformAudit": "Plattformaudit",
       "domains": "Kundendomains",
@@ -8845,7 +8852,7 @@
     }
   },
   "InvoiceFactual": {
-    "budget": { "title": "Budgetabgleich {label} ({year})", "planned": "Planansatz (Soll)", "booked_before": "Bisher zugeordnet", "invoice": "Diese Rechnung", "remaining": "Rest", "exceeded": "Planansatz einschließlich Toleranz überschritten (Hinweis)." },
+    "budget": { "title": "Budgetabgleich {label} ({year})", "planned": "Planansatz (Soll)", "booked_before": "Bisher zugeordnet", "invoices_before": "davon Rechnungen", "credit_notes_before": "davon Gutschriften", "journal_lines_net": "davon Buchungszeilen mit Plankonto", "invoice": "Diese Rechnung", "remaining": "Rest", "exceeded": "Planansatz einschließlich Toleranz überschritten (Hinweis)." },
     "resolutionCoverage": "Beschluss Nr. {number} vom {date}: {subject}.",
     "resolutionEffective": "Beschluss ist wirksam erfasst.",
     "resolutionNotEffective": "Beschlussstatus prüfen.",
@@ -10556,6 +10563,18 @@
     "noRenewal": "keine"
   },
   "WorkOrders": {
+    "ratingTitle": "Bewertung des Auftrags",
+    "ratingOff": "Die Anzeige von Bewertungen ist ausgeschaltet (Einstellung Bewertungen von Dienstleistern). Eine abgegebene Bewertung bleibt intern gespeichert.",
+    "ratingNone": "Noch keine Bewertung.",
+    "ratingParty_staff": "Verwaltung",
+    "ratingParty_resident": "Bewohner",
+    "ratingStarsValue": "{stars} von 5 Sternen",
+    "ratingStars": "Sterne",
+    "ratingComment": "Anmerkung (optional)",
+    "ratingSubmit": "Bewertung speichern",
+    "ratingSaved": "Die Bewertung wurde gespeichert.",
+    "ratingNotYet": "Eine Bewertung ist erst nach Abschluss des Auftrags möglich.",
+    "ratingDone": "Die Verwaltung hat diesen Auftrag bereits bewertet.",
     "listTitle": "Aufträge",
     "listDescription": "Alle Arbeitsaufträge an Dienstleister mit Status und Ticketbezug.",
     "listError": "Aufträge konnten nicht geladen werden.",
@@ -12712,6 +12731,52 @@
     "caseId": "Prüffall (Kennung)",
     "propose": "Vorschlag anfordern"
   },
+  "ObjektakteImportRun": {
+    "title": "Übernahme aus objektakte",
+    "pageIntro": "Export der objektakte prüfen und übernehmen, OCR-Textcache zuordnen und Vorschaubilder übernehmen. Die Vorschau ändert nichts.",
+    "back": "Zurück zu den Importen",
+    "noPermission": "Keine Berechtigung für die Übernahme aus objektakte.",
+    "runTitle": "Importlauf",
+    "runIntro": "Zuerst prüfen (Vorschau), danach übernehmen. Die Übernahme ist nur nach erfolgter Vorschau freigeschaltet.",
+    "dumpFile": "Exportdatei (SQL-Dump, UTF-8)",
+    "check": "Prüfen (Vorschau)",
+    "apply": "Übernehmen",
+    "applyHint": "Die Datei wurde noch nicht geprüft.",
+    "historyTitle": "Verlauf: Ergebnis eines Laufs",
+    "runId": "Importlauf-ID",
+    "load": "Abrufen",
+    "ocrTitle": "OCR-Textcache",
+    "ocrIntro": "ZIP des Verzeichnisses ocr-cache einem Importlauf zuordnen. Nicht zugeordnete Schlüssel werden aufgelistet, nichts wird stillschweigend verworfen.",
+    "ocrFile": "ZIP-Datei",
+    "ocrApply": "OCR-Cache übernehmen",
+    "ocrResult": "{matched} Dokumente zugeordnet, {unmatched} Schlüssel ohne Treffer.",
+    "previewTitle": "Vorschaubild-Übernahme",
+    "previewIntro": "Stand des letzten Laufs der Vorschaubild-Übernahme. Start und Fortsetzen verlangen die Freigaberolle.",
+    "previewNone": "Noch kein Lauf.",
+    "previewCounts": "{processed} von {total} verarbeitet: {imported} übernommen, {rendered} gerendert, {missing} fehlend, {skipped} übersprungen, {failed} fehlgeschlagen.",
+    "renderMissing": "Fehlende Vorschauen rendern",
+    "previewStart": "Lauf starten",
+    "previewResume": "Nach Abbruch fortsetzen",
+    "queued": "Der Lauf wurde in die Warteschlange gestellt.",
+    "startedInline": "Der Lauf wurde ausgeführt."
+  },
+  "MigrationHistory": {
+    "title": "Altdaten (nur lesend)",
+    "intro": "Übernommene Einzelposten und historische Tickets. Es wird nichts gebucht oder verändert.",
+    "ledger": "Buchungskreis",
+    "chooseLedger": "Buchungskreis wählen",
+    "kindLabel": "Art",
+    "allKinds": "Alle Arten",
+    "loadItems": "Einzelposten laden",
+    "loadTickets": "Tickets laden",
+    "none": "Keine Einträge.",
+    "openSum": "{count} Einzelposten, offen insgesamt {sum}.",
+    "kind": { "receivable": "Forderung", "credit": "Guthaben", "deposit": "Kaution", "reserve": "Rücklage", "loan": "Darlehen", "special_levy": "Sonderumlage" }
+  },
+  "ExportKinds": {
+    "title": "Bekannte Exporttypen und erwartete Spalten",
+    "reconciled": "wird abgeglichen"
+  },
   "MigrationExtras": {
     "acceptanceTitle": "Migrationsabnahme je Objekt",
     "acceptanceIntro": "Abnahmeprotokoll mit Prüfumfang, Verantwortlichen, Rückfallplan und Archivkonzept. Unterzeichnen muss eine zweite Person.",
@@ -12719,6 +12784,9 @@
     "chooseProperty": "Objekt wählen",
     "status": { "draft": "Entwurf", "signed": "Unterzeichnet" },
     "sign": "Unterzeichnen",
+    "edit": "Bearbeiten",
+    "saveEdit": "Änderungen speichern",
+    "cancelEdit": "Abbrechen",
     "create": "Abnahmeprotokoll anlegen",
     "field": {
       "review_scope": "Prüfumfang",
@@ -12794,6 +12862,11 @@
     }
   },
   "HoaCircular": {
+    "portalVotes": "Stimmen aus dem Eigentümerportal",
+    "portalVotesHint": "Nur lesend. Die Verwaltung übernimmt die Stimmen in die Ergebnisfeststellung.",
+    "portalVoteLine": "{owner}: {item}, {choice}, {at}",
+    "portalVoteHash": "Prüfsumme des Beschlusstexts: {hash}",
+    "portalChoice": { "yes": "Ja", "no": "Nein", "abstain": "Enthaltung" },
     "title": "Umlaufbeschluss erfassen",
     "hint": "Das System zählt die in Textform eingegangenen Stimmen und stellt das Ergebnis fest. Ob eine abgesenkte Mehrheit im Umlaufverfahren zulässig ist, ist eine rechtliche Einschätzung und durch die Rechtsberatung zu prüfen (M25-02).",
     "disabled": "Umlaufbeschluss mit einfacher Mehrheit ist für diesen Mandanten nicht freigeschaltet. Es gilt Allstimmigkeit in Textform.",
@@ -14108,8 +14181,9 @@
       "intro": "Die Vorschau legt nichts an. Jede Zeile wird einzeln freigegeben, dafür sind Objekt und Einheit anzugeben.",
       "file": "OpenImmo Datei (XML oder ZIP)",
       "count": "{file}: {count} Zeilen",
-      "propertyId": "Objekt ID",
-      "unitId": "Einheit ID",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "choose": "Bitte wählen",
       "untitled": "Ohne Titel",
       "duplicate": "Bereits vorhanden",
       "errors": "{count} Strukturhinweise",
@@ -14133,6 +14207,37 @@
       "exportHint": "Exporte von Kontakten und Rechnungen laufen über die API, weil sie eine ausdrückliche Auswahl der Datensätze verlangen.",
       "empty": "Noch keine Läufe.",
       "errors": "{count} Fehler"
+    },
+    "lexExport": {
+      "title": "Export nach Lexware Office",
+      "intro": "Datensätze auswählen, Vorschau prüfen, danach exportieren. Der Export läuft nur bei geöffnetem Buchhaltungsgate.",
+      "kind": "Datenart",
+      "contacts": "Kontakte",
+      "invoices": "Rechnungen",
+      "search": "Suche",
+      "from": "Rechnungsdatum von",
+      "to": "Rechnungsdatum bis",
+      "load": "Liste laden",
+      "empty": "Keine Datensätze gefunden.",
+      "payload": "Belegdaten als JSON (gilt für alle ausgewählten Datensätze)",
+      "payloadInvalid": "Die Belegdaten müssen ein gültiges JSON Objekt sein.",
+      "preview": "Vorschau",
+      "previewText": "{count} Datensätze würden exportiert. Es wurde noch nichts übertragen.",
+      "export": "Export starten ({count})",
+      "resultText": "{ok} übertragen, {failed} mit Fehler.",
+      "download": "Ergebnis herunterladen"
+    },
+    "uprotokollFiles": {
+      "title": "Dateien aus U-Protokoll zuordnen",
+      "intro": "ZIP des Speicherordners dem Importlauf zuordnen. Die Lauf ID steht im Ergebnis der Übernahme.",
+      "runId": "Lauf ID",
+      "file": "ZIP Datei",
+      "match": "Zuordnen",
+      "matched": "Zugeordnet ({count})",
+      "unmatched": "Ohne Treffer im Lauf ({count})",
+      "missing": "Erwartet, aber nicht im Archiv ({count})",
+      "unnamed": "Ohne Dateiname",
+      "unlinkHint": "Eine Zuordnung wird nur über Löschen des Dokuments gelöst, eine eigene Lösefunktion bietet die API nicht."
     },
     "fastTable": {
       "label": "Schneller Tabellenimport",
@@ -14600,6 +14705,42 @@
     "balance": "Saldo"
   },
   "Bookkeeping": {
+    "leadingSwitch": {
+      "title": "Führendes System je Vorgangstyp",
+      "help": "Ohne freigegebene Umschaltung gilt die Einstellung des Buchungskreises. Eine Umschaltung beantragt eine Person, freigeben muss eine andere; die Plattform als führendes System braucht G1.",
+      "kind": "Vorgangstyp",
+      "leading": "Führend",
+      "source": "Quelle",
+      "sourceSwitch": "Umschaltung",
+      "sourceLedger": "Buchungskreis",
+      "validFrom": "Gültig ab",
+      "property": "Objekt (optional)",
+      "allProperties": "Alle Objekte",
+      "status": "Status",
+      "comment": "Bemerkung",
+      "request": "Umschaltung beantragen",
+      "requested": "Antrag gestellt. Die Freigabe nimmt eine andere Person vor.",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "decided": "Entscheidung gespeichert.",
+      "history": "Anträge und Umschaltungen",
+      "empty": "Keine Umschaltungen.",
+      "kinds": {
+        "receivable_posting": "Sollstellung",
+        "dunning": "Mahnung",
+        "direct_debit": "Lastschrift",
+        "payment_order": "Zahlungsauftrag"
+      },
+      "systems": {
+        "immoware24": "Altsystem (Immoware24)",
+        "mhvp": "Plattform"
+      },
+      "statuses": {
+        "requested": "Beantragt",
+        "approved": "Freigegeben",
+        "rejected": "Abgelehnt"
+      }
+    },
     "notes": {
       "toggle": "Vermerke",
       "empty": "Keine Vermerke vorhanden.",
@@ -14895,6 +15036,8 @@
       "support_login_enabled": "Lesende Support-Sicht mit Einwilligung",
       "owner_rental_income_enabled": "Mieterträge für Kapitalanleger im Eigentümerportal",
       "owner_rental_statements_enabled": "Eigentümerabrechnung Miete und SEV im Eigentümerportal",
+      "portal_owner_receipts_enabled": "Belegeinsicht für Eigentümer im Eigentümerportal",
+      "owner_hoa_rental_statements_enabled": "Abrechnungen der Gemeinschaft als Vermieterin im Eigentümerportal",
       "chat_bot_enabled": "Assistent für die eigenen Unterlagen (Chat-Bot)",
       "privacy_feature_enabled": "Datenschutz-Feature für KI-Antworten"
     },
@@ -14904,13 +15047,15 @@
       "support_login_enabled": "Die Verwaltung kann nur mit gültiger Einwilligung des Nutzers lesend einsehen, jeder Aufruf wird protokolliert.",
       "owner_rental_income_enabled": "Zeigt Eigentümern mit Sondereigentumsverwaltung die vereinbarte Miete ihrer eigenen Einheiten ohne Mieternamen. Datenschutzfreigabe vor dem Einschalten prüfen.",
       "owner_rental_statements_enabled": "Zeigt Eigentümern die ausgegebenen Eigentümerabrechnungen ihrer eigenen Rechtsträger mit PDF. Zusätzlich ist die Freigabestufe G3 nötig.",
+      "portal_owner_receipts_enabled": "Zeigt Eigentümern die Belege zu den Kostenpositionen der freigegebenen Abrechnungen ihrer Gemeinschaft mit Suche je Abrechnungsperiode. Der Abruf läuft über die bestehende Dokumentberechtigung und wird als Indiz vermerkt. Zusätzlich ist die Freigabestufe G4 nötig.",
+      "owner_hoa_rental_statements_enabled": "Zeigt allen Eigentümern einer Gemeinschaft die ausgegebenen Eigentümerabrechnungen, deren Rechtsträger die Gemeinschaft selbst ist (Vermietung von Gemeinschaftseigentum). Die fachliche Entscheidung AF25-02 ist offen, zusätzlich sind der Schalter Eigentümerabrechnung und die Freigabestufe G3 nötig.",
       "chat_bot_enabled": "Mieter und Eigentümer können Fragen zu den für sie freigegebenen Unterlagen stellen. Ohne weitere Freigaben zeigt der Assistent nur Treffer aus diesen Unterlagen, die Antworten kommen nie aus fremden Unterlagen.",
       "privacy_feature_enabled": "Voraussetzung für KI-Antworten im Assistenten: freigegebener Datenschutzhinweis (Textbaustein portal_chat_privacy_notice, Freigabe durch eine zweite Person) und Kenntnisnahme je Zugang. Zusätzlich braucht die KI-Antwort den freigegebenen KI-Anbieter mit Auftragsverarbeitungsvertrag. Den Text pflegt der Mandant, die Software liefert keinen Rechtstext."
     },
     "ticketScope": "Meldungen im Eigentümerportal",
     "ticketScopes": { "none": "keine Meldungen", "released": "nur für Eigentümer freigegebene Meldungen", "property": "alle Meldungen der eigenen Objekte (Nummer, Titel, Status)" },
     "ratingDisplay": "Bewertungen von Dienstleistern",
-    "ratingModes": { "off": "nicht anzeigen (Standard, intern)", "staff": "nur der Verwaltung als Übersicht anzeigen" },
+    "ratingModes": { "off": "nicht anzeigen (Standard, intern)", "staff": "nur der Verwaltung als Übersicht anzeigen", "all": "zusätzlich Durchschnitt des Dienstleisters für Bewohner im Portal (nie für Dienstleister)" },
     "ratingHelp": "Bewertungen sind interne Einschätzungen der Verwaltung zu abgeschlossenen Aufträgen. Die Übersicht zeigt je Dienstleister nur Anzahl, Durchschnitt und Verteilung der Sterne, ohne Freitexte. Dienstleister und Dritte sehen die Bewertungen nicht. Eine Anzeige für Dienstleister bleibt bis zur Entscheidung AA14-02 und der Prüfung durch den Datenschutz ausgeschlossen.",
     "statistics": "Nutzung der letzten {days} Tage",
     "accountsTotal": "Portalzugänge gesamt: {count}",
@@ -16489,6 +16634,18 @@
       "security": "Sicherheit und Datenschutz"
     },
     "rules": {
+      "insurance-broker-access": {
+        "title": "Zugriff der Rolle Versicherungsmakler",
+        "description": "Eingeschaltet erhält die Rolle Versicherungsmakler lesenden Zugriff auf Versicherungsverträge und Schadenfälle (insurance:read, claims:read), begrenzt durch die Objektzuordnung des Mitglieds. Ausgeschaltet bleibt die Rolle ohne Zugriff. Die Entscheidung über den Umfang ist offen (GAC-07)."
+      },
+      "onboarding-link-threshold": {
+        "title": "Objektübernahme, Schwelle für automatische Zuordnung in Prozent",
+        "description": "Ab dieser Übereinstimmung verknüpft der Personenabgleich der Objektübernahme einen Treffer mit dem Adressbuch. Standard 90 Prozent. Die Schwelle darf nicht unter der Vorschlagsschwelle liegen."
+      },
+      "onboarding-suggest-threshold": {
+        "title": "Objektübernahme, Schwelle für Vorschläge in Prozent",
+        "description": "Zwischen dieser Schwelle und der Zuordnungsschwelle wird ein Treffer nur vorgeschlagen, darunter entsteht ein unvollständiger neuer Kontakt. Standard 60 Prozent."
+      },
       "invoice-intake-auto": {
         "title": "Belegerfassung nach Ablage einer Rechnung",
         "description": "Eingeschaltet startet die Bestätigung eines Eingangsvorschlags, der als Rechnung erkannt wurde, die Rechnungsauslesung als Vorschlag im Belegeingang. Nichts wird gebucht, freigegeben oder bezahlt. Ausgeschaltet bietet der Hinweis die Schaltfläche Beleg erfassen."
@@ -16570,6 +16727,10 @@
         "description": "Platzhalterfeld je Rücklagenplan mit dem Freigabestatus nicht freigegeben. Die Einordnung legt der Steuerberater fest.",
         "defaultText": "Nicht freigegeben"
       },
+      "allocation-proposal": {
+        "title": "Zuordnungsvorschlag bei Eigentümerwechsel",
+        "description": "Ob die Vorschau der Planübernahme und die Abrechnung den Eigentümer nach der Regel je Erwerbsart als Vorschlag zeigen. Verwendet wird weiter der bisherige Eigentümer, es wird nichts gebucht."
+      },
       "correction-report": {
         "title": "Korrekturbericht je Eigentümer",
         "description": "Ob der Korrekturbericht zwischen zwei Abrechnungsversionen angezeigt wird. Der Bericht ist nur eine Anzeige, es wird nichts gebucht und nichts versendet; die Rechtsfolge einer Korrektur bleibt offen."
@@ -16615,6 +16776,10 @@
         "title": "Stichtag der Übergangsregel",
         "description": "Datum, das Sie als Stichtag der Übergangsregel eintragen. Es ist kein Rechtstext und hat keine Sperrwirkung, die Fristhinweise nennen es nur."
       },
+      "portal-circular-resolution": {
+        "title": "Umlaufbeschluss im Eigentümerportal",
+        "description": "Ob Eigentümer in laufenden Umlaufverfahren im Portal abstimmen. Die Stimmabgabe braucht zusätzlich die Freigabestufe G4; die Zulässigkeit prüft die Software nicht."
+      },
       "online-meeting": {
         "title": "Online-Versammlung im Portal",
         "description": "Ob Eigentümer im Portal an hybriden oder virtuellen Versammlungen online teilnehmen und abstimmen. Die Zulässigkeit prüft die Software nicht."
@@ -16627,9 +16792,17 @@
         "title": "Mieterträge im Eigentümerportal",
         "description": "Zeigt Eigentümern die vereinbarte Miete ihrer Einheiten mit Sondereigentumsverwaltung, ohne Mietername. Die datenschutzrechtliche Freigabe ist offen."
       },
+      "portal-owner-receipts": {
+        "title": "Belegeinsicht im Eigentümerportal",
+        "description": "Zeigt Eigentümern die Belege zu den freigegebenen Abrechnungen ihrer Gemeinschaft. Nur Belege, die der Eigentümer nach der Dokumentberechtigung sehen darf, sind abrufbar. Zusätzlich ist die Freigabestufe G4 nötig."
+      },
       "owner-rental-statements-portal": {
         "title": "Eigentümerabrechnung im Eigentümerportal",
         "description": "Zeigt Eigentümern die ausgegebenen Eigentümerabrechnungen ihrer eigenen Rechtsträger mit PDF. Zusätzlich ist die Freigabestufe G3 nötig."
+      },
+      "owner-hoa-rental-statements-portal": {
+        "title": "Abrechnungen der Gemeinschaft im Eigentümerportal",
+        "description": "Zeigt den Eigentümern einer Gemeinschaft auch Eigentümerabrechnungen, deren Rechtsträger die Gemeinschaft ist. Ohne den Schalter sehen Eigentümer nur Abrechnungen ihres eigenen Rechtsträgers. Entscheidung AF25-02 offen."
       },
       "tenant-statement-portal": {
         "title": "Nebenkostenabrechnung im Mieterportal",
@@ -16781,7 +16954,8 @@
       },
       "provider-rating-display": {
         "off": "Aus, nur intern",
-        "staff": "Anzeige nur für die Verwaltung"
+        "staff": "Anzeige nur für die Verwaltung",
+        "all": "Verwaltung und Bewohner (Durchschnitt, nie für Dienstleister)"
       },
       "terms-version-mode": {
         "manual": "Pflege von Hand",
@@ -16897,7 +17071,9 @@
       "account": "Konto",
       "choose": "Konto wählen",
       "save": "Zuordnung speichern",
-      "saved": "Zuordnung gespeichert."
+      "saved": "Zuordnung gespeichert.",
+      "existing": "Bestehende Zuordnungen",
+      "noneYet": "Noch keine Zuordnung hinterlegt."
     },
     "approval": {
       "title": "Zweite Freigabe",
@@ -16956,6 +17132,7 @@
       "channels": {"letter": "Brief", "email": "E-Mail", "phone": "Telefon", "portal": "Portal", "in_person": "persönlich"},
       "provisions": {"electronic": "elektronisch", "copies": "Kopien", "appointment": "Termin"}
     },
+    "periodLocks": {"title": "Periodensperren des Objekts", "none": "Keine aktive Periodensperre für dieses Objekt."},
     "resultEntries": {
       "title": "Ergebnisbuchungen",
       "notice": "Erzeugt Entwürfe für Forderung und Gutschrift. Es wird nichts gebucht, die Freigabestufe G3 und die Freigabe durch die Geschäftsführung bleiben erforderlich.",
@@ -16997,7 +17174,9 @@
     "save": "Speichern",
     "saved": "Gläubiger-ID gespeichert.",
     "removed": "Gläubiger-ID entfernt.",
-    "noPermission": "Für diese Auswahl fehlt die Berechtigung."
+    "noPermission": "Für diese Auswahl fehlt die Berechtigung.",
+    "current": "Hinterlegte Gläubiger-IDs",
+    "notSet": "nicht hinterlegt"
   },
   "DirectDebitPreview": {
     "title": "Vorschau einziehbarer Sollstellungen",
@@ -17007,5 +17186,16 @@
     "show": "Vorschau",
     "result": "{count} Sollstellungen einziehbar, Kontrollsumme {sum}, Einzug am {date}. Die Vorschau legt nichts an.",
     "noCreditorId": "Für den Rechtsträger ist keine Gläubiger-ID hinterlegt."
+  },
+  "AG03": {
+    "roleNoAccess": "ohne Zugriff (Entscheidung offen)",
+    "platformTitle": "Plattformeinstellungen",
+    "platformHint": "Die Umgehung des Vier-Augen-Prinzips schwächt die Kontrolle der Freigabestufen G1 bis G5 und bleibt für produktive Mandanten ausgeschaltet. Die Haftungsbewertung ist offen (M2-02).",
+    "bypassLabel": "Superadmin darf Freigabestufen allein genehmigen",
+    "on": "Ein",
+    "off": "Aus",
+    "version": "Version {version}",
+    "confirm": "Die Umgehung des Vier-Augen-Prinzips wirklich ändern?",
+    "loadFailed": "Plattformeinstellungen konnten nicht geladen werden."
   }
 }

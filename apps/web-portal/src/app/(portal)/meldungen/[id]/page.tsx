@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AppointmentProposals } from "@/components/portal/AppointmentProposals";
 import { PortalChat } from "@/components/portal/PortalChat";
+import { WorkOrderRating } from "@/components/portal/WorkOrderRating";
 import { TicketComments } from "@/components/portal/TicketComments";
 import type { Me, Ticket } from "@/components/portal/types";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -45,6 +46,9 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         </div>
       ) : null}
       <AppointmentProposals proposals={row.appointment_proposals ?? []} />
+      {(row.completed_work_order_ids ?? []).map((orderId) => (
+        <WorkOrderRating key={orderId} orderId={orderId} />
+      ))}
       {me?.features?.chat_enabled ? (
         <PortalChat ticketId={row.id} />
       ) : (

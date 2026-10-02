@@ -23,12 +23,14 @@ FEATURES = (
     "chat_bot_enabled",
     "privacy_feature_enabled",
     "tenant_statement_enabled",
+    "portal_owner_receipts_enabled",
+    "owner_hoa_rental_statements_enabled",
 )
 OWNER_TICKET_SCOPES = ("none", "released", "property")
 # AE30 (AA14-02): off keeps the ratings of service providers internal (default), staff shows
 # them aggregated to the management only. Publication to providers or third parties is not
 # offered (data protection, decision AA14-02 open).
-PROVIDER_RATING_MODES = ("off", "staff")
+PROVIDER_RATING_MODES = ("off", "staff", "all")
 
 
 async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
@@ -45,6 +47,8 @@ async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
         chat_bot_enabled=False,
         privacy_feature_enabled=False,
         tenant_statement_enabled=False,
+        portal_owner_receipts_enabled=False,
+        owner_hoa_rental_statements_enabled=False,
         owner_ticket_scope="released",
         provider_rating_display="off",
     )

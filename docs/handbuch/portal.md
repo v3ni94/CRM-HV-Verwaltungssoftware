@@ -428,3 +428,25 @@ Mieter sehen unter "Nebenkostenabrechnung" (`/nebenkosten`) die ausgegebene Betr
 ## Eigentümerabrechnung, Erläuterung und Wirtschaftsplan (AF15)
 
 Eigentümer sehen unter "Eigentümerabrechnung" (`/eigentuemerabrechnungen`) die ausgegebenen Abrechnungen ihrer Mietverwaltung oder Sondereigentumsverwaltung mit Einnahmen, Ausgaben, Auszahlungen und PDF. Die Anzeige schaltet die Verwaltung unter Portalfunktionen ein (Standard aus); zusätzlich ist die Freigabestufe G3 nötig. Unter "Hausgeldabrechnung" steht je Einheit eine Erläuterung mit Kostenanteil, Vorschüssen (Soll und Ist), Abrechnungsspitze und Rücklage, unter "Wirtschaftsplan" (`/wirtschaftsplaene`) der beschlossene Plan mit Jahresbetrag und monatlichem Vorschuss der eigenen Einheiten; beides erst mit Freigabestufe G4. Die Erklärtexte lassen sich als Textbausteine `portal_owner_explain_*` freigeben. Auf der Seite "Eigentum" erscheint bei leerer Mieterträge-Liste ein Hinweis, die Annahme der Nutzungsbedingungen verlinkt direkt die veröffentlichte Fassung.
+
+Eigentümer reiner Mietverwaltungen (ohne Wohnungseigentum) erhalten den Zugang zur Eigentümerabrechnung über ihren eigenen Rechtsträger, solange ihr Eigentum im Objekt läuft; nach einem Eigentümerwechsel entfällt der Zugang mit der nächsten Neuableitung der Zugriffsrechte. Angezeigt werden nur Abrechnungen des eigenen Rechtsträgers. Abrechnungen, deren Rechtsträger die Gemeinschaft selbst ist, sehen deren Eigentümer nur, wenn die Verwaltung den Schalter "Abrechnungen der Gemeinschaft als Vermieterin im Eigentümerportal" einschaltet (Standard aus, Entscheidung AF25-02 offen).
+
+## Abgrenzung zum CRM-Handbuch (AG13)
+
+Dieses Kapitel beschreibt ausschließlich die Anwendung `apps/web-portal` für Mieter, Eigentümer, Beirat und Dienstleister. Einstellungen, die die Verwaltung im CRM vornimmt (Fachliche Regeln, Portalfunktionen, Textbausteine, Freigabestufen), stehen in den CRM-Kapiteln, vor allem Einstellungen und Plattform, und sind hier nur dort erwähnt, wo sie das Portal sichtbar steuern. Das Demo-Band und die API-Schlüssel-Seite gehören zum CRM und erscheinen im Portal nicht.
+
+## Aufträge bewerten (AG06)
+
+Nach Abschluss eines Auftrags kann der betroffene Bewohner in der Meldung unter Auftrag bewerten Sterne (1 bis 5) und eine Anmerkung abgeben, einmalig; ebenso die Verwaltung auf der Auftragsseite im CRM. Die Bewertungen sind intern und werden dem Dienstleister nie gezeigt. Wer sie sieht, steuert die Verwaltung unter Einstellungen, Bewertungen von Dienstleistern: aus (Standard), nur Verwaltung oder zusätzlich der Durchschnitt des Dienstleisters für Bewohner. Regel `docs/rules/AG06-01.md`.
+
+## Belegeinsicht für Eigentümer (AG09)
+
+Unter Einstellungen, Fachliche Regeln, Schalter "Belegeinsicht im Eigentümerportal" einschalten (Standard aus, zusätzlich Freigabestufe G4). Eigentümer finden die Seite "Belegeinsicht" im Portal, filtern nach Abrechnungsjahr und Bezeichnung und laden Belege herunter, für die sie nach der Dokumentberechtigung zugelassen sind. Jeder Abruf wird als Indiz vermerkt. Hinweis: Die Einsicht in Kostenbelege ist eine Entscheidung der Verwaltung, vor dem Einschalten mit Datenschutz und Gemeinschaftsordnung abstimmen.
+
+## Umlaufbeschlüsse (AG07)
+
+Unter Umlaufbeschlüsse sehen Eigentümer laufende Umlaufverfahren ihrer Gemeinschaft und stimmen je eigener Einheit und Beschlussantrag einmal mit Ja, Nein oder Enthaltung ab. Nach der Stimmabgabe zeigt die Seite Zeitpunkt und Prüfsumme des Beschlusstexts als Nachweis. Die Funktion ist nur aktiv, wenn die Verwaltung den Schalter Umlaufbeschluss im Eigentümerportal eingeschaltet hat und die Freigabestufe G4 offen ist. Das Ergebnis stellt die Verwaltung im CRM fest; dort erscheinen die Portalstimmen lesend im Formular Umlaufbeschluss erfassen.
+
+## Reporting für Kapitalanleger (AG08, GAF-34)
+
+Eigentümer mit Sondereigentumsverwaltung sehen unter Reporting je Einheit und Abrechnungszeitraum die vereinbarte Monatsmiete, die auf Mieter umlagefähigen Kosten, die Leerstandstage und den Leerstandsanteil des Objekts. Die Seite ist nur sichtbar gefüllt, wenn der Mandantenschalter "Mieterträge im Portal" (owner_rental_income_enabled) eingeschaltet und die Freigabestufe G3 offen ist; sonst erscheint ein Hinweis. Mieternamen und Zahlungsstatus werden nicht angezeigt.

@@ -107,6 +107,7 @@ class Context:
     features_hash: str
     locked_until: date | None = None
     outgoing_enabled: bool = False
+    object_locked: bool = False  # GAE-02: active property lock covers the booking date
 
 
 def _dec(value: Any) -> Decimal:
@@ -164,6 +165,8 @@ def _is_return(tx: dict[str, Any]) -> bool:
 
 def _period_locked(tx: dict[str, Any], ctx: Context) -> bool:
     day = pp._date(tx.get("booking_date"))
+    if ctx.object_locked:
+        return True
     return ctx.locked_until is not None and day is not None and day <= ctx.locked_until
 
 

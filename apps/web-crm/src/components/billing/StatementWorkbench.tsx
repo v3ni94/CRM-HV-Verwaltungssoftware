@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { PeriodLocksPanel } from "@/components/billing/PeriodLocksPanel";
 import { ResultEntriesPanel } from "@/components/billing/ResultEntriesPanel";
 import { StatementInspectionsPanel, type InspectionContract } from "@/components/billing/StatementInspectionsPanel";
 import { bff } from "@/lib/bff";
@@ -14,7 +15,7 @@ type Key = { id: string; code: string; name: string };
 
 /** Cost items, calculation and status steps of an operating cost statement (M17).
  *  Heating costs come from an external statement (H01) and are entered via the API. */
-export function StatementWorkbench({ id, status, keys, revision = "", contracts = [] }: { id: string; status: string; keys: Key[]; revision?: string; contracts?: InspectionContract[] }) {
+export function StatementWorkbench({ id, status, keys, revision = "", contracts = [], propertyId }: { id: string; status: string; keys: Key[]; revision?: string; contracts?: InspectionContract[]; propertyId?: string }) {
   const t = useTranslations("Billing");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
@@ -125,6 +126,7 @@ export function StatementWorkbench({ id, status, keys, revision = "", contracts 
         </p>
       ) : null}
       {status !== "draft" && contracts.length > 0 ? <StatementInspectionsPanel id={id} contracts={contracts} /> : null}
+      {propertyId ? <PeriodLocksPanel propertyId={propertyId} /> : null}
       {status !== "draft" ? <ResultEntriesPanel id={id} status={status} /> : null}
     </section>
   );

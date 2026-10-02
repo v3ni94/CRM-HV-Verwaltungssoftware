@@ -15,12 +15,16 @@ export type PortalFeatures = {
   owner_rental_income_enabled?: boolean;
   /** AF15 (GAC-01): Eigentümerabrechnung Miete/SEV im Portal, Standard aus, zusätzlich G3. */
   owner_rental_statements_enabled?: boolean;
+  /** AG09 (GAF-36): Belegeinsicht für Eigentümer im Portal, Standard aus, zusätzlich G4. */
+  portal_owner_receipts_enabled?: boolean;
+  /** AG12 (AF25-02): Abrechnungen des Rechtsträgers Gemeinschaft für deren Eigentümer, Standard aus. */
+  owner_hoa_rental_statements_enabled?: boolean;
   /** AE28 (M7-06, SA-04): Assistent für die eigenen Unterlagen und Datenschutz-Feature, beide aus. */
   chat_bot_enabled?: boolean;
   privacy_feature_enabled?: boolean;
   owner_ticket_scope?: "none" | "released" | "property";
   /** AA14-02: Bewertungen der Dienstleister, off (Standard) oder staff (nur Verwaltung). */
-  provider_rating_display?: "off" | "staff";
+  provider_rating_display?: "off" | "staff" | "all";
 };
 export type PortalStatistics = {
   period_days: number;
@@ -37,6 +41,8 @@ type BoolKey =
   | "support_login_enabled"
   | "owner_rental_income_enabled"
   | "owner_rental_statements_enabled"
+  | "portal_owner_receipts_enabled"
+  | "owner_hoa_rental_statements_enabled"
   | "chat_bot_enabled"
   | "privacy_feature_enabled";
 const KEYS: BoolKey[] = [
@@ -45,11 +51,13 @@ const KEYS: BoolKey[] = [
   "support_login_enabled",
   "owner_rental_income_enabled",
   "owner_rental_statements_enabled",
+  "portal_owner_receipts_enabled",
+  "owner_hoa_rental_statements_enabled",
   "chat_bot_enabled",
   "privacy_feature_enabled",
 ];
 const SCOPES = ["none", "released", "property"] as const;
-const RATING_MODES = ["off", "staff"] as const;
+const RATING_MODES = ["off", "staff", "all"] as const;
 
 /** Portalfunktionen und Statistik je Mandant (M21-08, SA-01): Schalter sind standardmäßig aus;
  *  die KI-Vorqualifizierung braucht zusätzlich den freigegebenen KI-Anbieter mit AVV, die
@@ -139,7 +147,7 @@ export function PortalManagement({
           <span className={ui.help}>{t("ratingHelp")}</span>
         </label>
       </div>
-      {features.provider_rating_display === "staff" ? <ProviderRatingsPanel /> : null}
+      {features.provider_rating_display === "staff" || features.provider_rating_display === "all" ? <ProviderRatingsPanel /> : null}
       {features.chat_bot_enabled && canManage ? <AssistantLogPanel /> : null}
       {statistics ? (
         <div className={`${ui.card} flex flex-col gap-1 text-sm`} data-testid="portal-statistics">

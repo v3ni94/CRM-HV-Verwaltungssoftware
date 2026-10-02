@@ -1455,3 +1455,35 @@ class PeriodLockSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     reopen_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+
+
+class LedgerLeadingSwitch(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Leading system per ledger, optional property, process kind and valid-from date
+    (13.1 Ergänzung, GAC-05). Requested by one person, decided by another; an approved row
+    is never changed, a later switch is a new row. Without approved rows the ledger flag
+    ``leading_system`` applies unchanged."""
+
+    __tablename__ = "ledger_leading_switch"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('receivable_posting', 'dunning', 'direct_debit', 'payment_order')",
+            name="kind_valid",
+        ),
+        CheckConstraint("leading_system IN ('immoware24', 'mhvp')", name="leading_valid"),
+        CheckConstraint("status IN ('requested', 'approved', 'rejected')", name="status_valid"),
+        Index("ix_ledger_leading_switch_lookup", "tenant_id", "ledger_id", "kind", "valid_from"),
+    )
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", ondelete="CASCADE")
+    property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True, ondelete="CASCADE")
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    leading_system: Mapped[str] = mapped_column(String(16), nullable=False)
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="requested", server_default=text("'requested'")
+    )
+    comment: Mapped[str | None] = mapped_column(Text)
+    requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_comment: Mapped[str | None] = mapped_column(Text)

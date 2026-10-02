@@ -117,6 +117,35 @@ async def _own_contracts(session: Any, ownership: set[uuid.UUID]) -> list[Any]:
     return list((await session.scalars(select(Contract).where(Contract.id.in_(ownership)))).all())
 
 
+async def _rental_scope(
+    session: Any, account: Any, include_hoa: bool
+) -> tuple[set[uuid.UUID], set[uuid.UUID]]:
+    """(legal entity ids, ownership contract ids) for the owner statements (AG12, AF25-02).
+
+    Own legal entities are the ``rental_owner`` entities granted to a pure rental owner
+    (``access.RENTAL_OWNER_BASIS``) and, through the ownership contracts, the owner's own
+    entities in the statement's property (see ``_rental_statements``). The community itself
+    (hoa grant) counts only with the switch ``owner_hoa_rental_statements_enabled`` (default
+    off, decision AF25-02 open). 403 without any owner grant."""
+    from mhvp.portal import access
+    from mhvp.portal.owner import OWNER_BASES
+
+    today = local_today()
+    active = await access.grants(session, account, today)
+    rental_ids = {
+        g.scope_id
+        for g in active
+        if g.legal_basis == access.RENTAL_OWNER_BASIS and g.scope_type == "legal_entity"
+    }
+    has_hoa = any(g.legal_basis in OWNER_BASES and g.scope_type == "legal_entity" for g in active)
+    if not has_hoa:
+        if not rental_ids:
+            raise ProblemError(ErrorCodes.FORBIDDEN, detail="Nur für Eigentümer verfügbar.")
+        return rental_ids, set()
+    hoa_ids, ownership = await _owner_scope(session, account, today)
+    return rental_ids | (hoa_ids if include_hoa else set()), ownership
+
+
 async def _rental_statements(
     session: Any, entity_ids: set[uuid.UUID], ownership: set[uuid.UUID]
 ) -> list[Any]:
@@ -188,8 +217,11 @@ async def owner_rental_statements(
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        entity_ids, ownership = await _owner_scope(session, account, local_today())
-        if not (await portal_features.get_or_default(session)).owner_rental_statements_enabled:
+        flags = await portal_features.get_or_default(session)
+        entity_ids, ownership = await _rental_scope(
+            session, account, bool(flags.owner_hoa_rental_statements_enabled)
+        )
+        if not flags.owner_rental_statements_enabled:
             return {"items": [], "note": NOTE_RENTAL_OFF, "enabled": False}
         if not await _gate_open(request, principal.tenant_id, ReleaseGate.G3):
             return {"items": [], "note": NOTE_GATE.format(gate="G3"), "enabled": False}
@@ -211,8 +243,11 @@ async def owner_rental_statement_pdf(
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        entity_ids, ownership = await _owner_scope(session, account, local_today())
-        if not (await portal_features.get_or_default(session)).owner_rental_statements_enabled:
+        flags = await portal_features.get_or_default(session)
+        entity_ids, ownership = await _rental_scope(
+            session, account, bool(flags.owner_hoa_rental_statements_enabled)
+        )
+        if not flags.owner_rental_statements_enabled:
             raise ProblemError(ErrorCodes.FORBIDDEN, detail=NOTE_RENTAL_OFF)
         await ensure_release_gate_open(
             ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver

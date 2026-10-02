@@ -197,3 +197,54 @@ def test_switch_four_eyes_with_g1_open(database: Database, redis_url: str, world
         finally:
             _ok(c.put(B, json={"enabled": False, "reason": "AE03 Ende"}, headers=h))
         assert _ok(c.get(f"{B}/switch-requests", headers=o))["items"] == []
+
+
+def test_outgoing_put_never_switches_on(client: TestClient, world: World) -> None:
+    """AG19 (AF25-01): PUT outgoing only switches off; on returns 409 MHVP-BANK-0064."""
+    h = bearer(login(client, world, "ae03admin"))
+    res = client.put(f"{B}/outgoing", json={"enabled": True, "reason": "AG19 direkt"}, headers=h)
+    assert res.status_code == 409
+    assert res.json()["code"] == "MHVP-BANK-0064"
+    assert _ok(client.get(f"{B}/switch-requests", headers=h))["outgoing_enabled"] is False
+    r = bearer(login(client, world, "ae03reader"))
+    off = {"enabled": False, "reason": "AG19 aus"}
+    assert client.put(f"{B}/outgoing", json=off, headers=r).status_code == 403
+    assert _ok(client.put(f"{B}/outgoing", json=off, headers=h)) == {"enabled": False}
+    body = {"reason": "AG19 Test", "target": "outgoing"}
+    closed = client.post(f"{B}/switch-requests", json=body, headers=h)
+    assert closed.status_code == 403
+    assert closed.json()["code"] == "MHVP-GATE-0001"
+    bad = {"reason": "AG19 Test", "target": "other"}
+    assert client.post(f"{B}/switch-requests", json=bad, headers=h).status_code == 422
+
+
+def test_outgoing_four_eyes_with_g1_open(database: Database, redis_url: str, world: World) -> None:
+    with TestClient(
+        create_app(_settings(database, redis_url), release_gate_resolver=_OpenG1())
+    ) as c:
+        h = bearer(login(c, world, "ae03admin"))
+        s = bearer(login(c, world, "ae03second"))
+        o = bearer(login(c, world, "ae03other"))
+        body = {"reason": "AG19 Antrag", "target": "outgoing"}
+        req = _ok(c.post(f"{B}/switch-requests", json=body, headers=h), 201)
+        assert req["target"] == "outgoing"
+        assert c.post(f"{B}/switch-requests", json=body, headers=h).status_code == 409
+        state = _ok(c.get(f"{B}/switch-requests", headers=h))
+        assert state["can_request_outgoing"] is False
+        assert state["can_request"] is True  # the main target has no open request
+        url = f"{B}/switch-requests/{req['id']}"
+        own = c.post(f"{url}/approve", json={}, headers=h)
+        assert own.status_code == 403
+        assert own.json()["code"] == "MHVP-GATE-0002"
+        assert c.post(f"{url}/approve", json={}, headers=o).status_code == 404
+        try:
+            done = _ok(c.post(f"{url}/approve", json={"comment": "ok"}, headers=s))
+            assert done["status"] == "approved"
+            after = _ok(c.get(f"{B}/switch-requests", headers=h))
+            assert after["outgoing_enabled"] is True
+            assert after["enabled"] is False  # the main switch stays untouched
+            assert _ok(c.get(f"{B}/levels", headers=h))["auto_posting_outgoing_enabled"] is True
+        finally:
+            off = {"enabled": False, "reason": "AG19 Ende"}
+            _ok(c.put(f"{B}/outgoing", json=off, headers=h))
+        assert _ok(c.get(f"{B}/switch-requests", headers=h))["outgoing_enabled"] is False
