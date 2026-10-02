@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.63.1",
+    date: "02.10.2026",
+    title: "Korrektur Hintergrundverarbeitung aus der API (FinTS-Dialog, Exporte, Zählersynchronisation)",
+    changes: [
+      "Bank FinTS: Der Start eines Bankdialogs scheiterte in der Produktion mit MHVP-BANK-0057, weil der API-Prozess die konfigurierte Celery-App nie als Standard-App gebunden hatte und Aufgaben über .delay an den eingebauten Standardbroker (amqp://localhost) übergab; die API bindet die konfigurierte App jetzt beim Start prozessweit, betroffen waren alle Aufgaben, die ein Endpunkt über .delay anstößt (FinTS-Schritt, finAPI-Abruf, EBICS-Abruf, Mandanten- und Objektakten-Export, Prüfexport, Zählersynchronisation, Belegeingang Paperless).",
+      "Technik: create_celery bindet die Thread-lokale aktuelle App nur noch auf ausdrückliche Anforderung, get_celery installiert die prozessweite Standard-App; Regressionstest prüft die Auflösung aus einem fremden Thread, die Testfixtures für FinTS und finAPI patchen erst nach dem Start der API.",
+    ],
+  },
+  {
     version: "1.63.0",
     date: "02.10.2026",
     title: "Welle 18, Befunde der Lückenanalyse GAA bis GAF: führendes System je Vorgangstyp, Stapelverarbeitung der KI, Umlaufbeschluss und Belegeinsicht im Eigentümerportal, Ausgangsautomatik nur per Antrag",

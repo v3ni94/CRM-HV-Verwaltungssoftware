@@ -201,6 +201,7 @@ from mhvp.tenant.routers import router as tenant_setup_router
 from mhvp.tickets.board import portal_router as portal_board_submissions_router
 from mhvp.tickets.routers import router as tickets_router
 from mhvp.tickets.work_order_proposal_routers import router as work_order_proposal_router
+from mhvp.worker import get_celery
 from mhvp.workspace.deadline_routers import router as deadline_router
 from mhvp.workspace.ops import router as ops_router
 from mhvp.workspace.routers import router as workspace_router
@@ -264,6 +265,11 @@ def create_app(
             s3=create_s3_client(settings) if settings.s3_configured else None,
         )
         warn_missing_probe_urls(settings)
+        # Bind the configured Celery app as the default app of this process (see
+        # `mhvp.worker.get_celery`); otherwise `shared_task(...).delay()` in a fresh API worker
+        # publishes to Celery's built-in default app (amqp://localhost), observed as
+        # MHVP-BANK-0057 in production.
+        get_celery()
         app.state.resources = resources
         instrument_engine(engine, app.state.tracer_provider)
         app.state.readiness_checks = checks_factory(settings, resources)

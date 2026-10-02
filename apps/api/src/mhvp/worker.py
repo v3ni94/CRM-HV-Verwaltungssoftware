@@ -19,9 +19,11 @@ from mhvp.core.telemetry import instrument_celery
 QUEUES: tuple[str, ...] = ("default", "io", "ocr", "ai", "bank", "mail", "beat")
 
 
-def create_celery(settings: Settings | None = None, *, set_as_current: bool = True) -> Celery:
-    """Build the Celery app. ``set_as_current=False`` is for inspecting the configuration
-    (tests, tooling) without rebinding the ``shared_task`` proxies to the new instance."""
+def create_celery(settings: Settings | None = None, *, set_as_current: bool = False) -> Celery:
+    """Build the Celery app. The process-wide instance is installed by `get_celery` as the
+    default app; ``set_as_current`` additionally binds the *thread-local* current app and is
+    off by default so that inspecting the configuration (tests, tooling) never rebinds the
+    ``shared_task`` proxies of the calling thread to a throwaway instance."""
     settings = settings or get_settings()
     backend = settings.celery_result_backend
     reconciliation_hour, reconciliation_minute = (
@@ -484,7 +486,15 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
 
 @lru_cache(maxsize=1)
 def get_celery() -> Celery:
-    return create_celery()
+    """The process-wide Celery app, built once from the environment settings and installed as
+    Celery's *default* app. `shared_task(...).delay()` resolves ``current_app``, which falls
+    back to the default app when the calling thread never set one; the thread-local
+    ``set_current()`` alone would not reach the request threads of an API process. Without
+    this binding a fresh API process publishes to Celery's built-in default app
+    (amqp://localhost) and every `.delay()` fails (prod incident MHVP-BANK-0057)."""
+    app = create_celery()
+    app.set_default()
+    return app
 
 
 @signals.setup_logging.connect

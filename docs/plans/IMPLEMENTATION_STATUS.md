@@ -223,6 +223,10 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Korrektur 1.63.1 (02.10.2026): Hintergrundverarbeitung aus der API
+
+Produktionsbefund nach dem Deploy von 1.63.0: Der Start eines FinTS-Bankdialogs scheiterte mit MHVP-BANK-0057. Ursache war kein Betriebsfehler (Redis und Worker liefen), sondern ein Fehler im API-Prozess: Aufgaben, die ein Endpunkt über `.delay` anstößt, lösen die aktuelle Celery-App auf, und die API hatte die konfigurierte App nie prozessweit gebunden. Der Aufruf ging an die eingebaute Standard-App von Celery (amqp://localhost). Betroffen waren alle Endpunkte mit `.delay` (FinTS-Schritt, finAPI-Abruf, EBICS-Abruf, Mandanten- und Objektakten-Export, Prüfexport, Zählersynchronisation, Belegeingang Paperless); Endpunkte mit `send_task` über `get_celery()` waren nicht betroffen. Korrektur: `get_celery` installiert die konfigurierte App als Standard-App, die API ruft sie beim Start auf, `create_celery` bindet die Thread-lokale App nur noch auf Anforderung. Regressionstest in `tests/unit/test_worker.py`, Testfixtures für FinTS und finAPI patchen nach dem Start der API. Nach dem Deploy ist die Verbindung in der Bankmaske neu zu starten.
+
 ## Bewusst nicht umgesetzt (Welle 18, AG18, 02.10.2026)
 
 - GAA-04 Konto Sonderumlage: wartet auf die Steuerberatung (P07-05, AG18-01). Die Prüfbericht-Warnung bleibt.

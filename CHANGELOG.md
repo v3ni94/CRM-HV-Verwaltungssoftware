@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.63.1 (02.10.2026) Korrektur Hintergrundverarbeitung aus der API (FinTS-Dialog, Exporte, Zählersynchronisation)
+
+- Bank FinTS: Der Start eines Bankdialogs scheiterte in der Produktion mit MHVP-BANK-0057, weil der API-Prozess die konfigurierte Celery-App nie als Standard-App gebunden hatte und Aufgaben über .delay an den eingebauten Standardbroker (amqp://localhost) übergab; die API bindet die konfigurierte App jetzt beim Start prozessweit, betroffen waren alle Aufgaben, die ein Endpunkt über .delay anstößt (FinTS-Schritt, finAPI-Abruf, EBICS-Abruf, Mandanten- und Objektakten-Export, Prüfexport, Zählersynchronisation, Belegeingang Paperless).
+- Technik: create_celery bindet die Thread-lokale aktuelle App nur noch auf ausdrückliche Anforderung, get_celery installiert die prozessweite Standard-App; Regressionstest prüft die Auflösung aus einem fremden Thread, die Testfixtures für FinTS und finAPI patchen erst nach dem Start der API.
+
 ## 1.63.0 (02.10.2026) Welle 18, Befunde der Lückenanalyse GAA bis GAF: führendes System je Vorgangstyp, Stapelverarbeitung der KI, Umlaufbeschluss und Belegeinsicht im Eigentümerportal, Ausgangsautomatik nur per Antrag
 
 - Betrieb: Messlauf GAE-32 mit MHVP_PERF=1 dokumentiert (Kontaktliste P95 47 ms, 200.000 Journalzeilen mit aktivem Wächter in 16,0 s), Playwright Kernpfade beider Apps gegen die API ausgeführt (GAE-39).

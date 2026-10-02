@@ -104,3 +104,29 @@ def test_gmail_settle_default_is_180() -> None:
     assert TenantSettings.__table__.c.gmail_settle_seconds.default.arg == 180
     field = TenantSettingsPatch.model_fields["gmail_settle_seconds"]
     assert {type(m).__name__: m for m in field.metadata}["Ge"].ge == 0
+
+
+def test_shared_tasks_publish_to_the_configured_broker(settings: Settings) -> None:
+    """`shared_task(...).delay()` resolves `current_app`; the API binds it at startup via
+    `get_celery()`. Without the binding the task would target Celery's default app
+    (amqp://localhost) and every enqueue fails (prod incident MHVP-BANK-0057)."""
+    import threading
+
+    from celery import _state
+
+    from mhvp.banking.tasks import fints_step
+
+    app = create_celery(settings, set_as_current=False)
+    previous = _state.default_app
+    app.set_default()
+    try:
+        seen: list[object] = []
+        # A thread that never set a current app (API request threads) must resolve the task
+        # of the configured app, not Celery's built-in default.
+        worker = threading.Thread(target=lambda: seen.append(fints_step.app))
+        worker.start()
+        worker.join()
+        assert seen == [app]
+        assert app.conf.broker_url == settings.celery_broker_url.get_secret_value()
+    finally:
+        _state.set_default_app(previous)

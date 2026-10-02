@@ -34,7 +34,12 @@ def _settings(database: Database, redis_url: str, **overrides: Any) -> Any:
 
 
 @pytest.fixture(autouse=True)
-def _fake_fints(monkeypatch: pytest.MonkeyPatch, database: Database, redis_url: str) -> None:
+def _fake_fints(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, database: Database, redis_url: str
+) -> None:
+    # `client` first: the API lifespan binds the configured Celery app as current; the
+    # `.delay` patch below must land on that app's task object.
+    del client
     fake.install(monkeypatch)
     test_settings = _settings(database, redis_url)
     monkeypatch.setattr(banking_tasks, "get_settings", lambda: test_settings)

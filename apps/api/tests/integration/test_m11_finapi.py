@@ -164,7 +164,12 @@ def _handler(request: httpx.Request) -> httpx.Response:
 
 
 @pytest.fixture(autouse=True)
-def _fake_finapi(monkeypatch: pytest.MonkeyPatch, database: Database, redis_url: str) -> None:
+def _fake_finapi(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, database: Database, redis_url: str
+) -> None:
+    # `client` first: the API lifespan binds the configured Celery app as current; the
+    # `.delay` patch below must land on that app's task object.
+    del client
     _FakeState.reset()
     transport = httpx.MockTransport(_handler)
 
