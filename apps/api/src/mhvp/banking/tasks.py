@@ -426,6 +426,18 @@ async def sync_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> dict[str, 
     for conn in (await session.scalars(select(BankConnection))).all():
         if conn.connector is Connector.FILE_IMPORT or conn.status is ConnectionStatus.DISABLED:
             continue
+        if conn.connector is Connector.FINTS or (
+            conn.connector is Connector.EBICS and conn.status is not ConnectionStatus.NOT_CONFIGURED
+        ):
+            # FinTS (PIN/TAN dialog in `fints_step`) and configured EBICS subscribers
+            # (`ebics_connector`) have their own flows and status handling; routing them
+            # through the placeholder below reset active connections to "not_configured"
+            # every morning (GAB-01). An EBICS connection without subscriber keeps the old
+            # "not configured" run so the operator sees the missing contract.
+            counts["connections"] += 1
+            if conn.connector is Connector.EBICS:
+                await _warn_consent_expiry(session, tenant_id, conn, today, counts)
+            continue
         if conn.connector is Connector.AGGREGATOR_FINAPI:
             # finAPI has its own real connector (`mhvp.banking.finapi.FinApiConnector`,
             # `mhvp.banking.routers`/`tasks.finapi_scheduled_fetch`); it must never be routed

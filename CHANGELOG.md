@@ -5,6 +5,12 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.61.1 (02.10.2026) Korrektur: FinTS-Verbindungen überleben den täglichen Bankabgleich, Warteschlangenfehler mit Klartext
+
+- Banking: Der tägliche Bankabgleich (bank.sync_all) setzte aktive FinTS- und EBICS-Verbindungen jeden Morgen auf "nicht eingerichtet" zurück; beide Konnektoren werden jetzt übersprungen, die Verbindung bleibt aktiv (Regressionstest).
+- Banking: Kann der FinTS-Dialog nicht an die Hintergrundverarbeitung übergeben werden (Redis oder Worker nicht erreichbar), meldet die Plattform MHVP-BANK-0057 mit Prüfhinweis statt eines Internen Fehlers.
+- Handbuch: Abschnitt Banking erklärt, wie ein Interner Fehler beim Verbinden im API-Log eingegrenzt wird.
+
 ## 1.61.0 (01.10.2026) Welle 16, Prioritätenliste des Betreibers Punkte 1 bis 28 und Prüfung: Abnahmeregister, Kontenrahmen-Freigabe, Rücklagenplan, Periodensperre, Objektspalte, Guthabenposten, EBICS-Gerüst, ZUGFeRD, Zweitfaktor-Richtlinie, Portal-Assistent, Datenschutzverzeichnis, Verfügbarkeitsmessung
 
 - Übersicht: Welle 16 mit 40 Paketen AE01 bis AE40 zu den Punkten 1 bis 28 der Prioritätenliste des Betreibers vom 01.10.2026, davon AE24 (GoCardless) vom Betreiber gestoppt und zurückgebaut; Migrationen 0357 bis 0394, real sind 33 (0357 bis 0359, 0361 bis 0369, 0371 bis 0374, 0376 bis 0379, 0381 bis 0384 und 0386 bis 0394), Platzhalter ohne Schemaänderung sind 0360 (AE04), 0370 (AE14), 0375 (AE19), 0380 (AE24) und 0385 (AE29); neue offene Entscheidungen (38): AE01-01, AE07-01, AE21-01, AE22-01, AE22-02, AE23-01 bis AE23-05, AE25-01, AE26-01 bis AE26-03, AE27-01 bis AE27-03, AE28-01 bis AE28-03, AE29-01, AE30-01, AE30-02, AE31-01, AE32-01, AE33-01 bis AE33-03, AE34-01 bis AE34-03, AE35-01, AE35-02, AE36-01, AE36-02, AE37-01, AE38-01, AE38-02; der Prüfbericht docs/reviews/REVIEW-W16-2026-10-01.md (AE40) nennt drei behobene Befunde (AE40-1 bis AE40-3) und sechs weitere Punkte (AE40-01 bis AE40-06, davon AE40-02 nach dem Bericht umgesetzt).

@@ -11,6 +11,7 @@ Login, PIN and TAN are never returned and never logged.
 from __future__ import annotations
 
 import base64
+import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -41,6 +42,7 @@ from mhvp.properties.models import BankAccountKind, LegalEntity, Property, Prope
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/banking/fints", tags=["Bank"])
+_log = logging.getLogger(__name__)
 
 READ = require_permission("accounting:read")
 UPDATE = require_permission("accounting:update")
@@ -310,9 +312,24 @@ def _require_product_id(request: Request) -> None:
 
 
 def _queue_step(tenant_id: uuid.UUID, session_id: uuid.UUID) -> None:
+    """Queues the dialog step in the worker. A broker outage is reported as a registered
+    503 problem instead of an unhandled 500 ("Interner Fehler"); the session row stays
+    pending and can be restarted."""
     from mhvp.banking.tasks import fints_step
 
-    fints_step.delay(str(tenant_id), str(session_id))
+    try:
+        fints_step.delay(str(tenant_id), str(session_id))
+    except ProblemError:
+        raise
+    except Exception as exc:  # kombu.OperationalError, socket errors, serialisation
+        _log.error("fints_queue_failed session=%s error_type=%s", session_id, type(exc).__name__)
+        raise ProblemError(
+            ErrorCodes.FINTS_QUEUE_UNAVAILABLE,
+            detail=(
+                "Der Bankdialog konnte nicht an die Hintergrundverarbeitung übergeben werden. "
+                "Bitte Betrieb prüfen (Redis und Worker) und die Verbindung danach neu starten."
+            ),
+        ) from None
 
 
 async def _load(

@@ -562,6 +562,14 @@ class ErrorCodes:
         "FinTS-Sitzung ist im falschen Zustand",
         "The requested action does not match the session or connection state.",
     )
+    FINTS_QUEUE_UNAVAILABLE = ErrorCode(
+        "MHVP-BANK-0057",
+        503,
+        "Hintergrundverarbeitung nicht erreichbar",
+        "The FinTS dialog could not be queued: the Celery broker (Redis) did not accept the "
+        "job. Check MHVP_CELERY_BROKER_URL of the api container and that redis and the worker "
+        "run.",
+    )
     FINTS_PIN_BLOCKED = ErrorCode(
         "MHVP-BANK-0016",
         409,

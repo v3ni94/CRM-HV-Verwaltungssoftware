@@ -3568,7 +3568,7 @@
   "href": "/bank",
   "keywords": [],
   "permission": null,
-  "excerpt": "Die Meldungen der Plattform zu diesen beiden Fällen sind deutsch und nennen die Prüfschritte in der richtigen Reihenfolge. Sie erscheinen in der Sitzung beim Verbinden, an der Karte der Verbindung und im Fehlerfeld der Schnittstelle. Bankzugang gesperrt (MHVP-BANK-0010). Die Sper",
+  "excerpt": "Die Meldungen der Plattform zu diesen beiden Fällen sind deutsch und nennen die Prüfschritte in der richtigen Reihenfolge. Sie erscheinen in der Sitzung beim Verbinden, an der Karte der Verbindung und im Fehlerfeld der Schnittstelle. Interner Fehler beim Verbinden. Ein \"Interner ",
   "file": "docs/handbuch/banking.md"
  },
  {

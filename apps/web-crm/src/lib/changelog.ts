@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.61.1",
+    date: "02.10.2026",
+    title: "Korrektur: FinTS-Verbindungen überleben den täglichen Bankabgleich, Warteschlangenfehler mit Klartext",
+    changes: [
+      "Banking: Der tägliche Bankabgleich (bank.sync_all) setzte aktive FinTS- und EBICS-Verbindungen jeden Morgen auf \"nicht eingerichtet\" zurück; beide Konnektoren werden jetzt übersprungen, die Verbindung bleibt aktiv (Regressionstest).",
+      "Banking: Kann der FinTS-Dialog nicht an die Hintergrundverarbeitung übergeben werden (Redis oder Worker nicht erreichbar), meldet die Plattform MHVP-BANK-0057 mit Prüfhinweis statt eines Internen Fehlers.",
+      "Handbuch: Abschnitt Banking erklärt, wie ein Interner Fehler beim Verbinden im API-Log eingegrenzt wird.",
+    ],
+  },
+  {
     version: "1.61.0",
     date: "01.10.2026",
     title:

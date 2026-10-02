@@ -430,3 +430,31 @@ def test_tenant_separation_and_disconnect(client: TestClient, world: World) -> N
     assert r.status_code == 409
     r = client.post(f"{B}/connections/{fints_id}/restart", json={"pin": fake.GOOD_PIN}, headers=h)
     assert r.status_code == 409
+
+
+def test_daily_sync_leaves_active_fints_connection_untouched(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """GAB-01: the daily `bank.sync_all` routed FinTS connections through the placeholder
+    connector and reset active ones to "not_configured" every morning."""
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    h = bearer(login(client, world, "ft-admin"))
+    fints_id, conn = _connect_done(client, h)
+    assert conn["status"] == "active"
+    settings = _settings(database, redis_url)
+
+    async def _sync() -> dict[str, int]:
+        engine = create_app_engine(settings)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                return await banking_tasks.sync_tenant(session, world.tenant_a)
+        finally:
+            await engine.dispose()
+
+    counts = asyncio.run(_sync())
+    assert counts["not_configured"] == 0
+    assert counts["connections"] >= 1
+    assert _connection(client, h, fints_id)["status"] == "active"

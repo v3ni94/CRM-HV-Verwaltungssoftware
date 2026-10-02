@@ -318,3 +318,21 @@ def test_legacy_fiducia_and_gad_hosts_are_rebuilt_from_the_atruvia_domain() -> N
     assert live["39061981"].fints_url == "https://fints1.atruvia.de/cgi-bin/hbciservlet"
     legacy = [i for i in live.values() if i.fints_url and "gad.de" in i.fints_url]
     assert len(legacy) <= 2  # only rows without a domain column stay on the old host
+
+
+def test_queue_step_maps_broker_outage_to_registered_problem(monkeypatch) -> None:
+    """A broker outage must not surface as an unhandled 500 ("Interner Fehler")."""
+    import uuid
+
+    import pytest
+
+    from mhvp.banking import fints_routers, tasks
+    from mhvp.core.problems import ErrorCodes, ProblemError
+
+    def boom(*_a: object, **_k: object) -> None:
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(tasks.fints_step, "delay", boom)
+    with pytest.raises(ProblemError) as info:
+        fints_routers._queue_step(uuid.uuid4(), uuid.uuid4())
+    assert info.value.error is ErrorCodes.FINTS_QUEUE_UNAVAILABLE

@@ -425,6 +425,13 @@ Die Meldungen der Plattform zu diesen beiden Fällen sind deutsch und nennen die
 in der richtigen Reihenfolge. Sie erscheinen in der Sitzung beim Verbinden, an der Karte der
 Verbindung und im Fehlerfeld der Schnittstelle.
 
+**Interner Fehler beim Verbinden.** Ein "Interner Fehler" ist keine Bankmeldung, sondern eine
+nicht abgefangene Störung der Plattform. Seit 1.62.0 meldet die Plattform den häufigsten Fall,
+eine nicht erreichbare Hintergrundverarbeitung (Redis oder Worker), als MHVP-BANK-0057 mit
+Prüfhinweis. Bleibt ein Interner Fehler, zeigt das API-Log die Ursache:
+`./mhvp.sh logs --no-color --since 30m api | grep unhandled_exception` liefert Pfad und
+Fehlertyp ohne Zugangsdaten.
+
 **Bankzugang gesperrt (MHVP-BANK-0010).** Die Sperre stammt von der Bank (Rückmeldecode
 3938 oder 9931). Die Plattform verwirft die gespeicherte PIN und startet keinen zweiten
 Versuch, weil jeder weitere Fehlversuch den Zugang erneut sperrt. Prüfschritte:
