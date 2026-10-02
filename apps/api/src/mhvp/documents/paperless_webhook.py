@@ -40,6 +40,7 @@ from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_body_limited
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import (
@@ -296,12 +297,12 @@ async def _receive(request: Request, tenant_key: str | None) -> dict[str, Any]:
     factory: async_sessionmaker[AsyncSession] = resources.session_factory
     # Size limit before anything is read or checked (Sicherheitsreview 1.22, Befund 2), same
     # bound as the telephony webhook: the payload is a document id and a title.
-    declared = request.headers.get("content-length")
-    if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
-    raw = await request.body()
-    if len(raw) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
+    raw = await read_body_limited(
+        request,
+        MAX_BODY_BYTES,
+        error=ErrorCodes.WEBHOOK_TOO_LARGE,
+        detail="Webhook-Inhalt zu groß.",
+    )
     timestamp = request.headers.get(TIMESTAMP_HEADER)
     signature = request.headers.get(SIGNATURE_HEADER)
     tenant_id = await _resolve_tenant(factory, tenant_key or request.headers.get(TENANT_HEADER))

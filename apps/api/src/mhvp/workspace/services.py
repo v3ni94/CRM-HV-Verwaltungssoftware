@@ -8,16 +8,17 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.core.clock import local_today as _core_today
 from mhvp.workspace.models import Notification
 
 REMIND_DAYS = {"14d": 14, "1m": 30, "3m": 91, "6m": 182}
 DEFAULT_REMIND_DAYS = 14
 # Display calendar only; the time zone of legal deadlines is still open (M1-09).
-_LOCAL = ZoneInfo("Europe/Berlin")
+_LOCAL = ZoneInfo("Europe/Berlin")  # same zone as mhvp.core.clock
 
 
 def local_today() -> date:
-    return datetime.now(UTC).astimezone(_LOCAL).date()
+    return _core_today()
 
 
 def local_date(moment: datetime) -> date:

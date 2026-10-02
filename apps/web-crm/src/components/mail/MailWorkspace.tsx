@@ -419,6 +419,7 @@ export function MailWorkspace({
       >
         {tab === "inbox" ? (
           <select
+            aria-label={t("statusFilter.all")}
             className={`${ui.input} w-auto min-w-[10rem]`}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -460,6 +461,7 @@ export function MailWorkspace({
         ) : null}
         {mailboxes.length > 0 ? (
           <select
+            aria-label={t("mailboxFilter.all")}
             className={`${ui.input} w-auto min-w-[12rem]`}
             value={mailboxId}
             onChange={(e) => setMailboxId(e.target.value)}
@@ -473,6 +475,7 @@ export function MailWorkspace({
           </select>
         ) : null}
         <input
+          aria-label={t("searchPlaceholder")}
           className={`${ui.input} w-full sm:w-auto sm:min-w-[14rem] sm:flex-1`}
           placeholder={t("searchPlaceholder")}
           value={queryText}

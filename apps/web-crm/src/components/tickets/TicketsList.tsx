@@ -198,7 +198,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
           <span className="font-medium">
             {selectedIds.length} {t("selected")}
           </span>
-          <select className={ui.input} value={bulkStatus} onChange={(e) => {
+          <select aria-label={t("bulkStatusLabel")} className={ui.input} value={bulkStatus} onChange={(e) => {
               setBulkStatus(e.target.value);
               setAskResolution(false);
             }}

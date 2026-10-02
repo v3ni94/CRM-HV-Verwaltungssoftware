@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import { localTotals, parseDecimal } from "./money";
+import { today } from "@/lib/today";
 
 /** Invoice draft for Lexware Office from the CRM (INT-LEXO-01): the invoice kind selects the
  *  issuing legal entity, amounts are decimal strings, the platform preview shows control sums
@@ -52,7 +53,7 @@ export function LexofficeInvoiceDraftForm({
 }) {
   const t = useTranslations("Lexoffice.draft");
   const [kind, setKind] = useState<InvoiceKind>("management");
-  const [voucherDate, setVoucherDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [voucherDate, setVoucherDate] = useState(() => today());
   const [taxType, setTaxType] = useState<TaxType>("net");
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [shipping, setShipping] = useState<ShippingType>("none");

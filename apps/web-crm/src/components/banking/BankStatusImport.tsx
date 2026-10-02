@@ -20,6 +20,7 @@ type Report = { id: string; kind: string; created: boolean; result: ReportLine[]
  *  effect. */
 export function BankStatusImport() {
   const t = useTranslations("PaymentRun");
+  const tCommon = useTranslations("Common");
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,6 +63,7 @@ export function BankStatusImport() {
             {report.kind}: {report.created ? t("importDone", { n: report.result.length }) : t("importRepeated")}
           </p>
           <ul className="text-xs">
+            {report.result.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
             {report.result.map((r, i) => (
               <li key={`${r.end_to_end_id ?? "x"}-${i}`}>
                 {r.end_to_end_id ?? "?"} {r.reported}

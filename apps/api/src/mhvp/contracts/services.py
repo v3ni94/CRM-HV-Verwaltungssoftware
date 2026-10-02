@@ -26,6 +26,7 @@ from mhvp.contracts.models import (
     PaymentSchedule,
     SepaMandate,
 )
+from mhvp.core.money import round_cents
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.defaults import REDUCTION_PAYMENT_TYPES
@@ -48,6 +49,9 @@ from mhvp.properties.models import (
 # one per party and unit in the creditor's books (6.9.2, E02).
 DEBTOR_START, DEBTOR_END = 90000, 99999
 CENT = Decimal("0.01")
+#: GAI-204: tolerated deviation of gross from round_cents(net * (1 + rate)); 1 cent is the
+#: product default until AJ02-01 is decided (0 cent would reject legacy imports).
+CHECK_AMOUNTS_TOLERANCE = CENT
 
 
 def invalid(detail: str) -> ProblemError:
@@ -240,13 +244,20 @@ async def check_b2b(session: AsyncSession, party_id: uuid.UUID, mandate_type: Ma
         raise invalid("Firmenlastschrift ist nur möglich, wenn alle Beteiligten Unternehmen sind.")
 
 
-def check_amounts(payment_type: str, net: Decimal, vat_percent: Decimal, gross: Decimal) -> None:
+def check_amounts(
+    payment_type: str,
+    net: Decimal,
+    vat_percent: Decimal,
+    gross: Decimal,
+    tolerance: Decimal = CHECK_AMOUNTS_TOLERANCE,
+) -> None:
     if (net < 0 or gross < 0) and payment_type not in REDUCTION_PAYMENT_TYPES:
         raise invalid("Negative Beträge sind nur bei Mietminderungen zulässig.")
     if (net < 0) != (gross < 0) and net != 0 and gross != 0:
         raise invalid("Netto und Brutto müssen dasselbe Vorzeichen haben.")
-    expected = (net * (1 + vat_percent / 100)).quantize(CENT)
-    if abs(expected - gross) > CENT:
+    # GAI-204: same rounding as split_gross (half up); tolerance 1 cent pending AJ02-01.
+    expected = round_cents(net * (1 + vat_percent / 100))
+    if abs(expected - gross) > tolerance:
         raise invalid(f"Brutto passt nicht zu Netto und Steuersatz (erwartet {expected}).")
 
 

@@ -8,6 +8,7 @@ therefore gains nothing but its own counter or idempotency namespace and is stil
 by the endpoint.
 """
 
+import ipaddress
 from dataclasses import dataclass
 
 from starlette.types import Scope
@@ -57,7 +58,55 @@ def identify(scope: Scope, settings: Settings) -> RequestIdentity | None:
     return None
 
 
-def client_ip(scope: Scope, *, trust_forwarded_for: bool) -> str:
+_Network = ipaddress.IPv4Network | ipaddress.IPv6Network
+
+
+def _in_networks(address: str, networks: list[_Network]) -> bool:
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    return any(ip in net for net in networks)
+
+
+def _parse_networks(
+    entries: list[str] | tuple[str, ...],
+) -> list[_Network]:
+    networks: list[_Network] = []
+    for entry in entries:
+        try:
+            networks.append(ipaddress.ip_network(entry.strip(), strict=False))
+        except ValueError:
+            continue
+    return networks
+
+
+def client_ip(
+    scope: Scope,
+    *,
+    trust_forwarded_for: bool,
+    trusted_proxies: list[str] | tuple[str, ...] = (),
+) -> str:
+    """Client address for limits and logs.
+
+    GAI-311 trust boundary: with ``trusted_proxies`` (CIDR list, empty by default) the
+    ``X-Forwarded-For`` header is honoured only when the direct peer is one of these proxies
+    (Traefik, the CRM and portal BFF containers); the address is then the rightmost entry that
+    is not itself a trusted proxy, so a client cannot spoof it by prepending values. The older
+    ``trust_forwarded_for`` switch trusts the first entry from any peer and stays unchanged.
+    """
+    networks = _parse_networks(trusted_proxies)
+    if networks:
+        client = scope.get("client")
+        peer = str(client[0]) if client else ""
+        if peer and _in_networks(peer, networks):
+            forwarded = header(scope, b"x-forwarded-for")
+            if forwarded:
+                hops = [h.strip() for h in forwarded.split(",") if h.strip()]
+                for hop in reversed(hops):
+                    if not _in_networks(hop, networks):
+                        return hop[:64]
+        return peer or "unknown"
     if trust_forwarded_for:
         forwarded = header(scope, b"x-forwarded-for")
         if forwarded:
@@ -68,3 +117,12 @@ def client_ip(scope: Scope, *, trust_forwarded_for: bool) -> str:
     if client:
         return str(client[0])
     return "unknown"
+
+
+def settings_client_ip(scope: Scope, settings: Settings) -> str:
+    """``client_ip`` with the configured trust settings (GAI-311)."""
+    return client_ip(
+        scope,
+        trust_forwarded_for=settings.rate_limit_trust_forwarded_for,
+        trusted_proxies=settings.rate_limit_trusted_proxies,
+    )

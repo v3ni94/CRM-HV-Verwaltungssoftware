@@ -192,4 +192,4 @@ logged as event `automation.webhook_data_withheld`. Rule: docs/rules/AC06-einwil
 
 ## Ereigniskatalog (GAH-307)
 
-`event_catalog.EVENT_CATALOG` listet alle per `emit(..., type="x.y")` ausgelösten Ereignistypen; `GET /automation/event-types` liefert ihn (Recht `tenant_settings:read` oder `tickets:read`). `tests/unit/test_automation_event_catalog.py` vergleicht den Katalog mit dem Quelltext, neue Ereignisse müssen eingetragen werden. Die Regelmaske warnt bei unbekannten Typen.
+`event_catalog.EVENT_CATALOG` listet alle per `emit(..., type="x.y")` ausgelösten Ereignistypen; `GET /automation/event-types` liefert ihn (Recht `tenant_settings:read` oder `tickets:read`). `tests/unit/test_automation_event_catalog.py` vergleicht den Katalog mit dem Quelltext, neue Ereignisse müssen eingetragen werden. Die Regelmaske warnt bei unbekannten Typen. Ereignistypen aus f-Strings (`type=f"..."`) stehen mit ihren möglichen Werten in `DYNAMIC_VARIANTS` (GAI-609); der Test prüft, dass jede Vorlage im Quelltext erfasst ist und jede Variante zur Vorlage passt. Der Endpunkt liefert `ALL_EVENT_TYPES`, die Vereinigung aus festen Typen und Varianten.

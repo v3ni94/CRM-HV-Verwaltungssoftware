@@ -30,6 +30,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction
 from mhvp.core.listparams import strict_query
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 RATE = Numeric(20, 8)
@@ -306,7 +307,7 @@ async def statutory_check(
     if reference is None:
         flags.append(f"Keine Miete zum {ref_day:%d.%m.%Y} erfasst: Kappungsgrenze nicht prüfbar.")
     else:
-        maximum = (reference.net * (1 + cap["percent"] / 100)).quantize(CENT)
+        maximum = round_cents(reference.net * (1 + cap["percent"] / 100))
         out["cap_reference_rent"] = str(reference.net)
         out["cap_max_rent"] = str(maximum)
         if case.target_rent > maximum:

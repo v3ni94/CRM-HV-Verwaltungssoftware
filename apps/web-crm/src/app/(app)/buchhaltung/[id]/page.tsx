@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EntryActions } from "@/components/accounting/EntryActions";
 import { InterestTaxConfig } from "@/components/accounting/InterestTaxConfig";
 import { LeadingSwitchPanel } from "@/components/accounting/LeadingSwitchPanel";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { JournalPropertyFilter } from "@/components/accounting/JournalPropertyFilter";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
@@ -17,6 +18,7 @@ import { formatDate, formatEur } from "@/lib/format";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,7 @@ export default async function LedgerPage({
   ]);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const propertyFilter = /^[0-9a-f-]{36}$/i.test(sp.property ?? "") ? (sp.property as string) : "";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   const api = serverApi();
   const me = await getMe();
   const canEditOpenItems = me.data?.permissions.includes("accounting:update") ?? false;
@@ -153,6 +155,7 @@ export default async function LedgerPage({
           />
         ) : null}
         <JournalPropertyFilter ledgerId={id} current={propertyFilter} properties={propertyOptions} />
+        <SavedFilters resource="journal" basePath={`/buchhaltung/${id}`} current={propertyFilter ? { property: propertyFilter } : {}} />
         <div className="overflow-x-auto">
 <table className="mhvp-table">
           <thead>

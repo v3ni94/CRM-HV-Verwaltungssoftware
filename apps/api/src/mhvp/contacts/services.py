@@ -37,6 +37,7 @@ from mhvp.contacts.models import (
 from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
 from mhvp.contracts.models import Contract
 from mhvp.core import crypto
+from mhvp.core.clock import local_date, local_today
 from mhvp.core.events import DomainEvent, emit
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.documents.models import RetentionProfile, RetentionStart
@@ -428,7 +429,7 @@ async def add_bank_account(
     if replaces is not None:
         if replaces.contact_id != contact.id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        if _is_ended(replaces, datetime.now(UTC).date()):
+        if _is_ended(replaces, local_today()):
             raise ProblemError(ErrorCodes.CONTACT_BANK_ACCOUNT_ENDED)
         await _check_no_pending(session, replaces)
         if data.valid_from <= replaces.valid_from:
@@ -499,7 +500,7 @@ async def end_bank_account(
     The IBAN row itself is never deleted."""
     if account.contact_id != contact.id:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-    today = datetime.now(UTC).date()
+    today = local_today()
     if _is_ended(account, today):
         raise ProblemError(ErrorCodes.CONTACT_BANK_ACCOUNT_ENDED)
     await _check_no_pending(session, account)
@@ -753,7 +754,7 @@ def delete_after(
     yield no date."""
     if profile is None or profile.permanent:
         return None
-    start = blocked_at.date() if blocked_at is not None else reference
+    start = local_date(blocked_at) if blocked_at is not None else reference
     if profile.start_rule in (
         RetentionStart.END_OF_YEAR_CREATED,
         RetentionStart.END_OF_YEAR_LAST_ENTRY,
@@ -797,7 +798,7 @@ async def apply_retention(
             )
     contact.retention_profile_id = profile_id
     contact.delete_after = delete_after(
-        profile, blocked_at=contact.blocked_at, reference=datetime.now(UTC).date()
+        profile, blocked_at=contact.blocked_at, reference=local_today()
     )
 
 
@@ -829,7 +830,7 @@ async def recompute_derived_roles(
     not before today, a property owner when valid_to is null or not before today. Objektakte
     staging assignments (owner/tenant) count as well. Returns True when roles changed.
     """
-    day = today or datetime.now(UTC).date()
+    day = today or local_today()
     party_ids = select(PartyMember.party_id).where(PartyMember.contact_id == contact.id)
     kinds = {
         (k.value if hasattr(k, "value") else str(k))
@@ -986,7 +987,7 @@ async def object_relations(
     session: AsyncSession, contact: Contact, today: date | None = None
 ) -> list[schemas.ObjectRelationOut]:
     """Contracts and ownerships over the contact's parties plus direct property contacts."""
-    day = today or datetime.now(UTC).date()
+    day = today or local_today()
     tenant = contact.tenant_id
     party_ids = select(PartyMember.party_id).where(
         PartyMember.contact_id == contact.id, PartyMember.tenant_id == tenant

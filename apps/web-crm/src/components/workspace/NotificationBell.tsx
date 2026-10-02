@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type Notice = {
   id: string;
@@ -27,6 +28,7 @@ const POLL_MS = 60_000;
 /** Unread notifications of the current user; polled once a minute. */
 export function NotificationBell() {
   const t = useTranslations("Workspace");
+  const { busy, guard } = useBusy();
   const [items, setItems] = useState<Notice[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -120,23 +122,23 @@ export function NotificationBell() {
                   </li>
                 ))}
               </ul>
-              <button type="button" className={`${ui.button} mt-2 w-full justify-center`} onClick={() => void readAll()}>
+              <button type="button" className={`${ui.button} mt-2 w-full justify-center`} disabled={busy} onClick={guard(() => readAll())}>
                 {t("markAllRead")}
               </button>
             </>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-border pt-2 text-xs" data-testid="notification-mute">
             <span className="text-muted">{t("muteAll")}</span>
-            <button type="button" className={ui.buttonSm} onClick={() => void mute(1)}>
+            <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => mute(1))}>
               {t("mute1h")}
             </button>
-            <button type="button" className={ui.buttonSm} onClick={() => void mute(24)}>
+            <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => mute(24))}>
               {t("mute1d")}
             </button>
-            <button type="button" className={ui.buttonSm} onClick={() => void mute(24 * 7)}>
+            <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => mute(24 * 7))}>
               {t("mute7d")}
             </button>
-            <button type="button" className={ui.buttonSm} onClick={() => void mute(null)}>
+            <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => mute(null))}>
               {t("unmute")}
             </button>
           </div>

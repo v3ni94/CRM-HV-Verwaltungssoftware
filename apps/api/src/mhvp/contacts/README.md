@@ -169,3 +169,9 @@ field and contact notes without author). `GET` and `PUT /contact-access-export-s
 (`options`); review, release and download rebuild exactly that content, so the hash check holds
 when the switches change later. Events without `options` count as the defaults. Rule:
 `docs/rules/AE33-papierkorb-auskunft.md`; open: AC07-01.
+
+## Access export sources (AJ13, GAI-506)
+
+`contact-access-export-settings` carries three further switches `include_tickets`,
+`include_communication`, `include_documents` (stored in `tenant_settings.sources`
+`access_export_sources`, default off, omitted in PUT keeps the stored value). Off: count only.

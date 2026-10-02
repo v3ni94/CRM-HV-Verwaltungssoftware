@@ -49,3 +49,7 @@ Gates: no money flows; sending to portals or FLOWFACT is not implemented (M28 st
 ### Datenmigration Selbstauskunft-Token (S16-03-01)
 
 `tasks.hash_self_disclosure_tokens_once` stellt Altzeilen mit Klartext-Token auf `sha256:<hex>` um (idempotent, ohne Schemaänderung, alle Mandanten). Auslösung manuell: Celery-Task `mhvp.letting.hash_self_disclosure_tokens` oder `POST /api/v1/platform/maintenance/self-disclosure-token-hash` (Plattform-Administrator). Kein Beat-Eintrag.
+
+### Begrenzung der Selbstauskunft (GAI-309, Welle 21, AJ07)
+
+`POST /letting/self-disclosure/{token}` begrenzt `payload` (Produktschutz): höchstens 64 KiB als JSON, 200 Felder und Listeneinträge, Tiefe 3, Feldnamen bis 100 Zeichen, Texte bis 5.000 Zeichen; sonst 422. Die Abgabe erzeugt das Ereignis `self_disclosure.submitted` nur mit der Interessenten-Id, ohne Inhalt. Eigenes Limit je Token ist nicht umgesetzt (offener Punkt); Speicherdauer nach DSGVO ist mit dem Datenschutz abzustimmen.

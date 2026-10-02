@@ -68,6 +68,10 @@
       {
        "depth": 0,
        "text": "[Barrierefreiheit](barrierefreiheit.md)"
+      },
+      {
+       "depth": 0,
+       "text": "[Versionsverlauf (Seite Version)](version.md)"
       }
      ]
     },
@@ -78,6 +82,10 @@
     {
      "t": "ul",
      "items": [
+      {
+       "depth": 0,
+       "text": "[Aufträge (Auftragsliste, Terminvorschläge, Auftragsschritte, Bewertung)](auftraege.md)"
+      },
       {
        "depth": 0,
        "text": "[Tickets (Mailverlauf, Antworten mit TNR#, Anhänge, Wiedereröffnung, Terminvorschläge, Erledigungsnotiz, Telefonassistenz)](tickets.md)"
@@ -285,6 +293,10 @@
       {
        "depth": 0,
        "text": "[Objektordner, Mieterakte und Objektdaten](anleitung-objektordner.md)"
+      },
+      {
+       "depth": 0,
+       "text": "[Objektakte (Prüfcenter der Übernahme)](objektakte.md)"
       },
       {
        "depth": 0,
@@ -1145,6 +1157,26 @@
     {
      "t": "p",
      "text": "Prüfpunkte des Regelregisters bestätigen Sie in der Prüfpunktliste mit Name und Datum der fachkundigen Prüfung. Die Bestätigung hält die Prüfung fest und ändert keine Regel."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Neue Version mit Korrekturgrund",
+     "id": "neue-version-mit-korrekturgrund"
+    },
+    {
+     "t": "p",
+     "text": "Eine ausgegebene oder freigegebene Betriebskostenabrechnung wird nie überschrieben. Über \"Neue Version\" öffnet sich ein Dialog, in dem ein Korrekturgrund mit mindestens 5 Zeichen Pflicht ist. Der Grund wird mit Benutzer, Zeitpunkt und Bezug auf die Vorversion in der neuen Version gespeichert (Einstellungen, Schlüssel correction). Ohne Grund lehnt die API die Anlage mit 422 ab."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Abrechnung als PDF und Zustellung der Anschreiben (gesperrt)",
+     "id": "abrechnung-als-pdf-und-zustellung-der-anschreiben-gesperrt"
+    },
+    {
+     "t": "p",
+     "text": "In der Eigentümerabrechnung steht Abrechnung als PDF, im Abschnitt Anschreiben Anschreiben zustellen. Beide zeigen den Stand der Freigabestufe G3 und bleiben gesperrt, solange G3 geschlossen ist; das PDF zusätzlich bis zur internen Freigabe der Abrechnung. Die Zustellung lehnt die Plattform auch bei offener Freigabestufe ab, bis der Zustellweg freigegeben ist."
     }
    ]
   },
@@ -4999,6 +5031,123 @@
    ]
   },
   {
+   "slug": "auftraege",
+   "title": "Aufträge",
+   "blocks": [
+    {
+     "t": "p",
+     "text": "Seite Aufträge (`/auftraege`) mit Auftragsdetail. Stand: 02.10.2026. Lesen verlangt das Recht Tickets lesen, die Bearbeitung der Schritte das Recht Tickets bearbeiten. Ergänzend zum Abschnitt \"Aufträge, Teams, Kommentare und Dokumente\" im Kapitel [Tickets](tickets.md)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zweck",
+     "id": "zweck"
+    },
+    {
+     "t": "p",
+     "text": "Ein Auftrag ist ein Arbeitsauftrag an einen Dienstleister, meist aus einem Ticket heraus (Mangel, Reparatur, Wartung). Die Seite zeigt alle Aufträge des Mandanten mit Status, Ticketbezug und Termin. Ein Auftrag bucht nichts und löst keine Zahlung aus. Rechnungen laufen über den Belegeingang, Zahlungen über die Freigabe der Zahlungen (gesperrt, solange G2 geschlossen ist)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Auftragsliste",
+     "id": "auftragsliste"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Spalten: Auftrag (Beschreibung, führt zum Detail), Status, Ticket (Nummer, führt zum Ticket), Termin."
+      },
+      {
+       "depth": 0,
+       "text": "Filter Status mit Schaltfläche Filtern: Entwurf, angefragt, Angebot liegt vor, freigegeben, Termin bestätigt, in Ausführung, ausgeführt, abgerechnet, abgenommen, abgelehnt, storniert, oder Alle."
+      },
+      {
+       "depth": 0,
+       "text": "Ohne Treffer erscheint \"Keine Aufträge gefunden.\""
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Auftragsdetail",
+     "id": "auftragsdetail"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Kopf mit Rücksprung zu den Tickets (Brotkrumen)."
+      },
+      {
+       "depth": 0,
+       "text": "Terminvorschläge des Dienstleisters: Der Dienstleister schlägt im Portal bis zu drei Termine je Runde vor, die betroffene Bewohnerin oder der Bewohner bestätigt einen. Die Verwaltung sieht das Ergebnis (bestätigter Termin, offene Vorschläge, Status je Vorschlag) und kommt mit \"Zum Ticket\" zurück zum Vorgang."
+      },
+      {
+       "depth": 0,
+       "text": "Auftragsschritt: Der Status folgt dem Ablauf Entwurf, angefragt, Angebot, freigegeben, Termin, Ausführung, ausgeführt, abgerechnet, abgenommen. Abgelehnt und storniert beenden den Auftrag. Es sind nur die Folgeschritte wählbar, die zum aktuellen Status passen; die Schnittstelle prüft erneut."
+      },
+      {
+       "depth": 0,
+       "text": "Bewertung des Auftrags: erst nach Abschluss möglich, je Verwaltung und Bewohner, Sterne von 1 bis 5 mit optionaler Anmerkung. Ob Bewertungen angezeigt werden, steuert die Einstellung Bewertungen von Dienstleistern."
+      },
+      {
+       "depth": 0,
+       "text": "Freigabe-Workflow: nur ein gespeicherter Verweis (Kennung). Maßgeblich bleibt die Beiratsfreigabe des Auftrags."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Grenzen",
+     "id": "grenzen"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Keine Buchung, keine Zahlung, keine verbindliche Erklärung gegenüber Dritten aus dieser Seite."
+      },
+      {
+       "depth": 0,
+       "text": "Dienstleister nehmen Aufträge im Portal an oder lehnen sie mit Begründung ab. Jede Änderung steht im Ticketverlauf."
+      },
+      {
+       "depth": 0,
+       "text": "Kosten über der Freigabegrenze verlangen die Freigabe nach den Regeln des Mandanten (Geschäftsführung)."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Auftragsschritte erfassen (GAI-416, Welle 21)",
+     "id": "auftragsschritte-erfassen-gai-416-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Auftragsseite bietet der Abschnitt \"Auftragsschritt\" (Schreibrecht Tickets) nur die zulässigen Folgeschritte an: Angebot erfassen, Freigeben, Termin, Ausführung, Abrechnung und Abnahme mit Bewertung. Die Schnittstelle prüft den Ablauf erneut, die Freigabe verlangt das Freigaberecht und beachtet das Budget des Auftrags. Es wird nichts gebucht und nichts bezahlt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Gespeicherte Filter in der Auftragsliste",
+     "id": "gespeicherte-filter-in-der-auftragsliste"
+    },
+    {
+     "t": "p",
+     "text": "Der gewählte Statusfilter lässt sich über die Leiste \"Gespeicherte Filter\" unter einem Namen speichern und später mit einem Klick wieder anwenden. Die Filter gelten nur für die eigene Person. Dasselbe steht im Journal eines Hauptbuchs für den Objektfilter zur Verfügung."
+    }
+   ]
+  },
+  {
    "slug": "auswertung-tickets",
    "title": "Auswertung Tickets",
    "blocks": [
@@ -6444,6 +6593,45 @@
     {
      "t": "p",
      "text": "Die Bankabstimmung zeigt je Auszug in der Spalte \"Kette zum Vorauszug\", ob der Anfangssaldo zum Endsaldo des vorherigen Auszugs passt, und meldet Kettenbrüche mit Betrag sowie Zeitraumlücken und Überschneidungen. Auszüge ohne Salden, etwa aus CSV, werden als nicht prüfbar gezählt. Befunde werden hier nur angezeigt und nicht korrigiert."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zahlungsformat, Bankrückmeldung, Vorschläge, Klärung und Digest (GAI-403 bis GAI-407, Welle 21)",
+     "id": "zahlungsformat-bankrueckmeldung-vorschlaege-klaerung-und-digest-gai-403-bis-gai-407-welle-21"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Zahlungsformat je Konto: Unter Bank, Zahlungen, Abschnitt Zahlungsformat je Bankkonto wählen Sie das Konto und hinterlegen die mit der Bank vereinbarte Version von pain.001 und pain.008, den Einreichungsweg und das Datum der Abstimmung. Angeboten werden nur Versionen, die die Plattform erzeugen und prüfen kann. Speichern braucht das Freigaberecht Bank, erzeugt keine Zahlungsdatei und löst keine Zahlung aus."
+      },
+      {
+       "depth": 0,
+       "text": "Bankrückmeldung je Zahlungsdatei: In der Tabelle Zahlungsdateien erfassen Sie über Bankrückmeldung erfassen die Status Eingereicht, Von der Bank angenommen oder Abgelehnt (Grund ist Pflicht). Eine Ablehnung lässt die Verbindlichkeit voll offen. Ausführung und Rückgabe lösen Buchungen aus und werden nicht hier, sondern über den Import der Bankrückmeldung erfasst."
+      },
+      {
+       "depth": 0,
+       "text": "Zuordnungsvorschläge: In der Umsatzliste zeigt die Schaltfläche Vorschläge je offenem Umsatz die passenden offenen Posten mit Treffergüte und Begründung. Ein Vorschlag bucht nichts, die IBAN allein beweist keinen Schuldner."
+      },
+      {
+       "depth": 0,
+       "text": "Als unbelegt melden (Regel B05): Bei einem offenen Umsatz meldet eine Person mit Schreibrecht Bank die Bewegung mit Begründung als unbelegt. Sie erscheint danach in der Liste Buchungen ohne Beleg und lässt sich erst mit Beleg oder begründeter Entscheidung buchen."
+      },
+      {
+       "depth": 0,
+       "text": "Wochendigest erzeugen: Unter Bank, Nachkontrolle wählen Sie den Montag der Woche und erzeugen oder aktualisieren den Digest. Das Erzeugen bucht nichts; die Bestätigung bleibt wie bisher Pflicht für die Folgewoche."
+      },
+      {
+       "depth": 0,
+       "text": "Gespeicherte Zahllauf-Vorschauen: Unter Bank, Zahllauf zeigt der Abschnitt Gespeicherte Zahllauf-Vorschauen die bisher gespeicherten Stände. Vorschau speichern ist sichtbar, bleibt aber gesperrt, solange die Freigabestufe G2 geschlossen ist; der Stand der Freigabestufe steht unter der Schaltfläche. Eine Vorschau erzeugt keine Aufträge und keine Dateien."
+      },
+      {
+       "depth": 0,
+       "text": "Auszahlung ohne Rechnung: Unter Bank, Zahllauf legt die Maske Auszahlung ohne Rechnung einen Zahlungsauftrag als Entwurf an. Eine Begründung aus der Liste ist Pflicht; ohne Begründung bleibt Entwurf anlegen gesperrt. Die Maske ist gesperrt, solange die Freigabestufe G2 geschlossen ist, und der Entwurf braucht danach die Freigabe einer zweiten Person."
+      }
+     ]
     }
    ]
   },
@@ -7962,6 +8150,16 @@
     {
      "t": "p",
      "text": "Neue Konten mit Nummer 001200 bis 001999 sind nur als Bank, Kasse, technisches Konto oder Geldtransit möglich, eine Bankkontoverknüpfung nur an Bank- oder Kassenkonten. Bestehende abweichende Konten bleiben erhalten und zeigen in der Kontenliste einen Hinweis unter der Kategorie."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Mahnschreiben versenden (gesperrt)",
+     "id": "mahnschreiben-versenden-gesperrt"
+    },
+    {
+     "t": "p",
+     "text": "Im Mahnfall mit Status Vorgeschlagen steht die Schaltfläche Mahnschreiben versenden mit dem Stand der Freigabestufe G1. Solange G1 geschlossen ist, bleibt sie gesperrt; auch bei offener Freigabestufe lehnt die Plattform den Versand ab, bis der Versandweg freigegeben ist. Bis dahin wird das Schreiben außerhalb der Plattform versendet und mit Als versendet markieren dokumentiert."
     }
    ]
   },
@@ -8074,6 +8272,34 @@
     {
      "t": "p",
      "text": "Das Verzeichnis erkennt zusätzlich das Schadenstool, Makler-CRM-Anbieter, Webhook-Ziele und EBICS- oder FinTS-Bankzugänge aus der Konfiguration. Je Dienst wird lesend angezeigt, welche Rechtsgrundlage für die betroffenen Einwilligungszwecke gilt (Register Rechtsgrundlagen der Einwilligung). Ob ein Dienst Auftragsverarbeiter ist, tragen Sie im Registereintrag ein."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Löschvorschläge",
+     "id": "loeschvorschlaege"
+    },
+    {
+     "t": "p",
+     "text": "Unter Datenschutz, Löschprofile lässt sich je Datenart der Schalter \"Löschvorschläge erzeugen\" setzen. Er wirkt erst, wenn das Profil von einer zweiten Person freigegeben ist. Das System löscht nichts selbst: Für Kontakte mit abgelaufenem Löschdatum entsteht jede Nacht ein Löschantrag im Status \"Vorschlag\". Eine Person übernimmt den Vorschlag als Antrag, eine zweite Person gibt ihn frei. Für Kommunikation, Tickets, Portalzugänge und das Ereignisprotokoll zeigt die Übersicht nur die Anzahl der Einträge, die älter als die Frist sind. Die Löschfristen selbst sind noch nicht entschieden (V17)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Datenschutzübersicht (Stand 02.10.2026)",
+     "id": "datenschutzuebersicht-stand-02-10-2026"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Datenschutz zeigt die Datenschutzübersicht die Einwilligungen aller Kontakte je Zweck (aktiv, widerrufen, Widersprüche, ohne Nachweisdokument). Im Bereich Fristen tragen Personen mit Freigaberecht die Antwortfristen für Auskunft und Löschung sowie eine Vorfrist in Tagen ein. Die Fristen haben bewusst keinen Standardwert; ohne Eintrag erscheinen offene Löschanträge ohne Fälligkeit. Die Vor-G1-Auswertung listet aktiv genutzte Dienste ohne Registereintrag und Einträge mit offenem AVV, Drittland oder rechtlicher Prüfung; sie öffnet kein Gate."
+    },
+    {
+     "t": "p",
+     "text": "Im Abschnitt Einwilligungsregeln wird festgelegt, ob E-Mail-Zustellung und Datenweitergabe nur mit Einwilligung (Standard) oder auch auf Vertragsgrundlage zulässig sind. Die Änderung ist eine Rechtsentscheidung und wird protokolliert."
+    },
+    {
+     "t": "p",
+     "text": "Im Abschnitt Umfang der DSGVO-Auskunft lassen sich Vorgänge, Nachrichten und Dokumentbezüge des Kontakts zuschalten. Ausgeschaltet erscheinen sie in der Auskunft nur als Anzahl."
     }
    ]
   },
@@ -8970,6 +9196,16 @@
        "text": "\"Übernahme starten\" (Recht Objektakte freigeben) startet die Übernahme der Vorschaubilder im Hintergrund; ein fehlgeschlagener Lauf wird fortgesetzt. Optional werden fehlende Bilder aus dem Original erzeugt (nur Bilddateien). Fortschritt und Zähler stehen darunter und lassen sich mit \"Aktualisieren\" nachladen."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Dokumente verknüpfen, Download-Link, Spiegelung (GAI-417, Welle 21)",
+     "id": "dokumente-verknuepfen-download-link-spiegelung-gai-417-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Dokumentenliste verknüpft der Abschnitt \"Dokumente mit einem Objekt verknüpfen\" (Schreibrecht Dokumente) mehrere Dokumente mit Objekt, Einheit, Vertrag oder Ticket. Das Ergebnis nennt je Dokument Erfolg oder Grund des Fehlschlags. Am Dokument erzeugt \"Download-Link erzeugen\" einen kurz gültigen signierten Link, \"Spiegelung erneut anstoßen\" wiederholt die Ablage in den angebundenen Systemen."
     }
    ]
   },
@@ -10253,6 +10489,16 @@
     {
      "t": "p",
      "text": "Hat ein Benutzer seinen zweiten Faktor verloren, kann ein Administrator mit dem Recht Mitglieder ändern einen Antrag stellen (Schnittstelle `POST /auth/mfa-reset/requests` mit Mitgliedschaft und Begründung, mindestens 10 Zeichen). Voraussetzung ist der Mandantenschalter `mfa_admin_reset_enabled` (Standard aus, `PUT /auth/mfa-reset/settings`). Ein zweiter Administrator gibt den Antrag frei oder lehnt ihn ab; der Antragsteller selbst und der betroffene Benutzer können nicht freigeben. Mit der Freigabe werden TOTP, Passkeys, gemerkte Geräte und alle Sitzungen des Benutzers widerrufen; er meldet sich mit dem Passwort an und richtet den zweiten Faktor neu ein. Benutzer und Antragsteller erhalten eine Benachrichtigung. Die Identität des Benutzers prüfen die Administratoren vorher selbst. Eine Maske im CRM folgt; die Variantenwahl ist offen (Frage AI09-01)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zweiten Faktor zurücksetzen (Vier-Augen-Prinzip)",
+     "id": "zweiten-faktor-zuruecksetzen-vier-augen-prinzip"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Benutzer erscheint für Personen mit dem Recht Mitglieder ändern der Block \"Zweiten Faktor zurücksetzen\". Die Funktion ist nur nutzbar, wenn der Mandantenschalter mfa_admin_reset_enabled eingeschaltet ist (Standard aus, Fachliche Regeln). Eine Person beantragt das Zurücksetzen mit Begründung (mindestens 10 Zeichen), eine zweite, andere Person gibt frei oder lehnt ab. Den eigenen zweiten Faktor kann man so nicht zurücksetzen. Wiederherstellungscodes gibt es noch nicht (offene Frage AI09-01). Schaltflächen sind während einer laufenden Anfrage gesperrt, damit Freigaben und Sperren nicht doppelt ausgelöst werden."
     }
    ]
   },
@@ -13237,6 +13483,16 @@
     {
      "t": "p",
      "text": "Im Abschnitt \"Portalzugang\" eines Kontakts mit Portalkonto leitet die Schaltfläche \"Berechtigungen neu ableiten\" die Portalfreigaben aus Verträgen, Eigentum und Gremienzugehörigkeit neu ab, etwa nach einem Eigentümer- oder Mieterwechsel. Manuell erteilte Freigaben bleiben erhalten. Anschließend wird die Zahl der aktiven abgeleiteten Freigaben angezeigt. Berechtigung: Kontakte bearbeiten."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Anruf einem Kontakt zuordnen (GAI-420, Welle 21)",
+     "id": "anruf-einem-kontakt-zuordnen-gai-420-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "In der Anrufliste bietet jeder nicht eindeutig zugeordnete Anruf (Schreibrecht Kommunikation) die Auswahl der Kandidaten oder die Eingabe einer Kontakt-ID mit \"Zuordnen\"."
     }
    ]
   },
@@ -13849,6 +14105,16 @@
     {
      "t": "p",
      "text": "Die Freigabe gilt genau für den angezeigten Entwurf. Wurde der Entwurf zwischenzeitlich neu erzeugt, meldet das System einen Konflikt; laden Sie die Ansicht neu und prüfen Sie den aktuellen Entwurf."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Anhang als Rechnung vorschlagen (GAI-418, Welle 21)",
+     "id": "anhang-als-rechnung-vorschlagen-gai-418-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "In der Mailansicht startet \"Als Rechnung vorschlagen (KI)\" neben einem PDF Anhang einen Extraktionslauf (Recht Buchhaltung anlegen, nur bei freigegebener KI). Das Ergebnis ist ein Vorschlag, die Rechnung entsteht erst nach Prüfung und Freigabe durch eine Person."
     }
    ]
   },
@@ -14196,6 +14462,16 @@
        "text": "Der Schalter `metering_module_enabled` wird bis zur Ergänzung der Mandantenseite über die Schnittstelle `PATCH /tenant/settings` gesetzt."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Kostenzeilen des Messdienstimports manuell erfassen (GAI-419, Welle 21)",
+     "id": "kostenzeilen-des-messdienstimports-manuell-erfassen-gai-419-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "Im Importentwurf der Heizkostenübernahme ersetzt \"Kostenzeilen manuell erfassen\" die Zeilen des Imports (Schreibrecht Abrechnung, nur solange der Import nicht übernommen ist). Je Zeile sind Nutzernummer und vier Beträge in EUR mit höchstens zwei Nachkommastellen erforderlich. Danach sind Prüfung und Zuordnung erneut auszuführen. Die Abrechnung selbst bleibt hinter dem Gate G3."
     }
    ]
   },
@@ -14452,6 +14728,103 @@
       {
        "depth": 0,
        "text": "Jede Änderung setzt die bearbeitende Person neu; unterzeichnen darf danach nur eine andere Person."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "objektakte",
+   "title": "Objektakte (Prüfcenter der Übernahme)",
+   "blocks": [
+    {
+     "t": "p",
+     "text": "Seite Objektakte (`/objektakte`). Stand: 02.10.2026. Sichtbar mit dem Recht objektakte:read, Pflege mit objektakte:update. Die Ordnerstruktur und die Zuordnung von Unterlagen beschreibt die Handlungsanweisung [Objektordner, Mieterakte und Objektdaten](anleitung-objektordner.md); der technische Hintergrund steht in [Dokumente und DMS](dokumente-dms.md)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zweck",
+     "id": "zweck"
+    },
+    {
+     "t": "p",
+     "text": "Das Bestandsprojekt objektakte wird im Parallelbetrieb in das CRM übernommen. Die Seite ist das Prüfcenter für die dreistufige Klassifikation der übernommenen Dokumente (Regeln, KI-Vorschlag, Prüfung durch eine Person). Sie verändert keine Buchungen. Jede Klassifikation durch die KI ist ein Vorschlag und wird erst durch eine Person bestätigt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Bereiche der Seite",
+     "id": "bereiche-der-seite"
+    },
+    {
+     "t": "table",
+     "head": [
+      "Bereich",
+      "Inhalt"
+     ],
+     "rows": [
+      [
+       "Prüfcenter",
+       "Offene Fälle je Kategorie; Klasse bestätigen, manuell setzen oder verwerfen"
+      ],
+      [
+       "Listen aus der Objektakte",
+       "Anforderungslisten fehlender Unterlagen je Objekt oder über alle Objekte, Dokumentenübersicht je Kategorie, Export als CSV (nur lesend)"
+      ],
+      [
+       "KI-Kosten der Altanwendung",
+       "Kosten, Token und Anzahl externer KI-Aufrufe aus dem objektakte-Protokoll je Objekt und Monat (nur lesend, neue KI-Aufrufe des CRM erscheinen hier nicht)"
+      ],
+      [
+       "Abgleich objektakte gegen CRM",
+       "Dokumente je Objekt in beiden Systemen, fehlende Dokumente auf beiden Seiten, abweichende Prüfsummen (nur lesend)"
+      ]
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Weitere Bereiche, die je nach Einrichtung erscheinen: Importläufe mit Datum und Zahlen (inklusive \"OCR-Cache leeren\", entfernt nur den übernommenen Text, Dokumente bleiben), Vorschaubilder übernehmen, Klassifikationsregeln, Synchronisationsstand (täglicher Differenzimport, Standard aus) und Benutzerabbildung (Vorschlag je objektakte-Benutzer, es wird nie automatisch ein Benutzer oder eine Rolle angelegt)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ablauf",
+     "id": "ablauf"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Prüfcenter öffnen und Fälle nach Kategorie bearbeiten."
+      },
+      {
+       "depth": 0,
+       "text": "Anforderungslisten für fehlende Unterlagen erzeugen und bei Bedarf als CSV herunterladen. Ein Nachforderungsschreiben entsteht nur als Entwurf, nicht versendet."
+      },
+      {
+       "depth": 0,
+       "text": "Abgleich prüfen und Abweichungen über den Differenzimport oder von Hand auflösen."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Grenzen",
+     "id": "grenzen"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Die Seite ist ein Werkzeug der Übernahme und kein Archiv. Aufbewahrung und Löschung richten sich nach den freigegebenen Profilen (siehe [Datenschutz im CRM](datenschutz.md), Löschkonzept im Entwurf)."
+      },
+      {
+       "depth": 0,
+       "text": "Wenn die Dossier-Angaben zum Bestandsprojekt noch Platzhalter tragen (V1), ist die Übernahme nur so weit belastbar, wie der Abgleich zeigt."
       }
      ]
     }
@@ -17446,6 +17819,10 @@
     },
     {
      "t": "p",
+     "text": "Dieser Abschnitt beschreibt den Stammdatenvorschlag aus der letzten eingehenden E-Mail im Ticketdetail."
+    },
+    {
+     "t": "p",
      "text": "Im Ticket steht im Bereich \"Vorschläge aus der E-Mail\" die Schaltfläche \"Vorschlag aus letzter E-Mail berechnen\". Sie prüft die letzte eingehende E-Mail des Tickets auf eine Stammdatenänderung (Name, Anschrift, Telefon, E-Mail) und legt höchstens einen Vorschlag je E-Mail an. Es wird nichts am Kontakt geändert: der Vorschlag erscheint mit Vergleich alt und neu und wird wie gewohnt akzeptiert, korrigiert oder abgelehnt. Wird keine Änderung erkannt, erscheint der Hinweis \"Keine Stammdatenänderung erkannt.\" Bankverbindungen werden nie übernommen. Berechtigung: Tickets bearbeiten; die Übernahme verlangt zusätzlich das Recht, Kontakte zu bearbeiten."
     }
    ]
@@ -18266,6 +18643,78 @@
        "text": "Grenzen: Einordnung in die Spanne und ortsübliche Vergleichsmiete bleiben eine Entscheidung der Verwaltung, die Quelle ist vor der Verwendung zu prüfen."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Selbstauskunft Links je Interessent (GAI-420, Welle 21)",
+     "id": "selbstauskunft-links-je-interessent-gai-420-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "In der Interessentenliste zeigt \"Links anzeigen\" die erzeugten Selbstauskunft Links mit Status (offen, eingereicht, abgelaufen) und Ablaufdatum. Der vollständige Link wird nur bei der Erzeugung angezeigt."
+    }
+   ]
+  },
+  {
+   "slug": "version",
+   "title": "Versionsverlauf",
+   "blocks": [
+    {
+     "t": "p",
+     "text": "Seite Versionsverlauf (`/version`), erreichbar über die Versionsangabe im Fuß der Seite. Stand: 02.10.2026. Für alle angemeldeten Benutzer sichtbar."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zweck",
+     "id": "zweck"
+    },
+    {
+     "t": "p",
+     "text": "Die Seite zeigt, welche Version des CRM läuft und was in jeder Version geändert wurde. Sie dient der Nachvollziehbarkeit bei Rückfragen und der Abnahme."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Aufbau",
+     "id": "aufbau"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Kopfzeile: aktuelle Version, bei Bedarf mit Build."
+      },
+      {
+       "depth": 0,
+       "text": "Hinweis zum Schema: die erste Stelle steht für grundlegende Umbauten, die zweite Stelle für neue Funktionen oder Module, die dritte Stelle für kleine Korrekturen."
+      },
+      {
+       "depth": 0,
+       "text": "Je Version ein Abschnitt mit Versionsnummer, Titel, Datum (TT.MM.JJJJ) und der Liste der Änderungen. Der erste Eintrag ist die aktuelle Version."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Grenzen",
+     "id": "grenzen"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Das Protokoll wird fortgeschrieben und nie rückwirkend geändert. Es ist kein Nachweis einer fachlichen Abnahme (siehe Abnahmeregister Anhang D im Kapitel [Plattform](plattform.md))."
+      },
+      {
+       "depth": 0,
+       "text": "Die Seite ist nur lesend und hat keine Einstellungen."
+      }
+     ]
     }
    ]
   },
@@ -18635,6 +19084,36 @@
     {
      "t": "p",
      "text": "Bei jedem gespeicherten Abrechnungsentwurf im Bereich Kautionen öffnet die Schaltfläche \"PDF-Vorschau\" das Schreiben in einem neuen Tab. Die Vorschau wird weder abgelegt noch versendet und bucht nichts; dafür genügt das Leserecht für Verträge. Zum dauerhaften Ablegen dient weiterhin \"Abrechnung als PDF erzeugen und ablegen\"."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "SEPA Mandat widerrufen (GAI-411, Welle 21)",
+     "id": "sepa-mandat-widerrufen-gai-411-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Vertragsseite im Abschnitt SEPA Mandate steht bei aktiven Mandaten die Aktion Widerrufen (Schreibrecht Verträge). Nach Bestätigung wird der Lastschrifteinzug der betroffenen Verträge beendet, das Mandat bleibt mit Status Widerrufen nachvollziehbar erhalten. Ein Widerruf lässt sich nicht zurücknehmen; für eine neue Einziehung ist ein neues Mandat anzulegen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zusatzfelder am Vertrag (GAI-415, Welle 21)",
+     "id": "zusatzfelder-am-vertrag-gai-415-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Vertragsseite pflegt der Abschnitt \"Zusatzfelder des Vertrags\" (Schreibrecht Verträge) die Werte der Zusatzfelder. Ein leerer Wert entfernt das Feld. Die Felddefinitionen werden unter Einstellungen verwaltet."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Kautionsabrechnung freigeben (Vier Augen, gesperrt)",
+     "id": "kautionsabrechnung-freigeben-vier-augen-gesperrt"
+    },
+    {
+     "t": "p",
+     "text": "Unter einem gespeicherten Entwurf der Kautionsabrechnung steht Kautionsabrechnung freigeben. Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat; sie bestätigt das durch Anhaken. Die Schaltfläche bleibt gesperrt, solange die Freigabestufe G3 geschlossen ist; der Stand steht unter der Schaltfläche. Freigegebene Abrechnungen lassen sich nicht erneut freigeben."
     }
    ]
   },
@@ -19460,6 +19939,16 @@
     {
      "t": "p",
      "text": "Die Schaltfläche \"Neue Version\" öffnet einen Dialog. Dort wählen Sie optional den Korrekturgrund, beschreiben die Grundlage und wählen einen Korrekturbeschluss derselben Gemeinschaft. Nach dem Anlegen zeigt die Maske die Mehrheitsprüfung des Beschlusses an. Die Prüfung ist nur ein Vermerk und ändert keinen Status. Ein Beschluss einer anderen Gemeinschaft wird abgelehnt (Fehler MHVP-HOA-0038)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Eigentümerwechsel prüfen und Mehrheit je Beschluss (GAI-412, GAI-413, Welle 21)",
+     "id": "eigentuemerwechsel-pruefen-und-mehrheit-je-beschluss-gai-412-gai-413-welle-21"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Einsichtsanfragen einer Gemeinschaft prüft die Schaltfläche \"Eigentümerwechsel prüfen\" (Recht WEG bearbeiten), ob bei offenen Anfragen der Eigentümer seit der Anfrage gewechselt hat. Es entsteht nur ein Prüfvermerk, keine Anfrage wird geschlossen und kein Paket widerrufen. In der Beschlusssammlung zeigt \"Mehrheit prüfen\" je Beschluss das gespeicherte und das aktuelle Ergebnis der Mehrheitsprüfung. Die Anzeige ändert den Beschlussstatus nicht und ersetzt keine rechtliche Würdigung."
     }
    ]
   }

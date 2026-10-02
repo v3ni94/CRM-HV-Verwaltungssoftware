@@ -39,6 +39,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -729,7 +730,7 @@ async def propose_all_tenants_once(
     job never deletes anything; approval and execution stay with two persons."""
     from mhvp.platform.models import Tenant, TenantStatus
 
-    reference = today or datetime.now(UTC).date()
+    reference = today or local_today()
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )

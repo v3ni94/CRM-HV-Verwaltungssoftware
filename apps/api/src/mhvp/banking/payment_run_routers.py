@@ -27,7 +27,7 @@ from mhvp.banking.models import PaymentBankConfig
 from mhvp.banking.payment_run_tasks import store_preview
 from mhvp.banking.routers import OrderOut, _order_out
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
@@ -280,7 +280,19 @@ async def get_setting(
         return {"weekly_preview_enabled": bool(enabled), "schedule": "Montag 08:00"}
 
 
-@router.put("/settings", summary="Wöchentliche Zahllauf-Vorschau ein- oder ausschalten")
+class PaymentRunSettingOut(BaseModel):
+    """Response of the weekly preview switch (GAI-304)."""
+
+    model_config = ConfigDict(extra="allow")
+    weekly_preview_enabled: bool
+    schedule: str
+
+
+@router.put(
+    "/settings",
+    summary="Wöchentliche Zahllauf-Vorschau ein- oder ausschalten",
+    response_model=PaymentRunSettingOut,
+)
 async def put_setting(
     body: PaymentRunSettingIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
 ) -> dict[str, Any]:
@@ -289,9 +301,24 @@ async def put_setting(
         if row is None:
             row = PaymentRunSetting(tenant_id=principal.tenant_id, created_by=principal.user_id)
             session.add(row)
+        old_enabled = bool(row.weekly_preview_enabled)
         row.weekly_preview_enabled = body.weekly_preview_enabled
         row.updated_by = principal.user_id
         await session.flush()
+        # GAI-307: payment configuration stays traceable (B07).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="payment_run_setting.updated",
+            entity_type="payment_run_setting",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"weekly_preview_enabled": row.weekly_preview_enabled},
+            changes=diff(
+                {"weekly_preview_enabled": old_enabled},
+                {"weekly_preview_enabled": row.weekly_preview_enabled},
+            ),
+        )
         return {"weekly_preview_enabled": row.weekly_preview_enabled, "schedule": "Montag 08:00"}
 
 

@@ -41,6 +41,7 @@ from mhvp.communication.models import Mailbox
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_body_limited
 from mhvp.platform.models import Tenant, TenantStatus
 
 log = logging.getLogger(__name__)
@@ -185,12 +186,9 @@ def enqueue(settings: Settings, address: str, history_id: str) -> None:
 )
 async def receive_push(request: Request) -> Response:
     settings: Settings = request.app.state.settings
-    declared = request.headers.get("content-length")
-    if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Push-Inhalt zu groß.")
-    raw = await request.body()
-    if len(raw) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Push-Inhalt zu groß.")
+    raw = await read_body_limited(
+        request, MAX_BODY_BYTES, error=ErrorCodes.WEBHOOK_TOO_LARGE, detail="Push-Inhalt zu groß."
+    )
     if not secret_ok(settings, request):
         log.warning("gmail push: missing or wrong token")
         raise ProblemError(ErrorCodes.WEBHOOK_SIGNATURE, detail="Push-Token fehlt oder falsch.")

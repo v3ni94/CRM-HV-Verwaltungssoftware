@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type TreeCategory = {
   id: string;
@@ -55,7 +56,9 @@ type Draft = { paperless_document_type: string; paperless_tag: string; drive_fol
 /** Category tree with the mapping to Paperless document type and tag and the Drive folder
  *  (6.7, M6-09). A changed mapping is pushed to existing mirrors by the API. */
 export function CategoryTree({ categories: initial }: { categories: TreeCategory[] }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("CategoryTree");
+  const tCommon = useTranslations("Common");
   const [categories, setCategories] = useState(initial);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({ paperless_document_type: "", paperless_tag: "", drive_folder: "" });
@@ -105,6 +108,7 @@ export function CategoryTree({ categories: initial }: { categories: TreeCategory
         </p>
       ) : null}
       <ul className={`${ui.card} flex flex-col divide-y divide-border-soft`} aria-label={t("tree")} role="tree">
+        {rows.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
         {rows.map((c) => (
           <li key={c.id} role="treeitem" aria-level={c.depth + 1} aria-selected={editing === c.id} className="py-2" style={{ paddingLeft: `${c.depth * 1.25}rem` }}>
             <div className="flex flex-wrap items-center gap-2">
@@ -138,10 +142,10 @@ export function CategoryTree({ categories: initial }: { categories: TreeCategory
                   <input className={ui.input} value={draft.drive_folder} maxLength={64} onChange={(e) => setDraft({ ...draft, drive_folder: e.target.value })} />
                 </label>
                 <div className={ui.formActions}>
-                  <button type="button" className={ui.primary} onClick={() => void save(c.id)}>
+                  <button disabled={busy} type="button" className={ui.primary} onClick={guard(() => save(c.id))}>
                     {t("save")}
                   </button>
-                  <button type="button" className={ui.secondary} onClick={() => setEditing(null)}>
+                  <button disabled={busy} type="button" className={ui.secondary} onClick={() => setEditing(null)}>
                     {t("cancel")}
                   </button>
                 </div>
@@ -150,7 +154,7 @@ export function CategoryTree({ categories: initial }: { categories: TreeCategory
           </li>
         ))}
       </ul>
-      <form onSubmit={create} className={`${ui.card} grid gap-2 sm:grid-cols-4`} aria-label={t("newTitle")}>
+      <form onSubmit={guard(create)} className={`${ui.card} grid gap-2 sm:grid-cols-4`} aria-label={t("newTitle")}>
         <h2 className="text-sm font-semibold sm:col-span-4">{t("newTitle")}</h2>
         <label className={ui.label}>
           {t("code")}

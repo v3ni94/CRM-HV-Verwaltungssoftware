@@ -6,7 +6,15 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-export type AccessExportSettingsData = { third_party_scope: "none" | "names"; include_internal_notes: boolean };
+export type AccessExportSettingsData = {
+  third_party_scope: "none" | "names";
+  include_internal_notes: boolean;
+  include_tickets?: boolean;
+  include_communication?: boolean;
+  include_documents?: boolean;
+};
+type SourceKey = "include_tickets" | "include_communication" | "include_documents";
+const SOURCE_KEYS: SourceKey[] = ["include_tickets", "include_communication", "include_documents"];
 
 /** Umfang der DSGVO-Auskunft je Mandant (AE33, AC07-01). Standard: andere Personen nur mit
  *  Rolle, interne Vermerke zurückgehalten. Die Rechtsfrage ist offen; der Umfang wird beim
@@ -15,6 +23,12 @@ export function AccessExportSettings({ initial, canEdit }: { initial: AccessExpo
   const t = useTranslations("AccessExportSettings");
   const [scope, setScope] = useState(initial.third_party_scope);
   const [notes, setNotes] = useState(initial.include_internal_notes);
+  // GAI-506: further data sources, off by default (AC07-01).
+  const [sources, setSources] = useState<Record<SourceKey, boolean>>({
+    include_tickets: initial.include_tickets ?? false,
+    include_communication: initial.include_communication ?? false,
+    include_documents: initial.include_documents ?? false,
+  });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +39,7 @@ export function AccessExportSettings({ initial, canEdit }: { initial: AccessExpo
     setError(null);
     const result = await bff<AccessExportSettingsData>("/api/bff/contact-access-export-settings", {
       method: "PUT",
-      body: JSON.stringify({ third_party_scope: scope, include_internal_notes: notes }),
+      body: JSON.stringify({ third_party_scope: scope, include_internal_notes: notes, ...sources }),
     });
     setBusy(false);
     if (result.ok) setMessage(t("saved"));
@@ -58,6 +72,17 @@ export function AccessExportSettings({ initial, canEdit }: { initial: AccessExpo
           <input type="checkbox" checked={notes} disabled={!canEdit || busy} onChange={(e) => setNotes(e.target.checked)} />
           {t("notes")}
         </label>
+        {SOURCE_KEYS.map((key) => (
+          <label key={key} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={sources[key]}
+              disabled={!canEdit || busy}
+              onChange={(e) => setSources((prev) => ({ ...prev, [key]: e.target.checked }))}
+            />
+            {t(`sources.${key}`)}
+          </label>
+        ))}
         {canEdit ? (
           <div>
             <button type="button" className={ui.primary} disabled={busy} onClick={() => void save()}>

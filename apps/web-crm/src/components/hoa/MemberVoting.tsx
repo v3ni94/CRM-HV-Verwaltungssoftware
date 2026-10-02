@@ -31,6 +31,7 @@ export function MemberVoting({
   agenda: Item[];
 }) {
   const t = useTranslations("HoaWork");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,13 @@ export function MemberVoting({
           </tr>
         </thead>
         <tbody>
+          {members.length === 0 ? (
+            <tr>
+              <td colSpan={99} className="text-muted">
+                {tCommon("emptyList")}
+              </td>
+            </tr>
+          ) : null}
           {members.map((m) => {
             const represented = m.present || m.proxy;
             return (

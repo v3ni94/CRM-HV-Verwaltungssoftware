@@ -33,6 +33,7 @@ from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGateResolver
+from mhvp.core.uploads import read_limited
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentSource, LinkRole
 from mhvp.documents.services import store_document
@@ -626,11 +627,9 @@ async def import_opening_balances(
     note: str | None = Form(default=None),
     principal: TenantPrincipal = Depends(CREATE),
 ) -> BalanceImportOut:
-    data = await file.read()
+    data = await read_limited(file, MAX_UPLOAD)
     if not data:
         raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Die Datei ist leer.")
-    if len(data) > MAX_UPLOAD:
-        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Die Datei ist zu groß.")
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id, lock=True)
         accounts = {

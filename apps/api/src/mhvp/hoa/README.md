@@ -362,3 +362,11 @@ statement value changes. Tests: `tests/integration/test_af11_statement_archive.p
 - GAG-15 (GAF-16): `POST /hoa/statements/{id}/new-version` mit `resolution_id` führt die Mehrheitsprüfung (M25-01) für den Korrekturbeschluss aus und liefert sie als `correction_majority_check` zurück. Nur Anzeige und Protokollvermerk, keine Statusänderung, keine Sperre. `GET /hoa/resolutions/{id}/majority-check` lehnt unbekannte Query-Parameter mit 422 ab.
 - GAH-403: `new-version` lehnt einen Korrekturbeschluss einer anderen GdWE (legal_entity_id des Beschlusses ungleich legal_entity_id des Buchungskreises) mit 422 `MHVP-HOA-0038` ab; nichts wird angelegt. GAH-402: CRM-Dialog `StatementNewVersionDialog` (Grund, Grundlage, Korrekturbeschluss) mit Anzeige der Mehrheitsprüfung per `MajorityCheckLine`.
 - GAG-22 (GAE-12): Planübernahme an `calc.allocation_owner` ist über `allocation_proposal.proposal_for` in `_plan_apply_preview` angebunden (Schalter, Standard aus); verifiziert mit `test_ag20_allocation.py`.
+
+## Rundung (Welle 21, AJ01)
+
+Alle `quantize` Aufrufe runden ausdrücklich ROUND_HALF_UP. `billing.calc.distribute` verteilt negative Summen vorzeichensymmetrisch und summentreu. Details und Schalter (`negative_costs_mode`, `remainder_mode`): docs/rules/RUNDUNG.md.
+
+## Ereignisse der Finanzierung (AJ04, Welle 21)
+
+Maßnahmen, Darlehen, Versicherungsfälle und ihre Positionen erzeugen Domainereignisse `hoa.measure.*`, `hoa.loan.*`, `hoa.insurance_claim.*` mit alt und neu (GAI-105).

@@ -30,6 +30,7 @@ from mhvp.contacts.models import (
 from mhvp.contacts.validation import mask_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
+from mhvp.core.clock import local_today
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
@@ -766,6 +767,9 @@ async def get_access_export_settings(
         return schemas.ContactAccessExportSettingsOut(
             third_party_scope=options.third_party_scope,
             include_internal_notes=options.include_internal_notes,
+            include_tickets=options.include_tickets,
+            include_communication=options.include_communication,
+            include_documents=options.include_documents,
         )
 
 
@@ -787,13 +791,28 @@ async def put_access_export_settings(
             row = ContactAccessExportSetting(tenant_id=principal.tenant_id)
             session.add(row)
             await session.flush()
+        sources_before = await access_export.source_switches(session)
         before = {
             "third_party_scope": row.third_party_scope,
             "include_internal_notes": row.include_internal_notes,
+            **sources_before,
         }
         row.third_party_scope = body.third_party_scope
         row.include_internal_notes = body.include_internal_notes
         row.updated_by = principal.user_id
+        sources_after = {
+            k: (sources_before[k] if getattr(body, k) is None else bool(getattr(body, k)))
+            for k in access_export.SOURCE_SWITCHES
+        }
+        if sources_after != sources_before:
+            from mhvp.platform.models import TenantSettings
+
+            ts = await session.scalar(select(TenantSettings).with_for_update())
+            if ts is None:
+                raise _not_found()
+            ts.sources = {**(ts.sources or {}), access_export.SCOPE_SOURCES_KEY: sources_after}
+            ts.version += 1
+            ts.updated_by = principal.user_id
         await session.flush()
         await emit(
             session,
@@ -802,11 +821,19 @@ async def put_access_export_settings(
             entity_type="contact_access_export_setting",
             entity_id=row.id,
             actor_user_id=principal.user_id,
-            payload={"before": before, "after": body.model_dump()},
+            payload={
+                "before": before,
+                "after": {
+                    "third_party_scope": body.third_party_scope,
+                    "include_internal_notes": body.include_internal_notes,
+                    **sources_after,
+                },
+            },
         )
         return schemas.ContactAccessExportSettingsOut(
             third_party_scope=body.third_party_scope,
             include_internal_notes=body.include_internal_notes,
+            **sources_after,
         )
 
 
@@ -862,7 +889,7 @@ async def revoke_mandate(
                 ErrorCodes.VALIDATION, detail="Kein aktives SEPA-Mandat auf dieser Bankverbindung."
             )
         account.mandate_status = ContactMandateStatus.REVOKED
-        account.mandate_revoked_on = datetime.now(UTC).date()
+        account.mandate_revoked_on = local_today()
         await emit(
             session,
             tenant_id=principal.tenant_id,

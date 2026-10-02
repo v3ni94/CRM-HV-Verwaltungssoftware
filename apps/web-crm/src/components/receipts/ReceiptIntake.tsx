@@ -869,6 +869,7 @@ export function ReceiptIntake({
                             </span>
                           ) : name === "property_ref" ? (
                             <select
+                              aria-label={t(`review.fields.${name}`)}
                               className={ui.input}
                               value={form[name]}
                               onChange={setField(name)}
@@ -886,6 +887,7 @@ export function ReceiptIntake({
                             </select>
                           ) : (
                             <input
+                              aria-label={t(`review.fields.${name}`)}
                               type={isDate ? "date" : "text"}
                               className={ui.input}
                               value={form[name]}

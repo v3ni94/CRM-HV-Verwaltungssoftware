@@ -147,20 +147,53 @@ def _refused(response: Any, gate: str, what: str) -> None:
     assert body.get("gate") == gate, body
 
 
+# GAI-620: a refused gate must also leave no effect. Tables whose row count proves that no
+# posting, open item, payment order, payment batch, statement or domain event was written.
+EFFECT_TABLES = (
+    "journal_entry",
+    "journal_line",
+    "open_item",
+    "payment_order",
+    "payment_batch",
+    "payment_approval",
+    "statement",
+    "domain_event",
+)
+
+
+def _effect_counts(admin: Admin) -> dict[str, int]:
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(admin.settings.database_url.get_secret_value())
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(admin.tenant_id)}
+            )
+            return {
+                t: int(conn.execute(text(f"SELECT count(*) FROM {t}")).scalar_one())
+                for t in EFFECT_TABLES
+            }
+    finally:
+        engine.dispose()
+
+
 @pytest.mark.parametrize(("method", "path", "gate"), GATED_ROUTES, ids=lambda v: str(v))
 def test_gated_route_is_refused_while_gate_closed(
     admin: Admin, method: str, path: str, gate: str
 ) -> None:
     if path in PREPARED:
         pytest.skip(f"proven with prepared record: {PREPARED[path]}")
+    before = _effect_counts(admin)
     response = admin.client.request(
         method, _fill(path), json=VALID_BODIES.get(path, {}), headers=admin.headers
     )
     if path in PRECONDITION_FIRST:
         allowed, reason = PRECONDITION_FIRST[path]
         assert response.status_code in allowed, f"{method} {path} ({reason}): {response.text}"
-        return
-    _refused(response, gate, f"{method} {path}")
+    else:
+        _refused(response, gate, f"{method} {path}")
+    assert _effect_counts(admin) == before, f"{method} {path}: refused call left an effect"
 
 
 async def _insert_switch_request(admin: Admin, ledger_id: str, property_id: str) -> uuid.UUID:
@@ -258,7 +291,9 @@ def test_prepared_records_are_refused_while_gate_closed(
     # Ledger exists: the switch request is refused by G1 before the reconciliation checks.
     path = "/api/v1/imports/migration/ledgers/{ledger_id}/switch-requests"
     url = path.replace("{ledger_id}", vat_world["ledger"])
+    before = _effect_counts(admin)
     _refused(c.post(url, json={}, headers=h), "G1", path)
+    assert _effect_counts(admin) == before
     seen.add(path)
 
     # Pending request of another person: approval is refused by G1, nothing switches.
@@ -267,14 +302,18 @@ def test_prepared_records_are_refused_while_gate_closed(
     )
     path = "/api/v1/imports/migration/switch-requests/{request_id}/approve"
     url = path.replace("{request_id}", str(request_id))
+    before = _effect_counts(admin)
     _refused(c.post(url, json={}, headers=h), "G1", path)
+    assert _effect_counts(admin) == before
     seen.add(path)
     ledger = _ok(c.get(f"/api/v1/accounting/ledgers/{vat_world['ledger']}", headers=h))
     assert ledger["leading_system"] != "mhvp", ledger
 
     # Run with rule items (VAT): posting is refused by G1, the run stays unposted.
     path = "/api/v1/accounting/receivable-runs/{run_id}/post"
+    before = _effect_counts(admin)
     _refused(c.post(path.replace("{run_id}", vat_world["run"]), headers=h), "G1", path)
+    assert _effect_counts(admin) == before  # no journal entry, no open item
     seen.add(path)
     run = _ok(c.get(f"/api/v1/accounting/receivable-runs/{vat_world['run']}", headers=h))
     assert run["status"] != "posted", run
@@ -295,7 +334,9 @@ def test_prepared_records_are_refused_while_gate_closed(
         )
     )
     path = "/api/v1/postal/jobs"
+    before = _effect_counts(admin)
     _refused(c.post(path, json={"dunning_case_id": _U}, headers=h), "G1", path)
+    assert _effect_counts(admin) == before
     seen.add(path)
 
     assert seen == set(PREPARED)

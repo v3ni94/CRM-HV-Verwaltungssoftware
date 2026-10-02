@@ -29,6 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 
 from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction
 from mhvp.core.listparams import strict_query
@@ -452,7 +453,7 @@ async def import_availability(
 ) -> ProbeFigure:
     year, mon = (int(x) for x in body.month.split("-"))
     first = date(year, mon, 1)
-    today = datetime.now(UTC).date()
+    today = local_today()
     if first > today.replace(day=1):
         raise ProblemError(ErrorCodes.VALIDATION, detail="Der Monat liegt in der Zukunft.")
     async with platform_transaction(sessions(request)) as session:

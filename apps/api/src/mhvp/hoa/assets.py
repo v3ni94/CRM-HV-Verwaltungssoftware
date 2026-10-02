@@ -10,7 +10,7 @@ no legal effect until gate G4 is open for the tenant; the PDF carries the draft 
 
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
+from mhvp.core.clock import local_today
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
@@ -600,7 +601,7 @@ async def loan_annual(
 
 
 def _eur(value: Any) -> str:
-    amount = Decimal(str(value)).quantize(Decimal("0.01"))
+    amount = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     sign = "-" if amount < 0 else ""
     whole, cents = f"{abs(amount):.2f}".split(".")
     groups = f"{int(whole):,}".replace(",", ".")
@@ -750,7 +751,7 @@ async def render_report_pdf(session: AsyncSession, settings: Any, row: HoaAssetR
     head = await docs.letterhead(session, BlobStore(settings))
     entity = await session.get(LegalEntity, row.legal_entity_id)
     name = entity.name if entity is not None else "Gemeinschaft der Wohnungseigentümer"
-    letter = compose_pdf(row, row.snapshot, name, datetime.now(UTC).date())
+    letter = compose_pdf(row, row.snapshot, name, local_today())
     return letters.render_pdf(head, letter)
 
 
@@ -969,7 +970,7 @@ async def dispatch_asset_report(
         head = await docs.letterhead(session, blobs)
         entity = await session.get(LegalEntity, row.legal_entity_id)
         name = entity.name if entity is not None else "Gemeinschaft der Wohnungseigentümer"
-        base = compose_pdf(row, row.snapshot, name, datetime.now(UTC).date())
+        base = compose_pdf(row, row.snapshot, name, local_today())
         wanted = set(body.contract_ids) if body.contract_ids is not None else None
         created: list[dict[str, Any]] = []
         skipped: list[dict[str, Any]] = []

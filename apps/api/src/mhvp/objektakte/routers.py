@@ -14,6 +14,13 @@ from sqlalchemy import select
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import (
+    check_dump_file,
+    check_text_dump,
+    check_zip_file,
+    check_zip_signature,
+    read_limited,
+)
 from mhvp.documents.models import Document, TextStatus
 from mhvp.objektakte import objektakte_import as importer
 from mhvp.objektakte.models import ObjektakteSourceDeletion
@@ -33,9 +40,9 @@ MAX_OCR_ENTRIES = 50_000
 
 
 async def _read_dump(file: UploadFile) -> str:
-    data = await file.read()
-    if len(data) > MAX_DUMP_BYTES:
-        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Der Export ist zu groß.")
+    check_dump_file(file)
+    data = await read_limited(file, MAX_DUMP_BYTES, detail="Der Export ist zu groß.")
+    check_text_dump(data)
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -101,9 +108,9 @@ async def apply_ocr_cache(
         if run is None or run.tenant_id != principal.tenant_id or run.source != "objektakte":
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
-        data = await file.read()
-        if len(data) > MAX_OCR_ZIP_BYTES:
-            raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Der OCR-Cache ist zu groß.")
+        check_zip_file(file)
+        data = await read_limited(file, MAX_OCR_ZIP_BYTES, detail="Der OCR-Cache ist zu groß.")
+        check_zip_signature(data)
         try:
             archive = zipfile.ZipFile(BytesIO(data))
         except zipfile.BadZipFile as exc:

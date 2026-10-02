@@ -504,3 +504,11 @@ approval is covered by the `test_ai03_*` tests (GAH-112).
 ## Nummernkreis Bank und Kasse (AI01, GAH-105)
 
 `POST /ledgers/{id}/accounts` weist Konten im Bereich 001200 bis 001999 mit anderer Kategorie als bank, cash, technical oder transit und Bankkontoverknüpfungen an anderen Kategorien als bank oder cash mit 422 `MHVP-ACC-0032` ab (`accounting/chart_rules.py`). Bestehende Konten tragen in der Kontenliste den Hinweis `range_warning`. Regel AI01-01.
+
+### Datenbankwachen AJ03 (Migration 0444)
+
+Trigger `open_item_guard` (erweitert), `journal_entry_period_lock`, `payment_order_guard`, `deposit_movement_guard`, `receivable_item_guard` und `journal_number_counter_guard` sichern B03 und B04 auch außerhalb der Anwendung (Regeln `docs/rules/B03.md`, `docs/rules/B04.md`, Fragen AJ03-01 bis AJ03-03). Verstöße melden SQLSTATE P0001.
+
+## Nachweisereignisse und Kontoauszugskette (AJ04, Welle 21)
+
+Siehe docs/rules/AJ04-kontoauszugskette-und-nachweis.md: die Hauptbuchprüfung liefert Brüche der Kontoauszugskette getrennt als bank_findings mit bank_ok, ohne das Prüfergebnis der Buchungen zu verändern (GAI-604), Steuer, Gläubiger und Zahlungskonfiguration emittieren Ereignisse mit alt und neu (GAI-307), die alte Liquiditätsroute prüft den Rechtsträgerbereich (GAI-601).

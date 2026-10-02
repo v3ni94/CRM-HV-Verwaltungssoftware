@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.events import emit
+from mhvp.core.ids import uuid7
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.webhooks import RETRY_SCHEDULE_SECONDS
 from mhvp.integrations.schadenstool.client import (
@@ -441,7 +442,7 @@ async def queue_status_if_linked(
     if remote is None:
         return False
     row = _outbox(link, OutboxKind.STATUS, "", {"status": remote}, actor)
-    row.id = uuid.uuid4()
+    row.id = uuid7()
     row.idempotency_key = f"mhvp-status-{row.id}"
     session.add(row)
     await session.flush()
@@ -837,7 +838,7 @@ async def record_event(session: AsyncSession, tenant_id: uuid.UUID, event: dict[
     stmt = (
         insert(SchadenstoolEvent)
         .values(
-            id=uuid.uuid4(),
+            id=uuid7(),
             tenant_id=tenant_id,
             event_id=event_id,
             event_type=event_type,

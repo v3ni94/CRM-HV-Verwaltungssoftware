@@ -28,6 +28,54 @@ jobs:
           persist-credentials: false
       - run: python3 scripts/sync_agent_docs.py --check
 
+  version-check:
+    # VERSION, CHANGELOG.md und changelog.ts stimmen ueberein (GAI-112, scripts/bump_version.py).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/bump_version.py --check
+
+  commitlint:
+    # Conventional Commits (GAI-113, CLAUDE.md Regel 12, scripts/check_commits.py); nur Pull Requests.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Commits der Pull Request pruefen
+        env:
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags origin "$PR_BASE"
+          python3 scripts/check_commits.py "origin/$PR_BASE..HEAD"
+
+  restore-drill-dry-run:
+    # Trockenlauf der Restore-Uebung (GAI-511): Konfiguration und Werkzeuge, kein S3, keine Datenbank.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends age
+      - run: python3 -m pip install boto3
+      - run: bash infra/scripts/tests/test-restore-drill.sh
+      - name: make restore-drill DRY_RUN=1
+        env:
+          PGDATABASE: mhvp
+          BACKUP_S3_BUCKET: ci-dry-run
+          BACKUP_S3_ACCESS_KEY_ID: ci-dry-run
+          BACKUP_S3_SECRET_ACCESS_KEY: ci-dry-run
+        run: |
+          echo "AGE-SECRET-KEY-CI-DRY-RUN" > "$RUNNER_TEMP/identity.txt"
+          BACKUP_AGE_IDENTITY="$RUNNER_TEMP/identity.txt" make restore-drill DRY_RUN=1
+
   secrets-scan:
     # Vollstaendiger Secrets-Scan der Historie dieses Pushs/PRs (Sicherheitspruefung 27.09.2026,
     # Befund 6 / OE-M27-02-03; der bisherige Muster-Grep deckte nur den aktuellen Stand ab).

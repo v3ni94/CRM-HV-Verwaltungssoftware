@@ -51,12 +51,14 @@ export function AcceptanceRegister({
   canApprove: boolean;
 }) {
   const t = useTranslations("AE01");
+  const tCommon = useTranslations("Common");
   const [state, setState] = useState<AcceptanceState | null>(initial);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", inputs: "{}", expected: "{}", source: "", calculation: "" });
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function reload() {
     const res = await bff<AcceptanceState>(`${BASE}/cases`);
@@ -64,8 +66,11 @@ export function AcceptanceRegister({
   }
 
   async function run(path: string, body?: unknown) {
+    if (busy) return false;
+    setBusy(true);
     setError(null);
     const res = await bff(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+    setBusy(false);
     if (!res.ok) {
       setError(res.message);
       return false;
@@ -126,7 +131,7 @@ export function AcceptanceRegister({
           <label className="flex flex-col">{t("fieldCalculation")}<textarea className={ui.input} value={form.calculation} onChange={(e) => setForm({ ...form, calculation: e.target.value })} /></label>
           <p className="text-sm">{t("amountHint")}</p>
           <div className="flex gap-2">
-            <button type="button" className={ui.button} onClick={() => void saveDraft()}>{t("saveDraft")}</button>
+            <button type="button" className={ui.button} disabled={busy} onClick={() => void saveDraft()}>{t("saveDraft")}</button>
             <button type="button" className={ui.button} onClick={() => setEditing(null)}>{t("cancel")}</button>
           </div>
         </div>
@@ -139,6 +144,13 @@ export function AcceptanceRegister({
           </tr>
         </thead>
         <tbody>
+          {state.items.length === 0 ? (
+            <tr>
+              <td colSpan={99} className="text-muted">
+                {tCommon("emptyList")}
+              </td>
+            </tr>
+          ) : null}
           {state.items.map((item) => {
             const cur = item.current;
             const rel = item.released;
@@ -154,18 +166,18 @@ export function AcceptanceRegister({
                     <button type="button" className={ui.button} onClick={() => { setEditing(item.case_id); setForm({ title: cur?.title ?? "", inputs: "{}", expected: "{}", source: "", calculation: "" }); }}>{t("newVersion")}</button>
                   ) : null}
                   {canManage && cur?.status === "draft" ? (
-                    <button type="button" className={ui.button} onClick={() => void run(`${BASE}/expected/${cur.id}/submit`)}>{t("submit")}</button>
+                    <button type="button" className={ui.button} disabled={busy} onClick={() => void run(`${BASE}/expected/${cur.id}/submit`)}>{t("submit")}</button>
                   ) : null}
                   {canApprove && cur?.status === "submitted" ? (
                     <>
-                      <button type="button" className={ui.button} disabled={!name} onClick={() => void run(`${BASE}/expected/${cur.id}/decision`, { decision: "approve", name })}>{t("approve")}</button>
-                      <button type="button" className={ui.button} disabled={!name} onClick={() => void run(`${BASE}/expected/${cur.id}/decision`, { decision: "reject", name })}>{t("reject")}</button>
+                      <button type="button" className={ui.button} disabled={!name || busy} onClick={() => void run(`${BASE}/expected/${cur.id}/decision`, { decision: "approve", name })}>{t("approve")}</button>
+                      <button type="button" className={ui.button} disabled={!name || busy} onClick={() => void run(`${BASE}/expected/${cur.id}/decision`, { decision: "reject", name })}>{t("reject")}</button>
                     </>
                   ) : null}
                   {canApprove && rel ? (
                     <>
-                      <button type="button" className={ui.button} disabled={!name || !version} onClick={() => void run(`${BASE}/expected/${rel.id}/results`, { outcome: "passed", software_version: version, name })}>{t("passed")}</button>
-                      <button type="button" className={ui.button} disabled={!name || !version} onClick={() => void run(`${BASE}/expected/${rel.id}/results`, { outcome: "failed", software_version: version, name })}>{t("failed")}</button>
+                      <button type="button" className={ui.button} disabled={!name || !version || busy} onClick={() => void run(`${BASE}/expected/${rel.id}/results`, { outcome: "passed", software_version: version, name })}>{t("passed")}</button>
+                      <button type="button" className={ui.button} disabled={!name || !version || busy} onClick={() => void run(`${BASE}/expected/${rel.id}/results`, { outcome: "failed", software_version: version, name })}>{t("failed")}</button>
                     </>
                   ) : null}
                 </td>

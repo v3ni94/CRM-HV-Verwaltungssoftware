@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Win = {
   id: string;
@@ -21,6 +22,7 @@ const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE", { timeZone: "
 
 /** GB16-01: announce, list and cancel maintenance windows (platform administrators). */
 export function MaintenanceAdmin() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("AD10");
   const [rows, setRows] = useState<Win[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export function MaintenanceAdmin() {
       </h2>
       <p className={ui.notice}>{t("windowsIntro")}</p>
       {error ? <p className={ui.alert}>{error}</p> : null}
-      <form onSubmit={(e) => void create(e)} className={`${ui.card} grid gap-3 sm:grid-cols-2`}>
+      <form onSubmit={guard(create)} className={`${ui.card} grid gap-3 sm:grid-cols-2`}>
         <label className="block">
           <span className={ui.label}>{t("start")}</span>
           <input className={ui.input} type="datetime-local" required value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} />
@@ -121,7 +123,7 @@ export function MaintenanceAdmin() {
                   <td>{t(`phases.${w.phase}` as never)}</td>
                   <td>
                     {w.phase === "scheduled" || w.phase === "announced" || w.phase === "active" ? (
-                      <button type="button" className={ui.buttonSm} onClick={() => void cancel(w.id)}>
+                      <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => cancel(w.id))}>
                         {t("cancel")}
                       </button>
                     ) : null}

@@ -14,7 +14,7 @@ community in the portal only; the attendance list records the channel per owner 
 online, proxy)."""
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import Attendance, Meeting, Resolution
@@ -188,7 +189,7 @@ def basis_deadlines(
     today: date | None = None,
 ) -> dict[str, Any]:
     """Orientation values for the meeting detail (to be verified, no legal computation)."""
-    today = today or datetime.now(UTC).date()
+    today = today or local_today()
     return {
         "decided_on": decided_on,
         "term_limit": basis_term_limit(decided_on),

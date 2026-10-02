@@ -18,4 +18,9 @@ describe("ReserveYearsTable", () => {
     expect(screen.getByText(/12\.015,00/, { selector: "td.font-medium" })).toBeInTheDocument();
     expect(screen.getByText(/Wirtschaftsplan \(Soll\)/)).toBeInTheDocument();
   });
+
+  it("shows the shared empty state without rows", () => {
+    renderIntl(<ReserveYearsTable rows={[]} />);
+    expect(screen.getByText("Keine Einträge vorhanden.")).toBeInTheDocument();
+  });
 });

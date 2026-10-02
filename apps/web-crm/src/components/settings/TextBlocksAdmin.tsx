@@ -7,6 +7,7 @@ import { useState } from "react";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type TextBlockCode = { code: string; label: string; released: boolean; approved_version: number | null };
 export type TextBlock = {
@@ -40,6 +41,7 @@ export function TextBlocksAdmin({
   canEdit: boolean;
   canApprove: boolean;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("TextBlocks");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -80,29 +82,30 @@ export function TextBlocksAdmin({
                 {b.reject_reason ? <p className="text-xs text-muted">{b.reject_reason}</p> : null}
                 <div className={ui.formActions}>
                   {canEdit && b.status === "draft" ? (
-                    <button type="button" className={ui.buttonSm} onClick={() => call(`/api/bff/document-text-blocks/${b.id}/submit`, "POST")}>
+                    <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => call(`/api/bff/document-text-blocks/${b.id}/submit`, "POST"))}>
                       {t("submit")}
                     </button>
                   ) : null}
                   {canApprove && b.status === "submitted" ? (
                     <>
-                      <button type="button" className={ui.buttonSm} onClick={() => call(`/api/bff/document-text-blocks/${b.id}/approve`, "POST")}>
+                      <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => call(`/api/bff/document-text-blocks/${b.id}/approve`, "POST"))}>
                         {t("approve")}
                       </button>
                       <button
                         type="button"
                         className={ui.buttonSm}
-                        onClick={() => {
+                        disabled={busy}
+                        onClick={guard(() => {
                           const reason = window.prompt(t("rejectReason"));
-                          if (reason) void call(`/api/bff/document-text-blocks/${b.id}/reject`, "POST", { reason });
-                        }}
+                          if (reason) return call(`/api/bff/document-text-blocks/${b.id}/reject`, "POST", { reason });
+                        })}
                       >
                         {t("reject")}
                       </button>
                     </>
                   ) : null}
                   {canApprove && b.status === "approved" ? (
-                    <button type="button" className={ui.buttonSm} onClick={() => call(`/api/bff/document-text-blocks/${b.id}/retire`, "POST")}>
+                    <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => call(`/api/bff/document-text-blocks/${b.id}/retire`, "POST"))}>
                       {t("retire")}
                     </button>
                   ) : null}
@@ -112,15 +115,15 @@ export function TextBlocksAdmin({
             {canEdit ? (
               <form
                 className="flex min-w-0 flex-col gap-2 border-t border-line pt-2"
-                onSubmit={(e) => {
+                onSubmit={guard((e: React.FormEvent) => {
                   e.preventDefault();
-                  void call("/api/bff/document-text-blocks", "POST", {
+                  return call("/api/bff/document-text-blocks", "POST", {
                     code: c.code,
                     title: draft.title,
                     body: draft.body,
                     source_note: draft.source || null,
                   });
-                }}
+                })}
               >
                 <label className={ui.label} htmlFor={`tb-body-${c.code}`}>{t("bodyField")}</label>
                 <textarea
@@ -138,7 +141,7 @@ export function TextBlocksAdmin({
                   onChange={(e) => setDrafts({ ...drafts, [c.code]: { ...draft, source: e.target.value } })}
                 />
                 <div className={ui.formActions}>
-                  <button type="submit" className={ui.button} disabled={!draft.body.trim()}>
+                  <button type="submit" className={ui.button} disabled={busy || !draft.body.trim()}>
                     {t("newVersion")}
                   </button>
                 </div>

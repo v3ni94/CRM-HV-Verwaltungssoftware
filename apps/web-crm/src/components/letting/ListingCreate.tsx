@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { warmRentDisplay } from "@/lib/money";
 import { ui } from "@/lib/ui";
 
 type Option = { id: string; label: string };
@@ -183,12 +184,12 @@ export function ListingCreate({ properties }: { properties: Option[] }) {
 
   const warmRentPreview = useMemo(() => {
     if (kind !== "rental" || form.price === "") return null;
-    const price = Number(form.price);
-    const additional = form.additional_costs === "" ? 0 : Number(form.additional_costs);
-    const heating = form.heating_costs === "" ? 0 : Number(form.heating_costs);
-    if (Number.isNaN(price) || Number.isNaN(additional) || Number.isNaN(heating)) return null;
-    const total = form.heating_in_additional_costs ? price + additional : price + additional + heating;
-    return total.toFixed(2).replace(".", ",");
+    return warmRentDisplay(
+      form.price,
+      form.additional_costs,
+      form.heating_costs,
+      form.heating_in_additional_costs,
+    );
   }, [kind, form.price, form.additional_costs, form.heating_costs, form.heating_in_additional_costs]);
 
   const energyDisabled = form.energy_status === "nicht_erforderlich";

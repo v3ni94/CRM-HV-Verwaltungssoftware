@@ -98,8 +98,8 @@ function DeputiesSection({
               {t("row", {
                 absent: nameOf(row.absent_user_id),
                 deputy: nameOf(row.deputy_user_id),
-                from: new Date(row.starts_at).toLocaleString(),
-                to: new Date(row.ends_at).toLocaleString(),
+                from: new Date(row.starts_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" }),
+                to: new Date(row.ends_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" }),
               })}
               {row.note ? ` (${row.note})` : ""}
             </span>

@@ -53,7 +53,7 @@ describe("MembersAdmin", () => {
     // Add member flow.
     await userEvent.type(screen.getByLabelText("E-Mail"), "neu@muellerhv.de");
     await userEvent.type(screen.getByLabelText("Anzeigename"), "Neue Person");
-    await userEvent.type(screen.getByLabelText("Startpasswort", { exact: false }), "sicheresstartpw2");
+    await userEvent.type(within(screen.getByRole("form", { name: "Benutzer hinzufügen" })).getByLabelText("Startpasswort", { exact: false }), "sicheresstartpw2");
     await userEvent.click(screen.getByRole("button", { name: "Benutzer anlegen" }));
 
     await waitFor(() => expect(screen.getAllByText("Neue Person").length).toBeGreaterThan(0));

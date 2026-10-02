@@ -13,6 +13,7 @@ export type DeletionProfile = {
   id: string;
   data_type: string;
   retention_months: number;
+  auto_propose?: boolean | null;
   start_rule: string;
   basis_note: string | null;
   released: boolean;
@@ -44,7 +45,7 @@ export type RegisterEntry = {
 type RecordsDraft = { title: string; status: string; review_notice: string; markdown: string };
 type ContactHit = { id: string; display_name: string };
 
-const DATA_TYPES = ["contact", "portal_account", "communication", "ticket", "other"] as const;
+const DATA_TYPES = ["contact", "portal_account", "communication", "ticket", "other", "domain_event", "platform_user", "bank_raw"] as const;
 const KINDS = ["processor", "sub_processor", "processing_activity", "responsibility"] as const;
 const AVV = ["none", "requested", "confirmed", "not_required"] as const;
 
@@ -64,7 +65,7 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
   const [draft, setDraft] = useState<RecordsDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [profileForm, setProfileForm] = useState({ data_type: "contact", retention_months: "36", start_rule: "", basis_note: "" });
+  const [profileForm, setProfileForm] = useState({ data_type: "contact", retention_months: "36", start_rule: "", basis_note: "", auto_propose: false });
   const [regForm, setRegForm] = useState({ kind: "processor", name: "", purpose: "", avv_status: "none" });
   const [contactQuery, setContactQuery] = useState("");
   const [contactHits, setContactHits] = useState<ContactHit[]>([]);
@@ -114,6 +115,7 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
           retention_months: months,
           start_rule: profileForm.start_rule.trim(),
           basis_note: profileForm.basis_note.trim() || null,
+          auto_propose: profileForm.auto_propose,
         }),
       }),
     );
@@ -149,7 +151,7 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
     }
   }
 
-  async function decide(id: string, action: "approve" | "reject" | "execute") {
+  async function decide(id: string, action: "approve" | "reject" | "execute" | "accept") {
     if (action === "execute" && !window.confirm(t("executeConfirm"))) return;
     await run(() => bff(`/api/bff/privacy/erasure-requests/${id}/${action}`, { method: "POST", body: JSON.stringify({}) }));
   }
@@ -220,7 +222,10 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
                     <td>{t(`dataType.${p.data_type}`)}</td>
                     <td className="num">{p.retention_months}</td>
                     <td>{p.start_rule}</td>
-                    <td>{p.released ? t("profiles.released") : t("profiles.draft")}</td>
+                    <td>
+                      {p.released ? t("profiles.released") : t("profiles.draft")}
+                      {p.auto_propose ? ` · ${t("profiles.autoOn")}` : ""}
+                    </td>
                     <td>
                       {!p.released && canApprove ? (
                         <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void run(() => bff(`/api/bff/privacy/deletion-profiles/${p.id}/release`, { method: "POST", body: JSON.stringify({}) }))}>
@@ -257,6 +262,10 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
             <label className="flex flex-col gap-1 sm:col-span-2">
               <span className={ui.label}>{t("profiles.basis")}</span>
               <input className={ui.input} value={profileForm.basis_note} onChange={(e) => setProfileForm({ ...profileForm, basis_note: e.target.value })} />
+            </label>
+            <label className="flex items-center gap-2 sm:col-span-2">
+              <input type="checkbox" checked={profileForm.auto_propose} onChange={(e) => setProfileForm({ ...profileForm, auto_propose: e.target.checked })} />
+              <span>{t("profiles.autoPropose")}</span>
             </label>
             <div className="sm:col-span-2">
               <button type="submit" className={ui.primary} disabled={busy}>
@@ -311,6 +320,20 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
                       )}
                     </td>
                     <td className="flex flex-wrap gap-2">
+                      {r.status === "proposed" ? (
+                        <>
+                          {canManage ? (
+                            <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void decide(r.id, "accept")}>
+                              {t("erasure.accept")}
+                            </button>
+                          ) : null}
+                          {canApprove ? (
+                            <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void decide(r.id, "reject")}>
+                              {t("erasure.reject")}
+                            </button>
+                          ) : null}
+                        </>
+                      ) : null}
                       {canApprove && r.status === "requested" ? (
                         <>
                           <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void decide(r.id, "approve")}>

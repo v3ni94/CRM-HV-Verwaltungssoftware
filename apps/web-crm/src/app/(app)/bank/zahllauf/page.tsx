@@ -5,6 +5,8 @@ import { BankStatusImport } from "@/components/banking/BankStatusImport";
 import { CreditPayables } from "@/components/banking/CreditPayables";
 import { PaymentRunPreview } from "@/components/banking/PaymentRunPreview";
 import { PaymentRunSettingsCard } from "@/components/banking/PaymentRunSettingsCard";
+import { PayoutOrderForm } from "@/components/gated/PayoutOrderForm";
+import { SavedPaymentRunPreviews } from "@/components/gated/SavedPaymentRunPreviews";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getMe } from "@/lib/me";
 
@@ -24,8 +26,10 @@ export default async function PaymentRunPage() {
         title={t("title")}
       />
       <PaymentRunPreview />
+      <SavedPaymentRunPreviews />
       <PaymentRunSettingsCard canUpdate={canUpdate} />
       <CreditPayables />
+      <PayoutOrderForm />
       <BankStatusImport />
       <BankLimitsCard />
     </div>

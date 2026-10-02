@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import type { ChartTemplate } from "./ChartReleaseAdmin";
+import { useBusy } from "@/lib/use-busy";
 
 /** AE02 (M10-01, SA-08, P07-04, P07-05): four eyes switch, coverage report and the multi key
  * distribution editor of a draft chart of accounts version. */
@@ -34,6 +35,7 @@ export function ChartCoveragePanel({
   canApprove: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("ChartRelease.coverage");
   const [report, setReport] = useState<Coverage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -116,12 +118,12 @@ export function ChartCoveragePanel({
             placeholder={t("reasonLabel")}
             onChange={(e) => setReason(e.target.value)}
           />
-          <button type="button" className={ui.button} disabled={reason.trim().length < 3} onClick={toggleFourEyes}>
+          <button type="button" className={ui.button} disabled={busy || (reason.trim().length < 3)} onClick={guard(toggleFourEyes)}>
             {fourEyes ? t("fourEyesDisable") : t("fourEyesEnable")}
           </button>
         </div>
       ) : null}
-      <button type="button" className={`${ui.button} mt-2`} onClick={loadReport}>
+      <button disabled={busy} type="button" className={`${ui.button} mt-2`} onClick={guard(loadReport)}>
         {t("load")}
       </button>
       {report ? (
@@ -217,7 +219,7 @@ export function ChartCoveragePanel({
           ))}
           <p className={ui.help}>{t("sum", { sum: sum.toLocaleString("de-DE") })}</p>
           <div className={`${ui.formActions} mt-2`}>
-            <button type="button" className={ui.button} onClick={() => setSplit([...split, { key_code: "", share_percent: "" }])}>
+            <button disabled={busy} type="button" className={ui.button} onClick={() => setSplit([...split, { key_code: "", share_percent: "" }])}>
               {t("addRow")}
             </button>
             <button type="submit" className={ui.primary}>

@@ -25,7 +25,7 @@ import sys
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -50,6 +50,7 @@ from mhvp.contracts.models import (
     PaymentReason,
     PaymentSchedule,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -122,7 +123,7 @@ def amount_cents(value: Decimal) -> int:
 
 
 def default_start_date(today: date | None = None) -> date:
-    return date((today or datetime.now(UTC).date()).year, 1, 1)
+    return date((today or local_today()).year, 1, 1)
 
 
 @dataclass(frozen=True)

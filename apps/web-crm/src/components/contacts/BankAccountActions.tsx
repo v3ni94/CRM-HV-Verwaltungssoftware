@@ -8,6 +8,7 @@ import { useId, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 type BankAccount =
   components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
@@ -15,13 +16,10 @@ type BankAccount =
 const NOTE_MAX = 500;
 const REASON_MAX = 500;
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** True when the account is closed for further changes: rejected IBAN or Gültig bis in the
  * past (the API answers 409 MHVP-CONT-0001 in that case). */
-export function isEnded(account: BankAccount, day = today()): boolean {
+export function isEnded(account: BankAccount, day = businessToday()): boolean {
   return (
     account.approval_status === "rejected" ||
     (account.valid_to != null && account.valid_to < day)
@@ -53,7 +51,7 @@ export function BankAccountActions({
   const router = useRouter();
   const id = useId();
   const [ending, setEnding] = useState(false);
-  const [validTo, setValidTo] = useState(today());
+  const [validTo, setValidTo] = useState(businessToday());
   const [note, setNote] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");

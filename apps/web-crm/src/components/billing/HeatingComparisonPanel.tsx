@@ -26,6 +26,7 @@ type Comparison = {
 /** M17-02: external heating amounts against the own calculation per user. Read only. */
 export function HeatingComparisonPanel({ id }: { id: string }) {
   const t = useTranslations("Billing.heating.compare");
+  const tCommon = useTranslations("Common");
   const [data, setData] = useState<Comparison | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tolAbs, setTolAbs] = useState("0.50");
@@ -82,6 +83,13 @@ export function HeatingComparisonPanel({ id }: { id: string }) {
                 </tr>
               </thead>
               <tbody>
+                {data.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="text-muted">
+                      {tCommon("emptyList")}
+                    </td>
+                  </tr>
+                ) : null}
                 {data.rows.map((r) => (
                   <tr key={r.key} data-status={r.status}>
                     <td>{r.unit_number}</td>

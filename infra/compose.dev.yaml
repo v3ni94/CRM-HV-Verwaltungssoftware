@@ -83,6 +83,12 @@ services:
       traefik.http.routers.web-crm-api.rule: Host(`crm.localhost`) && (PathPrefix(`/api`) || PathPrefix(`/auth`))
       traefik.http.routers.web-crm-api.entrypoints: web
       traefik.http.routers.web-crm-api.middlewares: security-headers@file,api-ratelimit@file
+      # GAI-116: stricter auth limit for the login paths.
+      traefik.http.routers.web-crm-auth.rule: Host(`crm.localhost`) && (PathPrefix(`/api/session/login`) || PathPrefix(`/api/session/mfa`) || PathPrefix(`/api/session/totp`) || PathPrefix(`/api/session/webauthn`))
+      traefik.http.routers.web-crm-auth.priority: "100"
+      traefik.http.routers.web-crm-auth.entrypoints: web
+      traefik.http.routers.web-crm-auth.middlewares: security-headers@file,auth-ratelimit@file
+      traefik.http.routers.web-crm-auth.service: web-crm
       traefik.http.services.web-crm.loadbalancer.server.port: "3000"
 
   web-portal:
@@ -100,4 +106,10 @@ services:
       traefik.http.routers.web-portal-api.rule: Host(`portal.localhost`) && (PathPrefix(`/api`) || PathPrefix(`/auth`))
       traefik.http.routers.web-portal-api.entrypoints: web
       traefik.http.routers.web-portal-api.middlewares: security-headers@file,api-ratelimit@file
+      # GAI-116: stricter auth limit for login, magic link and invitation paths.
+      traefik.http.routers.web-portal-auth.rule: Host(`portal.localhost`) && (PathPrefix(`/api/session/login`) || PathPrefix(`/api/session/mfa`) || PathPrefix(`/api/session/totp`) || PathPrefix(`/api/session/webauthn`) || PathPrefix(`/api/session/magic-link`) || PathPrefix(`/api/session/invitation`))
+      traefik.http.routers.web-portal-auth.priority: "100"
+      traefik.http.routers.web-portal-auth.entrypoints: web
+      traefik.http.routers.web-portal-auth.middlewares: security-headers@file,auth-ratelimit@file
+      traefik.http.routers.web-portal-auth.service: web-portal
       traefik.http.services.web-portal.loadbalancer.server.port: "3001"

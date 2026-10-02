@@ -12,6 +12,7 @@ import { ui } from "@/lib/ui";
  *  and duplicate protection, apply only by an explicit second step, export with numbers as text. */
 export function AssignmentsCsv({ canUpdate, onApplied }: { canUpdate: boolean; onApplied?: () => void }) {
   const t = useTranslations("Metering.csv");
+  const tCommon = useTranslations("Common");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [applied, setApplied] = useState<ImportPreview | null>(null);
@@ -95,6 +96,13 @@ export function AssignmentsCsv({ canUpdate, onApplied }: { canUpdate: boolean; o
                 </tr>
               </thead>
               <tbody>
+                {report.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="text-muted">
+                      {tCommon("emptyList")}
+                    </td>
+                  </tr>
+                ) : null}
                 {report.rows.map((r) => (
                   <tr key={r.line} data-testid={`csv-row-${r.line}`}>
                     <td className="tabular-nums">{r.line}</td>

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type RuleTable = {
   id: string;
@@ -23,6 +24,7 @@ const BASE = "/api/bff/billing/heating-rule-tables";
 /** GAF-12: maintain the heating rule tables (CO2 steps, degree days). No values are
  *  prefilled: the operator enters rows and the official source, the API validates them. */
 export function HeatingRuleTablesAdmin({ canManage }: { canManage: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("BillingSetup.ruleTables");
   const [rows, setRows] = useState<RuleTable[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export function HeatingRuleTablesAdmin({ canManage }: { canManage: boolean }) {
             <input className={ui.input} value={note} onChange={(e) => setNote(e.target.value)} />
           </label>
           <div>
-            <button type="button" className={ui.primary} disabled={!validFrom || source.trim().length < 3 || !json.trim()} onClick={() => void save()}>
+            <button type="button" className={ui.primary} disabled={busy || (!validFrom || source.trim().length < 3 || !json.trim())} onClick={guard(() => save())}>
               {t("save")}
             </button>
           </div>

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { CallAssign } from "@/components/aj17/CallAssign";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -21,6 +22,8 @@ export type CallOut = {
   contact_id: string | null;
   contact_name: string | null;
   match_status: "matched" | "ambiguous" | "unknown";
+  candidate_contact_ids?: string[];
+  candidate_names?: string[];
   related_ticket_id: string | null;
   proposal_status: "none" | "proposed" | "accepted" | "dismissed";
   ticket_id: string | null;
@@ -112,6 +115,13 @@ export function CallsPanel({
             </div>
             {call.note ? (
               <p className="mt-1 whitespace-pre-wrap text-sm">{call.note}</p>
+            ) : null}
+            {call.match_status !== "matched" ? (
+              <CallAssign
+                callId={call.id}
+                canEdit={canDismiss}
+                candidates={(call.candidate_contact_ids ?? []).map((id, i) => ({ id, name: call.candidate_names?.[i] ?? id }))}
+              />
             ) : null}
             {created[call.id] !== undefined ? (
               <p className="mt-1 text-xs text-muted">

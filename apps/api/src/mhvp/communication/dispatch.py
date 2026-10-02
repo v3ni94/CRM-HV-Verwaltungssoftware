@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.communication import calendar_feed  # noqa: F401  (registers the token table)
 from mhvp.communication.models import Dispatch, Message
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -367,7 +368,7 @@ async def serial_merge(
     async with tenant_tx(request, principal) as session:
         template = await _template(session, body.template_id)
         head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
-        letter_date = body.letter_date or datetime.now(UTC).date()
+        letter_date = body.letter_date or local_today()
         rows: list[Dispatch] = []
         seen: set[uuid.UUID] = set()
         recipients = await resolve_recipients(session, body.contact_ids)

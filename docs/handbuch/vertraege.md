@@ -225,3 +225,15 @@ Mit Entwurf berechnen entsteht für ein abgeschlossenes Jahr die Zinsgutschrift 
 ### PDF-Vorschau der Kautionsabrechnung
 
 Bei jedem gespeicherten Abrechnungsentwurf im Bereich Kautionen öffnet die Schaltfläche "PDF-Vorschau" das Schreiben in einem neuen Tab. Die Vorschau wird weder abgelegt noch versendet und bucht nichts; dafür genügt das Leserecht für Verträge. Zum dauerhaften Ablegen dient weiterhin "Abrechnung als PDF erzeugen und ablegen".
+
+## SEPA Mandat widerrufen (GAI-411, Welle 21)
+
+Auf der Vertragsseite im Abschnitt SEPA Mandate steht bei aktiven Mandaten die Aktion Widerrufen (Schreibrecht Verträge). Nach Bestätigung wird der Lastschrifteinzug der betroffenen Verträge beendet, das Mandat bleibt mit Status Widerrufen nachvollziehbar erhalten. Ein Widerruf lässt sich nicht zurücknehmen; für eine neue Einziehung ist ein neues Mandat anzulegen.
+
+## Zusatzfelder am Vertrag (GAI-415, Welle 21)
+
+Auf der Vertragsseite pflegt der Abschnitt "Zusatzfelder des Vertrags" (Schreibrecht Verträge) die Werte der Zusatzfelder. Ein leerer Wert entfernt das Feld. Die Felddefinitionen werden unter Einstellungen verwaltet.
+
+## Kautionsabrechnung freigeben (Vier Augen, gesperrt)
+
+Unter einem gespeicherten Entwurf der Kautionsabrechnung steht Kautionsabrechnung freigeben. Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat; sie bestätigt das durch Anhaken. Die Schaltfläche bleibt gesperrt, solange die Freigabestufe G3 geschlossen ist; der Stand steht unter der Schaltfläche. Freigegebene Abrechnungen lassen sich nicht erneut freigeben.

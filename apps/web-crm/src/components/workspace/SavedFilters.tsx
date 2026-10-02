@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type SavedFilter = { id: string; resource: string; name: string; params: Record<string, string> };
 
@@ -22,6 +23,7 @@ export function SavedFilters({
   /** Client side lists apply the saved params in place instead of navigating (M9-03). */
   onApply?: (params: Record<string, string>) => void;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Workspace");
   const [filters, setFilters] = useState<SavedFilter[]>([]);
   const [name, setName] = useState("");
@@ -68,12 +70,12 @@ export function SavedFilters({
               {f.name}
             </Link>
           )}
-          <button type="button" aria-label={t("deleteFilter", { name: f.name })} onClick={() => void remove(f.id)}>
+          <button disabled={busy} type="button" aria-label={t("deleteFilter", { name: f.name })} onClick={guard(() => remove(f.id))}>
             ×
           </button>
         </span>
       ))}
-      <form onSubmit={save} className="flex items-center gap-1" aria-label={t("filterName")}>
+      <form onSubmit={guard(save)} className="flex items-center gap-1" aria-label={t("filterName")}>
         <label htmlFor="filter-name" className="sr-only">
           {t("filterName")}
         </label>

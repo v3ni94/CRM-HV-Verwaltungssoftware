@@ -293,7 +293,12 @@ def test_ai_check_is_a_proposal_and_changes_nothing(
 def test_ai_check_needs_a_snapshot(client: TestClient, world: World, fake: FakeProvider) -> None:
     admin = bearer(login(client, world, "ckadmin"))
     st = _ok(client.get(S, headers=admin))[0]
-    draft = _ok(client.post(f"{S}/{st['id']}/new-version", headers=admin), 201)
+    draft = _ok(
+        client.post(
+            f"{S}/{st['id']}/new-version", json={"reason": "Korrektur Test"}, headers=admin
+        ),
+        201,
+    )
     assert draft["status"] == "draft"
     refused = client.post(f"{S}/{draft['id']}/ai-check", headers=admin)
     assert refused.status_code == 409, refused.text

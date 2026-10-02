@@ -14,6 +14,7 @@ import { ui } from "@/lib/ui";
 
 import { type AmountRow, parseAmount, type PaymentTypeOption } from "./amounts";
 import { type AmountDraft, amountDraftBody, AmountsDraftFields } from "./AmountsPanel";
+import { today as businessToday } from "@/lib/today";
 
 export { parseAmount };
 
@@ -263,6 +264,7 @@ const CREATE_FIELDS = [
   "kind",
   "unit_id",
   "party_id",
+  "contact_id",
   "start_date",
   "end_date",
   "legal_entity_id",
@@ -277,6 +279,7 @@ const CREATE_FIELDS = [
   "proration_method",
   "sev_enabled",
   "sev_fee_debtor_party_id",
+  "sev_fee_debtor_contact_id",
   "title_transfer_date",
   "benefit_burden_date",
   "acquisition_kind",
@@ -376,7 +379,7 @@ function scheduleBody(s: ScheduleState) {
 export function ContractCreateForm({ properties, initialPropertyId, initialUnitId }: { properties: PropertyOption[]; initialPropertyId?: string; initialUnitId?: string }) {
   const t = useTranslations("ContractForm");
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
 
   const [kind, setKind] = useState<ContractKind>("tenancy");
   const [propertyId, setPropertyId] = useState(initialPropertyId ?? "");
@@ -447,7 +450,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
       return;
     }
     let cancelled = false;
-    void bff<MandateOption[]>(`/api/bff/sepa-mandates?party_id=${party.id}&status=active`).then((res) => {
+    void bff<MandateOption[]>(`/api/bff/sepa-mandates?contact_id=${party.id}&status=active`).then((res) => {
       if (!cancelled) setMandates(res.ok ? res.data : []);
     });
     return () => {
@@ -526,7 +529,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
     const body: Record<string, unknown> = {
       kind,
       unit_id: unitId,
-      party_id: party!.id,
+      contact_id: party!.id,
       start_date: startDate,
       end_date: endDate || null,
       legal_entity_id: legalEntityId || null,
@@ -544,7 +547,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
     if (kind === "ownership") {
       Object.assign(body, {
         sev_enabled: sevEnabled,
-        sev_fee_debtor_party_id: sevEnabled && sevDebtor ? sevDebtor.id : null,
+        sev_fee_debtor_contact_id: sevEnabled && sevDebtor ? sevDebtor.id : null,
         title_transfer_date: titleTransfer,
         benefit_burden_date: benefitBurden || null,
         acquisition_kind: acquisitionKind || null,
@@ -648,7 +651,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
             </Field>
           ) : null}
         </div>
-        <PartyPicker label={t("fields.party")} role={role} onRole={setRole} onPick={setParty} error={errors["party_id"]} />
+        <PartyPicker label={t("fields.party")} role={role} onRole={setRole} onPick={setParty} error={errors["party_id"] ?? errors["contact_id"]} />
         {party ? (
           <p className="text-sm" data-testid="picked-party">
             {t("party.picked")} <strong>{party.display_name}</strong>{" "}
@@ -703,7 +706,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
               <Check label={t("fields.sevEnabled")} checked={sevEnabled} onChange={setSevEnabled} />
               {sevEnabled ? (
                 <>
-                  <PartyPicker label={t("fields.sevFeeDebtor")} role={role} onRole={setRole} onPick={setSevDebtor} error={errors["sev_fee_debtor_party_id"]} />
+                  <PartyPicker label={t("fields.sevFeeDebtor")} role={role} onRole={setRole} onPick={setSevDebtor} error={errors["sev_fee_debtor_party_id"] ?? errors["sev_fee_debtor_contact_id"]} />
                   {sevDebtor ? (
                     <p className="text-sm">
                       {t("party.picked")} <strong>{sevDebtor.display_name}</strong>{" "}
@@ -860,7 +863,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
   const t = useTranslations("ContractForm");
   const tc = useTranslations("contracts");
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
 
   const [effectiveDate, setEffectiveDate] = useState(today);
   const [directDebit, setDirectDebit] = useState(contract.direct_debit);

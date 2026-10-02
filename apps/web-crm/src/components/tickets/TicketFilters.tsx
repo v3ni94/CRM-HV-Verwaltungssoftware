@@ -240,6 +240,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             {t("filters.sortCreated")}
           </button>
           <select
+            aria-label={t("filters.assigneeAll")}
             className={ui.input}
             value={values.assignee_user_id}
             onChange={(e) => set("assignee_user_id", e.target.value)}
@@ -253,6 +254,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             ))}
           </select>
           <select
+            aria-label={t("filters.propertyAll")}
             className={ui.input}
             value={values.property_id}
             onChange={(e) =>
@@ -268,6 +270,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             ))}
           </select>
           <select
+            aria-label={t("filters.unitAll")}
             className={ui.input}
             value={values.unit_id}
             onChange={(e) => set("unit_id", e.target.value)}
@@ -321,6 +324,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             ) : null}
           </label>
           <select
+            aria-label={t("filters.roleAll")}
             className={ui.input}
             value={values.contact_role}
             onChange={(e) => set("contact_role", e.target.value)}
@@ -334,6 +338,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             ))}
           </select>
           <select
+            aria-label={t("filters.statusAll")}
             className={ui.input}
             value={values.status}
             onChange={(e) => set("status", e.target.value)}
@@ -347,6 +352,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             ))}
           </select>
           <select
+            aria-label={t("filters.priorityAll")}
             className={ui.input}
             value={values.priority}
             onChange={(e) => set("priority", e.target.value)}

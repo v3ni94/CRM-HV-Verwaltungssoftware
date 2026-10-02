@@ -121,3 +121,7 @@ dort einer Zuordnung zugewiesen oder verworfen, nie stillschweigend verteilt.
   Ordnungsbegriffsabgleich) sind nicht Teil der Oberfläche.
 * Der Schalter `metering_module_enabled` wird bis zur Ergänzung der Mandantenseite über die
   Schnittstelle `PATCH /tenant/settings` gesetzt.
+
+## Kostenzeilen des Messdienstimports manuell erfassen (GAI-419, Welle 21)
+
+Im Importentwurf der Heizkostenübernahme ersetzt "Kostenzeilen manuell erfassen" die Zeilen des Imports (Schreibrecht Abrechnung, nur solange der Import nicht übernommen ist). Je Zeile sind Nutzernummer und vier Beträge in EUR mit höchstens zwei Nachkommastellen erforderlich. Danach sind Prüfung und Zuordnung erneut auszuführen. Die Abrechnung selbst bleibt hinter dem Gate G3.

@@ -50,6 +50,7 @@ from mhvp.accounting.models import (
     LedgerAccount,
 )
 from mhvp.contacts import recipients
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -249,13 +250,23 @@ def fee_amount_for(settings: EffectiveSettings, level: int) -> Decimal | None:
     return Decimal(str(raw))
 
 
-def interest_amount_for(settings: EffectiveSettings, total: Decimal, days: int) -> Decimal:
+def interest_amount_for(
+    settings: EffectiveSettings, total: Decimal, days: int, start: date | None = None
+) -> Decimal:
     """Informational only (Nebenforderung), never booked automatically. Zero unless the
     operator both enabled interest and maintained a Basiszinssatz; the day count and formula
-    are a generic approximation and are not a legal certification (0.2)."""
+    are a generic approximation and are not a legal certification (0.2).
+
+    GAI-606: with ``start`` the tenant day count switch (``settings.interest_day_count``,
+    question AI03-01) applies via ``year_fraction``; without a start date only days/365 is
+    computable. The production paths use ``interest_for``, which always honours the switch."""
     if not settings.interest_enabled or settings.interest_base_rate is None or days <= 0:
         return Decimal("0.00")
     rate = settings.interest_base_rate + (settings.interest_spread or Decimal("0"))
+    if start is not None:
+        fraction = year_fraction(start, start + timedelta(days=days), settings.interest_day_count)
+        amount = total * rate / Decimal("100") * fraction
+        return amount.quantize(CENT, rounding=ROUND_HALF_UP)
     amount = total * rate / Decimal("100") * Decimal(days) / Decimal("365")
     return amount.quantize(CENT, rounding=ROUND_HALF_UP)
 
@@ -1080,7 +1091,7 @@ async def create_interest_draft(
         )
     ledger = await session.get(Ledger, case.ledger_id)
     if ledger is None or not await leading.is_leading(
-        session, ledger, leading.LeadingKind.DUNNING, datetime.now(UTC).date()
+        session, ledger, leading.LeadingKind.DUNNING, local_today()
     ):
         raise ProblemError(ErrorCodes.CONFLICT, detail="Nur das führende System darf mahnen.")
     revenue = await _interest_revenue_account(session, ledger)
@@ -1088,7 +1099,7 @@ async def create_interest_draft(
         tenant_id=case.tenant_id,
         created_by=user_id,
         ledger_id=ledger.id,
-        booking_date=datetime.now(UTC).date(),
+        booking_date=local_today(),
         text=f"Verzugszinsen, Stufe {case.level}, Fall {case.id}, Entwurf zur Prüfung",
         kind=EntryKind.INTEREST,
         contract_id=case.contract_id,

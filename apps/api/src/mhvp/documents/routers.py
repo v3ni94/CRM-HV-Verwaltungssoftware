@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import session_allowed_legal_entity_ids, session_allowed_property_ids
 from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
+from mhvp.core.clock import local_today
 from mhvp.core.escaping import content_disposition
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
@@ -1048,7 +1049,7 @@ async def retention_status(
     WEG permanent record or period; ``deletion_blocker`` None means deletable."""
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
-        today = datetime.now(UTC).date()
+        today = local_today()
         return s.DocumentRetentionStatusOut(
             document_id=document.id,
             retention_until=document.retention_until,
@@ -1682,6 +1683,15 @@ async def create_template(
         )
         session.add(row)
         await _flush(session, "Vorlage konnte nicht gespeichert werden.")
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document_template.created",
+            entity_type="document_template",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"code": row.code, "version": row.version},
+        )
         return s.TemplateOut.model_validate(row)
 
 
@@ -1701,6 +1711,15 @@ async def update_template_context(
         except letters.PlaceholderError as exc:
             raise ProblemError(ErrorCodes.PLACEHOLDER, detail=str(exc)) from None
         await _flush(session, "Vorlage konnte nicht gespeichert werden.")
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document_template.context_updated",
+            entity_type="document_template",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"context_types": list(row.context_types or [])},
+        )
         return s.TemplateOut.model_validate(row)
 
 

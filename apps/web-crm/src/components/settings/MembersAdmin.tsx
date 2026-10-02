@@ -488,6 +488,7 @@ function ResetPassword({ membershipId }: { membershipId: string }) {
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       <p className="text-xs text-muted">{t("resetHint")}</p>
       <input
+        aria-label={t("startPassword")}
         type="password"
         className={ui.input}
         value={password}

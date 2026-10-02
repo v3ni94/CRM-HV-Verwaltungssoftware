@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Connection = {
   id: string;
@@ -38,6 +39,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *  Schalter des Entscheidungsprotokolls (ADR 0014) und Protokoll je Umsatz. Das Anlegen einer
  *  Verbindung ruft nichts bei der Bank ab; der Schalter bucht nichts. Zahlungen: G2. */
 export function BankConnectionsPanel({ canApprove }: { canApprove: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("BankConnections");
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [runs, setRuns] = useState<SyncRun[] | null>(null);
@@ -150,7 +152,7 @@ export function BankConnectionsPanel({ canApprove }: { canApprove: boolean }) {
           </div>
         ) : null}
         {canApprove ? (
-          <form onSubmit={create} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <form onSubmit={guard(create)} className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <label className="flex-1">
               <span className={ui.label}>{t("bank")}</span>
               <input
@@ -236,7 +238,7 @@ export function BankConnectionsPanel({ canApprove }: { canApprove: boolean }) {
                   <span className={ui.label}>{t("reason")}</span>
                   <input className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} />
                 </label>
-                <button type="button" className={ui.button} disabled={!reason.trim()} onClick={switchLearning}>
+                <button type="button" className={ui.button} disabled={busy || (!reason.trim())} onClick={guard(switchLearning)}>
                   {learning.enabled ? t("switchOff") : t("switchOn")}
                 </button>
               </div>
@@ -249,7 +251,7 @@ export function BankConnectionsPanel({ canApprove }: { canApprove: boolean }) {
         <h2 id="bc-decisions" className="text-base font-semibold">
           {t("decisions")}
         </h2>
-        <form onSubmit={lookup} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <form onSubmit={guard(lookup)} className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="flex-1">
             <span className={ui.label}>{t("transactionId")}</span>
             <input className={ui.input} value={txId} onChange={(e) => setTxId(e.target.value)} />

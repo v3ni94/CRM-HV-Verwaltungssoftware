@@ -8,6 +8,7 @@ import { useId, useState } from "react";
 import { bff } from "@/lib/bff";
 import { CONTACT_BANK_ACCOUNT_KINDS, isValidIban } from "@/lib/contact-schema";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 type BankAccount =
   components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
@@ -30,9 +31,6 @@ type Values = {
   valid_to: string;
 };
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Add a bank account to an existing contact, or change one as a new version (M5-01
  * addendum 28.09.2026). The IBAN is checked client side (ISO 13616 mod 97, same rule as the
@@ -62,7 +60,7 @@ export function BankAccountForm({
     bic: account?.bic ?? "",
     bank_name: account?.bank_name ?? "",
     holder: account?.holder ?? "",
-    valid_from: today(),
+    valid_from: businessToday(),
     valid_to: "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({});

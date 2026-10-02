@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { HeatingImportRowsForm } from "@/components/aj17/HeatingImportRowsForm";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -383,6 +384,16 @@ export function HeatingImportPanel({ permissions }: { permissions: string[] }) {
               </div>
             </fieldset>
           ) : null}
+
+          <HeatingImportRowsForm
+            key={`${selected.id}-${selected.rows.length}`}
+            importId={selected.id}
+            initial={selected.rows.map((r) => ({ user_number: r.user_number, heating_base: r.heating_base, heating_consumption: r.heating_consumption, hot_water_base: r.hot_water_base, hot_water_consumption: r.hot_water_consumption }))}
+            editable={editable}
+            onSaved={(d) => {
+              if (d && typeof d === "object" && "id" in d && "rows" in d) replace(d as ImportRow);
+            }}
+          />
 
           {selected.rows.length > 0 ? (
             <div className="flex flex-col gap-2">

@@ -25,14 +25,18 @@ export function DirectDebitPreview({ ledgers }: { ledgers: { id: string; name: s
   const [lead, setLead] = useState("");
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const run = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     setResult(null);
     const res = await bff<PreviewResult>("/api/bff/accounting/direct-debits/preview", {
       method: "POST",
       body: JSON.stringify({ ledger_id: ledger, collection_date: date, lead_days: Number(lead) }),
     });
+    setBusy(false);
     if (res.ok) setResult(res.data);
     else setError(res.message);
   };
@@ -69,7 +73,7 @@ export function DirectDebitPreview({ ledgers }: { ledgers: { id: string; name: s
             onChange={(e) => setLead(e.target.value)}
           />
         </label>
-        <button type="submit" className={ui.button}>
+        <button type="submit" className={ui.button} disabled={busy}>
           {t("show")}
         </button>
       </form>

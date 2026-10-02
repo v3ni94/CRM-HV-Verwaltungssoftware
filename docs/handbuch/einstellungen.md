@@ -669,3 +669,7 @@ Geräte und alle Sitzungen des Benutzers widerrufen; er meldet sich mit dem Pass
 richtet den zweiten Faktor neu ein. Benutzer und Antragsteller erhalten eine Benachrichtigung.
 Die Identität des Benutzers prüfen die Administratoren vorher selbst. Eine Maske im CRM folgt;
 die Variantenwahl ist offen (Frage AI09-01).
+
+## Zweiten Faktor zurücksetzen (Vier-Augen-Prinzip)
+
+Unter Einstellungen, Benutzer erscheint für Personen mit dem Recht Mitglieder ändern der Block "Zweiten Faktor zurücksetzen". Die Funktion ist nur nutzbar, wenn der Mandantenschalter mfa_admin_reset_enabled eingeschaltet ist (Standard aus, Fachliche Regeln). Eine Person beantragt das Zurücksetzen mit Begründung (mindestens 10 Zeichen), eine zweite, andere Person gibt frei oder lehnt ab. Den eigenen zweiten Faktor kann man so nicht zurücksetzen. Wiederherstellungscodes gibt es noch nicht (offene Frage AI09-01). Schaltflächen sind während einer laufenden Anfrage gesperrt, damit Freigaben und Sperren nicht doppelt ausgelöst werden.

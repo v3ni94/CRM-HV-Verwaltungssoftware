@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { today } from "@/lib/today";
 
 type Tab = "documents" | "contacts" | "events";
 
@@ -49,7 +50,7 @@ type TakeOverContactsResult = { created: number; linked: number; skipped: number
 const PAGE_SIZE = 25;
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return today();
 }
 
 function plusDaysIso(days: number): string {
@@ -479,6 +480,7 @@ function ContactsTab() {
                             <div className="flex flex-col gap-1">
                               <div className="flex gap-2">
                                 <input
+                                  aria-label={t("contacts.matchPlaceholder")}
                                   className={ui.input}
                                   value={matchQuery}
                                   onChange={(e) => setMatchQuery(e.target.value)}

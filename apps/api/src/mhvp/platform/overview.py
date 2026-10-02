@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
+from mhvp.core.clock import local_today
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
@@ -299,7 +300,7 @@ async def overview(
     """Figures per tenant of the caller's memberships, each read in its own tenant transaction
     (RLS stays in force). Read only; nothing here opens a gate or changes data."""
     user_id = _user_id(principal)
-    today = datetime.now(UTC).date()
+    today = local_today()
     figures: list[TenantFigures] = []
     for tenant_id, name in await _scope(request, principal):
         async with tenant_transaction(sessions(request), tenant_id) as session:

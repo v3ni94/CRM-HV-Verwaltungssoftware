@@ -22,6 +22,7 @@ from fastapi import APIRouter, Request, Response
 from mhvp.core.auth.principal import sessions
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_body_limited
 from mhvp.integrations.schadenstool import services as svc
 from mhvp.integrations.schadenstool.signature import SIGNATURE_HEADER, TIMESTAMP_HEADER, verify
 
@@ -40,12 +41,9 @@ MAX_BODY_BYTES = 256 * 1024
     responses={200: {"description": "Angenommen oder bereits bekannt"}},
 )
 async def receive(tenant_id: uuid.UUID, path_id: uuid.UUID, request: Request) -> Response:
-    declared = request.headers.get("content-length")
-    if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE)
-    raw = await request.body()
-    if len(raw) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE)
+    raw = await read_body_limited(
+        request, MAX_BODY_BYTES, error=ErrorCodes.WEBHOOK_TOO_LARGE, detail=None
+    )
     fresh = False
     async with tenant_transaction(sessions(request), tenant_id) as session:
         config = await svc.get_config(session, tenant_id)

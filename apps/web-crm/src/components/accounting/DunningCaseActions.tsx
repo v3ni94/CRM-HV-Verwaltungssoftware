@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { DunningLetterSendButton } from "@/components/gated/DunningLetterSendButton";
 import { bff } from "@/lib/bff";
 import { problemMessage, readProblem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -234,6 +235,7 @@ export function DunningCaseActions({
           {error}
         </span>
       ) : null}
+      {status === "proposed" ? <DunningLetterSendButton caseId={caseId} /> : null}
     </div>
   );
 }

@@ -1,11 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { OwnershipScanButton } from "@/components/aj17/OwnershipScanButton";
 import { InspectionRequestCreate } from "@/components/hoa/InspectionRequests";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { hoaContext } from "@/lib/hoa";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,8 @@ export default async function InspectionListPage({ params }: { params: Promise<{
   redirectIfUnauthenticated(ctx.response);
   if (!ctx.property || !ctx.entity) return <p role="alert" className={ui.alert}>{th("noEntity")}</p>;
   const base = `/weg/${propertyId}`;
+  const me = await getMe();
+  const canEditHoa = (me.data?.permissions ?? []).includes("hoa:update");
   const res = await serverFetch(`/api/v1/hoa/inspection-requests?legal_entity_id=${encodeURIComponent(ctx.entity.id)}`);
   redirectIfUnauthenticated(res);
   const rows: Row[] = res.ok ? ((await res.json()) as Row[]) : [];
@@ -33,6 +37,7 @@ export default async function InspectionListPage({ params }: { params: Promise<{
         title={t("title")}
       />
       <p className={ui.notice}>{t("notice")}</p>
+      <OwnershipScanButton canEdit={canEditHoa} />
       <div className="overflow-x-auto">
       <table className={ui.table}>
         <thead>

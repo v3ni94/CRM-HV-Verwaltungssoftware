@@ -9,12 +9,12 @@ aus `docs/MASTER-PROMPT.md`, `docs/OPEN_QUESTIONS.md` (Punkt V1) und
 ## 1. Zweck
 
 Zahlungseinzug in Verbindung mit lexoffice, das die HVM für Eigentümer- und Kundendaten nutzt
-(Abschnitt 13.3, aus der Projektbezeichnung abgeleitet). [zu ergänzen durch Betreiber: genauer
+(Abschnitt 13.3, aus der Projektbezeichnung abgeleitet). [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber: genauer
 Einzugsprozess, Lastschrift- oder Rechnungslauf, betroffene Vertragsarten, Nutzergruppe].
 
 ## 2. Datenbestand
 
-Kein Zugriff auf das Datenmodell von smart-einzug. [zu ergänzen durch Betreiber:
+Kein Zugriff auf das Datenmodell von smart-einzug. [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber:
 Datenbank/Storage, Entitäten für Zahlungsempfänger, Einzugsaufträge, lexoffice-Referenzen].
 
 ## 3. Schnittstellen
@@ -26,7 +26,7 @@ Zielbild vorgesehen:
   beziehungsweise lexoffice gespiegelt.
 - Verwalterhonorar-Rechnungen können als Ausgangsrechnung an lexoffice übergeben werden.
 
-[zu ergänzen durch Betreiber: tatsächliche Empfangsschnittstelle von smart-einzug für diese
+[Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber: tatsächliche Empfangsschnittstelle von smart-einzug für diese
 Webhooks, Authentifizierung, Antwortverhalten, lexoffice-API-Version und Berechtigungen].
 
 ## 4. Ablösestatus im CRM
@@ -98,12 +98,12 @@ Belegt sind nur Master-Prompt Abschnitt 13.3 und die Sendeseite der Plattform
 - Zweck: Zahlungseinzug in Verbindung mit lexoffice. Genauer Einzugsprozess: offen, Dossier
   erforderlich (AA16-03).
 - Stack: eigenes Projekt auf einem separaten VPS, nicht Teil des Serverumzugs. Sprache,
-  Framework, Datenbank und Betrieb: offen, Dossier erforderlich (AA16-03).
-- Datenmodell: offen, Dossier erforderlich (AA16-03).
+  Framework, Datenbank und Betrieb: offen, [Betreiber-Erhebung offen, V1, AA16-03].
+- Datenmodell: offen, [Betreiber-Erhebung offen, V1, AA16-03].
 - Schnittstellen: die Plattform sendet signierte ausgehende Webhooks `contact.updated` (nur
   Kennungen und geänderte Feldnamen, keine Klardaten), `contact.mandate_iban_changed` und
   `invoice.issued` mit stabilem `Idempotency-Key` je Zustellung und Wiederholung bei
   Fehlzustellung. Test: `apps/api/tests/integration/test_ga09_smart_einzug_contact_updated.py`.
-  Die Empfangsseite von smart-einzug ist offen, Dossier erforderlich (AA16-03).
+  Die Empfangsseite von smart-einzug ist offen, [Betreiber-Erhebung offen, V1, AA16-03].
 - Status: Sendeseite umgesetzt, Empfang und Signaturprüfung durch smart-einzug nicht
   bestätigt.

@@ -28,6 +28,7 @@ from mhvp.core.auth.principal import (
     sessions,
     tenant_tx,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.db.tenancy import platform_transaction
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
@@ -161,7 +162,7 @@ def _formats_out(sources: dict[str, Any] | None) -> NumberFormatsOut:
                 **effective[scope].model_dump(),
                 locked=scope in LOCKED_SCOPES and not INVOICE_FORMAT_RELEASED,
                 is_default=effective[scope] == DEFAULT_FORMATS[scope],
-                preview=preview(effective[scope], datetime.now(UTC).date()),
+                preview=preview(effective[scope], local_today()),
             )
             for scope in SCOPES
         ]
@@ -210,7 +211,7 @@ async def preview_number_format(
     body: NumberFormatPreviewIn, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, list[str]]:
     fmt = NumberFormat.model_validate(body.model_dump(exclude={"scope"}))
-    return {"preview": preview(fmt, datetime.now(UTC).date())}
+    return {"preview": preview(fmt, local_today())}
 
 
 # Platform audit (AB13) ---------------------------------------------------------------------

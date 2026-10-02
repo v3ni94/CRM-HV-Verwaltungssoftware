@@ -75,6 +75,7 @@ export function ReleaseGatesAdmin({
   const [documentId, setDocumentId] = useState("");
   const [properties, setProperties] = useState("");
   const [checks, setChecks] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
   const own = tenantId === activeTenantId;
   const checklist = checklists.find((c) => c.gate === gate);
 
@@ -87,14 +88,20 @@ export function ReleaseGatesAdmin({
   }
 
   async function act(url: string, body: Record<string, unknown>) {
+    if (busy) return false;
+    setBusy(true);
     setError(null);
-    const res = await bff<GateRequest>(url, { method: "POST", body: JSON.stringify(body) });
-    if (!res.ok) {
-      setError(res.message);
-      return false;
+    try {
+      const res = await bff<GateRequest>(url, { method: "POST", body: JSON.stringify(body) });
+      if (!res.ok) {
+        setError(res.message);
+        return false;
+      }
+      await load(tenantId);
+      return true;
+    } finally {
+      setBusy(false);
     }
-    await load(tenantId);
-    return true;
   }
 
   function decide(row: GateRequest, kind: "approve" | "reject" | "revoke") {
@@ -229,16 +236,16 @@ export function ReleaseGatesAdmin({
                   </label>
                   {row.status === "requested" ? (
                     <>
-                      <button type="button" className={ui.primary} onClick={() => decide(row, "approve")}>
+                      <button type="button" className={ui.primary} disabled={busy} onClick={() => decide(row, "approve")}>
                         {t("approve")}
                       </button>
-                      <button type="button" className={ui.secondary} onClick={() => decide(row, "reject")}>
+                      <button type="button" className={ui.secondary} disabled={busy} onClick={() => decide(row, "reject")}>
                         {t("reject")}
                       </button>
                     </>
                   ) : null}
                   {own ? (
-                    <button type="button" className={ui.secondary} onClick={() => decide(row, "revoke")}>
+                    <button type="button" className={ui.secondary} disabled={busy} onClick={() => decide(row, "revoke")}>
                       {t("revoke")}
                     </button>
                   ) : null}
@@ -298,7 +305,7 @@ export function ReleaseGatesAdmin({
             <p>{t("noChecklist")}</p>
           )}
           <div>
-            <button type="submit" className={ui.primary}>
+            <button type="submit" className={ui.primary} disabled={busy}>
               {t("submit")}
             </button>
           </div>

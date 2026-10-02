@@ -378,6 +378,7 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
                   {t("correct")}
                 </button>
                 <input
+                  aria-label={t("rejectReason")}
                   className={ui.input}
                   placeholder={t("rejectReason")}
                   value={rejectReason}

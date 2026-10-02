@@ -10,6 +10,7 @@ import { ui } from "@/lib/ui";
 
 import { ReserveAccountFields } from "./ReserveAccountFields";
 import { ReserveYearsTable, type AccountOption, type ReserveYearRow } from "./ReserveYears";
+import { useBusy } from "@/lib/use-busy";
 
 export type ReserveRow = {
   id: string;
@@ -39,6 +40,7 @@ export function ReservePosition({
   bankAccounts?: AccountOption[];
   accounts?: AccountOption[];
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("HoaReserves");
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -106,12 +108,12 @@ export function ReservePosition({
         <button type="button" className={ui.buttonSm} onClick={() => setEditing((v) => !v)}>
           {editing ? t("cancel") : t("edit")}
         </button>
-        <button type="button" className={ui.buttonSm} onClick={load}>
+        <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(load)}>
           {t("loadDevelopment")}
         </button>
       </div>
       {editing ? (
-        <form onSubmit={save} className="flex flex-wrap items-end gap-2" aria-label={t("edit")}>
+        <form onSubmit={guard(save)} className="flex flex-wrap items-end gap-2" aria-label={t("edit")}>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("name")}</span>
             <input className={ui.input} value={name} onChange={(e) => setName(e.target.value)} minLength={2} required />
@@ -147,6 +149,7 @@ export function ReservePosition({
 
 /** Recorded uses of funds of one statement with receipt state; removal only in the draft. */
 export function ReserveMovementList({ statementId, reserves, editable }: { statementId: string; reserves: ReserveRow[]; editable: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("HoaReserves");
   const [items, setItems] = useState<Movement[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +178,7 @@ export function ReserveMovementList({ statementId, reserves, editable }: { state
     <section className="flex flex-col gap-2" data-testid="reserve-movements">
       <div className="flex items-center gap-2">
         <h3 className="font-medium">{t("movementsTitle")}</h3>
-        <button type="button" className={ui.buttonSm} onClick={load}>
+        <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(load)}>
           {t("showMovements")}
         </button>
       </div>

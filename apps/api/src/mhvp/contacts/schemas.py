@@ -639,8 +639,15 @@ class ContactAccessExportSettingsOut(BaseModel):
 
     third_party_scope: Literal["none", "names"]
     include_internal_notes: bool
+    include_tickets: bool = False
+    include_communication: bool = False
+    include_documents: bool = False
 
 
 class ContactAccessExportSettingsIn(_Strict):
     third_party_scope: Literal["none", "names"] = "none"
     include_internal_notes: bool = False
+    # GAI-506: None keeps the stored value (clients of the two field form stay valid).
+    include_tickets: bool | None = None
+    include_communication: bool | None = None
+    include_documents: bool | None = None

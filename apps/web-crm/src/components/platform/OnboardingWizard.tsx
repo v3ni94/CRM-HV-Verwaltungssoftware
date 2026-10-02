@@ -158,6 +158,7 @@ export function OnboardingWizard() {
           {entities.map((entity, index) => (
             <div key={index} className="flex flex-col gap-2 sm:flex-row">
               <select
+                aria-label={t("entityKind")}
                 className={ui.input}
                 value={entity.kind}
                 onChange={(e) => setEntities(entities.map((x, i) => (i === index ? { ...x, kind: e.target.value as EntityKind } : x)))}

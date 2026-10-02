@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 
+import { ResolutionMajorityCheck } from "@/components/aj17/ResolutionMajorityCheck";
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { formatDate } from "@/lib/format";
 
@@ -49,6 +50,7 @@ export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
                 </span>
               ) : null}
               {r.majority_check ? <MajorityCheckLine check={r.majority_check} /> : null}
+              <ResolutionMajorityCheck resolutionId={r.id} />
               {r.location || r.entered_at ? (
                 <span className="block text-xs text-muted" data-testid="resolution-entry">
                   {r.location ? `${t("location")}: ${r.location}` : ""}

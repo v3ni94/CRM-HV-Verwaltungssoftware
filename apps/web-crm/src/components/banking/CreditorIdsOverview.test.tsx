@@ -24,8 +24,8 @@ describe("CreditorIdsOverview", () => {
     expect(items[1]).toHaveTextContent("Mandant: nicht hinterlegt");
   });
 
-  it("renders an empty list without rows", async () => {
+  it("renders the empty state without rows", async () => {
     render(await CreditorIdsOverview({ rows: [] }));
-    expect(screen.getByTestId("creditor-id-overview")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("creditor-id-overview")).toHaveTextContent("Keine Einträge vorhanden.");
   });
 });

@@ -14,6 +14,7 @@ from kombu import Queue
 
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.logging import configure_logging
+from mhvp.core.task_policy import apply_beat_policy, celery_policy_conf
 from mhvp.core.telemetry import instrument_celery
 
 QUEUES: tuple[str, ...] = ("default", "io", "ocr", "ai", "bank", "mail", "beat")
@@ -71,6 +72,8 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Fa
             "mhvp.billing.consumption_info_tasks",
             "mhvp.billing.deadline_tasks",
             "mhvp.hoa.inspection_transfer",
+            "mhvp.core.auth.session_purge",
+            "mhvp.privacy.proposals",
         ],
     )
     app.conf.update(
@@ -481,6 +484,22 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Fa
         "schedule": crontab(hour=3, minute=55),
         "options": {"queue": "io"},
     }
+    # AJ12 (GAI-502): device descriptions of ended sessions are blanked, rows stay.
+    app.conf.beat_schedule["auth-session-metadata-purge"] = {
+        "task": "mhvp.core.auth.session_metadata_purge",
+        "schedule": crontab(hour=4, minute=10),
+        "options": {"queue": "io"},
+    }
+    # AJ12 (GAI-501): deletion proposals per released profile with auto_propose; only
+    # proposals with four eyes release, nothing is deleted (V17 open).
+    app.conf.beat_schedule["privacy-deletion-proposals"] = {
+        "task": "mhvp.privacy.deletion_proposals",
+        "schedule": crontab(hour=4, minute=25),
+        "options": {"queue": "io"},
+    }
+    # Time limits, visibility timeout, retries and overlap locks (GAI-316 to GAI-319).
+    app.conf.update(celery_policy_conf(settings))
+    apply_beat_policy(app.conf.beat_schedule)
     return app
 
 

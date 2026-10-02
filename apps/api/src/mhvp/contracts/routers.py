@@ -37,6 +37,7 @@ from mhvp.core.auth.scope import (
     session_allowed_property_ids,
 )
 from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
+from mhvp.core.clock import local_today
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import (
@@ -263,6 +264,20 @@ async def _create(
 ) -> Contract:
     unit = await _get(session, Unit, body.unit_id)
     prop = await _get(session, Property, unit.property_id)
+    if body.contact_id is not None:
+        resolved = await party_for_contact(
+            session, principal.tenant_id, principal.user_id, body.contact_id
+        )
+        body = body.model_copy(update={"party_id": resolved.id, "contact_id": None})
+    if body.sev_fee_debtor_contact_id is not None:
+        fee_party = await party_for_contact(
+            session, principal.tenant_id, principal.user_id, body.sev_fee_debtor_contact_id
+        )
+        body = body.model_copy(
+            update={"sev_fee_debtor_party_id": fee_party.id, "sev_fee_debtor_contact_id": None}
+        )
+    if body.party_id is None:  # pragma: no cover - the schema requires one of the two
+        raise svc.invalid("Vertragspartei fehlt.")
     party = await _get(session, Party, body.party_id)
     creditor = await svc.creditor_entity(
         session, prop, unit, body.kind, body.start_date, body.legal_entity_id
@@ -273,7 +288,7 @@ async def _create(
     if body.sev_fee_debtor_party_id is not None:
         await _get(session, Party, body.sev_fee_debtor_party_id)
     account = await svc.debtor_account(session, principal.tenant_id, creditor, party, unit)
-    data = body.model_dump(exclude={"legal_entity_id"})
+    data = body.model_dump(exclude={"legal_entity_id", "contact_id", "sev_fee_debtor_contact_id"})
     data["custom_fields"] = await check_custom_fields(
         session,
         "contract",
@@ -425,7 +440,7 @@ async def list_contracts(
     async with tenant_tx(request, principal) as session:
         query = apply_filters(select(Contract), params, _CONTRACT_FILTERS)
         if status is not None:
-            day = as_of or datetime.now(UTC).date()
+            day = as_of or local_today()
             if status == "ended":
                 query = query.where(Contract.end_date.is_not(None), Contract.end_date < day)
             elif status == "upcoming":
@@ -1310,6 +1325,9 @@ async def list_mandates(
     request: Request,
     response: Response,
     party_id: uuid.UUID | None = None,
+    contact_id: uuid.UUID | None = Query(
+        default=None, description="Mandate aller Parteien, denen dieser Kontakt angehört"
+    ),
     status: MandateStatus | None = None,
     expiring_until: date | None = Query(
         default=None, description="Aktive Mandate mit valid_until bis zu diesem Datum (M5-05)"
@@ -1335,6 +1353,12 @@ async def list_mandates(
         query = select(SepaMandate)
         if party_id is not None:
             query = query.where(SepaMandate.party_id == party_id)
+        if contact_id is not None:
+            query = query.where(
+                SepaMandate.party_id.in_(
+                    select(PartyMember.party_id).where(PartyMember.contact_id == contact_id)
+                )
+            )
         if status is not None:
             query = query.where(SepaMandate.status == status)
         if expiring_until is not None:
@@ -1685,7 +1709,7 @@ async def add_deposit_movement(
 async def occupancy(
     property_id: uuid.UUID,
     request: Request,
-    as_of: date = Query(default_factory=date.today),
+    as_of: date = Query(default_factory=local_today),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.OccupancyRow]:
     async with tenant_tx(request, principal) as session:
@@ -1748,7 +1772,7 @@ async def occupancy(
 async def vacancies(
     property_id: uuid.UUID,
     request: Request,
-    as_of: date = Query(default_factory=date.today),
+    as_of: date = Query(default_factory=local_today),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.VacancyRow]:
     """Vermietbare Einheiten ohne Mietverhältnis zum Stichtag (Mietobjekte und SEV-Eigentum)

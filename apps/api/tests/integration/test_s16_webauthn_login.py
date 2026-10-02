@@ -237,10 +237,34 @@ def test_w01_review_negative_paths(client: TestClient, world: World) -> None:
     assert locked.status_code != 200
 
 
-def test_webauthn_options_rate_limit(database: Database, redis_url: str, world: World) -> None:
-    """W01-01: option endpoints are limited per client address and per user; the window resets."""
-    import time
+class _WindowClock:
+    """GAI-618: frozen clock for the fixed window limiter instead of real sleeps. Starts at a
+    window boundary in the future (fresh Redis keys per run) and moves only on ``advance``."""
 
+    def __init__(self, window: int) -> None:
+        import time as real_time
+
+        self._real = real_time
+        self.now = (int(real_time.time()) // window + 10_000) * window
+
+    def time(self) -> float:
+        return float(self.now)
+
+    def advance(self, seconds: int) -> None:
+        self.now += seconds
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._real, name)
+
+
+def test_webauthn_options_rate_limit(
+    database: Database, redis_url: str, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """W01-01: option endpoints are limited per client address and per user; the window resets."""
+    from mhvp.core.auth import webauthn as webauthn_module
+
+    clock = _WindowClock(2)
+    monkeypatch.setattr(webauthn_module, "time", clock)
     cfg = _settings(
         database,
         redis_url,
@@ -253,19 +277,22 @@ def test_webauthn_options_rate_limit(database: Database, redis_url: str, world: 
     )
     with TestClient(create_app(cfg)) as c:
         h = bearer(login_password_only(c, world, "s16two"))
-        time.sleep(2.1 - time.time() % 2)  # start of a fresh window
         codes = [c.post(f"{A}/webauthn/register/options", json={}, headers=h) for _ in range(4)]
         assert [r.status_code for r in codes[:3]] == [200, 200, 200]
         assert codes[3].status_code == 429
         assert codes[3].json()["code"] == "MHVP-CORE-0006"
         assert int(codes[3].headers["Retry-After"]) >= 1
-        time.sleep(2.1)
+        clock.advance(2)
         assert c.post(f"{A}/webauthn/register/options", json={}, headers=h).status_code == 200
 
 
-def test_webauthn_login_options_ip_limit(database: Database, redis_url: str) -> None:
-    import time
+def test_webauthn_login_options_ip_limit(
+    database: Database, redis_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mhvp.core.auth import webauthn as webauthn_module
 
+    clock = _WindowClock(2)
+    monkeypatch.setattr(webauthn_module, "time", clock)
     cfg = _settings(
         database,
         redis_url,
@@ -276,8 +303,7 @@ def test_webauthn_login_options_ip_limit(database: Database, redis_url: str) -> 
         webauthn_options_window_seconds=2,
     )
     with TestClient(create_app(cfg)) as c:
-        time.sleep(2.1 - time.time() % 2)
         res = [c.post(f"{A}/login/webauthn/options", json={}).status_code for _ in range(3)]
         assert res == [200, 200, 429]
-        time.sleep(2.1)
+        clock.advance(2)
         assert c.post(f"{A}/login/webauthn/options", json={}).status_code == 200

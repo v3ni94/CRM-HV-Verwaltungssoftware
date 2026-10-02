@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from mhvp.contacts import services
+from mhvp.core.clock import local_today
 from mhvp.documents.models import RetentionStart
 from mhvp.main import create_app
 from mhvp.platform import services as platform
@@ -261,7 +262,7 @@ def test_retention_profile_reservation_only(client: TestClient, world: World) ->
 
     second = bearer(login(client, world, "p1second"))
     _ok(client.post(f"/api/v1/retention-profiles/{profile['id']}/release", headers=second), 200)
-    today = datetime.now(UTC).date()
+    today = local_today()
     assigned = _ok(client.put(f"/api/v1/contacts/{contact_id}", json=payload, headers=h), 200)
     assert assigned["retention_profile_id"] == profile["id"]
     expected = services.delete_after(

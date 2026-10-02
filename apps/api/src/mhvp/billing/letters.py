@@ -44,7 +44,7 @@ CENT = Decimal("0.01")
 
 def fmt_eur(value: Decimal) -> str:
     """``1.234,56 EUR`` (rule 10, section 4.1)."""
-    quantized = value.quantize(CENT)
+    quantized = value.quantize(CENT, rounding=ROUND_HALF_UP)
     sign = "-" if quantized < 0 else ""
     whole, cents = f"{abs(quantized):.2f}".split(".")
     groups: list[str] = []

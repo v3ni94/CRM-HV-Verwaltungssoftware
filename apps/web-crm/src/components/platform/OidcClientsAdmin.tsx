@@ -5,12 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type OidcClient = { client_id: string; name: string; redirect_uris: string[]; public: boolean; active: boolean };
 type WithSecret = OidcClient & { client_secret: string | null };
 
 /** GA01-12: OIDC-Clients der Plattform anlegen, Secret erneuern, (de)aktivieren. */
 export function OidcClientsAdmin() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("AA17.oidc");
   const [clients, setClients] = useState<OidcClient[]>([]);
   const [clientId, setClientId] = useState("");
@@ -100,11 +102,11 @@ export function OidcClientsAdmin() {
                     <td className={ui.small}>{c.redirect_uris.join(", ")}</td>
                     <td className="flex gap-2">
                       {c.public ? null : (
-                        <button type="button" className={ui.secondary} onClick={() => void rotate(c.client_id)}>
+                        <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => rotate(c.client_id))}>
                           {t("rotate")}
                         </button>
                       )}
-                      <button type="button" className={ui.secondary} onClick={() => void toggle(c)}>
+                      <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => toggle(c))}>
                         {c.active ? t("deactivate") : t("activate")}
                       </button>
                     </td>
@@ -115,7 +117,7 @@ export function OidcClientsAdmin() {
           </div>
         )}
       </div>
-      <form onSubmit={create} className={`${ui.card} flex flex-col gap-3`} aria-label={t("create")}>
+      <form onSubmit={guard(create)} className={`${ui.card} flex flex-col gap-3`} aria-label={t("create")}>
         <label htmlFor="aa17-oidc-id" className={ui.label}>
           {t("clientId")}
         </label>

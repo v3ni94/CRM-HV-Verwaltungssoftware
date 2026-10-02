@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { StatementLettersSendButton } from "@/components/gated/StatementLettersSendButton";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, readProblem } from "@/lib/problem";
@@ -176,6 +177,7 @@ export function StatementLettersPanel({ id, status, hasSnapshot }: { id: string;
           {error}
         </p>
       ) : null}
+      <StatementLettersSendButton statementId={id} />
     </section>
   );
 }

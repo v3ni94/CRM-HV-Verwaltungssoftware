@@ -75,3 +75,14 @@ Die CRM-eigenen Werte (`MHVP_API_WORKERS`, `MHVP_WORKER_CONCURRENCY`, `PG_*`) st
 Kerne mit den Nachbarstacks; bei dauerhaft hoher Last ist grundsätzlich zuerst zu prüfen,
 ob ein Nachbarstack seine Grenze braucht oder überschreitet, bevor die CRM-Werte erhöht
 werden.
+
+## Celery: Zeitlimits, Sperren und Queues (Welle 21, AJ11)
+
+Die zentrale Richtlinie liegt in `apps/api/src/mhvp/core/task_policy.py` und wird in `mhvp/worker.py` angewendet.
+
+- Zeitlimits je Taskklasse (Sekunden, weich und hart): kurz 240/300, mittel 900/1200 (Standard), lang 3600/4200, Import 10800/12600. Überschreibbar per Umgebung, zum Beispiel `MHVP_CELERY_LIMIT_IMPORT_SOFT` und `MHVP_CELERY_LIMIT_IMPORT_HARD`. Das weiche Limit muss unter dem harten liegen, sonst startet der Worker nicht.
+- `visibility_timeout` des Redis Brokers ergibt sich aus dem größten harten Limit plus 600 Sekunden. Wer Limits erhöht, erhöht damit automatisch das Sichtbarkeitsfenster, sodass ein Task mit später Bestätigung nicht doppelt ausgeliefert wird.
+- Die zwölf schnellen Beat Tasks (Takt bis fünf Minuten) erhalten eine Redis Sperre `mhvp:tasklock:<task>` (Lebensdauer hartes Limit plus 30 Sekunden) und ein Beat `expires` gleich ihrem Takt. Ein zweiter Lauf, während der erste noch läuft, wird übersprungen und protokolliert (`task_lock.skipped_overlap`). Ist Redis nicht erreichbar, läuft der Task ohne Sperre wie bisher. Abschalten mit `MHVP_CELERY_OVERLAP_LOCK_ENABLED=false`.
+- Wiederholung mit exponentiellem Backoff und Zufallsanteil (höchstens drei Versuche, höchstens 600 Sekunden Abstand) nur für ausgewählte idempotente, netzwerkabhängige Tasks ohne Beat Nachholung und nur bei Netzfehlern. Zahlungs, Mahn und Forderungsläufe werden nie automatisch wiederholt. Nach dem letzten Versuch erscheint `task.retries_exhausted` im Log; der Lauf muss dann erneut ausgelöst werden.
+- Jeder Beat Eintrag nennt eine Queue (ohne Angabe `default`); ein Test prüft Beat Plan, Queues und Limits.
+- Queues: Derzeit bedient ein Worker alle sieben Queues. Wenn lange KI oder Bankläufe E-Mail und Fristen Tasks spürbar verzögern, einen zweiten Worker mit `-Q ai,ocr,bank --concurrency 2` starten und den ersten auf `default,io,mail,beat` beschränken. Die Parallelität je Worker mit `--concurrency` an die Kernzahl anpassen. Die Beat Zeitplandatei liegt derzeit in `/tmp` des Containers und geht beim Neustart verloren (Folge: Takte beginnen neu, keine doppelten Läufe); für den Betrieb ein Volume vorsehen.

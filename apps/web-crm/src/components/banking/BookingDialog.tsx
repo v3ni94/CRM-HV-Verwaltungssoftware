@@ -25,6 +25,7 @@ import {
   type Transaction,
 } from "./bankTypes";
 import { CreditorContactButton } from "./CreditorContactButton";
+import { today as businessToday } from "@/lib/today";
 
 /** HOOK (plan M12 step S1): rejection of a deterministic stage 1 proposal with a mandatory
  *  reason needs the decision log endpoint (`POST /banking/transactions/{id}/reject`), which
@@ -106,7 +107,7 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
       setProposals(p.data);
       const ledgerId = p.data.ledger_id;
       if (ledgerId) {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = businessToday();
         const [a, o] = await Promise.all([
           bff<LedgerAccount[]>(`/api/bff/accounting/ledgers/${ledgerId}/accounts`),
           bff<OpenItem[]>(`/api/bff/accounting/ledgers/${ledgerId}/open-items?as_of=${today}`),

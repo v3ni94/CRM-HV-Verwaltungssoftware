@@ -1,6 +1,6 @@
 {
   "name": "@mhvp/web-crm",
-  "version": "0.1.0",
+  "version": "1.66.0",
   "private": true,
   "type": "module",
   "scripts": {

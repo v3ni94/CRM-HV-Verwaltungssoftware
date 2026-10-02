@@ -444,7 +444,20 @@ def _ingest_direct(
                 waiter.cancel()
                 first.result()  # surfaces the error of the first ingest
             second = asyncio.create_task(one(mailboxes[1], hold=False))
-            await asyncio.sleep(1.0)
+            # GAI-618: explicit synchronisation instead of a fixed sleep: the first commits
+            # only once the second waits for a database lock (or has already finished).
+            waiting_sql = sa.text(
+                "SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid ="
+                " l.pid WHERE NOT l.granted AND a.datname = current_database())"
+            )
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + 30
+            while not second.done():
+                async with engine.connect() as conn:
+                    if await conn.scalar(waiting_sql):
+                        break
+                assert loop.time() < deadline, "second ingest neither waits nor ends"
+                await asyncio.sleep(0.02)
             release.set()
             await asyncio.gather(first, second)
         finally:

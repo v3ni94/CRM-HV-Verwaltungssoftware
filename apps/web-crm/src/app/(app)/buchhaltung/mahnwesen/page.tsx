@@ -10,6 +10,7 @@ import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function DunningPage() {
   const t = await getTranslations("Dunning");
   const { data, error, response } = await serverApi().GET("/api/v1/accounting/dunning-runs");
   redirectIfUnauthenticated(response);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   return (
     <div className="flex flex-col gap-4">
       <PageHeader

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
+import { settleAmount } from "@/lib/money";
 import { ui } from "@/lib/ui";
 
 type Split = { open_item_id: string; amount: string; contract_id?: string | null };
@@ -71,13 +72,10 @@ export function TransactionMatcher({
     else setError(res.message);
   };
   const book = async (splits: Split[]) => {
-    const total = splits.reduce(
-      (sum, s) => sum + Math.round(Number(s.amount) * 100),
-      0,
+    const settle = settleAmount(
+      amount,
+      splits.map((s) => s.amount),
     );
-    const settle = (
-      Math.min(Math.round(Math.abs(Number(amount)) * 100), total) / 100
-    ).toFixed(2);
     if (!window.confirm(t("confirmBook", { amount: formatEur(settle) })))
       return;
     setBusy(true);

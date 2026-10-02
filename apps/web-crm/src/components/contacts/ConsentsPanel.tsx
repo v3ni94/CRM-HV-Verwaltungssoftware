@@ -8,6 +8,7 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { today } from "@/lib/today";
 
 // AE34: `record_type` "objection" marks an objection to a processing on legitimate interest;
 // it is listed with the consents but never counts as one. The field is optional until the
@@ -23,12 +24,12 @@ export function ConsentsPanel({ contactId, consents }: { contactId: string; cons
   const tl = useTranslations("Labels");
   const router = useRouter();
   const [kind, setKind] = useState<(typeof KINDS)[number]>("email_delivery");
-  const [grantedAt, setGrantedAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [grantedAt, setGrantedAt] = useState(() => today());
   const [source, setSource] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [oKind, setOKind] = useState<(typeof OBJECTION_KINDS)[number]>("marketing");
-  const [oDate, setODate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [oDate, setODate] = useState(() => today());
   const [oSource, setOSource] = useState("");
 
   async function submitObjection(event: React.FormEvent) {
@@ -36,7 +37,7 @@ export function ConsentsPanel({ contactId, consents }: { contactId: string; cons
     setError(null);
     const src = oSource.trim();
     if (src.length < 2 || src.length > 200) return setError(ta("objection.sourceInvalid"));
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(oDate) || oDate > new Date().toISOString().slice(0, 10)) return setError(ta("objection.dateInvalid"));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(oDate) || oDate > today()) return setError(ta("objection.dateInvalid"));
     setBusy(true);
     const result = await bff(`/api/bff/contacts/${contactId}/objections`, {
       method: "POST",

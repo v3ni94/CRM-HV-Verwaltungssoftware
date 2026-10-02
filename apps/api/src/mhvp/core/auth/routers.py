@@ -22,7 +22,7 @@ from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.core.request_identity import client_ip
+from mhvp.core.request_identity import settings_client_ip
 from mhvp.platform.models import (
     Membership,
     MembershipRole,
@@ -719,6 +719,12 @@ async def revoke_trusted_device(
         sessions(request), principal.user_id, device_id
     ):
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    await _audit(
+        request,
+        principal.user_id,
+        audit.TRUSTED_DEVICE_REVOKED,
+        payload={"device_id": str(device_id)},
+    )
     return Response(status_code=204)
 
 
@@ -876,7 +882,7 @@ async def webauthn_register_options(
         _redis(request),
         settings,
         scope="register",
-        ip=client_ip(request.scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for),
+        ip=settings_client_ip(request.scope, settings),
         user_id=str(principal.user_id),
     )
     passwordless = bool(body and body.passwordless)
@@ -1008,7 +1014,7 @@ async def webauthn_login_options(
         _redis(request),
         settings,
         scope="login",
-        ip=client_ip(request.scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for),
+        ip=settings_client_ip(request.scope, settings),
         user_id=str(user_id) if user_id else None,
     )
     if user_id is not None:

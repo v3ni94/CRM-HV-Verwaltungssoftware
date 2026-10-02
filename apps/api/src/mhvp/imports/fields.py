@@ -7,9 +7,10 @@ Values are parsed strictly: an unreadable number or date is an error, never a gu
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 
+from mhvp.core.money import parse_decimal_strict
 from mhvp.imports.models import ReportType
 
 
@@ -115,22 +116,12 @@ FIELDS: dict[ReportType, tuple[Field, ...]] = {
 }
 
 _DATE = re.compile(r"^(\d{1,2})\.(\d{1,2})\.(\d{4})$")
-_GERMAN_NUMBER = re.compile(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$|^-?\d+(,\d+)?$")
 
 
 def parse_decimal(value: Any) -> Decimal:
-    if isinstance(value, bool):
-        raise ValueError("Zahl nicht lesbar (Wahrheitswert)")
-    if isinstance(value, int | float | Decimal):
-        return Decimal(str(value))
-    text = str(value).strip().replace("\u00a0", "").replace(" ", "")
-    text = text.removesuffix("EUR").removesuffix("€").removesuffix("%")
-    if _GERMAN_NUMBER.match(text):
-        return Decimal(text.replace(".", "").replace(",", "."))
-    try:
-        return Decimal(text)  # already with a decimal point (e.g. 71.35)
-    except InvalidOperation:
-        raise ValueError(f"Zahl {value!r} nicht lesbar") from None
+    """German or plain numbers; ambiguous ``12.500`` is rejected, Excel floats are rounded
+    half up to eight decimals (GAI-205, GAI-206; ``core.money.parse_decimal_strict``)."""
+    return parse_decimal_strict(value)
 
 
 def parse_date(value: Any) -> date:

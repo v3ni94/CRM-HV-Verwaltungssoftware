@@ -5,7 +5,7 @@ are operating metrics (counts and sums), never domain data. No price is seeded: 
 an operator decision (M27-01). Readiness never opens a gate; G5 stays a per tenant flag."""
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
+from mhvp.core.clock import local_today
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -182,7 +183,7 @@ async def sync_price_to_structure(session: AsyncSession, module: str) -> None:
     )
     if item is None:
         return
-    price = await _price(session, module, datetime.now(UTC).date())
+    price = await _price(session, module, local_today())
     if price is not None:
         item.amount = price
 
@@ -434,7 +435,7 @@ async def count_usage(
             session.add(row)
         row.units, row.users, row.ai_cost_eur, row.storage_bytes = units, users, ai, storage
         # Daily history (M27-05): one snapshot per day, only for the running month.
-        today = datetime.now(UTC).date()
+        today = local_today()
         if start == today.replace(day=1):
             snap = await session.scalar(
                 select(UsageCounterDaily).where(
@@ -485,7 +486,7 @@ async def usage_history(
 
     days = min(max(days, 1), 731)
     months = min(max(months, 1), 60)
-    since = datetime.now(UTC).date() - timedelta(days=days)
+    since = local_today() - timedelta(days=days)
     async with platform_transaction(sessions(request)) as session:
         if await session.get(Tenant, tenant_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -532,7 +533,7 @@ async def readiness(
     from mhvp.platform.models import Tenant
     from mhvp.properties.models import Property
 
-    day = as_of or datetime.now(UTC).date()
+    day = as_of or local_today()
     factory = sessions(request)
     async with platform_transaction(factory) as session:
         tenant = await session.get(Tenant, tenant_id)
@@ -607,7 +608,7 @@ async def usage_all_once(settings: Any, month: date | None = None) -> dict[str, 
                 )
             )
         for tenant_id in ids:
-            await count_usage(factory, tenant_id, month or datetime.now(UTC).date())
+            await count_usage(factory, tenant_id, month or local_today())
             counted += 1
     finally:
         await engine.dispose()

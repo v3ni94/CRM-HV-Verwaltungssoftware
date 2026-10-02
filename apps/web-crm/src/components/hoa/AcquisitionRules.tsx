@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 /** AE10 (AA07-01): tenant rule per acquisition kind. Default is manual release; the legal
  *  question per kind is open, the screen only configures the proposed debtor of drafts. */
@@ -13,7 +14,9 @@ type Rule = { acquisition_kind: string; kind_label: string; variant: string; is_
 type Payload = { items: Rule[]; variants: { code: string; label: string }[]; note: string };
 
 export function AcquisitionRules() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("HoaAcquisitionRule");
+  const tCommon = useTranslations("Common");
   const [data, setData] = useState<Payload | null>(null);
   const [edits, setEdits] = useState<Record<string, { variant?: string; source_note?: string }>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -55,6 +58,7 @@ export function AcquisitionRules() {
       ) : null}
       {message ? <p role="status">{message}</p> : null}
       <ul className="mt-2 flex flex-col gap-3">
+        {(data?.items ?? []).length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
         {(data?.items ?? []).map((rule) => (
           <li key={rule.acquisition_kind} className="flex flex-wrap items-end gap-2 rounded border border-border p-3">
             <span className="min-w-40 font-medium">{rule.kind_label}</span>
@@ -81,7 +85,7 @@ export function AcquisitionRules() {
                 onChange={(e) => setEdits({ ...edits, [rule.acquisition_kind]: { ...edits[rule.acquisition_kind], source_note: e.target.value } })}
               />
             </label>
-            <button type="button" className={ui.secondary} onClick={() => void save(rule)}>
+            <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => save(rule))}>
               {t("save")}
             </button>
           </li>

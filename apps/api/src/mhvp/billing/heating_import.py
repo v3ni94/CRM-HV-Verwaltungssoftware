@@ -13,7 +13,7 @@ import csv
 import io
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 from sqlalchemy import select
@@ -41,13 +41,13 @@ def _money(value: Any, label: str) -> Decimal:
         amount = Decimal(str(value))
     except InvalidOperation:
         raise ProblemError(ErrorCodes.VALIDATION, detail=f"{label}: keine Zahl.") from None
-    if amount != amount.quantize(CENT):
+    if amount != amount.quantize(CENT, rounding=ROUND_HALF_UP):
         raise ProblemError(
             ErrorCodes.VALIDATION, detail=f"{label}: mehr als zwei Nachkommastellen."
         )
     if amount < 0:
         raise ProblemError(ErrorCodes.VALIDATION, detail=f"{label}: negativ.")
-    return amount.quantize(CENT)
+    return amount.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
 def normalise_rows(rows: list[dict[str, Any]]) -> list[dict[str, str]]:

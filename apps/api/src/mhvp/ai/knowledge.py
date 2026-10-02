@@ -27,6 +27,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai.models import AiKnowledgeEntry, AiKnowledgeStatus
+from mhvp.core.clock import local_today
 
 STALE_AFTER_DAYS = 180
 MAX_CONTEXT_ENTRIES = 30
@@ -125,7 +126,7 @@ async def context(
     """Context text ("-" when empty) and the entries used, ranked by similarity to
     ``question`` when embeddings exist, newest first otherwise. ``record`` bumps the usage
     counters of the used entries in the caller's transaction."""
-    today = datetime.now(UTC).date()
+    today = local_today()
     rows = list(
         await session.scalars(
             approved_query(property_id, today).order_by(AiKnowledgeEntry.created_at.desc())

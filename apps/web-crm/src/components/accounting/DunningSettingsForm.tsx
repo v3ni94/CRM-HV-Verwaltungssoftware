@@ -373,6 +373,7 @@ export function DunningSettingsForm({
               <tr key={i}>
                 <td>
                   <input
+                    aria-label={t("levelNo")}
                     type="number"
                     min={1}
                     className={`${ui.input} w-16`}
@@ -383,6 +384,7 @@ export function DunningSettingsForm({
                 </td>
                 <td>
                   <input
+                    aria-label={t("minDays")}
                     type="number"
                     min={0}
                     className={`${ui.input} w-20`}
@@ -393,6 +395,7 @@ export function DunningSettingsForm({
                 </td>
                 <td>
                   <input
+                    aria-label={t("levelText")}
                     className={ui.input}
                     value={lv.text}
                     onChange={(e) => updateLevel(i, { text: e.target.value })}
@@ -401,6 +404,7 @@ export function DunningSettingsForm({
                 </td>
                 <td>
                   <input
+                    aria-label={t("feeAmount")}
                     className={`${ui.input} w-28`}
                     value={lv.fee_amount ?? ""}
                     onChange={(e) => updateLevel(i, { fee_amount: e.target.value || null })}
@@ -409,6 +413,7 @@ export function DunningSettingsForm({
                 </td>
                 <td>
                   <input
+                    aria-label={t("paymentDays")}
                     type="number"
                     min={0}
                     className={`${ui.input} w-20`}
@@ -421,6 +426,7 @@ export function DunningSettingsForm({
                 </td>
                 <td>
                   <textarea
+                    aria-label={t("letterText")}
                     className={`${ui.input} min-w-[16rem]`}
                     rows={2}
                     value={lv.letter_text ?? ""}

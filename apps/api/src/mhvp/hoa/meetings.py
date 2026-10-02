@@ -8,7 +8,7 @@ individual community (Teilungserklärung, Vereinbarungen) are not known to the s
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -1325,7 +1326,7 @@ async def create_audit(
         }
         data = body.model_dump(exclude={"accounts", "auditor_contact_ids"})
         if data.get("data_as_of") is None:
-            data["data_as_of"] = datetime.now(UTC).date()
+            data["data_as_of"] = local_today()
         row = AuditEngagement(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -1669,7 +1670,7 @@ async def create_report(
             ),
             "findings": body.findings,
             "recommendation": body.recommendation,
-            "date": datetime.now(UTC).date().isoformat(),
+            "date": local_today().isoformat(),
         }
         row = AuditReport(
             tenant_id=principal.tenant_id,
@@ -1684,7 +1685,7 @@ async def create_report(
 
 
 def _money(value: Decimal) -> str:
-    return str(value.quantize(Decimal("0.01")))
+    return str(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def _overall_status(items: Sequence[AuditItem]) -> str:
@@ -2038,7 +2039,7 @@ async def protocol_draft(
         blobs = BlobStore(request.app.state.settings)
         head = await docs.letterhead(session, blobs)
         context, missing = await protocol.build_context(session, meeting)
-        draft = protocol.compose(context, missing, datetime.now(UTC).date())
+        draft = protocol.compose(context, missing, local_today())
         pdf = protocol.render(head, draft)
         document = await docs.store_document(
             session,

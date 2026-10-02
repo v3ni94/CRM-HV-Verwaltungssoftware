@@ -14,6 +14,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +24,7 @@ from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
     session_allowed_legal_entity_ids,
 )
+from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import (
@@ -305,6 +307,20 @@ def _measure_out(m: HoaMeasure) -> dict[str, Any]:
     }
 
 
+def _ev(
+    principal: TenantPrincipal, after: dict[str, Any], before: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Event arguments with old and new values for webhooks and the audit chain (GAI-105)."""
+    after_j = jsonable_encoder(after)
+    before_j = jsonable_encoder(before) if before is not None else {}
+    return {
+        "tenant_id": principal.tenant_id,
+        "actor_user_id": principal.user_id,
+        "payload": after_j,
+        "changes": diff(before_j, after_j),
+    }
+
+
 @router.post("/measures", status_code=201, summary="Größere Maßnahme anlegen (W10)")
 async def create_measure(
     body: MeasureIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -327,7 +343,15 @@ async def create_measure(
         )
         session.add(row)
         await session.flush()
-        return _measure_out(row)
+        out = _measure_out(row)
+        await emit(
+            session,
+            type="hoa.measure.created",
+            entity_type="hoa_measure",
+            entity_id=row.id,
+            **_ev(principal, out),
+        )
+        return out
 
 
 @router.get("/measures", summary="Maßnahmen einer GdWE", dependencies=[Depends(strict_query)])
@@ -403,11 +427,20 @@ async def patch_measure(
                 ErrorCodes.VALIDATION, detail="Status beschlossen braucht einen Beschluss (W06)."
             )
         await _check_resolution(session, body.resolution_id, m.legal_entity_id)
+        before = _measure_out(m)
         for field, value in body.model_dump(exclude_none=True).items():
             setattr(m, field, value)
         m.updated_by = principal.user_id
         await session.flush()
-        return _measure_out(m)
+        out = _measure_out(m)
+        await emit(
+            session,
+            type="hoa.measure.updated",
+            entity_type="hoa_measure",
+            entity_id=m.id,
+            **_ev(principal, out, before),
+        )
+        return out
 
 
 @router.post(
@@ -442,7 +475,15 @@ async def add_financing(
         )
         session.add(row)
         await session.flush()
-        return {"id": row.id, "measure_id": m.id, "source": row.source, "amount": str(row.amount)}
+        out = {"id": row.id, "measure_id": m.id, "source": row.source, "amount": str(row.amount)}
+        await emit(
+            session,
+            type="hoa.measure.financing_added",
+            entity_type="hoa_measure",
+            entity_id=m.id,
+            **_ev(principal, out),
+        )
+        return out
 
 
 # Loans ------------------------------------------------------------------------------------
@@ -489,7 +530,15 @@ async def create_loan(
         )
         session.add(row)
         await session.flush()
-        return _loan_out(row)
+        out = _loan_out(row)
+        await emit(
+            session,
+            type="hoa.loan.created",
+            entity_type="hoa_loan",
+            entity_id=row.id,
+            **_ev(principal, out),
+        )
+        return out
 
 
 @router.get("/loans", summary="Darlehen einer GdWE", dependencies=[Depends(strict_query)])
@@ -624,7 +673,15 @@ async def add_loan_item(
         if status == "posted" and loan.status == "draft" and body.kind == "disbursement":
             loan.status = "active"
         await session.flush()
-        return (await _items_out(session, [row], loan.ledger_id))[0]
+        out = (await _items_out(session, [row], loan.ledger_id))[0]
+        await emit(
+            session,
+            type="hoa.loan.item_added",
+            entity_type="hoa_loan",
+            entity_id=loan.id,
+            **_ev(principal, out),
+        )
+        return out
 
 
 # Insurance claims -------------------------------------------------------------------------
@@ -667,7 +724,15 @@ async def create_claim(
         )
         session.add(row)
         await session.flush()
-        return _claim_out(row)
+        out = _claim_out(row)
+        await emit(
+            session,
+            type="hoa.insurance_claim.created",
+            entity_type="hoa_insurance_claim",
+            entity_id=row.id,
+            **_ev(principal, out),
+        )
+        return out
 
 
 @router.get(
@@ -731,11 +796,20 @@ async def patch_claim(
     async with tenant_tx(request, principal) as session:
         c = await _get(session, HoaInsuranceClaim, claim_id)
         await _check_resolution(session, body.resolution_id, c.legal_entity_id)
+        before = _claim_out(c)
         for field, value in body.model_dump(exclude_none=True).items():
             setattr(c, field, value)
         c.updated_by = principal.user_id
         await session.flush()
-        return _claim_out(c)
+        out = _claim_out(c)
+        await emit(
+            session,
+            type="hoa.insurance_claim.updated",
+            entity_type="hoa_insurance_claim",
+            entity_id=c.id,
+            **_ev(principal, out, before),
+        )
+        return out
 
 
 @router.post(
@@ -774,4 +848,12 @@ async def add_claim_item(
         )
         session.add(row)
         await session.flush()
-        return (await _items_out(session, [row], c.ledger_id))[0]
+        out = (await _items_out(session, [row], c.ledger_id))[0]
+        await emit(
+            session,
+            type="hoa.insurance_claim.item_added",
+            entity_type="hoa_insurance_claim",
+            entity_id=c.id,
+            **_ev(principal, out),
+        )
+        return out

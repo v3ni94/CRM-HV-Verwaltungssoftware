@@ -15,6 +15,7 @@ import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function LedgerReportsPage({
   searchParams: Promise<Params>;
 }) {
   const [{ id }, query, t] = await Promise.all([params, searchParams, getTranslations("Accounting")]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   const asOf = query.as_of || today;
   const start = query.start || firstOfYear(today);
   const end = query.end || today;

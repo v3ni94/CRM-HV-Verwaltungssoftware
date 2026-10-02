@@ -5,6 +5,9 @@ import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { StatementLettersPanel } from "./StatementLettersPanel";
 
+// AJ28: the gated child reads the gate state itself (own test in components/gated).
+vi.mock("@/components/gated/StatementLettersSendButton", () => ({ StatementLettersSendButton: () => null }));
+
 const ID = "0192abcd-0000-7000-8000-000000000021";
 const CID = "0192abcd-0000-7000-8000-000000000022";
 const ROW = {

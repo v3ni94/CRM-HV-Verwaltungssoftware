@@ -6,6 +6,7 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type InspectionContract = { contract_id: string; unit_number: string };
 type Inspection = {
@@ -26,6 +27,7 @@ const PROVISIONS = ["electronic", "copies", "appointment"] as const;
 /** GAF-13: record requests to inspect the receipts (rental statement), their provision and
  *  objections. Loaded on demand. Records only, no legal effect and no deadline calculation. */
 export function StatementInspectionsPanel({ id, contracts }: { id: string; contracts: InspectionContract[] }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("BillingExtra.inspections");
   const base = `/api/bff/statements/${id}/inspections`;
   const [rows, setRows] = useState<Inspection[] | null>(null);
@@ -65,7 +67,7 @@ export function StatementInspectionsPanel({ id, contracts }: { id: string; contr
       <h3 className={ui.h2}>{t("title")}</h3>
       <p className={ui.notice}>{t("notice")}</p>
       <div className="flex flex-wrap items-end gap-2">
-        <button type="button" className={ui.secondary} onClick={() => void load()}>
+        <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => load())}>
           {t("load")}
         </button>
       </div>
@@ -101,7 +103,7 @@ export function StatementInspectionsPanel({ id, contracts }: { id: string; contr
                 ))}
               </select>
             </label>
-            <button type="button" className={ui.button} disabled={!contract || !requestedAt} onClick={() => void create()}>
+            <button type="button" className={ui.button} disabled={busy || (!contract || !requestedAt)} onClick={guard(() => create())}>
               {t("add")}
             </button>
           </div>
@@ -142,7 +144,7 @@ export function StatementInspectionsPanel({ id, contracts }: { id: string; contr
                               ))}
                             </select>
                             <input className={ui.input} type="date" aria-label={t("providedAt")} value={providedAt} onChange={(e) => setProvidedAt(e.target.value)} />
-                            <button type="button" className={ui.secondary} disabled={!providedAt} onClick={() => void patch(r.id, { provision, provided_at: providedAt })}>
+                            <button type="button" className={ui.secondary} disabled={busy || (!providedAt)} onClick={guard(() => patch(r.id, { provision, provided_at: providedAt }))}>
                               {t("provide")}
                             </button>
                             <input className={ui.input} type="date" aria-label={t("objectionDate")} value={objectionAt} onChange={(e) => setObjectionAt(e.target.value)} />
@@ -150,12 +152,12 @@ export function StatementInspectionsPanel({ id, contracts }: { id: string; contr
                             <button
                               type="button"
                               className={ui.secondary}
-                              disabled={!objection.trim() || !objectionAt}
-                              onClick={() => void patch(r.id, { objection_received_at: objectionAt, objection_text: objection })}
+                              disabled={busy || (!objection.trim() || !objectionAt)}
+                              onClick={guard(() => patch(r.id, { objection_received_at: objectionAt, objection_text: objection }))}
                             >
                               {t("recordObjection")}
                             </button>
-                            <button type="button" className={ui.secondary} onClick={() => void patch(r.id, { close: true })}>
+                            <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => patch(r.id, { close: true }))}>
                               {t("close")}
                             </button>
                           </>

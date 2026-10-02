@@ -81,7 +81,7 @@ describe("BusinessRulesList", () => {
     expect(r.getByTestId("default-rent-invoice-numbering")).toHaveTextContent("Entwurfsnummer ENTWURF-JJJJ-NNNNNN");
     expect(r.getAllByText(/Reguläre Rechnungsnummer MR auch im Entwurf/).length).toBeGreaterThan(0);
     expect(r.getByText("AC03-01")).toBeInTheDocument();
-    expect(r.getAllByText(/in docs\/OPEN_QUESTIONS\.md/).length).toBeGreaterThan(0);
+    expect(r.getAllByText(/in der Liste offener Fragen/).length).toBeGreaterThan(0);
     expect(r.getByRole("link", { name: "Fachmaske öffnen" })).toHaveAttribute("href", "/vertraege");
     // several questions use the plural label
     expect(within(row("period-lock-mode")).getByText("Offene Fragen")).toBeInTheDocument();

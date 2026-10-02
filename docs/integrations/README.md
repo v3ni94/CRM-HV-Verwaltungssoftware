@@ -40,3 +40,11 @@ markiert. Der Nachweis des Wissensdatenbank-Eintrags je Dossier steht aus (Frage
 | Übergabeprotokoll | Wohnungsübergaben | Modul `handover` (M30), Importer `uprotokoll_import` | übernommen, Dossier Entwurf (`dossier-uebergabeprotokoll.md`) | Kompatibilität des Exportformats, Stilllegung nach Übernahme der Altprotokolle |
 | Objektakte | Objektordner, Dokumentablage | lesende API und Webhooks (`objektakte.md`) | Vertrag M29 Stufe 3 und 4, Dossier (`dossier-objektakte.md`) | interner Aufbau, Kontakt-ID wirkt dort noch nicht, Löschung folgt eigenen Regeln |
 | smart-einzug | Lastschrifteinzug, gekoppelt an lexoffice | ausgehende Webhooks `contact.updated`, `contact.mandate_iban_changed`, `invoice.issued` (`smart-einzug.md`, `webhooks.md`) | Sendeseite umgesetzt und getestet (Test `test_ga09_smart_einzug_contact_updated.py`), Empfangsseite unbekannt | Empfangsschnittstelle, Signaturprüfung durch smart-einzug, VPS-Betrieb |
+
+## Kennzeichnung offener Dossierangaben (GAI-118, Stand 02.10.2026)
+
+In den Dossiers der Bestandsprojekte (Müller FLOW, Übergabeprotokoll, smart-einzug) steht jede
+Angabe, die nur der Betreiber durch einen Erhebungslauf nach Anhang B des Master-Prompts liefern
+kann, einheitlich als sichtbarer Platzhalter `[Betreiber-Erhebung offen, V1 ...]`. Die Suche nach
+diesem Text listet alle offenen Stellen. Ein Platzhalter wird nur durch belegte Angaben ersetzt,
+nie durch Vermutungen. Verantwortlich: Timo Müller (OPEN_QUESTIONS V1, AA16-03).

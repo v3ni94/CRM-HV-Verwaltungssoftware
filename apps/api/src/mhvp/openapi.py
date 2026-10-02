@@ -11,12 +11,13 @@ Entfernungen nur mit v2, Deprecation-Header mindestens 6 Monate).
 
 import json
 import sys
-from datetime import UTC, date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from pydantic import SecretStr
 
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings
 from mhvp.main import create_app
 
@@ -91,7 +92,7 @@ def breaking_removals(
     component schema of ``old`` missing in ``new`` while still referenced in ``new``; a
     property of a component schema present in both documents that is missing in ``new``
     unless the old property was ``deprecated: true``. Additive changes are never reported."""
-    today = today or datetime.now(UTC).date()
+    today = today or local_today()
     problems: list[str] = []
     old_ops, new_ops = _operations(old), _operations(new)
     for key in sorted(old_ops):

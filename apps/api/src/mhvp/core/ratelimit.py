@@ -10,6 +10,12 @@ the problem code ``MHVP-CORE-0006``. Health endpoints are exempt.
 The middleware fails open: if Redis is unavailable the request passes without headers and a
 warning is logged, because availability of the platform ranks above the limit and the edge
 proxy keeps its own limit (section 3, Traefik).
+
+GAI-312: with ``rate_limit_token_routes_fail_closed`` (default off) anonymous requests to the
+token and code routes (``TOKEN_ROUTE_PREFIXES``) are counted by an in-process emergency
+counter while Redis is unavailable, so a Redis outage does not lift the limit for routes that
+check secrets. The counter is per worker process (with n workers the effective limit is up to
+n times the configured one); it is a fallback, not a replacement of the Redis counter.
 """
 
 import time
@@ -22,10 +28,33 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from mhvp.core.config import Settings
 from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, problem_response
-from mhvp.core.request_identity import client_ip, identify
+from mhvp.core.request_identity import identify, settings_client_ip
 
 WINDOW_SECONDS = 60
 EXEMPT_PREFIXES = ("/api/v1/health",)
+# GAI-312: anonymous routes that check a token or code (login, MFA, magic link, invitation,
+# self disclosure, calendar feed).
+TOKEN_ROUTE_PREFIXES = (
+    "/api/v1/auth/",
+    "/api/v1/portal/magic-link/",
+    "/api/v1/portal/invitations/",
+    "/api/v1/portal/terms/accept",
+    "/api/v1/letting/self-disclosure/",
+    "/api/v1/workspace/calendar-feed/",
+)
+_LOCAL_MAX_KEYS = 10_000
+_local_window = [0]
+_local_counts: dict[str, int] = {}
+
+
+def _local_incr(key: str, window: int) -> int:
+    """In-process emergency counter (GAI-312); reset per window, size bounded."""
+    if _local_window[0] != window or len(_local_counts) >= _LOCAL_MAX_KEYS:
+        _local_counts.clear()
+        _local_window[0] = window
+    _local_counts[key] = _local_counts.get(key, 0) + 1
+    return _local_counts[key]
+
 
 _log = get_logger("mhvp.ratelimit")
 
@@ -54,7 +83,7 @@ class RateLimitMiddleware:
             return
 
         identity = identify(scope, settings)
-        address = client_ip(scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for)
+        address = settings_client_ip(scope, settings)
         if identity is None:
             limit = settings.rate_limit_per_minute_anonymous
             subject = "ip:" + address
@@ -80,8 +109,14 @@ class RateLimitMiddleware:
                 count = int((await pipe.execute())[0])
         except (RedisError, OSError):
             _log.warning("ratelimit_unavailable", path=path)
-            await self.app(scope, receive, send)
-            return
+            if not (
+                settings.rate_limit_token_routes_fail_closed
+                and identity is None
+                and path.startswith(TOKEN_ROUTE_PREFIXES)
+            ):
+                await self.app(scope, receive, send)
+                return
+            count = _local_incr(f"rl:{subject}:{window}", window)
 
         headers = _headers(limit, limit - count, reset)
         if count > limit:

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ContactPicker, type PickedContact } from "@/components/hoa/ContactPicker";
 import { bff } from "@/lib/bff";
+import { sumShares } from "@/lib/money";
 import { ui } from "@/lib/ui";
 
 export const PARTY_ROLES = ["primary", "co_party", "guarantor", "legal_representative"] as const;
@@ -28,7 +29,7 @@ function shareValue(value: string | null): string | null {
 }
 
 function shareSum(members: PartyMember[]): number {
-  return members.reduce((sum, m) => sum + (Number.parseFloat(shareValue(m.share_percent) ?? "0") || 0), 0);
+  return sumShares(members.map((m) => shareValue(m.share_percent)));
 }
 
 /** Contracting parties of a contact (M3-01, 6.1 party and party_member): list, create, edit

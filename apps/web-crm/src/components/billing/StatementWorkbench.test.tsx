@@ -44,6 +44,35 @@ describe("StatementWorkbench", () => {
   });
 });
 
+describe("StatementWorkbench new version", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("requires a correction reason of at least 5 characters and sends it", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "x", version: 2 }, 201));
+    renderIntl(<StatementWorkbench id={ID} status="issued" keys={KEYS} />);
+    await userEvent.click(screen.getByText("Neue Version"));
+    const confirm = screen.getByText("Neue Version anlegen");
+    expect(confirm).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Korrekturgrund"), " abc ");
+    expect(confirm).toBeDisabled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText("Korrekturgrund"), "Heizkosten falsch");
+    await userEvent.click(confirm);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/bff/statements/${ID}/new-version`);
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ reason: "abc Heizkosten falsch" });
+  });
+
+  it("can be cancelled without a request", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    renderIntl(<StatementWorkbench id={ID} status="issued" keys={KEYS} />);
+    await userEvent.click(screen.getByText("Neue Version"));
+    await userEvent.click(screen.getByText("Abbrechen"));
+    expect(screen.queryByTestId("statement-new-version-dialog")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("StatementWorkbench hints", () => {
   it("explains that a second person approves internally", () => {
     renderIntl(<StatementWorkbench id={ID} status="calculated" keys={KEYS} />);

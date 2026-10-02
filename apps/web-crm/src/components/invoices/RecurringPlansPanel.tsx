@@ -8,6 +8,7 @@ import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { RecurringPlanCreate } from "./RecurringPlanCreate";
+import { useBusy } from "@/lib/use-busy";
 
 type Option = { id: string; label: string };
 type Plan = {
@@ -19,6 +20,7 @@ const MONEY = /^\d+([.,]\d{1,2})?$/;
 
 /** M14-01: recurring invoice plans of a ledger. Generating creates an unreviewed draft only. */
 export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("RecurringPlans");
   const [ledger, setLedger] = useState(ledgers[0]?.id ?? "");
   const [rows, setRows] = useState<Plan[] | null>(null);
@@ -145,14 +147,14 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
                   <td className="flex flex-wrap gap-2">
                     {p.ended_at ? null : (
                       <>
-                        <button type="button" className={ui.buttonSm} onClick={() => void act(`${p.id}/generate`, { method: "POST" }, t("generated"))}>
+                        <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => act(`${p.id}/generate`, { method: "POST" }, t("generated")))}>
                           {t("generate")}
                         </button>
                         <button type="button" className={ui.buttonSm} onClick={() => startEdit(p)}>{t("edit")}</button>
                         <button type="button" className={ui.buttonSm} onClick={() => setEnding(p.id)}>{t("end")}</button>
                       </>
                     )}
-                    <button type="button" className={ui.buttonSm} onClick={() => void act(p.id, { method: "DELETE" }, t("deleted"))}>{t("delete")}</button>
+                    <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => act(p.id, { method: "DELETE" }, t("deleted")))}>{t("delete")}</button>
                   </td>
                 </tr>
               ))}
@@ -178,7 +180,7 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
           </div>
           <p className={ui.help}>{t("editHint")}</p>
           <div className="flex gap-2">
-            <button type="button" className={ui.primary} disabled={!editValid} onClick={() => void saveEdit()}>{t("save")}</button>
+            <button type="button" className={ui.primary} disabled={busy || (!editValid)} onClick={guard(() => saveEdit())}>{t("save")}</button>
             <button type="button" className={ui.button} onClick={() => setEditing(null)}>{t("cancel")}</button>
           </div>
         </section>
@@ -196,8 +198,8 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
           <button
             type="button"
             className={ui.primary}
-            disabled={!end.ended_at || end.reason.trim().length < 3}
-            onClick={() => void act(`${ending}/end`, { method: "POST", body: JSON.stringify({ ended_at: end.ended_at, reason: end.reason.trim() }) }, t("endedDone"))}
+            disabled={busy || (!end.ended_at || end.reason.trim().length < 3)}
+            onClick={guard(() => act(`${ending}/end`, { method: "POST", body: JSON.stringify({ ended_at: end.ended_at, reason: end.reason.trim() }) }, t("endedDone")))}
           >
             {t("endConfirm")}
           </button>

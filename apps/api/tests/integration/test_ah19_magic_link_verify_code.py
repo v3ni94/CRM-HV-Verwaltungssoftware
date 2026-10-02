@@ -230,3 +230,47 @@ def test_verify_code_rate_limited(database: Database, redis_url: str) -> None:
     assert all(c == 401 for c in codes[:first]), codes
     assert all(c == 429 for c in codes[first:]), codes
     assert first == 3
+
+
+def test_verify_code_locked_after_five_failures(
+    client: TestClient, world: tuple[World, uuid.UUID, uuid.UUID], app_settings: Any
+) -> None:
+    """GAI-310: five wrong codes invalidate code and link; the correct code is then refused
+    and every failure is recorded as an event without the code."""
+    from sqlalchemy import select
+
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.events import DomainEvent
+
+    w, a, _b = world
+    account_id = _account_with_2fa(client, w, a, "AH19 Sperre")
+    link_id = _consumed_link(client, app_settings, a, account_id, expired=False)
+    for _ in range(5):
+        resp = _verify(client, a, link_id, "000001")
+        assert resp.status_code == 401, resp.text
+    assert _verify(client, a, link_id, CODE).status_code == 401
+
+    async def check() -> None:
+        engine = create_app_engine(app_settings)
+        try:
+            async with tenant_transaction(create_session_factory(engine), a) as session:
+                row = await session.get(MagicLoginLink, link_id)
+                assert row is not None
+                assert row.code_failed_attempts == 5
+                assert row.code_used_at is None
+                assert row.expires_at <= datetime.now(UTC)
+                events = (
+                    await session.scalars(
+                        select(DomainEvent).where(
+                            DomainEvent.entity_id == link_id,
+                            DomainEvent.type == "portal.magic_link.code_failed",
+                        )
+                    )
+                ).all()
+                assert len(events) == 5
+                assert any(e.payload.get("locked") for e in events)
+                assert all("code" not in e.payload for e in events)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(check())

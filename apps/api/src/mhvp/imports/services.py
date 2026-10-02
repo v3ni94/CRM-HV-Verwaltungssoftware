@@ -9,7 +9,7 @@ import csv
 import io
 import uuid
 from collections import Counter
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -24,6 +24,7 @@ from mhvp.contacts.models import Contact, Party, PartyMember
 from mhvp.contracts import schemas as contract_schemas
 from mhvp.contracts import services as contract_services
 from mhvp.contracts.models import Contract, ContractKind, ContractPayment, PaymentReason
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import w3_reports, w5_reports
@@ -283,7 +284,7 @@ async def _apply_contact(
     if v.get("iban"):
         try:
             # The export carries no validity date: the account counts from the import day (A-021).
-            today = datetime.now(UTC).date()
+            today = local_today()
             data["bank_accounts"] = [
                 cs.BankAccountIn(iban=v["iban"], valid_from=today).model_dump()
             ]

@@ -223,6 +223,15 @@ async def delete_template(
                 detail="Zu dieser Vorlage liegen Einreichungen vor. Bitte deaktivieren.",
             )
         await session.delete(t)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="portal_form_template.deleted",
+            entity_type="portal_form_template",
+            entity_id=template_id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
 
 
 @admin.get(

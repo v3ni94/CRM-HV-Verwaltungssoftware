@@ -278,6 +278,7 @@ def test_rental_tenancy_lifecycle(client: TestClient, world: World) -> None:
     assert client.get("/api/v1/contracts", headers=caretaker).status_code == 403
 
 
+@pytest.mark.annex_d("D16", "D17")
 def test_ownership_transfer_and_sev(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "m5admin"))
     weg = _property(client, h, "502", "hoa_with_sev")

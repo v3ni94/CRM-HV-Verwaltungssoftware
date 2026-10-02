@@ -430,9 +430,16 @@ def test_operating_cost_statement(clients: tuple[TestClient, TestClient], world:
         ).status_code
         == 409
     )
-    v2 = _ok(client.post(f"{S}/{st['id']}/new-version", headers=h), 201)
+    # GAI-602: the correction reason is mandatory (min 5 characters) and kept in the version.
+    nv_url = f"{S}/{st['id']}/new-version"
+    assert client.post(nv_url, headers=h).status_code == 422
+    assert client.post(nv_url, json={"reason": "  ab  "}, headers=h).status_code == 422
+    assert client.post(nv_url, json={"reason": "abcd"}, headers=h).status_code == 422
+    v2 = _ok(client.post(nv_url, json={"reason": "Korrektur Heizkosten"}, headers=h), 201)
     assert v2["version"] == 2
     assert v2["supersedes_id"] == st["id"]
+    assert v2["settings"]["correction"]["reason"] == "Korrektur Heizkosten"
+    assert v2["settings"]["correction"]["supersedes_id"] == st["id"]
     assert (
         _ok(client.get(f"{S}/{st['id']}", headers=h))["snapshot"]["hash"] == snap["hash"]
     )  # issued version unchanged
@@ -917,7 +924,10 @@ def test_d28_rule_version_pinned_in_snapshot(
         old["hash"],
         old["id"],
     )
-    v2 = _ok(client.post(f"{S}/{st['id']}/new-version", headers=h), 201)
+    v2 = _ok(
+        client.post(f"{S}/{st['id']}/new-version", json={"reason": "Korrektur Test"}, headers=h),
+        201,
+    )
     recalculated = _ok(client.post(f"{S}/{v2['id']}/calculate", headers=h))["snapshot"]
     assert recalculated["rule_version"] == "operating-costs-v1"
     assert recalculated["results"][0]["costs"] == "120.00"
@@ -965,7 +975,10 @@ def test_ab10_snapshot_keeps_rule_register_version(
     assert (kept["hash"], kept["rule_register"]) == (old["hash"], old["rule_register"])
     # A posted statement is recalculated only through a new statement version (A05); the
     # old run keeps its register entry and the new run still picks version 1 for its period.
-    v2 = _ok(client.post(f"{S}/{st['id']}/new-version", headers=h), 201)
+    v2 = _ok(
+        client.post(f"{S}/{st['id']}/new-version", json={"reason": "Korrektur Test"}, headers=h),
+        201,
+    )
     again = _ok(client.post(f"{S}/{v2['id']}/calculate", headers=h))["snapshot"]
     assert again["results"] == old["results"]
     assert again["rule_register"]["version"] == 1

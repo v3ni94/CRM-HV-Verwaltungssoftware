@@ -15,12 +15,24 @@ import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
 import { UserMenu } from "@/components/shell/UserMenu";
 import { NotificationBell } from "@/components/workspace/NotificationBell";
 import { ThemeController } from "@/components/workspace/ThemeToggle";
-import { redirectIfUnauthenticated, sessionContext } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch, sessionContext } from "@/lib/api-server";
+import { crmBrandingCssVars, NEUTRAL_CRM_BRANDING, parseCrmBranding } from "@/lib/branding";
 import { getMe } from "@/lib/me";
 import { NONCE_HEADER } from "@/lib/csp";
 import { serverThemeScript } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
+
+/** Branding variables of the tenant; empty on every failure or while the switch is off. */
+async function loadBrandingVars(): Promise<Record<string, string>> {
+  try {
+    const response = await serverFetch("/api/v1/tenant/branding");
+    if (!response.ok) return {};
+    return crmBrandingCssVars(parseCrmBranding(await response.json()));
+  } catch {
+    return crmBrandingCssVars(NEUTRAL_CRM_BRANDING);
+  }
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const [t, tHome, ctx] = await Promise.all([
@@ -30,6 +42,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
   const { data: me, response } = await getMe();
   redirectIfUnauthenticated(response);
+  // GAI-109: tenant colours as CSS variables, only behind the tenant switch branding.crm_apply.
+  const brandingVars = await loadBrandingVars();
   const can = (p: string) => me?.permissions.includes(p) ?? false;
   const isAdmin = can("tickets:delete") || Boolean(me?.is_platform_admin);
   const groups: NavGroup[] = [
@@ -105,7 +119,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const themePreference = (me as { ui_preferences?: { theme?: unknown } } | null | undefined)?.ui_preferences
     ?.theme;
   return (
-    <div className="flex min-h-screen flex-col bg-bg lg:flex-row">
+    <div className="flex min-h-screen flex-col bg-bg lg:flex-row" style={brandingVars as React.CSSProperties}>
       {themePreference !== undefined ? (
         <script
           nonce={(await headers()).get(NONCE_HEADER) ?? undefined}

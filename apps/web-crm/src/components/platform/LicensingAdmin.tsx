@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type LicTenant = { id: string; name: string };
 
@@ -52,6 +53,7 @@ function mb(bytes: number): string {
 /** M27-02, M27-03, M27-05: licences, price list, billing preview and usage history. Net
  *  amounts only; the page changes no gate and invents no price. */
 export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[]; initialPrices: PriceEntry[] }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("PlatformLicensing");
   const [tenantId, setTenantId] = useState(tenants[0]?.id ?? "");
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -208,11 +210,11 @@ export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[
                         value={endDates[l.id] ?? ""}
                         onChange={(e) => setEndDates({ ...endDates, [l.id]: e.target.value })}
                       />
-                      <button type="button" className={ui.buttonSm} disabled={!endDates[l.id]} onClick={() => void endLicense(l.id)}>
+                      <button type="button" className={ui.buttonSm} disabled={busy || (!endDates[l.id])} onClick={guard(() => endLicense(l.id))}>
                         {t("end")}
                       </button>
                       {l.price_per_unit !== null ? (
-                        <button type="button" className={ui.buttonSm} onClick={() => void applyStructure(l.id)}>
+                        <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => applyStructure(l.id))}>
                           {t("useStructure")}
                         </button>
                       ) : null}
@@ -259,7 +261,7 @@ export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[
           </label>
         </div>
         <div className={ui.formActions}>
-          <button type="button" className={ui.primary} disabled={!tenantId || !form.valid_from || !form.unit_quota} onClick={() => void createLicense()}>
+          <button type="button" className={ui.primary} disabled={busy || (!tenantId || !form.valid_from || !form.unit_quota)} onClick={guard(() => createLicense())}>
             {t("create")}
           </button>
         </div>
@@ -272,7 +274,7 @@ export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[
             <span className={ui.label}>{t("month")}</span>
             <input type="month" className={ui.input} value={month} onChange={(e) => setMonth(e.target.value)} />
           </label>
-          <button type="button" className={ui.secondary} disabled={!tenantId || !month} onClick={() => void preview()}>
+          <button type="button" className={ui.secondary} disabled={busy || (!tenantId || !month)} onClick={guard(() => preview())}>
             {t("calculate")}
           </button>
         </div>
@@ -319,7 +321,7 @@ export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[
       <section className={`${ui.card} flex flex-col gap-3`}>
         <h2 className={ui.h2}>{t("usageTitle")}</h2>
         <div>
-          <button type="button" className={ui.secondary} disabled={!tenantId} onClick={() => void countNow()}>
+          <button type="button" className={ui.secondary} disabled={busy || (!tenantId)} onClick={guard(() => countNow())}>
             {t("countNow")}
           </button>
         </div>
@@ -384,10 +386,10 @@ export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[
                     <td>{formatEur(p.price_per_unit)}</td>
                     <td>{p.note ?? ""}</td>
                     <td className="flex gap-2">
-                      <button type="button" className={ui.buttonSm} onClick={() => void changePrice(p)}>
+                      <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => changePrice(p))}>
                         {t("change")}
                       </button>
-                      <button type="button" className={ui.buttonSm} onClick={() => void deletePrice(p)}>
+                      <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => deletePrice(p))}>
                         {t("delete")}
                       </button>
                     </td>
@@ -424,7 +426,7 @@ export function LicensingAdmin({ tenants, initialPrices }: { tenants: LicTenant[
           </label>
         </div>
         <div className={ui.formActions}>
-          <button type="button" className={ui.primary} disabled={!priceForm.price || !priceForm.valid_from} onClick={() => void addPrice()}>
+          <button type="button" className={ui.primary} disabled={busy || (!priceForm.price || !priceForm.valid_from)} onClick={guard(() => addPrice())}>
             {t("addPrice")}
           </button>
         </div>

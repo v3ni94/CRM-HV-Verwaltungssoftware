@@ -6,7 +6,7 @@ nothing here changes contract payments (§ 560 BGB, separate step, G3).
 
 import uuid
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -56,7 +56,9 @@ class AdvanceDecisionIn(BaseModel):
 
 def _rule_out(row: rule.AdvanceRuleSetting) -> dict[str, Any]:
     return {
-        "surcharge_percent": str(Decimal(row.surcharge_percent).quantize(rule.CENT)),
+        "surcharge_percent": str(
+            Decimal(row.surcharge_percent).quantize(rule.CENT, rounding=ROUND_HALF_UP)
+        ),
         "months": rule.MONTHS,
         "rule_version": rule.RULE_VERSION,
         "formula": "Kostenanteil des Abrechnungszeitraums geteilt durch zwölf, zuzüglich "

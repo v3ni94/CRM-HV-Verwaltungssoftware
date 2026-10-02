@@ -261,3 +261,7 @@ In der Kompaktansicht erzeugt "Antwortentwurf (KI)" einen Entwurf nach dem Tonfa
 ## Freigabe des Antwortentwurfs (Stand 01.10.2026)
 
 Die Freigabe gilt genau für den angezeigten Entwurf. Wurde der Entwurf zwischenzeitlich neu erzeugt, meldet das System einen Konflikt; laden Sie die Ansicht neu und prüfen Sie den aktuellen Entwurf.
+
+## Anhang als Rechnung vorschlagen (GAI-418, Welle 21)
+
+In der Mailansicht startet "Als Rechnung vorschlagen (KI)" neben einem PDF Anhang einen Extraktionslauf (Recht Buchhaltung anlegen, nur bei freigegebener KI). Das Ergebnis ist ein Vorschlag, die Rechnung entsteht erst nach Prüfung und Freigabe durch eine Person.

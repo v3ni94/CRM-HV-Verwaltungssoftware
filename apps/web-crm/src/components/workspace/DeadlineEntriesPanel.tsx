@@ -9,10 +9,12 @@ import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import type { DeadlineEntry } from "./DeadlineCreatePanel";
+import { useBusy } from "@/lib/use-busy";
 
 /** All user created deadlines of the tenant (rule WS-01) on the deadline page: due date,
  *  type, reference, responsible person, link to the source and the done action. */
 export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate: boolean; canManageTypes: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("DeadlineEntries");
   const td = useTranslations("Deadlines");
   const [rows, setRows] = useState<DeadlineEntry[] | null>(null);
@@ -89,7 +91,7 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
       ) : null}
       {canUpdate && rows && rows.some((e) => e.status === "open") ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <button type="button" className={ui.buttonSm} onClick={() => void finishSelected()} data-testid="entries-bulk-done">
+          <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => finishSelected())} data-testid="entries-bulk-done">
             {t("doneSelected")}
           </button>
           {notice ? (
@@ -149,7 +151,7 @@ export function DeadlineEntriesPanel({ canUpdate, canManageTypes }: { canUpdate:
                       </Link>
                     ) : null}
                     {canUpdate && e.status === "open" ? (
-                      <button type="button" className={ui.buttonSm} onClick={() => finish(e.id)} data-testid={`entry-done-${e.id}`}>
+                      <button type="button" className={ui.buttonSm} disabled={busy} onClick={guard(() => finish(e.id))} data-testid={`entry-done-${e.id}`}>
                         {t("done")}
                       </button>
                     ) : null}

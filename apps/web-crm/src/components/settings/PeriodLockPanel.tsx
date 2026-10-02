@@ -53,6 +53,7 @@ export function PeriodLockPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [form, setForm] = useState({ ledger_id: "", property_id: "", period_from: "", period_to: "", reason: "" });
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
 
   async function reload() {
     const res = await bff<PeriodLockRow[]>(BASE);
@@ -62,8 +63,11 @@ export function PeriodLockPanel({
 
   async function saveSettings(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const res = await bff<PeriodLockSettings>(`${BASE}/settings`, { method: "PUT", body: JSON.stringify(settings) });
+    setBusy(false);
     if (res.ok) {
       setSettings(res.data);
       setMessage(t("saved"));
@@ -72,8 +76,11 @@ export function PeriodLockPanel({
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const res = await bff<PeriodLockRow>(BASE, { method: "POST", body: JSON.stringify(form) });
+    setBusy(false);
     if (res.ok) {
       setMessage(t("created"));
       await reload();
@@ -81,11 +88,14 @@ export function PeriodLockPanel({
   }
 
   async function act(id: string, action: "release-request" | "release") {
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const res = await bff<PeriodLockRow>(`${BASE}/${id}/${action}`, {
       method: "POST",
       body: JSON.stringify({ reason: reasons[id] ?? "" }),
     });
+    setBusy(false);
     if (res.ok) {
       setMessage(t("done"));
       await reload();
@@ -131,7 +141,7 @@ export function PeriodLockPanel({
           />
           {t("reopen")}
         </label>
-        {canSettings ? <button type="submit">{t("save")}</button> : null}
+        {canSettings ? <button type="submit" disabled={busy}>{t("save")}</button> : null}
       </form>
 
       {canApprove ? (
@@ -155,7 +165,7 @@ export function PeriodLockPanel({
             {t("reason")}
             <input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} required minLength={3} />
           </label>
-          <button type="submit">{t("create")}</button>
+          <button type="submit" disabled={busy}>{t("create")}</button>
         </form>
       ) : null}
 
@@ -185,11 +195,11 @@ export function PeriodLockPanel({
                     onChange={(e) => setReasons({ ...reasons, [row.id]: e.target.value })}
                   />
                   {row.release_requested_by ? (
-                    <button type="button" onClick={() => act(row.id, "release")}>
+                    <button type="button" disabled={busy} onClick={() => act(row.id, "release")}>
                       {t("release")}
                     </button>
                   ) : (
-                    <button type="button" onClick={() => act(row.id, "release-request")}>
+                    <button type="button" disabled={busy} onClick={() => act(row.id, "release-request")}>
                       {t("requestRelease")}
                     </button>
                   )}

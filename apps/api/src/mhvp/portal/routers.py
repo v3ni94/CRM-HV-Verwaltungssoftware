@@ -36,6 +36,7 @@ from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_limited
 from mhvp.portal import access, magic_link, public_terms, read_receipts
 from mhvp.portal.models import AccessGrant, ChangeRequest, PortalAccount
 from mhvp.portal.property_scope import (
@@ -547,6 +548,15 @@ async def set_security(
         if account is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         account.magic_link_2fa = body.magic_link_2fa
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="portal_account.security_changed",
+            entity_type="portal_account",
+            entity_id=account_id,
+            actor_user_id=principal.user_id,
+            payload={"magic_link_2fa": body.magic_link_2fa},
+        )
     return Response(status_code=204)
 
 
@@ -1363,10 +1373,10 @@ def _client_hash(request: Request | None, tenant_id: uuid.UUID) -> str | None:
     if request is None:
         return None
     from mhvp.core import crypto
-    from mhvp.core.request_identity import client_ip
+    from mhvp.core.request_identity import settings_client_ip
 
     settings = _settings(request)
-    address = client_ip(request.scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for)
+    address = settings_client_ip(request.scope, settings)
     if address == "unknown":
         return None
     try:
@@ -1416,7 +1426,19 @@ async def portal_terms_status(request: Request) -> dict[str, Any]:
     }
 
 
-@router.post("/terms/accept", summary="Nutzungsbedingungen des Portals annehmen")
+class PortalTermsAcceptOut(BaseModel):
+    """Response of the terms acceptance (GAI-304)."""
+
+    model_config = ConfigDict(extra="allow")
+    terms_version: str
+    accepted: bool
+
+
+@router.post(
+    "/terms/accept",
+    summary="Nutzungsbedingungen des Portals annehmen",
+    response_model=PortalTermsAcceptOut,
+)
 async def portal_terms_accept(body: PortalTermsAcceptIn, request: Request) -> dict[str, Any]:
     tp, account = await _terms_account(request)
     async with tenant_tx(request, tp) as session:
@@ -1814,7 +1836,11 @@ async def upload(
     )
 
     principal, account = ctx
-    data = await file.read()
+    data = await read_limited(
+        file,
+        request.app.state.settings.document_max_bytes,
+        detail="Die Datei ist zu groß.",
+    )
     mime = (file.content_type or "application/octet-stream").split(";")[0].strip()
     if mime not in PORTAL_UPLOAD_MIME_TYPES:
         raise ProblemError(

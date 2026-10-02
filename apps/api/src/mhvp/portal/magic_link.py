@@ -39,6 +39,7 @@ from mhvp.core.auth import mfa_policy, tokens
 from mhvp.core.auth import service as auth_service
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.events import emit
 from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import User
@@ -49,6 +50,8 @@ LINK_TTL_MINUTES = 15
 CODE_TTL_MINUTES = 10
 RATE_LIMIT_PER_HOUR = 5
 RATE_LIMIT_WINDOW_SECONDS = 3600
+# GAI-310: wrong e-mail codes per link; at this count the code and the link become invalid.
+CODE_MAX_FAILED_ATTEMPTS = 5
 
 _log = get_logger("mhvp.portal.magic_link")
 
@@ -275,12 +278,34 @@ async def verify_code_step(
             or row.code_used_at is not None
             or row.code_expires_at is None
             or row.code_expires_at < now
-            or not tokens.constant_time_equals(row.code_hash, _hash(code.strip()))
+            or row.code_failed_attempts >= CODE_MAX_FAILED_ATTEMPTS
         ):
             raise ProblemError(ErrorCodes.MAGIC_LINK_INVALID)
-        row.code_used_at = now
-        account = await session.get(PortalAccount, row.account_id)
-        if account is None:  # pragma: no cover - FK guarantees this
-            raise ProblemError(ErrorCodes.MAGIC_LINK_INVALID)
-        user_id = account.user_id
+        if not tokens.constant_time_equals(row.code_hash, _hash(code.strip())):
+            # GAI-310: count the failure and commit it (the error is raised after the
+            # transaction); at the limit the code and the link are invalidated for good.
+            row.code_failed_attempts += 1
+            locked = row.code_failed_attempts >= CODE_MAX_FAILED_ATTEMPTS
+            if locked:
+                row.code_expires_at = now
+                row.expires_at = min(row.expires_at, now)
+            await emit(
+                session,
+                tenant_id=tenant_id,
+                type="portal.magic_link.code_failed",
+                entity_type="portal_magic_link",
+                entity_id=row.id,
+                actor_user_id=None,
+                payload={"attempts": row.code_failed_attempts, "locked": locked},
+            )
+            failed = True
+        else:
+            failed = False
+            row.code_used_at = now
+            account = await session.get(PortalAccount, row.account_id)
+            if account is None:  # pragma: no cover - FK guarantees this
+                raise ProblemError(ErrorCodes.MAGIC_LINK_INVALID)
+            user_id = account.user_id
+    if failed:
+        raise ProblemError(ErrorCodes.MAGIC_LINK_INVALID)
     return await _finish(factory, settings, user_id, tenant_id, user_agent)

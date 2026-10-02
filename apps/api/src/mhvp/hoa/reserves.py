@@ -13,7 +13,7 @@ stays in accounting behind G1 (rule M24-01).
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing.status import StatementStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import EconomicPlan, HoaReserve, HoaReserveMovement, HoaStatement, PlanItem
@@ -83,7 +84,7 @@ async def check_reserve_refs(
                 detail="Bankkonto gehört nicht zum Rechtsträger der Gemeinschaft.",
             )
         # V11-06: an ended bank account (valid_to before today) is refused.
-        if bank.valid_to is not None and bank.valid_to < datetime.now(UTC).date():
+        if bank.valid_to is not None and bank.valid_to < local_today():
             raise ProblemError(ErrorCodes.VALIDATION, detail="Bankkonto ist beendet.")
 
 

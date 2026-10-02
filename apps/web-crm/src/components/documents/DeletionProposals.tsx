@@ -202,6 +202,7 @@ export function DeletionProposals({
               </div>
               {mayReject && isOpen ? (
                 <input
+                  aria-label={t("notePlaceholder")}
                   className={ui.input}
                   placeholder={t("notePlaceholder")}
                   value={note}

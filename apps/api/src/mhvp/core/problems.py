@@ -319,6 +319,13 @@ class ErrorCodes:
         "Schadsoftwareprüfung nicht möglich",
         "MHVP_CLAMAV_MODE=enforce and clamd did not answer; nothing was stored.",
     )
+    UPLOAD_TOO_LARGE = ErrorCode(
+        "MHVP-DOC-0010",
+        413,
+        "Datei zu groß",
+        "The upload or request body exceeds the size limit of this endpoint; nothing was read "
+        "beyond the limit.",
+    )
     ACC_UNBALANCED = ErrorCode(
         "MHVP-ACC-0001",
         422,

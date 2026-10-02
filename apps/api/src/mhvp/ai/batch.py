@@ -347,6 +347,52 @@ async def submit_deferred(
     return report
 
 
+async def _cancel_at_provider(
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    provider: AiProvider,
+    batch_id: str,
+) -> str:
+    """GAI-610: after the release was withdrawn, a batch still open at the provider is
+    cancelled there, so that no further processing (and cost) happens without release. The
+    cancel request carries only the batch id, no content. Uses the stored API key even though
+    the configuration is no longer usable; without a key or a cancel capability the result is
+    recorded as ``not_possible``. Emits ``ai.batch_cancelled`` with the outcome
+    (``cancelled``, ``failed`` or ``not_possible``)."""
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.core.events import emit
+
+    async with tenant_transaction(factory, tenant_id) as session:
+        row = await session.scalar(
+            select(AiProviderConfig).where(AiProviderConfig.provider == provider)
+        )
+        api_key = row.api_key if row is not None else None
+        region = row.endpoint_region if row is not None else None
+    outcome = "not_possible"
+    if api_key:
+        client = providers.client_for(provider, api_key, region)
+        try:
+            if providers.supports_cancel(client):
+                await client.cancel_batch(batch_id)  # type: ignore[attr-defined]
+                outcome = "cancelled"
+        except providers.ProviderError as exc:
+            log.warning("ai_batch_cancel_failed", tenant_id=str(tenant_id), reason=str(exc))
+            outcome = "failed"
+        finally:
+            await providers.close_client(client)
+    async with tenant_transaction(factory, tenant_id) as session:
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="ai.batch_cancelled",
+            entity_type="ai_provider_config",
+            entity_id=row.id if row is not None else None,
+            actor_user_id=None,
+            payload={"provider": provider.value, "batch_id": batch_id, "outcome": outcome},
+        )
+    return outcome
+
+
 async def poll_submitted(
     factory: async_sessionmaker[AsyncSession],
     tenant_id: uuid.UUID,
@@ -370,7 +416,15 @@ async def poll_submitted(
         ).all()
         open_runs = [(r.id, dict(r.input_ref[BATCH_KEY])) for r in rows]
         configs = await batch_configs(session)
-    report = {"batches": 0, "open": 0, "runs": 0, "succeeded": 0, "resubmitted": 0, "sync": 0}
+    report = {
+        "batches": 0,
+        "open": 0,
+        "runs": 0,
+        "succeeded": 0,
+        "resubmitted": 0,
+        "sync": 0,
+        "cancelled": 0,
+    }
     by_batch: dict[str, list[tuple[uuid.UUID, dict[str, Any]]]] = {}
     for run_id, state in open_runs:
         by_batch.setdefault(str(state.get("batch_id")), []).append((run_id, state))
@@ -378,8 +432,11 @@ async def poll_submitted(
         provider = AiProvider(members[0][1]["provider"])
         config = configs.get(provider)
         if config is None:
-            # Switch off, release, DPA, document or opt-out withdrawn (GAH-203): no provider
-            # call; the runs go back to the nightly queue, where the gateway blocks them.
+            # Switch off, release, DPA, document or opt-out withdrawn (GAH-203): no further
+            # processing call; the batch is cancelled at the provider (GAI-610) and the runs go
+            # back to the nightly queue, where the gateway blocks them.
+            cancelled = await _cancel_at_provider(factory, tenant_id, provider, batch_id)
+            report["cancelled"] += 1 if cancelled == "cancelled" else 0
             for run_id, _state in members:
                 await _mark(
                     factory,
@@ -390,6 +447,7 @@ async def poll_submitted(
                         "state": "deferred",
                         "aborted_batch_id": batch_id,
                         "reason": "release_withdrawn",
+                        "provider_cancel": cancelled,
                     },
                 )
             continue

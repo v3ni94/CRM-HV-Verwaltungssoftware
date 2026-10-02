@@ -228,6 +228,11 @@ Protokoll; alle Werte kommen aus der Umgebung des Aufrufers oder einer `--env-fi
 Aufruf (Restore-Rechner oder Server, nie über die laufende Produktionsdatenbank):
 
     infra/scripts/restore-drill.sh --env-file /opt/mhvp/.env.backup
+    make restore-drill RESTORE_DRILL_ARGS='--env-file /opt/mhvp/.env.backup'
+
+Trockenlauf (prüft nur Konfiguration und Werkzeuge, kein S3, keine Datenbank, läuft in CI als
+Job `restore-drill-dry-run`): `make restore-drill DRY_RUN=1`. Er ersetzt nie die Übung selbst;
+das erste Protokoll `docs/reviews/restore-YYYY-MM-DD.md` steht noch aus (GAI-511).
 
 Optionen: `--stamp <STAMP>` prüft einen bestimmten Lauf statt des neuesten, `--skip-objects`
 lässt den Objektspeicher-Abgleich aus (nur Datenbank), `--keep-work` behält das temporäre
@@ -297,6 +302,31 @@ Order (every step is recorded, the run is part of the restore protocol):
 
 Technical acceptance: `apps/api/tests/integration/test_m9_restore_replay.py` (D47). The
 functional release of the procedure (data protection) stays open under M9-03.
+
+## Restore nach Kontakt-Anonymisierung (GAI-512)
+
+Auch die Anonymisierung eines Kontakts nach Art. 17 (`privacy_erasure_request`, Ereignis
+`contact.anonymized`) wird durch ein Backup rückgängig gemacht: der wiederhergestellte Stand
+enthält die personenbezogenen Daten wieder. Ablauf analog zum Dokument-Löschjournal, zusätzlich
+zu den Schritten dort (vor dem Öffnen für Benutzer):
+
+1. **Journal sichern (vor dem Restore, aus der Live-Datenbank):**
+   `python -m mhvp.privacy.erasure_journal export --since <ISO-Datum des ältesten Backups>
+   --out /var/backups/mhvp/erasures-<Datum>.json` (optional `--tenant <UUID>`). Datei außerhalb
+   der Datenbank neben den Backups aufbewahren. Das Journal enthält nur Mandanten-, Ereignis-
+   und Kontakt-IDs, keine Klardaten.
+2. **Restore** wie oben.
+3. **Prüfung:** `python -m mhvp.privacy.erasure_journal replay --journal <Datei> --report
+   <Bericht.json>` (Trockenlauf, ändert nichts). Ergebnisse: `would_anonymize`, `absent`,
+   `already_anonymized`, `invalid`.
+4. **Anwenden:** dieselbe Zeile mit `--apply`. Jeder Kontakt wird mit derselben Routine wie bei
+   der ursprünglichen Ausführung erneut anonymisiert (keine erneute Sperrprüfung, die
+   Vier-Augen-Freigabe lag bei der Ausführung) und als `contact.anonymized` mit `replay: true`
+   protokolliert. Exitcode 1 bei `invalid`; Bericht zum Restore-Protokoll legen.
+
+Ohne Journal die Plattform geschlossen halten und den Betreiber einbeziehen. Technische
+Prüfung: `apps/api/tests/unit/test_erasure_journal.py` (reine Teile); der Lauf gegen eine
+wiederhergestellte Datenbank ist bei der nächsten Restore-Übung zu belegen.
 
 ## Löschcheckliste, Nachlauf und Backups (AC07, GA08-08)
 

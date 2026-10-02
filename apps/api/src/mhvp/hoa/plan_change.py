@@ -18,7 +18,7 @@ released) and is listed as ``manual``."""
 
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing.status import StatementStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -110,9 +111,11 @@ async def compute_differences(session: AsyncSession, plan: EconomicPlan) -> dict
                     ).all()
                     if items:
                         posted = sum((i.amount for i in items), Decimal(0))
-                        new = (monthly * max(_months_of(i) for i in items)).quantize(CENT)
+                        new = (monthly * max(_months_of(i) for i in items)).quantize(
+                            CENT, rounding=ROUND_HALF_UP
+                        )
                         manual = month < plan.valid_from
-                        diff = (new - posted).quantize(CENT)
+                        diff = (new - posted).quantize(CENT, rounding=ROUND_HALF_UP)
                         rows.append(
                             {
                                 "unit_id": str(unit_id),
@@ -121,7 +124,7 @@ async def compute_differences(session: AsyncSession, plan: EconomicPlan) -> dict
                                 "contract_number": contract.number,
                                 "component": component,
                                 "period_month": month,
-                                "posted_amount": str(posted.quantize(CENT)),
+                                "posted_amount": str(posted.quantize(CENT, rounding=ROUND_HALF_UP)),
                                 "new_amount": str(new),
                                 "difference": str(diff),
                                 "kind": "manual"
@@ -132,7 +135,7 @@ async def compute_differences(session: AsyncSession, plan: EconomicPlan) -> dict
                         if not manual:
                             total += diff
                 month = _add_months(month, 1)
-    return {"rows": rows, "total": str(total.quantize(CENT))}
+    return {"rows": rows, "total": str(total.quantize(CENT, rounding=ROUND_HALF_UP))}
 
 
 async def _proposed_due(session: AsyncSession, plan: EconomicPlan, mode: str) -> date:
@@ -147,7 +150,7 @@ async def _proposed_due(session: AsyncSession, plan: EconomicPlan, mode: str) ->
             decided = await session.scalar(
                 select(Resolution.decided_on).where(Resolution.id == plan.resolution_id)
             )
-        return _add_months(decided or datetime.now(UTC).date(), 1)
+        return _add_months(decided or local_today(), 1)
     last = await session.scalar(
         select(func.max(ReceivableItem.period_month)).where(
             ReceivableItem.ledger_id == plan.ledger_id,

@@ -213,3 +213,11 @@ Unter Einstellungen, Abrechnung pflegen Sie die Regeltabellen der Heizkostenabre
 In der Abrechnung erfassen Sie Anfragen zur Belegeinsicht je Einheit samt Bereitstellung, Einwendung und Abschluss. Die Erfassung ist reine Dokumentation ohne Fristberechnung. Ergebnisbuchungen erzeugen Sie erst im Status fällig, es entstehen Entwürfe. Die Freigabestufe G3 und die Freigabe durch die Geschäftsführung bleiben erforderlich.
 
 Prüfpunkte des Regelregisters bestätigen Sie in der Prüfpunktliste mit Name und Datum der fachkundigen Prüfung. Die Bestätigung hält die Prüfung fest und ändert keine Regel.
+
+## Neue Version mit Korrekturgrund
+
+Eine ausgegebene oder freigegebene Betriebskostenabrechnung wird nie überschrieben. Über "Neue Version" öffnet sich ein Dialog, in dem ein Korrekturgrund mit mindestens 5 Zeichen Pflicht ist. Der Grund wird mit Benutzer, Zeitpunkt und Bezug auf die Vorversion in der neuen Version gespeichert (Einstellungen, Schlüssel correction). Ohne Grund lehnt die API die Anlage mit 422 ab.
+
+## Abrechnung als PDF und Zustellung der Anschreiben (gesperrt)
+
+In der Eigentümerabrechnung steht Abrechnung als PDF, im Abschnitt Anschreiben Anschreiben zustellen. Beide zeigen den Stand der Freigabestufe G3 und bleiben gesperrt, solange G3 geschlossen ist; das PDF zusätzlich bis zur internen Freigabe der Abrechnung. Die Zustellung lehnt die Plattform auch bei offener Freigabestufe ab, bis der Zustellweg freigegeben ist.

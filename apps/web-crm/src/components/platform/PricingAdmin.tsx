@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type PricingItem = {
   id: string;
@@ -26,6 +27,7 @@ export type Pricing = { items: PricingItem[]; complete: boolean; missing_amounts
 /** M27-01: pricing structure (tiers by units, module add-ons, trial). Amounts are empty until
  *  the operator maintains them; the offer PDF is a draft. No amount is invented here. */
 export function PricingAdmin({ initial }: { initial: Pricing }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("PlatformPricing");
   const [pricing, setPricing] = useState<Pricing>(initial);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -112,7 +114,7 @@ export function PricingAdmin({ initial }: { initial: Pricing }) {
                         >
                           {t("save")}
                         </button>
-                        <button type="button" className={ui.buttonSm} onClick={() => void save(item, { active: !item.active })}>
+                        <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => save(item, { active: !item.active }))}>
                           {item.active ? t("deactivate") : t("activate")}
                         </button>
                       </td>

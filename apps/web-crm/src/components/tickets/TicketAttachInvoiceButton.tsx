@@ -62,7 +62,7 @@ export function TicketAttachInvoiceButton({ ticketId, hasProperty }: { ticketId:
         <button type="button" className={ui.primary} disabled={busy || !invoiceId.trim()} onClick={attach}>
           {t("attach")}
         </button>
-        <button type="button" className={ui.buttonSm} onClick={() => setOpen(false)}>
+        <button type="button" className={ui.buttonSm} aria-label={t("close")} onClick={() => setOpen(false)}>
           ×
         </button>
       </div>

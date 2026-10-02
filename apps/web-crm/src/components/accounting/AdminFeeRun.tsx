@@ -33,6 +33,7 @@ export function AdminFeeRun({
   onIssued?: () => void | Promise<void>;
 }) {
   const t = useTranslations("AdminFees");
+  const tCommon = useTranslations("Common");
   const [periodDate, setPeriodDate] = useState(today);
   const [invoiceDate, setInvoiceDate] = useState(today);
   const [result, setResult] = useState<RunOut | null>(null);
@@ -96,6 +97,13 @@ export function AdminFeeRun({
                 </tr>
               </thead>
               <tbody>
+                {result.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="text-muted">
+                      {tCommon("emptyList")}
+                    </td>
+                  </tr>
+                ) : null}
                 {result.rows.map((r) => (
                   <tr key={`${r.fee_setting_id}-${r.period_start}`}>
                     <td>{propertyLabel(r.property_id)}</td>

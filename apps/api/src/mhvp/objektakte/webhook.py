@@ -40,6 +40,7 @@ from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_body_limited
 from mhvp.objektakte import dms_service as svc
 from mhvp.objektakte.dms_models import ObjektakteWebhookReceipt
 from mhvp.objektakte.dms_routers import configured_tenant_id
@@ -91,14 +92,6 @@ async def _require_timestamp(request: Request, tenant_id: uuid.UUID) -> bool:
     return bool(value)
 
 
-def _declared_too_large(request: Request) -> bool:
-    raw = request.headers.get("content-length")
-    try:
-        return raw is not None and int(raw) > MAX_BODY_BYTES
-    except ValueError:
-        return False
-
-
 def _occurred_at(raw: object) -> datetime | None:
     if not isinstance(raw, str):
         return None
@@ -116,11 +109,12 @@ def _invalid(detail: str) -> ProblemError:
 async def receive(request: Request) -> dict[str, Any]:
     settings: Settings = request.app.state.settings
     # Size check before reading (GAH-202): a declared oversized body is refused unread.
-    if _declared_too_large(request):
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
-    raw = await request.body()
-    if len(raw) > MAX_BODY_BYTES:
-        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
+    raw = await read_body_limited(
+        request,
+        MAX_BODY_BYTES,
+        error=ErrorCodes.WEBHOOK_TOO_LARGE,
+        detail="Webhook-Inhalt zu groß.",
+    )
     secret = (
         settings.objektakte_webhook_secret.get_secret_value()
         if settings.objektakte_webhook_secret

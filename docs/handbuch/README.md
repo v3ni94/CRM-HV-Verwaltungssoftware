@@ -38,9 +38,11 @@ Grundlagen
 - [Fristen (zentrale Liste der Fälligkeiten und Stichtage)](fristen.md)
 - [Stammdaten direkt bearbeiten](bearbeiten.md)
 - [Barrierefreiheit](barrierefreiheit.md)
+- [Versionsverlauf (Seite Version)](version.md)
 
 Vorgänge und Kommunikation
 
+- [Aufträge (Auftragsliste, Terminvorschläge, Auftragsschritte, Bewertung)](auftraege.md)
 - [Tickets (Mailverlauf, Antworten mit TNR#, Anhänge, Wiedereröffnung, Terminvorschläge, Erledigungsnotiz, Telefonassistenz)](tickets.md)
 - [Mail (Vorbereitung, Freigabe, Archivierung bei Abschluss, Telefonassistenz)](mail.md)
 - [Kommunikation (Telefonie-Anrufliste, Zustellungen, ausgehende Webhooks)](kommunikation.md)
@@ -102,6 +104,7 @@ gekennzeichnet. Schreibweisen und Pflichtfelder: [Erfassungsstandards](erfassung
 - [Mieterhöhung](anleitung-mieterhoehung.md)
 - [Bankverbindung neu anlegen oder ändern (Vier-Augen-Freigabe)](anleitung-bankverbindung.md)
 - [Objektordner, Mieterakte und Objektdaten](anleitung-objektordner.md)
+- [Objektakte (Prüfcenter der Übernahme)](objektakte.md)
 - [Aufgabenverteilung Mail und Tickets (Vorschlag zur Entscheidung durch die Geschäftsführung)](aufgabenverteilung-vorschlag.md)
 
 ### Lücken in der Software

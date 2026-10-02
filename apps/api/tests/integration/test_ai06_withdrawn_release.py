@@ -6,7 +6,8 @@ network.
 Expected values by hand: before the withdrawal one synchronous call succeeds (1 call). After
 each withdrawal a chat run is not ``succeeded`` and the call counter stays at 1; the batch
 submit captures nothing (0 batches); a submitted batch is not polled (0 polls) and its run goes
-back to ``deferred`` with reason ``release_withdrawn`` and the aborted batch id."""
+back to ``deferred`` with reason ``release_withdrawn`` and the aborted batch id; the batch is
+cancelled at the provider exactly once (GAI-610, 1 cancel call)."""
 
 import asyncio
 import uuid
@@ -39,6 +40,10 @@ class CountingProvider(FakeBatchProvider):
     def __init__(self) -> None:
         super().__init__()
         self.polls = 0
+        self.cancelled: list[str] = []
+
+    async def cancel_batch(self, batch_id: str) -> None:
+        self.cancelled.append(batch_id)
 
     async def poll_batch(self, batch_id: str) -> providers.BatchPoll:
         self.polls += 1
@@ -183,12 +188,16 @@ def test_withdrawn_release_dpa_or_opt_out_stops_every_provider_call(
     report = asyncio.run(_call(settings, "poll_submitted", world.tenant_a))
     assert report["batches"] == 0
     assert fake.polls == 0
+    # GAI-610: the open batch is cancelled at the provider (id only, no content).
+    assert fake.cancelled == ["msgbatch_0"]
+    assert report["cancelled"] == 1
     assert len(fake.calls) == 1
     status, ref, _cost = asyncio.run(_run(settings, world.tenant_a, run_id))
     assert status == "queued"
     assert ref["batch"]["state"] == "deferred"
     assert ref["batch"]["reason"] == "release_withdrawn"
     assert ref["batch"]["aborted_batch_id"] == "msgbatch_0"
+    assert ref["batch"]["provider_cancel"] == "cancelled"
 
 
 async def _openai_reason(settings: Any, tenant_id: uuid.UUID, **fields: Any) -> str | None:

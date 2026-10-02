@@ -19,6 +19,7 @@ from mhvp.core.auth.scope import property_unrestricted_guard
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_limited
 from mhvp.imports import objektdaten, vollimport
 from mhvp.imports.models import FullRunStatus, ImportFullRun
 from mhvp.imports.routers import READ, WRITE, _need_domain
@@ -92,11 +93,11 @@ async def _uploads(files: list[UploadFile], kinds: list[str]) -> list[vollimport
                 ErrorCodes.VALIDATION,
                 detail=f"Exporttyp {kind!r} unbekannt ({', '.join(vollimport.EXPORT_KINDS)}).",
             )
-        data = await upload.read()
-        if len(data) > vollimport.MAX_BYTES:
-            raise ProblemError(
-                ErrorCodes.UPLOAD_REJECTED, detail=f"{upload.filename or 'Die Datei'} ist zu groß."
-            )
+        data = await read_limited(
+            upload,
+            vollimport.MAX_BYTES,
+            detail=f"{upload.filename or 'Die Datei'} ist zu groß.",
+        )
         out.append(vollimport.Upload(upload.filename or kind, kind, data))
     return out
 

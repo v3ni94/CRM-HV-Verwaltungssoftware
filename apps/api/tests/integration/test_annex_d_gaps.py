@@ -498,6 +498,21 @@ def test_d04_reversal_reopens_the_pair_once_from_either_half(
     _assert_g1_closed(client, h, w["ledger"])
 
 
+async def _other_waits_for_a_lock(engine: Any) -> None:
+    """Polls until a backend of this database waits for a lock (GAI-618)."""
+    from sqlalchemy import text
+
+    sql = text(
+        "SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid"
+        " WHERE NOT l.granted AND a.datname = current_database())"
+    )
+    while True:
+        async with engine.connect() as conn:
+            if await conn.scalar(sql):
+                return
+        await asyncio.sleep(0.02)
+
+
 def test_d04_parallel_bookings_of_both_halves_post_once(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
@@ -542,7 +557,9 @@ def test_d04_parallel_bookings_of_both_halves_post_once(
                     )
                     if staggered:
                         started.set()
-                        await asyncio.sleep(0.5)  # commit only while the other one waits
+                        # GAI-618: commit only once the other one waits for the row lock
+                        # (explicit synchronisation instead of a fixed sleep).
+                        await asyncio.wait_for(_other_waits_for_a_lock(engine), 30)
                 return "ok"
             except ProblemError as exc:
                 return exc.error.code

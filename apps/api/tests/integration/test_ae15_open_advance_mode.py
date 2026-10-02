@@ -6,7 +6,8 @@ January and February 2025 due (200,00), January paid (100,00), February open (10
 share 120,00. Economically owed: 120,00 - 100,00 = 20,00 EUR.
 
 * info_only (default): balance 120,00 - 100,00 = 20,00, open 100,00 stays -> combined view
-  120,00 (the double claim D24 forbids; the strict xfail in test_annex_d_gaps stays).
+  120,00 (the double claim D24 forbids; kept as default until AC10-01, see
+  test_annex_d_gaps.test_d24_default_info_only_keeps_double_view_until_ac10_01).
 * offset_reversal: balance 20,00, open 100,00 offset by a draft behind G3 -> 20,00.
 * balance_against_due: balance 120,00 - 200,00 = -80,00, open 100,00 stays -> -80 + 100 = 20,00.
 """
@@ -132,7 +133,7 @@ def test_ae15_d24_info_only_default_keeps_today_and_discloses(
     assert (row["open_advance_mode"], row["balance"], row["net_claim"]) == (
         "info_only",
         "20.00",
-        "120.00",  # 20,00 + 100,00: open decision AC10-01, strict xfail D24 stays
+        "120.00",  # 20,00 + 100,00: open decision AC10-01 (no xfail marker)
     )
     assert row["offset_items"] == []
     assert _open_remaining(client, h, w["ledger"]) == Decimal("100.00")

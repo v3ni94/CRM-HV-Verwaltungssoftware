@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type InterestInfo = {
   day_count: string;
@@ -19,6 +20,7 @@ type Rate = { id: string; valid_from: string; valid_to: string | null; base_rate
 /** M16-02: Basiszinssatzhistorie mit Gültigkeitszeitraum und Quelle. Die Sätze sind
  * Betreibereingaben; die Plattform liefert keinen Satz und nimmt keinen an. */
 export function DunningInterestRates() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("DunningRates");
   const [rows, setRows] = useState<Rate[] | null>(null);
   const [f, setF] = useState({ valid_from: "", base_rate: "", source: "" });
@@ -69,7 +71,7 @@ export function DunningInterestRates() {
         <div role="status" className={ui.notice} data-testid="dunning-rate-stale">
           <strong>{t("staleTitle")}</strong> {info.base_rate_hint}{" "}
           {t("nextChange", { dates: info.next_change_dates.map((d) => formatDate(d)).join(", ") })}{" "}
-          <button type="button" className={ui.button} onClick={seed}>
+          <button disabled={busy} type="button" className={ui.button} onClick={guard(seed)}>
             {t("seedCheckpoints")}
           </button>
         </div>
@@ -113,7 +115,7 @@ export function DunningInterestRates() {
           <span className={ui.label}>{t("source")}</span>
           <input className={ui.input} value={f.source} onChange={(e) => setF((v) => ({ ...v, source: e.target.value }))} />
         </label>
-        <button type="button" className={ui.button} onClick={add} disabled={!valid}>
+        <button type="button" className={ui.button} onClick={guard(add)} disabled={busy || (!valid)}>
           {t("add")}
         </button>
       </div>

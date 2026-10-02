@@ -141,11 +141,19 @@ class ExportOptions:
 
     third_party_scope: str = SCOPE_NONE
     include_internal_notes: bool = False
+    # GAI-506: further data sources, tenant switches in ``tenant_settings.sources``
+    # (``SCOPE_SOURCES_KEY``); off by default, the extent is AC07-01.
+    include_tickets: bool = False
+    include_communication: bool = False
+    include_documents: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "third_party_scope": self.third_party_scope,
             "include_internal_notes": self.include_internal_notes,
+            "include_tickets": self.include_tickets,
+            "include_communication": self.include_communication,
+            "include_documents": self.include_documents,
         }
 
     @classmethod
@@ -156,18 +164,36 @@ class ExportOptions:
         return cls(
             third_party_scope=scope if scope in THIRD_PARTY_SCOPES else SCOPE_NONE,
             include_internal_notes=bool(raw.get("include_internal_notes", False)),
+            include_tickets=bool(raw.get("include_tickets", False)),
+            include_communication=bool(raw.get("include_communication", False)),
+            include_documents=bool(raw.get("include_documents", False)),
         )
+
+
+SCOPE_SOURCES_KEY = "access_export_sources"
+SOURCE_SWITCHES = ("include_tickets", "include_communication", "include_documents")
+
+
+async def source_switches(session: AsyncSession) -> dict[str, bool]:
+    """Switches of the further data sources (GAI-506) from the tenant settings JSON."""
+    from mhvp.platform.models import TenantSettings
+
+    row = await session.scalar(select(TenantSettings))
+    raw = ((row.sources or {}) if row else {}).get(SCOPE_SOURCES_KEY) or {}
+    return {k: bool(raw.get(k, False)) for k in SOURCE_SWITCHES}
 
 
 async def current_options(session: AsyncSession) -> ExportOptions:
     """Switches of the tenant; no row means the conservative defaults."""
     row = await session.scalar(select(ContactAccessExportSetting))
+    sources = await source_switches(session)
     if row is None:
-        return ExportOptions()
+        return ExportOptions.from_dict(sources)
     return ExportOptions.from_dict(
         {
             "third_party_scope": row.third_party_scope,
             "include_internal_notes": row.include_internal_notes,
+            **sources,
         }
     )
 
@@ -184,12 +210,36 @@ WITHHELD = {
     "Kennung ausgegeben.",
     "event_payloads": "Das Verarbeitungsprotokoll nennt nur Art und Zeitpunkt.",
 }
+# GAI-506: sources that are only listed (with count) until the tenant switch includes them.
+WITHHELD_SOURCES = {
+    "include_tickets": (
+        "tickets",
+        "Vorgänge (Tickets) des Kontakts werden nur gezählt, nicht ausgegeben "
+        "(Mandantenschalter, AC07-01).",
+    ),
+    "include_communication": (
+        "communication",
+        "Nachrichten (E-Mail, Messenger, Brief) des Kontakts werden nur gezählt, nicht "
+        "ausgegeben (Mandantenschalter, AC07-01).",
+    ),
+    "include_documents": (
+        "documents",
+        "Dem Kontakt zugeordnete Dokumente werden nur gezählt, nicht ausgegeben "
+        "(Mandantenschalter, AC07-01).",
+    ),
+}
+TICKET_FIELDS = ("number", "title", "public_description", "status", "created_at")
+MESSAGE_FIELDS = ("channel", "direction", "subject", "body", "received_at", "sent_at")
+DOCUMENT_FIELDS = ("title", "filename", "created_at")
 
 
 def withheld_for(options: ExportOptions) -> dict[str, str]:
     out = dict(WITHHELD)
     if options.include_internal_notes:
         del out["internal_notes"]
+    for switch, (key, text_) in WITHHELD_SOURCES.items():
+        if not getattr(options, switch):
+            out[key] = text_
     if options.third_party_scope == SCOPE_NAMES:
         out["third_parties"] = (
             "Angaben zu anderen Personen werden mit Namen und Rolle ausgegeben, ohne "
@@ -381,8 +431,70 @@ async def build(
         }
     else:
         content["withheld"]["internal_notes_count"] = len(notes) + (1 if contact.notes else 0)
+    await _add_sources(session, contact_id, options, content)
     result: dict[str, Any] = strip_secrets(content)
     return result
+
+
+async def _add_sources(
+    session: AsyncSession, contact_id: uuid.UUID, options: ExportOptions, content: dict[str, Any]
+) -> None:
+    """Tickets, messages and linked documents of the contact (GAI-506). Internal ticket
+    descriptions, recipient lists of messages and document contents are never included."""
+    from sqlalchemy import func, or_
+
+    from mhvp.communication.models import Message
+    from mhvp.documents.models import Document, DocumentLink
+    from mhvp.tickets.models import Ticket
+
+    ticket_where = or_(Ticket.contact_id == contact_id, Ticket.initiator_contact_id == contact_id)
+    doc_where = (DocumentLink.entity_type == "contact") & (DocumentLink.entity_id == contact_id)
+    counts = content["withheld"]
+    if options.include_tickets:
+        content["tickets"] = [
+            pick(t, TICKET_FIELDS)
+            for t in await session.scalars(
+                select(Ticket).where(ticket_where).order_by(Ticket.created_at, Ticket.id)
+            )
+        ]
+    else:
+        counts["tickets_count"] = int(
+            await session.scalar(select(func.count()).select_from(Ticket).where(ticket_where)) or 0
+        )
+    if options.include_communication:
+        content["communication"] = [
+            pick(m, MESSAGE_FIELDS)
+            for m in await session.scalars(
+                select(Message)
+                .where(Message.contact_id == contact_id)
+                .order_by(Message.created_at, Message.id)
+            )
+        ]
+    else:
+        counts["communication_count"] = int(
+            await session.scalar(
+                select(func.count()).select_from(Message).where(Message.contact_id == contact_id)
+            )
+            or 0
+        )
+    if options.include_documents:
+        content["documents"] = [
+            pick(d, DOCUMENT_FIELDS)
+            for d in await session.scalars(
+                select(Document)
+                .join(DocumentLink, DocumentLink.document_id == Document.id)
+                .where(doc_where)
+                .distinct()
+                .order_by(Document.created_at, Document.id)
+            )
+        ]
+    else:
+        counts["documents_count"] = int(
+            await session.scalar(
+                select(func.count(func.distinct(DocumentLink.document_id))).where(doc_where)
+            )
+            or 0
+        )
 
 
 @dataclass

@@ -19,6 +19,7 @@ const SEVERITY_CLASS: Record<Severity, string> = { low: ui.badge, medium: ui.bad
  *  release or a legal review; the case and its deterministic check stay unchanged. */
 export function RentIncreaseAiCheck({ caseId, canStart }: { caseId: string; canStart: boolean }) {
   const t = useTranslations("Letting.aiCheck");
+  const tCommon = useTranslations("Common");
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function RentIncreaseAiCheck({ caseId, canStart }: { caseId: string; canS
           <p>{t(`overall.${proposed.overall}`)}</p>
           {proposed.summary ? <p className="text-sm">{proposed.summary}</p> : null}
           <ul className="flex flex-col gap-1 text-sm">
+            {proposed.findings.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
             {proposed.findings.map((f, i) => (
               <li key={`${f.field}-${i}`}>
                 <span className={SEVERITY_CLASS[f.severity]}>{t(`severity.${f.severity}`)}</span> {f.description}

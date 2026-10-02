@@ -8,10 +8,12 @@ until ``INVOICE_FORMAT_RELEASED`` is switched on by that decision.
 """
 
 import re
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from mhvp.core.clock import local_today
 
 SCOPES = ("property", "contract", "document", "ticket", "invoice")
 LOCKED_SCOPES = frozenset({"invoice"})
@@ -56,7 +58,7 @@ def format_number(fmt: NumberFormat, value: int, on: date | None = None) -> str:
     """``[PREFIX-][JJJJ-]NNNN`` with zero padded digits; empty parts are left out."""
     parts = [fmt.prefix] if fmt.prefix else []
     if fmt.year_based:
-        parts.append(str((on or datetime.now(UTC).date()).year))
+        parts.append(str((on or local_today()).year))
     parts.append(f"{value:0{fmt.digits}d}")
     return "-".join(parts)
 

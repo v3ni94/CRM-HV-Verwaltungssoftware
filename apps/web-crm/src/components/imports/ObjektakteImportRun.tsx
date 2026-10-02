@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 const API = "/api/bff/objektakte/imports";
 
@@ -14,6 +15,7 @@ export type OcrResult = { import_run_id: string; matched: number; unmatched_keys
 /** Importlauf der objektakte-Übernahme (M35): Export prüfen (Vorschau, ändert nichts), übernehmen,
  *  Ergebnis eines Laufs abrufen und OCR-Textcache zu einem Lauf übernehmen. */
 export function ObjektakteImportRun() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("ObjektakteImportRun");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -70,10 +72,10 @@ export function ObjektakteImportRun() {
           <input type="file" accept=".sql,.txt" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreviewed(false); }} />
         </label>
         <div className="mt-2 flex gap-2">
-          <button type="button" className={ui.buttonSm} disabled={!file} onClick={() => void send("preview")}>
+          <button type="button" className={ui.buttonSm} disabled={busy || (!file)} onClick={guard(() => send("preview"))}>
             {t("check")}
           </button>
-          <button type="button" className={ui.buttonSm} disabled={!file || !previewed} onClick={() => void send("apply")}>
+          <button type="button" className={ui.buttonSm} disabled={busy || (!file || !previewed)} onClick={guard(() => send("apply"))}>
             {t("apply")}
           </button>
         </div>
@@ -91,7 +93,7 @@ export function ObjektakteImportRun() {
           <span className={ui.label}>{t("runId")}</span>
           <input className={ui.input} value={runId} onChange={(e) => setRunId(e.target.value)} />
         </label>
-        <button type="button" className={`${ui.buttonSm} mt-2`} disabled={!validRun} onClick={() => void loadRun()}>
+        <button type="button" className={`${ui.buttonSm} mt-2`} disabled={busy || (!validRun)} onClick={guard(() => loadRun())}>
           {t("load")}
         </button>
         {run ? (
@@ -108,7 +110,7 @@ export function ObjektakteImportRun() {
           <span className={ui.label}>{t("ocrFile")}</span>
           <input type="file" accept=".zip" onChange={(e) => setOcrFile(e.target.files?.[0] ?? null)} />
         </label>
-        <button type="button" className={`${ui.buttonSm} mt-2`} disabled={!ocrFile || !validRun} onClick={() => void sendOcr()}>
+        <button type="button" className={`${ui.buttonSm} mt-2`} disabled={busy || (!ocrFile || !validRun)} onClick={guard(() => sendOcr())}>
           {t("ocrApply")}
         </button>
         {ocr ? (

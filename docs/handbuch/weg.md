@@ -530,3 +530,7 @@ Unter Einstellungen, Fachliche Regeln, schaltet der Schalter "Zuordnungsvorschla
 ### Neue Version einer Jahresabrechnung mit Korrekturbeschluss
 
 Die Schaltfläche "Neue Version" öffnet einen Dialog. Dort wählen Sie optional den Korrekturgrund, beschreiben die Grundlage und wählen einen Korrekturbeschluss derselben Gemeinschaft. Nach dem Anlegen zeigt die Maske die Mehrheitsprüfung des Beschlusses an. Die Prüfung ist nur ein Vermerk und ändert keinen Status. Ein Beschluss einer anderen Gemeinschaft wird abgelehnt (Fehler MHVP-HOA-0038).
+
+## Eigentümerwechsel prüfen und Mehrheit je Beschluss (GAI-412, GAI-413, Welle 21)
+
+Auf der Seite Einsichtsanfragen einer Gemeinschaft prüft die Schaltfläche "Eigentümerwechsel prüfen" (Recht WEG bearbeiten), ob bei offenen Anfragen der Eigentümer seit der Anfrage gewechselt hat. Es entsteht nur ein Prüfvermerk, keine Anfrage wird geschlossen und kein Paket widerrufen. In der Beschlusssammlung zeigt "Mehrheit prüfen" je Beschluss das gespeicherte und das aktuelle Ergebnis der Mehrheitsprüfung. Die Anzeige ändert den Beschlussstatus nicht und ersetzt keine rechtliche Würdigung.

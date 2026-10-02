@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
 import boto3
@@ -15,6 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
 
+from mhvp.core.clock import local_today
 from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.conftest import Database
@@ -110,7 +111,7 @@ def test_receipt_chain_lock_and_release(client: TestClient, world: World) -> Non
     assert opened["status"] == "open"
     assert opened["ticket_id"] is not None
     assert opened["reasons"] == ["Rechnung fehlt"]
-    assert opened["age_days"] == (datetime.now(UTC).date() - date(2026, 1, 12)).days
+    assert opened["age_days"] == (local_today() - date(2026, 1, 12)).days
 
     # Lock without document or flag.
     refused = client.post(f"{B}/transactions/{t1}/book", json=book, headers=h)

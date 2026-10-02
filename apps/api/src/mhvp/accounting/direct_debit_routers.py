@@ -21,7 +21,7 @@ from mhvp.accounting.direct_debit_models import DirectDebitRun, DirectDebitRunSt
 from mhvp.accounting.models import Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import content_disposition
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.ids import uuid7
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -199,9 +199,23 @@ async def set_creditor_id(
         entity = await session.get(LegalEntity, legal_entity_id)
         if entity is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        old_cid = entity.sepa_creditor_id
         entity.sepa_creditor_id = body.sepa_creditor_id
         entity.updated_by = principal.user_id
         await session.flush()
+        # GAI-307: payment parameters stay traceable (B07).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="creditor_id.updated",
+            entity_type="legal_entity",
+            entity_id=entity.id,
+            actor_user_id=principal.user_id,
+            payload={"sepa_creditor_id": entity.sepa_creditor_id},
+            changes=diff(
+                {"sepa_creditor_id": old_cid}, {"sepa_creditor_id": entity.sepa_creditor_id}
+            ),
+        )
         return {"legal_entity_id": entity.id, "sepa_creditor_id": entity.sepa_creditor_id}
 
 
@@ -217,6 +231,7 @@ async def set_tenant_creditor_id(
 
     async with tenant_tx(request, principal) as session:
         existing = await session.scalar(select(TenantBillingSettings.id).limit(1))
+        old_tid = await session.scalar(select(TenantBillingSettings.sepa_creditor_id).limit(1))
         if existing is None:
             await session.execute(
                 insert(TenantBillingSettings).values(
@@ -231,6 +246,18 @@ async def set_tenant_creditor_id(
                 .where(TenantBillingSettings.id == existing)
                 .values(sepa_creditor_id=body.sepa_creditor_id)
             )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="creditor_id.tenant_updated",
+            entity_type="tenant",
+            entity_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            payload={"sepa_creditor_id": body.sepa_creditor_id},
+            changes=diff(
+                {"sepa_creditor_id": old_tid}, {"sepa_creditor_id": body.sepa_creditor_id}
+            ),
+        )
         return {"tenant_id": principal.tenant_id, "sepa_creditor_id": body.sepa_creditor_id}
 
 

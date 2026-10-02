@@ -106,7 +106,7 @@ function ChecklistEditor({ items, onChange }: { items: ChecklistItem[]; onChange
         ))}
       </ul>
       <div className="flex gap-2">
-        <input className={ui.input} placeholder={t("newChecklistItem")} value={label} onChange={(e) => setLabel(e.target.value)} />
+        <input aria-label={t("newChecklistItem")} className={ui.input} placeholder={t("newChecklistItem")} value={label} onChange={(e) => setLabel(e.target.value)} />
         <button
           type="button"
           className={ui.buttonSm}
@@ -156,8 +156,8 @@ function ExtraFieldsEditor({ fields, onChange }: { fields: ExtraField[]; onChang
         ))}
       </ul>
       <div className="flex flex-wrap gap-2">
-        <input className={ui.input} placeholder={t("newFieldLabel")} value={label} onChange={(e) => setLabel(e.target.value)} />
-        <select className={ui.input} value={type} onChange={(e) => setType(e.target.value as ExtraField["type"])}>
+        <input aria-label={t("newFieldLabel")} className={ui.input} placeholder={t("newFieldLabel")} value={label} onChange={(e) => setLabel(e.target.value)} />
+        <select aria-label={t("fieldType")} className={ui.input} value={type} onChange={(e) => setType(e.target.value as ExtraField["type"])}>
           {FIELD_TYPES.map((ft) => (
             <option key={ft} value={ft}>
               {t(`fieldTypes.${ft}`)}
@@ -191,6 +191,7 @@ function TemplateForm({
   onCancel?: () => void;
 }) {
   const t = useTranslations("TicketTemplates");
+  const tCommon = useTranslations("Common");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -310,6 +311,7 @@ function TemplateForm({
       <div className="flex flex-col gap-1.5">
         <span className={ui.label}>{t("documentKinds")}</span>
         <ul className="flex flex-col gap-1">
+          {documents.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
           {documents.map((doc) => (
             <li key={doc} className="flex items-center gap-2 text-sm">
               <span className="flex-1">{doc}</span>
@@ -320,7 +322,7 @@ function TemplateForm({
           ))}
         </ul>
         <div className="flex gap-2">
-          <input className={ui.input} placeholder={t("newDocumentKind")} value={newDocument} onChange={(e) => setNewDocument(e.target.value)} />
+          <input aria-label={t("newDocumentKind")} className={ui.input} placeholder={t("newDocumentKind")} value={newDocument} onChange={(e) => setNewDocument(e.target.value)} />
           <button
             type="button"
             className={ui.buttonSm}
@@ -355,6 +357,7 @@ function TemplateForm({
 
 export function TicketTemplatesAdmin({ initialTemplates, canManage }: { initialTemplates: TicketTemplate[]; canManage: boolean }) {
   const t = useTranslations("TicketTemplates");
+  const tCommon = useTranslations("Common");
   const [templates, setTemplates] = useState(initialTemplates);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -402,6 +405,7 @@ export function TicketTemplatesAdmin({ initialTemplates, canManage }: { initialT
   return (
     <div className="flex flex-col gap-4">
       <ul className="flex flex-col gap-2">
+        {templates.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
         {templates.map((tpl) =>
           editingId === tpl.id ? (
             <TemplateForm key={tpl.id} initial={tpl} onSaved={upsert} onCancel={() => setEditingId(null)} />

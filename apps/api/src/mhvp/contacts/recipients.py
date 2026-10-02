@@ -27,12 +27,13 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, ContactRelation, DeliveryMode, RelationKind
+from mhvp.core.clock import local_today
 
 REPRESENTATIVE_ONLY_WARNING = (
     "Zustellung nur an den Bevollmächtigten: ob die Mahnung damit dem Vollmachtgeber zugeht, "
@@ -62,7 +63,7 @@ async def active_representatives(
     deleted representatives."""
     if not contact_ids:
         return {}
-    day = on or datetime.now(UTC).date()
+    day = on or local_today()
     rows = (
         await session.execute(
             select(ContactRelation)

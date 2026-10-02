@@ -14,12 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts import consent_rules
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Tenant
-from mhvp.privacy import config_sources, erasure, register_doc
+from mhvp.privacy import config_sources, erasure, proposals, register_doc
 from mhvp.privacy.models import (
     PrivacyDeletionProfile,
     PrivacyErasureRequest,
@@ -33,7 +34,16 @@ APPROVE = require_permission("privacy:approve")
 
 RegisterKind = Literal["processor", "sub_processor", "processing_activity", "responsibility"]
 AvvStatus = Literal["none", "requested", "confirmed", "not_required"]
-DataType = Literal["contact", "portal_account", "communication", "ticket", "other"]
+DataType = Literal[
+    "contact",
+    "portal_account",
+    "communication",
+    "ticket",
+    "other",
+    "domain_event",
+    "platform_user",
+    "bank_raw",
+]
 ThirdCountryStatus = Literal["open", "no", "yes"]
 ResponsibilityActor = Literal["gdwe", "verwalter", "betreiber"]
 ResponsibilityRole = Literal["open", "controller", "joint_controller", "processor", "not_involved"]
@@ -122,6 +132,8 @@ class PrivacyDeletionProfileIn(BaseModel):
     retention_months: int = Field(ge=0, le=1200)
     start_rule: str = Field(min_length=1, max_length=200)
     basis_note: str | None = None
+    # AJ12 (GAI-501): nightly deletion proposals, default off; never deletes.
+    auto_propose: bool | None = None
 
 
 class PrivacyDeletionProfileOut(PrivacyDeletionProfileIn):
@@ -130,6 +142,17 @@ class PrivacyDeletionProfileOut(PrivacyDeletionProfileIn):
     id: uuid.UUID
     released: bool
     released_at: datetime | None
+    auto_propose: bool | None = None
+
+
+class PrivacyDeletionProposalOut(BaseModel):
+    data_type: str
+    released: bool
+    auto_propose: bool
+    retention_months: int
+    cutoff: date
+    candidates: int | None = None
+    note: str | None = None
 
 
 class PrivacyErasureIn(BaseModel):
@@ -295,9 +318,7 @@ async def processing_records(
         detected = await config_sources.detect(
             session, _settings(request), tenant.slug if tenant else ""
         )
-        text = register_doc.render(
-            tenant.name if tenant else "", rows, datetime.now(UTC).date(), detected
-        )
+        text = register_doc.render(tenant.name if tenant else "", rows, local_today(), detected)
         return PrivacyRecordsDraft(
             title="Verzeichnis von Verarbeitungstätigkeiten",
             status="Entwurf",
@@ -322,7 +343,7 @@ async def processing_records_pdf(
         detected = await config_sources.detect(
             session, _settings(request), tenant.slug if tenant else ""
         )
-        today = datetime.now(UTC).date()
+        today = local_today()
         pdf = register_doc.render_pdf(tenant.name if tenant else "", rows, today, detected)
     filename = f"verarbeitungsverzeichnis-entwurf-{today.isoformat()}.pdf"
     return Response(
@@ -431,12 +452,16 @@ async def upsert_profile(
         )
         if row is None:
             row = PrivacyDeletionProfile(
-                tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                **body.model_dump(exclude_none=True),
             )
             session.add(row)
         else:
-            for key, value in body.model_dump().items():
+            for key, value in body.model_dump(exclude={"auto_propose"}).items():
                 setattr(row, key, value)
+            if body.auto_propose is not None:
+                row.auto_propose = body.auto_propose
             row.released, row.released_by, row.released_at = False, None, None
             row.updated_by = principal.user_id
         await session.flush()
@@ -549,4 +574,42 @@ async def execute_request(
 ) -> PrivacyErasureOut:
     async with tenant_tx(request, principal) as session:
         row = await erasure.execute(session, await _load(session, request_id), principal.user_id)
+        return PrivacyErasureOut.model_validate(row)
+
+
+@router.get(
+    "/privacy/deletion-proposals",
+    summary="Löschvorschläge je Datenart (nur Arbeitsliste, löscht nichts)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_deletion_proposals(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[PrivacyDeletionProposalOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = await proposals.preview(session, local_today())
+        return [PrivacyDeletionProposalOut(**r) for r in rows]
+
+
+@router.post(
+    "/privacy/deletion-proposals/run",
+    summary="Löschvorschläge jetzt erzeugen (nur Vorschläge, Vier-Augen)",
+)
+async def run_deletion_proposals(
+    request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> dict[str, object]:
+    async with tenant_tx(request, principal) as session:
+        return await proposals.run_proposals(session, principal.tenant_id, local_today())
+
+
+@router.post(
+    "/privacy/erasure-requests/{request_id}/accept",
+    summary="Löschvorschlag als Antrag übernehmen (erste Person)",
+)
+async def accept_proposal(
+    request_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> PrivacyErasureOut:
+    async with tenant_tx(request, principal) as session:
+        row = await erasure.accept_proposal(
+            session, await _load(session, request_id), principal.user_id
+        )
         return PrivacyErasureOut.model_validate(row)

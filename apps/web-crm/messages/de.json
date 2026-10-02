@@ -69,7 +69,7 @@
     "defaultActive": "Standardrichtlinie aktiv: freiwillig, jeder Benutzer entscheidet selbst; Portal freiwillig.",
     "crmLegend": "CRM-Rollen",
     "mode": {
-      "voluntary": "Freiwillig, jeder Benutzer entscheidet selbst (Standard, Betreiberentscheidung M2-01)",
+      "voluntary": "Freiwillig, jeder Benutzer entscheidet selbst (Standard)",
       "all_staff": "Pflicht für alle CRM-Rollen (Verwaltungsrollen)",
       "roles": "Pflicht nur für ausgewählte Rollen"
     },
@@ -591,7 +591,7 @@
     "isConsumer": "Verbraucher",
     "isConsumerYes": "Ja",
     "isConsumerNo": "Nein",
-    "isConsumerHelp": "Kennzeichen für das Mahnwesen (M16-03), keine Angabe bedeutet nicht beurteilt. Dient nur der Prüfung, keine rechtliche Feststellung.",
+    "isConsumerHelp": "Kennzeichen für das Mahnwesen, keine Angabe bedeutet nicht beurteilt. Dient nur der Prüfung, keine rechtliche Feststellung.",
     "errors": {
       "nameRequired": "Personen benötigen Vor- oder Nachname.",
       "companyRequired": "Firmen benötigen einen Firmennamen.",
@@ -995,7 +995,7 @@
     "maxOutput": "Ausgabegrenze ({tier})",
     "maxOutputHint": "Ausgabegrenze des Modells laut Anbieter, in Token je Antwort. Leer bedeutet 16000.",
     "toolUse": "Werkzeuge (Tool Use) für Stufe {tier} erlauben",
-    "toolUseHint": "Der Assistent darf in Kontakten, Verträgen, offenen Posten, Dokumenten, Terminen und im Kontenplan nachschlagen, nur lesend und mit den Rechten des Fragenden, bis zu vier Anbieteraufrufe je Frage. Standard aus. Wirkt erst nach Freigabe im Vier-Augen-Prinzip mit AVV-Nachweis; die Entscheidung dazu ist offen (AC08-01).",
+    "toolUseHint": "Der Assistent darf in Kontakten, Verträgen, offenen Posten, Dokumenten, Terminen und im Kontenplan nachschlagen, nur lesend und mit den Rechten des Fragenden, bis zu vier Anbieteraufrufe je Frage. Standard aus. Wirkt erst nach Freigabe im Vier-Augen-Prinzip mit AVV-Nachweis; die Entscheidung dazu ist offen.",
     "maxOutputInvalid": "Stufe {tier}: Die Ausgabegrenze muss eine ganze Zahl größer 0 sein.",
     "test": "Verbindung testen",
     "testHint": "Schickt je eingerichteter Stufe (klein, groß) einen Minimalprompt an den Anbieter. Der Test setzt keine Freigabe voraus und erteilt keine; die Kosten sind minimal und werden dem Monatsbudget belastet.",
@@ -1458,7 +1458,7 @@
       "samplesTitle": "Beispielzeilen",
       "errorRowsTitle": "Beispiele fehlerhafter Zeilen",
       "requirementsTitle": "Benötigte Exporte",
-      "requirementsIntro": "Stand je Berichtsart. Welcher Immoware24-Export die Spalten liefert, bestätigt der Betreiber in der Anforderungsliste (docs/integrations/immoware24-exporte.md); die Plattform setzt kein Exportformat voraus.",
+      "requirementsIntro": "Stand je Berichtsart. Welcher Immoware24-Export die Spalten liefert, bestätigt der Betreiber in der Anforderungsliste; die Plattform setzt kein Exportformat voraus.",
       "colReport": "Berichtsart",
       "colSource": "Quelle (Abschnitt 13.1)",
       "colRequired": "Pflichtfelder gemerkt",
@@ -2048,7 +2048,7 @@
   },
   "Broker": {
     "title": "Makler",
-    "flowfactNotice": "Die Übergabe an FLOWFACT folgt, sobald die Schnittstellendokumentation vorliegt (M28-01).",
+    "flowfactNotice": "Die Übergabe an FLOWFACT folgt, sobald die Schnittstellendokumentation vorliegt.",
     "tabRental": "Vermietung",
     "tabSale": "Verkauf",
     "statusAll": "Alle",
@@ -2176,7 +2176,7 @@
         "forceHint": "Die Datei wird trotz fehlender Angaben oder Schemafehlern erzeugt. Fehlende Werte werden nicht erfunden, die zugehörigen Elemente bleiben leer.",
         "hintsTitle": "Hinweise (nicht sperrend):",
         "error": "Prüfung fehlgeschlagen.",
-        "notice": "Nur lesender Export nach OpenImmo 1.2.7 (M26-02), XML oder ZIP mit verknüpften Bildern. Kein Versand an ein Portal. Die Pflichtfeldliste ist ein Produktstandard, keine rechtliche Vollständigkeitsprüfung.",
+        "notice": "Nur lesender Export nach OpenImmo 1.2.7, XML oder ZIP mit verknüpften Bildern. Kein Versand an ein Portal. Die Pflichtfeldliste ist ein Produktstandard, keine rechtliche Vollständigkeitsprüfung.",
         "schemaValidXsd": "Schemaprüfung gegen die hinterlegte OpenImmo-XSD bestanden.",
         "schemaValidStructure": "Strukturprüfung bestanden (dokumentierte Elemente). Keine Prüfung gegen das amtliche OpenImmo-Schema.",
         "schemaInvalidXsd": "Schemaprüfung gegen die hinterlegte OpenImmo-XSD nicht bestanden. Der Export ist gesperrt, bis die Fehler behoben sind oder der Export ausdrücklich trotzdem ausgelöst wird:",
@@ -2799,6 +2799,14 @@
       "decided": "Klärungsstatus gesetzt: {status}."
     }
   },
+  "BankActions": {
+    "config": {"title": "Zahlungsformat je Bankkonto", "intro": "Vereinbarte Version von pain.001 (Überweisung) und pain.008 (Lastschrift) sowie Einreichungsweg je Konto. Angeboten werden nur Versionen, die die Plattform erzeugen und prüfen kann. Speichern erzeugt keine Zahlungsdatei und löst keine Zahlung aus; Erzeugen und Einreichen bleiben bis zur Freigabestufe G2 gesperrt.", "account": "Bankkonto", "choose": "Konto wählen", "pain001": "Version pain.001", "pain008": "Version pain.008", "channel": "Einreichungsweg", "channel_file": "Datei (manueller Upload)", "channel_fints": "FinTS", "channel_ebics": "EBICS", "confirmedOn": "Mit der Bank abgestimmt am", "notes": "Notiz", "save": "Speichern", "saved": "Zahlungsformat gespeichert.", "readOnly": "Ändern braucht das Freigaberecht Bank."},
+    "batchStatus": {"open": "Bankrückmeldung erfassen", "status": "Rückmeldung der Bank", "status_submitted": "Eingereicht", "status_accepted_by_bank": "Von der Bank angenommen", "status_rejected": "Abgelehnt", "reason": "Grund (bei Ablehnung Pflicht)", "hint": "Ausführung und Rückgabe werden nicht hier, sondern über den Import der Bankrückmeldung erfasst. Eine Ablehnung lässt die Verbindlichkeit voll offen.", "record": "Erfassen", "cancel": "Abbrechen", "recorded": "Rückmeldung erfasst, betroffene Aufträge: {count}."},
+    "candidates": {"show": "Vorschläge", "hide": "Vorschläge ausblenden", "loading": "Vorschläge werden geladen.", "none": "Kein passender offener Posten gefunden.", "remaining": "Offen: {amount}", "score": "Treffergüte {score}", "unambiguous": "eindeutig", "note": "Vorschlag, keine Buchung. Die IBAN allein beweist keinen Schuldner."},
+    "clarification": {"open": "Als unbelegt melden", "reason": "Begründung", "submit": "Melden", "cancel": "Abbrechen", "opened": "Klärung eröffnet"},
+    "digest": {"buildWeek": "Woche ab (Montag)", "build": "Digest erzeugen", "buildHint": "Erzeugt oder aktualisiert den Digest der Woche, bucht nichts.", "built": "Digest erzeugt oder aktualisiert: {count}."},
+    "mandate": {"action": "Aktion", "revoke": "Widerrufen", "confirm": "Mandat {reference} widerrufen? Der Lastschrifteinzug der betroffenen Verträge wird beendet.", "revoked": "Mandat {reference} widerrufen."}
+  },
   "Payments": {
     "batchesTitle": "Zahlungsdateien",
     "batchesHint": "Nur Anzeige. Erzeugen, Download und Einreichung der Datei sind bis Freigabestufe G2 gesperrt.",
@@ -2949,7 +2957,7 @@
       "calendar_due_date": "kalendermäßig bestimmt (Vertragsfälligkeit)",
       "after_reminder": "erst nach Mahnung (Zugang der Mahnung)"
     },
-    "defaultStartHint": "Fälligkeit und Verzug werden getrennt ausgewiesen. Der Modus legt fest, aus welchen erfassten Tatsachen die Plattform einen Verzugsbeginn ableitet; fehlt die Tatsache (Zugangsdatum), bleibt der Verzugsbeginn offen. Die Ableitung ist eine Einschätzung und durch einen Rechtsanwalt zu prüfen (docs/rules/M16-03.md). Verzugszinsen bleiben Entwurf hinter dem Gate.",
+    "defaultStartHint": "Fälligkeit und Verzug werden getrennt ausgewiesen. Der Modus legt fest, aus welchen erfassten Tatsachen die Plattform einen Verzugsbeginn ableitet; fehlt die Tatsache (Zugangsdatum), bleibt der Verzugsbeginn offen. Die Ableitung ist eine Einschätzung und durch einen Rechtsanwalt zu prüfen. Verzugszinsen bleiben Entwurf hinter dem Gate.",
     "dueDate": "Fälligkeit",
     "defaultStart": "Verzugsbeginn",
     "defaultStartOpen": "offen",
@@ -3074,6 +3082,10 @@
     "deliveredAt": "Zugang beim Mieter",
     "issue": "Ausgeben",
     "newVersion": "Neue Version",
+    "newVersionReason": "Korrekturgrund",
+    "newVersionReasonHint": "Pflichtangabe, mindestens 5 Zeichen. Der Grund wird in der neuen Version gespeichert.",
+    "newVersionConfirm": "Neue Version anlegen",
+    "newVersionCancel": "Abbrechen",
     "results": "Ergebnis je Einheit",
     "unit": "Einheit",
     "costs": "Kosten",
@@ -3161,7 +3173,7 @@
       "notice": "Vorjahresergebnis je Mieter geteilt durch zwölf, optional mit Sicherheitsaufschlag in Prozent (Standard 0). Vorschläge ändern keine Vertragszahlungen; die Anpassung nach § 560 BGB ist ein eigener Schritt hinter der Freigabestufe G3.",
       "rule": "Sicherheitsaufschlag des Mandanten: {percent} %",
       "openMode": "Behandlung offener Vorauszahlungen bei Abrechnung",
-      "openModeHelp": "Mandantenschalter, Verfahren nicht freigegeben (Frage AC10-01). Wirkung nur über die Ergebnisbuchung hinter G3; der Standard ändert nichts.",
+      "openModeHelp": "Mandantenschalter, Verfahren nicht freigegeben. Wirkung nur über die Ergebnisbuchung hinter G3; der Standard ändert nichts. Die Wahl des Verfahrens liegt beim Betreiber (AC10-01).",
       "openModes": { "info_only": "Nur Information (Standard)", "offset_reversal": "Verrechnung der offenen Posten per Storno", "balance_against_due": "Saldo gegen Soll, Rückstand bleibt bestehen" },
       "surcharge": "Aufschlag %",
       "create": "Vorschläge ermitteln",
@@ -3286,7 +3298,7 @@
     },
     "outputs": {
       "title": "Ausgaben zum Abrechnungslauf",
-      "textNotice": "Rechtlich maßgebliche Texte sind als \"Text nicht freigegeben\" gekennzeichnet, bis der Betreiber sie freigegeben hat (AA11-01, AA11-02).",
+      "textNotice": "Rechtlich maßgebliche Texte sind als \"Text nicht freigegeben\" gekennzeichnet, bis der Betreiber sie freigegeben hat.",
       "preview": {
         "infoSheet": "Vorschau Informationsblatt",
         "ownerLetter": "Vorschau Anschreiben",
@@ -3345,7 +3357,7 @@
         "info": "Hinweis"
       },
       "complete": "Alle erfassten Angaben liegen vor. Das ist keine Feststellung der Zulässigkeit.",
-      "incomplete": "Es gibt offene Prüfpunkte. Die Zulässigkeit ist rechtlich zu klären (AD06-01)."
+      "incomplete": "Es gibt offene Prüfpunkte. Die Zulässigkeit ist rechtlich zu klären."
     },
     "conflicts": {
       "title": "Stimmkonflikte (Vollmacht gegen eigene Stimme)",
@@ -3369,7 +3381,7 @@
         "apply_second": "zweite Stimme gezählt",
         "rule_second": "nach Regel des Mandanten ersetzt"
       },
-      "hint": "Bis zur Entscheidung zählt die erste Stimme. Die Entscheidung trifft die Versammlungsleitung und ist rechtlich zu klären (AD06-02); keine Stimme wird gelöscht."
+      "hint": "Bis zur Entscheidung zählt die erste Stimme. Die Entscheidung trifft die Versammlungsleitung und ist rechtlich zu klären; keine Stimme wird gelöscht."
     }
   },
   "HoaWork": {
@@ -3783,19 +3795,19 @@
       "weeksInvalid": "Bitte 1 bis 12 Wochen eintragen.",
       "virtual": "Virtuelle Versammlungen zulassen (V13)",
       "termLock": "Sperre bei Geltungsdauer über drei Jahre (Grundlagenbeschluss virtuelle Versammlung)",
-      "termLockHint": "Standard aus: dann nur Hinweis. Höchstdauer und Übergangsregel sind rechtlich zu prüfen (offene Frage AA06-02).",
+      "termLockHint": "Standard aus: dann nur Hinweis. Höchstdauer und Übergangsregel sind rechtlich zu prüfen.",
       "transitionDate": "Stichtag Übergangsregel (vom Betreiber eingetragen)",
-      "transitionHint": "Freies Datum ohne Rechtswirkung: Es löst keine Sperre aus und ersetzt keine rechtliche Prüfung. Inhalt und Anwendbarkeit der Übergangsregel sind offen (AA06-02).",
+      "transitionHint": "Freies Datum ohne Rechtswirkung: Es löst keine Sperre aus und ersetzt keine rechtliche Prüfung. Inhalt und Anwendbarkeit der Übergangsregel sind offen.",
       "virtualHint": "Standard aus. Freischaltung nur nach Entscheidung des Betreibers mit Rechtsberatung; jede virtuelle Versammlung braucht zusätzlich den zulassenden Beschluss der Eigentümer mit Gültigkeitsende.",
       "save": "Einstellung speichern",
       "saved": "Einstellung gespeichert."
     },
     "onlineSwitch": {
       "title": "Online-Versammlung im Eigentümerportal",
-      "hint": "Standard aus. Ob eine Online-Versammlung zulässig ist, prüft das System nicht (offene Frage AD06-01). Freischaltung nur nach Entscheidung des Betreibers mit Rechtsberatung.",
+      "hint": "Standard aus. Ob eine Online-Versammlung zulässig ist, prüft das System nicht. Freischaltung nur nach Entscheidung des Betreibers mit Rechtsberatung.",
       "label": "Online-Teilnahme im Portal zulassen",
       "rule": "Regel bei Vollmacht gegen eigene Stimme",
-      "ruleHint": "Gilt, wenn für eine Einheit eine Stimme des Eigentümers und eine Stimme des Bevollmächtigten vorliegen. Die Regel ist eine Einstellung des Betreibers und keine Rechtsauskunft; die rechtliche Wirkung ist offen (AD06-02).",
+      "ruleHint": "Gilt, wenn für eine Einheit eine Stimme des Eigentümers und eine Stimme des Bevollmächtigten vorliegen. Die Regel ist eine Einstellung des Betreibers und keine Rechtsauskunft; die rechtliche Wirkung ist offen.",
       "modes": {
         "flag": "Konflikt als Prüfhinweis markieren (Standard)",
         "first_vote": "Zuerst abgegebene Stimme zählt",
@@ -4020,6 +4032,7 @@
     "toListing": "Zur Anzeige"
   },
   "Tickets": {
+    "bulkStatusLabel": "Neuer Status für die Auswahl",
     "sections": {
       "label": "Abschnitte",
       "bearbeiten": "Bearbeiten",
@@ -4523,7 +4536,7 @@
     "description": "Beschreibung",
     "owner": "Regelbesitzer",
     "ownerNone": "Kein Regelbesitzer",
-    "ownerHelp": "Wird bei einer endgültig fehlgeschlagenen Webhook-Zustellung benachrichtigt (M9-08). Ohne Regelbesitzer wird die zuletzt bearbeitende Person benachrichtigt.",
+    "ownerHelp": "Wird bei einer endgültig fehlgeschlagenen Webhook-Zustellung benachrichtigt. Ohne Regelbesitzer wird die zuletzt bearbeitende Person benachrichtigt.",
     "trigger": "Ereignistyp",
     "triggerHelp": "Zum Beispiel ticket.created. Die Liste zeigt bekannte Ereignistypen.",
     "conditions": "Bedingungen",
@@ -4858,6 +4871,7 @@
     }
   },
   "TicketTemplates": {
+    "fieldType": "Feldtyp des Zusatzfelds",
     "title": "Ticketvorlagen",
     "description": "Checklisten und Zusatzfelder für wiederkehrende Vorgänge, zum Beispiel Vermietung oder Kaution.",
     "newTemplate": "Neue Vorlage",
@@ -6364,7 +6378,53 @@
       "immowareStatus": "Stand der Immoware24-Übernahme",
       "immowareExplain": "Wie läuft die Übernahme?",
       "platformExplain": "Was zeigt diese Seite?",
-      "assistantHow": "Was kann der Assistent?"
+      "assistantHow": "Was kann der Assistent?",
+      "bulkMailHow": "Wie stelle ich einen Serienversand zusammen?",
+      "mergeCheck": "Welche Kontakte sind mögliche Dubletten?",
+      "rentIndexExplain": "Wie wirkt der Mietspiegel auf Mieterhöhungen?",
+      "contractNewHelp": "Welche Angaben braucht ein neuer Vertrag?",
+      "sepaExplain": "Welche SEPA-Mandate sind offen oder widerrufen?",
+      "bankReviewExplain": "Was prüfe ich in der Nachkontrolle?",
+      "bankKpiExplain": "Was bedeuten die Automatik-Kennzahlen?",
+      "paymentRunExplain": "Welche Zahlungen liegen im Zahllauf?",
+      "bankConnectionsExplain": "Welche Bankverbindungen sind eingerichtet?",
+      "creditorsFind": "Welcher Kreditor gehört zu dieser Rechnung?",
+      "invoicePlansExplain": "Welche Rechnungspläne laufen demnächst aus?",
+      "dunningSettingsExplain": "Was legen die Mahneinstellungen fest?",
+      "ownerStatementExplain": "Wie entsteht die Eigentümerabrechnung?",
+      "managementFeeExplain": "Wie wird das Verwalterhonorar ermittelt?",
+      "ticketReportExplain": "Was zeigt die Ticketauswertung?",
+      "handoverNewHelp": "Was brauche ich für ein neues Übergabeprotokoll?",
+      "brokerNewHelp": "Welche Angaben braucht ein neues Inserat?",
+      "brokerImportHelp": "Welche Dateien kann ich für Inserate importieren?",
+      "brokerListingExplain": "Welche Pflichtangaben fehlen diesem Inserat?",
+      "lettersHow": "Wie erzeuge ich einen Brief aus einer Vorlage?",
+      "intakeProposalsExplain": "Was ist bei den Eingangsvorschlägen zu prüfen?",
+      "generatedDocsFind": "Welche Dokumente wurden zuletzt erzeugt?",
+      "deletionProposalsExplain": "Warum wird dieses Dokument zur Löschung vorgeschlagen?",
+      "dmsSearchHelp": "Wie suche ich im Dokumentenarchiv?",
+      "dmsDocumentExplain": "Was enthält dieses Dokument?",
+      "importsReconcileExplain": "Welche Abweichungen zeigt der Abgleich?",
+      "immowareListsExplain": "Welche Immoware24-Listen kann ich einlesen?",
+      "immowareImportExplain": "Wie läuft der Immoware24-Import ab?",
+      "fullImportExplain": "Was geschieht beim Vollimport?",
+      "migrationExplain": "Welche Schritte hat die Migration aus Immoware24?",
+      "objektakteImportExplain": "Wie übernehme ich Unterlagen in die objektakte?",
+      "immowareLearningExplain": "Was passiert in der Lernphase?",
+      "platformAuditExplain": "Welche Änderungen stehen im Plattformaudit?",
+      "platformOperationsExplain": "Wie ist der Betriebsstatus?",
+      "platformDomainsExplain": "Welche Kundendomains sind eingerichtet?",
+      "gateG5Explain": "Was fehlt noch für die Freigabe G5?",
+      "releaseGatesExplain": "Welche Freigabestufen sind offen?",
+      "licensesExplain": "Welche Lizenzen hat dieser Mandant?",
+      "rentLawExplain": "Was zeigt die Mietrechtsprüfung?",
+      "oidcClientsExplain": "Wofür dienen OIDC-Clients?",
+      "onboardingExplain": "Welche Schritte hat das Onboarding?",
+      "priceListExplain": "Wie ist die Preisliste aufgebaut?",
+      "platformOverviewExplain": "Was zeigt die Plattformübersicht?",
+      "helpHow": "Wie finde ich Hilfe zu dieser Funktion?",
+      "conversationHow": "Wie führe ich ein Gespräch mit dem Assistenten fort?",
+      "versionExplain": "Was hat sich in der aktuellen Version geändert?"
     },
     "linksTitle": "Gefundene Datensätze",
     "toolsTitle": "Verwendete Nachschlagewerkzeuge",
@@ -6520,7 +6580,8 @@
       "merge": "Zusammenführung",
       "reserves": "Rücklagen",
       "rentIndex": "Mietspiegel",
-      "letters": "Briefe"
+      "letters": "Briefe",
+      "version": "Version"
     }
   },
   "Settings": {
@@ -6849,6 +6910,29 @@
       "description": "Verfügbarkeitsfenster und Freigaben je Unterlagenklasse der Dienstleister."
     }
   },
+  "MfaReset": {
+      "title": "Zweiten Faktor zurücksetzen (Vier-Augen-Prinzip)",
+      "intro": "Verliert ein Benutzer seinen zweiten Faktor, beantragt eine Person mit Mitgliederrecht das Zurücksetzen mit Begründung, eine zweite, andere Person gibt frei oder lehnt ab. Wiederherstellungscodes gibt es derzeit nicht, ob sie eingeführt werden, entscheidet der Betreiber (AI09-01).",
+      "disabled": "Die Funktion ist ausgeschaltet. Ein Mandantenadministrator aktiviert sie unter Fachliche Regeln (Schalter mfa_admin_reset_enabled).",
+      "member": "Mitglied",
+      "reason": "Begründung (mindestens 10 Zeichen)",
+      "request": "Zurücksetzen beantragen",
+      "requested": "Antrag gestellt.",
+      "requests": "Anträge",
+      "none": "Keine Anträge.",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "comment": "Kommentar zur Entscheidung (optional)",
+      "working": "Bitte warten",
+      "decided": "Entscheidung gespeichert.",
+      "confirmApprove": "Zweiten Faktor dieses Benutzers wirklich zurücksetzen? Der Benutzer richtet ihn bei der nächsten Anmeldung neu ein.",
+      "status": {
+          "requested": "Offen",
+          "approved": "Freigegeben",
+          "rejected": "Abgelehnt"
+      },
+      "selectMember": "Mitglied wählen"
+  },
   "Members": {
     "propertiesAll": "Objekte: alle",
     "editProperties": "Objekte: {count} zugeordnet",
@@ -7010,7 +7094,7 @@
       "off": "aus"
     },
     "description": "Ist der Schalter an, speichert die Plattform je Ticketabschluss ein Lernbeispiel (Betreff, Anliegen, Kategorie, Thema, Erledigungsart, Notiz und ein Auszug der letzten Antwort). Daraus entsteht der Hinweis Bei ähnlichen Vorgängen wurde für neue Anliegen. Die Beispiele bleiben in der Plattform und gehen nicht an den KI-Anbieter. Wird ein Kontakt gelöscht, werden die Beispiele seiner Tickets mit gelöscht.",
-    "risk": "Standard aus: Die Beispiele enthalten in der Regel personenbezogene Daten. Aufbewahrungsfrist und Löschlauf sind noch nicht festgelegt (ADR 0010, offene Frage M7-04). Das Ausschalten stoppt neue Beispiele, vorhandene bleiben erhalten. Jede Änderung wird protokolliert.",
+    "risk": "Standard aus: Die Beispiele enthalten in der Regel personenbezogene Daten. Aufbewahrungsfrist und Löschlauf sind noch nicht festgelegt. Das Ausschalten stoppt neue Beispiele, vorhandene bleiben erhalten. Jede Änderung wird protokolliert.",
     "label": "Lernbeispiele aus Ticketabschlüssen speichern",
     "saved": "Gespeichert.",
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
@@ -7620,6 +7704,7 @@
       "closesAt": "Öffnungszeit bis",
       "timezone": "Zeitzone {timezone}",
       "holidays": "Feiertage",
+      "removeHoliday": "Feiertag {date} entfernen",
       "noHolidays": "Noch kein Feiertag hinterlegt.",
       "holidayDate": "Datum",
       "addHoliday": "Feiertag hinzufügen",
@@ -7831,7 +7916,7 @@
   },
   "LegalEntityBankAccounts": {
     "title": "Standardkonto des Rechtsträgers",
-    "intro": "Bankkonten des Rechtsträgers dieses Objekts (Stammdaten). Das Standardkonto ist das Zahlungsziel im Mahnschreiben (M16-13).",
+    "intro": "Bankkonten des Rechtsträgers dieses Objekts (Stammdaten). Das Standardkonto ist das Zahlungsziel im Mahnschreiben.",
     "depositHint": "Ein Kautionskonto kann nicht Standardkonto sein.",
     "loading": "Konten werden geladen.",
     "empty": "Keine Bankkonten des Rechtsträgers vorhanden.",
@@ -7960,7 +8045,7 @@
     "letterPdf": "INI-/HIA-Brief als PDF",
     "title": "EBICS (Grundgerüst)",
     "intro": "Abruf von Kontoauszügen über EBICS (Auftragsart C53, camt.053). Schlüssel werden verschlüsselt gespeichert, der Signaturschlüssel bleibt in der Standardvariante bei der unterschreibenden Person. Zahlungen werden über EBICS nicht eingereicht (Freigabetor G2).",
-    "transportMissing": "Die Übertragung zur Bank ist nicht verfügbar: Es ist keine geprüfte EBICS-Implementierung installiert (offene Frage AE23-01). Teilnehmer und Schlüssel können vorbereitet werden, an die Bank wird nichts gesendet.",
+    "transportMissing": "Die Übertragung zur Bank ist nicht verfügbar: Es ist keine geprüfte EBICS-Implementierung installiert. Teilnehmer und Schlüssel können vorbereitet werden, an die Bank wird nichts gesendet.",
     "keyPolicy": "Schlüssellänge heute mindestens {min} Bit, Standard {standard} Bit; ab {date} sind mindestens 4096 Bit nötig (Krypto LifeCycle EBICS der Deutschen Kreditwirtschaft).",
     "enabled": "Eingeschaltet",
     "disabled": "Ausgeschaltet",
@@ -7968,7 +8053,7 @@
     "switchOff": "EBICS ausschalten",
     "signatureMode": "Signaturschlüssel",
     "modeExternal": "extern bei der unterschreibenden Person",
-    "modeServer": "von der Plattform erzeugt (Entscheidung S16-03-02 offen)",
+    "modeServer": "von der Plattform erzeugt (Entscheidung offen, S16-03-02)",
     "modeHelp": "Die Variante gilt für neu angelegte Teilnehmer. Empfehlung der Deutschen Kreditwirtschaft: Signaturschlüssel auf Chipkarte oder eigenem Datenträger.",
     "empty": "Noch kein EBICS-Teilnehmer angelegt.",
     "created": "Teilnehmer angelegt.",
@@ -9016,6 +9101,7 @@
     "proposeHint": "Vorbereiten legt nur einen Zahlungsauftrag als Entwurf an. Freigabe durch zwei Personen unter Bank, Zahlungsaufträge; die Zahlungsdatei bleibt bis G2 gesperrt."
   },
   "TicketInvoice": {
+    "close": "Schließen",
     "attach": "Als Rechnung zuordnen",
     "invoiceId": "Rechnungs-ID",
     "attached": "Als Rechnung zugeordnet und im Objektordner abgelegt.",
@@ -9867,7 +9953,7 @@
   },
   "TelephonySettings": {
     "title": "Telefonie-Webhook",
-    "pageIntro": "Anbieterneutraler Eingang für Anrufereignisse der Telefonanlage. Der Anbieter ist beim Betreiber noch offen, das Nachrichtenformat ist in docs/integrations/telefonie.md beschrieben.",
+    "pageIntro": "Anbieterneutraler Eingang für Anrufereignisse der Telefonanlage. Der Anbieter ist beim Betreiber noch offen.",
     "intro": "Die Telefonanlage signiert jede Zustellung mit dem hier hinterlegten Geheimnis (HMAC-SHA256, Zeitfenster fünf Minuten). Ereignisse: Anruf begonnen, beendet, verpasst, jeweils mit Rufnummer, Richtung, Dauer und optionaler Anbieter-Referenz.",
     "endpoint": "Endpunkt:",
     "enabled": "Webhook aktiv",
@@ -10296,7 +10382,7 @@
     "migrationCutoff": "Übernahmestichtag",
     "assetReports": "Vermögensberichte",
     "assetReport": "Vermögensbericht",
-    "assetReportNotice": "Vermögensbericht zum Stichtag aus der Buchhaltung des Rechtsträgers. Entwurf ohne Rechtsfolge; Gliederung mit Rechtsberatung abzustimmen (M24-02), Ausgabe an Eigentümer erst mit Freigabestufe G4.",
+    "assetReportNotice": "Vermögensbericht zum Stichtag aus der Buchhaltung des Rechtsträgers. Entwurf ohne Rechtsfolge; Gliederung mit Rechtsberatung abzustimmen, Ausgabe an Eigentümer erst mit Freigabestufe G4.",
     "assetReportCreate": "Vermögensbericht anlegen",
     "assetReportNone": "Noch kein Vermögensbericht.",
     "asOf": "Stichtag",
@@ -10357,7 +10443,7 @@
       "none": "keine Angabe"
     },
     "loanAllocation": "Darlehen in der Jahresabrechnung",
-    "loanAllocationNote": "Ausweis je Einheit nach Schlüssel und Grundlage; nicht Teil des Abrechnungsergebnisses (Entscheidung M24-03 offen).",
+    "loanAllocationNote": "Ausweis je Einheit nach Schlüssel und Grundlage; nicht Teil des Abrechnungsergebnisses.",
     "loanAllocationLoan": "Darlehen",
     "loanAllocationKey": "Verteilerschlüssel",
     "loanAllocationBasis": "Grundlage (Beschluss, Vertrag)",
@@ -10900,7 +10986,7 @@
       "description": "Ausgehende Ereignismeldungen an Fremdsysteme: Abonnements, Zustellprotokoll, Neuzustellung."
     },
     "title": "Webhook-Abonnements",
-    "pageIntro": "Fremdsysteme erhalten Ereignisse der Plattform als signierte Meldung (HMAC SHA-256). Die Meldung enthält nur Kennungen, Feldnamen, Nummern, Daten und Beträge, nie Namen, Anschriften oder IBAN. Vertrag und Katalog: docs/integrations/webhooks.md.",
+    "pageIntro": "Fremdsysteme erhalten Ereignisse der Plattform als signierte Meldung (HMAC SHA-256). Die Meldung enthält nur Kennungen, Feldnamen, Nummern, Daten und Beträge, nie Namen, Anschriften oder IBAN.",
     "readOnlyHint": "Nur Lesezugriff, Änderungen erfordern das Recht Mandanteneinstellungen bearbeiten.",
     "newSubscription": "Neues Abonnement",
     "cancel": "Abbrechen",
@@ -12131,6 +12217,7 @@
     }
   },
   "Common": {
+    "emptyList": "Keine Einträge vorhanden.",
     "breadcrumbNav": "Brotkrümelnavigation",
     "links": {
       "title": "Verknüpfungen",
@@ -12433,7 +12520,7 @@
       "on": "an",
       "off": "aus"
     },
-    "description": "Erlaubt den Umlaufbeschluss mit einfacher statt einstimmiger Mehrheit, wenn ein Beschluss der Gemeinschaft dies zuvor zulässt (Einschätzung: § 23 Abs. 3 Satz 2 WEG, M25-02). Standard aus.",
+    "description": "Erlaubt den Umlaufbeschluss mit einfacher statt einstimmiger Mehrheit, wenn ein Beschluss der Gemeinschaft dies zuvor zulässt (Einschätzung: § 23 Abs. 3 Satz 2 WEG). Standard aus.",
     "risk": "Das Einschalten ist eine Betreiberentscheidung nach rechtlicher Prüfung. Die Plattform stellt die Zulässigkeit der abgesenkten Mehrheit im Einzelfall nicht fest, das bleibt Aufgabe der Prüfung des zulassenden Beschlusses.",
     "label": "Umlaufbeschluss mit einfacher Mehrheit für diesen Mandanten zulassen",
     "saved": "Gespeichert.",
@@ -12810,18 +12897,78 @@
     "hint": "Standard aus: Eine zulässige Löschung bleibt dann endgültig. Mit Papierkorb bleibt das Dokument bis zum Fristende erhalten und kann wiederhergestellt werden; danach löscht ein täglicher Auftrag endgültig, sofern keine Sperre besteht.",
     "enabled": "Papierkorb verwenden",
     "days": "Frist in Tagen",
-    "daysHint": "Vorschlag {proposed} Tage. Das ist keine Rechtsfrist; ob personenbezogene Daten so lange im Papierkorb bleiben dürfen, ist offen (AE33-01). Eine Änderung gilt für Dokumente, die danach in den Papierkorb gelegt werden.",
+    "daysHint": "Vorschlag {proposed} Tage. Das ist keine Rechtsfrist; ob personenbezogene Daten so lange im Papierkorb bleiben dürfen, ist offen. Eine Änderung gilt für Dokumente, die danach in den Papierkorb gelegt werden (AE33-01).",
     "save": "Speichern",
     "saved": "Einstellung gespeichert."
   },
+  "PrivacyOversight": {
+    "title": "Datenschutzübersicht",
+    "loading": "Wird geladen.",
+    "consents": {
+      "title": "Einwilligungen je Zweck",
+      "hint": "Zählung aller Kontakte des Mandanten. \"Ohne Nachweisdokument\" heißt: aktive Einwilligung ohne verknüpftes Dokument; ob die erfasste Quelle als Nachweis genügt, wird hier nicht bewertet.",
+      "kind": "Zweck",
+      "active": "Aktiv",
+      "revoked": "Widerrufen",
+      "objections": "Widersprüche",
+      "withoutProof": "Ohne Nachweisdokument",
+      "contacts": "Kontakte mit aktiver Einwilligung"
+    },
+    "kinds": {
+      "data_sharing": "Datenweitergabe",
+      "portal_terms": "Portalbedingungen",
+      "email_delivery": "Zustellung per E-Mail",
+      "marketing": "Werbung",
+      "whatsapp": "WhatsApp"
+    },
+    "deadlines": {
+      "title": "Fristen für Datenschutzanträge",
+      "hint": "Die Fristen haben keinen Standardwert, weil ihre Länge eine Rechtsfrage ist. Tragen Sie die Werte nach rechtlicher Prüfung ein. Die berechneten Daten sind eine Orientierung und zu prüfen.",
+      "access": "Auskunft (Tage)",
+      "erasure": "Löschung (Tage)",
+      "warn": "Vorfrist (Tage vorher)",
+      "save": "Fristen speichern",
+      "saved": "Fristen gespeichert.",
+      "unconfigured": "Keine Fristen hinterlegt: offene Anträge werden ohne Fälligkeit angezeigt.",
+      "empty": "Keine offenen Löschanträge.",
+      "item": "Löschantrag, Eingang {received}, Vorfrist {warn}, Frist {due}:"
+    },
+    "states": {
+      "unconfigured": "keine Frist hinterlegt",
+      "ok": "im Rahmen",
+      "warn": "Vorfrist erreicht",
+      "overdue": "Frist überschritten"
+    },
+    "readiness": {
+      "title": "Vor-G1-Auswertung des Verzeichnisses",
+      "complete": "Alle {n} aktiv genutzten Dienste haben einen geklärten Eintrag.",
+      "open": "{n} Einträge mit offenen Punkten:"
+    }
+  },
+  "ConsentPolicySettings": {
+    "title": "Einwilligungsregeln",
+    "hint": "Standard ist die strenge Variante: E-Mail-Zustellung und Datenweitergabe nur mit Einwilligung. Die Erweiterung auf Vertrag ist eine Rechtsentscheidung und wird protokolliert.",
+    "email_delivery": "Zustellung per E-Mail",
+    "data_sharing": "Datenweitergabe an Dritte",
+    "consentOnly": "nur mit Einwilligung (Standard)",
+    "consentOrContract": "Einwilligung oder Vertrag",
+    "termsVersion": "Aktuelle Version der Portalbedingungen",
+    "save": "Speichern",
+    "saved": "Einwilligungsregeln gespeichert."
+  },
   "AccessExportSettings": {
     "title": "Umfang der DSGVO-Auskunft",
-    "hint": "Standard: andere Personen nur mit Rolle, interne Vermerke zurückgehalten. Welcher Umfang zulässig ist, ist eine Rechtsfrage (AC07-01). Der Umfang wird beim Vorbereiten einer Auskunft festgehalten und gilt dann unverändert bis zur Freigabe. Anschriften, Kontaktdaten, Kennungen und Bankdaten anderer Personen werden in keiner Variante ausgegeben.",
+    "hint": "Standard: andere Personen nur mit Rolle, interne Vermerke zurückgehalten. Welcher Umfang zulässig ist, ist eine Rechtsfrage. Der Umfang wird beim Vorbereiten einer Auskunft festgehalten und gilt dann unverändert bis zur Freigabe. Anschriften, Kontaktdaten, Kennungen und Bankdaten anderer Personen werden in keiner Variante ausgegeben.",
     "scope": "Angaben zu anderen Personen",
     "scopeNone": "nur mit Rolle (Standard)",
     "scopeNames": "mit Name und Rolle",
     "notes": "Interne Vermerke (Notizfeld und Kontaktnotizen, ohne Verfasser) in die Auskunft aufnehmen",
     "save": "Speichern",
+    "sources": {
+      "include_tickets": "Vorgänge (Tickets) des Kontakts ausgeben, ohne interne Beschreibung",
+      "include_communication": "Nachrichten des Kontakts ausgeben (Betreff und Text, ohne Empfängerlisten)",
+      "include_documents": "Dem Kontakt zugeordnete Dokumente auflisten (Titel und Datum, ohne Inhalt)"
+    },
     "saved": "Einstellung gespeichert."
   },
   "RetentionSettings": {
@@ -13060,7 +13207,7 @@
     "portalVoteHash": "Prüfsumme des Beschlusstexts: {hash}",
     "portalChoice": { "yes": "Ja", "no": "Nein", "abstain": "Enthaltung" },
     "title": "Umlaufbeschluss erfassen",
-    "hint": "Das System zählt die in Textform eingegangenen Stimmen und stellt das Ergebnis fest. Ob eine abgesenkte Mehrheit im Umlaufverfahren zulässig ist, ist eine rechtliche Einschätzung und durch die Rechtsberatung zu prüfen (M25-02).",
+    "hint": "Das System zählt die in Textform eingegangenen Stimmen und stellt das Ergebnis fest. Ob eine abgesenkte Mehrheit im Umlaufverfahren zulässig ist, ist eine rechtliche Einschätzung und durch die Rechtsberatung zu prüfen.",
     "disabled": "Umlaufbeschluss mit einfacher Mehrheit ist für diesen Mandanten nicht freigeschaltet. Es gilt Allstimmigkeit in Textform.",
     "subject": "Gegenstand",
     "wording": "Beschlusstext",
@@ -13285,7 +13432,7 @@
     "colComment": "Kommentar"
   },
   "PeriodLocks": {
-    "decisionOpen": "Entscheidung offen (P06-02 und AA08-01): Standard ist die Sperre des ganzen Buchungskreises. Die Objektsperre und die Aufhebung sind technisch vorbereitet und standardmäßig aus.",
+    "decisionOpen": "Entscheidung offen: Standard ist die Sperre des ganzen Buchungskreises. Die Objektsperre und die Aufhebung sind technisch vorbereitet und standardmäßig aus (P06-02, AA08-01).",
     "settingsTitle": "Schalter",
     "lockMode": "Umfang der Sperre",
     "modeLedger": "Nur Buchungskreis (Standard)",
@@ -13318,14 +13465,14 @@
   "G1Opening": {
     "register": {
       "title": "Abnahmeregister Anhang D",
-      "help": "Nur Anzeige. Der Stand kommt aus dem Abnahmeregister (abgenommene Fälle durch die fachkundige Person, offene Frage AE01-01) und überschreibt die Ergebnisse dieser Checkliste nicht.",
+      "help": "Nur Anzeige. Der Stand kommt aus dem Abnahmeregister (abgenommene Fälle durch die fachkundige Person) und überschreibt die Ergebnisse dieser Checkliste nicht.",
       "state": "G1 Fälle bestanden {passed} von {total}, freigegebene Sollwerte {released} von {all}",
       "link": "Zum Abnahmeregister"
     },
     "evidence": {"document": "Dokument", "missing": "Nachweis fehlt"},
     "title": "G1 Öffnung",
     "description": "Checkliste vor der produktiven Buchführung (Freigabestufe G1). Der Stand kommt aus dem System, die Ergebnisse trägt der Betreiber ein. Der Antrag läuft über den bestehenden Freigabepfad mit zweiter Person; diese Seite öffnet die Stufe nie selbst.",
-    "intro": "Reihenfolge nach der Öffnungsliste M12-09: Kontenrahmen mit der Steuerberatung freigeben, Anhang D Fälle durch die fachkundige Person abnehmen, Umsatzsteuerbehandlung prüfen, danach den Antrag auf G1 stellen. Die Entscheidung trifft eine zweite Person unter Plattform.",
+    "intro": "Reihenfolge der Öffnungsliste: Kontenrahmen mit der Steuerberatung freigeben, Anhang D Fälle durch die fachkundige Person abnehmen, Umsatzsteuerbehandlung prüfen, danach den Antrag auf G1 stellen. Die Entscheidung trifft eine zweite Person unter Plattform.",
     "loadError": "Die Checkliste konnte nicht geladen werden.",
     "savedMessage": "Ergebnis eingetragen.",
     "requestedMessage": "Antrag auf G1 gestellt. Die Entscheidung trifft eine zweite Person unter Plattform, Freigabestufen.",
@@ -13386,7 +13533,7 @@
     },
     "cases": {
       "title": "Anhang D Fälle mit Freigabestufe G1",
-      "help": "Ergebnis der fachlichen Abnahme je Fall nach docs/acceptance/abnahme-anhang-d.md. Ein Test im Code ist keine Abnahme; eingetragen wird das Ergebnis der fachkundigen Person."
+      "help": "Ergebnis der fachlichen Abnahme je Fall. Ein Test im Code ist keine Abnahme; eingetragen wird das Ergebnis der fachkundigen Person."
     },
     "manual": {
       "title": "Manuelle Prüfpunkte",
@@ -13504,7 +13651,7 @@
   },
   "MailApprovalSettings": {
     "title": "Vier-Augen-Prinzip beim Mailversand",
-    "description": "Mandantenmodus für die Freigabe von E-Mail-Entwürfen vor dem Versand (M20-04). Alle jede Antwort, external_only nur an externe Empfänger, off keine Pflichtfreigabe.",
+    "description": "Mandantenmodus für die Freigabe von E-Mail-Entwürfen vor dem Versand. Alle jede Antwort, external_only nur an externe Empfänger, off keine Pflichtfreigabe.",
     "modeLabel": "Modus",
     "modes": {
       "all": "Alle Antworten freigeben",
@@ -13530,7 +13677,7 @@
   },
   "ReceivableRulesSettings": {
     "title": "Sollstellungsregeln",
-    "description": "Mandantenvorgaben für den Sollstellungsagenten (M13-01 bis M13-03): Zeitanteilsregel und Umsatzsteueroption. Standard aus.",
+    "description": "Mandantenvorgaben für den Sollstellungsagenten: Zeitanteilsregel und Umsatzsteueroption. Standard aus.",
     "gateHint": "Buchung bleibt hinter Gate G1 (produktive Buchhaltung) gesperrt, auch wenn diese Regeln aktiviert sind. Diese Einstellungen betreffen nur die Berechnung des Entwurfs.",
     "enabled": "Sollstellungsagent für diesen Mandanten aktivieren",
     "prorationMethod": "Zeitanteilsregel",
@@ -13549,14 +13696,14 @@
       "semiannual": "halbjährlich",
       "annual": "jährlich"
     },
-    "paymentIntervalHint": "Die Zahlweise wird weiterhin je Vertrag festgelegt (payment_interval). Ein neuer Zahlungsplan ohne eigene Angabe übernimmt diesen Mandanten-Standard, ohne Vorgabe bleibt es bei monatlich (M13-01a).",
+    "paymentIntervalHint": "Die Zahlweise wird weiterhin je Vertrag festgelegt (payment_interval). Ein neuer Zahlungsplan ohne eigene Angabe übernimmt diesen Mandanten-Standard, ohne Vorgabe bleibt es bei monatlich.",
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
     "save": "Speichern",
     "saved": "Gespeichert."
   },
   "PlatformLicensing": {
     "title": "Lizenzen und Preisliste",
-    "notice": "Lizenzen und Preise je Modul. Ohne vereinbarten Preis folgt eine Lizenz der Preisstruktur (Stufen nach Einheiten, Zusatzmodule, Testphase). Alle Beträge netto, die Rechnungsstellung ist offen (M27-01). Es sind keine Preise vorbelegt.",
+    "notice": "Lizenzen und Preise je Modul. Ohne vereinbarten Preis folgt eine Lizenz der Preisstruktur (Stufen nach Einheiten, Zusatzmodule, Testphase). Alle Beträge netto, die Rechnungsstellung ist offen. Es sind keine Preise vorbelegt.",
     "forbidden": "Nur für Plattformadministratoren.",
     "link": "Lizenzen und Preisliste",
     "tenant": "Mandant",
@@ -13622,7 +13769,7 @@
   },
   "PlatformPricing": {
     "title": "Preisstruktur",
-    "notice": "Preismodell als Struktur: Stufen nach Einheiten, Zusatzmodule, Testphase. Beträge sind nicht vorbelegt und vom Betreiber zu pflegen (offene Entscheidung M27-01). Ein Angebot ist nur ein Entwurf und enthält keine Umsatzsteuer.",
+    "notice": "Preismodell als Struktur: Stufen nach Einheiten, Zusatzmodule, Testphase. Beträge sind nicht vorbelegt und vom Betreiber zu pflegen. Ein Angebot ist nur ein Entwurf und enthält keine Umsatzsteuer.",
     "forbidden": "Nur für Plattformadministratoren.",
     "complete": "Alle aktiven Zeilen haben einen Betrag.",
     "incomplete": "{count} aktive Zeilen ohne Betrag. Angebote bleiben Entwurf.",
@@ -13714,6 +13861,7 @@
     }
   },
   "PlatformOnboarding": {
+    "entityKind": "Art des Rechtsträgers",
     "title": "Onboarding Drittmandanten",
     "notice": "Assistent für Plattformadministratoren. Der Mandant erhält Rechtsträger, ersten Administrator, CI-Einstellungen und Standardrollen. Feature-Flags bleiben aus, kein Gate wird geöffnet, die Willkommens-E-Mail ist nur ein Entwurf.",
     "forbidden": "Nur für Plattformadministratoren.",
@@ -13786,7 +13934,7 @@
     "modeDraftNumbers": "Entwurfsnummer ENTWURF-JJJJ-NNNNNN (Standard)",
     "modeRegularNumbers": "Reguläre Rechnungsnummer MR auch bei Entwurf",
     "modeReject": "Ausgabe bei geschlossenem G1 ablehnen",
-    "numberingHint": "Entwürfe verbrauchen die fortlaufende Rechnungsnummer nicht. Die reguläre Nummer wird erst bei Ausgabe mit offenem G1 vergeben. Einstufung offen (AC03-01), Entscheidung durch Betreiber und Steuerberatung.",
+    "numberingHint": "Entwürfe verbrauchen die fortlaufende Rechnungsnummer nicht. Die reguläre Nummer wird erst bei Ausgabe mit offenem G1 vergeben. Die Einstufung entscheiden Betreiber und Steuerberatung (AC03-01).",
     "title": "Mietrechnungen mit Umsatzsteuerausweis",
     "intro": "Aus den Sollstellungsposten des Vertrags (Netto, Steuersatz, Steuer, Brutto). Solange die Freigabestufe G1 nicht erteilt ist, trägt die PDF das Wasserzeichen Entwurf. Ein Storno erfolgt nur durch Gutschrift, nie durch Löschung. Rechtliche Pflichtangaben sind durch den Steuerberater zu prüfen.",
     "standing": "Dauermietrechnung je Jahr",
@@ -14771,7 +14919,7 @@
   "HandoverOfflineSwitch": {
     "title": "Offline Erfassung Übergabeprotokoll",
     "description": "Mit dem Schalter speichert der Editor am Handy oder Tablet Änderungen und Fotos ohne Verbindung verschlüsselt auf dem Gerät und überträgt sie nach Wiederherstellung der Verbindung in der Reihenfolge der Erfassung. Der Schlüssel liegt nur im Speicher der Sitzung; Abmelden, Sitzungsende oder Neuladen der Seite löschen die wartenden Änderungen. Gerätezeiten werden als vom Gerät gemeldet gespeichert.",
-    "risk": "Betreiberentscheidung vom 28.09.2026 mit Datenschutzauflagen (ADR 0016, Regel M30-10). Ohne den Schalter wird nichts auf dem Gerät gespeichert.",
+    "risk": "Betreiberentscheidung vom 28.09.2026 mit Datenschutzauflagen. Ohne den Schalter wird nichts auf dem Gerät gespeichert.",
     "label": "Offline Erfassung aktivieren",
     "status": {
       "on": "Aktiv",
@@ -15247,7 +15395,7 @@
       "owner_rental_income_enabled": "Zeigt Eigentümern mit Sondereigentumsverwaltung die vereinbarte Miete ihrer eigenen Einheiten ohne Mieternamen. Datenschutzfreigabe vor dem Einschalten prüfen.",
       "owner_rental_statements_enabled": "Zeigt Eigentümern die ausgegebenen Eigentümerabrechnungen ihrer eigenen Rechtsträger mit PDF. Zusätzlich ist die Freigabestufe G3 nötig.",
       "portal_owner_receipts_enabled": "Zeigt Eigentümern die Belege zu den Kostenpositionen der freigegebenen Abrechnungen ihrer Gemeinschaft mit Suche je Abrechnungsperiode. Der Abruf läuft über die bestehende Dokumentberechtigung und wird als Indiz vermerkt. Zusätzlich ist die Freigabestufe G4 nötig.",
-      "owner_hoa_rental_statements_enabled": "Zeigt allen Eigentümern einer Gemeinschaft die ausgegebenen Eigentümerabrechnungen, deren Rechtsträger die Gemeinschaft selbst ist (Vermietung von Gemeinschaftseigentum). Die fachliche Entscheidung AF25-02 ist offen, zusätzlich sind der Schalter Eigentümerabrechnung und die Freigabestufe G3 nötig.",
+      "owner_hoa_rental_statements_enabled": "Zeigt allen Eigentümern einer Gemeinschaft die ausgegebenen Eigentümerabrechnungen, deren Rechtsträger die Gemeinschaft selbst ist (Vermietung von Gemeinschaftseigentum). Zusätzlich sind der Schalter Eigentümerabrechnung und die Freigabestufe G3 nötig. Die fachliche Entscheidung liegt beim Betreiber (AF25-02).",
       "chat_bot_enabled": "Mieter und Eigentümer können Fragen zu den für sie freigegebenen Unterlagen stellen. Ohne weitere Freigaben zeigt der Assistent nur Treffer aus diesen Unterlagen, die Antworten kommen nie aus fremden Unterlagen.",
       "privacy_feature_enabled": "Voraussetzung für KI-Antworten im Assistenten: freigegebener Datenschutzhinweis (Textbaustein portal_chat_privacy_notice, Freigabe durch eine zweite Person) und Kenntnisnahme je Zugang. Zusätzlich braucht die KI-Antwort den freigegebenen KI-Anbieter mit Auftragsverarbeitungsvertrag. Den Text pflegt der Mandant, die Software liefert keinen Rechtstext."
     },
@@ -15255,7 +15403,7 @@
     "ticketScopes": { "none": "keine Meldungen", "released": "nur für Eigentümer freigegebene Meldungen", "property": "alle Meldungen der eigenen Objekte (Nummer, Titel, Status)" },
     "ratingDisplay": "Bewertungen von Dienstleistern",
     "ratingModes": { "off": "nicht anzeigen (Standard, intern)", "staff": "nur der Verwaltung als Übersicht anzeigen", "all": "zusätzlich Durchschnitt des Dienstleisters für Bewohner im Portal (nie für Dienstleister)" },
-    "ratingHelp": "Bewertungen sind interne Einschätzungen der Verwaltung zu abgeschlossenen Aufträgen. Die Übersicht zeigt je Dienstleister nur Anzahl, Durchschnitt und Verteilung der Sterne, ohne Freitexte. Dienstleister und Dritte sehen die Bewertungen nicht. Eine Anzeige für Dienstleister bleibt bis zur Entscheidung AA14-02 und der Prüfung durch den Datenschutz ausgeschlossen.",
+    "ratingHelp": "Bewertungen sind interne Einschätzungen der Verwaltung zu abgeschlossenen Aufträgen. Die Übersicht zeigt je Dienstleister nur Anzahl, Durchschnitt und Verteilung der Sterne, ohne Freitexte. Dienstleister und Dritte sehen die Bewertungen nicht. Eine Anzeige für Dienstleister bleibt bis zur Entscheidung des Betreibers und der Prüfung durch den Datenschutz ausgeschlossen.",
     "statistics": "Nutzung der letzten {days} Tage",
     "accountsTotal": "Portalzugänge gesamt: {count}",
     "accountsInvited": "Eingeladen, noch nicht aktiviert: {count}",
@@ -15521,7 +15669,7 @@
     "source": "Quelle",
     "add": "Satz erfassen",
     "added": "Basiszinssatz erfasst.",
-    "dayCount": "Zinstagemethode (Mandantenschalter, Entscheidung offen AI03-01): {label}",
+    "dayCount": "Zinstagemethode (Mandantenschalter, Entscheidung offen, AI03-01): {label}",
     "staleTitle": "Basiszinssatz prüfen",
     "seedCheckpoints": "Prüfpunkte 01.01. und 01.07. anlegen",
     "seeded": "{count} Prüfpunkte im Fristenregister angelegt.",
@@ -15936,9 +16084,13 @@
       "portal_account": "Portalzugänge",
       "communication": "Kommunikation",
       "ticket": "Tickets",
-      "other": "Sonstige Daten"
+      "other": "Sonstige Daten",
+      "domain_event": "Ereignisprotokoll",
+      "platform_user": "Plattformbenutzer",
+      "bank_raw": "Bankrohdaten"
     },
     "erasureStatus": {
+      "proposed": "Vorschlag",
       "requested": "Beantragt",
       "approved": "Freigegeben",
       "rejected": "Abgelehnt",
@@ -15970,6 +16122,8 @@
       "release": "Freigeben",
       "save": "Profil speichern",
       "saveHint": "Eine Änderung setzt die Freigabe zurück und braucht eine neue Freigabe.",
+      "autoPropose": "Löschvorschläge erzeugen (nur Vorschlag, nichts wird gelöscht)",
+      "autoOn": "Vorschläge an",
       "formLabel": "Löschprofil bearbeiten"
     },
     "erasure": {
@@ -15983,6 +16137,7 @@
       "blockers": "Sperren",
       "noBlockers": "Keine Sperre",
       "approve": "Freigeben",
+      "accept": "Als Antrag übernehmen",
       "reject": "Ablehnen",
       "execute": "Anonymisieren",
       "formLabel": "Löschantrag erfassen",
@@ -16094,8 +16249,8 @@
     "recipientSearch": "Empfänger suchen",
     "recipients": "Empfänger ({count})",
     "remove": "{name} entfernen",
-    "subject": "Betreff (felder.betreff)",
-    "text": "Text (felder.text)",
+    "subject": "Betreff",
+    "text": "Text",
     "serialHint": "Bei mehreren Empfängern entsteht ein Serienbrief mit einem Dokument je Empfänger; Vertretungen werden nach der Zustellregel berücksichtigt.",
     "preview": "Vorschau",
     "previewTitle": "Vorschau des Briefs",
@@ -16448,7 +16603,7 @@
     "vatNo": "Vorsteuerkonto (Nummer, optional)",
     "numbersInvalid": "Kontonummern bestehen aus genau sechs Ziffern.",
     "payerDistinct": "Die Kontonummern der Zahlerseite müssen verschieden sein.",
-    "taxHint": "Die steuerliche Behandlung (Umsatzsteuer auf Verwalterhonorar, Vorsteuerabzug beim Zahler) ist offen und durch die Steuerberatung zu klären, siehe offene Frage T04-01.",
+    "taxHint": "Die steuerliche Behandlung (Umsatzsteuer auf Verwalterhonorar, Vorsteuerabzug beim Zahler) ist offen und durch die Steuerberatung zu klären.",
     "readOnly": "Änderungen sind nur mit der Berechtigung zur Freigabe in der Buchhaltung möglich.",
     "save": "Zuordnung speichern",
     "saved": "Kontenzuordnung gespeichert."
@@ -16699,7 +16854,7 @@
     },
     "retention": "Die Minutenwerte werden {days} Tage aufbewahrt und erst gelöscht, wenn der Monat ausgewertet und festgeschrieben ist. Die Monatsauswertung bleibt erhalten.",
     "switchLabel": "Wartungsfenster zählen als Ausfall",
-    "switchHelp": "Aus (Standard): Prüfungen innerhalb angekündigter Wartungsfenster bleiben außen vor, bewertet wird der Wert ohne Wartungsfenster. Ein: Wartungsfenster zählen als Ausfall, bewertet wird der Wert aus allen Prüfungen. Beide Werte stehen immer in der Tabelle. Welche Zählweise gegenüber Dritten gilt, ist offen (Frage AD10-02) und gehört zu G5. Jede Änderung steht im Plattformaudit.",
+    "switchHelp": "Aus (Standard): Prüfungen innerhalb angekündigter Wartungsfenster bleiben außen vor, bewertet wird der Wert ohne Wartungsfenster. Ein: Wartungsfenster zählen als Ausfall, bewertet wird der Wert aus allen Prüfungen. Beide Werte stehen immer in der Tabelle. Welche Zählweise gegenüber Dritten gilt, ist offen und gehört zu G5. Jede Änderung steht im Plattformaudit.",
     "monthsTitle": "Monatsauswertung der Eigenmessung",
     "noMonths": "Noch keine Monatsauswertung. Sie entsteht täglich aus den Minutenwerten.",
     "month": "Monat",
@@ -16811,7 +16966,7 @@
     "variants": "Varianten",
     "questionOne": "Offene Frage",
     "questionMany": "Offene Fragen",
-    "questionFile": "in docs/OPEN_QUESTIONS.md",
+    "questionFile": "in der Liste offener Fragen",
     "change": "Ändern",
     "reason": "Begründung",
     "save": "Speichern",
@@ -17012,6 +17167,10 @@
         "title": "Vollmacht gegen eigene Stimme",
         "description": "Wie bei der Online-Abstimmung verfahren wird, wenn für dieselbe Einheit eine Vollmacht und eine eigene Stimme vorliegen."
       },
+      "crm-branding-apply": {
+        "title": "Mandantenfarben im CRM",
+        "description": "Wendet die unter Mandant hinterlegten Farben (Primär und Akzent) in der Oberfläche des CRM an. Aus: neutrales Produktdesign. Es werden nur gültige Farbwerte übernommen."
+      },
       "owner-rental-income": {
         "title": "Mieterträge im Eigentümerportal",
         "description": "Zeigt Eigentümern die vereinbarte Miete ihrer Einheiten mit Sondereigentumsverwaltung, ohne Mietername. Die datenschutzrechtliche Freigabe ist offen."
@@ -17026,7 +17185,7 @@
       },
       "owner-hoa-rental-statements-portal": {
         "title": "Abrechnungen der Gemeinschaft im Eigentümerportal",
-        "description": "Zeigt den Eigentümern einer Gemeinschaft auch Eigentümerabrechnungen, deren Rechtsträger die Gemeinschaft ist. Ohne den Schalter sehen Eigentümer nur Abrechnungen ihres eigenen Rechtsträgers. Entscheidung AF25-02 offen."
+        "description": "Zeigt den Eigentümern einer Gemeinschaft auch Eigentümerabrechnungen, deren Rechtsträger die Gemeinschaft ist. Ohne den Schalter sehen Eigentümer nur Abrechnungen ihres eigenen Rechtsträgers. Die Entscheidung liegt beim Betreiber (AF25-02)."
       },
       "tenant-statement-portal": {
         "title": "Nebenkostenabrechnung im Mieterportal",
@@ -17101,6 +17260,18 @@
       "access-export-internal-notes": {
         "title": "Auskunftsexport: interne Vermerke",
         "description": "Ob interne Vermerke im Auskunftsexport enthalten sind. Aus bedeutet: zurückgehalten."
+      },
+      "access-export-tickets": {
+        "title": "Auskunftsexport: Vorgänge",
+        "description": "Ob die Vorgänge (Tickets) des Kontakts ohne interne Beschreibung im Auskunftsexport enthalten sind. Aus bedeutet: nur gezählt."
+      },
+      "access-export-communication": {
+        "title": "Auskunftsexport: Kommunikation",
+        "description": "Ob die Nachrichten des Kontakts (Betreff und Text, ohne Empfängerlisten) im Auskunftsexport enthalten sind. Aus bedeutet: nur gezählt."
+      },
+      "access-export-documents": {
+        "title": "Auskunftsexport: Dokumentbezüge",
+        "description": "Ob die dem Kontakt zugeordneten Dokumente (Titel und Datum) im Auskunftsexport aufgelistet sind. Aus bedeutet: nur gezählt."
       },
       "text-block-second-person": {
         "title": "Textbausteine: Freigabe durch eine zweite Person",
@@ -17230,7 +17401,7 @@
     "demoConfirmMark": "Mandant als Demo-Mandant kennzeichnen? Er wird aus Abrechnung, Exporten, DATEV und Statistiken ausgeschlossen. Nicht möglich, solange eine Freigabestufe geöffnet ist.",
     "demoConfirmUnmark": "Demo-Kennzeichen entfernen? Der Mandant geht danach wieder in Abrechnung, Exporte und Statistiken ein. Nur für Mandanten mit echten Daten.",
     "title": "Skalierung und Jahrespartitionierung",
-    "intro": "Kennzahlen zu den Auslösern aus ADR 0021 (Entscheidung AC09-01 offen). Die Seite meldet nur: Es wird nichts umgebaut, verschoben oder gelöscht. Die Schwellen sind Vorschläge und können unten geändert werden.",
+    "intro": "Kennzahlen zu den Auslösern aus ADR 0021. Die Seite meldet nur: Es wird nichts umgebaut, verschoben oder gelöscht. Die Schwellen sind Vorschläge und können unten geändert werden. Die Entscheidung über die Auslöser liegt beim Betreiber (AC09-01).",
     "triggersTitle": "Erreichte Auslöser",
     "noTrigger": "Kein Auslöser erreicht. Die Wochenmessung läuft montags und meldet neue Auslöser an alle Plattformadministratoren.",
     "kind": {
@@ -17404,7 +17575,7 @@
   "CreditorIds": {
     "title": "Gläubiger-ID",
     "intro": "Gläubiger-Identifikationsnummer je Rechtsträger für SEPA-Lastschriften. Ohne Nummer wird kein Lastschriftlauf angelegt.",
-    "notice": "Betreibereingabe. Format und Prüfung der Nummer sind fachlich offen (M15-01) und werden nicht validiert. Leer speichern entfernt die Nummer.",
+    "notice": "Betreibereingabe. Format und Prüfung der Nummer sind fachlich offen und werden nicht validiert. Leer speichern entfernt die Nummer.",
     "target": "Rechtsträger",
     "tenantFallback": "Rückfall des Mandanten",
     "creditorId": "Gläubiger-Identifikationsnummer",
@@ -17427,12 +17598,180 @@
   "AG03": {
     "roleNoAccess": "ohne Zugriff (Entscheidung offen)",
     "platformTitle": "Plattformeinstellungen",
-    "platformHint": "Die Umgehung des Vier-Augen-Prinzips schwächt die Kontrolle der Freigabestufen G1 bis G5 und bleibt für produktive Mandanten ausgeschaltet. Die Haftungsbewertung ist offen (M2-02).",
+    "platformHint": "Die Umgehung des Vier-Augen-Prinzips schwächt die Kontrolle der Freigabestufen G1 bis G5 und bleibt für produktive Mandanten ausgeschaltet. Die Haftungsbewertung ist offen.",
     "bypassLabel": "Superadmin darf Freigabestufen allein genehmigen",
     "on": "Ein",
     "off": "Aus",
     "version": "Version {version}",
     "confirm": "Die Umgehung des Vier-Augen-Prinzips wirklich ändern?",
     "loadFailed": "Plattformeinstellungen konnten nicht geladen werden."
+  },
+  "Aj17": {
+    "ownerScan": {
+      "button": "Eigentümerwechsel prüfen",
+      "help": "Prüft, ob bei offenen Einsichtsanfragen der Eigentümer seit der Anfrage gewechselt hat. Es wird nur ein Prüfvermerk angelegt, keine Anfrage geschlossen und kein Paket widerrufen.",
+      "result": "{events} Eigentümerwechsel geprüft, {noted} Prüfvermerke angelegt."
+    },
+    "majority": {
+      "button": "Mehrheit prüfen",
+      "stored": "Gespeichertes Ergebnis",
+      "current": "Aktuelle Prüfung",
+      "none": "Kein Ergebnis gespeichert",
+      "help": "Reine Anzeige, der Beschlussstatus wird nicht geändert."
+    },
+    "customFields": {
+      "title": "Zusatzfelder des Vertrags",
+      "empty": "Für diesen Vertrag sind keine Zusatzfelder hinterlegt.",
+      "key": "Feldname",
+      "value": "Wert",
+      "add": "Feld hinzufügen",
+      "remove": "Wert entfernen",
+      "save": "Zusatzfelder speichern",
+      "saved": "Zusatzfelder gespeichert.",
+      "hint": "Leere Werte entfernen das Feld. Die Felddefinitionen werden unter Einstellungen gepflegt."
+    },
+    "step": {
+      "title": "Auftragsschritt",
+      "hint": "Nur zulässige Folgeschritte werden von der Schnittstelle angenommen. Die Freigabe erfordert das Recht zur Freigabe.",
+      "status": "Neuer Status",
+      "note": "Notiz",
+      "quoteAmount": "Angebotsbetrag in EUR",
+      "scheduledAt": "Termin",
+      "completionReport": "Abschlussbericht",
+      "invoiceId": "Rechnungs-ID",
+      "rating": "Bewertung (1 bis 5)",
+      "submit": "Schritt speichern",
+      "saved": "Schritt gespeichert: {status}",
+      "statuses": {
+        "draft": "Entwurf",
+        "requested": "Angefragt",
+        "quoted": "Angebot erfasst",
+        "approved": "Freigegeben",
+        "scheduled": "Termin vereinbart",
+        "in_progress": "In Ausführung",
+        "done": "Ausgeführt",
+        "invoiced": "Abgerechnet",
+        "accepted": "Abgenommen",
+        "rejected": "Abgelehnt",
+        "cancelled": "Storniert"
+      }
+    },
+    "docs": {
+      "bulkTitle": "Dokumente mit einem Objekt verknüpfen",
+      "ids": "Dokument-IDs (eine je Zeile)",
+      "entityType": "Objektart",
+      "entityId": "Objekt-ID",
+      "submit": "Verknüpfen",
+      "result": "{succeeded} von {total} verknüpft, {failed} fehlgeschlagen.",
+      "failedItem": "{id}: {detail}",
+      "invalid": "Mindestens eine gültige Dokument-ID und eine gültige Objekt-ID sind erforderlich.",
+      "downloadUrl": "Download-Link erzeugen",
+      "downloadReady": "Link gültig für {seconds} Sekunden",
+      "downloadOpen": "Datei öffnen",
+      "mirror": "Spiegelung erneut anstoßen",
+      "mirrorDone": "Spiegelung angestoßen."
+    },
+    "invoice": {
+      "button": "Als Rechnung vorschlagen (KI)",
+      "started": "Extraktion gestartet (Lauf {run}). Das Ergebnis ist ein Vorschlag und wird erst nach Ihrer Prüfung zur Rechnung.",
+      "help": "Nur PDF-Anhänge. Die KI liefert einen Vorschlag, die Freigabe bleibt bei einer Person."
+    },
+    "heatingRows": {
+      "title": "Kostenzeilen manuell erfassen",
+      "hint": "Ersetzt die Zeilen des Imports. Beträge in EUR mit Punkt oder Komma, höchstens zwei Nachkommastellen.",
+      "userNumber": "Nutzernummer",
+      "heatingBase": "Heizung Grundkosten",
+      "heatingConsumption": "Heizung Verbrauch",
+      "hotWaterBase": "Warmwasser Grundkosten",
+      "hotWaterConsumption": "Warmwasser Verbrauch",
+      "addRow": "Zeile hinzufügen",
+      "removeRow": "Zeile entfernen",
+      "save": "Zeilen speichern",
+      "saved": "{count} Zeilen gespeichert.",
+      "invalid": "Nutzernummer und alle vier Beträge sind je Zeile erforderlich."
+    },
+    "selfDisclosure": {
+      "title": "Selbstauskunft Links",
+      "load": "Links anzeigen",
+      "empty": "Noch kein Link erzeugt.",
+      "expires": "gültig bis {date}",
+      "submitted": "eingereicht am {date}",
+      "open": "offen",
+      "expired": "abgelaufen",
+      "help": "Der vollständige Link wird nur bei der Erzeugung angezeigt."
+    },
+    "callAssign": {
+      "label": "Kontakt zuordnen",
+      "choose": "Kontakt wählen",
+      "contactId": "Kontakt-ID",
+      "submit": "Zuordnen",
+      "done": "Zugeordnet: {name}",
+      "invalid": "Bitte eine gültige Kontakt-ID eingeben."
+    }
+  },
+  "gatedMasks": {
+    "busy": "Wird ausgeführt …",
+    "done": "Erledigt.",
+    "gateStatus": {
+      "open": "Freigabestufe {gate}: offen",
+      "closed": "Freigabestufe {gate}: geschlossen",
+      "loading": "Freigabestufe {gate}: Stand wird geladen"
+    },
+    "savedPreviews": {
+      "title": "Gespeicherte Zahllauf-Vorschauen",
+      "save": "Vorschau speichern",
+      "hint": "Eine Vorschau erzeugt keine Aufträge und keine Dateien.",
+      "locked": "Gesperrt, solange die Freigabestufe G2 (Zahlungsanstoß) geschlossen ist. Ob gespeicherte Vorschauen vorher gebraucht werden, entscheidet die Geschäftsführung.",
+      "empty": "Noch keine gespeicherte Vorschau.",
+      "row": "Stand {asOf}, {trigger}, {count} Rechnungen",
+      "triggerManual": "manuell",
+      "triggerScheduled": "wöchentlich"
+    },
+    "payout": {
+      "title": "Auszahlung ohne Rechnung (Entwurf)",
+      "intro": "Legt einen Zahlungsauftrag als Entwurf an. Der Auftrag braucht danach die Freigabe einer zweiten Person.",
+      "fields": {
+        "open_item_id": "Offener Posten (ID)",
+        "contact_bank_account_id": "Bankkonto des Empfängers (ID)",
+        "property_bank_account_id": "Auftraggeberkonto (ID)",
+        "execution_date": "Ausführungsdatum",
+        "reason": "Begründung",
+        "purpose": "Verwendungszweck (optional)"
+      },
+      "reasonPlaceholder": "Begründung wählen",
+      "reasonRequired": "Eine Auszahlung ohne Rechnung ist nur mit Begründung möglich.",
+      "reasons": {
+        "owner_payout": "Auszahlung an Eigentümer",
+        "statement_credit": "Guthaben aus Abrechnung",
+        "deposit_refund": "Kautionsrückzahlung",
+        "other_refund": "Sonstige Erstattung"
+      },
+      "submit": "Entwurf anlegen",
+      "locked": "Gesperrt, solange die Freigabestufe G2 (Zahlungsanstoß) geschlossen ist. Freigabe durch die Geschäftsführung erforderlich.",
+      "created": "Entwurf über {amount} an {name} angelegt."
+    },
+    "dunningSend": {
+      "action": "Mahnschreiben versenden",
+      "hint": "Bis zur Freigabe erfolgt der Versand außerhalb der Plattform und wird mit „Als versendet markieren“ dokumentiert.",
+      "locked": "Gesperrt, solange die Freigabestufe G1 (produktive Buchhaltung) geschlossen ist und der Versandweg nicht freigegeben ist."
+    },
+    "ownerPdf": {
+      "action": "Abrechnung als PDF",
+      "hint": "Ausgabe der intern freigegebenen Abrechnung.",
+      "notApproved": "Erst nach interner Freigabe der Abrechnung möglich.",
+      "locked": "Gesperrt, solange die Freigabestufe G3 (Mietabrechnungen) geschlossen ist."
+    },
+    "statementLettersSend": {
+      "action": "Anschreiben zustellen",
+      "hint": "Die Anschreiben bleiben bis zur Freigabe Entwürfe.",
+      "locked": "Gesperrt, solange die Freigabestufe G3 geschlossen ist und der Zustellweg nicht freigegeben ist."
+    },
+    "depositRelease": {
+      "action": "Kautionsabrechnung freigeben",
+      "fourEyes": "Vier-Augen-Prinzip: Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat.",
+      "confirm": "Ich habe den Entwurf nicht selbst erstellt und ihn geprüft.",
+      "notDraft": "Nur ein Entwurf kann freigegeben werden.",
+      "locked": "Gesperrt, solange die Freigabestufe G3 (Mietabrechnungen) geschlossen ist. Freigabe durch die Geschäftsführung erforderlich."
+    }
   }
 }

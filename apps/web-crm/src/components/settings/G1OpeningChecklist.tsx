@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 /** Shapes of GET /api/v1/accounting/g1-opening (M12-09). */
 export type G1Item = {
@@ -61,9 +62,6 @@ function formatDate(iso: string | null): string {
   return `${d}.${m}.${y}`;
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Checkliste zur Öffnung der Freigabestufe G1 (Einstellungen, Buchhaltung, G1 Öffnung):
  *  Stand aus dem System, Ergebnis je Prüfpunkt (Recht Buchhaltung freigeben) und der Antrag
@@ -86,7 +84,7 @@ export function G1OpeningChecklist({
   const [editing, setEditing] = useState<G1Item | null>(null);
   const [form, setForm] = useState({
     status: "passed",
-    confirmed_on: today(),
+    confirmed_on: businessToday(),
     confirmed_by_name: "",
     note: "",
     responsible_user_id: "",
@@ -117,7 +115,7 @@ export function G1OpeningChecklist({
     setEditing(item);
     setForm({
       status: item.status === "open" ? "passed" : item.status,
-      confirmed_on: item.confirmed_on ?? today(),
+      confirmed_on: item.confirmed_on ?? businessToday(),
       confirmed_by_name: item.confirmed_by_name ?? "",
       note: item.note ?? "",
       responsible_user_id: item.responsible_user_id ?? "",

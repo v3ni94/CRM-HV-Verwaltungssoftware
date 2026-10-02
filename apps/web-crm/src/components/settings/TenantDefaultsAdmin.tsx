@@ -28,6 +28,7 @@ export function TenantDefaultsAdmin({
   initialFormats: NumberFormatEntry[];
 }) {
   const t = useTranslations("AA17");
+  const tCommon = useTranslations("Common");
   const [channel, setChannel] = useState<Channel>(initialChannel);
   const [formats, setFormats] = useState<NumberFormatEntry[]>(initialFormats);
   const [channelMsg, setChannelMsg] = useState<string | null>(null);
@@ -126,6 +127,13 @@ export function TenantDefaultsAdmin({
               </tr>
             </thead>
             <tbody>
+              {formats.length === 0 ? (
+                <tr>
+                  <td colSpan={99} className="text-muted">
+                    {tCommon("emptyList")}
+                  </td>
+                </tr>
+              ) : null}
               {formats.map((r) => (
                 <tr key={r.scope}>
                   <td>

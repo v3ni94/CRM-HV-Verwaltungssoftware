@@ -22,6 +22,8 @@ from mhvp.contacts.models import Contact
 from mhvp.contracts.service_contracts import ServiceContract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import session_allowed_property_ids
+from mhvp.core.clock import local_today
+from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.models import ProviderAvailability
@@ -161,7 +163,7 @@ async def framework_contracts(
             .where(ServiceContract.provider_contact_id == account.contact_id)
             .order_by(ServiceContract.starts_at.desc(), ServiceContract.id)
         )
-        today = datetime.now(UTC).date()
+        today = local_today()
         return [
             {
                 "id": c.id,
@@ -267,6 +269,15 @@ async def add_availability(
         )
         session.add(row)
         await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="provider_availability.created",
+            entity_type="provider_availability",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"provider_contact_id": str(row.provider_contact_id), "kind": row.kind},
+        )
         return {**_out(row), "provider_contact_id": row.provider_contact_id}
 
 
@@ -280,7 +291,17 @@ async def delete_availability(
         row = await session.get(ProviderAvailability, availability_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        provider_contact_id = row.provider_contact_id
         await session.delete(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="provider_availability.deleted",
+            entity_type="provider_availability",
+            entity_id=availability_id,
+            actor_user_id=principal.user_id,
+            payload={"provider_contact_id": str(provider_contact_id)},
+        )
 
 
 # Rating of a completed work order by the affected resident (GAF-35, AE30-02) ---------------

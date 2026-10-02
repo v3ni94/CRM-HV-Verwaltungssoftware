@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { today } from "@/lib/today";
 
 export type CreditPayableSettings = {
   mode: "off" | "subledger" | "reclass";
@@ -60,7 +61,7 @@ export function CreditPayables() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [ordering, setOrdering] = useState<{ id: string; options: Options; payee: string; bank: string } | null>(null);
-  const [executionDate, setExecutionDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [executionDate, setExecutionDate] = useState<string>(today());
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {

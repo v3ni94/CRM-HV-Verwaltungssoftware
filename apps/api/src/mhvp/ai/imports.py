@@ -31,6 +31,7 @@ from mhvp.contracts.models import (
     PaymentSchedule,
     SepaMandate,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document, DocumentLink
@@ -76,7 +77,7 @@ def _contact_in(
     if item.get("iban"):
         try:
             base["bank_accounts"] = [
-                cs.BankAccountIn(iban=item["iban"], valid_from=date.today()).model_dump()  # noqa: DTZ011
+                cs.BankAccountIn(iban=item["iban"], valid_from=local_today()).model_dump()
             ]
         except ValidationError:
             notes.append("IBAN ist ungültig und wurde nicht übernommen.")
@@ -434,7 +435,7 @@ async def _document_kept(session: AsyncSession, document_id: uuid.UUID) -> str:
     document = await session.get(Document, document_id)
     if document is None:
         return "Original nicht mehr vorhanden"
-    blocker = await deletion_blocker(session, document, date.today())  # noqa: DTZ011
+    blocker = await deletion_blocker(session, document, local_today())
     if blocker is not None:
         return f"Aufbewahrung: {blocker}"
     return "Originale werden nur über die Dokumentlöschung mit Aufbewahrungsprüfung entfernt"

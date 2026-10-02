@@ -17,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
+from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.letting.models import RentIndexEntry
@@ -206,6 +208,15 @@ async def delete_entry(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await session.delete(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="rent_index_entry.deleted",
+            entity_type="rent_index_entry",
+            entity_id=entry_id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
 
 
 @router.post("/import", summary="Mietspiegel per CSV importieren (Vorschau oder Übernahme)")
@@ -280,7 +291,7 @@ async def lookup(
     """Matching rows of the newest index valid on the day. A row with a criterion applies only
     when the criterion is given and inside its bounds; rows without a criterion always apply.
     No match is reported as such (no fallback value)."""
-    day = as_of or datetime.now().date()  # noqa: DTZ005
+    day = as_of or local_today()
     async with tenant_tx(request, principal) as session:
         rows = (
             await session.scalars(

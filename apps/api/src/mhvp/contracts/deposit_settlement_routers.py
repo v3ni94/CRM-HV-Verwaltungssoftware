@@ -353,7 +353,17 @@ async def delete_reference_rate(
         ).scalar_one_or_none()
         if row is None:
             raise _nf()
+        rate_id, old_rate = row.id, str(row.rate)
         await session.delete(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_interest_rate.deleted",
+            entity_type="deposit_interest_rate",
+            entity_id=rate_id,
+            actor_user_id=principal.user_id,
+            payload={"year": str(year), "rate": old_rate},
+        )
         return Response(status_code=204)
 
 
@@ -745,7 +755,17 @@ async def delete_deposit_rate(
         ).scalar_one_or_none()
         if row is None:
             raise _nf()
+        old_rate = str(row.rate)
         await session.delete(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_interest_rate.deposit_deleted",
+            entity_type="deposit",
+            entity_id=deposit_id,
+            actor_user_id=principal.user_id,
+            payload={"valid_from": valid_from.isoformat(), "rate": old_rate},
+        )
         return Response(status_code=204)
 
 

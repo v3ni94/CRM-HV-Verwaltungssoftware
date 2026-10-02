@@ -40,6 +40,7 @@ export function LeadingSwitchPanel({
   const [state, setState] = useState<State | null>(null);
   const [form, setForm] = useState({ kind: "dunning" as Kind, leading_system: "mhvp", valid_from: today, property_id: "", comment: "" });
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await bff<State>(url);
@@ -52,6 +53,7 @@ export function LeadingSwitchPanel({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (busy) return;
     const body = {
       kind: form.kind,
       leading_system: form.leading_system,
@@ -59,13 +61,18 @@ export function LeadingSwitchPanel({
       property_id: form.property_id || null,
       comment: form.comment || null,
     };
+    setBusy(true);
     const res = await bff<SwitchRow>(url, { method: "POST", body: JSON.stringify(body) });
+    setBusy(false);
     setMessage(res.ok ? { ok: true, text: t("requested") } : { ok: false, text: res.message });
     if (res.ok) await load();
   };
 
   const decide = async (id: string, approve: boolean) => {
+    if (busy) return;
+    setBusy(true);
     const res = await bff<SwitchRow>(`${url}/${id}/decide`, { method: "POST", body: JSON.stringify({ approve }) });
+    setBusy(false);
     setMessage(res.ok ? { ok: true, text: t("decided") } : { ok: false, text: res.message });
     if (res.ok) await load();
   };
@@ -122,10 +129,10 @@ export function LeadingSwitchPanel({
                 <td>
                   {canApprove && row.status === "requested" ? (
                     <span className="flex gap-2">
-                      <button type="button" className={ui.secondary} onClick={() => void decide(row.id, true)}>
+                      <button type="button" className={ui.secondary} disabled={busy} onClick={() => void decide(row.id, true)}>
                         {t("approve")}
                       </button>
-                      <button type="button" className={ui.secondary} onClick={() => void decide(row.id, false)}>
+                      <button type="button" className={ui.secondary} disabled={busy} onClick={() => void decide(row.id, false)}>
                         {t("reject")}
                       </button>
                     </span>
@@ -176,7 +183,7 @@ export function LeadingSwitchPanel({
             <input className={ui.input} value={form.comment} maxLength={2000} onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))} />
           </label>
           <div className={ui.formActions}>
-            <button type="submit" className={ui.primary}>
+            <button type="submit" className={ui.primary} disabled={busy}>
               {t("request")}
             </button>
           </div>

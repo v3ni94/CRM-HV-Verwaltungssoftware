@@ -38,6 +38,7 @@ from mhvp.core.auth.permissions import (
     METERING_BILLING_ORDER,
     METERING_USERS_SUBMIT,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.metering import services
@@ -744,7 +745,7 @@ async def check(
             ErrorCodes.METERING_CONFLICT_BLOCKS_WRITE,
             extensions={"assignment_ids": [str(assignment.id)]},
         )
-    today = today or _now().date()
+    today = today or local_today()
     billing_unit = await external_number(session, assignment)
     provider: dict[str, Any] = {"called": False}
     template: dict[str, Any] = {}

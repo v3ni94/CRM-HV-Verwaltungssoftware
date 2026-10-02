@@ -88,3 +88,7 @@ Einladungslink, der daneben auch als Text gedruckt wird. Die exakte Version steh
 ## Nachtrag 26.09.2026: OpenAI-SDK für den zweiten KI-Anbieter (M7-02)
 
 Der OpenAI-Adapter (`mhvp.ai.providers.OpenAIClient`) nutzt das offizielle Paket `openai` (2.x, `apps/api/pyproject.toml`: `openai>=1,<3`, exakte Version in `uv.lock`) statt eines eigenen httpx-Clients. Begründung: gleiche Fehlerklassen und Retry-Semantik wie beim Anthropic-SDK (`RateLimitError`, `APIStatusError`, `APIConnectionError`), `base_url` je Endpunktregion (M7-07) ohne eigene Transportlogik, Structured Outputs über `response_format`. Beide SDKs sind ohne Netz testbar, weil die Adapter einen fertigen Client injizieren können.
+
+## Ergänzung 02.10.2026: Abweichungen von Punkt 1 (GAI-108)
+
+Punkt 1 ("unverändert") gilt mit den Abweichungen, die ADR 0026 auflistet: `reportlab` statt WeasyPrint oder Gotenberg, eigene SEPA-XML-Erzeugung statt `sepaxml` oder `fintech.sepa`, `pyjwt` statt Authlib, nur `pypdf` ohne `pdfplumber`, kein factory_boy, kein Testcontainers, kein TanStack und kein shadcn oder Radix. ADR 0026 liegt dem Betreiber zur Freigabe vor. Dieser Abschnitt ändert Punkt 1 nicht, er verweist nur.

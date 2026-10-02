@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { WorkOrderStepForm } from "@/components/aj17/WorkOrderStepForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkOrderProposals, type WorkOrderProposalsData } from "@/components/workorders/WorkOrderProposals";
 import { WorkOrderRatingPanel } from "@/components/workorders/WorkOrderRatingPanel";
@@ -20,7 +21,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ orde
   if (!response.ok) return <p role="alert" className={ui.alert}>{t("notFound")}</p>;
   const data = (await response.json()) as WorkOrderProposalsData;
   const orderRes = await serverFetch(`/api/v1/work-orders/${encodeURIComponent(orderId)}`);
-  const order = orderRes.ok ? ((await orderRes.json()) as { approval_workflow_id?: string | null }) : null;
+  const order = orderRes.ok ? ((await orderRes.json()) as { approval_workflow_id?: string | null; status?: string }) : null;
   const me = await getMe();
   const canEdit = (me.data?.permissions ?? []).includes("tickets:update");
   return (
@@ -31,6 +32,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ orde
         description={data.description}
       />
       <WorkOrderProposals initial={data} />
+      {order?.status ? <WorkOrderStepForm orderId={orderId} status={order.status} canEdit={canEdit} /> : null}
       <WorkOrderRatingPanel orderId={orderId} canEdit={canEdit} />
       {order ? <WorkOrderWorkflowRef orderId={orderId} initial={order.approval_workflow_id ?? null} canEdit={canEdit} /> : null}
     </div>

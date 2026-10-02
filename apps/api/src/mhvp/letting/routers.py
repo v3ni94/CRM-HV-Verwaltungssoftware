@@ -17,7 +17,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Header, Query, Request, Response, UploadFile
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
@@ -27,8 +27,10 @@ from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
 from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.logging import get_logger
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+from mhvp.core.uploads import read_limited
 from mhvp.documents.letter_records import LetterRecordIn
 from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import basis_checks, openimmo, openimmo_import, openimmo_schema
@@ -165,9 +167,48 @@ class SelfDisclosureLinkIn(LettingBaseIn):
     valid_days: int = Field(default=14, ge=1, le=90)
 
 
+# GAI-309: limits of the anonymous self disclosure payload (Produktschutz, not a legal rule).
+SELF_DISCLOSURE_MAX_KEYS = 200
+SELF_DISCLOSURE_MAX_DEPTH = 3
+SELF_DISCLOSURE_MAX_KEY_LENGTH = 100
+SELF_DISCLOSURE_MAX_STRING = 5000
+SELF_DISCLOSURE_MAX_BYTES = 64 * 1024
+
+
+def _check_self_disclosure_value(value: Any, depth: int, counter: list[int]) -> None:
+    if depth > SELF_DISCLOSURE_MAX_DEPTH:
+        raise ValueError("payload is nested too deeply")
+    if isinstance(value, dict):
+        for key, item in value.items():
+            counter[0] += 1
+            if counter[0] > SELF_DISCLOSURE_MAX_KEYS:
+                raise ValueError("payload has too many fields")
+            if len(str(key)) > SELF_DISCLOSURE_MAX_KEY_LENGTH:
+                raise ValueError("payload field name is too long")
+            _check_self_disclosure_value(item, depth + 1, counter)
+    elif isinstance(value, list):
+        for item in value:
+            counter[0] += 1
+            if counter[0] > SELF_DISCLOSURE_MAX_KEYS:
+                raise ValueError("payload has too many fields")
+            _check_self_disclosure_value(item, depth + 1, counter)
+    elif isinstance(value, str) and len(value) > SELF_DISCLOSURE_MAX_STRING:
+        raise ValueError("payload value is too long")
+
+
 class SelfDisclosureSubmitIn(LettingBaseIn):
     consent_privacy: bool
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("payload")
+    @classmethod
+    def _limit_payload(cls, value: dict[str, Any]) -> dict[str, Any]:
+        import json
+
+        if len(json.dumps(value, ensure_ascii=False).encode()) > SELF_DISCLOSURE_MAX_BYTES:
+            raise ValueError("payload is too large")
+        _check_self_disclosure_value(value, 1, [0])
+        return value
 
 
 class BrokerConfigIn(LettingBaseIn):
@@ -229,9 +270,7 @@ def _check(case: RentIncreaseCase, block_until: date | None) -> dict[str, Any]:
     if increase <= 0:
         flags.append("Zielmiete liegt nicht über der aktuellen Miete.")
     if case.reference_rent is not None and case.cap_limit_percent is not None:
-        cap = (case.reference_rent * (1 + case.cap_limit_percent / 100)).quantize(
-            CENT, rounding=ROUND_HALF_UP
-        )
+        cap = round_cents(case.reference_rent * (1 + case.cap_limit_percent / 100))
         out["cap_max_rent"] = str(cap)
         if case.target_rent > cap:
             flags.append(f"Zielmiete über erfasster Kappungsgrenze ({cap} EUR).")
@@ -622,11 +661,12 @@ async def rent_increase_letter_pdf(
         await ensure_release_gate_open(
             ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
         )
-    blobs = BlobStore(request.app.state.settings)
     async with tenant_tx(request, principal) as session:
         case = await session.get(RentIncreaseCase, case_id)
         if case is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        # AJ23 (GAI-303): the storage check follows the lookup, a foreign id answers 404.
+        blobs = BlobStore(request.app.state.settings)
         if case.status in ("cancelled", "rejected"):
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail=f"Kein Schreiben im Status {case.status}."
@@ -944,7 +984,7 @@ async def vacancies(
     from mhvp.contracts.models import Contract, ContractKind
     from mhvp.properties.models import ManagementType, Property, Unit
 
-    day = as_of or datetime.now(UTC).date()
+    day = as_of or local_today()
     async with tenant_tx(request, principal) as session:
         active = select(Contract.unit_id).where(
             Contract.kind == ContractKind.TENANCY,
@@ -1276,7 +1316,7 @@ def _prospect_out(p: Prospect) -> dict[str, Any]:
 async def create_prospect(
     body: ProspectIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
-    if body.delete_after <= datetime.now(UTC).date():
+    if body.delete_after <= local_today():
         raise ProblemError(ErrorCodes.VALIDATION, detail="Löschdatum muss in der Zukunft liegen.")
     async with tenant_tx(request, principal) as session:
         data = body.model_dump(exclude={"search_profile"})
@@ -1466,6 +1506,15 @@ async def delete_prospect(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await session.delete(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="prospect.deleted",
+            entity_type="prospect",
+            entity_id=prospect_id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
 
 
 # Makler (M28-01, stage 2): listings for rent and sale. FLOWFACT is not connected;
@@ -1973,6 +2022,15 @@ async def delete_listing(
                 ErrorCodes.CONFLICT, detail="Nur Anzeigen im Entwurf können gelöscht werden."
             )
         await session.delete(listing)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="listing.deleted",
+            entity_type="listing",
+            entity_id=listing_id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
 
 
 # OpenImmo export (M26-02, docs/rules/M26-02.md): read only, no portal upload -----------
@@ -2718,6 +2776,9 @@ async def list_prospect_viewings(
     prospect_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        # AJ23 (GAI-303): an unknown or foreign prospect answers 404, not an empty list.
+        if await session.get(Prospect, prospect_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         rows = await session.scalars(
             select(ProspectViewing)
             .where(ProspectViewing.prospect_id == prospect_id)
@@ -2862,6 +2923,9 @@ async def list_self_disclosure_links(
     prospect_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        # AJ23 (GAI-303): an unknown or foreign prospect answers 404, not an empty list.
+        if await session.get(Prospect, prospect_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         rows = await session.scalars(
             select(SelfDisclosureLink)
             .where(SelfDisclosureLink.prospect_id == prospect_id)
@@ -2931,6 +2995,16 @@ async def submit_self_disclosure(
         link.payload = body.payload
         link.submitted_at = datetime.now(UTC)
         await session.flush()
+        # GAI-309: record the submission without any of its content.
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="self_disclosure.submitted",
+            entity_type="self_disclosure_link",
+            entity_id=link.id,
+            actor_user_id=None,
+            payload={"prospect_id": str(link.prospect_id)},
+        )
         return _self_disclosure_out(link, portal_url=None)
 
 
@@ -3010,6 +3084,15 @@ async def put_broker_config(
                 detail="Ohne Zugangsdaten kann die Anbindung nicht aktiviert werden.",
             )
         await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="broker_config.updated",
+            entity_type="broker_config",
+            entity_id=config.id,
+            actor_user_id=principal.user_id,
+            payload={"provider": provider, "enabled": config.enabled},
+        )
         return _broker_config_out(config, provider)
 
 
@@ -3091,7 +3174,7 @@ async def preview_openimmo_import(
     file: UploadFile = File(),
     principal: TenantPrincipal = Depends(CREATE),
 ) -> dict[str, Any]:
-    data = await file.read()
+    data = await read_limited(file, 20 * 1024 * 1024)
     filename = file.filename or "openimmo.xml"
     async with tenant_tx(request, principal) as session:
         existing = await session.scalars(

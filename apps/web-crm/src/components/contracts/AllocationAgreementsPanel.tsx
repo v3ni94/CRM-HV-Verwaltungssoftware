@@ -42,6 +42,7 @@ export function AllocationAgreementsPanel({
   const [bulk, setBulk] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await bff<{ items: Agreement[] }>(base);
@@ -57,6 +58,16 @@ export function AllocationAgreementsPanel({
   }, [load]);
 
   async function submit(dryRun: boolean) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await submitInner(dryRun);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitInner(dryRun: boolean) {
     setError(null);
     setMessage(null);
     const common = { status, clause_reference: clause || null, valid_from: from, valid_to: to || null };
@@ -85,7 +96,10 @@ export function AllocationAgreementsPanel({
   }
 
   async function remove(id: string) {
+    if (busy) return;
+    setBusy(true);
     const res = await bff(`${base}/${id}`, { method: "DELETE" });
+    setBusy(false);
     if (!res.ok) return setError(res.message);
     await load();
   }
@@ -109,7 +123,7 @@ export function AllocationAgreementsPanel({
               {r.valid_to ? ` bis ${formatDate(r.valid_to)}` : ""}
             </span>
             {canUpdate ? (
-              <button type="button" className={ui.button} onClick={() => void remove(r.id)}>
+              <button type="button" className={ui.button} disabled={busy} onClick={() => void remove(r.id)}>
                 {t("remove")}
               </button>
             ) : null}
@@ -159,11 +173,11 @@ export function AllocationAgreementsPanel({
             {t("bulk")}
           </label>
           <div className="flex gap-2 sm:col-span-2">
-            <button type="submit" className={ui.button}>
+            <button type="submit" className={ui.button} disabled={busy}>
               {bulk ? t("bulkPreviewButton") : t("add")}
             </button>
             {bulk ? (
-              <button type="button" className={ui.button} onClick={() => void submit(false)}>
+              <button type="button" className={ui.button} disabled={busy} onClick={() => void submit(false)}>
                 {t("bulkApply")}
               </button>
             ) : null}

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type RequiredDocument = { id: string; management_type: string; document_category_id: string; mandatory: boolean };
 type Category = { id: string; code: string; name: string };
@@ -13,6 +14,7 @@ const TYPES = ["rental", "hoa", "hoa_with_sev"] as const;
 /** Pflichtunterlagen je Verwaltungsart (M35, Vollständigkeitsprüfung der Objektakte) und Stand des
  *  lokalen Klassifikationsmodells mit Vorschlag je Prüffall. Das Modell schlägt nur vor. */
 export function RequiredDocuments({ categories, canManage, canDelete }: { categories: Category[]; canManage: boolean; canDelete: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("ObjektakteRequired");
   const [rows, setRows] = useState<RequiredDocument[]>([]);
   const [type, setType] = useState<string>(TYPES[0]);
@@ -61,7 +63,7 @@ export function RequiredDocuments({ categories, canManage, canDelete }: { catego
             <span>{name(r.document_category_id)}</span>
             <span className={r.mandatory ? ui.badgeWarning : ui.badge}>{r.mandatory ? t("mandatory") : t("optional")}</span>
             {canDelete ? (
-              <button type="button" className={ui.buttonSm} onClick={() => void remove(r.id)}>
+              <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => remove(r.id))}>
                 {t("remove")}
               </button>
             ) : null}

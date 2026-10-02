@@ -424,3 +424,7 @@ Auf der Rechnungsseite und in der Liste der Zahlungsaufträge öffnet "Freigabev
 ## Hinweis zum Nummernkreis Bank und Kasse
 
 Neue Konten mit Nummer 001200 bis 001999 sind nur als Bank, Kasse, technisches Konto oder Geldtransit möglich, eine Bankkontoverknüpfung nur an Bank- oder Kassenkonten. Bestehende abweichende Konten bleiben erhalten und zeigen in der Kontenliste einen Hinweis unter der Kategorie.
+
+## Mahnschreiben versenden (gesperrt)
+
+Im Mahnfall mit Status Vorgeschlagen steht die Schaltfläche Mahnschreiben versenden mit dem Stand der Freigabestufe G1. Solange G1 geschlossen ist, bleibt sie gesperrt; auch bei offener Freigabestufe lehnt die Plattform den Versand ab, bis der Versandweg freigegeben ist. Bis dahin wird das Schreiben außerhalb der Plattform versendet und mit Als versendet markieren dokumentiert.

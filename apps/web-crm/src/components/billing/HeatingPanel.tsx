@@ -50,6 +50,7 @@ const CO2_KINDS = ["unknown", "residential", "non_residential", "mixed", "self_s
  *  draft; issuing the statement stays behind G3. */
 export function HeatingPanel({ id, status }: { id: string; status: string }) {
   const t = useTranslations("Billing.heating");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [data, setData] = useState<Heating | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -229,6 +230,13 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
                 </tr>
               </thead>
               <tbody>
+                {data.occupants.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="text-muted">
+                      {tCommon("emptyList")}
+                    </td>
+                  </tr>
+                ) : null}
                 {data.occupants.map((o) => (
                   <tr key={o.key}>
                     <td>

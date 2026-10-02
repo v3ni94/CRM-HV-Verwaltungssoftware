@@ -49,6 +49,7 @@ from mhvp.core.auth.scope import (
     session_allowed_legal_entity_ids,
     session_allowed_property_ids,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import emit
@@ -541,7 +542,7 @@ async def owner_check(
     async with tenant_tx(request, principal) as session:
         row = await _load(session, request_id)
         then = await _is_owner(session, row, row.requested_on)
-        today = await _is_owner(session, row, _now().date())
+        today = await _is_owner(session, row, local_today())
         active = row.package_document_id is not None and (
             row.package_expires_at is None or row.package_expires_at > _now()
         )

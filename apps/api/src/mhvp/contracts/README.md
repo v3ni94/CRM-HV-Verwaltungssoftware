@@ -186,3 +186,19 @@ for the collection after G2. New columns in migration 0265: `contract.custom_fie
 ### Deposit hint (AI18, GAH-111)
 
 `DepositHintSetting` (default off) adds non blocking `limit_hints` to `DepositOut` for residential tenancies; `GET/PUT /deposit-hint-settings` with `tenant_settings` permissions. Rule AI18-02.
+
+## Ereignisse und Berechtigungstests (Welle 21, AJ06)
+
+- Löschen von Referenzzinssätzen und Kautionszinssätzen schreibt `deposit_interest_rate.deleted`
+  beziehungsweise `deposit_interest_rate.deposit_deleted` (GAI-308).
+- Vermietung: `listing.deleted`, `prospect.deleted`, `rent_index_entry.deleted`,
+  `broker_config.updated` (ohne Zugangsdaten im Payload).
+- Tabellengetriebene Mandantentrennungs- und 403-Tests: `tests/integration/test_aj06_authz_*.py`.
+
+## Contract creation by contact (AJ32)
+
+`POST /contracts` accepts either `party_id` or `contact_id` (exactly one, otherwise 422); the
+same holds optionally for `sev_fee_debtor_party_id` / `sev_fee_debtor_contact_id`. A contact is
+resolved via `mhvp.contacts.services.party_for_contact` (own single member party, created when
+missing; unknown contact 404). `GET /sepa-mandates?contact_id=` lists the mandates of all parties
+the contact is a member of. The CRM contract form sends `contact_id` and loads mandates this way.

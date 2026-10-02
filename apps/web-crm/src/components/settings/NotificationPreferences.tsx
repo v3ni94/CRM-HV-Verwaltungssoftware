@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Item = { kind: string; in_app: boolean; email: boolean; muted_until: string | null; mandatory: boolean; email_mode?: "immediate" | "daily" };
 
@@ -19,7 +20,9 @@ const MUTE_HOURS = ["0", "1", "8", "24", "168"] as const;
  *  Art, Stummschaltung für alle Arten. Pflichtmeldungen (Fristen, SLA, Bankzustimmung) sind
  *  nicht abschaltbar. GET und PUT /workspace/notification-preferences. */
 export function NotificationPreferences() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("NotificationSettings");
+  const tCommon = useTranslations("Common");
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -115,6 +118,13 @@ export function NotificationPreferences() {
             </tr>
           </thead>
           <tbody>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={99} className="text-muted">
+                  {tCommon("emptyList")}
+                </td>
+              </tr>
+            ) : null}
             {items.map((i) => (
               <tr key={i.kind}>
                 <td>
@@ -160,7 +170,7 @@ export function NotificationPreferences() {
         </table>
       </div>
       <div className="flex items-center gap-3">
-        <button type="button" className={ui.button} onClick={() => void save()} data-testid="pref-save">
+        <button disabled={busy} type="button" className={ui.button} onClick={guard(() => save())} data-testid="pref-save">
           {t("save")}
         </button>
         {message ? (

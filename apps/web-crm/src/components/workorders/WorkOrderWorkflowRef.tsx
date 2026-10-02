@@ -5,12 +5,14 @@ import { useState, type FormEvent } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Reference to the approval workflow of an order (GA04-07). There is no workflow table yet
  *  (AA05-01), so the reference is entered as an id; the board vote stays the effective approval. */
 export function WorkOrderWorkflowRef({ orderId, initial, canEdit }: { orderId: string; initial: string | null; canEdit: boolean }) {
+  const { guard } = useBusy();
   const t = useTranslations("WorkOrders");
   const [value, setValue] = useState(initial ?? "");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -30,7 +32,7 @@ export function WorkOrderWorkflowRef({ orderId, initial, canEdit }: { orderId: s
   }
 
   return (
-    <form onSubmit={save} className={`${ui.card} flex flex-col gap-2`} aria-label={t("workflowTitle")}>
+    <form onSubmit={guard(save)} className={`${ui.card} flex flex-col gap-2`} aria-label={t("workflowTitle")}>
       <h2 className="text-base font-semibold">{t("workflowTitle")}</h2>
       <label className={ui.label}>
         {t("workflowId")}

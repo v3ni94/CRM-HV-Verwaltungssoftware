@@ -448,6 +448,27 @@ class AnthropicClient:
             raise ProviderError("connection failed", retryable=True) from exc
         return BatchPoll(ended=True, results=results)
 
+    async def cancel_batch(self, batch_id: str) -> None:
+        """Cancels a submitted batch at the provider (``messages.batches.cancel``, GAI-610).
+        The request carries only the batch id, no content; requests already processed stay
+        processed, the remaining ones end as ``canceled``."""
+        try:
+            await self._client.messages.batches.cancel(batch_id)
+        except anthropic.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except anthropic.APIStatusError as exc:
+            raise ProviderError(
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
+            ) from exc
+        except anthropic.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+
+
+def supports_cancel(client: object) -> bool:
+    """Whether the provider client can cancel a batch (GAI-610). Only clients with a batch
+    path have one; today the Anthropic client."""
+    return callable(getattr(client, "cancel_batch", None))
+
 
 def supports_batch(client: object) -> bool:
     return callable(getattr(client, "submit_batch", None)) and callable(

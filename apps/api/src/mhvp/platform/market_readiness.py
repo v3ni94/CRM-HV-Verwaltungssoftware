@@ -53,6 +53,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
+from mhvp.core.clock import local_today
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TimestampMixin
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -339,7 +340,7 @@ async def offer_pdf(
         pdf = render_offer_pdf(
             rows,
             customer_name=customer_name[:200],
-            issued_on=datetime.now(UTC).date(),
+            issued_on=local_today(),
             units=units,
         )
     return Response(

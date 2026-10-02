@@ -12,6 +12,7 @@ import { formatDate, formatEur } from "@/lib/format";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function LettingPage() {
     getTranslations("LettingW3"),
   ]);
   const api = serverApi();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   // GET /contracts is paginated (at most 200 per page by default, performance review
   // 26.09.2026); the rent increase form needs every active tenancy, so all pages are loaded.
   const [vac, cases, contracts] = await Promise.all([

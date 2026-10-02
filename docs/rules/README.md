@@ -162,7 +162,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [H04](H04-co2.md) | CO₂-Regeln mit Geltungsstand | 7.10 | implemented, not accepted (M17, CO₂ split) |
 | [M17-02](M17-02-heizkosten.md) | Heizkostenabrechnung als Entwurf (H02, H04, D25 bis D27) | 7.10 | implemented, not accepted (M17-02, 27.09.2026; Werte als Konfiguration zu prüfen, Ausgabe hinter G3) |
 | H05 | Bereits veröffentlichte spätere Regeln | 7.10 | partial (01.10.2026: Prüfpunkte 2028/2029 als Entwurf im Regelregister, Berechnung unverändert, siehe AA12-03) |
-| H06 | § 35a | 7.10 | specified, not implemented |
+| [H06](AI18-01.md) | § 35a | 7.10 | implemented behind switch (Schalter Rechnungs- oder Zahlungsdatum, Standard konservativ), decision open (AI17-01), siehe AI18-01 |
 | S01 | Steuerlicher Kontext | 7.11 | specified, not implemented |
 | S02 | E-Rechnung | 7.11 | specified, not implemented |
 | S03 | Original und Verarbeitung | 7.11 | specified, not implemented |
@@ -345,3 +345,40 @@ Vollständigkeitsprüfung des Index gegen `docs/rules/*.md`: Regeldateien ohne I
 | [AI09-01](AI09-01-mfa-admin-reset.md) | Zurücksetzen des zweiten Faktors im Vier-Augen-Verfahren hinter Schalter mfa_admin_reset_enabled (Standard aus) und Sicherheitsereignisse der Anmeldung (AI09, Welle 20) | 3.4, 16 | implemented, not accepted (Migration 0442; Variantenwahl AI09-01 offen) |
 | [AI03-01](AI03-01.md) | Zinstagemethode des Verzugszinses als Mandantenschalter (Standard 365 fest), Methode im Zinsergebnis, Hinweis und Prüfpunkte zum Basiszinssatz | 7.5, Offene Entscheidung | implemented behind switch, decision open (AI03-01) |
 | [AI01-01](AI01-01-bank-chain-account-range.md) | Kettenprüfung der Kontoauszüge (Saldo und Zeitraum), Status nicht prüfbar, Nummernkreis Bank und Kasse bei neuen Konten (MHVP-ACC-0032) | 7.1 B09, 7.2, Fachliche Umsetzung | implemented, not accepted (AI01, Welle 20) |
+
+## Nachtrag 02.10.2026 (GAI-517, GAI-518, AJ15): bisher nicht verlinkte Regeldateien und Regeln aus dem Quelltext
+
+Status der bisher nicht verlinkten Dateien ist dem jeweiligen Dateikopf zu entnehmen (hier nur Verlinkung, keine Statusänderung). Die sieben Regeln am Ende standen im Quelltext ohne Regeldatei und sind nachgetragen (Produktschutz, keine Verhaltensänderung).
+
+| ID | Title | Master prompt section | Status |
+| --- | --- | --- | --- |
+| [AA12-regelregister](AA12-regelregister.md) | AA12 Regelregister und Prüfpunkte | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [AA14-portal-access](AA14-portal-access.md) | Portal: Freigabe je Unterlagenklasse, Sprachwahl, Formularelemente (AA14) | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [AB10-01-pruefpunkte](AB10-01-pruefpunkte.md) | AB10-01 Prüfpunkte pflegen (Welle 16, AE19) | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [AC01-02](AC01-02.md) | AC01-02 Nebenbuchprüfung: ausgebuchte und stornierte Posten | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [AE10-acquisition-rule](AE10-acquisition-rule.md) | AE10 Zuordnungsregel bei Eigentümerwechsel je Erwerbsart | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [GA04-vorlagen-erzeugte-dokumente](GA04-vorlagen-erzeugte-dokumente.md) | GA04-10/11/12 Vorlagenkontext, Herkunft erzeugter Dokumente, Ähnlichkeitssuche für Lernbeispiele | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [GAC-04](GAC-04.md) | GAC-04: Handbuch im Produkt | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [GAE-02-banking-objektsperre](GAE-02-banking-objektsperre.md) | GAE-02 Objektsperre im Banking-Verifier | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [M11-07-bankrohdaten-ablage](M11-07-bankrohdaten-ablage.md) | Regel M11-07: Ablage der Bankrohdaten und Aufbewahrung | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [M11-08-consent-erneuerung](M11-08-consent-erneuerung.md) | Regel M11-08: Erneuerung der Aggregator-Zustimmung | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [M13-fee-fields](M13-fee-fields.md) | Regel M13-fee-fields: Verwalterhonorar Felder, Rechnungsplan Automatikkennzeichen, Standardregel | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [M17-04-abrechnungsfrist](M17-04-abrechnungsfrist.md) | M17-04 Abrechnungsfrist (Orientierung) | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [R03-onboarding-uebernahme](R03-onboarding-uebernahme.md) | R03: Objektübernahme, Aufgaben, Eigentümeransicht und Onboarding-Anlage | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [T08](T08.md) | T08: Zustellung der Benachrichtigungsmails (M23-04) | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [U07-portal-belegsuche-index](U07-portal-belegsuche-index.md) | U07: Trigramm-Index der Portal-Belegsuche und Anzeige Art der Abrechnung je Konto | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [U15-04](U15-04.md) | U15-04 Inhaltsmodus der Benachrichtigungsmails | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [W02-ticket-feldereignisse](W02-ticket-feldereignisse.md) | W02 Ticket-Ereignisse für Priorität und Team | siehe Datei | siehe Dateikopf (Verlinkung nachgetragen) |
+| [B15](B15.md) | Kautionsverzinsung (Zinssatzverlauf, Jahreszins als Entwurf; B10 bis B14 nicht vergeben) | 7.1 (projektintern, Paket R10) | implemented, not accepted (Registereintrag nachgetragen) |
+| [D13](D13.md) | WEG-Ergebnis ohne wirksamen Beschluss: keine beschlussabhängige Forderung | 6.9.3, Anhang D D13 | implemented, not accepted (Registereintrag nachgetragen) |
+| [M1-09](M1-09.md) | Zeitzone Europe/Berlin für Fachfristen, Fristen nur zur Orientierung | 4.1, Offene Entscheidung | implemented, not accepted (Registereintrag nachgetragen) |
+| [M20-03](M20-03.md) | Antworten aus dem Ticket: Freigabekennzeichen und Notbremse | M20 | implemented, not accepted (Registereintrag nachgetragen) |
+| [M6-08](M6-08.md) | Temporäre Objekte im Objektspeicher (tmp/, Lifecycle) | M6 | implemented, not accepted (Registereintrag nachgetragen) |
+| [M26-02a](M26-02a.md) | Mieterhöhung: Basisprüfungen nur rechnerisch, keine Zulässigkeitsaussage | M26 | implemented, not accepted (Registereintrag nachgetragen) |
+| [M11-04](M11-04-no-credentials-in-crm.md) | Keine Bankzugangsdaten (PIN, TAN) im CRM bei finAPI | M11, 8.2 | implemented, not accepted (Registereintrag nachgetragen) |
+| [GLOSSAR-ZUORDNUNG](GLOSSAR-ZUORDNUNG.md) | Zuordnung Glossar zu Codebegriffen (GAI-117) | 20 | Dokumentation, keine Regel |
+| [V-STATUSABGLEICH-19-1](V-STATUSABGLEICH-19-1.md) | Statusabgleich Tabelle 19.1 gegen OPEN_QUESTIONS (GAI-119) | 19.1 | Dokumentation, keine Regel |
+| [AJ12-loeschvorschlaege](AJ12-loeschvorschlaege.md) | Löschvorschläge je Datenart, Sitzungsmetadaten bereinigen (GAI-501 bis 504, 522) | 16, V17 | implemented, not accepted |
+| [AJ04-kontoauszugskette-und-nachweis](AJ04-kontoauszugskette-und-nachweis.md) | Kontoauszugskette in checks(), Ereignisse Steuer, Zahlung, WEG Finanzierung (GAI-604, 307, 105, 601, 606) | 7.1 B09, 0.1.6 | implemented, not accepted |
+| [AJ10-upload-limits](AJ10-upload-limits.md) | Upload- und Webhook-Körperlimits, Typprüfung der Dump-Importe (GAI-313 bis 315, 106) | 4.1, Produktschutz | implemented, not accepted |
+| [AJ13-datenschutzaufsicht](AJ13-datenschutzaufsicht.md) | Auskunftsumfang, Fristenüberwachung, Einwilligungsübersicht, Art.-30-Detektoren und Vor-G1-Auswertung (GAI-506 bis 510, 414) | 16 | implemented, not accepted |

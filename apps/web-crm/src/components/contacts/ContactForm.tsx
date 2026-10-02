@@ -37,6 +37,7 @@ import { fieldPath } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 import { DuplicateWarning, type DuplicateCandidate } from "./DuplicateWarning";
+import { today } from "@/lib/today";
 
 export type RetentionProfileOption = { id: string; document_class: string; legal_entity_kind: string | null };
 type Props = ({ mode: "create" } | { mode: "edit"; contact: ContactOut }) & {
@@ -382,7 +383,7 @@ export function ContactForm(props: Props) {
               bic: "",
               bank_name: "",
               holder: "",
-              valid_from: new Date().toISOString().slice(0, 10),
+              valid_from: today(),
               valid_to: "",
               sepa_enabled: false,
               mandate_reference: "",

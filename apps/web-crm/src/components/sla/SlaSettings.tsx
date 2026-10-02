@@ -863,7 +863,7 @@ function CalendarTab({ initial, canManage }: { initial: WorkCalendar; canManage:
               <li key={h} className={ui.badge}>
                 {h}
                 {canManage ? (
-                  <button type="button" className="ml-1 text-danger-fg" onClick={() => removeHoliday(h)}>
+                  <button type="button" className="ml-1 text-danger-fg" aria-label={t("calendar.removeHoliday", { date: h })} onClick={() => removeHoliday(h)}>
                     ×
                   </button>
                 ) : null}

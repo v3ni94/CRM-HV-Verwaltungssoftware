@@ -36,6 +36,7 @@ from mhvp.contacts.models import (
     ContactNote,
     ContactPhone,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.db.base import Base
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -61,7 +62,7 @@ def _referencing_columns() -> list[tuple[str, str]]:
 async def blockers(
     session: AsyncSession, contact: Contact, today: date | None = None
 ) -> list[dict[str, Any]]:
-    today = today or datetime.now(UTC).date()
+    today = today or local_today()
     out: list[dict[str, Any]] = []
     if contact.display_name.startswith(ANONYMIZED_PREFIX):
         out.append(
@@ -220,7 +221,9 @@ async def reject(
     user_id: uuid.UUID | None,
     note: str | None,
 ) -> PrivacyErasureRequest:
-    _require(request, "requested", "approved")
+    # A job proposal (AJ12, status ``proposed``) has no requester and may be dismissed by
+    # any person with the approve permission; dismissing deletes nothing.
+    _require(request, "proposed", "requested", "approved")
     if user_id is None or user_id == request.requested_by:
         raise ProblemError(ErrorCodes.PRIVACY_FOUR_EYES)
     request.status, request.decided_by, request.decided_at = "rejected", user_id, datetime.now(UTC)
@@ -237,18 +240,12 @@ async def reject(
     return request
 
 
-async def execute(
-    session: AsyncSession, request: PrivacyErasureRequest, user_id: uuid.UUID | None
-) -> PrivacyErasureRequest:
-    """Anonymises the contact after a fresh lock check (state may have changed since release)."""
-    _require(request, "approved")
-    contact = await session.get(Contact, request.contact_id)
-    if contact is None:
-        raise ProblemError(ErrorCodes.NOT_FOUND)
-    found = await blockers(session, contact)
-    if found:
-        request.blockers = found
-        raise ProblemError(ErrorCodes.PRIVACY_ERASURE_BLOCKED, extensions={"blockers": found})
+async def anonymize_contact(
+    session: AsyncSession, contact: Contact, user_id: uuid.UUID | None
+) -> dict[str, int]:
+    """Removes the personal child rows and anonymises the contact row (no lock check, no event).
+
+    Shared by :func:`execute` and the erasure journal replay after a restore (GAI-512)."""
     removed: dict[str, int] = {}
     accounts = select(ContactBankAccount.id).where(ContactBankAccount.contact_id == contact.id)
     res = await session.execute(
@@ -295,6 +292,22 @@ async def execute(
             updated_by=user_id,
         )
     )
+    return removed
+
+
+async def execute(
+    session: AsyncSession, request: PrivacyErasureRequest, user_id: uuid.UUID | None
+) -> PrivacyErasureRequest:
+    """Anonymises the contact after a fresh lock check (state may have changed since release)."""
+    _require(request, "approved")
+    contact = await session.get(Contact, request.contact_id)
+    if contact is None:
+        raise ProblemError(ErrorCodes.NOT_FOUND)
+    found = await blockers(session, contact)
+    if found:
+        request.blockers = found
+        raise ProblemError(ErrorCodes.PRIVACY_ERASURE_BLOCKED, extensions={"blockers": found})
+    removed = await anonymize_contact(session, contact, user_id)
     request.status, request.executed_by, request.executed_at = (
         "executed",
         user_id,
@@ -310,5 +323,28 @@ async def execute(
         entity_id=request.contact_id,
         actor_user_id=user_id,
         payload={"request_id": str(request.id)},
+    )
+    return request
+
+
+async def accept_proposal(
+    session: AsyncSession, request: PrivacyErasureRequest, user_id: uuid.UUID | None
+) -> PrivacyErasureRequest:
+    """A job proposal (AJ12, GAI-501) becomes a request of the accepting person (first person);
+    the release stays with a second person (``approve``)."""
+    _require(request, "proposed")
+    contact = await session.get(Contact, request.contact_id)
+    if contact is None:
+        raise ProblemError(ErrorCodes.NOT_FOUND)
+    request.status, request.requested_by = "requested", user_id
+    request.blockers = await blockers(session, contact)
+    await emit(
+        session,
+        tenant_id=request.tenant_id,
+        type="privacy.erasure_proposal_accepted",
+        entity_type="contact",
+        entity_id=request.contact_id,
+        actor_user_id=user_id,
+        payload={"request_id": str(request.id), "blocked": bool(request.blockers)},
     )
     return request

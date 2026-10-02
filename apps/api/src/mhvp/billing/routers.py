@@ -378,10 +378,24 @@ async def statement_period_lock(
         }
 
 
+class BillingNewVersionIn(_In):
+    """GAI-602: correction reason for a new statement version (rule 7, traceability)."""
+
+    reason: str = Field(min_length=5, max_length=2000)
+
+
 @router.post("/{statement_id}/new-version", status_code=201, summary="Neue Version mit Bezug")
 async def new_version(
-    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    statement_id: uuid.UUID,
+    body: BillingNewVersionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
 ) -> dict[str, Any]:
+    reason = body.reason.strip()
+    if len(reason) < 5:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Der Korrekturgrund braucht mindestens 5 Zeichen."
+        )
     async with tenant_tx(request, principal) as session:
         old = await _statement(session, statement_id)
         if old.status is StatementStatus.DRAFT:
@@ -399,7 +413,17 @@ async def new_version(
             interim=old.interim,
             purpose=old.purpose,
             include_heating=old.include_heating,
-            settings=old.settings,
+            # GAI-602: no dedicated column (no migration in wave 21); the reason is kept in
+            # the settings JSONB of the new version under "correction".
+            settings={
+                **(old.settings or {}),
+                "correction": {
+                    "reason": reason,
+                    "by": str(principal.user_id),
+                    "at": datetime.now(UTC).isoformat(),
+                    "supersedes_id": str(old.id),
+                },
+            },
             deadline_exception=old.deadline_exception,
             deadline_exception_document_id=old.deadline_exception_document_id,
             deadline_exception_set_by=old.deadline_exception_set_by,

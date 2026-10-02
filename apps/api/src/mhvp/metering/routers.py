@@ -34,6 +34,7 @@ from mhvp.core.escaping import content_disposition
 from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_limited
 from mhvp.metering import csv_io, services, transmissions
 from mhvp.metering.models import (
     AssignmentStatus,
@@ -1104,10 +1105,11 @@ def _preview_out(preview: csv_io.Preview, created: list[uuid.UUID]) -> ImportPre
     )
 
 
+HEIWAKO_MAX_FILE_BYTES = 20 * 1024 * 1024
+
+
 async def _read_csv(file: UploadFile) -> str:
-    raw = await file.read()
-    if len(raw) > 2_000_000:
-        raise ProblemError(ErrorCodes.VALIDATION, detail="Datei größer als 2 MB.")
+    raw = await read_limited(file, 2_000_000, detail="Datei größer als 2 MB.")
     for encoding in ("utf-8-sig", "cp1252"):
         try:
             return raw.decode(encoding)
@@ -1282,7 +1284,7 @@ async def heiwako_import_preview(
         )
     contents: dict[str, bytes] = {}
     for upload in files:
-        raw = await upload.read()
+        raw = await read_limited(upload, HEIWAKO_MAX_FILE_BYTES)
         contents[upload.filename or f"datei-{len(contents) + 1}"] = raw
     currency = str(connection.config.get("currency") or "EUR")
     result = adapter.import_files(contents, period_from=period_from, default_currency=currency)

@@ -43,6 +43,7 @@ export function CircularResolutionForm({
   lowerMajorityEnabled: boolean;
 }) {
   const t = useTranslations("HoaCircular");
+  const tCommon = useTranslations("Common");
   const tk = useTranslations("MajorityRules");
   const router = useRouter();
   const [subject, setSubject] = useState("");
@@ -185,6 +186,13 @@ export function CircularResolutionForm({
             </tr>
           </thead>
           <tbody>
+            {owners.length === 0 ? (
+              <tr>
+                <td colSpan={99} className="text-muted">
+                  {tCommon("emptyList")}
+                </td>
+              </tr>
+            ) : null}
             {owners.map((o) => (
               <tr key={o.id}>
                 <td>{o.label}</td>
@@ -198,7 +206,7 @@ export function CircularResolutionForm({
                   </select>
                 </td>
                 <td>
-                  <select className={ui.input} value={votes[o.id]?.channel ?? "email"} onChange={(e) => setVote(o.id, { channel: e.target.value as Vote["channel"] })}>
+                  <select aria-label={`${t("channel")} ${o.label}`} className={ui.input} value={votes[o.id]?.channel ?? "email"} onChange={(e) => setVote(o.id, { channel: e.target.value as Vote["channel"] })}>
                     {CHANNELS.map((c) => (
                       <option key={c} value={c}>
                         {t(`channels.${c}`)}
@@ -207,7 +215,7 @@ export function CircularResolutionForm({
                   </select>
                 </td>
                 <td>
-                  <input className={ui.input} type="datetime-local" value={votes[o.id]?.receivedAt ?? ""} onChange={(e) => setVote(o.id, { receivedAt: e.target.value })} />
+                  <input aria-label={`${t("receivedAt")} ${o.label}`} className={ui.input} type="datetime-local" value={votes[o.id]?.receivedAt ?? ""} onChange={(e) => setVote(o.id, { receivedAt: e.target.value })} />
                 </td>
               </tr>
             ))}

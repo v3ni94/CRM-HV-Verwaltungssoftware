@@ -15,6 +15,8 @@ import { bankAccountLabel, type BankAccountOption, type Transaction, type Transa
 import { BookingDialog } from "./BookingDialog";
 import { PayerIbanButton } from "./PayerIbanButton";
 import { BulkConfirm } from "./BulkConfirm";
+import { ClarificationOpenButton } from "./ClarificationOpenButton";
+import { TransactionCandidates } from "./TransactionCandidates";
 
 /** Reopening an ignored transaction with a reason (GAG-25, 7.4 Rückweg): the API sets the
  *  status back to `new`; a transaction with an effective posting stays booked (correction by
@@ -305,6 +307,8 @@ export function TransactionList({ canBook, canUpdate }: TransactionListProps) {
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1">
+                      {(tx.status === "new" || tx.status === "needs_review" || tx.status === "proposed") && !tx.transfer_pair_id ? <TransactionCandidates txId={tx.id} /> : null}
+                      {(tx.status === "new" || tx.status === "needs_review" || tx.status === "proposed") && canUpdate ? <ClarificationOpenButton txId={tx.id} /> : null}
                       {tx.status === "new" && canBook ? (
                         <button type="button" className={ui.buttonSm} onClick={() => setDialogTx(tx)} disabled={busyId === tx.id}>
                           {tl("book")}

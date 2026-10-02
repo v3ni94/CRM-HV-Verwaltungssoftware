@@ -619,3 +619,13 @@ Ist der Objektzeitraum eines Umsatzes gesperrt, zeigen Buchungsdialog, Vorschlag
 ## Kettenprüfung in der Bankabstimmung
 
 Die Bankabstimmung zeigt je Auszug in der Spalte "Kette zum Vorauszug", ob der Anfangssaldo zum Endsaldo des vorherigen Auszugs passt, und meldet Kettenbrüche mit Betrag sowie Zeitraumlücken und Überschneidungen. Auszüge ohne Salden, etwa aus CSV, werden als nicht prüfbar gezählt. Befunde werden hier nur angezeigt und nicht korrigiert.
+
+## Zahlungsformat, Bankrückmeldung, Vorschläge, Klärung und Digest (GAI-403 bis GAI-407, Welle 21)
+
+- Zahlungsformat je Konto: Unter Bank, Zahlungen, Abschnitt Zahlungsformat je Bankkonto wählen Sie das Konto und hinterlegen die mit der Bank vereinbarte Version von pain.001 und pain.008, den Einreichungsweg und das Datum der Abstimmung. Angeboten werden nur Versionen, die die Plattform erzeugen und prüfen kann. Speichern braucht das Freigaberecht Bank, erzeugt keine Zahlungsdatei und löst keine Zahlung aus.
+- Bankrückmeldung je Zahlungsdatei: In der Tabelle Zahlungsdateien erfassen Sie über Bankrückmeldung erfassen die Status Eingereicht, Von der Bank angenommen oder Abgelehnt (Grund ist Pflicht). Eine Ablehnung lässt die Verbindlichkeit voll offen. Ausführung und Rückgabe lösen Buchungen aus und werden nicht hier, sondern über den Import der Bankrückmeldung erfasst.
+- Zuordnungsvorschläge: In der Umsatzliste zeigt die Schaltfläche Vorschläge je offenem Umsatz die passenden offenen Posten mit Treffergüte und Begründung. Ein Vorschlag bucht nichts, die IBAN allein beweist keinen Schuldner.
+- Als unbelegt melden (Regel B05): Bei einem offenen Umsatz meldet eine Person mit Schreibrecht Bank die Bewegung mit Begründung als unbelegt. Sie erscheint danach in der Liste Buchungen ohne Beleg und lässt sich erst mit Beleg oder begründeter Entscheidung buchen.
+- Wochendigest erzeugen: Unter Bank, Nachkontrolle wählen Sie den Montag der Woche und erzeugen oder aktualisieren den Digest. Das Erzeugen bucht nichts; die Bestätigung bleibt wie bisher Pflicht für die Folgewoche.
+- Gespeicherte Zahllauf-Vorschauen: Unter Bank, Zahllauf zeigt der Abschnitt Gespeicherte Zahllauf-Vorschauen die bisher gespeicherten Stände. Vorschau speichern ist sichtbar, bleibt aber gesperrt, solange die Freigabestufe G2 geschlossen ist; der Stand der Freigabestufe steht unter der Schaltfläche. Eine Vorschau erzeugt keine Aufträge und keine Dateien.
+- Auszahlung ohne Rechnung: Unter Bank, Zahllauf legt die Maske Auszahlung ohne Rechnung einen Zahlungsauftrag als Entwurf an. Eine Begründung aus der Liste ist Pflicht; ohne Begründung bleibt Entwurf anlegen gesperrt. Die Maske ist gesperrt, solange die Freigabestufe G2 geschlossen ist, und der Entwurf braucht danach die Freigabe einer zweiten Person.

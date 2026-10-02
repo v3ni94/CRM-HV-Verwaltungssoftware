@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type DomTenant = { id: string; slug: string; name: string; status: string };
 type Domain = {
@@ -19,6 +20,7 @@ type Domain = {
 
 /** GA01-10: Kundendomains je Mandant (tenant_domain) und Mandantenstatus. */
 export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("AA17.domains");
   const [list, setList] = useState<DomTenant[]>(tenants);
   const [tenantId, setTenantId] = useState(tenants[0]?.id ?? "");
@@ -94,7 +96,7 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
           <span>
             {t("status")}: <span className={current.status === "active" ? ui.badgeSuccess : ui.badgeWarning}>{t(current.status === "active" ? "active" : "suspended")}</span>
           </span>
-          <button type="button" className={current.status === "active" ? ui.danger : ui.secondary} onClick={() => void toggleStatus()}>
+          <button disabled={busy} type="button" className={current.status === "active" ? ui.danger : ui.secondary} onClick={guard(() => toggleStatus())}>
             {t(current.status === "active" ? "suspend" : "activate")}
           </button>
         </div>
@@ -131,10 +133,10 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
                     ) : null}
                   </td>
                   <td className="flex gap-2">
-                    <button type="button" className={ui.secondary} onClick={() => void verify(d.id)}>
+                    <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => verify(d.id))}>
                       {t("verify")}
                     </button>
-                    <button type="button" className={ui.secondary} onClick={() => void remove(d.id)}>
+                    <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => remove(d.id))}>
                       {t("remove")}
                     </button>
                   </td>
@@ -144,7 +146,7 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
           </table>
         </div>
       )}
-      <form onSubmit={add} className="flex flex-wrap items-end gap-3" aria-label={t("add")}>
+      <form onSubmit={guard(add)} className="flex flex-wrap items-end gap-3" aria-label={t("add")}>
         <div>
           <label htmlFor="aa17-host" className={ui.label}>
             {t("host")}

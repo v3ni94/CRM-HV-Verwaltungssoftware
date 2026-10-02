@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.escaping import csv_safe_cell
+from mhvp.core.ids import uuid7
 from mhvp.metering import services
 from mhvp.metering.models import (
     MeteringConnection,
@@ -220,11 +221,11 @@ async def preview(session: AsyncSession, tenant_id: uuid.UUID, content: str) -> 
             results.append(result)
             continue
         candidate = MeteringPropertyAssignment(
-            id=uuid.uuid4(),
+            id=uuid7(),
             tenant_id=tenant_id,
             connection_id=connection.id,
             property_id=prop.id,
-            external_billing_unit_id=uuid.uuid4(),
+            external_billing_unit_id=uuid7(),
             service_scope=scope,
             valid_from=valid_from,
             valid_to=valid_to,

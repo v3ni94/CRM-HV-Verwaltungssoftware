@@ -42,7 +42,7 @@ describe("ContactMasterData", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(jsonResponse({ ...contact, is_consumer: true, version: 4 }));
     renderIntl(<ContactMasterData contact={{ ...contact, is_consumer: null }} canEdit />);
-    expect(screen.getByText("Kennzeichen für das Mahnwesen (M16-03), keine Angabe bedeutet nicht beurteilt. Dient nur der Prüfung, keine rechtliche Feststellung.")).toBeInTheDocument();
+    expect(screen.getByText("Kennzeichen für das Mahnwesen, keine Angabe bedeutet nicht beurteilt. Dient nur der Prüfung, keine rechtliche Feststellung.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Verbraucher bearbeiten" }));
     await userEvent.selectOptions(screen.getByLabelText("Verbraucher"), "Ja");
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));

@@ -42,9 +42,12 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any
 
 import httpx
+
+from mhvp.core.money import json_number
 
 FLOWFACT_BASE_URL = "https://api.production.cloudios.flowfact-prod.cloud"
 _FLOWFACT_TOKEN_PATH = "/admin-token-service/public/adminUser/authenticate"  # noqa: S105 (path, not a secret)
@@ -296,11 +299,12 @@ class FlowfactBrokerProvider(BrokerProvider):
             "headline": [payload.title],
         }
         if payload.price is not None:
-            fields["rent" if payload.kind == "rental" else "purchaseprice"] = [float(payload.price)]
+            price_field = "rent" if payload.kind == "rental" else "purchaseprice"
+            fields[price_field] = [json_number(Decimal(payload.price))]
         if payload.living_area_sqm is not None:
-            fields["livingarea"] = [float(payload.living_area_sqm)]
+            fields["livingarea"] = [json_number(Decimal(payload.living_area_sqm))]
         if payload.rooms is not None:
-            fields["rooms"] = [float(payload.rooms)]
+            fields["rooms"] = [json_number(Decimal(payload.rooms))]
         if payload.street or payload.postal_code or payload.city:
             fields["addresses"] = [
                 {

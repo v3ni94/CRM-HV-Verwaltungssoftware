@@ -18,6 +18,7 @@ type Checklist = {
  * bearbeitet; ein wiederhergestelltes Dokument unter Sperre bleibt erhalten. */
 export function DeletionChecklist({ documentId, canDelete }: { documentId: string; canDelete: boolean }) {
   const t = useTranslations("DeletionProposals.checklist");
+  const tCommon = useTranslations("Common");
   const [data, setData] = useState<Checklist | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,6 +47,7 @@ export function DeletionChecklist({ documentId, canDelete }: { documentId: strin
     <div className={ui.small}>
       <p>{t(`overall.${data.status}`)}</p>
       <ul>
+        {data.items.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
         {data.items.map((i) => (
           <li key={i.target}>
             {t(`target.${i.target}`)}: {t(`status.${i.status}`)}

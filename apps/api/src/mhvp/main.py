@@ -82,6 +82,7 @@ from mhvp.core.idempotency import IdempotencyMiddleware
 from mhvp.core.listparams import declare_list_parameters
 from mhvp.core.logging import configure_logging
 from mhvp.core.middleware import CorrelationIdMiddleware
+from mhvp.core.openapi_docs import install_openapi_docs
 from mhvp.core.problems import install_problem_handlers
 from mhvp.core.ratelimit import RateLimitMiddleware
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
@@ -189,6 +190,7 @@ from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.portal.tenant_statements import router as portal_tenant_statements_router
 from mhvp.privacy.routers import router as privacy_router
+from mhvp.privacy.routers_oversight import router as privacy_oversight_router
 from mhvp.properties.routers import router as properties_router
 from mhvp.properties.routers_catalogs import router as catalogs_router
 from mhvp.properties.routers_creditors import router as properties_creditors_router
@@ -331,6 +333,7 @@ def create_app(
     app.include_router(documents_intake_router, prefix=API_PREFIX)
     app.include_router(text_block_router, prefix=API_PREFIX)
     app.include_router(privacy_router, prefix=API_PREFIX)
+    app.include_router(privacy_oversight_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
     app.include_router(paperless_webhook_router, prefix=API_PREFIX)
     app.include_router(handover_router, prefix=API_PREFIX)
@@ -495,6 +498,7 @@ def create_app(
     app.state.tracer_provider = setup_tracing(settings)
     instrument_app(app, app.state.tracer_provider)
     declare_list_parameters(app)
+    install_openapi_docs(app)
     return app
 
 

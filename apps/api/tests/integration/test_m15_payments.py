@@ -446,6 +446,7 @@ def _events(client: TestClient, h: dict[str, str], kind: str) -> list[dict[str, 
     return list(_ok(client.get(f"{T}/events", params={"type": kind, "page_size": 200}, headers=h)))
 
 
+@pytest.mark.annex_d("D35", "D36", "D37", "D38")
 def test_d35_to_d38_payment_release_and_bank_feedback(
     clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
 ) -> None:

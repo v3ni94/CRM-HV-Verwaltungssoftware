@@ -17,6 +17,7 @@ import {
 } from "@/lib/ai";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Option = { id: string; label: string };
 type Stage = "idle" | "picking" | "uploading" | "queued" | "processing" | "review" | "done";
@@ -83,6 +84,7 @@ export function InvoiceExtract({
   initialProposalId?: string | null;
   onClose?: () => void;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Invoices");
   const router = useRouter();
   const [stage, setStage] = useState<Stage>(initialProposalId ? "processing" : "idle");
@@ -302,7 +304,7 @@ export function InvoiceExtract({
             <span className={ui.label}>{t("fields.provider_search")}</span>
             <span className="flex gap-1">
               <input className={ui.input} value={q} onChange={(e) => setQ(e.target.value)} defaultValue={preview.invoice.supplier_name ?? ""} />
-              <button type="button" className={ui.button} onClick={search} disabled={q.trim().length < 2}>{t("search")}</button>
+              <button type="button" className={ui.button} onClick={guard(search)} disabled={busy || (q.trim().length < 2)}>{t("search")}</button>
             </span>
           </label>
           <label className="flex flex-col gap-1">
@@ -361,7 +363,7 @@ export function InvoiceExtract({
           </label>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={ui.primary} disabled={!valid || stage === "processing"} onClick={() => void submit()}>
+          <button type="button" className={ui.primary} disabled={busy || (!valid || stage === "processing")} onClick={guard(() => submit())}>
             {t("extract.createDraft")}
           </button>
           <button

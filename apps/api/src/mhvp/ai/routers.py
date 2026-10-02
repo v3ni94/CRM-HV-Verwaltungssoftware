@@ -1793,7 +1793,7 @@ async def knowledge_feedback(
     entry_id: uuid.UUID,
     body: s.FeedbackIn,
     request: Request,
-    principal: TenantPrincipal = Depends(READ),
+    principal: TenantPrincipal = Depends(CREATE),
 ) -> s.KnowledgeEntryOut:
     """Feedback "hilfreich / nicht hilfreich" on one entry (audit 29.09.2026). Counters only:
     no state change, no automatic withdrawal; the release workflow stays with the reviewers."""

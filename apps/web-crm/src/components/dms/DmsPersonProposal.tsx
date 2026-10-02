@@ -28,6 +28,7 @@ const BADGE: Record<ProposalRowStatus, string> = {
  *  confirms the reconciliation as working basis. Nothing is written into the master data. */
 export function DmsPersonProposal({ number }: { number: string }) {
   const t = useTranslations("Dms");
+  const tCommon = useTranslations("Common");
   const [kind, setKind] = useState<PersonKind>("owners");
   const [proposal, setProposal] = useState<PersonProposal | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +101,13 @@ export function DmsPersonProposal({ number }: { number: string }) {
                 </tr>
               </thead>
               <tbody>
+                {proposal.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="text-muted">
+                      {tCommon("emptyList")}
+                    </td>
+                  </tr>
+                ) : null}
                 {proposal.rows.map((r, index) => (
                   <tr key={`${r.source_id ?? "crm"}-${index}`}>
                     <td>{r.display_name}</td>

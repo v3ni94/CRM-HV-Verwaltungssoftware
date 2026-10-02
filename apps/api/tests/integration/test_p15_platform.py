@@ -8,7 +8,7 @@ import json
 import uuid
 import zipfile
 from collections.abc import Iterator
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
 import boto3
@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
 
+from mhvp.core.clock import local_today
 from mhvp.main import create_app
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import RUN, World, bearer, login
@@ -240,7 +241,7 @@ def test_usage_history_daily_and_monthly(client: TestClient, world: World) -> No
     h = bearer(login(client, world, "p15admin"))
     ph = bearer(login(client, world, "p15padmin"))
     tenant = str(world.tenant_a)
-    today = datetime.now(UTC).date()
+    today = local_today()
     month = today.replace(day=1).isoformat()
     _ok(client.post(f"{P}/tenants/{tenant}/usage", json={"month": month}, headers=ph))
     _ok(client.post(f"{P}/tenants/{tenant}/usage", json={"month": month}, headers=ph))

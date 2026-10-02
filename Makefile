@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify check-s3 kosit-fetch kosit-test kosit-validate
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -100,6 +100,18 @@ backup: ## Encrypted pg_dump into BACKUP_DIR (needs PG*, BACKUP_AGE_RECIPIENT)
 
 backup-verify: ## Restore newest backup into a throwaway database and check it
 	scripts/backup-verify.sh
+
+restore-drill: ## Restore drill (infra/scripts/restore-drill.sh); DRY_RUN=1 checks configuration only
+	infra/scripts/restore-drill.sh $(if $(DRY_RUN),--dry-run,) $(RESTORE_DRILL_ARGS)
+
+restore-drill-test: ## Script test of the restore drill dry run (no network, no database)
+	bash infra/scripts/tests/test-restore-drill.sh
+
+commit-lint: ## Conventional Commits check of RANGE (default origin/main..HEAD), GAI-113
+	python3 scripts/check_commits.py $(or $(RANGE),origin/main..HEAD)
+
+version-check: ## VERSION, CHANGELOG.md and changelog.ts agree (GAI-112)
+	python3 scripts/bump_version.py --check
 
 check-s3: ## Connectivity, bucket and put/get/delete round trip against MHVP_S3_* (ENV_FILE=.env.prod)
 	scripts/check-s3.sh $(if $(ENV_FILE),--env-file $(ENV_FILE),)

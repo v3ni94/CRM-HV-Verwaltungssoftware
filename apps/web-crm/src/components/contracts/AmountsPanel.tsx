@@ -9,6 +9,7 @@ import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { AMOUNT_REASONS, type AmountReason, type AmountRow, amountsValidOn, findOverlap, grossFromNet, monthlyTotal, parseAmount, type PaymentTypeOption, sortAmounts, withNewAmount } from "./amounts";
+import { today as businessToday } from "@/lib/today";
 
 /** Draft of an amount in the create form: recorded after POST /contracts from the start date. */
 export type AmountDraft = { payment_type_code: string; net: string; vat_percent: string };
@@ -108,7 +109,7 @@ export function AmountsPanel({
 }) {
   const t = useTranslations("contracts");
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   const defaultFrom = today < startDate ? startDate : endDate && today > endDate ? startDate : today;
   const [rows, setRows] = useState(() => sortAmounts(amounts));
   const [asOfInput, setAsOf] = useState(defaultFrom);

@@ -28,6 +28,9 @@ export function StatementWorkbench({ id, status, keys, revision = "", contracts 
   const { refreshing, refresh } = useRefreshAfterPost(revision);
   const busy = posting || refreshing;
   const [error, setError] = useState<string | null>(null);
+  // GAI-602: a new version needs a correction reason (min 5 characters, API validates too).
+  const [versionOpen, setVersionOpen] = useState(false);
+  const [reason, setReason] = useState("");
 
   const call = async (path: string, body?: unknown) => {
     setBusy(true);
@@ -116,10 +119,37 @@ export function StatementWorkbench({ id, status, keys, revision = "", contracts 
         </div>
       ) : null}
       {status === "calculated" ? <p className={ui.help}>{t("approveInternalHint")}</p> : null}
-      {status !== "draft" ? (
-        <button type="button" className={ui.button} onClick={() => call("new-version")} disabled={busy}>
+      {status !== "draft" && !versionOpen ? (
+        <button type="button" className={ui.button} onClick={() => setVersionOpen(true)} disabled={busy}>
           {t("newVersion")}
         </button>
+      ) : null}
+      {status !== "draft" && versionOpen ? (
+        <div role="dialog" aria-label={t("newVersion")} className="flex flex-col gap-2" data-testid="statement-new-version-dialog">
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("newVersionReason")}</span>
+            <textarea className={ui.input} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} />
+          </label>
+          <p className={ui.help}>{t("newVersionReasonHint")}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={ui.primary}
+              disabled={busy || reason.trim().length < 5}
+              onClick={async () => {
+                if (await call("new-version", { reason: reason.trim() })) {
+                  setVersionOpen(false);
+                  setReason("");
+                }
+              }}
+            >
+              {t("newVersionConfirm")}
+            </button>
+            <button type="button" className={ui.button} onClick={() => setVersionOpen(false)} disabled={busy}>
+              {t("newVersionCancel")}
+            </button>
+          </div>
+        </div>
       ) : null}
       {error ? (
         <p role="alert" className={ui.alert}>

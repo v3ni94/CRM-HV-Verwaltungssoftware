@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Suggestion = {
   dispatch_id: string;
@@ -54,7 +55,9 @@ export function DeadlineOverviewPanel({
   id: string;
   canEdit: boolean;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Billing.deadlineOverview");
+  const tCommon = useTranslations("Common");
   const [data, setData] = useState<Overview | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +128,13 @@ export function DeadlineOverviewPanel({
           </tr>
         </thead>
         <tbody>
+          {data.contracts.length === 0 ? (
+            <tr>
+              <td colSpan={99} className="text-muted">
+                {tCommon("emptyList")}
+              </td>
+            </tr>
+          ) : null}
           {data.contracts.map((r) => (
             <tr key={r.contract_id}>
               <td>{r.unit_number}</td>
@@ -139,10 +149,10 @@ export function DeadlineOverviewPanel({
                       channel: r.access_suggestion.channel,
                     })}
                     {canEdit ? (
-                      <button
+                      <button disabled={busy}
                         type="button"
                         className={ui.button}
-                        onClick={() => void adopt(r)}
+                        onClick={guard(() => adopt(r))}
                       >
                         {t("adopt")}
                       </button>

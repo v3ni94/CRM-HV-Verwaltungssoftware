@@ -65,8 +65,33 @@ async def unit_weights(
     return shares
 
 
+MONTHLY_REMAINDER_MODES = ("report_only", "first_month", "last_month")
+
+
+def monthly_rates(annual: Decimal, mode: str = "report_only") -> list[Decimal]:
+    """Twelve monthly rates of ``annual`` (GAI-214, AJ01-02). Each rate is annual / 12 on cents
+    half up. ``report_only`` (default, previous behaviour) keeps twelve equal rates; the
+    difference to the annual amount stays as ``rounding_difference``. ``first_month`` or
+    ``last_month`` put the difference on that month so the twelve rates add up exactly."""
+    if mode not in MONTHLY_REMAINDER_MODES:
+        raise ValueError(f"Unbekannte Restcentregel: {mode}")
+    rate = (annual / 12).quantize(CENT, rounding=ROUND_HALF_UP)
+    rates = [rate] * 12
+    diff = annual - rate * 12
+    if mode == "first_month":
+        rates[0] += diff
+    elif mode == "last_month":
+        rates[-1] += diff
+    return rates
+
+
 async def plan_results(
-    session: AsyncSession, property_id: uuid.UUID, items: list[Any], start: date, end: date
+    session: AsyncSession,
+    property_id: uuid.UUID,
+    items: list[Any],
+    start: date,
+    end: date,
+    remainder_mode: str = "report_only",
 ) -> dict[str, Any]:
     per_unit: dict[str, dict[str, Decimal]] = {}
     reserve_split: dict[str, dict[str, Decimal]] = {}  # M24-01: annual reserve share per reserve
@@ -94,6 +119,17 @@ async def plan_results(
                 "annual": {k: str(v) for k, v in comp.items()},
                 "monthly": {k: str(v) for k, v in monthly.items()},
                 "rounding_difference": {k: str(comp[k] - monthly[k] * 12) for k in comp},
+                **(
+                    {
+                        "monthly_rates": {
+                            k: [str(r) for r in monthly_rates(v, remainder_mode)]
+                            for k, v in comp.items()
+                        },
+                        "remainder_mode": remainder_mode,
+                    }
+                    if remainder_mode != "report_only"
+                    else {}
+                ),
                 "reserve_split": {
                     k: str(v) for k, v in sorted(reserve_split.get(unit_id, {}).items())
                 },
@@ -434,7 +470,7 @@ def loan_schedule(
             ErrorCodes.VALIDATION, detail="Ratenplan braucht eine Rate oder eine Laufzeit."
         )
     monthly_rate = interest_rate_percent / Decimal(100) / Decimal(12)
-    balance = principal.quantize(CENT)
+    balance = principal.quantize(CENT, rounding=ROUND_HALF_UP)
     kind = "annuity" if instalment is not None else "linear"
     limit = term_months if term_months is not None else MAX_SCHEDULE_MONTHS
     # linear plan: constant repayment share, the last instalment takes the rounding rest
@@ -852,7 +888,7 @@ async def loan_year_figures(session: AsyncSession, loan: Any, year: int) -> dict
                 if due <= end:
                     schedule_balance = Decimal(r["balance"])
             if schedule_balance is None and loan.start_date <= end:
-                schedule_balance = loan.principal.quantize(CENT)
+                schedule_balance = loan.principal.quantize(CENT, rounding=ROUND_HALF_UP)
     components = {}
     for c in LOAN_COMPONENTS:
         if booked[c] != ZERO:
@@ -1105,7 +1141,11 @@ def totals_comparison(
                 "basis_amount": str(before) if before is not None else None,
                 "deviation": str(now - Decimal(str(before))) if before is not None else None,
                 "deviation_percent": (
-                    str(((now - Decimal(str(before))) / Decimal(str(before)) * 100).quantize(CENT))
+                    str(
+                        ((now - Decimal(str(before))) / Decimal(str(before)) * 100).quantize(
+                            CENT, rounding=ROUND_HALF_UP
+                        )
+                    )
                     if before is not None and Decimal(str(before)) != 0
                     else None
                 ),

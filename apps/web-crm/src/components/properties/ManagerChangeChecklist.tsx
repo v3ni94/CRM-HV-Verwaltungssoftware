@@ -15,6 +15,7 @@ export type Checklist = { id: string; property_id: string; kind: string; status:
  *  properties:read, starting and ticking properties:update (checked server side again). */
 export function ManagerChangeChecklist({ propertyId, canEdit }: { propertyId: string; canEdit: boolean }) {
   const t = useTranslations("ManagerChecklist");
+  const tCommon = useTranslations("Common");
   const [lists, setLists] = useState<Checklist[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,6 +85,7 @@ export function ManagerChangeChecklist({ propertyId, canEdit }: { propertyId: st
         <>
           <p className="text-xs text-muted">{t("startedAt", { date: formatDate(current.created_at.slice(0, 10)) })}</p>
           <ol className="flex flex-col gap-2 text-sm" data-testid="checklist-items">
+            {current.items.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
             {current.items.map((item) => (
               <li key={item.code} className="flex items-start gap-2">
                 <input

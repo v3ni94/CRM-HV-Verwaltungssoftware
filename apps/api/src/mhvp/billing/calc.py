@@ -24,7 +24,13 @@ class Share:
 
 
 def distribute(total: Decimal, shares: list[Share]) -> dict[tuple[str, str], Decimal]:
-    """Largest remainder on cents; ties resolved by the stable key (D08: 100 / 3 -> 33.34 first)."""
+    """Largest remainder on cents; ties resolved by the stable key (D08: 100 / 3 -> 33.34 first).
+
+    Sign symmetric (GAI-101, GAI-201): a negative total (credit, refund) is distributed on its
+    absolute value and negated, so the parts always add up exactly to ``total`` and the rest
+    cents go to the largest remainders by amount (-100 / 3 -> -33.34 first)."""
+    if total < 0:
+        return {k: -v for k, v in distribute(-total, shares).items()}
     ordered = sorted(shares, key=lambda s: s.key)
     weight_sum = sum((s.weight for s in ordered), Decimal(0))
     if weight_sum <= 0:

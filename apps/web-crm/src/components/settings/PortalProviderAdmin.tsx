@@ -7,6 +7,7 @@ import { ContactPicker, type PickedContact } from "@/components/hoa/ContactPicke
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type ProviderWindow = {
   id: string;
@@ -44,6 +45,7 @@ export function PortalProviderAdmin({
   /** true: the user may not read the legal entity list (tenant_settings:read missing). */
   entitiesRestricted?: boolean;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("PortalProviders");
   const [contact, setContact] = useState<PickedContact | null>(null);
   const [windows, setWindows] = useState<ProviderWindow[]>([]);
@@ -171,7 +173,7 @@ export function PortalProviderAdmin({
                     {w.note ? `, ${w.note}` : ""}
                   </span>
                   {canManage ? (
-                    <button type="button" className={ui.buttonSm} onClick={() => void removeWindow(w.id)}>
+                    <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => removeWindow(w.id))}>
                       {t("window.remove")}
                     </button>
                   ) : null}
@@ -179,7 +181,7 @@ export function PortalProviderAdmin({
               ))}
             </ul>
             {canManage ? (
-              <form onSubmit={addWindow} noValidate className="mt-3 grid gap-2 sm:grid-cols-2" aria-label={t("window.add")}>
+              <form onSubmit={guard(addWindow)} noValidate className="mt-3 grid gap-2 sm:grid-cols-2" aria-label={t("window.add")}>
                 <label className="flex flex-col gap-1">
                   <span className={ui.label}>{t("window.start")}</span>
                   <input type="datetime-local" className={ui.input} value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
@@ -200,7 +202,7 @@ export function PortalProviderAdmin({
                   <input className={ui.input} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
                 </label>
                 <div className="sm:col-span-2">
-                  <button type="submit" className={ui.primary}>
+                  <button disabled={busy} type="submit" className={ui.primary}>
                     {t("window.add")}
                   </button>
                 </div>
@@ -250,7 +252,7 @@ export function PortalProviderAdmin({
                   </p>
                 ) : null}
                 {canManage && !entitiesRestricted ? (
-                  <form onSubmit={addGrant} noValidate className="mt-3 grid gap-2 sm:grid-cols-2" aria-label={t("grants.add")}>
+                  <form onSubmit={guard(addGrant)} noValidate className="mt-3 grid gap-2 sm:grid-cols-2" aria-label={t("grants.add")}>
                     <label className="flex flex-col gap-1">
                       <span className={ui.label}>{t("grants.entity")}</span>
                       <select className={ui.input} value={entityId} onChange={(e) => setEntityId(e.target.value)}>

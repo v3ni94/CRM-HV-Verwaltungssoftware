@@ -270,6 +270,7 @@ export function DraftEditor({ message, onUpdated }: { message: Message; onUpdate
           <div className="flex flex-col gap-2 border-t border-border-soft pt-2">
             <div className="flex flex-wrap items-center gap-2">
               <input
+                aria-label={ta("searchPlaceholder")}
                 className={`${ui.input} min-w-0 flex-1`}
                 placeholder={ta("searchPlaceholder")}
                 value={dmsQuery}

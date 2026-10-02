@@ -29,6 +29,7 @@ export type LegalTextsConfig = {
  *  Das Ändern von Fassung und Schalter verlangt contacts:approve (vom Backend geprüft). */
 export function PortalLegalTexts({ config, canChange }: { config: LegalTextsConfig; canChange: boolean }) {
   const t = useTranslations("PortalLegalTexts");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -53,6 +54,7 @@ export function PortalLegalTexts({ config, canChange }: { config: LegalTextsConf
       <section className="flex min-w-0 flex-col gap-2 rounded-md border border-line p-3" aria-labelledby="legal-status-title">
         <h2 id="legal-status-title" className="text-sm font-semibold">{t("statusTitle")}</h2>
         <ul className="flex flex-col gap-1 text-sm">
+          {config.items.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
           {config.items.map((item) => (
             <li key={item.code} className="flex flex-wrap items-center gap-2" data-testid={`legal-item-${item.code}`}>
               <span>{item.label}</span>

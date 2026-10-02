@@ -64,6 +64,7 @@ const MONEY = /^\d+([.,]\d{1,2})?$/;
  *  structural check and filing. Nothing is sent; revenue posting drafts only for released invoices, behind G1. */
 export function AdminFeePanel({ properties, today }: { properties: PropertyOption[]; today: string }) {
   const t = useTranslations("AdminFees");
+  const tCommon = useTranslations("Common");
   const [fees, setFees] = useState<Fee[]>([]);
   const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -380,6 +381,13 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
             </tr>
           </thead>
           <tbody>
+            {fees.length === 0 ? (
+              <tr>
+                <td colSpan={99} className="text-muted">
+                  {tCommon("emptyList")}
+                </td>
+              </tr>
+            ) : null}
             {fees.map((f) => (
               <tr key={f.id}>
                 <td>{label(f.property_id)}</td>
@@ -429,6 +437,13 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
             </tr>
           </thead>
           <tbody>
+            {periods.length === 0 ? (
+              <tr>
+                <td colSpan={99} className="text-muted">
+                  {tCommon("emptyList")}
+                </td>
+              </tr>
+            ) : null}
             {periods.map((row) => (
               <tr key={`${row.fee_setting_id}-${row.period_start}`}>
                 <td>
@@ -474,6 +489,13 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
             </tr>
           </thead>
           <tbody>
+            {invoices.length === 0 ? (
+              <tr>
+                <td colSpan={99} className="text-muted">
+                  {tCommon("emptyList")}
+                </td>
+              </tr>
+            ) : null}
             {invoices.map((inv) => (
               <tr key={inv.id}>
                 <td>

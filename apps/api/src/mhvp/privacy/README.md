@@ -39,3 +39,17 @@ Webhook-Ziele (je Zielhost, ohne Secret), EBICS und FinTS Bankzugänge. Die List
 Einwilligungszwecke (`consent_purposes`, `consent_basis` aus `/consent-legal-basis`) und den Text
 `legal_basis` des Registereintrags. Das ist eine Anzeige, keine Rechtsfeststellung; der Status als
 Auftragsverarbeiter bleibt Pflegefeld.
+
+## Löschvorschläge je Datenart (AJ12, GAI-501 bis GAI-504, GAI-522)
+
+`mhvp.privacy.proposals` (Beat `privacy-deletion-proposals`, täglich 04:25) erzeugt nur Vorschläge: Kontakte mit abgelaufenem Löschdatum erhalten einen Antrag im Status `proposed`, wenn das Kontaktprofil freigegeben ist und `auto_propose` (Migration 0445, Standard aus) eingeschaltet ist. Übernahme per `POST /privacy/erasure-requests/{id}/accept` (erste Person), Freigabe wie bisher durch eine zweite Person. Andere Datenarten (Kommunikation, Tickets, Portalzugänge, `domain_event`) werden nur gezählt (`GET /privacy/deletion-proposals`); `platform_user` und `bank_raw` sind nur dokumentierbar. Sitzungsmetadaten bereinigt `mhvp.core.auth.session_purge`. Regel: docs/rules/AJ12-loeschvorschlaege.md.
+
+## Oversight (AJ13, GAI-506 to GAI-510, GAI-414)
+
+`routers_oversight.py`: `GET /privacy/consent-overview` (consent counts per purpose),
+`GET|PUT /privacy/request-deadlines` (response periods in `tenant_settings.sources`
+`privacy_request_deadlines`, no default value, AJ13-01), `GET /privacy/request-deadlines/monitor`
+(open erasure requests with warn and due date; access requests need an intake table, AJ13-03),
+`GET /privacy/register/readiness` (pre G1 list of services without settled entry; informative,
+opens no gate, AJ13-02). `config_sources` additionally detects OIDC relying parties, ClamAV,
+`BACKUP_REMOTE` and `ALERT_WEBHOOK_URL`. Rule: docs/rules/AJ13-datenschutzaufsicht.md.

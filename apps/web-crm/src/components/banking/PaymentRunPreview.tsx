@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { today } from "@/lib/today";
 
 type PreviewInvoice = {
   invoice_id: string;
@@ -61,7 +62,7 @@ export function PaymentRunPreview() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [accounts, setAccounts] = useState<Record<string, string>>({});
-  const [executionDate, setExecutionDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [executionDate, setExecutionDate] = useState<string>(today());
   const [result, setResult] = useState<CreateResult | null>(null);
   const [busy, setBusy] = useState(false);
 

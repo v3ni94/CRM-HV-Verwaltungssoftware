@@ -6,9 +6,11 @@ import { useMemo, useState } from "react";
 
 import type { ReferenceRate } from "@/components/settings/DepositInterestRatesAdmin";
 import { DepositSettlementPreviewButton } from "@/components/contracts/DepositSettlementPreviewButton";
+import { DepositSettlementReleaseButton } from "@/components/gated/DepositSettlementReleaseButton";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { today } from "@/lib/today";
 
 export type DepositMovementOut = { id: string; date: string; amount: string; kind: "payment" | "interest" | "payout" | "offset"; reason: string | null; review_required: boolean };
 export type DepositOut = {
@@ -164,7 +166,7 @@ export function DepositMovementForm({ depositId }: { depositId: string }) {
   const t = useTranslations("LedgerExtras.deposit");
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(today());
   const [amount, setAmount] = useState("");
   const [kind, setKind] = useState<(typeof MOVEMENT_KINDS)[number]>("payment");
   const [reason, setReason] = useState("");
@@ -336,7 +338,7 @@ export function DepositPanel({
     router.refresh();
   };
   const [open, setOpen] = useState<string | null>(null);
-  const [date, setDate] = useState(contractEndDate ?? new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(contractEndDate ?? today());
   const [mode, setMode] = useState<InterestMode>("individual");
   const [interest, setInterest] = useState<Record<number, string>>({});
   const [deductions, setDeductions] = useState<DeductionRow[]>([]);
@@ -454,6 +456,7 @@ export function DepositPanel({
                   {s.id ? (
                     <div className="mt-2">
                       <DepositSettlementPreviewButton contractId={contractId} settlementId={s.id} />
+                      {canUpdate ? <DepositSettlementReleaseButton settlementId={s.id} status={s.status} /> : null}
                     </div>
                   ) : null}
                   {canUpdate && s.id ? (

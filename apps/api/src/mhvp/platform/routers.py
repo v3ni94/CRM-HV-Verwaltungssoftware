@@ -29,6 +29,7 @@ from mhvp.core.auth.principal import (
     sessions,
     tenant_tx,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import AuditLog, DomainEvent, diff, emit
@@ -1503,7 +1504,7 @@ async def ensure_staff_portal_access(
                     right="read",
                     legal_basis=STAFF_ACCESS_LEGAL_BASIS,
                     role="staff",
-                    valid_from=datetime.now(UTC).date(),
+                    valid_from=local_today(),
                 )
             )
     return "granted"

@@ -69,7 +69,7 @@
     "defaultActive": "Default policy active: voluntary, every user decides; optional in the portal.",
     "crmLegend": "CRM roles",
     "mode": {
-      "voluntary": "Voluntary, every user decides (default, operator decision M2-01)",
+      "voluntary": "Voluntary, every user decides (default)",
       "all_staff": "Mandatory for every CRM role (management roles)",
       "roles": "Mandatory for selected roles only"
     },
@@ -591,7 +591,7 @@
     "isConsumer": "Consumer",
     "isConsumerYes": "Yes",
     "isConsumerNo": "No",
-    "isConsumerHelp": "Flag for dunning (M16-03); no entry means not assessed. For review only, not a legal determination.",
+    "isConsumerHelp": "Flag for dunning; no entry means not assessed. For review only, not a legal determination.",
     "errors": {
       "nameRequired": "Persons require a first or last name.",
       "companyRequired": "Companies require a company name.",
@@ -995,7 +995,7 @@
     "maxOutput": "Output limit ({tier})",
     "maxOutputHint": "Output limit of the model according to the provider, in tokens per answer. Empty means 16000.",
     "toolUse": "Allow lookup tools (tool use) for tier {tier}",
-    "toolUseHint": "The assistant may look up contacts, contracts, open items, documents, appointments and the chart of accounts, read only and with the rights of the asking user, up to four provider calls per question. Default off. Takes effect only after release by two people with proof of the DPA; the decision is still open (AC08-01).",
+    "toolUseHint": "The assistant may look up contacts, contracts, open items, documents, appointments and the chart of accounts, read only and with the rights of the asking user, up to four provider calls per question. Default off. Takes effect only after release by two people with proof of the DPA; the decision is still open.",
     "maxOutputInvalid": "Tier {tier}: the output limit must be an integer greater than 0.",
     "test": "Test connection",
     "testHint": "Sends a minimal prompt to the provider for each configured tier (small, large). The test neither requires nor grants a release; the costs are minimal and are charged to the monthly budget.",
@@ -1458,7 +1458,7 @@
       "samplesTitle": "Sample rows",
       "errorRowsTitle": "Examples of rows with errors",
       "requirementsTitle": "Required exports",
-      "requirementsIntro": "Status per report type. Which Immoware24 export provides the columns is confirmed by the operator in the requirement list (docs/integrations/immoware24-exporte.md); the platform assumes no export format.",
+      "requirementsIntro": "Status per report type. Which Immoware24 export provides the columns is confirmed by the operator in the requirement list; the platform assumes no export format.",
       "colReport": "Report type",
       "colSource": "Source (section 13.1)",
       "colRequired": "Required fields remembered",
@@ -2048,7 +2048,7 @@
   },
   "Broker": {
     "title": "Broker",
-    "flowfactNotice": "The handover to FLOWFACT follows as soon as the interface documentation is available (M28-01).",
+    "flowfactNotice": "The handover to FLOWFACT follows as soon as the interface documentation is available.",
     "tabRental": "Rental",
     "tabSale": "Sale",
     "statusAll": "All",
@@ -2176,7 +2176,7 @@
         "forceHint": "The file is generated despite missing data or schema errors. Missing values are not invented, the related elements stay empty.",
         "hintsTitle": "Notes (not blocking):",
         "error": "Check failed.",
-        "notice": "Read only export to OpenImmo 1.2.7 (M26-02), XML or ZIP with linked images. No transfer to a portal. The list of required fields is a product standard, not a legal completeness check.",
+        "notice": "Read only export to OpenImmo 1.2.7, XML or ZIP with linked images. No transfer to a portal. The list of required fields is a product standard, not a legal completeness check.",
         "schemaValidXsd": "Schema check against the stored OpenImmo XSD passed.",
         "schemaValidStructure": "Structural check passed (documented elements). No check against the official OpenImmo schema.",
         "schemaInvalidXsd": "Schema check against the stored OpenImmo XSD failed. The export is locked until the errors are fixed or the export is explicitly forced:",
@@ -2799,6 +2799,14 @@
       "decided": "Clarification status set: {status}."
     }
   },
+  "BankActions": {
+    "config": {"title": "Payment format per bank account", "intro": "Agreed version of pain.001 (credit transfer) and pain.008 (direct debit) and submission channel per account. Only versions the platform can generate and validate are offered. Saving creates no payment file and triggers no payment; creating and submitting stay locked until release stage G2.", "account": "Bank account", "choose": "Choose account", "pain001": "Version pain.001", "pain008": "Version pain.008", "channel": "Submission channel", "channel_file": "File (manual upload)", "channel_fints": "FinTS", "channel_ebics": "EBICS", "confirmedOn": "Agreed with the bank on", "notes": "Note", "save": "Save", "saved": "Payment format saved.", "readOnly": "Changing needs the bank approval right."},
+    "batchStatus": {"open": "Record bank feedback", "status": "Bank feedback", "status_submitted": "Submitted", "status_accepted_by_bank": "Accepted by the bank", "status_rejected": "Rejected", "reason": "Reason (required on rejection)", "hint": "Execution and returns are not recorded here but via the bank feedback import. A rejection leaves the payable fully open.", "record": "Record", "cancel": "Cancel", "recorded": "Feedback recorded, orders affected: {count}."},
+    "candidates": {"show": "Suggestions", "hide": "Hide suggestions", "loading": "Loading suggestions.", "none": "No matching open item found.", "remaining": "Open: {amount}", "score": "Match score {score}", "unambiguous": "unambiguous", "note": "Suggestion, not a posting. The IBAN alone does not prove a debtor."},
+    "clarification": {"open": "Report as unsupported", "reason": "Reason", "submit": "Report", "cancel": "Cancel", "opened": "Clarification opened"},
+    "digest": {"buildWeek": "Week starting (Monday)", "build": "Build digest", "buildHint": "Builds or updates the digest of the week, books nothing.", "built": "Digests built or updated: {count}."},
+    "mandate": {"action": "Action", "revoke": "Revoke", "confirm": "Revoke mandate {reference}? Direct debit collection of the affected contracts will stop.", "revoked": "Mandate {reference} revoked."}
+  },
   "Payments": {
     "batchesTitle": "Payment files",
     "batchesHint": "Display only. Creating, downloading and submitting the file are locked until release gate G2.",
@@ -2949,7 +2957,7 @@
       "calendar_due_date": "fixed by the calendar (contractual due date)",
       "after_reminder": "only after a reminder (receipt of the reminder)"
     },
-    "defaultStartHint": "Due date and default are shown separately. The mode defines from which recorded facts the platform derives a start of default; if the fact (receipt date) is missing, the start stays open. The derivation is an assessment to be reviewed by a lawyer (docs/rules/M16-03.md). Interest stays a draft behind the gate.",
+    "defaultStartHint": "Due date and default are shown separately. The mode defines from which recorded facts the platform derives a start of default; if the fact (receipt date) is missing, the start stays open. The derivation is an assessment to be reviewed by a lawyer. Interest stays a draft behind the gate.",
     "dueDate": "Due date",
     "defaultStart": "Start of default",
     "defaultStartOpen": "open",
@@ -3074,6 +3082,10 @@
     "deliveredAt": "Delivered to tenant",
     "issue": "Issue",
     "newVersion": "New version",
+    "newVersionReason": "Correction reason",
+    "newVersionReasonHint": "Required, at least 5 characters. The reason is stored in the new version.",
+    "newVersionConfirm": "Create new version",
+    "newVersionCancel": "Cancel",
     "results": "Result per unit",
     "unit": "Unit",
     "costs": "Costs",
@@ -3161,7 +3173,7 @@
       "notice": "Previous year's result per tenant divided by twelve, optionally with a safety surcharge in percent (default 0). Proposals change no contract payments; the adjustment under § 560 BGB is a separate step behind release gate G3.",
       "rule": "Tenant's safety surcharge: {percent} %",
       "openMode": "Treatment of open advances at statement",
-      "openModeHelp": "Tenant switch, procedure not released (question AC10-01). Effect only through the result entries behind G3; the default changes nothing.",
+      "openModeHelp": "Tenant switch, procedure not released. Effect only through the result entries behind G3; the default changes nothing. The choice of procedure rests with the operator (AC10-01).",
       "openModes": { "info_only": "Information only (default)", "offset_reversal": "Offset open items by reversal", "balance_against_due": "Balance against due, arrears stay" },
       "surcharge": "Surcharge %",
       "create": "Determine proposals",
@@ -3286,7 +3298,7 @@
     },
     "outputs": {
       "title": "Outputs of the statement run",
-      "textNotice": "Legally relevant texts are marked \"Text not released\" until the operator has released them (AA11-01, AA11-02).",
+      "textNotice": "Legally relevant texts are marked \"Text not released\" until the operator has released them.",
       "preview": {
         "infoSheet": "Preview info sheet",
         "ownerLetter": "Preview cover letter",
@@ -3345,7 +3357,7 @@
         "info": "note"
       },
       "complete": "All recorded details are present. This does not establish admissibility.",
-      "incomplete": "There are open points. Admissibility needs a legal review (AD06-01)."
+      "incomplete": "There are open points. Admissibility needs a legal review."
     },
     "conflicts": {
       "title": "Vote conflicts (proxy against own vote)",
@@ -3369,7 +3381,7 @@
         "apply_second": "second vote counted",
         "rule_second": "replaced by tenant rule"
       },
-      "hint": "Until a decision the first vote counts. The meeting chair decides and the rule needs legal clarification (AD06-02); no vote is deleted."
+      "hint": "Until a decision the first vote counts. The meeting chair decides and the rule needs legal clarification; no vote is deleted."
     }
   },
   "HoaWork": {
@@ -3781,19 +3793,19 @@
       "weeksInvalid": "Please enter 1 to 12 weeks.",
       "virtual": "Allow virtual meetings (V13)",
       "termLock": "Lock when the term exceeds three years (enabling resolution for virtual meetings)",
-      "termLockHint": "Default off: notice only. Maximum term and transition rule need legal review (open question AA06-02).",
+      "termLockHint": "Default off: notice only. Maximum term and transition rule need legal review.",
       "transitionDate": "Transition rule date (entered by the operator)",
-      "transitionHint": "Free date without legal effect: it triggers no lock and does not replace legal review. Content and applicability of the transition rule are open (AA06-02).",
+      "transitionHint": "Free date without legal effect: it triggers no lock and does not replace legal review. Content and applicability of the transition rule are open.",
       "virtualHint": "Default off. Enable only after the operator's decision with legal advice; every virtual meeting also needs the owners' enabling resolution with a validity end.",
       "save": "Save setting",
       "saved": "Setting saved."
     },
     "onlineSwitch": {
       "title": "Online meeting in the owner portal",
-      "hint": "Default off. The system does not check whether an online meeting is admissible (open question AD06-01). Enable only after the operator's decision with legal advice.",
+      "hint": "Default off. The system does not check whether an online meeting is admissible. Enable only after the operator's decision with legal advice.",
       "label": "Allow online participation in the portal",
       "rule": "Rule for a proxy vote against the owner's own vote",
-      "ruleHint": "Applies when a unit has a vote of the owner and a vote of the proxy holder. The rule is an operator setting and no legal advice; its legal effect is open (AD06-02).",
+      "ruleHint": "Applies when a unit has a vote of the owner and a vote of the proxy holder. The rule is an operator setting and no legal advice; its legal effect is open.",
       "modes": {
         "flag": "Mark the conflict for review (default)",
         "first_vote": "The first vote cast counts",
@@ -4020,6 +4032,7 @@
     "toListing": "Open listing"
   },
   "Tickets": {
+    "bulkStatusLabel": "New status for the selection",
     "sections": {
       "label": "Sections",
       "bearbeiten": "Edit",
@@ -4216,27 +4229,27 @@
     },
     "reply": {
       "title": "Reply",
-      "select": "Antwortvorlage wählen",
-      "none": "Keine Vorlage gewählt",
-      "emptyTemplates": "Keine aktiven Antwortvorlagen. Vorlagen werden unter Einstellungen, Antwortvorlagen gepflegt.",
-      "manage": "Antwortvorlagen verwalten",
-      "loadFailed": "Die Vorschau konnte nicht geladen werden.",
-      "preview": "Vorschau mit ausgefüllten Platzhaltern",
-      "to": "An",
-      "subject": "Betreff",
+      "select": "Select reply template",
+      "none": "No template selected",
+      "emptyTemplates": "No active reply templates. Templates are maintained under Settings, Reply templates.",
+      "manage": "Manage reply templates",
+      "loadFailed": "The preview could not be loaded.",
+      "preview": "Preview with filled placeholders",
+      "to": "To",
+      "subject": "Subject",
       "body": "Text",
-      "mailbox": "Absender: Postfach des Tickets",
-      "noMailbox": "Für dieses Ticket ist kein sendefähiges Postfach eingerichtet.",
-      "noRecipient": "Kein Empfänger bekannt. Bitte Adresse eintragen.",
-      "attachments": "Anhänge",
-      "noAttachments": "Keine Anhänge",
-      "attachmentMissing": "Dokument nicht gefunden",
-      "removeAttachment": "Anhang entfernen",
-      "openPlaceholders": "Der Text enthält noch offene Platzhalter.",
-      "send": "Antwort senden",
-      "sendHint": "Der Versand erfolgt erst nach Klick auf Antwort senden über das Postfach des Tickets und den bestehenden Freigabeweg. Es wird nichts automatisch gesendet.",
+      "mailbox": "Sender: mailbox of the ticket",
+      "noMailbox": "No mailbox able to send is set up for this ticket.",
+      "noRecipient": "No recipient known. Please enter an address.",
+      "attachments": "Attachments",
+      "noAttachments": "No attachments",
+      "attachmentMissing": "Document not found",
+      "removeAttachment": "Remove attachment",
+      "openPlaceholders": "The text still contains open placeholders.",
+      "send": "Send reply",
+      "sendHint": "The reply is sent only after you click Send reply, through the ticket's mailbox and the existing approval path. Nothing is sent automatically.",
       "sent": "Reply submitted. It goes to the approvers as a draft and is sent through the ticket's mailbox after approval.",
-      "openMail": "Im Postfach öffnen",
+      "openMail": "Open in mailbox",
       "cc": "Cc",
       "replyingTo": "Reply to the mail of {at}",
       "replyingToLatest": "Reply to the latest inbound mail",
@@ -4266,7 +4279,7 @@
       "playbookFitsNot": "does not fit",
       "playbookFeedbackSaved": "Feedback saved."
     },
-    "openTicket": "Ticket öffnen",
+    "openTicket": "Open ticket",
     "messages": "Nachrichten",
     "pagination": {
       "label": "Pagination",
@@ -4523,7 +4536,7 @@
     "description": "Description",
     "owner": "Rule owner",
     "ownerNone": "No rule owner",
-    "ownerHelp": "Notified when a webhook delivery finally fails (M9-08). Without a rule owner, the last person who edited the rule is notified.",
+    "ownerHelp": "Notified when a webhook delivery finally fails. Without a rule owner, the last person who edited the rule is notified.",
     "trigger": "Event type",
     "triggerHelp": "For example ticket.created. The list shows known event types.",
     "conditions": "Conditions",
@@ -4858,6 +4871,7 @@
     }
   },
   "TicketTemplates": {
+    "fieldType": "Field type of the extra field",
     "title": "Ticket templates",
     "description": "Checklists and additional fields for recurring processes, for example letting or deposit.",
     "newTemplate": "New template",
@@ -4936,7 +4950,7 @@
   "TextBlocks": {
     "title": "Text blocks",
     "description": "Texts for the information sheet, the owner letter and the section 35a proof. Only approved texts are printed, otherwise the note Text nicht freigegeben appears. The software ships no legal text. A second person approves.",
-    "notReleased": "Text nicht freigegeben",
+    "notReleased": "Text not released",
     "released": "approved, version {version}",
     "status": {
       "draft": "draft",
@@ -6364,7 +6378,53 @@
       "immowareStatus": "Status of the Immoware24 migration",
       "immowareExplain": "How does the migration work?",
       "platformExplain": "What does this page show?",
-      "assistantHow": "What can the assistant do?"
+      "assistantHow": "What can the assistant do?",
+      "bulkMailHow": "How do I put together a bulk mailing?",
+      "mergeCheck": "Which contacts are possible duplicates?",
+      "rentIndexExplain": "How does the rent index affect rent increases?",
+      "contractNewHelp": "What does a new contract need?",
+      "sepaExplain": "Which SEPA mandates are open or revoked?",
+      "bankReviewExplain": "What do I check in the follow-up review?",
+      "bankKpiExplain": "What do the automation figures mean?",
+      "paymentRunExplain": "Which payments are in the payment run?",
+      "bankConnectionsExplain": "Which bank connections are set up?",
+      "creditorsFind": "Which creditor belongs to this invoice?",
+      "invoicePlansExplain": "Which invoice plans end soon?",
+      "dunningSettingsExplain": "What do the dunning settings define?",
+      "ownerStatementExplain": "How is the owner statement produced?",
+      "managementFeeExplain": "How is the management fee determined?",
+      "ticketReportExplain": "What does the ticket report show?",
+      "handoverNewHelp": "What do I need for a new handover protocol?",
+      "brokerNewHelp": "What does a new listing need?",
+      "brokerImportHelp": "Which files can I import for listings?",
+      "brokerListingExplain": "Which required details are missing for this listing?",
+      "lettersHow": "How do I create a letter from a template?",
+      "intakeProposalsExplain": "What needs checking in the intake proposals?",
+      "generatedDocsFind": "Which documents were generated most recently?",
+      "deletionProposalsExplain": "Why is this document proposed for deletion?",
+      "dmsSearchHelp": "How do I search the document archive?",
+      "dmsDocumentExplain": "What does this document contain?",
+      "importsReconcileExplain": "Which differences does the reconciliation show?",
+      "immowareListsExplain": "Which Immoware24 lists can I read in?",
+      "immowareImportExplain": "How does the Immoware24 import work?",
+      "fullImportExplain": "What happens during the full import?",
+      "migrationExplain": "Which steps does the migration from Immoware24 have?",
+      "objektakteImportExplain": "How do I take documents into the property file?",
+      "immowareLearningExplain": "What happens in the learning phase?",
+      "platformAuditExplain": "Which changes are in the platform audit?",
+      "platformOperationsExplain": "What is the operating status?",
+      "platformDomainsExplain": "Which customer domains are set up?",
+      "gateG5Explain": "What is still missing for release G5?",
+      "releaseGatesExplain": "Which release gates are open?",
+      "licensesExplain": "Which licences does this tenant have?",
+      "rentLawExplain": "What does the rent law review show?",
+      "oidcClientsExplain": "What are OIDC clients used for?",
+      "onboardingExplain": "Which steps does onboarding have?",
+      "priceListExplain": "How is the price list structured?",
+      "platformOverviewExplain": "What does the platform overview show?",
+      "helpHow": "How do I find help for this function?",
+      "conversationHow": "How do I continue a conversation with the assistant?",
+      "versionExplain": "What changed in the current version?"
     },
     "linksTitle": "Records found",
     "toolsTitle": "Lookup tools used",
@@ -6520,7 +6580,8 @@
       "merge": "Merge",
       "reserves": "Reserves",
       "rentIndex": "Rent index",
-      "letters": "Letters"
+      "letters": "Letters",
+      "version": "Version"
     }
   },
   "Settings": {
@@ -6595,7 +6656,7 @@
     },
     "replyTemplates": {
       "title": "Antwortvorlagen",
-      "description": "Vorgefertigte Antworten für Tickets mit Platzhaltern und Standardanhängen."
+      "description": "Predefined replies for tickets with placeholders and standard attachments."
     },
     "automation": {
       "title": "Automation",
@@ -6849,6 +6910,29 @@
       "description": "Availability windows and document class releases of service providers."
     }
   },
+  "MfaReset": {
+      "title": "Reset second factor (four eyes)",
+      "intro": "If a user loses the second factor, one member with member rights files a reset request with a reason and a different person approves or rejects it. Recovery codes do not exist yet; whether they are introduced is for the operator to decide (AI09-01).",
+      "disabled": "The function is switched off. A tenant administrator enables it under business rules (switch mfa_admin_reset_enabled).",
+      "member": "Member",
+      "reason": "Reason (at least 10 characters)",
+      "request": "Request reset",
+      "requested": "Request filed.",
+      "requests": "Requests",
+      "none": "No requests.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "comment": "Decision comment (optional)",
+      "working": "Please wait",
+      "decided": "Decision saved.",
+      "confirmApprove": "Really reset this user's second factor? The user sets it up again at the next sign in.",
+      "status": {
+          "requested": "Open",
+          "approved": "Approved",
+          "rejected": "Rejected"
+      },
+      "selectMember": "Select member"
+  },
   "Members": {
     "propertiesAll": "Properties: all",
     "editProperties": "Properties: {count} assigned",
@@ -7010,7 +7094,7 @@
       "off": "off"
     },
     "description": "When on, the platform stores one learning example per ticket closure (subject, request, category, topic, resolution kind, note and an excerpt of the last reply). They feed the hint For similar cases for new requests. The examples stay in the platform and are not sent to the AI provider. Deleting a contact deletes the examples of its tickets.",
-    "risk": "Default off: the examples usually contain personal data. Retention period and deletion run are not yet decided (ADR 0010, open question M7-04). Switching off stops new examples; existing ones stay. Every change is logged.",
+    "risk": "Default off: the examples usually contain personal data. Retention period and deletion run are not yet decided. Switching off stops new examples; existing ones stay. Every change is logged.",
     "label": "Store learning examples from ticket resolutions",
     "saved": "Saved.",
     "readOnly": "Changing this requires the permission to change tenant settings.",
@@ -7620,6 +7704,7 @@
       "closesAt": "Closes at",
       "timezone": "Time zone {timezone}",
       "holidays": "Holidays",
+      "removeHoliday": "Remove holiday {date}",
       "noHolidays": "No holiday set yet.",
       "holidayDate": "Date",
       "addHoliday": "Add holiday",
@@ -7831,7 +7916,7 @@
   },
   "LegalEntityBankAccounts": {
     "title": "Default account of the legal entity",
-    "intro": "Bank accounts of this property's legal entity (master data). The default account is the payment target on the dunning letter (M16-13).",
+    "intro": "Bank accounts of this property's legal entity (master data). The default account is the payment target on the dunning letter.",
     "depositHint": "A deposit account cannot be the default account.",
     "loading": "Loading accounts.",
     "empty": "No bank accounts of the legal entity.",
@@ -7960,7 +8045,7 @@
     "letterPdf": "INI/HIA letter as PDF",
     "title": "EBICS (scaffold)",
     "intro": "Statement download via EBICS (order type C53, camt.053). Keys are stored encrypted; in the default variant the signature key stays with the signing person. Payments are not submitted via EBICS (release gate G2).",
-    "transportMissing": "The bank transport is not available: no verified EBICS implementation is installed (open question AE23-01). Subscribers and keys can be prepared, nothing is sent to the bank.",
+    "transportMissing": "The bank transport is not available: no verified EBICS implementation is installed. Subscribers and keys can be prepared, nothing is sent to the bank.",
     "keyPolicy": "Key length today at least {min} bits, default {standard} bits; from {date} at least 4096 bits are required (Krypto LifeCycle EBICS of Die Deutsche Kreditwirtschaft).",
     "enabled": "On",
     "disabled": "Off",
@@ -7968,7 +8053,7 @@
     "switchOff": "Switch EBICS off",
     "signatureMode": "Signature key",
     "modeExternal": "external, with the signing person",
-    "modeServer": "generated by the platform (decision S16-03-02 open)",
+    "modeServer": "generated by the platform (decision open, S16-03-02)",
     "modeHelp": "The variant applies to newly created subscribers. Recommendation of Die Deutsche Kreditwirtschaft: signature key on a chip card or a dedicated medium.",
     "empty": "No EBICS subscriber yet.",
     "created": "Subscriber created.",
@@ -9016,6 +9101,7 @@
     "proposeHint": "Preparing only creates a payment order as draft. Approval by two people under Bank, payment orders; the payment file stays locked until G2."
   },
   "TicketInvoice": {
+    "close": "Close",
     "attach": "Assign as invoice",
     "invoiceId": "Invoice id",
     "attached": "Assigned as invoice and filed in the property folder.",
@@ -9867,7 +9953,7 @@
   },
   "TelephonySettings": {
     "title": "Telephony webhook",
-    "pageIntro": "Provider neutral inbound endpoint for call events of the phone system. The provider is still open at the operator, the message format is described in docs/integrations/telefonie.md.",
+    "pageIntro": "Provider neutral inbound endpoint for call events of the phone system. The provider is still open at the operator.",
     "intro": "The phone system signs every delivery with the secret stored here (HMAC-SHA256, five minute window). Events: call started, ended, missed, each with number, direction, duration and an optional provider reference.",
     "endpoint": "Endpoint:",
     "enabled": "Webhook active",
@@ -10296,7 +10382,7 @@
     "migrationCutoff": "Takeover date",
     "assetReports": "Asset reports",
     "assetReport": "Asset report",
-    "assetReportNotice": "Asset report as of the date from the ledger of the legal entity. Draft without legal effect; structure to be agreed with legal counsel (M24-02), issue to owners only with release gate G4.",
+    "assetReportNotice": "Asset report as of the date from the ledger of the legal entity. Draft without legal effect; structure to be agreed with legal counsel, issue to owners only with release gate G4.",
     "assetReportCreate": "Create asset report",
     "assetReportNone": "No asset report yet.",
     "asOf": "Reporting date",
@@ -10357,7 +10443,7 @@
       "none": "not available"
     },
     "loanAllocation": "Loans in the annual statement",
-    "loanAllocationNote": "Shown per unit by key and basis; not part of the statement result (decision M24-03 open).",
+    "loanAllocationNote": "Shown per unit by key and basis; not part of the statement result.",
     "loanAllocationLoan": "Loan",
     "loanAllocationKey": "Allocation key",
     "loanAllocationBasis": "Basis (resolution, contract)",
@@ -10900,7 +10986,7 @@
       "description": "Outgoing event notifications to third party systems: subscriptions, delivery log, redelivery."
     },
     "title": "Webhook subscriptions",
-    "pageIntro": "Third party systems receive platform events as signed messages (HMAC SHA-256). A message carries identifiers, field names, numbers, dates and amounts only, never names, addresses or IBANs. Contract and catalogue: docs/integrations/webhooks.md.",
+    "pageIntro": "Third party systems receive platform events as signed messages (HMAC SHA-256). A message carries identifiers, field names, numbers, dates and amounts only, never names, addresses or IBANs.",
     "readOnlyHint": "Read only; changes require the permission to update tenant settings.",
     "newSubscription": "New subscription",
     "cancel": "Cancel",
@@ -12131,6 +12217,7 @@
     }
   },
   "Common": {
+    "emptyList": "No entries available.",
     "breadcrumbNav": "Breadcrumb",
     "links": {
       "title": "Links",
@@ -12433,7 +12520,7 @@
       "on": "on",
       "off": "off"
     },
-    "description": "Allows a circular resolution with a simple instead of a unanimous majority, when a prior community resolution admits it (assessment: § 23 (3) sentence 2 WEG, M25-02). Default off.",
+    "description": "Allows a circular resolution with a simple instead of a unanimous majority, when a prior community resolution admits it (assessment: § 23 (3) sentence 2 WEG). Default off.",
     "risk": "Switching this on is an operator decision after legal review. The platform does not itself determine the admissibility of the lowered majority in the individual case; that stays the task of reviewing the enabling resolution.",
     "label": "Allow circular resolutions with simple majority for this tenant",
     "saved": "Saved.",
@@ -12810,18 +12897,78 @@
     "hint": "Off by default: a lawful deletion then stays final. With the trash the document is kept until the period ends and can be restored; a daily job then deletes it for good unless a hold exists.",
     "enabled": "Use the trash",
     "days": "Period in days",
-    "daysHint": "Proposal {proposed} days. This is not a legal period; whether personal data may stay that long in a trash is open (AE33-01). A change applies to documents moved to the trash afterwards.",
+    "daysHint": "Proposal {proposed} days. This is not a legal period; whether personal data may stay that long in a trash is open. A change applies to documents moved to the trash afterwards (AE33-01).",
     "save": "Save",
     "saved": "Setting saved."
   },
+  "PrivacyOversight": {
+    "title": "Privacy overview",
+    "loading": "Loading.",
+    "consents": {
+      "title": "Consents by purpose",
+      "hint": "Count over all contacts of the tenant. \"Without proof document\" means an active consent without a linked document; whether the recorded source suffices as proof is not judged here.",
+      "kind": "Purpose",
+      "active": "Active",
+      "revoked": "Revoked",
+      "objections": "Objections",
+      "withoutProof": "Without proof document",
+      "contacts": "Contacts with active consent"
+    },
+    "kinds": {
+      "data_sharing": "Data sharing",
+      "portal_terms": "Portal terms",
+      "email_delivery": "Delivery by e-mail",
+      "marketing": "Marketing",
+      "whatsapp": "WhatsApp"
+    },
+    "deadlines": {
+      "title": "Deadlines for privacy requests",
+      "hint": "The deadlines have no default value because their length is a legal question. Enter the values after legal review. The computed dates are an orientation and must be verified.",
+      "access": "Access (days)",
+      "erasure": "Erasure (days)",
+      "warn": "Advance warning (days before)",
+      "save": "Save deadlines",
+      "saved": "Deadlines saved.",
+      "unconfigured": "No deadlines configured: open requests are shown without due date.",
+      "empty": "No open erasure requests.",
+      "item": "Erasure request, received {received}, warning {warn}, due {due}:"
+    },
+    "states": {
+      "unconfigured": "no deadline configured",
+      "ok": "within deadline",
+      "warn": "warning date reached",
+      "overdue": "deadline exceeded"
+    },
+    "readiness": {
+      "title": "Pre G1 evaluation of the register",
+      "complete": "All {n} actively used services have a settled entry.",
+      "open": "{n} entries with open points:"
+    }
+  },
+  "ConsentPolicySettings": {
+    "title": "Consent rules",
+    "hint": "The default is the strict variant: e-mail delivery and data sharing only with consent. Widening to contract is a legal decision and is logged.",
+    "email_delivery": "Delivery by e-mail",
+    "data_sharing": "Data sharing with third parties",
+    "consentOnly": "consent only (default)",
+    "consentOrContract": "consent or contract",
+    "termsVersion": "Current version of the portal terms",
+    "save": "Save",
+    "saved": "Consent rules saved."
+  },
   "AccessExportSettings": {
     "title": "Scope of the GDPR disclosure",
-    "hint": "Default: other persons by role only, internal notes withheld. Which scope is lawful is a legal question (AC07-01). The scope is fixed when a disclosure is prepared and stays unchanged until release. Addresses, contact data, identifiers and bank data of other persons are never disclosed in any variant.",
+    "hint": "Default: other persons by role only, internal notes withheld. Which scope is lawful is a legal question. The scope is fixed when a disclosure is prepared and stays unchanged until release. Addresses, contact data, identifiers and bank data of other persons are never disclosed in any variant.",
     "scope": "Details of other persons",
     "scopeNone": "role only (default)",
     "scopeNames": "with name and role",
     "notes": "Include internal notes (note field and contact notes, without author) in the disclosure",
     "save": "Save",
+    "sources": {
+      "include_tickets": "Include the contact's tickets, without internal description",
+      "include_communication": "Include the contact's messages (subject and text, without recipient lists)",
+      "include_documents": "List documents linked to the contact (title and date, without content)"
+    },
     "saved": "Setting saved."
   },
   "RetentionSettings": {
@@ -13060,7 +13207,7 @@
     "portalVoteHash": "Checksum of the motion text: {hash}",
     "portalChoice": { "yes": "Yes", "no": "No", "abstain": "Abstain" },
     "title": "Record circular resolution",
-    "hint": "The system counts the votes received in text form and determines the result. Whether a lowered majority is admissible in the circular procedure is a legal assessment to be checked by legal counsel (M25-02).",
+    "hint": "The system counts the votes received in text form and determines the result. Whether a lowered majority is admissible in the circular procedure is a legal assessment to be checked by legal counsel.",
     "disabled": "Circular resolutions with a simple majority are not enabled for this tenant. Unanimity in text form applies.",
     "subject": "Subject",
     "wording": "Resolution text",
@@ -13285,7 +13432,7 @@
     "colComment": "Comment"
   },
   "PeriodLocks": {
-    "decisionOpen": "Decision open (P06-02 and AA08-01): the default is the lock of the whole ledger. The property lock and the release are technically prepared and off by default.",
+    "decisionOpen": "Decision open: the default is the lock of the whole ledger. The property lock and the release are technically prepared and off by default (P06-02, AA08-01).",
     "settingsTitle": "Switches",
     "lockMode": "Scope of the lock",
     "modeLedger": "Ledger only (default)",
@@ -13318,14 +13465,14 @@
   "G1Opening": {
     "register": {
       "title": "Acceptance register annex D",
-      "help": "Display only. The state comes from the acceptance register (cases accepted by the expert, open question AE01-01) and does not overwrite the results of this checklist.",
+      "help": "Display only. The state comes from the acceptance register (cases accepted by the expert) and does not overwrite the results of this checklist.",
       "state": "G1 cases passed {passed} of {total}, released expected values {released} of {all}",
       "link": "Open acceptance register"
     },
     "evidence": {"document": "Document", "missing": "Evidence missing"},
     "title": "G1 opening",
     "description": "Checklist before productive bookkeeping (release gate G1). The state comes from the system, the operator records the results. The request goes through the existing release flow with a second person; this page never opens the gate itself.",
-    "intro": "Order of the opening list M12-09: release the chart of accounts with the tax advisor, accept the annex D cases by the expert person, check the VAT treatment, then file the G1 request. A second person decides under Platform.",
+    "intro": "Order of the opening list: release the chart of accounts with the tax advisor, accept the annex D cases by the expert person, check the VAT treatment, then file the G1 request. A second person decides under Platform.",
     "loadError": "The checklist could not be loaded.",
     "savedMessage": "Result recorded.",
     "requestedMessage": "G1 request filed. A second person decides under Platform, release gates.",
@@ -13386,7 +13533,7 @@
     },
     "cases": {
       "title": "Annex D cases with release gate G1",
-      "help": "Result of the acceptance per case per docs/acceptance/abnahme-anhang-d.md. A test in the code is no acceptance; the result of the expert person is recorded."
+      "help": "Result of the acceptance per case. A test in the code is no acceptance; the result of the expert person is recorded."
     },
     "manual": {
       "title": "Manual items",
@@ -13504,7 +13651,7 @@
   },
   "MailApprovalSettings": {
     "title": "Four-eyes principle for outgoing mail",
-    "description": "Tenant mode for approving mail drafts before sending (M20-04). all requires approval for every reply, external_only only for external recipients, off means no mandatory approval.",
+    "description": "Tenant mode for approving mail drafts before sending. all requires approval for every reply, external_only only for external recipients, off means no mandatory approval.",
     "modeLabel": "Mode",
     "modes": {
       "all": "Approve every reply",
@@ -13530,7 +13677,7 @@
   },
   "ReceivableRulesSettings": {
     "title": "Receivable rules",
-    "description": "Tenant defaults for the receivable agent (M13-01 to M13-03): proration rule and VAT option. Default off.",
+    "description": "Tenant defaults for the receivable agent: proration rule and VAT option. Default off.",
     "gateHint": "Posting stays locked behind gate G1 (productive bookkeeping) even when these rules are enabled. These settings only affect the draft calculation.",
     "enabled": "Enable the receivable agent for this tenant",
     "prorationMethod": "Proration rule",
@@ -13549,14 +13696,14 @@
       "semiannual": "semiannual",
       "annual": "annual"
     },
-    "paymentIntervalHint": "The payment interval is still set per contract (payment_interval). A new payment schedule without its own value takes over this tenant default; monthly stays the fallback with no default (M13-01a).",
+    "paymentIntervalHint": "The payment interval is still set per contract (payment_interval). A new payment schedule without its own value takes over this tenant default; monthly stays the fallback with no default.",
     "readOnly": "Changing this requires the tenant settings update permission.",
     "save": "Save",
     "saved": "Saved."
   },
   "PlatformLicensing": {
     "title": "Licences and price list",
-    "notice": "Licences and prices per module. Without an agreed price a licence follows the pricing structure (tiers by units, module add-ons, trial). All amounts are net, invoicing is open (M27-01). No prices are preset.",
+    "notice": "Licences and prices per module. Without an agreed price a licence follows the pricing structure (tiers by units, module add-ons, trial). All amounts are net, invoicing is open. No prices are preset.",
     "forbidden": "Platform administrators only.",
     "link": "Licences and price list",
     "tenant": "Tenant",
@@ -13622,7 +13769,7 @@
   },
   "PlatformPricing": {
     "title": "Pricing structure",
-    "notice": "Pricing model as a structure: tiers by units, module add-ons, trial phase. Amounts are not prefilled and must be maintained by the operator (open decision M27-01). An offer is a draft only and holds no VAT.",
+    "notice": "Pricing model as a structure: tiers by units, module add-ons, trial phase. Amounts are not prefilled and must be maintained by the operator. An offer is a draft only and holds no VAT.",
     "forbidden": "Platform administrators only.",
     "complete": "Every active row has an amount.",
     "incomplete": "{count} active rows without amount. Offers stay drafts.",
@@ -13714,6 +13861,7 @@
     }
   },
   "PlatformOnboarding": {
+    "entityKind": "Entity type",
     "title": "Third party onboarding",
     "notice": "Wizard for platform administrators. The tenant receives legal entities, a first administrator, CI settings and system roles. Feature flags stay off, no gate opens, the welcome mail is a draft only.",
     "forbidden": "Platform administrators only.",
@@ -13786,7 +13934,7 @@
     "modeDraftNumbers": "Draft number ENTWURF-YYYY-NNNNNN (default)",
     "modeRegularNumbers": "Regular invoice number MR even for drafts",
     "modeReject": "Reject issuing while G1 is closed",
-    "numberingHint": "Drafts do not consume the gapless invoice number. The regular number is only assigned when issued with G1 open. Classification open (AC03-01), decision by operator and tax adviser.",
+    "numberingHint": "Drafts do not consume the gapless invoice number. The regular number is only assigned when issued with G1 open. The classification is decided by the operator and the tax adviser (AC03-01).",
     "title": "Rent invoices with VAT",
     "intro": "Built from the receivable items of the contract (net, tax rate, tax, gross). While release gate G1 is closed the PDF carries the draft watermark. Cancellation only by credit note, never by deletion. Legal mandatory content is to be checked by the tax adviser.",
     "standing": "Standing invoice per year",
@@ -14771,7 +14919,7 @@
   "HandoverOfflineSwitch": {
     "title": "Offline capture of handover protocols",
     "description": "With the switch the editor on a phone or tablet keeps changes and photos encrypted on the device while offline and sends them in capture order once the connection is back. The key lives only in the memory of the session; logout, session end or a page reload delete the waiting changes. Device times are stored as reported by the device.",
-    "risk": "Operator decision of 28.09.2026 with data protection conditions (ADR 0016, rule M30-10). Without the switch nothing is stored on the device.",
+    "risk": "Operator decision of 28.09.2026 with data protection conditions. Without the switch nothing is stored on the device.",
     "label": "Enable offline capture",
     "status": {
       "on": "On",
@@ -15247,7 +15395,7 @@
       "owner_rental_income_enabled": "Shows owners with special property administration the agreed rent of their own units without tenant names. Check data protection approval before switching on.",
       "owner_rental_statements_enabled": "Shows owners the issued owner statements of their own legal entities with PDF. Release gate G3 is also required.",
       "portal_owner_receipts_enabled": "Shows owners the receipts behind the cost positions of the released statements of their community with a search per statement period. Retrieval uses the existing document authorisation and is logged as an indication. Release gate G4 is also required.",
-      "owner_hoa_rental_statements_enabled": "Shows all owners of a community the issued owner statements whose legal entity is the community itself (letting of common property). Decision AF25-02 is open; the owner statement switch and release gate G3 are also required.",
+      "owner_hoa_rental_statements_enabled": "Shows all owners of a community the issued owner statements whose legal entity is the community itself (letting of common property). The owner statement switch and release gate G3 are also required. The decision rests with the operator (AF25-02).",
       "chat_bot_enabled": "Tenants and owners can ask questions about the documents released for them. Without further releases the assistant only shows matches in these documents; answers never come from foreign documents.",
       "privacy_feature_enabled": "Prerequisite for AI answers in the assistant: a released privacy notice (text block portal_chat_privacy_notice, released by a second person) and acknowledgement per account. The AI answer also needs the released AI provider with a data processing agreement. The tenant maintains the text; the software ships no legal text."
     },
@@ -15255,7 +15403,7 @@
     "ticketScopes": { "none": "no tickets", "released": "only tickets released for owners", "property": "all tickets of the own properties (number, title, status)" },
     "ratingDisplay": "Ratings of service providers",
     "ratingModes": { "off": "do not show (default, internal)", "staff": "show to the management only as an overview", "all": "additionally the contractor average for residents in the portal (never for contractors)" },
-    "ratingHelp": "Ratings are internal assessments by the management of completed orders. The overview shows only the count, mean and distribution of the stars per provider, without free text. Providers and third parties do not see the ratings. A display for providers stays excluded until decision AA14-02 and a data protection review.",
+    "ratingHelp": "Ratings are internal assessments by the management of completed orders. The overview shows only the count, mean and distribution of the stars per provider, without free text. Providers and third parties do not see the ratings. A display for providers stays excluded until the operator decides and data protection has reviewed it.",
     "statistics": "Usage in the last {days} days",
     "accountsTotal": "Portal accounts in total: {count}",
     "accountsInvited": "Invited, not yet activated: {count}",
@@ -15521,7 +15669,7 @@
     "source": "Source",
     "add": "Record rate",
     "added": "Base rate recorded.",
-    "dayCount": "Day count method (tenant switch, decision open AI03-01): {label}",
+    "dayCount": "Day count method (tenant switch, decision open, AI03-01): {label}",
     "staleTitle": "Check the base rate",
     "seedCheckpoints": "Create check points 1 January and 1 July",
     "seeded": "{count} check points created in the deadline register.",
@@ -15936,9 +16084,13 @@
       "portal_account": "Portal accounts",
       "communication": "Communication",
       "ticket": "Tickets",
-      "other": "Other data"
+      "other": "Other data",
+      "domain_event": "Event log",
+      "platform_user": "Platform users",
+      "bank_raw": "Bank raw data"
     },
     "erasureStatus": {
+      "proposed": "Proposal",
       "requested": "Requested",
       "approved": "Released",
       "rejected": "Rejected",
@@ -15970,6 +16122,8 @@
       "release": "Release",
       "save": "Save profile",
       "saveHint": "A change resets the release and needs a new release.",
+      "autoPropose": "Create deletion proposals (proposal only, nothing is deleted)",
+      "autoOn": "Proposals on",
       "formLabel": "Edit deletion profile"
     },
     "erasure": {
@@ -15983,6 +16137,7 @@
       "blockers": "Locks",
       "noBlockers": "No lock",
       "approve": "Release",
+      "accept": "Take over as request",
       "reject": "Reject",
       "execute": "Anonymise",
       "formLabel": "Record erasure request",
@@ -16094,8 +16249,8 @@
     "recipientSearch": "Search recipients",
     "recipients": "Recipients ({count})",
     "remove": "Remove {name}",
-    "subject": "Subject (felder.betreff)",
-    "text": "Text (felder.text)",
+    "subject": "Subject",
+    "text": "Text",
     "serialHint": "Several recipients create a serial letter with one document per recipient; representatives follow the delivery rule.",
     "preview": "Preview",
     "previewTitle": "Letter preview",
@@ -16448,7 +16603,7 @@
     "vatNo": "Input tax account (number, optional)",
     "numbersInvalid": "Account numbers consist of exactly six digits.",
     "payerDistinct": "The payer side account numbers must be different.",
-    "taxHint": "The tax treatment (VAT on the management fee, input tax deduction at the payer) is open and to be clarified by the tax advisor, see open question T04-01.",
+    "taxHint": "The tax treatment (VAT on the management fee, input tax deduction at the payer) is open and to be clarified by the tax advisor.",
     "readOnly": "Changes need the accounting approval permission.",
     "save": "Save assignment",
     "saved": "Account assignment saved."
@@ -16699,7 +16854,7 @@
     },
     "retention": "The minute values are kept for {days} days and are only deleted once the month has been evaluated and frozen. The monthly evaluation is kept.",
     "switchLabel": "Maintenance windows count as downtime",
-    "switchHelp": "Off (default): checks inside announced maintenance windows are left out and the figure without maintenance windows is rated. On: maintenance windows count as downtime and the figure from all checks is rated. Both figures are always shown in the table. Which way of counting applies towards third parties is open (question AD10-02) and belongs to G5. Every change is written to the platform audit.",
+    "switchHelp": "Off (default): checks inside announced maintenance windows are left out and the figure without maintenance windows is rated. On: maintenance windows count as downtime and the figure from all checks is rated. Both figures are always shown in the table. Which way of counting applies towards third parties is open and belongs to G5. Every change is written to the platform audit.",
     "monthsTitle": "Monthly evaluation of the own measurement",
     "noMonths": "No monthly evaluation yet. It is created daily from the minute values.",
     "month": "Month",
@@ -16811,7 +16966,7 @@
     "variants": "Variants",
     "questionOne": "Open question",
     "questionMany": "Open questions",
-    "questionFile": "in docs/OPEN_QUESTIONS.md",
+    "questionFile": "in the list of open questions",
     "change": "Change",
     "reason": "Reason",
     "save": "Save",
@@ -17012,6 +17167,10 @@
         "title": "Proxy versus own vote",
         "description": "How online voting proceeds when a proxy and an own vote exist for the same unit."
       },
+      "crm-branding-apply": {
+        "title": "Tenant colours in the CRM",
+        "description": "Applies the colours stored under Tenant (primary and accent) in the CRM interface. Off: neutral product design. Only valid colour values are used."
+      },
       "owner-rental-income": {
         "title": "Rental income in the owner portal",
         "description": "Shows owners the agreed rent of their units with separate property management, without the tenant name. The data protection approval is open."
@@ -17026,7 +17185,7 @@
       },
       "owner-hoa-rental-statements-portal": {
         "title": "Community statements in the owner portal",
-        "description": "Also shows the owners of a community owner statements whose legal entity is the community. Without the switch owners see only statements of their own legal entity. Decision AF25-02 open."
+        "description": "Also shows the owners of a community owner statements whose legal entity is the community. Without the switch owners see only statements of their own legal entity. The decision rests with the operator (AF25-02)."
       },
       "tenant-statement-portal": {
         "title": "Service charge statement in the tenant portal",
@@ -17101,6 +17260,18 @@
       "access-export-internal-notes": {
         "title": "Access export: internal notes",
         "description": "Whether internal notes are part of the access export. Off means: withheld."
+      },
+      "access-export-tickets": {
+        "title": "Access export: tickets",
+        "description": "Whether the contact's tickets without internal description are part of the access export. Off means: counted only."
+      },
+      "access-export-communication": {
+        "title": "Access export: communication",
+        "description": "Whether the contact's messages (subject and text, without recipient lists) are part of the access export. Off means: counted only."
+      },
+      "access-export-documents": {
+        "title": "Access export: document references",
+        "description": "Whether documents linked to the contact (title and date) are listed in the access export. Off means: counted only."
       },
       "text-block-second-person": {
         "title": "Text blocks: approval by a second person",
@@ -17230,7 +17401,7 @@
     "demoConfirmMark": "Mark the tenant as demo tenant? It is excluded from billing, exports, DATEV and statistics. Not possible while a release gate is open.",
     "demoConfirmUnmark": "Remove the demo flag? The tenant then takes part in billing, exports and statistics again. Only for tenants with real data.",
     "title": "Scale and yearly partitioning",
-    "intro": "Figures for the triggers of ADR 0021 (decision AC09-01 open). The page only reports: nothing is rebuilt, moved or deleted. The thresholds are proposals and can be changed below.",
+    "intro": "Figures for the triggers of ADR 0021. The page only reports: nothing is rebuilt, moved or deleted. The thresholds are proposals and can be changed below. The decision on the triggers rests with the operator (AC09-01).",
     "triggersTitle": "Triggers reached",
     "noTrigger": "No trigger reached. The weekly measurement runs on Mondays and reports new triggers to all platform administrators.",
     "kind": {
@@ -17404,7 +17575,7 @@
   "CreditorIds": {
     "title": "Creditor ID",
     "intro": "SEPA creditor identifier per legal entity for direct debits. Without it no direct debit run is created.",
-    "notice": "Operator input. Format and validation of the identifier are an open question (M15-01) and are not validated. Saving empty removes it.",
+    "notice": "Operator input. Format and validation of the identifier are an open question and are not validated. Saving empty removes it.",
     "target": "Legal entity",
     "tenantFallback": "Tenant fallback",
     "creditorId": "Creditor identifier",
@@ -17427,12 +17598,180 @@
   "AG03": {
     "roleNoAccess": "no access (decision open)",
     "platformTitle": "Platform settings",
-    "platformHint": "Bypassing the four eyes principle weakens the control of release gates G1 to G5 and stays off for productive tenants. The liability assessment is open (M2-02).",
+    "platformHint": "Bypassing the four eyes principle weakens the control of release gates G1 to G5 and stays off for productive tenants. The liability assessment is open.",
     "bypassLabel": "Superadmin may approve release gates alone",
     "on": "On",
     "off": "Off",
     "version": "Version {version}",
     "confirm": "Really change the four eyes bypass?",
     "loadFailed": "Platform settings could not be loaded."
+  },
+  "Aj17": {
+    "ownerScan": {
+      "button": "Check owner changes",
+      "help": "Checks whether the owner changed since an open inspection request was filed. Only a review note is created; no request is closed and no package is revoked.",
+      "result": "{events} owner changes checked, {noted} review notes created."
+    },
+    "majority": {
+      "button": "Check majority",
+      "stored": "Stored result",
+      "current": "Current check",
+      "none": "No result stored",
+      "help": "Display only, the resolution status is not changed."
+    },
+    "customFields": {
+      "title": "Contract custom fields",
+      "empty": "No custom fields are set for this contract.",
+      "key": "Field name",
+      "value": "Value",
+      "add": "Add field",
+      "remove": "Remove value",
+      "save": "Save custom fields",
+      "saved": "Custom fields saved.",
+      "hint": "Empty values remove the field. Field definitions are maintained under Settings."
+    },
+    "step": {
+      "title": "Order step",
+      "hint": "The API only accepts permitted follow-up steps. Approval requires the approval permission.",
+      "status": "New status",
+      "note": "Note",
+      "quoteAmount": "Quote amount in EUR",
+      "scheduledAt": "Appointment",
+      "completionReport": "Completion report",
+      "invoiceId": "Invoice ID",
+      "rating": "Rating (1 to 5)",
+      "submit": "Save step",
+      "saved": "Step saved: {status}",
+      "statuses": {
+        "draft": "Draft",
+        "requested": "Requested",
+        "quoted": "Quote recorded",
+        "approved": "Approved",
+        "scheduled": "Scheduled",
+        "in_progress": "In progress",
+        "done": "Done",
+        "invoiced": "Invoiced",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled"
+      }
+    },
+    "docs": {
+      "bulkTitle": "Link documents to an object",
+      "ids": "Document IDs (one per line)",
+      "entityType": "Object type",
+      "entityId": "Object ID",
+      "submit": "Link",
+      "result": "{succeeded} of {total} linked, {failed} failed.",
+      "failedItem": "{id}: {detail}",
+      "invalid": "At least one valid document ID and a valid object ID are required.",
+      "downloadUrl": "Create download link",
+      "downloadReady": "Link valid for {seconds} seconds",
+      "downloadOpen": "Open file",
+      "mirror": "Retrigger mirroring",
+      "mirrorDone": "Mirroring triggered."
+    },
+    "invoice": {
+      "button": "Suggest as invoice (AI)",
+      "started": "Extraction started (run {run}). The result is a proposal and becomes an invoice only after your review.",
+      "help": "PDF attachments only. The AI only proposes; approval stays with a person."
+    },
+    "heatingRows": {
+      "title": "Enter cost rows manually",
+      "hint": "Replaces the rows of the import. Amounts in EUR with point or comma, at most two decimals.",
+      "userNumber": "User number",
+      "heatingBase": "Heating base costs",
+      "heatingConsumption": "Heating consumption",
+      "hotWaterBase": "Hot water base costs",
+      "hotWaterConsumption": "Hot water consumption",
+      "addRow": "Add row",
+      "removeRow": "Remove row",
+      "save": "Save rows",
+      "saved": "{count} rows saved.",
+      "invalid": "User number and all four amounts are required per row."
+    },
+    "selfDisclosure": {
+      "title": "Self-disclosure links",
+      "load": "Show links",
+      "empty": "No link created yet.",
+      "expires": "valid until {date}",
+      "submitted": "submitted on {date}",
+      "open": "open",
+      "expired": "expired",
+      "help": "The full link is shown only when it is created."
+    },
+    "callAssign": {
+      "label": "Assign contact",
+      "choose": "Choose contact",
+      "contactId": "Contact ID",
+      "submit": "Assign",
+      "done": "Assigned: {name}",
+      "invalid": "Please enter a valid contact ID."
+    }
+  },
+  "gatedMasks": {
+    "busy": "Running …",
+    "done": "Done.",
+    "gateStatus": {
+      "open": "Release gate {gate}: open",
+      "closed": "Release gate {gate}: closed",
+      "loading": "Release gate {gate}: loading state"
+    },
+    "savedPreviews": {
+      "title": "Saved payment run previews",
+      "save": "Save preview",
+      "hint": "A preview creates no orders and no files.",
+      "locked": "Locked while release gate G2 (payment initiation) is closed. The management decides whether saved previews are needed before.",
+      "empty": "No saved preview yet.",
+      "row": "As of {asOf}, {trigger}, {count} invoices",
+      "triggerManual": "manual",
+      "triggerScheduled": "weekly"
+    },
+    "payout": {
+      "title": "Payout without invoice (draft)",
+      "intro": "Creates a payment order as a draft. The order then needs the approval of a second person.",
+      "fields": {
+        "open_item_id": "Open item (ID)",
+        "contact_bank_account_id": "Payee bank account (ID)",
+        "property_bank_account_id": "Originator account (ID)",
+        "execution_date": "Execution date",
+        "reason": "Reason",
+        "purpose": "Remittance information (optional)"
+      },
+      "reasonPlaceholder": "Select a reason",
+      "reasonRequired": "A payout without invoice requires a reason.",
+      "reasons": {
+        "owner_payout": "Payout to owner",
+        "statement_credit": "Credit from statement",
+        "deposit_refund": "Deposit refund",
+        "other_refund": "Other refund"
+      },
+      "submit": "Create draft",
+      "locked": "Locked while release gate G2 (payment initiation) is closed. Approval by the management required.",
+      "created": "Draft of {amount} to {name} created."
+    },
+    "dunningSend": {
+      "action": "Send dunning letter",
+      "hint": "Until released, letters are sent outside the platform and documented with \"Mark as sent\".",
+      "locked": "Locked while release gate G1 (productive bookkeeping) is closed and the dispatch path is not released."
+    },
+    "ownerPdf": {
+      "action": "Statement as PDF",
+      "hint": "Output of the internally approved statement.",
+      "notApproved": "Only possible after internal approval of the statement.",
+      "locked": "Locked while release gate G3 (rental statements) is closed."
+    },
+    "statementLettersSend": {
+      "action": "Deliver cover letters",
+      "hint": "The letters stay drafts until released.",
+      "locked": "Locked while release gate G3 is closed and the delivery path is not released."
+    },
+    "depositRelease": {
+      "action": "Release deposit settlement",
+      "fourEyes": "Four eyes principle: the release is given by a person other than the author of the draft.",
+      "confirm": "I did not create the draft myself and have reviewed it.",
+      "notDraft": "Only a draft can be released.",
+      "locked": "Locked while release gate G3 (rental statements) is closed. Approval by the management required."
+    }
   }
 }

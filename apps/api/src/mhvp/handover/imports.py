@@ -21,6 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import (
+    check_dump_file,
+    check_text_dump,
+    check_zip_file,
+    check_zip_signature,
+    read_limited,
+)
 from mhvp.documents import services as documents
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
@@ -50,9 +57,9 @@ _ENTITY_BY_FIELD: tuple[tuple[str, str, Any], ...] = (
 
 
 async def _read_dump(file: UploadFile) -> str:
-    data = await file.read()
-    if len(data) > MAX_DUMP_BYTES:
-        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Der Export ist zu groß.")
+    check_dump_file(file)
+    data = await read_limited(file, MAX_DUMP_BYTES, detail="Der Export ist zu groß.")
+    check_text_dump(data)
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -109,9 +116,9 @@ async def match_files(
     defect, meter or item it belonged to in U-Protokoll; a `file_category=signature` file also
     creates the `handover_signature` row (needs the image, so it could not be created by
     `/apply`). Files with no match are reported, not silently dropped."""
-    data = await file.read()
-    if len(data) > MAX_ZIP_BYTES:
-        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Das Archiv ist zu groß.")
+    check_zip_file(file)
+    data = await read_limited(file, MAX_ZIP_BYTES, detail="Das Archiv ist zu groß.")
+    check_zip_signature(data)
     try:
         archive = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile as exc:

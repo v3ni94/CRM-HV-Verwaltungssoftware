@@ -134,7 +134,7 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: `/assistent/${ID}`, area: "assistant", subArea: "conversation", entityType: null },
   { path: "/hilfe", area: "assistant", subArea: "help", entityType: null },
   { path: "/hilfe/banking", area: "assistant", subArea: "help", entityType: null },
-  { path: "/version", area: "other", subArea: null, entityType: null },
+  { path: "/version", area: "other", subArea: "version", entityType: null },
 ];
 
 describe("chatPageContext", () => {
@@ -222,7 +222,7 @@ describe("suggestionsFor", () => {
     expect(suggestionsFor(chatPageContext("/plattform/abnahme"))).toEqual(SUGGESTIONS["platform/acceptance"]);
     expect(suggestionsFor(chatPageContext("/start"))).toEqual(["todayOverview", "calendarToday", "deadlinesWeek", "ticketsOpen"]);
     expect(suggestionsFor(chatPageContext("/vermietung"))).toEqual(["lettingVacancies", "lettingRentIncreases", "lettingProspects"]);
-    expect(suggestionsFor(chatPageContext("/version"))).toEqual(SUGGESTIONS.list);
+    expect(suggestionsFor(chatPageContext("/version"))).toEqual(SUGGESTIONS["other/version"]);
   });
 
   it("has a set for every area and every sub area of the route table", () => {
@@ -232,6 +232,13 @@ describe("suggestionsFor", () => {
       expect(keys.length, rule.path).toBeGreaterThan(0);
       expect(keys, rule.path).not.toEqual(SUGGESTIONS.list);
     }
+  });
+
+  it("gives every sub page without a record its own set instead of the area set (GAI-421)", () => {
+    const missing = ROUTES.filter((r) => r.subArea && !r.entityType && !r.query && r.area !== "settings")
+      .filter((r) => !SUGGESTIONS[`${r.area}/${r.subArea}`])
+      .map((r) => r.path);
+    expect(missing).toEqual([]);
   });
 
   it("has a German and an English text for every suggestion, without dashes in German", () => {

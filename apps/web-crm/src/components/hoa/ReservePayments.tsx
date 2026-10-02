@@ -22,6 +22,7 @@ type Payload = { mode: string; paid_unassigned: string; reserves: Row[] };
  *  proposed split of unbound payments. Information only, nothing is posted. */
 export function ReservePayments({ ledgerId, year }: { ledgerId: string; year: number }) {
   const t = useTranslations("HoaReservePayments");
+  const tCommon = useTranslations("Common");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +62,13 @@ export function ReservePayments({ ledgerId, year }: { ledgerId: string; year: nu
               </tr>
             </thead>
             <tbody>
+              {data.reserves.length === 0 ? (
+                <tr>
+                  <td colSpan={99} className="text-muted">
+                    {tCommon("emptyList")}
+                  </td>
+                </tr>
+              ) : null}
               {data.reserves.map((r) => (
                 <tr key={r.reserve_id}>
                   <td>{r.name}</td>

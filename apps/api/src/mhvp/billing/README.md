@@ -162,3 +162,7 @@ No new endpoints and no schema change (migration 0408 is a noop). CRM: check poi
 `statement_snapshot` is insert only: trigger `statement_snapshot_insert_only` (migration 0439,
 function `mhvp_insert_only` from 0010) refuses UPDATE and DELETE. Deleting a statement that owns a
 snapshot is refused as well (the cascade hits the guard). Rule B03.
+
+## Rundung (Welle 21, AJ01)
+
+Alle `quantize` Aufrufe runden ausdrücklich ROUND_HALF_UP. `billing.calc.distribute` verteilt negative Summen vorzeichensymmetrisch und summentreu. Details und Schalter (`negative_costs_mode`, `remainder_mode`): docs/rules/RUNDUNG.md.

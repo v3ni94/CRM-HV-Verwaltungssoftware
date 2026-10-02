@@ -223,6 +223,191 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 21 (Stand 1.66.0, 02.10.2026)
+
+Befunde der Lückenanalyse GAI (Gesamtdurchlauf des Master-Prompts in sechs Teilen: Regeln und Konventionen, Geld und Rundung, Sicherheit und Berechtigungen, Oberfläche und Handbuch, Datenschutz und Betrieb, Modulreste; 126 Befunde GAI-101 bis GAI-623), Pakete AJ01 bis AJ32 in zwei Reihen. Die Welle wurde nach einem Umgebungsreset am 02.10.2026 vollständig neu erarbeitet, der erste Durchlauf ging vor dem Commit verloren. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.66.0 in `CHANGELOG.md`, Befunddateien GAI-1 bis GAI-6 der Analyse. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.
+
+- Migrationen 0444 bis 0446, alle real: 0444 Datenbankschutz für open_item (alle fachlich festen Felder), journal_entry (Periodensperre), payment_order, deposit_movement, receivable_item und journal_number_counter; 0445 Löschvorschläge je Datenart (auto_propose, Status proposed, Datenarten domain_event, platform_user, bank_raw); 0446 Fehlversuchszähler des Magic-Link-Codes.
+- Fachliche Korrekturen aus den Tests: distribute verteilte negative Summen nicht summentreu (GAI-101); drei Bankrouten und drei Vermietungsrouten gaben für fremde Mandanten 200 oder 503 statt 404 (AJ05, AJ23); sechs Schreibrouten verlangten nur Leserecht (AJ21); das Vertragsformular sandte die Kontakt-ID als Partei-ID (AJ32, Produktionsfehler aus Welle 20).
+- Verhaltensänderungen: Importwerte wie 1.234 ohne Komma werden abgewiesen statt als 1234 gelesen (AJ02); neue Abrechnungsversion verlangt einen Korrekturgrund (AJ27); Celery-Tasks haben Zeitlimits je Klasse und die zwölf schnellen Beat-Tasks eine Überlappungssperre (AJ11); Uploads brechen bei Überschreitung mit 413 MHVP-DOC-0010 ab (AJ10).
+- Neue offene Entscheidungen: AJ01-01, AJ01-02, AJ02-01, AJ02-02, AJ02-03, AJ03-01, AJ03-03, AJ07-01, AJ07-02, AJ09-01, AJ12-01, AJ13-01, AJ13-02, AJ13-03, AJ15-01, AJ15-05, AJ21-01, AJ26-01, AJ26-02, AJ27-01, AJ28-02, AJ28-04, AJ30-14, AJ30-17, AJ30-18, AJ30-19, AJ30-28, AJ31-01 sowie AJ30-01 bis AJ30-28 (Vorlagen in `docs/plans/ENTSCHEIDUNGEN-2026-10-01.md`). Neue Annahmen AJ09-01 (Europe/Berlin als fachliche Zeitzone aller Mandanten) und AJ12-01 (90 Tage bis zur Anonymisierung abgelaufener Sitzungsdaten) in `docs/ASSUMPTIONS.md`.
+- Teilweise erledigt (Rest für Welle 22): GAI-202 (AJ01), GAI-214 (AJ01), GAI-204 (AJ02), GAI-215 (AJ02), GAI-210 (AJ03), GAI-307 (AJ04), GAI-303 (AJ06), GAI-309 (AJ07), GAI-311 (AJ07), GAI-312 (AJ07), GAI-422 (AJ08), GAI-315 (AJ10), GAI-317 (AJ11), GAI-319 (AJ11), GAI-501 (AJ12), GAI-503 (AJ12), GAI-504 (AJ12), GAI-522 (AJ12), GAI-506 (AJ13), GAI-507 (AJ13), GAI-513 (AJ14), GAI-516 (AJ14), GAI-118 (AJ15), GAI-119 (AJ15), GAI-515 (AJ15), GAI-519 (AJ15), GAI-520 (AJ15), GAI-521 (AJ15), GAI-404 (AJ16), GAI-615 (AJ18), GAI-612 (AJ19), GAI-110 (AJ20), GAI-304 (AJ22), GAI-303 (AJ24), GAI-512 (AJ26), GAI-623 (AJ26), GAI-607 (AJ27), GAI-410 (AJ28), GAI-422 (AJ29), GAI-109 (AJ31), GAI-605 (AJ31).
+- Vom Koordinator bei der Integration erledigt: drei rekursive businessToday-Wrapper entfernt (AJ09), fünf eslint-Warnungen (ungenutztes busy aus AJ29), zwei ruff-Befunde und vier Formatierungen, OpenAPI-Export und api-client neu erzeugt, Hilfeindex und Handbuch neu gebaut, Versionsnummern in pyproject und package.json per scripts/bump_version.py gesetzt, Migrationsrundlauf 0446 nach 0443 und zurück, Wächtertests (Migrationen, Tenant-Index, Ereigniskatalog, Problemcodes, Schemakonvention) grün, Gesamtsuiten API, CRM und Portal, next build und Playwright (Ergebnis siehe Versionsverlauf und Ergebnisbericht).
+- Deploy-Hinweise 1.66.0: drei Migrationen (0444 bis 0446); Traefik-Router crm-auth und portal-auth mit auth-ratelimit in compose.prod.yaml prüfen; neue Settings MHVP_CELERY_LIMIT_*, MHVP_CELERY_OVERLAP_LOCK_ENABLED, rate_limit_trusted_proxies, rate_limit_token_routes_fail_closed stehen auf konservativen Standardwerten; Worker-Smoke nach dem Start (Beat lädt mhvp.core.auth.session_purge und mhvp.privacy.proposals); Branch Protection für die CI-Jobs version-check, commitlint, restore-drill-dry-run und e2e-backend setzen (AJ26-01).
+
+| Befund-ID | Paket | Status | Hinweis |
+| --- | --- | --- | --- |
+| GAI-101 | AJ01 | done |  |
+| GAI-201 | AJ01 | done |  |
+| GAI-202 | AJ01 | partial | negative_costs_mode in HeatingSettings (legacy_warn Standard mit Warnhinweis, distribute); persistenter Mandantenschalter fehlt (Schema) |
+| GAI-213 | AJ01 | done |  |
+| GAI-214 | AJ01 | partial | monthly_rates/remainder_mode (report_only Standard, first_month, last_month) in hoa.calc.plan_results; persistenter Mandantenschalter und UI fehlen (Schema) |
+| GAI-613 | AJ01 | done |  |
+| GAI-614 | AJ01 | done |  |
+| GAI-203 | AJ02 | done |  |
+| GAI-204 | AJ02 | partial | check_amounts rundet HALF_UP wie split_gross, Toleranz als Konstante CHECK_AMOUNTS_TOLERANCE und Parameter (Standard 1 Cent); Mandantenschalter offen bis AJ02-0 |
+| GAI-205 | AJ02 | done |  |
+| GAI-206 | AJ02 | done |  |
+| GAI-207 | AJ02 | done |  |
+| GAI-208 | AJ02 | done |  |
+| GAI-215 | AJ02 | partial | Summentests fuer distribute_cents (Eigenschaft, negativ, Null) und reserve_split; heating _component, Kautionszins, Eigentuemerabrechnung, proration nicht ergae |
+| GAI-209 | AJ03 | done |  |
+| GAI-210 | AJ03 | partial | Objektsperre period_lock (object_period) nur in der Anwendung, Frage AJ03-02 |
+| GAI-211 | AJ03 | done |  |
+| GAI-212 | AJ03 | done |  |
+| GAI-105 | AJ04 | done |  |
+| GAI-307 | AJ04 | partial | emit mit changes ergänzt für Steuerprofil Objekt und Lieferant, Rechnungssteuerdaten, § 35a setzen/entfernen, interest-tax-config, Gläubiger-Id Rechtsträger und |
+| GAI-601 | AJ04 | done |  |
+| GAI-604 | AJ04 | done |  |
+| GAI-606 | AJ04 | done |  |
+| GAI-303 | AJ05 | done |  |
+| GAI-303 | AJ06 | partial | billing und Portal (Bewohnerseite, Übergabe im Portal) nur 403/401 mit unbekannten Ids, kein Fremdmandant-404 mit echten Objekten (Abrechnungen, Heizkostenimpor |
+| GAI-308 | AJ06 | done |  |
+| GAI-116 | AJ07 | done |  |
+| GAI-309 | AJ07 | partial | payload begrenzt (64 KiB, 200 Felder, Tiefe 3, Schluessel 100, Text 5000) plus Ereignis self_disclosure.submitted ohne Inhalt; eigenes Limit je Token fehlt, DSG |
+| GAI-310 | AJ07 | done |  |
+| GAI-311 | AJ07 | partial | API-Seite fertig (rate_limit_trusted_proxies, Standard leer = aus, rechtester nicht vertrauter Hop); CRM-BFF und Sitzungsrouten reichen X-Forwarded-For noch nic |
+| GAI-312 | AJ07 | partial | Schalter rate_limit_token_routes_fail_closed (Standard aus) mit Notzaehler im Prozess fuer Token- und Code-Routen; Limit je Route und Token fehlt |
+| GAI-422 | AJ08 | partial | nur Freigabe- und Sperrkomponenten, Rest bei AJ29 |
+| GAI-426 | AJ08 | done |  |
+| GAI-427 | AJ08 | done |  |
+| GAI-603 | AJ08 | done |  |
+| GAI-102 | AJ09 | done |  |
+| GAI-103 | AJ09 | done |  |
+| GAI-104 | AJ09 | done |  |
+| GAI-115 | AJ09 | done |  |
+| GAI-106 | AJ10 | done |  |
+| GAI-313 | AJ10 | done |  |
+| GAI-314 | AJ10 | done |  |
+| GAI-315 | AJ10 | partial | alle 6 Webhooks nutzen read_body_limited (Strom mit Abbruch, auch ohne Content-Length), WhatsApp 256 KiB vor HMAC, compare_digest, Engine aus app.state.resource |
+| GAI-316 | AJ11 | done |  |
+| GAI-317 | AJ11 | partial | Retry nur für 6 sicher idempotente Tasks; weitere ereignisgetriebene Tasks (archive_message, suggest_message, prepare_mail, paperless_receipt_intake, assistant_ |
+| GAI-318 | AJ11 | done |  |
+| GAI-319 | AJ11 | partial | compose.yaml nicht geändert (kein zweiter Worker, Beat Zeitplandatei weiter in /tmp), nur Runbook |
+| GAI-501 | AJ12 | partial | Vorschlagsjob mhvp.privacy.proposals (Beat 04:25) nur bei freigegebenem Profil mit auto_propose (Standard aus); Kontakte erhalten Antrag Status proposed, Überna |
+| GAI-502 | AJ12 | done |  |
+| GAI-503 | AJ12 | partial | domain_event als Datenart im Löschprofil, nur Zählung, Standard keine Löschung; Fristen je Ereignisklasse offen (AJ12-01) |
+| GAI-504 | AJ12 | partial | platform_user als Datenart dokumentierbar, keine Anonymisierung (mandantenübergreifend, M20-08-Q7 offen) |
+| GAI-522 | AJ12 | partial | bank_raw als Datenart dokumentierbar, Regel AJ12 dokumentiert; Löschpfad Bankverbindungen und finAPI-Anbieterlöschung offen |
+| GAI-414 | AJ13 | done |  |
+| GAI-506 | AJ13 | partial | Tickets, Kommunikation, Dokumentbezüge per Mandantenschalter (Standard aus, sonst nur Anzahl); Portalkonto mit Anmeldeereignissen/Sitzungen sowie Zahlungs- und  |
+| GAI-507 | AJ13 | partial | Fristeinstellung ohne Standardwert und Überwachung für Löschanträge; Auskunftsanträge ohne Eingangsdatensatz (Schemabedarf AJ13-03), keine Eintragung ins allgem |
+| GAI-508 | AJ13 | done |  |
+| GAI-509 | AJ13 | done |  |
+| GAI-510 | AJ13 | done |  |
+| GAI-108 | AJ14 | done |  |
+| GAI-513 | AJ14 | partial | Runbooks 2FA-Reset, FINTS-Betrieb und Webhook-Betrieb nicht geschrieben (nicht im Paketumfang) |
+| GAI-514 | AJ14 | done |  |
+| GAI-516 | AJ14 | partial | ADR für Webhook-Helfer, CSP, Split-Worker, Branding vorhanden; Mandantenschalter-Muster, Zwei-Personen-Reset, Tenant-Index-Wächter, Kettenprüfung, Snapshot-Trig |
+| GAI-608 | AJ14 | done |  |
+| GAI-117 | AJ15 | done |  |
+| GAI-118 | AJ15 | partial | Platzhalter einheitlich gekennzeichnet, Inhalte brauchen Betreiber |
+| GAI-119 | AJ15 | partial | Abgleichtabelle, Master-Prompt unveraendert (AJ15-03) |
+| GAI-428 | AJ15 | done |  |
+| GAI-505 | AJ15 | done |  |
+| GAI-515 | AJ15 | partial | Stammdatenvorschlag benannt; Brotkruemennavigation nicht als eigener Abschnitt |
+| GAI-517 | AJ15 | done |  |
+| GAI-518 | AJ15 | done |  |
+| GAI-519 | AJ15 | partial | B10 bis B14 nicht vergeben vermerkt, Entscheidung Betreiber (AJ15-01) |
+| GAI-520 | AJ15 | partial | V17-Matrixvorlage und V13-Pruefmappe angelegt, Entscheidungen offen |
+| GAI-521 | AJ15 | partial | Doppelvergabe M11-42 und Pruefplan nur als OPEN_QUESTIONS AJ15-05 |
+| GAI-403 | AJ16 | done |  |
+| GAI-404 | AJ16 | partial | Maske erfasst nur submitted, accepted_by_bank, rejected; executed und returned buchen (Ausgleich, Storno) und bleiben beim Import der Bankrueckmeldung bzw. API |
+| GAI-405 | AJ16 | done |  |
+| GAI-406 | AJ16 | done |  |
+| GAI-407 | AJ16 | done |  |
+| GAI-411 | AJ16 | done |  |
+| GAI-412 | AJ17 | done |  |
+| GAI-413 | AJ17 | done |  |
+| GAI-415 | AJ17 | done |  |
+| GAI-416 | AJ17 | done |  |
+| GAI-417 | AJ17 | done |  |
+| GAI-418 | AJ17 | done |  |
+| GAI-419 | AJ17 | done |  |
+| GAI-420 | AJ17 | done |  |
+| GAI-421 | AJ18 | done |  |
+| GAI-424 | AJ18 | done |  |
+| GAI-425 | AJ18 | done |  |
+| GAI-611 | AJ18 | done |  |
+| GAI-615 | AJ18 | partial | 22 Komponenten getestet; verbleibend ohne Test u. a. metering/ConnectionsAdmin, AssignmentWizard, PropertyMeteringTab, imports/Immoware24Wizard, tickets/*, mail |
+| GAI-107 | AJ19 | done |  |
+| GAI-612 | AJ19 | partial | Marker annex_d registriert, D16 (2 Tests), D17, D35 bis D38 markiert; Waechter verlangt je Fall D01 bis D49 mindestens einen Test, 29 Faelle mit nur einem Test  |
+| GAI-616 | AJ19 | done |  |
+| GAI-617 | AJ19 | done |  |
+| GAI-618 | AJ19 | done |  |
+| GAI-620 | AJ19 | done |  |
+| GAI-110 | AJ20 | partial | Offene Posten, Mahnfälle, WEG Listen, Postfach, Zahlläufe haben keine Abfrageparameter in der Oberfläche, Ressourcen stehen bereit |
+| GAI-114 | AJ20 | done |  |
+| GAI-301 | AJ21 | done |  |
+| GAI-304 | AJ22 | partial | Antwortmodelle fuer 4 schreibende Routen (PUT /hoa/acquisition-rules/{kind} HoaAcqRuleOut, PUT /hoa/allocation-proposal-settings HoaAllocationProposalSettingOut |
+| GAI-305 | AJ22 | done |  |
+| GAI-306 | AJ22 | done |  |
+| GAI-303 | AJ23 | done |  |
+| GAI-303 | AJ24 | partial | Fremdmandant-404 mit echten Objekten fehlt für Messdienst (Zuordnungen, Übertragungen, Clearing), Telefonie-Anrufe, Mail-Postfächer/Playbooks, Lizenzen/Preislis |
+| GAI-621 | AJ25 | partial |  |
+| GAI-622 | AJ25 | done |  |
+| GAI-609 | AJ25 | done |  |
+| GAI-610 | AJ25 | done |  |
+| GAI-111 | AJ26 | done |  |
+| GAI-112 | AJ26 | done |  |
+| GAI-113 | AJ26 | done |  |
+| GAI-511 | AJ26 | done |  |
+| GAI-512 | AJ26 | partial | Kontakt-Löschjournal (mhvp.privacy.erasure_journal export/replay, erasure.anonymize_contact extrahiert) und Runbook vorhanden; Replay gegen echte DB nur durch r |
+| GAI-623 | AJ26 | partial | docs/runbooks/ci-required-checks.md listet e2e-backend als Pflichtprüfung; Branch Protection selbst ist nur im GitHub-Setup möglich (AJ26-01) |
+| GAI-602 | AJ27 | done |  |
+| GAI-607 | AJ27 | partial | /parties lehnt as_of weiter per strict_query mit 422 ab, Test prueft jetzt, dass die Meldung den Parameter nennt; Gueltigkeitsspalten an Party brauchen Schema,  |
+| GAI-401 | AJ28 | done |  |
+| GAI-402 | AJ28 | done |  |
+| GAI-408 | AJ28 | done |  |
+| GAI-409 | AJ28 | done |  |
+| GAI-410 | AJ28 | partial | Vier-Augen nur im CRM per Bestaetigung; API prueft created_by != Freigebender nicht (AJ28-04, Domaene contracts) |
+| GAI-422 | AJ29 | partial | nicht umgesetzt AppointmentButton, LocalModelStatus, OccupancyList, AvailabilitySelfMeasurement, CostTypeAccountsAdmin (eigene Handler bzw. Auswahlfelder, Einze |
+| GAI-423 | AJ29 | done | ohne Leerzustand belassen, da statisch, durch Elternkomponente abgedeckt oder nie leer: AssistantTab, ChatLinks, ChatTools (null-Guard), ProviderSettings, Tenan |
+| GAI-102 | AJ30 | done |  |
+| GAI-108 | AJ30 | done |  |
+| GAI-117 | AJ30 | done |  |
+| GAI-118 | AJ30 | done |  |
+| GAI-119 | AJ30 | done |  |
+| GAI-202 | AJ30 | done |  |
+| GAI-203 | AJ30 | done |  |
+| GAI-204 | AJ30 | done |  |
+| GAI-205 | AJ30 | done |  |
+| GAI-208 | AJ30 | done |  |
+| GAI-209 | AJ30 | done |  |
+| GAI-210 | AJ30 | done |  |
+| GAI-211 | AJ30 | done |  |
+| GAI-213 | AJ30 | done |  |
+| GAI-214 | AJ30 | done |  |
+| GAI-301 | AJ30 | done |  |
+| GAI-311 | AJ30 | done |  |
+| GAI-312 | AJ30 | done |  |
+| GAI-316 | AJ30 | done |  |
+| GAI-319 | AJ30 | done |  |
+| GAI-401 | AJ30 | done |  |
+| GAI-402 | AJ30 | done |  |
+| GAI-408 | AJ30 | done |  |
+| GAI-409 | AJ30 | done |  |
+| GAI-410 | AJ30 | done |  |
+| GAI-414 | AJ30 | done |  |
+| GAI-425 | AJ30 | done |  |
+| GAI-501 | AJ30 | done |  |
+| GAI-503 | AJ30 | done |  |
+| GAI-504 | AJ30 | done |  |
+| GAI-505 | AJ30 | done |  |
+| GAI-506 | AJ30 | done |  |
+| GAI-510 | AJ30 | done |  |
+| GAI-519 | AJ30 | done |  |
+| GAI-520 | AJ30 | done |  |
+| GAI-521 | AJ30 | done |  |
+| GAI-522 | AJ30 | done |  |
+| GAI-603 | AJ30 | done |  |
+| GAI-606 | AJ30 | done |  |
+| GAI-607 | AJ30 | done |  |
+| GAI-614 | AJ30 | done |  |
+| GAI-109 | AJ31 | partial | Farben (Primaer, Akzent) als CSS-Variablen im CRM-Layout hinter Schalter branding.crm_apply (Standard aus); Logo nicht angewendet |
+| GAI-605 | AJ31 | partial | coverage-Block (v8) in beiden Configs vorbereitet; @vitest/coverage-v8 nicht im pnpm-Store (Store enthaelt nur index/projects/files, find ohne Treffer), Schwell |
+| GAI-619 | AJ31 | done |  |
+
 ## Welle 20 (Stand 1.65.0, 02.10.2026)
 
 Befunde der Lückenanalyse GAH (Modul-Durchlauf MASTER-PROMPT 3 bis 17 und Anhang D sowie Rückstände der Welle 19, 62 Befunde GAH-101 bis GAH-418), Pakete AI01 bis AI18. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.65.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.

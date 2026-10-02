@@ -57,6 +57,7 @@ export function RetentionSettings({
   userId: string | null;
 }) {
   const t = useTranslations("RetentionSettings");
+  const tCommon = useTranslations("Common");
   const [profiles, setProfiles] = useState(initialProfiles);
   const [categories, setCategories] = useState(initialCategories);
   const [editing, setEditing] = useState<string | null>(null);
@@ -161,6 +162,13 @@ export function RetentionSettings({
             </tr>
           </thead>
           <tbody>
+            {profiles.length === 0 ? (
+              <tr>
+                <td colSpan={99} className="text-muted">
+                  {tCommon("emptyList")}
+                </td>
+              </tr>
+            ) : null}
             {profiles.map((p) => {
               const isEditing = editing === p.id && draft;
               const canRelease = p.status !== "freigegeben" && userId !== null && p.created_by !== userId;
@@ -303,6 +311,13 @@ export function RetentionSettings({
               </tr>
             </thead>
             <tbody>
+              {categories.length === 0 ? (
+                <tr>
+                  <td colSpan={99} className="text-muted">
+                    {tCommon("emptyList")}
+                  </td>
+                </tr>
+              ) : null}
               {categories.map((c) => (
                 <tr key={c.id}>
                   <td>

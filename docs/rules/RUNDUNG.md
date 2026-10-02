@@ -43,3 +43,33 @@ Rund 100 Aufrufe von `quantize` geben kein Verfahren an und runden damit nach de
 ## Uneinheitlichkeit
 
 Die Rücklagenaufteilung rundet HALF_EVEN ohne Restcentausgleich, die Kostenverteilung ROUND_DOWN mit Restcentausgleich. Ob die Summe der Rücklagenanteile stets dem Ausgangsbetrag entspricht, ist mit einem Test zu prüfen (nicht Teil dieses Pakets).
+
+## Zentrale Funktionen (Welle 21, AJ02)
+
+`mhvp.core.money` bündelt die Rundung: `round_cents` (ROUND_HALF_UP auf Cent), `round_to` (ROUND_HALF_UP auf beliebige Stelle), `distribute_cents` (Verteilung nach Gewichten, Summe exakt, Restcent nach größtem Rest, negative Beträge spiegelbildlich), `parse_decimal_strict` (deutsche und einfache Zahlen, mehrdeutige Werte wie `12.500` werden abgelehnt, Excel Gleitkommawerte auf acht Nachkommastellen ROUND_HALF_UP) und `json_number` (Decimal als JSON Zahl nur verlustfrei, sonst Fehler).
+
+| Rechenstelle | Rundung | Fundstelle | Test |
+| --- | --- | --- | --- |
+| Kappungsgrenze Mieterhöhung (beide Wege) | ROUND_HALF_UP auf Cent | letting/routers.py `_check`, letting/rentlaw.py | `unit/test_aj02_money.py` (11,50 EUR plus 15 Prozent gleich 13,23 EUR) |
+| Brutto gegen Netto und Steuersatz (`check_amounts`) | ROUND_HALF_UP auf Cent, Toleranz 1 Cent (`CHECK_AMOUNTS_TOLERANCE`, Frage AJ02-01) | contracts/services.py | `unit/test_aj02_money.py` |
+| Import Zahlenwerte | mehrdeutig abgelehnt, Excel float auf 8 Stellen | imports/fields.py `parse_decimal` | `unit/test_aj02_money.py`, `unit/test_m8_fields.py` |
+| Abgleichbericht Beträge | ROUND_HALF_UP auf Cent | imports/reconciliation.py | `unit/test_m8_reconciliation_report.py` |
+| lexoffice Menge | ROUND_HALF_UP auf 4 Stellen | integrations/lexoffice_ext/payloads.py `quantity` | `unit/test_aj02_money.py` |
+| lexoffice und Makler JSON | Decimal verlustfrei als Zahl (`json_number`) | payloads.py `json_ready`, letting/broker_provider.py | `unit/test_aj02_money.py`, `unit/test_broker_provider.py` |
+
+Quellenstatus: Produktschutz (kaufmännische Rundung, Anhang C enthält keine Rundungsnorm). Änderungsgrund: GAI-203 bis GAI-208, GAI-215.
+
+## Änderung Welle 21 (AJ01, 02.10.2026)
+
+Änderungsgrund: GAI-101, GAI-201, GAI-202, GAI-213, GAI-214, GAI-613, GAI-614. Quellenstatus unverändert Produktstandard (6.9.8), keine Rechtsregel behauptet. G3 und G4 bleiben geschlossen; Wirkung auf produktive Abrechnungen erst nach Freigabe der Geschäftsführung.
+
+| Rechenwert | neues Verfahren | Ort | Test |
+| --- | --- | --- | --- |
+| Kostenverteilung bei negativer Summe | vorzeichensymmetrisch: Verteilung auf den Betrag, dann negiert; Restcent nach größtem Rest, Gleichstand nach stabilem Schlüssel; Summe exakt (bisher -100,00 / 3 ergab -99,97, jetzt -33,34 / -33,33 / -33,33) | billing/calc.py `distribute` | unit/test_aj01_rounding.py (Tabellenfälle, 2.000 Zufallsfälle Summentreue) |
+| Negative Heizkostenanteile | Mandantenwert `negative_costs_mode` in `HeatingSettings`: `legacy_warn` (Standard, bisheriges Ergebnis mit Nullanteilen plus Warnhinweis in `notes`), `distribute` (vorzeichensymmetrische Verteilung) | billing/heating_calc.py `_component` | ebenda |
+| WEG Monatsrate Hausgeld, Restcent | Regel `remainder_mode`: `report_only` (Standard, bisher, nur `rounding_difference`), `first_month`, `last_month` (Differenz auf diesen Monat, zwölf Raten ergeben den Jahresbetrag) | hoa/calc.py `monthly_rates`, `plan_results` | ebenda |
+| Rücklagenaufteilung nach Planverhältnis | ROUND_HALF_UP statt HALF_EVEN, Restausgleich wie bisher | hoa/reserve_split.py | ebenda (Summentreue 2.000 Zufallsfälle) |
+| Eigentümerabrechnung SEV Einzelwerte | ROUND_HALF_UP statt Standardkontext | billing/owner_statement.py `_d`, owner_statement_pdf.py | ebenda |
+| übrige `quantize` in billing und hoa | ausdrücklich ROUND_HALF_UP (plan_change, calc Darlehen und Abweichung, assets, meetings, advance_rule, advance_routers, consumption_info, heating_import, letters) | | bestehende Tests |
+
+Unverändert: Ratenaufteilung Sonderumlage (hoa/levies.py) rundet ROUND_DOWN je Rate, Rest auf die letzte Rate, Summe exakt. Die beiden Mandantenwerte sind bisher nur Parameter der Rechenfunktionen; eine dauerhafte Speicherung je Mandant braucht eine Schemaänderung (AJ01-01, AJ01-02).

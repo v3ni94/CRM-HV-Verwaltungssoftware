@@ -7,6 +7,7 @@ import { AllocationAgreementsPanel } from "@/components/contracts/AllocationAgre
 import { AmountsPanel } from "@/components/contracts/AmountsPanel";
 import { ContractAllocationValues } from "@/components/contracts/ContractAllocationValues";
 import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAccount";
+import { ContractCustomFieldsForm } from "@/components/aj17/ContractCustomFieldsForm";
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
 import { ContractMandates } from "@/components/contracts/ContractMandates";
 import { DepositInterestPanel } from "@/components/contracts/DepositInterestPanel";
@@ -142,6 +143,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
         </dl>
       </section>
       <ContractNotesSection contract={contract} canEdit={canUpdate} />
+      <ContractCustomFieldsForm contractId={contract.id} initial={((contract as unknown as { custom_fields?: Record<string, unknown> }).custom_fields ?? {})} canEdit={canUpdate} />
       {contract.kind === "ownership" && !contract.end_date ? (
         <OwnershipTransfer contractId={contract.id} sevAllowed={managementType === "hoa_with_sev"} canUpdate={canUpdate} />
       ) : null}
@@ -162,7 +164,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
         )}
       </section>
       <ContractAllocationValues contractId={contract.id} values={allocationValues} keys={allocationKeys} canUpdate={canUpdate} startDate={contract.start_date} />
-      <ContractMandates mandates={mandates} defaultMandateId={contract.sepa_mandate_id} directDebit={contract.direct_debit} />
+      <ContractMandates mandates={mandates} defaultMandateId={contract.sepa_mandate_id} directDebit={contract.direct_debit} canUpdate={canUpdate} />
       {contract.debtor_account ? (
         <ContractDebtorAccount
           account={contract.debtor_account}

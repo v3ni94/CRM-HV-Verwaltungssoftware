@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { AssignmentPrompt } from "@/components/assignment/AssignmentPrompt";
+import { MailInvoiceExtraction } from "@/components/aj17/MailInvoiceExtraction";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { ContactRoleBadges } from "@/components/common/ContactRoleBadges";
 import { SafeText } from "@/components/ui/SafeText";
@@ -498,8 +499,9 @@ export function MailDetail({
         {message.direction === "in" && message.attachment_document_ids.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
             {message.attachment_document_ids.map((attachmentId, i) => (
-              <li key={attachmentId}>
+              <li key={attachmentId} className="flex flex-wrap items-start gap-2">
                 <AttachmentReceiptAction messageId={message.id} documentId={attachmentId} label={t("attachmentInvoice", { number: i + 1 })} />
+                <MailInvoiceExtraction messageId={message.id} attachmentId={attachmentId} />
               </li>
             ))}
           </ul>

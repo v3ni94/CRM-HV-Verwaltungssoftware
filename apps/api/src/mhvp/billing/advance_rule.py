@@ -292,10 +292,12 @@ def out(row: AdvanceProposal) -> dict[str, Any]:
         "snapshot_hash": row.snapshot_hash,
         "contract_id": row.contract_id,
         "unit_number": row.unit_number,
-        "previous_costs": str(Decimal(row.previous_costs).quantize(CENT)),
+        "previous_costs": str(Decimal(row.previous_costs).quantize(CENT, rounding=ROUND_HALF_UP)),
         "months": row.months,
-        "surcharge_percent": str(Decimal(row.surcharge_percent).quantize(CENT)),
-        "proposed_amount": str(Decimal(row.proposed_amount).quantize(CENT)),
+        "surcharge_percent": str(
+            Decimal(row.surcharge_percent).quantize(CENT, rounding=ROUND_HALF_UP)
+        ),
+        "proposed_amount": str(Decimal(row.proposed_amount).quantize(CENT, rounding=ROUND_HALF_UP)),
         "status": row.status,
         "note": row.note,
         "letter_text": row.letter_text,

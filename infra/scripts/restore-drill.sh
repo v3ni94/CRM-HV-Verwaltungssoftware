@@ -12,7 +12,10 @@
 #
 # Usage (on a restore machine or the server, never the productive database):
 #   infra/scripts/restore-drill.sh [--env-file /opt/mhvp/.env.backup] [--stamp <STAMP>]
-#                                   [--skip-objects] [--keep-work]
+#                                   [--skip-objects] [--keep-work] [--dry-run]
+#
+# --dry-run checks configuration and tools only (no S3, no database access, no protocol), exit 0
+# if the drill could start (GAI-511, make restore-drill, CI job restore-drill-dry-run).
 #
 # Required environment (same names as scripts/backup-offsite.sh / backup-verify.sh):
 #   PGDATABASE, PGHOST, PGUSER (or BACKUP_COMPOSE), BACKUP_S3_ENDPOINT_URL,
@@ -32,13 +35,15 @@ ENV_FILE=""
 STAMP=""
 SKIP_OBJECTS=0
 KEEP_WORK=0
+DRY_RUN=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env-file) [[ $# -ge 2 ]] || { echo "restore-drill: --env-file needs a path" >&2; exit 2; }; ENV_FILE="$2"; shift 2 ;;
     --stamp) [[ $# -ge 2 ]] || { echo "restore-drill: --stamp needs a value" >&2; exit 2; }; STAMP="$2"; shift 2 ;;
     --skip-objects) SKIP_OBJECTS=1; shift ;;
     --keep-work) KEEP_WORK=1; shift ;;
-    -h|--help) sed -n '2,24p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) sed -n '2,28p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "restore-drill: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -61,6 +66,20 @@ BACKUP_S3_PREFIX="${BACKUP_S3_PREFIX:-mhvp}"
 RESTORE_DATABASE="${RESTORE_DATABASE:-mhvp_restore_drill}"
 [[ "$RESTORE_DATABASE" =~ ^[a-z_][a-z0-9_]*$ && "$RESTORE_DATABASE" != "$PGDATABASE" ]] \
   || { echo "restore-drill: invalid RESTORE_DATABASE" >&2; exit 2; }
+
+if [[ "$DRY_RUN" == 1 ]]; then
+  missing=0
+  tools=(age python3)
+  [[ -n "${BACKUP_COMPOSE:-}" ]] || tools+=(psql pg_restore)
+  for tool in "${tools[@]}"; do
+    command -v "$tool" >/dev/null 2>&1 || { echo "restore-drill: dry run, tool missing: $tool" >&2; missing=1; }
+  done
+  python3 -c "import boto3" 2>/dev/null || { echo "restore-drill: dry run, python module boto3 missing" >&2; missing=1; }
+  [[ "$missing" == 0 ]] || exit 2
+  echo "restore-drill: dry run ok (database=$PGDATABASE, restore database=$RESTORE_DATABASE," \
+    "bucket=$BACKUP_S3_BUCKET, prefix=$BACKUP_S3_PREFIX, objects=$([[ $SKIP_OBJECTS == 1 ]] && echo skipped || echo checked))"
+  exit 0
+fi
 
 WORK="$(mktemp -d)"
 cleanup() {

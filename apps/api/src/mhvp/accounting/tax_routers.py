@@ -32,7 +32,7 @@ from mhvp.contacts.models import Contact, Party, PartyMember
 from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_path_guard
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
@@ -324,6 +324,13 @@ async def put_settings(
         return TaxSettingsOut.model_validate(row)
 
 
+def _jsonable(value: Any) -> Any:
+    """Decimal and dates as strings for event payloads."""
+    if isinstance(value, Decimal | date | datetime | uuid.UUID):
+        return str(value)
+    return value
+
+
 # Property and supplier profiles ------------------------------------------------------------------
 
 
@@ -358,14 +365,31 @@ async def put_property_profile(
             select(PropertyTaxProfile).where(PropertyTaxProfile.property_id == property_id)
         )
         if row is None:
+            before: dict[str, Any] = {}
             row = PropertyTaxProfile(tenant_id=principal.tenant_id, property_id=property_id)
             session.add(row)
+        else:
+            before = PropertyProfileOut.model_validate(row).model_dump(mode="json")
         row.vat_opted = body.vat_opted
         row.revenue_key_percent = body.revenue_key_percent
         row.note = body.note
         row.updated_by = principal.user_id
         await session.flush()
-        return PropertyProfileOut.model_validate(row)
+        await session.refresh(row)
+        out = PropertyProfileOut.model_validate(row)
+        after = out.model_dump(mode="json")
+        # GAI-307: tax classification stays traceable (rule 6, B07).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="property_tax_profile.updated",
+            entity_type="property",
+            entity_id=property_id,
+            actor_user_id=principal.user_id,
+            payload=after,
+            changes=diff(before, after),
+        )
+        return out
 
 
 @router.get("/suppliers/{contact_id}/profile", summary="Steuerkennzeichen des Lieferanten")
@@ -422,8 +446,11 @@ async def put_supplier_profile(
             select(SupplierTaxProfile).where(SupplierTaxProfile.contact_id == contact_id)
         )
         if row is None:
+            before_s: dict[str, Any] = {}
             row = SupplierTaxProfile(tenant_id=principal.tenant_id, contact_id=contact_id)
             session.add(row)
+        else:
+            before_s = _supplier_out(row).model_dump(mode="json")
         for name in (
             "construction_services",
             "reverse_charge",
@@ -437,7 +464,19 @@ async def put_supplier_profile(
         row.updated_by = principal.user_id
         await session.flush()
         await _refresh_invoices_of_supplier(session, contact_id)
-        return _supplier_out(row)
+        out_s = _supplier_out(row)
+        after_s = out_s.model_dump(mode="json")
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="supplier_tax_profile.updated",
+            entity_type="contact",
+            entity_id=contact_id,
+            actor_user_id=principal.user_id,
+            payload=after_s,
+            changes=diff(before_s, after_s),
+        )
+        return out_s
 
 
 # Invoice tax data --------------------------------------------------------------------------------
@@ -463,12 +502,25 @@ async def put_invoice_tax(
     async with tenant_tx(request, principal) as session:
         inv = await _invoice(session, invoice_id)
         data = await tax.tax_data_of(session, inv)
+        tax_keys = ("vat_rate", "input_tax_amount", "reverse_charge", "construction_service")
+        before_t = {k: _jsonable(getattr(data, k)) for k in tax_keys}
         data.vat_rate = body.vat_rate
         data.input_tax_amount = body.input_tax_amount
         data.reverse_charge = body.reverse_charge
         data.construction_service = body.construction_service
         data.updated_by = principal.user_id
         data = await tax.refresh_proposals(session, inv, data)
+        after_t = {k: _jsonable(getattr(data, k)) for k in tax_keys}
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice_tax_data.updated",
+            entity_type="invoice",
+            entity_id=inv.id,
+            actor_user_id=principal.user_id,
+            payload=after_t,
+            changes=diff(before_t, after_t),
+        )
         return _tax_out(data)
 
 
@@ -534,17 +586,33 @@ async def put_section35a(
             select(InvoiceLineSection35a).where(InvoiceLineSection35a.invoice_line_id == line_id)
         )
         if row is None:
+            before_a: dict[str, Any] = {}
             row = InvoiceLineSection35a(
                 tenant_id=principal.tenant_id, invoice_id=line.invoice_id, invoice_line_id=line_id
             )
             session.add(row)
+        else:
+            before_a = Section35aOut.model_validate(row).model_dump(mode="json")
         row.kind = body.kind
         row.labor_amount = body.labor_amount
         row.material_amount = body.material_amount
         row.text = body.text
         row.updated_by = principal.user_id
         await session.flush()
-        return Section35aOut.model_validate(row)
+        await session.refresh(row)
+        out_a = Section35aOut.model_validate(row)
+        after_a = out_a.model_dump(mode="json")
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice_line_section35a.updated",
+            entity_type="invoice_line",
+            entity_id=line_id,
+            actor_user_id=principal.user_id,
+            payload=after_a,
+            changes=diff(before_a, after_a),
+        )
+        return out_a
 
 
 @router.delete(
@@ -559,8 +627,19 @@ async def delete_section35a(
         )
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before_d = Section35aOut.model_validate(row).model_dump(mode="json")
         await session.delete(row)
         await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice_line_section35a.deleted",
+            entity_type="invoice_line",
+            entity_id=line_id,
+            actor_user_id=principal.user_id,
+            payload={"invoice_id": before_d.get("invoice_id")},
+            changes=diff(before_d, {}),
+        )
         return Response(status_code=204)
 
 

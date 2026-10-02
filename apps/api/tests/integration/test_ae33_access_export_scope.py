@@ -161,14 +161,24 @@ def test_settings_default_permissions_validation_and_tenant_separation(
     assert _ok(client.get(SETTINGS, headers=prep)) == {
         "third_party_scope": "none",
         "include_internal_notes": False,
+        # GAI-506 (AJ13): further sources, off by default.
+        "include_tickets": False,
+        "include_communication": False,
+        "include_documents": False,
     }
     wide = {"third_party_scope": "names", "include_internal_notes": True}
+    wide_out = {
+        **wide,
+        "include_tickets": False,
+        "include_communication": False,
+        "include_documents": False,
+    }
     assert client.put(SETTINGS, json=wide, headers=viewer).status_code == 403
     assert client.put(SETTINGS, json={"third_party_scope": "all"}, headers=prep).status_code == 422
     assert client.put(SETTINGS, json={"x": 1}, headers=prep).status_code == 422
     assert client.get(SETTINGS, params={"x": "1"}, headers=prep).status_code == 422
-    assert _ok(client.put(SETTINGS, json=wide, headers=prep)) == wide
-    assert _ok(client.get(SETTINGS, headers=viewer)) == wide
+    assert _ok(client.put(SETTINGS, json=wide, headers=prep)) == wide_out
+    assert _ok(client.get(SETTINGS, headers=viewer)) == wide_out
     assert _ok(client.get(SETTINGS, headers=other))["third_party_scope"] == "none"
     _ok(client.put(SETTINGS, json={}, headers=prep))
     assert _ok(client.get(SETTINGS, headers=prep))["include_internal_notes"] is False

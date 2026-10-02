@@ -8,6 +8,7 @@ import { formatDate, formatEur } from "@/lib/format";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function AccountSheetPage({
     params,
     searchParams,
   ]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   const start = sp.start && ISO.test(sp.start) ? sp.start : `${today.slice(0, 4)}-01-01`;
   const end = sp.end && ISO.test(sp.end) ? sp.end : today;
   const api = serverApi();

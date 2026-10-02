@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.communication import mail
 from mhvp.communication.html import display_body
 from mhvp.communication.models import Message
+from mhvp.core.clock import local_today
 
 EXCERPT_SENTENCES = 3
 EXCERPT_CHARS = 400
@@ -211,7 +212,7 @@ async def open_items_for_contact(
     from mhvp.contacts.models import PartyMember
     from mhvp.contracts.models import Contract
 
-    as_of = as_of or datetime.now(UTC).date()
+    as_of = as_of or local_today()
     settled = (
         select(OpenItemSettlement.open_item_id, func.sum(OpenItemSettlement.amount).label("s"))
         .where(OpenItemSettlement.date <= as_of)

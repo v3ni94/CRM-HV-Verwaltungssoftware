@@ -6,6 +6,7 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type RentIndexRow = {
   id: string;
@@ -30,6 +31,7 @@ const COLUMNS = "gemeinde;name;stand;baujahr_von;baujahr_bis;flaeche_von;flaeche
 /** Maintenance of the rent index values per municipality (M26-03): manual entry and CSV import
  *  with preview. Manually maintained values, no automatic source; the source note is mandatory. */
 export function RentIndexAdmin({ rows: initial, canEdit }: { rows: RentIndexRow[]; canEdit: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("LettingW3.rentIndex");
   const [rows, setRows] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +110,7 @@ export function RentIndexAdmin({ rows: initial, canEdit }: { rows: RentIndexRow[
                 </td>
                 <td>
                   {canEdit ? (
-                    <button type="button" className={ui.button} onClick={() => void remove(r.id)}>
+                    <button disabled={busy} type="button" className={ui.button} onClick={guard(() => remove(r.id))}>
                       {t("delete")}
                     </button>
                   ) : null}
@@ -125,7 +127,7 @@ export function RentIndexAdmin({ rows: initial, canEdit }: { rows: RentIndexRow[
       </div>
       {canEdit ? (
         <>
-          <form onSubmit={add} className={`${ui.card} grid gap-2 sm:grid-cols-3`} data-testid="rent-index-form" aria-label={t("add")}>
+          <form onSubmit={guard(add)} className={`${ui.card} grid gap-2 sm:grid-cols-3`} data-testid="rent-index-form" aria-label={t("add")}>
             <h2 className={`${ui.h2} sm:col-span-3`}>{t("add")}</h2>
             <label className="flex flex-col gap-1"><span className={ui.label}>{t("municipality")}</span><input className={ui.input} required value={form.municipality} onChange={set("municipality")} /></label>
             <label className="flex flex-col gap-1"><span className={ui.label}>{t("name")}</span><input className={ui.input} required value={form.index_name} onChange={set("index_name")} /></label>
@@ -143,8 +145,8 @@ export function RentIndexAdmin({ rows: initial, canEdit }: { rows: RentIndexRow[
             <p className={ui.help}>{t("importHelp", { columns: COLUMNS })}</p>
             <textarea className={`${ui.input} mt-2 font-mono`} rows={5} value={csv} onChange={(e) => { setCsv(e.target.value); setPreview(null); }} aria-label={t("import")} />
             <div className="mt-2 flex gap-2">
-              <button type="button" className={ui.button} disabled={csv.trim().length < 10} onClick={() => void runImport(true)}>{t("preview")}</button>
-              <button type="button" className={ui.primary} disabled={!preview || preview.errors.length > 0 || preview.rows === 0} onClick={() => void runImport(false)}>{t("apply")}</button>
+              <button type="button" className={ui.button} disabled={busy || (csv.trim().length < 10)} onClick={guard(() => runImport(true))}>{t("preview")}</button>
+              <button type="button" className={ui.primary} disabled={busy || (!preview || preview.errors.length > 0 || preview.rows === 0)} onClick={guard(() => runImport(false))}>{t("apply")}</button>
             </div>
             {preview ? (
               <div className="mt-2 text-sm" data-testid="import-preview">

@@ -15,13 +15,13 @@ oder Prozessliste].
 
 ## 2. Datenbestand
 
-Kein Zugriff auf Quelltext oder Datenmodell. [zu ergänzen durch Betreiber: Datenbank/Storage,
+Kein Zugriff auf Quelltext oder Datenmodell. [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber: Datenbank/Storage,
 Tabellen oder Entitäten für Regeln, Auslöser, Aktionen, Protokolle, Bezug zu Objekt- oder
 Vertragsnummern].
 
 ## 3. Schnittstellen
 
-Keine dokumentierten Endpunkte bekannt. [zu ergänzen durch Betreiber: vorhandene REST-
+Keine dokumentierten Endpunkte bekannt. [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber: vorhandene REST-
 Endpunkte oder Funktionen, Webhooks, Authentifizierung, Zeitpläne].
 
 ## 4. Ablösestatus im CRM
@@ -80,9 +80,9 @@ Im Repo ist über Müller FLOW nur das aus `docs/MASTER-PROMPT.md` Abschnitt 13.
 
 - Zweck: Prozess- und Automatisierungssoftware der HVM, Projektname "Müller FLOW: Fable 5.1 und
   Ultracode Strategie" (Claude-Code-Projekt des Betreibers). Konkrete Prozesse: offen,
-  Dossier erforderlich (AA16-03).
-- Stack: offen, Dossier erforderlich (AA16-03).
-- Datenmodell: offen, Dossier erforderlich (AA16-03).
+  [Betreiber-Erhebung offen, V1, AA16-03].
+- Stack: offen, [Betreiber-Erhebung offen, V1, AA16-03].
+- Datenmodell: offen, [Betreiber-Erhebung offen, V1, AA16-03].
 - Schnittstellen: vorgesehen ist die Anbindung an die Regel-Engine und das Ticketsystem über
   Webhooks sowie Single Sign-on über die OIDC-Provider-Fähigkeit der Plattform (Master-Prompt
   Abschnitt 6). Die tatsächlichen Endpunkte von FLOW sind offen, Dossier erforderlich

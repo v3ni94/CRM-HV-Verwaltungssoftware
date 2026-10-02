@@ -4,6 +4,7 @@ import { SepaOverview, type SepaMandateRow } from "@/components/contracts/SepaOv
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
+import { today as businessToday } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function SepaOverviewPage() {
   const response = await serverFetch("/api/v1/sepa-mandates?limit=1000");
   redirectIfUnauthenticated(response);
   const rows = response.ok ? ((await response.json()) as SepaMandateRow[]) : null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessToday();
   return (
     <div className={ui.pageGap}>
       <PageHeader

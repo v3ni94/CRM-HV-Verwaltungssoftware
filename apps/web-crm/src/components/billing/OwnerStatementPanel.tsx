@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { OwnerStatementPdfLink } from "@/components/gated/OwnerStatementPdfLink";
+
 import { StatementOutputsPanel } from "./StatementOutputsPanel";
 import { StatementStatusActions, type StatementStatusValue, type StatusLogEntry } from "./StatementStatusActions";
 
@@ -221,6 +223,7 @@ export function OwnerStatementPanel({ ledgers }: { ledgers: { id: string; name: 
               }}
             />
           ) : null}
+          <OwnerStatementPdfLink statementId={selected.id} approved={!["draft", "calculated"].includes(selected.status)} />
           <p className={`${ui.notice} mt-4`}>{t("gateNotice")}</p>
         </section>
       ) : null}

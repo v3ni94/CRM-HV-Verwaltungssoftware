@@ -56,6 +56,12 @@ FILTER_RESOURCES = (
     # M9-03: bank work list and invoice list.
     "bank_transactions",
     "invoices",
+    # GAI-110: journal, open items, dunning cases, WEG properties and work orders.
+    "journal",
+    "open_items",
+    "dunning_cases",
+    "hoa_properties",
+    "work_orders",
 )
 MAX_BULK = 500
 MAX_RANGE_DAYS = 400

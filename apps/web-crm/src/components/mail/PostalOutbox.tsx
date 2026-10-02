@@ -8,6 +8,7 @@ import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 /** Postausgang (M23-01): Postaufträge je Zustellung mit Anbieterstatus, Filter, manueller
  *  Erfassung (Druck, Versand, Zugang mit Nachweis), Statusabruf und Stornierung; für
@@ -84,6 +85,7 @@ export function PostalOutbox({
   initialJobs?: PostalJob[];
   initialSettings?: PostalSettings | null;
 }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("PostalOutbox");
   const [jobs, setJobs] = useState<PostalJob[]>(initialJobs ?? []);
   const [loading, setLoading] = useState(initialJobs === undefined);
@@ -188,7 +190,7 @@ export function PostalOutbox({
           <input type="checkbox" checked={dunningOnly} onChange={(e) => setDunningOnly(e.target.checked)} />
           {t("filterDunning")}
         </label>
-        <button type="button" className={ui.secondary} onClick={() => void load()}>
+        <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => load())}>
           {t("reload")}
         </button>
         {canSettings ? (
@@ -245,16 +247,16 @@ export function PostalOutbox({
                     <td className="align-top">{formatDateTime(job.submitted_at ?? job.created_at)}</td>
                     <td className="align-top">
                       <div className="flex flex-wrap gap-1">
-                        <button type="button" className={ui.buttonSm} onClick={() => void openJob(job)}>
+                        <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => openJob(job))}>
                           {t("details")}
                         </button>
                         {canWrite && job.provider !== "manual" && OPEN.has(job.status) ? (
-                          <button type="button" className={ui.buttonSm} onClick={() => void action(job, "refresh")}>
+                          <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => action(job, "refresh"))}>
                             {t("refresh")}
                           </button>
                         ) : null}
                         {canWrite && OPEN.has(job.status) ? (
-                          <button type="button" className={ui.buttonSm} onClick={() => void action(job, "cancel")}>
+                          <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => action(job, "cancel"))}>
                             {t("cancel")}
                           </button>
                         ) : null}
@@ -272,7 +274,7 @@ export function PostalOutbox({
         <div className={ui.card}>
           <div className="flex items-start justify-between gap-3">
             <h2 className={ui.title}>{t("detailTitle")}</h2>
-            <button type="button" className={ui.buttonSm} onClick={() => setSelected(null)}>
+            <button disabled={busy} type="button" className={ui.buttonSm} onClick={() => setSelected(null)}>
               {t("close")}
             </button>
           </div>
@@ -334,7 +336,7 @@ export function PostalOutbox({
               </label>
               <p className={ui.help}>{t("manual.help")}</p>
               <div className={ui.formActions}>
-                <button type="submit" className={ui.primary}>
+                <button disabled={busy} type="submit" className={ui.primary}>
                   {t("manual.save")}
                 </button>
               </div>
@@ -347,6 +349,7 @@ export function PostalOutbox({
 }
 
 function PostalSettingsPanel({ settings, onChange }: { settings: PostalSettings; onChange: (s: PostalSettings) => void }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("PostalOutbox.settings");
   const [form, setForm] = useState({
     provider: settings.provider,
@@ -471,7 +474,7 @@ function PostalSettingsPanel({ settings, onChange }: { settings: PostalSettings;
           {t("save")}
         </button>
         {form.provider !== "manual" ? (
-          <button type="button" className={ui.secondary} onClick={() => void test()}>
+          <button disabled={busy} type="button" className={ui.secondary} onClick={guard(() => test())}>
             {t("test")}
           </button>
         ) : null}

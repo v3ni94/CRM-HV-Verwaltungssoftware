@@ -78,6 +78,9 @@ class HeatingSettings:
     hot_water_energy_kwh: Decimal | None = None
     degree_days: dict[int, Decimal] = field(default_factory=dict)  # month -> promille
     degree_days_source: str = ""
+    # GAI-202: negative cost parts (credit, refund). "legacy_warn" keeps the previous result
+    # (zero shares) and adds a warning; "distribute" splits them sign symmetric (AJ01-01).
+    negative_costs_mode: str = "legacy_warn"
 
 
 def _q(value: Decimal) -> Decimal:
@@ -307,16 +310,27 @@ def _component(
     occupants: list[Occupant],
     consumption: dict[str, Decimal],
     degree_days: dict[int, Decimal],
+    negative_costs_mode: str = "legacy_warn",
 ) -> dict[str, Any]:
     consumption_part = _q(costs * share_percent / 100)
     basic_part = costs - consumption_part
     keys = {o.key: (o.unit_number, o.key) for o in occupants}
+    signed = negative_costs_mode == "distribute"
+    warning = None
+    if (consumption_part < 0 or basic_part < 0) and not signed:
+        warning = (
+            f"{label}: negativer Kostenanteil ({costs}) nicht verteilt; Summe der Einheiten "
+            "weicht vom Gesamtbetrag ab. Verteilung negativer Kosten ist nicht freigegeben "
+            "(GAI-202, AJ01-01)."
+        )
     cons_shares = [Share(keys[o.key], consumption.get(o.key, Decimal(0))) for o in occupants]
-    if consumption_part > 0 and sum((s.weight for s in cons_shares), Decimal(0)) <= 0:
+    if (consumption_part > 0 or (signed and consumption_part < 0)) and sum(
+        (s.weight for s in cons_shares), Decimal(0)
+    ) <= 0:
         raise HeatingCalcError(f"{label}: Verbrauchssumme ist null, keine Verteilung möglich.")
     cons_split = (
         distribute(consumption_part, cons_shares)
-        if consumption_part > 0
+        if consumption_part > 0 or (signed and consumption_part < 0)
         else {k: Decimal("0.00") for k in keys.values()}
     )
     basic_shares = []
@@ -327,7 +341,7 @@ def _component(
         basic_trace[o.key] = {"area": str(o.area), "time_weight": str(tw), "method": method}
     basic_split = (
         distribute(basic_part, basic_shares)
-        if basic_part > 0
+        if basic_part > 0 or (signed and basic_part < 0)
         else {k: Decimal("0.00") for k in keys.values()}
     )
     return {
@@ -338,6 +352,7 @@ def _component(
         "basic_part": str(basic_part),
         "consumption_values": {k: str(v) for k, v in consumption.items()},
         "basic_weights": basic_trace,
+        "warning": warning,
         "per_occupant": {
             o.key: {
                 "consumption": str(cons_split[keys[o.key]]),
@@ -395,6 +410,7 @@ def calculate(
             occupants,
             heat_values,
             settings.degree_days,
+            settings.negative_costs_mode,
         )
     ]
     hot_est: list[str] = []
@@ -411,8 +427,10 @@ def calculate(
                 occupants,
                 hot_values,
                 settings.degree_days,
+                settings.negative_costs_mode,
             )
         )
+    notes.extend(str(c["warning"]) for c in components if c.get("warning"))
     estimated = sorted(set(heat_est) | set(hot_est))
     if estimated:
         notes.append(

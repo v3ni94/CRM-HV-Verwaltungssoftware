@@ -93,11 +93,11 @@ def test_templates_list_permissions_and_validation(client: TestClient, world: Wo
 
 def test_event_type_catalogue_permissions_and_validation(client: TestClient, world: World) -> None:
     """GAH-307: GET /automation/event-types lists the emitted types to authorised readers."""
-    from mhvp.automation.event_catalog import EVENT_CATALOG
+    from mhvp.automation.event_catalog import ALL_EVENT_TYPES, EVENT_CATALOG
 
     res = client.get(f"{A}/event-types", headers=_h(client, world, "ah20admin"))
     assert res.status_code == 200, res.text
-    assert res.json()["event_types"] == list(EVENT_CATALOG)
+    assert res.json()["event_types"] == list(ALL_EVENT_TYPES)
     assert "contract.created" in EVENT_CATALOG
     care = _h(client, world, "ah20care")
     assert client.get(f"{A}/event-types", headers=care).status_code == 200

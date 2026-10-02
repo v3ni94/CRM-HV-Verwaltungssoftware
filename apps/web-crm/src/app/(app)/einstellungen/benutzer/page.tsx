@@ -11,6 +11,7 @@ import {
   serverApi,
   serverFetch,
 } from "@/lib/api-server";
+import { MfaResetAdmin, type MfaResetRequest } from "@/components/settings/MfaResetAdmin";
 import { getMe } from "@/lib/me";
 import { fetchAllProperties } from "@/lib/properties-all";
 import { ui } from "@/lib/ui";
@@ -60,6 +61,17 @@ export default async function MembersPage({
       ? fetchAllProperties<PropertyOption>().then((r) => r.items ?? [])
       : Promise.resolve([] as PropertyOption[]),
   ]);
+  // AJ08 (GAI-603): four eyes reset of the second factor (switch default off).
+  const mfaResetEnabled = can("tenant_settings:read")
+    ? await serverFetch("/api/v1/auth/mfa-reset/settings").then(async (r) =>
+        r.ok ? Boolean(((await r.json()) as { enabled?: boolean }).enabled) : false,
+      )
+    : false;
+  const mfaResetRequests = can("members:update")
+    ? await serverFetch("/api/v1/auth/mfa-reset/requests").then(async (r) =>
+        r.ok ? ((await r.json()) as MfaResetRequest[]) : [],
+      )
+    : [];
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -81,6 +93,13 @@ export default async function MembersPage({
           roleCodes: first(query.role) ? [first(query.role)] : [],
         }}
       />
+      {can("members:update") ? (
+        <MfaResetAdmin
+          members={(members.data ?? []).map((m) => ({ membership_id: m.membership_id, display_name: m.display_name }))}
+          initialRequests={mfaResetRequests}
+          enabled={mfaResetEnabled}
+        />
+      ) : null}
     </div>
   );
 }

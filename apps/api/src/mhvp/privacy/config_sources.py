@@ -14,6 +14,7 @@ register entries with every legal field open and never overwrites what the opera
 
 from __future__ import annotations
 
+import os
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ from mhvp.documents.models import DmsConnection, StorageKind
 from mhvp.integrations.models import LexofficeTenantConfig
 from mhvp.integrations.schadenstool.models import SchadenstoolTenantConfig
 from mhvp.letting.models import BrokerTenantConfig
+from mhvp.platform.models import OidcClient
 from mhvp.privacy.models import PrivacyRegisterEntry
 from mhvp.sla.models import SmsGateway, WhatsAppConfig
 
@@ -421,6 +423,70 @@ async def _webhook_targets(session: AsyncSession, _: Settings, __: str) -> list[
     return out
 
 
+async def _oidc_relying_parties(
+    session: AsyncSession, _: Settings, __: str
+) -> list[DetectedSource]:
+    """Relying parties of the platform OIDC provider receive identity claims (GAI-509)."""
+    out: list[DetectedSource] = []
+    for row in await session.scalars(select(OidcClient).order_by(OidcClient.client_id)):
+        hosts = sorted({_host(u) for u in row.redirect_uris if _host(u)})
+        out.append(
+            DetectedSource(
+                _key("oidc", row.client_id),
+                f"OIDC-Anwendung {row.name}"[:200],
+                "Übermittlung von Anmelde- und Identitätsdaten an eine angebundene Anwendung",
+                row.active,
+                f"Client {row.client_id}, Hosts {', '.join(hosts) or 'unbekannt'}.",
+                "platform",
+            )
+        )
+    return out
+
+
+async def _ops(_: AsyncSession, settings: Settings, __: str) -> list[DetectedSource]:
+    """Virus scan, off site backup and alert webhook (GAI-509). Backup and alert targets are
+    read from the process environment (scripts/backup.sh, scripts/healthcheck.sh); they are
+    only detected when the API process sees the same variables."""
+    out: list[DetectedSource] = []
+    if settings.clamav_mode != "off":
+        out.append(
+            DetectedSource(
+                _key("clamav", settings.clamav_host.lower()),
+                f"Virenscan ClamAV ({settings.clamav_host})",
+                "Prüfung hochgeladener Dokumente auf Schadsoftware",
+                True,
+                f"Host {settings.clamav_host}, Modus {settings.clamav_mode}.",
+                "platform",
+            )
+        )
+    remote = os.environ.get("BACKUP_REMOTE", "").strip()
+    if remote:
+        host = remote.split(":", 1)[0].rsplit("@", 1)[-1].lower()
+        out.append(
+            DetectedSource(
+                _key("backup", host),
+                f"Externe Datensicherung ({host})",
+                "Verschlüsselte Datenbanksicherung auf einem externen Speicher (ADR 0005)",
+                True,
+                f"Host {host}.",
+                "platform",
+            )
+        )
+    alert = _host(os.environ.get("ALERT_WEBHOOK_URL"))
+    if alert:
+        out.append(
+            DetectedSource(
+                _key("alert", alert),
+                f"Alarm-Webhook ({alert})",
+                "Übermittlung technischer Störungsmeldungen an den Überwachungsdienst",
+                True,
+                f"Host {alert}.",
+                "platform",
+            )
+        )
+    return out
+
+
 Detector = Callable[[AsyncSession, Settings, str], Awaitable[list[DetectedSource]]]
 DETECTORS: tuple[Detector, ...] = (
     _mail,
@@ -435,6 +501,8 @@ DETECTORS: tuple[Detector, ...] = (
     _broker,
     _webhook_targets,
     _platform,
+    _oidc_relying_parties,
+    _ops,
 )
 
 

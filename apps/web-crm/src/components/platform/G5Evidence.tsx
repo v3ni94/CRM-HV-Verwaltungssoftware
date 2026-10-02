@@ -31,10 +31,12 @@ type Tenant = { id: string; name: string; slug: string };
  *  superadmin, and only when every item is done. */
 export function G5Evidence({ tenants, initial }: { tenants: Tenant[]; initial: EvidenceList | null }) {
   const t = useTranslations("PlatformG5");
+  const tCommon = useTranslations("Common");
   const [tenantId, setTenantId] = useState(initial?.tenant_id ?? tenants[0]?.id ?? "");
   const [list, setList] = useState<EvidenceList | null>(initial);
   const [drafts, setDrafts] = useState<Record<string, { document_id: string; note: string }>>({});
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function load(id: string) {
     setTenantId(id);
@@ -45,6 +47,8 @@ export function G5Evidence({ tenants, initial }: { tenants: Tenant[]; initial: E
   }
 
   async function save(item: EvidenceItem, status: "open" | "done") {
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const draft = drafts[item.code] ?? { document_id: item.document_id ?? "", note: item.note ?? "" };
     const res = await bff<EvidenceItem>(`/api/bff/platform/tenants/${tenantId}/g5-evidence/${item.code}`, {
@@ -57,9 +61,11 @@ export function G5Evidence({ tenants, initial }: { tenants: Tenant[]; initial: E
     });
     if (!res.ok) {
       setError(res.message);
+      setBusy(false);
       return;
     }
     await load(tenantId);
+    setBusy(false);
   }
 
   return (
@@ -81,6 +87,7 @@ export function G5Evidence({ tenants, initial }: { tenants: Tenant[]; initial: E
             {list.gate_open ? t("gateOpen") : list.complete ? t("completeClosed") : t("incomplete", { count: list.missing.length })}
           </p>
           <ul className={ui.sectionGap}>
+            {list.items.length === 0 ? <li className="text-sm text-muted">{tCommon("emptyList")}</li> : null}
             {list.items.map((item) => {
               const draft = drafts[item.code] ?? { document_id: item.document_id ?? "", note: item.note ?? "" };
               return (
@@ -106,10 +113,10 @@ export function G5Evidence({ tenants, initial }: { tenants: Tenant[]; initial: E
                     />
                   </label>
                   <div className={ui.formActions}>
-                    <button type="button" className={ui.primary} onClick={() => void save(item, "done")}>
+                    <button type="button" className={ui.primary} disabled={busy} onClick={() => void save(item, "done")}>
                       {t("markDone")}
                     </button>
-                    <button type="button" className={ui.secondary} onClick={() => void save(item, "open")}>
+                    <button type="button" className={ui.secondary} disabled={busy} onClick={() => void save(item, "open")}>
                       {t("markOpen")}
                     </button>
                   </div>

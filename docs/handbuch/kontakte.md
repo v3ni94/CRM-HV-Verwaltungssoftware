@@ -242,3 +242,7 @@ Die Annahme der Portal-Nutzungsbedingungen wird mit Zeitpunkt, Fassung und einem
 ## Portalberechtigungen neu ableiten
 
 Im Abschnitt "Portalzugang" eines Kontakts mit Portalkonto leitet die Schaltfläche "Berechtigungen neu ableiten" die Portalfreigaben aus Verträgen, Eigentum und Gremienzugehörigkeit neu ab, etwa nach einem Eigentümer- oder Mieterwechsel. Manuell erteilte Freigaben bleiben erhalten. Anschließend wird die Zahl der aktiven abgeleiteten Freigaben angezeigt. Berechtigung: Kontakte bearbeiten.
+
+## Anruf einem Kontakt zuordnen (GAI-420, Welle 21)
+
+In der Anrufliste bietet jeder nicht eindeutig zugeordnete Anruf (Schreibrecht Kommunikation) die Auswahl der Kandidaten oder die Eingabe einer Kontakt-ID mit "Zuordnen".

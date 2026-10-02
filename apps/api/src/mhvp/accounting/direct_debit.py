@@ -37,6 +37,7 @@ from mhvp.accounting.direct_debit_models import (
 )
 from mhvp.accounting.models import Ledger, OpenItem, OpenItemKind
 from mhvp.core import crypto
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -1040,9 +1041,7 @@ async def create_pre_notifications(
     config = await bank_config(session, bank.id)
     if config is not None and config.pre_notification_days is not None:
         lead_days = config.pre_notification_days
-    check = pre_notification_check(
-        config, run.collection_date, today or datetime.now(UTC).date(), lead_days
-    )
+    check = pre_notification_check(config, run.collection_date, today or local_today(), lead_days)
     result: list[dict[str, Any]] = []
     by_payer: dict[uuid.UUID, list[DirectDebitOrder]] = {}
     for order in await orders_of(session, run):

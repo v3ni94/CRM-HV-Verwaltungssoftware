@@ -25,3 +25,5 @@ Manual release directly on the production server in `/opt/mhvp` (local images, `
 wrapper, verified backup, rollback hints): `infra/scripts/release.sh`, see `release.md`.
 Monitoring and alerts after the deployment: `monitoring.md`. Availability target 99.5 percent
 per month and monthly evaluation: `verfuegbarkeit.md`.
+
+Split-Worker (optionales Profil `split-workers`): Ablauf und Release-Hinweise in `docs/runbooks/skalierung.md`, Entscheidung in ADR 0029. CSP-Nonce: `docs/runbooks/csp-nonce.md`. Abhängigkeitsaudit: `docs/runbooks/abhaengigkeitsaudit.md`.

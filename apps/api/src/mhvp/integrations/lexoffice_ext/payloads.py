@@ -14,6 +14,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+from mhvp.core.money import json_number, round_to
+
 BERLIN = ZoneInfo("Europe/Berlin")
 COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 FORBIDDEN_KEY_RE = re.compile(
@@ -321,7 +323,7 @@ def money(value: Decimal | str | int) -> Decimal:
 
 
 def quantity(value: Decimal | str | int) -> Decimal:
-    return Decimal(str(value)).quantize(Decimal("0.0001"))
+    return round_to(value, Decimal("0.0001"))
 
 
 def build_invoice_draft(
@@ -405,9 +407,11 @@ def invoice_totals(tax_type: str, line_items: list[dict[str, Any]]) -> dict[str,
 
 
 def json_ready(value: Any) -> Any:
-    """Decimal as number with fixed scale for the JSON body (no float in the domain)."""
+    """Decimal as JSON number for the lexoffice body; lossless or ``ValueError`` (GAI-207).
+
+    The domain keeps Decimal; only this boundary converts, via ``core.money.json_number``."""
     if isinstance(value, Decimal):
-        return float(value) if value != value.to_integral() else int(value)
+        return json_number(value)
     if isinstance(value, dict):
         return {k: json_ready(v) for k, v in value.items()}
     if isinstance(value, list):

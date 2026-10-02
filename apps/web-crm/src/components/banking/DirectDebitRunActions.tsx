@@ -121,6 +121,7 @@ export function DirectDebitRunActions({
       {canDownload && !submitted ? (
         <span className="flex flex-wrap items-center gap-2">
           <input
+            aria-label={t("submitReferencePlaceholder")}
             type="text"
             className={ui.input}
             placeholder={t("submitReferencePlaceholder")}

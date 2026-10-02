@@ -4,6 +4,7 @@ import { AdminFeePanel, type PropertyOption } from "@/components/accounting/Admi
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { today } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function AdminFeesPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
-      <AdminFeePanel properties={properties} today={new Date().toISOString().slice(0, 10)} />
+      <AdminFeePanel properties={properties} today={today()} />
     </div>
   );
 }

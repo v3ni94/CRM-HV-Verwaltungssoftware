@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type WorkOrderRatingState = {
   mode: "off" | "staff" | "all";
@@ -16,6 +17,7 @@ export type WorkOrderRatingState = {
 /** GAF-35: Bewertung des Auftrags durch die Verwaltung (einmalig, nach Abschluss). Die
  *  Bewertungen selbst erscheinen nur bei Schalter staff oder all; nie für Dienstleister. */
 export function WorkOrderRatingPanel({ orderId, canEdit }: { orderId: string; canEdit: boolean }) {
+  const { guard } = useBusy();
   const t = useTranslations("WorkOrders");
   const [state, setState] = useState<WorkOrderRatingState | null>(null);
   const [stars, setStars] = useState(5);
@@ -70,7 +72,7 @@ export function WorkOrderRatingPanel({ orderId, canEdit }: { orderId: string; ca
       {!state.can_rate ? <p className={ui.help}>{t("ratingNotYet")}</p> : null}
       {state.can_rate && state.staff_rated ? <p className={ui.help}>{t("ratingDone")}</p> : null}
       {state.can_rate && !state.staff_rated && canEdit ? (
-        <form onSubmit={save} className="flex flex-col gap-2">
+        <form onSubmit={guard(save)} className="flex flex-col gap-2">
           <label className={ui.label}>
             {t("ratingStars")}
             <select className={ui.input} value={stars} onChange={(e) => setStars(Number(e.target.value))}>

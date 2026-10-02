@@ -23,6 +23,9 @@ from mhvp.platform import availability_probe as ap
 pytestmark = pytest.mark.integration
 
 LOOPBACK = "127.0.0.1"
+# GAI-618: /slow blocks on this event instead of a fixed sleep, so the client timeout fires
+# regardless of machine load; the fixture releases it before shutting the server down.
+SLOW_RELEASE = threading.Event()
 
 
 def _only_loopback(url: str) -> str:
@@ -53,7 +56,7 @@ def _app() -> FastAPI:
 
     @app.get("/slow")
     def slow() -> dict[str, str]:
-        time.sleep(1.5)
+        SLOW_RELEASE.wait(30)
         return {"status": "late"}
 
     return app
@@ -74,6 +77,7 @@ def base_url() -> Iterator[str]:
     try:
         yield f"http://{LOOPBACK}:{port}"
     finally:
+        SLOW_RELEASE.set()
         server.should_exit = True
         thread.join(timeout=10)
 

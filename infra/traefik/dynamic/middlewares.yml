@@ -15,7 +15,8 @@ http:
         average: 100
         burst: 200
         period: 1s
-    # Login paths (M9-05): stricter than api-ratelimit; attach to a router for /api/v1/auth.
+    # Login paths (M9-05, GAI-116): stricter than api-ratelimit; attached to the login routers
+    # of the CRM and portal hosts (web-crm-auth, web-portal-auth in compose.dev.yaml).
     auth-ratelimit:
       rateLimit:
         average: 30

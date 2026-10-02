@@ -279,7 +279,10 @@ def test_m17_02_03_05_06_results_access_diff_inspection(
 
     # Difference report: new version with 150,00 instead of 120,00.
     assert client.get(f"{S}/{st['id']}/diff", headers=h).status_code == 409
-    new = _ok(client.post(f"{S}/{st['id']}/new-version", headers=h), 201)
+    new = _ok(
+        client.post(f"{S}/{st['id']}/new-version", json={"reason": "Korrektur Test"}, headers=h),
+        201,
+    )
     (old_item,) = _ok(client.get(f"{S}/{new['id']}", headers=h))["cost_items"]
     _ok(
         client.put(

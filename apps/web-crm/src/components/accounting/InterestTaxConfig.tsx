@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import type { LedgerAccountOption } from "./JournalEntryForm";
+import { useBusy } from "@/lib/use-busy";
 
 const FIELDS = ["capital_gains_tax_account_id", "solidarity_tax_account_id", "church_tax_account_id"] as const;
 type Field = (typeof FIELDS)[number];
@@ -21,6 +22,7 @@ const EXCLUDED = new Set(["bank", "cash", "reserve", "revenue"]);
 /** Tax accounts per ledger for withholdings on credit interest (P01-01, AE05). Without an
  *  account the withholding cannot be entered; no tax rate is maintained here. */
 export function InterestTaxConfig({ ledgerId, accounts }: { ledgerId: string; accounts: LedgerAccountOption[] }) {
+  const { guard } = useBusy();
   const t = useTranslations("Bookkeeping");
   const [config, setConfig] = useState<Config>({ capital_gains_tax_account_id: null, solidarity_tax_account_id: null, church_tax_account_id: null });
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -41,7 +43,7 @@ export function InterestTaxConfig({ ledgerId, accounts }: { ledgerId: string; ac
   };
 
   return (
-    <form onSubmit={save} className={`${ui.card} flex flex-col gap-3`} aria-label={t("entry.interestTax.title")}>
+    <form onSubmit={guard(save)} className={`${ui.card} flex flex-col gap-3`} aria-label={t("entry.interestTax.title")}>
       <h3 className="text-sm font-semibold">{t("entry.interestTax.title")}</h3>
       <p className={ui.help}>{t("entry.interestTax.help")}</p>
       <div className="grid gap-3 sm:grid-cols-3">

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Option = { id: string; label: string };
 
@@ -13,6 +14,7 @@ type Option = { id: string; label: string };
  *  auf die angehakten Zeilen (Checkboxen "bulk-id" im Formular mit der gegebenen Id).
  *  Die Aktion läuft ganz oder gar nicht (POST /workspace/bulk). */
 export function DocumentBulkBar({ formId }: { formId: string }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Workspace");
   const router = useRouter();
   const [categories, setCategories] = useState<Option[]>([]);
@@ -67,7 +69,7 @@ export function DocumentBulkBar({ formId }: { formId: string }) {
           </option>
         ))}
       </select>
-      <button type="button" className={ui.button} disabled={!categoryId} onClick={() => void run({ action: "documents.set_category", category_id: categoryId })}>
+      <button type="button" className={ui.button} disabled={busy || (!categoryId)} onClick={guard(() => run({ action: "documents.set_category", category_id: categoryId }))}>
         {t("bulkSetCategory")}
       </button>
       <label htmlFor="bulk-property" className="text-muted">
@@ -81,7 +83,7 @@ export function DocumentBulkBar({ formId }: { formId: string }) {
           </option>
         ))}
       </select>
-      <button type="button" className={ui.button} disabled={!propertyId} onClick={() => void run({ action: "documents.link_property", property_id: propertyId })}>
+      <button type="button" className={ui.button} disabled={busy || (!propertyId)} onClick={guard(() => run({ action: "documents.link_property", property_id: propertyId }))}>
         {t("bulkLinkProperty")}
       </button>
       {message ? (

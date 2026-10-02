@@ -7,6 +7,7 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { today } from "@/lib/today";
 
 export type RentLawRule = {
   code: string;
@@ -182,7 +183,7 @@ export function CapAreas({ areas }: { areas: CapArea[] }) {
       source: f.source.trim(),
     });
   const end = (a: CapArea) => {
-    const until = window.prompt(t("endPrompt"), new Date().toISOString().slice(0, 10));
+    const until = window.prompt(t("endPrompt"), today());
     if (!until) return;
     const { id, ...rest } = a;
     void send(`/api/bff/platform/rent-law/cap-areas/${id}`, "PUT", { ...rest, valid_to: until });

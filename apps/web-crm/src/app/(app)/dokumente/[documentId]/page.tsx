@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { DocumentRedactions, type Redaction } from "@/components/documents/DocumentRedactions";
+import { DocumentTransferActions } from "@/components/aj17/DocumentTransferActions";
 import { RetentionStatusCard } from "@/components/documents/RetentionStatusCard";
 import { DocumentVisibilityEditor } from "@/components/documents/DocumentVisibilityEditor";
 import { PortalReadReceipts, type PortalReadReceiptsOut } from "@/components/documents/PortalReadReceipts";
@@ -81,6 +82,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("visibility")}</p>
           <DocumentVisibilityEditor documentId={documentId} visibility={data.visibility} canEdit={canEditVisibility} />
+        </div>
+        <div className={ui.card}>
+          <DocumentTransferActions documentId={documentId} canMirror={canEditVisibility} />
         </div>
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("links")}</p>

@@ -31,6 +31,7 @@ export function BankLimitsCard() {
   const [f, setF] = useState({ single: "", daily: "", frst: "", rcur: "", pre: "" });
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!accountId) return;
@@ -56,7 +57,8 @@ export function BankLimitsCard() {
   const money = (v: string) => (v.trim() === "" ? null : v.trim().replace(",", "."));
   const int = (v: string) => (v.trim() === "" ? null : Number.parseInt(v.trim(), 10));
   const save = async () => {
-    if (!accountId) return;
+    if (!accountId || busy) return;
+    setBusy(true);
     setError(null);
     setMessage(null);
     const res = await bff<Limits>(`/api/bff/accounting/payment-runs/bank-limits/${accountId}`, {
@@ -69,6 +71,7 @@ export function BankLimitsCard() {
         pre_notification_days: int(f.pre),
       }),
     });
+    setBusy(false);
     if (!res.ok) return setError(res.message);
     setLimits(res.data);
     setMessage(t("saved"));
@@ -96,7 +99,7 @@ export function BankLimitsCard() {
           <p className={ui.help}>{t("sourceStatus", { status: limits.source_status })}</p>
           <p className={ui.help} data-testid="vop-note">{limits.verification_of_payee}</p>
           <p className={ui.help}>{limits.lead_times.note}</p>
-          <button type="button" className={ui.button} onClick={save} disabled={!valid}>
+          <button type="button" className={ui.button} onClick={save} disabled={!valid || busy}>
             {t("save")}
           </button>
         </div>

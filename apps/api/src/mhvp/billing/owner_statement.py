@@ -25,7 +25,7 @@ import hashlib
 import json
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Any
 
@@ -127,7 +127,7 @@ class OwnerStatement(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 def _d(value: Any) -> Decimal:
-    return Decimal(str(value)).quantize(Decimal("0.01"))
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def _finding(code: str, level: str, message: str) -> dict[str, str]:

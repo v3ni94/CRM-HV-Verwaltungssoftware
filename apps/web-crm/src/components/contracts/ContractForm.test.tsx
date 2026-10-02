@@ -141,7 +141,7 @@ describe("ContractCreateForm", () => {
     expect(JSON.parse(String(posts[0]![1]!.body))).toEqual({
       kind: "tenancy",
       unit_id: UNIT,
-      party_id: PARTY,
+      contact_id: PARTY,
       start_date: "2026-10-01",
       end_date: null,
       legal_entity_id: null,
@@ -232,13 +232,13 @@ describe("ContractCreateForm", () => {
     expect(JSON.parse(String(init!.body))).toMatchObject({
       kind: "ownership",
       unit_id: UNIT,
-      party_id: PARTY,
+      contact_id: PARTY,
       start_date: "2026-03-01",
       title_transfer_date: "2026-02-15",
       benefit_burden_date: "2026-03-01",
       acquisition_kind: "purchase",
       sev_enabled: true,
-      sev_fee_debtor_party_id: null,
+      sev_fee_debtor_contact_id: null,
       special_succession_liability: false,
     });
   });

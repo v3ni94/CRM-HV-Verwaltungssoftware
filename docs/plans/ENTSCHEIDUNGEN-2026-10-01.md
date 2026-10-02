@@ -1213,3 +1213,214 @@ Gate: keins (Datenschutzfreigabe); Rundung Bezug G1, G3, G4.
 | IBAN A Status quo | keiner | hoch |
 | IBAN B Platzhalter, lokaler Abgleich | mittel | gering |
 | IBAN C Ohne IBAN | gering | mittel (schlechtere Vorschläge) |
+
+## Lückenanalyse GAI (Welle 21): Entscheidungsvorlagen AJ30-01 bis AJ30-28
+
+Hinweis: Die folgenden Vorlagen entscheiden nichts. Grundlage sind alle Befunde der Lückenanalyse GAI (GAI-101 bis GAI-623) mit Entscheidungsbedarf "ja". Wo ein Paket der Welle 21 bereits eine Frage angelegt hat (AJ01-01 bis AJ15-05), verweist die Vorlage darauf, statt sie zu doppeln. Alle Schalter stehen auf dem konservativen Standard (aus, nichts bucht, nichts versendet, nichts löscht), G1 bis G5 bleiben geschlossen. Rechtliche und steuerliche Punkte sind Einschätzungen und vor der Entscheidung mit Rechtsanwalt oder Steuerberater abzustimmen. Normen, Fristen und Werte werden hier nicht festgelegt. Die Fragen stehen zusätzlich in docs/OPEN_QUESTIONS.md (AJ30-01 bis AJ30-28).
+
+Priorität: zuerst Geld und Fristen (AJ30-06, AJ30-08, AJ30-11, AJ30-12, AJ30-13, AJ30-27), dann Datenschutz gebündelt (AJ30-19, AJ30-21 bis AJ30-23, AJ30-26), dann Sicherheit und Betrieb (AJ30-14 bis AJ30-16), zuletzt Doku und Pflege.
+
+### Vermerk zu AI17-13a (Rundungsteil von AI17-13) (Eigentümer Timo Müller, Geschäftsführung)
+Stand: Die Varianten zur Rundung in AI17-13 (A Status quo, B ausdrückliches Verfahren je Fundstelle) sind technisch in Richtung Variante B vorbereitet, nicht entschieden. Grundlage ist die Arbeitsvorgabe der Welle 21 (Cent-Rundung kaufmännisch ROUND_HALF_UP, Verteilungen summentreu).
+Umgesetzt: zentrale Funktionen in `mhvp.core.money` (round_cents, distribute_cents, AJ02); alle quantize in billing und hoa mit ROUND_HALF_UP, Rücklagenaufteilung und Eigentümerabrechnung von HALF_EVEN auf HALF_UP, Verteilung negativer Summen summentreu (AJ01); Kappungsgrenze, check_amounts und Importe (AJ02). Register: docs/rules/RUNDUNG.md, Abschnitte Welle 21.
+Nicht umgesetzt: Außerhalb von billing, hoa, letting und contracts runden weiter Aufrufe ohne ausdrückliches Verfahren, unter anderem ai/imports.py:947 (Netto aus Brutto, nur Vorschlag) und platform/licensing.py:696. Eine grep-Zählung einzeiliger quantize-Aufrufe ohne Verfahrensangabe ergibt 77 Treffer (teils mehrzeilig mit Verfahren auf der Folgezeile, nicht einzeln geprüft). Der Abschnitt "Befund: Rundung ohne ausdrückliches Verfahren" in RUNDUNG.md beschreibt noch den Stand vor Welle 21.
+Wirkung: Ergebnisse ändern sich in Grenzfällen um einen Cent (x,xx5). Vor Wirkung auf produktive Abrechnungen ist die Freigabe der Geschäftsführung nötig; G1, G3 und G4 bleiben geschlossen.
+Empfehlung: ROUND_HALF_UP als Produktstandard (Produktschutz, keine Rechtsregel) bestätigen, Restfundstellen in einer Folgewelle mit unabhängigen Sollwerten angleichen, RUNDUNG.md Befundabschnitt fortschreiben. Der IBAN-Teil von AI17-13 (AI17-13b) bleibt unverändert offen.
+Gate: keins (Bezug G1, G3, G4). Technischer Stand: vorbereitet (Welle 21, AJ01, AJ02).
+
+### AJ30-01 Fachliches Heute in Europe/Berlin (GAI-102) (Eigentümer Timo Müller)
+Frage: Gilt als fachlicher Kalendertag für Stichtage, Gültigkeit, Protokolldatum und Sperrprüfungen einheitlich Europe/Berlin, oder braucht es eine Zeitzone je Mandant?
+Varianten: A Europe/Berlin fest für alle Mandanten; B Zeitzone je Mandant (Schemaänderung); C UTC-Tag beibehalten.
+Empfehlung: A. Alle Mandanten sitzen in Deutschland, eine Einstellung je Mandant wäre Aufwand ohne Nutzen. Fristberechnungen selbst bleiben Gegenstand der jeweiligen Rechtsprüfung.
+Risiko: C erzeugt zwischen 00:00 und 02:00 Uhr Ortszeit das Vortagsdatum (Fristen, Belegdatum).
+Gate: keins (Bezug Fristen G1, G4). Technischer Stand: vorbereitet (Welle 21, AJ09), Annahme AJ09-01 in docs/ASSUMPTIONS.md.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Europe/Berlin fest | keiner | gering |
+| B Je Mandant | mittel | gering |
+| C UTC | keiner | mittel |
+
+### AJ30-02 Stackabweichungen (GAI-108) (Eigentümer Timo Müller)
+Frage: Werden reportlab statt WeasyPrint oder Gotenberg, eigene SEPA-XML statt Bibliothek sowie fehlendes TanStack und shadcn per ADR 0026 freigegeben oder angeglichen?
+Varianten: A ADR 0026 freigeben, SEPA-Erzeugung vor G2 gesondert gegen Schemata prüfen; B Angleichung an die Spezifikation (Umbau); C ohne Dokumentation weiter.
+Empfehlung: A. Ein Umbau bindet viel Entwicklungszeit ohne fachlichen Mehrwert; das Risiko liegt allein bei der SEPA-Datei und ist über Schemaprüfung vor G2 beherrschbar.
+Risiko: Zahlungsdateien fehlerhaft bei Variante C. Gate: keins, Bezug G2. Technischer Stand: vorbereitet (Welle 21, AJ14), Frage GAI-108-01.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A ADR freigeben | gering | gering |
+| B Umbau | hoch | mittel |
+| C Nichts | keiner | mittel |
+
+### AJ30-03 Glossar und Codebegriffe (GAI-117) (Eigentümer Timo Müller)
+Frage: Genügt die Abbildungstabelle docs/rules/GLOSSAR-ZUORDNUNG.md, oder wird im Code umbenannt?
+Varianten: A Tabelle beibehalten; B Umbenennung im Code; C nichts.
+Empfehlung: A. Umbenennungen berühren Schema und API und bringen Migrationsrisiko ohne Fachnutzen.
+Risiko: gering. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ15), Frage AJ15-02.
+
+### AJ30-04 Dossiers der Bestandsprojekte (GAI-118) (Eigentümer Timo Müller)
+Frage: Wann führt der Betreiber die Erhebungen nach Anhang B für Flow, Smart Einzug und Übergabeprotokoll durch, um die Platzhalter zu schließen?
+Varianten: A Termin je Projekt festlegen, Dossiers danach füllen; B Platzhalter belassen, Integrationen bleiben auf Vorbereitung; C Integrationen ohne Dossier anbinden.
+Empfehlung: A, gebündelt mit den Lieferungen zu V1. C ist nicht vertretbar, weil Schnittstellen ohne belegte Formate Datenfehler erzeugen.
+Risiko: C mittel. Gate: keins. Technischer Stand: teilweise vorbereitet (Welle 21, AJ15), Bezug AA16-03.
+
+### AJ30-05 Führende Statusquelle V1 bis V23 (GAI-119) (Eigentümer Timo Müller)
+Frage: Master-Prompt als Version 2.1 aktualisieren oder OPEN_QUESTIONS als führende Statusquelle festlegen?
+Varianten: A OPEN_QUESTIONS führend, Hinweis in der nächsten Prompt-Version; B sofort Version 2.1; C zwei Quellen belassen.
+Empfehlung: A, weil OPEN_QUESTIONS laufend gepflegt wird und eine Prompt-Version nur gebündelt sinnvoll ist.
+Risiko: C führt zu widersprüchlichen Arbeitsständen. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ15), Frage AJ15-03.
+
+### AJ30-06 Negative Heizkosten verteilen (GAI-202) (Eigentümer Geschäftsführung, Steuerberater)
+Frage: Werden Gutschriften und Erstattungen des Versorgers nach denselben Schlüsseln verteilt oder gesondert ausgewiesen?
+Varianten: A `distribute` (vorzeichensymmetrisch) nach fachlicher Bestätigung; B `legacy_warn` (Standard: Nullanteile mit Warnhinweis); C gesonderter Ausweis außerhalb der Verteilung.
+Empfehlung: A, sofern Rechtsanwalt oder Steuerberater die Verteilung nach den Heizkostenschlüsseln bestätigt; bis dahin B. Kaufmännisch muss die Summe der Einheiten den Gesamtbetrag treffen, sonst bleibt ein nicht erklärter Rest in der Abrechnung.
+Risiko: Geld und Recht (Abrechnungsergebnis je Mieter). Gate: G3. Technischer Stand: vorbereitet (Welle 21, AJ01), Frage AJ01-01; dauerhafte Speicherung je Mandant braucht Schemaänderung.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Verteilen | gering (Schema) | gering nach Bestätigung |
+| B Warnung | keiner | mittel |
+| C Gesonderter Ausweis | mittel | gering |
+
+### AJ30-07 Kappungsgrenze einheitlich runden (GAI-203) (Eigentümer Timo Müller)
+Frage: Bestätigung, dass beide Prüfwege der Kappungsgrenze kaufmännisch (ROUND_HALF_UP) runden.
+Varianten: A bestätigen; B abweichendes Verfahren benennen.
+Empfehlung: A. Die Prüfung ist Produktschutz; die rechtliche Zulässigkeit einer Mieterhöhung bleibt Sache der Rechtsprüfung.
+Risiko: gering (ein Cent). Gate: keins, Bezug Mieterhöhung. Technischer Stand: vorbereitet (Welle 21, AJ02), siehe Vermerk AI17-13a.
+
+### AJ30-08 Toleranz Brutto gegen Netto und Steuer (GAI-204) (Eigentümer Timo Müller, Steuerberater)
+Frage: Bleibt 1 Cent Toleranz oder gilt 0 Cent?
+Varianten: A 1 Cent für Importe aus dem Altsystem, 0 Cent für neu erfasste Belege; B 1 Cent überall; C 0 Cent überall.
+Empfehlung: A nach Rücksprache mit dem Steuerberater. Altdaten mit abweichender Rundung würden bei C abgewiesen und Nacharbeit erzeugen; neue Belege sollen exakt sein.
+Risiko: Geld und Steuer (Vorsteuerausweis). Gate: G1. Technischer Stand: vorbereitet (Welle 21, AJ02), Frage AJ02-01; Variante A braucht einen Mandantenschalter.
+
+### AJ30-09 Spaltenformat bei Importen (GAI-205) (Eigentümer Timo Müller)
+Frage: Soll je Importvorlage ein Zahlenformat (deutsch oder englisch) wählbar sein? Mehrdeutige Werte wie 12.500 werden derzeit abgelehnt.
+Varianten: A Format je Vorlage wählbar, Standard deutsch; B Ablehnung beibehalten; C automatische Erkennung je Datei.
+Empfehlung: A. Die Ablehnung schützt vor Faktor-1000-Fehlern, ein Format je Vorlage vermeidet aber Handkorrekturen bei Zählerständen und MEA.
+Risiko: C mittel (Fehlerkennung). Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ02), Frage AJ02-02.
+
+### AJ30-10 Formatvorgabe Maklerportal (GAI-208) (Eigentümer Timo Müller)
+Frage: Welche Formatvorgabe gilt bei FLOW für Preis, Fläche und Zimmer?
+Varianten: A Vorgabe beim Anbieter einholen und umsetzen; B verlustfreie JSON-Zahl beibehalten.
+Empfehlung: A, bis dahin B. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ02), Frage AJ02-03.
+
+### AJ30-11 Datenbankschutz für Geldtabellen (GAI-209, GAI-210, GAI-211) (Eigentümer Timo Müller, Steuerberater)
+Frage: Welche Felder offener Posten bleiben änderbar, wirkt die Objektsperre zusätzlich als Datenbanktrigger, und gilt der Statusschutz für Zahlungsaufträge, Kautionsbewegungen und Sollstellungsposten als Produktstandard?
+Varianten: A Stand Migration 0444 bestätigen und Objektsperre als Trigger ergänzen; B Stand 0444 bestätigen, Objektsperre nur in der Anwendung; C Schutz wieder lockern.
+Empfehlung: A. Ein Schutz in der Datenbank verhindert, dass künftige Importe oder Direktzugriffe gesperrte Perioden ändern; die Korrektur mit offenem Buchungsdatum ist vorher mit dem Steuerberater festzulegen.
+Risiko: Nachweis und Geld bei C hoch. Gate: G1 und G2. Technischer Stand: vorbereitet (Welle 21, AJ03), Fragen AJ03-01 bis AJ03-03.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Stand 0444 plus Trigger Objektsperre | mittel | gering |
+| B Stand 0444 | keiner | mittel |
+| C Lockern | gering | hoch |
+
+### AJ30-12 Rundung Eigentümerabrechnung und WEG (GAI-213, GAI-614) (Eigentümer Geschäftsführung)
+Frage: Wird ROUND_HALF_UP je Einzelwert in Eigentümerabrechnung, Wirtschaftsplan und Planänderung als Produktstandard bestätigt?
+Varianten: A bestätigen; B HALF_EVEN beibehalten (Stand vor Welle 21).
+Empfehlung: A, einheitlich mit dem übrigen System (siehe Vermerk AI17-13a). Gate: keins, Bezug G3, G4. Technischer Stand: vorbereitet (Welle 21, AJ01).
+
+### AJ30-13 Restcent der Hausgeld-Monatsrate (GAI-214) (Eigentümer Geschäftsführung, Rechtsanwalt)
+Frage: Wird die Differenz zwischen Jahresbetrag und zwölf Monatsraten im ersten oder letzten Monat ausgeglichen oder nur ausgewiesen?
+Varianten: A `last_month`; B `first_month`; C `report_only` (Standard).
+Empfehlung: A als Einschätzung, weil die Summe der Raten dann dem beschlossenen Jahresbetrag entspricht und die laufenden Raten gleich bleiben; ob dies mit dem Beschluss über den Wirtschaftsplan vereinbar ist, prüft der Rechtsanwalt.
+Risiko: C lässt Cent-Differenzen in Sollstellungen stehen. Gate: G4. Technischer Stand: vorbereitet (Welle 21, AJ01), Frage AJ01-02; Speicherung je Mandant braucht Schemaänderung.
+
+### AJ30-14 Rechtematrix schreibender Endpunkte mit Leserecht (GAI-301) (Eigentümer Timo Müller)
+Frage: Erhalten die 17 zustandsändernden Endpunkte (Messdatenübertragung, Vertretungen der Mailfreigabe, Ticket- und Antwortvorlagen, SLA-Quittierung, Playbook, Wissensfeedback, Kalender-Token) eigene Schreibrechte mit Rollenmigration?
+Varianten: A eigene update-Rechte, Rollenmigration so, dass bisherige Bearbeiterrollen sie erhalten; B nur Vertretungen der Mailfreigabe und Messdatenübertragung umstellen; C Status quo.
+Empfehlung: A. Die Vertretung der Mailfreigabe berührt das Vier-Augen-Prinzip beim Versand, die Messdatenübertragung Abrechnungsgrundlagen; der Aufwand ist überschaubar.
+Risiko: C hoch (Umgehung von Freigaben mit Leserecht). Gate: keins. Technischer Stand: nicht vorbereitet.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Alle 17 | mittel | gering |
+| B Teilweise | gering | mittel |
+| C Status quo | keiner | hoch |
+
+### AJ30-15 Rate-Limit über BFF und bei Redis-Ausfall (GAI-311, GAI-312) (Eigentümer Timo Müller, Sicherheit)
+Frage: Vertraut die API X-Forwarded-For nur aus dem Stacknetz, und gilt für Token- und Code-Routen bei Redis-Ausfall ein Notzähler statt Fail open?
+Varianten: A beide Schalter nach Test auf Staging aktivieren; B nur Weitergabe der Adresse; C Status quo.
+Empfehlung: A. Ohne Adresse je Client kann ein einzelner Angreifer alle Anmeldungen blockieren; der Notzähler betrifft nur Token-Routen und gefährdet die Verfügbarkeit kaum.
+Risiko: C hoch (Sperrung aller Anmeldungen, Durchprobieren von Token). Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ07), Fragen AJ07-01, AJ07-02; Limit je Route offen.
+
+### AJ30-16 Zeitlimits und Worker-Aufteilung Celery (GAI-316, GAI-319) (Eigentümer Timo Müller, Betrieb)
+Frage: Werden die konservativ gesetzten Zeitlimits je Taskklasse bestätigt, und wird ein zweiter Worker für ai, ocr und bank betrieben?
+Varianten: A Limits nach Messung auf Staging bestätigen, zweiten Worker und Volume für die Beat-Zeitplandatei einrichten; B nur Limits; C Status quo.
+Empfehlung: A. Lange KI- oder Bankläufe sollen Versand und Fristenaufgaben nicht blockieren; der Mehrbedarf an Speicher ist vorher auf dem Server zu prüfen.
+Risiko: C mittel (Verzögerung von Fristenaufgaben, Doppelläufe). Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ11); compose.yaml unverändert.
+
+### AJ30-17 Zahllauf-Vorschau speichern und Auszahlung ohne Beleg (GAI-401, GAI-402) (Eigentümer Geschäftsführung)
+Frage: Werden gespeicherte Zahllauf-Vorschauen vor G2 gebraucht, und soll die Auszahlung ohne Rechnung eine Oberfläche erhalten?
+Varianten: A Vorschau speichern als Maske jetzt, Auszahlung ohne Beleg erst mit G2 und Vier-Augen-Freigabe; B beides erst mit G2; C beides jetzt.
+Empfehlung: B. Vor G2 entsteht kein Zahlungsfluss, der Nutzen der gespeicherten Vorschau ist gering; ein Geldabfluss ohne Beleg braucht ohnehin eine Freigaberegel der Geschäftsführung.
+Risiko: C hoch (Geldabfluss ohne Beleg). Gate: G2. Technischer Stand: API vorhanden, keine Maske.
+
+### AJ30-18 Masken für Versand und Freigaben hinter Gates (GAI-408, GAI-409, GAI-410) (Eigentümer Geschäftsführung)
+Frage: Werden Mahnversand, PDF und Zustellung der Abrechnungen sowie die Freigabe der Kautionsabrechnung schon jetzt als gesperrte Masken gebaut?
+Varianten: A Masken bauen, sichtbar gesperrt mit Hinweis auf das Gate; B erst mit Gateöffnung; C ohne Sperre.
+Empfehlung: A. Der Abnahmeweg vor Gateöffnung wird testbar, ohne Rechtswirkung auszulösen; die Sperre bleibt serverseitig.
+Risiko: C nicht zulässig (Rechtswirkung, Fristen, Auszahlung). Gate: G1 (Mahnung), G3 (Abrechnung, Kaution). Technischer Stand: API gesperrt vorhanden, keine Maske.
+
+### AJ30-19 Einwilligungsregeln des Mandanten (GAI-414) (Eigentümer Timo Müller, Datenschutz)
+Frage: Erhält consent-policy eine Einstellungsmaske, und welche Rechtsgrundlagen sind je Zweck hinterlegt?
+Varianten: A Maske bauen, Inhalte erst nach Datenschutzberatung pflegen; B nur API; C Maske mit Vorbelegung.
+Empfehlung: A. Eine Vorbelegung ohne Beratung wäre eine erfundene Rechtsgrundlage.
+Risiko: Datenschutz. Gate: keins. Technischer Stand: nicht umgesetzt (AJ13).
+
+### AJ30-20 Interne Kennungen in Oberflächentexten (GAI-425) (Eigentümer Timo Müller)
+Frage: Bleiben Kennungen offener Entscheidungen in Klammern am Textende sichtbar?
+Varianten: A Kennung in Klammern nur bei Betreiberentscheidungen (Stand AJ18); B ganz entfernen; C Stand vor Welle 21.
+Empfehlung: A, weil der Betreiber den Bezug zur offenen Frage braucht, Mitarbeitende aber keine Pfade.
+Risiko: gering. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ18).
+
+### AJ30-21 Löschfristen und Löschpfade je Datenart (GAI-501, GAI-503, GAI-504, GAI-505, GAI-520, GAI-522) (Eigentümer Timo Müller mit Rechtsanwalt und Steuerberater)
+Frage: Welche Fristen, welcher Fristbeginn und welcher Löschweg gelten je Datenart (Kommunikation, Tickets, Portalzugänge, Ereignisprotokoll, Plattformbenutzer, Bankrohdaten, Bankverbindungen)?
+Varianten: A V17-Matrix je Rechtsträger ausfüllen lassen, danach auto_propose je Datenart freigeben; B nur Kontakte freigeben, übrige Datenarten später; C ohne Fristen weiter.
+Empfehlung: A in einem gebündelten Termin. Bis dahin löscht das System nichts automatisch; der Nachweis nach der Rechenschaftspflicht fehlt aber, solange keine Fristen festgelegt sind.
+Risiko: Datenschutz hoch bei C. Gate: G5, Bezug G1, G3, G4. Technischer Stand: vorbereitet (Welle 21, AJ12, AJ15), Fragen AJ12-01, AJ15-04, Bezug V17, M20-08-Q7.
+
+### AJ30-22 Umfang der Auskunft (GAI-506) (Eigentümer Timo Müller, Datenschutz)
+Frage: Umfasst die Auskunft Tickets, Kommunikation, Dokumente, Portalkonto und Vertrags- und Zahlungsdaten, und wird ein Eingangsdatensatz für Anträge angelegt?
+Varianten: A alle Quellen nach Beratung aktivieren, Eingangsdatensatz in der nächsten Migrationswelle; B Status quo.
+Empfehlung: A. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ13), Fragen AJ13-01, AJ13-03, Bezug AC07-01.
+
+### AJ30-23 Verzeichnis der Verarbeitungstätigkeiten vor G1 (GAI-510) (Eigentümer Timo Müller)
+Frage: Wird ein geklärter Verzeichniseintrag für alle aktiv genutzten Dienste Bedingung der G1-Checkliste?
+Varianten: A ja; B nur informativ.
+Empfehlung: A, weil die Auswertung vorhanden ist und den Datenschutznachweis vor produktiver Buchhaltung sichert. Gate: G1. Technischer Stand: vorbereitet (Welle 21, AJ13), Frage AJ13-02, Bezug AE32-01.
+
+### AJ30-24 Nummernfolge der B-Regeln (GAI-519) (Eigentümer Timo Müller)
+Frage: B10 bis B14 frei lassen oder B15 umbenennen?
+Empfehlung: frei lassen, keine Umbenennung im Code. Risiko: keins. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ15), Frage AJ15-01.
+
+### AJ30-25 finAPI Prüfplan (GAI-521) (Eigentümer Timo Müller)
+Frage: Wird der Prüfplan mit Testzugang (Vertrag, Zustimmungsablauf, Update, Trennen, Mandator) als Abnahmeschritt vor G1 übernommen, und gilt die Aufteilung M11-42a und M11-42b?
+Empfehlung: ja, beides; ohne Testzugang bleiben Ablaufdatum und Trennen unbestätigt. Gate: G1 (Bankabruf). Technischer Stand: vorbereitet (Welle 21, AJ15), Frage AJ15-05, Bezug M11-40 bis M11-44.
+
+### AJ30-26 Wiederherstellung des zweiten Faktors (GAI-603) (Eigentümer Timo Müller, Sicherheit)
+Frage: Wiederherstellungscodes, Rücksetzung durch zwei Administratoren oder beides?
+Varianten: A Rücksetzung durch zwei Personen (Maske vorhanden) plus einmalig angezeigte Wiederherstellungscodes; B nur Rücksetzung; C nur Codes.
+Empfehlung: A. Codes vermeiden Betriebsaufwand, die Rücksetzung mit zweiter Person deckt den Verlust der Codes ab.
+Risiko: Sicherheit mittel. Gate: keins. Technischer Stand: vorbereitet (Welle 21, AJ08), Schalter Admin-Rücksetzung Standard aus, Frage AI09-01.
+
+### AJ30-27 Tageszählung Verzugszins (GAI-606) (Eigentümer Geschäftsführung, Rechtsanwalt)
+Frage: Welche Tageszählung gilt für Verzugszinsen als Nebenforderung?
+Varianten: Tageszählungen act_365_fixed und act_act sind als Einstellung vorhanden; Standard unverändert.
+Empfehlung: Festlegung durch den Rechtsanwalt; bis dahin Standard beibehalten. Keine Einschätzung zur Rechtslage in dieser Vorlage.
+Risiko: Geld und Recht (Höhe der Nebenforderung). Gate: G1. Technischer Stand: vorbereitet (Welle 21, AJ04), Frage AI03-01.
+
+### AJ30-28 Stichtagsabfrage für Personen (GAI-607) (Eigentümer Timo Müller)
+Frage: Erhält party Gültigkeitsspalten valid_from und valid_to für as_of-Abfragen?
+Varianten: A ja, mit Migration, sobald ein konkreter Fachfall (etwa Rechtsnachfolge) es verlangt; B nein, Historie über Beziehungen mit Gültigkeit abbilden.
+Empfehlung: B bis ein Fachfall belegt ist; Regel 2 erlaubt keine Felder auf Vorrat.
+Risiko: gering. Gate: keins. Technischer Stand: nicht vorbereitet.
+
+### AJ21-01 Rechtematrix für schreibende Routen mit Leserecht (GAI-301)
+Frage: Reichen die bestehenden Schreibrechte (`communication:update`, `sla:update`, `ai:create`) oder sollen eigene Rechte und eine Rollenmigration folgen? Bleibt das Kalender-Abo als persönlicher Token mit Leserecht?
+Varianten: A bestehende Rechte (umgesetzt, keine neuen Rollen); B eigene Rechte je Aktion mit Rollenmigration.
+Empfehlung: A, B nur bei konkretem Bedarf einer Rolle, die quittieren, aber nicht verwalten soll.
+Risiko: gering. Gate: keins. Technischer Stand: A umgesetzt, Test tests/unit/test_aj21_write_with_read_permission.py.

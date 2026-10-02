@@ -14,7 +14,7 @@ and deposits are named apart (A06). The PDF uses the letter blocks of
 
 import html
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from mhvp.billing.letters import fmt_date, fmt_eur
@@ -35,7 +35,7 @@ NO_SOURCE_35A = (
 
 
 def _d(value: Any) -> Decimal:
-    return Decimal(str(value)).quantize(Decimal("0.01"))
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def settlement(results: dict[str, Any]) -> dict[str, Any]:

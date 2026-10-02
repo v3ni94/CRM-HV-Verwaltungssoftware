@@ -27,6 +27,7 @@ TOTP_DISABLED = "auth.totp_disabled"
 PASSKEY_REGISTERED = "auth.passkey_registered"
 PASSKEY_REVOKED = "auth.passkey_revoked"
 SESSION_REVOKED = "auth.session_revoked"
+TRUSTED_DEVICE_REVOKED = "auth.trusted_device_revoked"
 OIDC_TOKEN_ISSUED = "auth.oidc_token_issued"
 MFA_RESET = "auth.mfa_reset"
 
@@ -40,6 +41,7 @@ SECURITY_EVENT_TYPES = (
     PASSKEY_REGISTERED,
     PASSKEY_REVOKED,
     SESSION_REVOKED,
+    TRUSTED_DEVICE_REVOKED,
     OIDC_TOKEN_ISSUED,
     MFA_RESET,
 )

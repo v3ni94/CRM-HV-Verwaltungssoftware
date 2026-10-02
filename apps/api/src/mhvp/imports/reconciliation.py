@@ -22,7 +22,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -43,7 +43,9 @@ from mhvp.accounting.models import (
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.banking.models import BankStatement, BankTransaction
 from mhvp.core import crypto
+from mhvp.core.clock import local_today
 from mhvp.core.escaping import csv_safe_cell
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports.fields import parse_date, parse_decimal
 from mhvp.imports.models import ImportMapping, ImportSourceFile, ReportType, StagingRow
@@ -252,7 +254,7 @@ def _cell(raw: dict[str, Any], columns: dict[str, str], name: str) -> Any:
 
 
 def _money(value: Any) -> Decimal:
-    return parse_decimal(value).quantize(CENT)
+    return round_cents(parse_decimal(value))
 
 
 @dataclass
@@ -704,7 +706,7 @@ async def build_report(
         )
         rows.extend((source.report_type, n, raw) for n, raw in staged.all())
     agg = aggregate_rows(rows, columns, as_of)
-    effective_as_of = as_of or agg.max_date or datetime.now(tz=UTC).date()
+    effective_as_of = as_of or agg.max_date or local_today()
     lines: list[dict[str, Any]] = []
     properties: list[dict[str, Any]] = []
     for prop in agg.properties:
@@ -831,7 +833,7 @@ def format_eur(value: str | None) -> str:
     """``1234.5`` -> ``1.234,50`` (UI format, rule 10); empty for missing values."""
     if value is None:
         return ""
-    amount = Decimal(value).quantize(CENT)
+    amount = round_cents(value)
     sign = "-" if amount < 0 else ""
     whole, cents = f"{abs(amount):.2f}".split(".")
     groups: list[str] = []

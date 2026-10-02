@@ -234,3 +234,7 @@ Ein erneuter Import aus der Objektakte stellt ein Dokument, das im Papierkorb li
 * Unter Einstellungen, Objektakte zeigt die Karte "Importläufe der objektakte-Übernahme" den Verlauf mit Datum, Status, Zahl der angelegten, geänderten und doppelten Datensätze sowie der Dokumente, die Text aus dem OCR-Cache tragen. Die Liste ist seitenweise (10 je Seite) und braucht das Leserecht Dokumente.
 * "OCR-Cache leeren" (Recht Objektakte bearbeiten) entfernt nach einer Bestätigung den aus dem Cache übernommenen Text und setzt den Textstatus auf "ausstehend". Dokumente und Dateien bleiben unverändert; ein erneuter Cache-Upload füllt den Text wieder. Der Vorgang wird protokolliert.
 * "Übernahme starten" (Recht Objektakte freigeben) startet die Übernahme der Vorschaubilder im Hintergrund; ein fehlgeschlagener Lauf wird fortgesetzt. Optional werden fehlende Bilder aus dem Original erzeugt (nur Bilddateien). Fortschritt und Zähler stehen darunter und lassen sich mit "Aktualisieren" nachladen.
+
+## Dokumente verknüpfen, Download-Link, Spiegelung (GAI-417, Welle 21)
+
+Auf der Dokumentenliste verknüpft der Abschnitt "Dokumente mit einem Objekt verknüpfen" (Schreibrecht Dokumente) mehrere Dokumente mit Objekt, Einheit, Vertrag oder Ticket. Das Ergebnis nennt je Dokument Erfolg oder Grund des Fehlschlags. Am Dokument erzeugt "Download-Link erzeugen" einen kurz gültigen signierten Link, "Spiegelung erneut anstoßen" wiederholt die Ablage in den angebundenen Systemen.

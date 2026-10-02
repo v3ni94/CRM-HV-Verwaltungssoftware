@@ -64,6 +64,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core import crypto
+from mhvp.core.clock import local_today
 from mhvp.core.sqldump import parse_dump
 
 log = logging.getLogger(__name__)
@@ -355,7 +356,7 @@ async def apply_secrets(
     from mhvp.contacts.models import BankAccountApproval, Contact, ContactBankAccount
     from mhvp.documents.models import DmsConnection, StorageKind
 
-    today = today or datetime.now(UTC).date()
+    today = today or local_today()
     contacts = {
         row.source_id: row.id
         for row in (

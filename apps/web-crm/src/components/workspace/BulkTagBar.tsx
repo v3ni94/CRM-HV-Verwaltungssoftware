@@ -6,9 +6,11 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 /** Bulk tag action on the checked rows (inputs named "bulk-id" inside the given form). */
 export function BulkTagBar({ formId }: { formId: string }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Workspace");
   const router = useRouter();
   const [tag, setTag] = useState("");
@@ -35,10 +37,10 @@ export function BulkTagBar({ formId }: { formId: string }) {
         {t("bulkTag")}
       </label>
       <input id="bulk-tag" value={tag} onChange={(e) => setTag(e.target.value)} maxLength={63} className={`${ui.input} w-40`} />
-      <button type="button" className={ui.button} disabled={!tag.trim()} onClick={() => void run("contacts.add_tag")}>
+      <button type="button" className={ui.button} disabled={busy || (!tag.trim())} onClick={guard(() => run("contacts.add_tag"))}>
         {t("bulkAdd")}
       </button>
-      <button type="button" className={ui.button} disabled={!tag.trim()} onClick={() => void run("contacts.remove_tag")}>
+      <button type="button" className={ui.button} disabled={busy || (!tag.trim())} onClick={guard(() => run("contacts.remove_tag"))}>
         {t("bulkRemove")}
       </button>
       {message ? (

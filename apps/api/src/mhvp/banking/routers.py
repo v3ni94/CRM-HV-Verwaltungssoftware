@@ -61,7 +61,7 @@ from mhvp.core.auth.scope import (
 )
 from mhvp.core.db.tenancy import after_commit
 from mhvp.core.etag import check_if_match, etag_of
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
@@ -2702,7 +2702,12 @@ def _config_out(config: PaymentBankConfig) -> dict[str, Any]:
 async def get_bank_config(
     account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
+    from mhvp.properties.models import PropertyBankAccount
+
     async with tenant_tx(request, principal) as session:
+        # AJ05 (GAI-303): unknown or foreign accounts answer 404 instead of defaults.
+        if await session.get(PropertyBankAccount, account_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Bankkonto nicht gefunden.")
         config = await _bank_config(session, account_id)
         if config is None:
             config = PaymentBankConfig(  # defaults, not stored
@@ -2741,10 +2746,26 @@ async def put_bank_config(
                 created_by=principal.user_id,
             )
             session.add(config)
+        cfg_keys = list(body.model_dump().keys())
+        before = {k: getattr(config, k, None) for k in cfg_keys}
         for key, value in body.model_dump().items():
             setattr(config, key, value)
         config.updated_by = principal.user_id
         await session.flush()
+        after = {k: getattr(config, k, None) for k in cfg_keys}
+        before_j = {k: None if v is None else str(v) for k, v in before.items()}
+        after_j = {k: None if v is None else str(v) for k, v in after.items()}
+        # GAI-307: payment format and channel stay traceable (B07).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="payment_bank_config.updated",
+            entity_type="property_bank_account",
+            entity_id=account_id,
+            actor_user_id=principal.user_id,
+            payload=after_j,
+            changes=diff(before_j, after_j),
+        )
         return _config_out(config)
 
 
@@ -3380,11 +3401,10 @@ async def _queue_finapi_fetch(
 def _fetch_ready_or_raise(
     fa: FinApiConnection | None, conn: BankConnection | None
 ) -> tuple[FinApiConnection, BankConnection]:
-    if (
-        fa is None
-        or conn is None
-        or conn.status not in (ConnectionStatus.ACTIVE, ConnectionStatus.ERROR)
-    ):
+    if fa is None:
+        # AJ05 (GAI-303): unknown or foreign connections answer 404, not a state conflict.
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Bankverbindung nicht gefunden.")
+    if conn is None or conn.status not in (ConnectionStatus.ACTIVE, ConnectionStatus.ERROR):
         raise ProblemError(ErrorCodes.FINAPI_STATE, detail="Bankverbindung ist nicht abrufbereit.")
     return fa, conn
 
@@ -3653,9 +3673,13 @@ async def match_invoice_transactions(
 async def get_invoice_matches(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[InvoiceMatchOut]:
+    from mhvp.accounting.models import Invoice
     from mhvp.banking import invoice_matching
 
     async with tenant_tx(request, principal) as session:
+        # AJ05 (GAI-303): unknown or foreign invoices answer 404, not an empty list.
+        if await session.get(Invoice, invoice_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Rechnung nicht gefunden.")
         rows = await invoice_matching.existing_links(session, invoice_id)
         return [
             InvoiceMatchOut(

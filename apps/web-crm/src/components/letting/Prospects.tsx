@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { ProspectSelfDisclosureLinks } from "@/components/aj17/ProspectSelfDisclosureLinks";
+
 import { ProspectViewings } from "./ProspectViewings";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -150,6 +152,7 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
                   </label>
                 ) : null}
                 <ProspectViewings prospectId={p.id} />
+                <ProspectSelfDisclosureLinks prospectId={p.id} />
               </td>
             </tr>
           ))}

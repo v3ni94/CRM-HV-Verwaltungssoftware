@@ -8,6 +8,7 @@ import { formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { MigrationHistory } from "./MigrationHistory";
+import { useBusy } from "@/lib/use-busy";
 
 const API = "/api/bff/imports/migration";
 
@@ -39,6 +40,7 @@ type YearExpenses = {
  *  Jahresausgaben je Buchungskreis. Unterzeichnen verlangt eine zweite Person (Vier-Augen-Prinzip,
  *  serverseitig geprüft); hier wird nichts gebucht. */
 export function MigrationExtras({ canUpdate, canApprove, canTickets = false }: { canUpdate: boolean; canApprove: boolean; canTickets?: boolean }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("MigrationExtras");
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState("");
@@ -144,7 +146,7 @@ export function MigrationExtras({ canUpdate, canApprove, canTickets = false }: {
                   </button>
                 ) : null}
                 {a.status === "draft" && canApprove ? (
-                  <button type="button" className={ui.buttonSm} onClick={() => void run(`${API}/acceptance/${a.id}/sign`, "POST", {}, () => loadAcceptances(propertyId))}>
+                  <button disabled={busy} type="button" className={ui.buttonSm} onClick={guard(() => run(`${API}/acceptance/${a.id}/sign`, "POST", {}, () => loadAcceptances(propertyId)))}>
                     {t("sign")}
                   </button>
                 ) : null}
@@ -172,7 +174,7 @@ export function MigrationExtras({ canUpdate, canApprove, canTickets = false }: {
               {editId ? t("saveEdit") : t("create")}
             </button>
             {editId ? (
-              <button type="button" className={ui.buttonSm} onClick={() => { setEditId(null); setForm(emptyForm); }}>
+              <button disabled={busy} type="button" className={ui.buttonSm} onClick={() => { setEditId(null); setForm(emptyForm); }}>
                 {t("cancelEdit")}
               </button>
             ) : null}
@@ -232,7 +234,7 @@ export function MigrationExtras({ canUpdate, canApprove, canTickets = false }: {
             <span className={ui.label}>{t("year")}</span>
             <input className={ui.input} inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value)} />
           </label>
-          <button type="button" className={ui.buttonSm} disabled={!ledgerId || !/^\d{4}$/.test(year)} onClick={() => void loadExpenses()}>
+          <button type="button" className={ui.buttonSm} disabled={busy || (!ledgerId || !/^\d{4}$/.test(year))} onClick={guard(() => loadExpenses())}>
             {t("load")}
           </button>
         </div>

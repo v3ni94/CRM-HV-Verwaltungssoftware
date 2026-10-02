@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -44,6 +45,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: P
         </select>
         <button type="submit" className={ui.button}>{t("filterApply")}</button>
       </form>
+      <SavedFilters resource="work_orders" basePath="/auftraege" current={status ? { status } : {}} />
       {rows.length === 0 ? (
         <EmptyState title={t("listEmpty")} />
       ) : (

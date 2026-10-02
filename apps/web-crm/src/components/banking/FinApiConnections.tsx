@@ -328,7 +328,7 @@ function AssignForm({
   const [value, setValue] = useState("");
   return (
     <div className="flex gap-1">
-      <input className={ui.input} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} />
+      <input aria-label={placeholder} className={ui.input} placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)} />
       <button type="button" className={ui.buttonSm} onClick={() => value && onAssign(value)}>
         {label}
       </button>

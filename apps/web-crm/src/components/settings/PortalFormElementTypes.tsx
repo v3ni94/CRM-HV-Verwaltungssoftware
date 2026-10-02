@@ -21,6 +21,7 @@ type ElementType = {
  *  Typenliste des Altportals ist offen und steht als Quellenstatus dabei. */
 export function PortalFormElementTypes() {
   const t = useTranslations("PortalFormTypes");
+  const tCommon = useTranslations("Common");
   const labels = useTranslations("PortalForms");
   const [rows, setRows] = useState<ElementType[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -71,6 +72,13 @@ export function PortalFormElementTypes() {
                 </tr>
               </thead>
               <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="text-muted">
+                      {tCommon("emptyList")}
+                    </td>
+                  </tr>
+                ) : null}
                 {rows.map((row) => (
                   <tr key={row.type} className="align-top">
                     <th scope="row" className="py-1 pr-3 font-medium">

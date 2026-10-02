@@ -75,3 +75,7 @@ Voraussetzung zum Ändern: Recht zum Ändern von Verträgen.
   Werte an und überspringt vorhandene.
 * Grenzen: Einordnung in die Spanne und ortsübliche Vergleichsmiete bleiben eine Entscheidung der
   Verwaltung, die Quelle ist vor der Verwendung zu prüfen.
+
+## Selbstauskunft Links je Interessent (GAI-420, Welle 21)
+
+In der Interessentenliste zeigt "Links anzeigen" die erzeugten Selbstauskunft Links mit Status (offen, eingereicht, abgelaufen) und Ablaufdatum. Der vollständige Link wird nur bei der Erzeugung angezeigt.

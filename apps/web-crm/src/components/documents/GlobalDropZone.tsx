@@ -131,6 +131,7 @@ export function GlobalDropZone() {
         {t("button")}
       </button>
       <input
+        aria-label={t("button")}
         ref={inputRef}
         type="file"
         multiple

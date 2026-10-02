@@ -63,7 +63,13 @@ class AmountBasis(StrEnum):
 class ContractIn(_In):
     kind: ContractKind
     unit_id: uuid.UUID
-    party_id: uuid.UUID
+    party_id: uuid.UUID | None = Field(
+        default=None, description="Vertragspartei; alternativ contact_id (genau eines)"
+    )
+    contact_id: uuid.UUID | None = Field(
+        default=None,
+        description="Kontakt statt Partei: wird auf die eigene Partei des Kontakts aufgelöst",
+    )
     start_date: date
     end_date: date | None = None
     legal_entity_id: uuid.UUID | None = Field(
@@ -83,6 +89,9 @@ class ContractIn(_In):
     )
     sev_enabled: bool = False
     sev_fee_debtor_party_id: uuid.UUID | None = None
+    sev_fee_debtor_contact_id: uuid.UUID | None = Field(
+        default=None, description="Alternative zu sev_fee_debtor_party_id (Kontakt)"
+    )
     title_transfer_date: date | None = None
     benefit_burden_date: date | None = None
     acquisition_kind: AcquisitionKind | None = None
@@ -94,6 +103,12 @@ class ContractIn(_In):
 
     @model_validator(mode="after")
     def _rules(self) -> Self:
+        if (self.party_id is None) == (self.contact_id is None):
+            raise ValueError("Genau eine Angabe: party_id oder contact_id")
+        if self.sev_fee_debtor_party_id is not None and self.sev_fee_debtor_contact_id is not None:
+            raise ValueError(
+                "Höchstens eine Angabe: sev_fee_debtor_party_id oder sev_fee_debtor_contact_id"
+            )
         if self.end_date is not None and self.end_date < self.start_date:
             raise ValueError("end_date liegt vor start_date")
         if (

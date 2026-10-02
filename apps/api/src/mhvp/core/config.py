@@ -71,6 +71,19 @@ class Settings(BaseSettings):
     redis_url: SecretStr
     celery_broker_url: SecretStr
     celery_result_backend: SecretStr | None = None
+    # Celery time limits per task class (GAI-316, core/task_policy.py), seconds, soft and hard.
+    # Conservative defaults; the broker visibility timeout is derived from the largest hard
+    # limit so that a late-acknowledged task is never redelivered while it still runs.
+    celery_limit_short_soft: int = Field(default=240, ge=10, le=86_400)
+    celery_limit_short_hard: int = Field(default=300, ge=10, le=86_400)
+    celery_limit_medium_soft: int = Field(default=900, ge=10, le=86_400)
+    celery_limit_medium_hard: int = Field(default=1200, ge=10, le=86_400)
+    celery_limit_long_soft: int = Field(default=3600, ge=10, le=86_400)
+    celery_limit_long_hard: int = Field(default=4200, ge=10, le=86_400)
+    celery_limit_import_soft: int = Field(default=10_800, ge=10, le=86_400)
+    celery_limit_import_hard: int = Field(default=12_600, ge=10, le=86_400)
+    # Redis lock against overlapping runs of the frequent beat tasks (GAI-318).
+    celery_overlap_lock_enabled: bool = True
 
     # Object storage is addressed through the S3 API only (ADR 0005).
     s3_endpoint_url: str | None = None
@@ -156,6 +169,12 @@ class Settings(BaseSettings):
     rate_limit_per_minute_anonymous: int = Field(default=120, ge=1)
     # Only behind a proxy that overwrites X-Forwarded-For (Traefik); otherwise spoofable.
     rate_limit_trust_forwarded_for: bool = False
+    # GAI-311: CIDRs of proxies (Traefik, BFF containers) whose X-Forwarded-For is trusted;
+    # empty = off. Only the direct peer is checked, the rightmost untrusted hop is the client.
+    rate_limit_trusted_proxies: list[str] = Field(default_factory=list)
+    # GAI-312: when Redis is unavailable, anonymous token and code routes are counted by an
+    # in-process emergency counter instead of passing unlimited. Default off (fail open).
+    rate_limit_token_routes_fail_closed: bool = False
     # WebAuthn option endpoints (W01-01): each call stores a challenge in Redis, so they get a
     # tighter limit per client address and per user inside a fixed window.
     webauthn_options_limit_per_ip: int = Field(default=60, ge=1)
@@ -242,6 +261,22 @@ class Settings(BaseSettings):
     # possible (python-fints 4 refuses to start a dialog). Read only, G2 stays closed.
     fints_product_id: str | None = None
     fints_product_version: str = "1.0"
+
+    @field_validator("app_version")
+    @classmethod
+    def _app_version_not_placeholder(cls, value: str) -> str:
+        """GAI-111: the legacy build default ``0.1.0`` (Dockerfile, compose) and an empty value
+        mean "not set"; the version then comes from the VERSION file."""
+        return __version__ if value.strip() in ("", "0.1.0") else value.strip()
+
+    @field_validator("rate_limit_trusted_proxies")
+    @classmethod
+    def _trusted_proxies(cls, value: list[str]) -> list[str]:
+        import ipaddress
+
+        for entry in value:
+            ipaddress.ip_network(entry.strip(), strict=False)  # ValueError: invalid CIDR
+        return value
 
     @field_validator(
         "availability_api_url", "availability_crm_url", "availability_portal_url", mode="before"

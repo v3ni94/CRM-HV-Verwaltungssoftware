@@ -201,3 +201,5 @@ Der Mandantenschalter `notification_mail_content` (`voll` Standard, `hinweis`) l
 * `scale_routers.py`: `GET /platform/ops/scale`, `PATCH /platform/ops/scale/settings`, `POST /platform/ops/scale/snapshot` (nur Plattformadministratoren, Änderungen im Plattformaudit).
 * `ops.py`: `/platform/ops/metrics` ergänzt um Gauges `<Tabelle>_rows`, `<Tabelle>_bytes`, `<Liste>_p95_ms`, `tenants_productive`, `tenants_demo` und die Alarme `scale_trigger_partition_review`, `scale_trigger_measure_again`; die Summen und `tenants_active` lassen Demo-Mandanten weg.
 * Regel `docs/rules/AE36-SCALE.md`, Runbook `docs/runbooks/leistungsmessung.md` (Abschnitt AE36). Tests: `tests/unit/test_ae36_scale.py`, `tests/integration/test_ae36_demo_scale.py`.
+
+GAI-110 (Welle 21): `FILTER_RESOURCES` enthält zusätzlich `journal`, `open_items`, `dunning_cases`, `hoa_properties` und `work_orders`. Angebunden sind das Journal (Parameter `property`) und die Auftragsliste (`status`); Offene Posten, Mahnfälle und WEG Listen haben noch keine Abfrageparameter in der Oberfläche, die Ressourcen stehen für die Anbindung bereit.

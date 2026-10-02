@@ -25,9 +25,12 @@ export function CreditorIdsCard({
   const [value, setValue] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const allowed = target === "tenant" ? canUpdateTenant : canUpdate;
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     setMessage(null);
     const path =
@@ -38,6 +41,7 @@ export function CreditorIdsCard({
       method: "PUT",
       body: JSON.stringify({ sepa_creditor_id: value.trim() || null }),
     });
+    setBusy(false);
     if (res.ok) setMessage(value.trim() ? t("saved") : t("removed"));
     else setError(res.message);
   };
@@ -66,7 +70,7 @@ export function CreditorIdsCard({
         <input className={ui.input} maxLength={35} value={value} onChange={(e) => setValue(e.target.value)} />
       </label>
       <div className={ui.formActions}>
-        <button type="submit" className={ui.primary} disabled={!allowed}>
+        <button type="submit" className={ui.primary} disabled={!allowed || busy}>
           {t("save")}
         </button>
       </div>

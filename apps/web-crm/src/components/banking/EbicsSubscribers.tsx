@@ -7,6 +7,7 @@ import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 /** EBICS-Grundgerüst (M11-01, AE23, Regel M11-11): Mandantenschalter, Teilnehmer, Schlüssel,
  *  INI/HIA, Freischaltung, HPB mit Prüfung durch eine zweite Person, Abruf C53. Die
@@ -83,6 +84,7 @@ const STATUS_VARIANT: Record<string, StatusPillVariant> = {
 const BASE = "/api/bff/banking/ebics";
 
 export function EbicsSubscribers() {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Ebics");
   const [status, setStatus] = useState<EbicsStatus | null>(null);
   const [subscribers, setSubscribers] = useState<EbicsSubscriber[]>([]);
@@ -136,10 +138,10 @@ export function EbicsSubscribers() {
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <StatusPill label={status.enabled ? t("enabled") : t("disabled")} variant={status.enabled ? "success" : "neutral"} />
-        <button
+        <button disabled={busy}
           type="button"
           className={ui.button}
-          onClick={() => void call("/settings", { enabled: !status.enabled }, "PUT")}
+          onClick={guard(() => call("/settings", { enabled: !status.enabled }, "PUT"))}
         >
           {status.enabled ? t("switchOff") : t("switchOn")}
         </button>
@@ -247,6 +249,7 @@ function CreateForm({ call, defaultBits }: { call: Call; defaultBits: number }) 
 }
 
 function SubscriberRow({ subscriber: s, call }: { subscriber: EbicsSubscriber; call: Call }) {
+  const { busy, guard } = useBusy();
   const t = useTranslations("Ebics");
   const [text, setText] = useState("");
   const [second, setSecond] = useState("");
@@ -280,7 +283,7 @@ function SubscriberRow({ subscriber: s, call }: { subscriber: EbicsSubscriber; c
       {step !== "none" && <p className="mt-2 text-sm">{t(`step.${step}`)}</p>}
       <div className="mt-2 flex flex-wrap items-end gap-2">
         {step === "generate_keys" && (
-          <button type="button" className={ui.primary} onClick={() => void call(`${path}/keys`, {}, "POST", t("done"))}>
+          <button disabled={busy} type="button" className={ui.primary} onClick={guard(() => call(`${path}/keys`, {}, "POST", t("done")))}>
             {t("generateKeys")}
           </button>
         )}
@@ -290,21 +293,21 @@ function SubscriberRow({ subscriber: s, call }: { subscriber: EbicsSubscriber; c
               <span className={ui.label}>{t("publicKeyOrNote")}</span>
               <textarea className={ui.input} rows={3} value={text} onChange={(e) => setText(e.target.value)} />
             </label>
-            <button type="button" className={ui.button} onClick={() => void call(`${path}/signature-key`, { public_key_pem: text }, "POST", t("done"))}>
+            <button disabled={busy} type="button" className={ui.button} onClick={guard(() => call(`${path}/signature-key`, { public_key_pem: text }, "POST", t("done")))}>
               {t("uploadKey")}
             </button>
-            <button type="button" className={ui.button} onClick={() => void call(`${path}/ini/external`, { note: text }, "POST", t("done"))}>
+            <button disabled={busy} type="button" className={ui.button} onClick={guard(() => call(`${path}/ini/external`, { note: text }, "POST", t("done")))}>
               {t("confirmIniExternal")}
             </button>
           </>
         )}
         {step === "send_ini" && (
-          <button type="button" className={ui.primary} onClick={() => void call(`${path}/ini`, undefined, "POST", t("done"))}>
+          <button disabled={busy} type="button" className={ui.primary} onClick={guard(() => call(`${path}/ini`, undefined, "POST", t("done")))}>
             {t("sendIni")}
           </button>
         )}
         {step === "send_hia" && (
-          <button type="button" className={ui.primary} onClick={() => void call(`${path}/hia`, undefined, "POST", t("done"))}>
+          <button disabled={busy} type="button" className={ui.primary} onClick={guard(() => call(`${path}/hia`, undefined, "POST", t("done")))}>
             {t("sendHia")}
           </button>
         )}
@@ -314,13 +317,13 @@ function SubscriberRow({ subscriber: s, call }: { subscriber: EbicsSubscriber; c
               <span className={ui.label}>{t("activatedOn")}</span>
               <input type="date" className={ui.input} value={day} onChange={(e) => setDay(e.target.value)} />
             </label>
-            <button type="button" className={ui.primary} onClick={() => void call(`${path}/activation`, { activated_on: day }, "POST", t("done"))}>
+            <button disabled={busy} type="button" className={ui.primary} onClick={guard(() => call(`${path}/activation`, { activated_on: day }, "POST", t("done")))}>
               {t("confirmActivation")}
             </button>
           </>
         )}
         {step === "fetch_bank_keys" && (
-          <button type="button" className={ui.primary} onClick={() => void call(`${path}/hpb`, undefined, "POST", t("done"))}>
+          <button disabled={busy} type="button" className={ui.primary} onClick={guard(() => call(`${path}/hpb`, undefined, "POST", t("done")))}>
             {t("fetchBankKeys")}
           </button>
         )}
@@ -376,11 +379,11 @@ function SubscriberRow({ subscriber: s, call }: { subscriber: EbicsSubscriber; c
               <input className={ui.input} value={second} onChange={(e) => setSecond(e.target.value)} />
             </label>
             {subscriberKeys.length > 0 && (
-              <button type="button" className={ui.button} onClick={() => void call(`${path}/keys`, { reason: second }, "POST", t("done"))}>
+              <button disabled={busy} type="button" className={ui.button} onClick={guard(() => call(`${path}/keys`, { reason: second }, "POST", t("done")))}>
                 {t("rotate")}
               </button>
             )}
-            <button type="button" className={ui.danger} onClick={() => void call(`${path}/suspend`, { reason: second }, "POST", t("done"))}>
+            <button disabled={busy} type="button" className={ui.danger} onClick={guard(() => call(`${path}/suspend`, { reason: second }, "POST", t("done")))}>
               {t("suspend")}
             </button>
           </div>

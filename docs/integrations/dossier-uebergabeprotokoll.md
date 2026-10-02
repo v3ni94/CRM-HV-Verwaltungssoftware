@@ -9,7 +9,7 @@ referenziert) belegbar ist.
 ## 1. Zweck
 
 Digitale Wohnungsübergabe (Einzug, Auszug) mit Zählerständen, Schlüsseln, Mängeln, Fotos und
-Unterschriften (Abschnitt 13.4). [zu ergänzen durch Betreiber: genaue Nutzergruppe,
+Unterschriften (Abschnitt 13.4). [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber: genaue Nutzergruppe,
 Ablauf im Bestandsprogramm, Anzahl Protokolle pro Jahr, mobile Erfassung ja/nein].
 
 ## 2. Datenbestand
@@ -19,12 +19,12 @@ bereits ein Parser für einen „U-Protokoll-Datenbankexport“
 (`apps/api/src/mhvp/handover/uprotokoll_import.py`, Router
 `apps/api/src/mhvp/handover/imports.py`, Endpunkt `/api/v1/handover/imports/uprotokoll`),
 was auf ein exportierbares Datenbankschema des Bestandsprojekts hindeutet. Die konkrete
-Feld- und Tabellenstruktur des Exports selbst ist [zu ergänzen durch Betreiber].
+Feld- und Tabellenstruktur des Exports selbst ist [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber].
 
 ## 3. Schnittstellen
 
 Keine API des Bestandsprojekts bekannt; die Datenübernahme läuft über einen Datenbankexport,
-nicht über eine Live-Schnittstelle. [zu ergänzen durch Betreiber: Exportformat, Häufigkeit,
+nicht über eine Live-Schnittstelle. [Betreiber-Erhebung offen, V1: zu ergänzen durch Betreiber: Exportformat, Häufigkeit,
 ob eine REST-Schnittstelle oder nur ein Exportjob existiert].
 
 ## 4. Ablösestatus im CRM
@@ -89,19 +89,19 @@ Faktor für Gehilfen (M30-05).
 ## Ergänzung 01.10.2026 (GA09-02): Faktenstand aus dem Repo
 
 Nur Angaben, die im Repo belegt sind (`apps/api/src/mhvp/handover/uprotokoll_import.py`,
-`docs/plans/M30-uebergabeprotokoll.md`). Alles andere ist offen, Dossier erforderlich (AA16-03).
+`docs/plans/M30-uebergabeprotokoll.md`). Alles andere ist offen, [Betreiber-Erhebung offen, V1, AA16-03].
 
 - Zweck: Wohnungsübergabe mit Protokollarten Miete, Verkauf und allgemein (`rental`, `sale`,
   `general`); Zählerstände, Schlüssel, Mängel, Räume, Positionen, Notizen, Dateien,
   Unterschriften, Versionen und E-Mails je Protokoll.
 - Stack: PHP mit MariaDB, Quellrepository `github.com/v3ni94/UProtkoll`, Schema in
   `database/migrations/001_create_schema.sql` dieses Repositorys (laut Modulkopf des Importers).
-  Hosting, Webserver und Betrieb: offen, Dossier erforderlich (AA16-03).
+  Hosting, Webserver und Betrieb: offen, [Betreiber-Erhebung offen, V1, AA16-03].
 - Datenmodell: 13 Tabellen werden gelesen: `protocols`, `protocol_participants`,
   `protocol_bank_details`, `protocol_meters`, `protocol_rooms`, `protocol_defects`,
   `protocol_keys`, `protocol_items`, `protocol_notes`, `protocol_files`,
   `protocol_signatures`, `protocol_versions`, `protocol_emails`. Folgeprotokolle sind über
-  `parent_protocol_id` verknüpft. Spaltenweise Belegung: offen, Dossier erforderlich (AA16-03).
+  `parent_protocol_id` verknüpft. Spaltenweise Belegung: offen, [Betreiber-Erhebung offen, V1, AA16-03].
 - Schnittstellen: `mysqldump` (utf8mb4), gelesen ohne SQL-Ausführung, Vorschau vor Übernahme,
   Übernahme idempotent je Quell-ID (`uprotokoll:<protocols.id>`); Binärdateien aus einem
   ZIP des Speicherverzeichnisses, zugeordnet über Pfad oder SHA-256. Eine Live-Schnittstelle

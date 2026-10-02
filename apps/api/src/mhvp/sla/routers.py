@@ -700,7 +700,7 @@ async def list_alerts(
 
 @router.post("/alerts/{alert_id}/ack", summary="Notfallalarm bestätigen")
 async def ack_alert(
-    alert_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    alert_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         alert = await session.get(EmergencyAlert, alert_id)

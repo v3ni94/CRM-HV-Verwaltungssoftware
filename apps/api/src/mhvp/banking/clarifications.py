@@ -34,6 +34,7 @@ from mhvp.banking.models import (
     ClarificationStatus,
     TransactionStatus,
 )
+from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -235,9 +236,7 @@ async def row_out(session: AsyncSession, row: BankClarification) -> dict[str, An
         "decided_by": row.decided_by,
         "decided_at": row.decided_at,
         "created_at": row.created_at,
-        "age_days": (
-            (datetime.now(UTC).date() - tx.booking_date).days if tx and tx.booking_date else None
-        ),
+        "age_days": ((local_today() - tx.booking_date).days if tx and tx.booking_date else None),
         "booking_date": tx.booking_date if tx else None,
         "amount": tx.amount if tx else None,
         "counterpart_name": tx.counterpart_name if tx else None,

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { DocumentBulkLink } from "@/components/aj17/DocumentBulkLink";
 import { DocumentBulkBar } from "@/components/workspace/DocumentBulkBar";
 import { DocumentListFilter, draftFilterOf } from "@/components/documents/DocumentListFilter";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,6 +10,7 @@ import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { ResponsiveList } from "@/components/ui/ResponsiveList";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -39,6 +41,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   });
   redirectIfUnauthenticated(response);
   const items = data?.items ?? [];
+  const canLinkDocuments = ((await getMe()).data?.permissions ?? []).includes("documents:update");
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const href = (p: number) => {
@@ -60,6 +63,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
         <Link href="/dokumente/erzeugt">{t("generatedLink")}</Link>
       </p>
       <DocumentListFilter q={q} draft={draft} />
+      <DocumentBulkLink canEdit={canLinkDocuments} />
       <SavedFilters resource="documents" basePath="/dokumente" current={Object.fromEntries(Object.entries({ q, entwurf: params.entwurf ?? "" }).filter(([, v]) => v))} />
       {!data ? (
         <p role="alert" className={ui.alert}>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Probe = { probe: string; uptime_percent: string | null; target_met: boolean | null };
 type Month = {
@@ -26,7 +27,9 @@ export function formatPercent(value: string | null): string {
 
 /** GB16-02: target (99,5 percent per month) against the imported actual figures. */
 export function AvailabilityAdmin() {
+  const { guard } = useBusy();
   const t = useTranslations("AD10");
+  const tCommon = useTranslations("Common");
   const [data, setData] = useState<Out | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ month: "", probe: "api", percent: "", note: "" });
@@ -87,6 +90,13 @@ export function AvailabilityAdmin() {
               </tr>
             </thead>
             <tbody>
+              {data.months.length === 0 ? (
+                <tr>
+                  <td colSpan={99} className="text-muted">
+                    {tCommon("emptyList")}
+                  </td>
+                </tr>
+              ) : null}
               {data.months.map((m) => (
                 <tr key={m.month}>
                   <td>{m.month}</td>
@@ -107,7 +117,7 @@ export function AvailabilityAdmin() {
         </div>
       ) : null}
       <p className={ui.help}>{t("adjustedHelp")}</p>
-      <form onSubmit={(e) => void save(e)} className={`${ui.card} grid gap-3 sm:grid-cols-2`}>
+      <form onSubmit={guard(save)} className={`${ui.card} grid gap-3 sm:grid-cols-2`}>
         <h3 className="text-base font-semibold sm:col-span-2">{t("importTitle")}</h3>
         <label className="block">
           <span className={ui.label}>{t("month")}</span>

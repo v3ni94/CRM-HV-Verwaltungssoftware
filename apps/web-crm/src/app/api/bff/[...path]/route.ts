@@ -142,6 +142,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^deposit-hint-settings$/ },
   { method: "POST", pattern: /^deposit-interest-drafts\/run$/ },
   { method: "GET", pattern: /^sepa-mandates$/ },
+  // AJ16 (GAI-411): revoke a SEPA mandate (stops direct debit on the contracts).
+  { method: "POST", pattern: new RegExp(`^sepa-mandates/${ID}/revoke$`) },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
   // und, nur nach ausdrücklicher Bestätigung, Einladung an externe Teilnehmer (M23-05).
@@ -309,19 +311,27 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Löschungssperre setzen und aufheben (GAG-26, 7.11 S05); Aufheben mit zweiter Person (API).
   { method: "POST", pattern: new RegExp(`^documents/${ID}/hold$`) },
   { method: "DELETE", pattern: new RegExp(`^documents/${ID}/hold$`) },
+  // Mehrfachverknüpfung, signierte Download-URL und erneute Spiegelung (GAI-417).
+  { method: "POST", pattern: /^documents\/bulk-link$/ },
+  { method: "GET", pattern: new RegExp(`^documents/${ID}/download-url$`) },
+  { method: "POST", pattern: new RegExp(`^documents/${ID}/mirror$`) },
   // Dokumentauswahl (V05) und Beschlussauswahl für die Startregel Beschluss (V03): nur Lesen.
   { method: "GET", pattern: /^documents$/ },
   { method: "GET", pattern: /^hoa\/resolutions$/ },
   // Datenschutz (P17, Abschnitt 16): Register, Löschprofile, Löschanträge, Verzeichnis-Entwurf.
-  { method: "GET", pattern: /^privacy\/(register|processing-records|deletion-profiles|erasure-requests)$/ },
+  { method: "GET", pattern: /^privacy\/(register|processing-records|deletion-profiles|erasure-requests|deletion-proposals)$/ },
   { method: "POST", pattern: /^privacy\/(register|erasure-requests)$/ },
   { method: "PUT", pattern: new RegExp(`^privacy/register/${ID}$`) },
   { method: "PUT", pattern: /^privacy\/deletion-profiles$/ },
   { method: "POST", pattern: new RegExp(`^privacy/deletion-profiles/${ID}/release$`) },
-  { method: "POST", pattern: new RegExp(`^privacy/erasure-requests/${ID}/(approve|reject|execute)$`) },
+  { method: "POST", pattern: new RegExp(`^privacy/erasure-requests/${ID}/(approve|reject|execute|accept)$`) },
+  { method: "POST", pattern: /^privacy\/deletion-proposals\/run$/ },
   // AE32 (S711-10): Dienstleister laut Konfiguration, Übernahme ins Register, PDF-Entwurf.
   { method: "GET", pattern: /^privacy\/(register\/config-sources|processing-records\/pdf)$/ },
   { method: "POST", pattern: /^privacy\/register\/config-sources\/sync$/ },
+  // AJ13 (GAI-507, 508, 510): Einwilligungsübersicht, Fristen, Vor-G1-Auswertung.
+  { method: "GET", pattern: /^privacy\/(consent-overview|request-deadlines|request-deadlines\/monitor|register\/readiness)$/ },
+  { method: "PUT", pattern: /^privacy\/request-deadlines$/ },
   // Portalformulare (A56): Vorlagen je Mandant.
   { method: "GET", pattern: /^portal-admin\/forms$/ },
   { method: "POST", pattern: /^portal-admin\/forms$/ },
@@ -386,6 +396,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // AI09 (GAH-301): switch of the four eyes reset of the second factor.
   { method: "GET", pattern: /^auth\/mfa-reset\/settings$/ },
   { method: "PUT", pattern: /^auth\/mfa-reset\/settings$/ },
+  // AJ08 (GAI-603): requests and four eyes decision for the second factor reset.
+  { method: "GET", pattern: /^auth\/mfa-reset\/requests$/ },
+  { method: "POST", pattern: /^auth\/mfa-reset\/requests$/ },
+  { method: "POST", pattern: new RegExp(`^auth/mfa-reset/requests/${ID}/(approve|reject)$`) },
   // Platform: tenant and tenant administrator creation (platform admins only, checked by the API).
   { method: "POST", pattern: /^platform\/tenants$/ },
   { method: "POST", pattern: /^platform\/users$/ },
@@ -643,6 +657,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^banking\/payment-batches$/ },
   { method: "GET", pattern: new RegExp(`^banking/payment-batches/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^banking/payment-bank-config/${ID}$`) },
+  // AJ16 (GAI-403, GAI-404): format per account (agreed with the bank) and bank feedback per file; no file creation.
+  { method: "PUT", pattern: new RegExp(`^banking/payment-bank-config/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^banking/payment-batches/${ID}/bank-status$`) },
   // AF03 (GAF-03): bank connections, sync log, learning switch (ADR 0014), decision log per
   // transaction. Connections never return credentials; the switch books nothing.
   { method: "GET", pattern: /^banking\/(connections|runs|learning)$/ },
@@ -1116,6 +1133,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^work-orders/${ID}/appointment-proposals$`) },
   { method: "GET", pattern: new RegExp(`^work-orders/${ID}/rating$`) },
   { method: "POST", pattern: new RegExp(`^work-orders/${ID}/rating$`) },
+  // Auftragsschritte: Angebot, Freigabe, Termin, Ausführung, Rechnung, Bewertung (GAI-416).
+  { method: "POST", pattern: new RegExp(`^work-orders/${ID}/steps$`) },
   // Auftragsliste und Auftragsdetail, Teams, Kommentarliste (M19-01, M19-02, M19-07).
   { method: "GET", pattern: /^work-orders$/ },
   { method: "GET", pattern: new RegExp(`^work-orders/${ID}$`) },
@@ -1530,6 +1549,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^tenant\/release-gates(\/checklists|\/requests)?$/ },
   { method: "POST", pattern: /^tenant\/release-gates\/requests$/ },
   { method: "POST", pattern: new RegExp(`^tenant/release-gates/requests/${ID}/revoke$`) },
+  // AJ28 (GAI-401, 402, 408, 409, 410): gated masks; the API enforces G1, G2 and G3 and the
+  // dispatch locks, the CRM only shows the gate state and disables the actions.
+  { method: "GET", pattern: /^accounting\/payment-runs\/previews$/ },
+  { method: "POST", pattern: /^accounting\/payment-runs\/(previews|payout-orders)$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/letter/send$`) },
+  { method: "GET", pattern: new RegExp(`^billing/owner-statements/${ID}/pdf$`) },
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/letters/send$`) },
+  { method: "POST", pattern: new RegExp(`^deposit-settlements/${ID}/release$`) },
   // Licences, price list, billing preview and usage history (M27-02, M27-03, M27-05); platform
   // administrators only, checked by the API.
   { method: "GET", pattern: /^platform\/price-list$/ },

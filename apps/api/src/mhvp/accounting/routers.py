@@ -100,7 +100,7 @@ from mhvp.core.auth.scope import (
     session_allowed_property_ids,
 )
 from mhvp.core.etag import check_if_match, etag_of
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.ids import uuid7
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
@@ -1278,6 +1278,9 @@ async def put_interest_tax_config(
 ) -> AccountingInterestTaxConfigOut:
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
+        before = _tax_config_out(
+            ledger.id, await ledger_ops.interest_tax_config(session, ledger)
+        ).model_dump(mode="json")
         config = await ledger_ops.set_interest_tax_config(
             session,
             ledger,
@@ -1285,7 +1288,20 @@ async def put_interest_tax_config(
             user_id=principal.user_id,
             values=body.model_dump(),
         )
-        return _tax_config_out(ledger.id, config)
+        out = _tax_config_out(ledger.id, config)
+        after = out.model_dump(mode="json")
+        # GAI-307: tax accounts for interest withholdings stay traceable (rule 6).
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ledger_interest_tax_config.updated",
+            entity_type="ledger",
+            entity_id=ledger.id,
+            actor_user_id=principal.user_id,
+            payload=after,
+            changes=diff(before, after),
+        )
+        return out
 
 
 @router.get(
@@ -1503,10 +1519,14 @@ async def checks(
     per debtor and creditor account the open items against the ledger balance as of
     ``as_of`` (GA05-03). A difference there is shown for review, it does not set ``ok``.
     AC01-02: written off items and items of reversed entries are hidden by the tenant switch
-    (default) or ``exclude_written_off``; ``excluded`` counts them separately."""
+    (default) or ``exclude_written_off``; ``excluded`` counts them separately. GAI-604:
+    ``bank_findings`` lists breaks in the statement chain of the linked bank accounts
+    (opening balance, sums, period gaps); they are shown for review and do not set ``ok``
+    because they concern the imported statements, not the postings (``bank_ok``)."""
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
         findings = await svc.checks(session, ledger)
+        bank_findings = await svc.bank_statement_chain_findings(session, ledger)
         exclude = (
             exclude_written_off
             if exclude_written_off is not None
@@ -1530,6 +1550,8 @@ async def checks(
         return {
             "ok": not findings,
             "findings": findings,
+            "bank_ok": not bank_findings,
+            "bank_findings": bank_findings,
             "exclude_written_off": exclude,
             "excluded": excluded,
             "subledger": subledger,
@@ -4019,9 +4041,10 @@ async def liquidity(
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        return await reports.liquidity(
-            session, await _ledger(session, ledger_id), as_of or local_today()
-        )
+        ledger = await _ledger(session, ledger_id)
+        # GAI-601: same property scope check as /reports/liquidity.
+        reports.ensure_ledger_in_scope(session, ledger)
+        return await reports.liquidity(session, ledger, as_of or local_today())
 
 
 @router.get(

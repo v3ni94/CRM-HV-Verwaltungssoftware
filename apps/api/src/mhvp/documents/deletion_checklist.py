@@ -52,6 +52,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -212,7 +213,7 @@ async def build(
     with trash.trashed_visible(session):
         document = await session.get(Document, document_id)
     if document is not None and document.deleted_at is not None:
-        return await _trash_checklist(session, document, today or datetime.now(UTC).date())
+        return await _trash_checklist(session, document, today or local_today())
     event = await _deleted_event(session, document_id)
     if event is None:
         return None
@@ -221,9 +222,7 @@ async def build(
     if document is None:
         items.append(ChecklistItem(TARGET_INDEX, DONE))
     else:
-        blocker = await services.deletion_blocker(
-            session, document, today or datetime.now(UTC).date()
-        )
+        blocker = await services.deletion_blocker(session, document, today or local_today())
         held = blocker is not None
         items.append(
             ChecklistItem(

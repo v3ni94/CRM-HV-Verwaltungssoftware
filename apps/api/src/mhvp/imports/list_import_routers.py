@@ -23,6 +23,7 @@ from mhvp.contacts.models import ContactRoleCode
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.uploads import read_limited
 from mhvp.imports import adressen, kontakte, objektdaten, zuordnung
 from mhvp.imports.csvtext import decode_csv
 from mhvp.imports.routers import WRITE, _need_domain
@@ -41,14 +42,12 @@ LIST_ROLES: dict[str, ContactRoleCode] = {
 
 async def _read_csv(file: UploadFile) -> tuple[str, str | None]:
     """Text of the upload and a note when it was not UTF-8 (Windows-1252 exports are read)."""
-    data = await file.read()
+    data = await read_limited(
+        file, MAX_LIST_BYTES, detail=f"{file.filename or 'Die Datei'} ist zu groß."
+    )
     if not data:
         raise ProblemError(
             ErrorCodes.VALIDATION, detail=f"{file.filename or 'Die Datei'} ist leer."
-        )
-    if len(data) > MAX_LIST_BYTES:
-        raise ProblemError(
-            ErrorCodes.UPLOAD_REJECTED, detail=f"{file.filename or 'Die Datei'} ist zu groß."
         )
     text, note = decode_csv(data)
     return text, (f"{file.filename}: {note}" if note and file.filename else note)
@@ -305,11 +304,9 @@ async def import_adressen(
     """CSV or XLSX with object number and street, house number, postal code, city. Fills only
     empty fields; differences to filled fields are reported as conflicts, never overwritten."""
     _need_domain(principal)
-    data = await file.read()
+    data = await read_limited(file, MAX_LIST_BYTES)
     if not data:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Die Datei ist leer.")
-    if len(data) > MAX_LIST_BYTES:
-        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Die Datei ist zu groß.")
     try:
         if data[:2] == b"PK":
             header, body, _ = load_xlsx(data)

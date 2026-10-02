@@ -53,6 +53,18 @@ class HoaAcqRuleIn(BaseModel):
     source_note: str | None = Field(default=None, max_length=2000)
 
 
+class HoaAcqRuleOut(BaseModel):
+    """Response of a rule (GAI-304). ``extra="allow"`` keeps later fields visible."""
+
+    model_config = ConfigDict(extra="allow")
+    acquisition_kind: str
+    kind_label: str
+    variant: str
+    variant_label: str
+    is_default: bool
+    source_note: str | None = None
+
+
 def pick_day(
     variant: str, *, default_day: date, due_day: date | None, resolution_day: date | None
 ) -> date:
@@ -104,7 +116,11 @@ async def list_rules(
         }
 
 
-@router.put("/acquisition-rules/{kind}", summary="Zuordnungsregel je Erwerbsart setzen")
+@router.put(
+    "/acquisition-rules/{kind}",
+    summary="Zuordnungsregel je Erwerbsart setzen",
+    response_model=HoaAcqRuleOut,
+)
 async def put_rule(
     kind: str,
     body: HoaAcqRuleIn,

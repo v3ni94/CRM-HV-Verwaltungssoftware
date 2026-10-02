@@ -53,6 +53,7 @@ from mhvp.contacts import schemas as contact_schemas
 from mhvp.contacts import services as contact_services
 from mhvp.contacts.models import Contact, ContactKind
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
@@ -799,7 +800,7 @@ def reply_sentences(
                 "Stammdaten hinterlegt."
             )
         else:
-            stamp = (today or datetime.now(UTC).date()).strftime("%d.%m.%Y")
+            stamp = (today or local_today()).strftime("%d.%m.%Y")
             parts.append(
                 f"Ihre neue Anschrift {address} haben wir zum {stamp} in unseren "
                 "Stammdaten hinterlegt."

@@ -5,6 +5,9 @@ import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { DunningCaseActions } from "./DunningCaseActions";
 
+// AJ28: the gated child reads the gate state itself (own test in components/gated).
+vi.mock("@/components/gated/DunningLetterSendButton", () => ({ DunningLetterSendButton: () => null }));
+
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 

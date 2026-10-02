@@ -214,6 +214,7 @@ def _setup(client: TestClient, h: dict[str, str], number: str) -> tuple[dict[str
     return contract, prop["id"]
 
 
+@pytest.mark.annex_d("D16")
 def test_preview_and_transfer_carry_over_standing_amounts(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "otadmin"))
     seller, _ = _setup(client, h, "701")

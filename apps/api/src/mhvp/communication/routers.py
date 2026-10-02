@@ -2129,7 +2129,7 @@ async def list_mail_approval_deputies(
 
 @router.post("/mail-approval/deputies", status_code=201, summary="Vertretung anlegen (M20-04a)")
 async def create_mail_approval_deputy(
-    body: MailApprovalDeputyIn, request: Request, principal: TenantPrincipal = Depends(READ)
+    body: MailApprovalDeputyIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> MailApprovalDeputyOut:
     _assert_own_deputy_or_admin(principal, body.absent_user_id)
     if body.absent_user_id == body.deputy_user_id:
@@ -2176,7 +2176,7 @@ async def create_mail_approval_deputy(
     summary="Vertretung widerrufen (M20-04a)",
 )
 async def delete_mail_approval_deputy(
-    deputy_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    deputy_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         row = await session.get(MailApprovalDeputy, deputy_id)
@@ -2924,7 +2924,7 @@ async def playbook_feedback(
     playbook_id: uuid.UUID,
     body: ai_s.FeedbackIn,
     request: Request,
-    principal: TenantPrincipal = Depends(READ),
+    principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     """Feedback "hilfreich / nicht hilfreich" on a suggested playbook (audit 29.09.2026). Counters
     only, shown in the knowledge base; no automatic activation or archiving."""
@@ -2955,7 +2955,7 @@ async def playbook_feedback(
 
 @router.post("/playbooks/{playbook_id}/use", summary="Playbook-Nutzung zählen")
 async def playbook_use(
-    playbook_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    playbook_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
     """Counts a use of the playbook outside ``apply-playbook`` (reply text inserted in the ticket
     reply, operator report 29.09.2026: the counter stayed at 0 because the ticket path inserted

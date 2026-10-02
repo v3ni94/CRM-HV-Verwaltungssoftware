@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -152,6 +153,10 @@ class MagicLoginLink(IdMixin, TimestampMixin, TenantMixin, Base):
     code_hash: Mapped[str | None] = mapped_column(String(64))
     code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     code_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GAI-310: wrong e-mail codes; at 5 the code and the link are invalid.
+    code_failed_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
 
 
 class SepaMandateProposal(IdMixin, TimestampMixin, TenantMixin, Base):

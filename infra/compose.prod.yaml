@@ -335,6 +335,13 @@ services:
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-crm"
+      # GAI-116: login paths of the CRM host get the stricter auth limit like /api/v1/auth.
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-auth.rule=Host(`${MHVP_HOST_CRM:-crm.mueller-holding.ag}`) && (PathPrefix(`/api/session/login`) || PathPrefix(`/api/session/mfa`) || PathPrefix(`/api/session/totp`) || PathPrefix(`/api/session/webauthn`))"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-auth.priority=100"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-auth.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-auth.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-auth.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-auth-ratelimit"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-auth.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-crm"
       - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.loadbalancer.server.port=3000"
 
   web-portal:
@@ -356,6 +363,13 @@ services:
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-portal"
+      # GAI-116: login, magic link and invitation paths of the portal hosts (auth limit).
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-auth.rule=(Host(`${MHVP_HOST_PORTAL_HVM:-portal.muellerhv.de}`) || Host(`${MHVP_HOST_PORTAL_MHAG:-portal.mueller-holding.ag}`)) && (PathPrefix(`/api/session/login`) || PathPrefix(`/api/session/mfa`) || PathPrefix(`/api/session/totp`) || PathPrefix(`/api/session/webauthn`) || PathPrefix(`/api/session/magic-link`) || PathPrefix(`/api/session/invitation`))"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-auth.priority=100"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-auth.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-auth.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-auth.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-auth-ratelimit"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-auth.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-portal"
       - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.loadbalancer.server.port=3001"
 
   uptime-kuma:

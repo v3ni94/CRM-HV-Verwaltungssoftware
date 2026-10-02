@@ -129,7 +129,8 @@ class PrivacyDeletionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "data_type", name="uq_privacy_deletion_profile_type"),
         CheckConstraint(
-            "data_type IN ('contact', 'portal_account', 'communication', 'ticket', 'other')",
+            "data_type IN ('contact', 'portal_account', 'communication', 'ticket', 'other', "
+            "'domain_event', 'platform_user', 'bank_raw')",
             name="ck_privacy_deletion_profile_type",
         ),
         CheckConstraint("retention_months >= 0", name="ck_privacy_deletion_profile_months"),
@@ -144,13 +145,18 @@ class PrivacyDeletionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Migration 0445 (AJ12, GAI-501): the nightly job creates deletion *proposals* for this
+    # data type (``mhvp.privacy.proposals``); default off, never deletes anything.
+    auto_propose: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class PrivacyErasureRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "privacy_erasure_request"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('requested', 'approved', 'rejected', 'executed')",
+            "status IN ('proposed', 'requested', 'approved', 'rejected', 'executed')",
             name="ck_privacy_erasure_request_status",
         ),
         Index("ix_privacy_erasure_request_contact", "tenant_id", "contact_id"),

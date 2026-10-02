@@ -95,8 +95,18 @@ async def get_allocation_proposal_setting(
         return {"enabled": await allocation_proposal_enabled(session), "note": NOTE}
 
 
+class HoaAllocationProposalSettingOut(BaseModel):
+    """Response of the switch (GAI-304)."""
+
+    model_config = ConfigDict(extra="allow")
+    enabled: bool
+    note: str
+
+
 @router.put(
-    "/allocation-proposal-settings", summary="Zuordnungsvorschlag Eigentümerwechsel (setzen)"
+    "/allocation-proposal-settings",
+    summary="Zuordnungsvorschlag Eigentümerwechsel (setzen)",
+    response_model=HoaAllocationProposalSettingOut,
 )
 async def put_allocation_proposal_setting(
     body: HoaAllocationProposalSettingIn,

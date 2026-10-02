@@ -217,3 +217,32 @@ are allowlisted with a reason in `TENANT_INDEX_ALLOWLIST`. New tables declare th
 - `declare_list_parameters(app)` (in `create_app`) trägt `filter[feld]`, `sort`, `fields`, `include` und `as_of` für alle Listen mit `list_params` oder `ListSpec` in das OpenAPI-Dokument ein (nur Deklaration, Verhalten und `strict_query` unverändert).
 - `valid_on(query, tag, von, bis)` filtert Gültigkeitszeilen auf einen Stichtag. `as_of` gilt für `/contracts/{id}/payments`, `/contracts/{id}/allocation-values`, `/properties/{id}/allocation-keys`, `/sepa-mandates` und `/parties`.
 - Limits über 200: Inventar in `docs/plans/LISTENLIMITS-2026-10-02.md`; `/postal/jobs` hat `limit` 1 bis 500.
+
+## Celery task policy (GAI-316 to GAI-319, AJ11)
+
+`task_policy.py` sets soft and hard time limits per task class (short, medium, long, import;
+settings `celery_limit_<class>_soft|hard`), derives the Redis `visibility_timeout` from the
+largest hard limit, wraps the twelve fast beat tasks in a Redis `SET NX` overlap lock (fail
+open, switch `celery_overlap_lock_enabled`), retries selected idempotent network tasks on
+transient errors with capped exponential backoff and jitter, and gives every beat entry a
+queue and the fast ones an `expires`. Applied via `task_annotations`; task bodies unchanged.
+Runbook: `docs/runbooks/ressourcen.md`. Tests: `tests/unit/test_task_policy.py`.
+
+### Uploads und Webhook-Körper (`uploads.py`, AJ10, GAI-313 bis 315)
+
+`read_limited(file, max_bytes)` liest Uploads in Blöcken und bricht beim Überschreiten mit 413
+`MHVP-DOC-0010` ab (nie mehr als `max_bytes + 1` Bytes im Speicher). `read_body_limited(request,
+max_bytes, error=...)` prüft Content-Length und liest Rohkörper als Strom mit Abbruch, auch ohne
+Content-Length (alle Webhooks, WhatsApp mit 256 KiB vor der HMAC Prüfung). `check_dump_file`,
+`check_zip_file`, `check_zip_signature` und `check_text_dump` prüfen Endung, Inhaltstyp und
+Signatur der Dump Importe (U-Protokoll, objektakte). Tests: `tests/unit/test_aj10_uploads.py`.
+
+## Write routes with read permission (GAI-301, AJ21)
+
+`tests/unit/test_aj21_write_with_read_permission.py` fails for every mutating route whose
+`require_permission` dependencies are all read rights, unless it is classified: 19 preview or
+check routes (nothing persisted), 9 routes whose write right is checked in the handler
+(ticket templates, reply templates, process catalogue seed, metering transmissions), and the
+personal calendar feed token (open question AJ21-01). Mail approval deputies and playbook
+use/feedback now need `communication:update`, SLA alert acknowledgement `sla:update`, AI
+knowledge feedback `ai:create`.

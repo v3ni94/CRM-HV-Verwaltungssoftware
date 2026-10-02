@@ -60,6 +60,8 @@ class Branding(BaseModel):
     portal_name: str | None = Field(default=None, max_length=80)
     imprint_url: str | None = Field(default=None, max_length=500, pattern=r"^https://")
     privacy_url: str | None = Field(default=None, max_length=500, pattern=r"^https://")
+    # GAI-109: apply colours in the CRM at runtime (tenant switch, default off).
+    crm_apply: bool | None = None
 
     @field_validator(
         "primary_color",

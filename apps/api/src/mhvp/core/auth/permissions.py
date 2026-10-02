@@ -140,7 +140,8 @@ def _r(resource: str) -> frozenset[str]:
 
 _TICKETS = _rw("tickets") | {"tickets:approve"} | _rw("communication")
 # SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub): Regeln, Eskalation, Bereitschaft und
-# Kalender teilen sich sla:update ("verwalten"), Uhren/Alarme lesen und quittieren sla:read.
+# Kalender teilen sich sla:update ("verwalten"), Uhren/Alarme lesen sla:read, quittieren
+# sla:update (GAI-301, zustandsändernd).
 _SLA_MANAGE = _rw("sla") | {"sla:approve"}
 
 # Rule "Löschen nur Administrator" (docs/rules/M2-07.md, Produktschutz): only tenant_admin

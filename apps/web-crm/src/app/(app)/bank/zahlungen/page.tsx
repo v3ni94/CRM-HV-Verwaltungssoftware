@@ -3,11 +3,14 @@ import Link from "next/link";
 
 import { ApprovalHistory } from "@/components/accounting/ApprovalHistory";
 import { OrderActions } from "@/components/banking/OrderActions";
+import { PaymentBankConfigCard } from "@/components/banking/PaymentBankConfigCard";
+import { PaymentBatchBankStatus } from "@/components/banking/PaymentBatchBankStatus";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -32,6 +35,8 @@ export default async function PaymentOrdersPage() {
   redirectIfUnauthenticated(response);
   // AF03 (GAF-02): Zahlungsdateien (Sammler) nur lesend; Erzeugen, Download und Einreichung
   // bleiben bis G2 ohne Oberfläche.
+  const me = await getMe();
+  const canApprove = (me.data?.permissions ?? []).includes("accounting:approve");
   const batches = (await serverApi().GET("/api/v1/banking/payment-batches")).data ?? [];
   return (
     <div className="flex flex-col gap-4">
@@ -115,6 +120,7 @@ export default async function PaymentOrdersPage() {
                   <th className="num">{t("batchSum")}</th>
                   <th>{t("status")}</th>
                   <th>{t("batchReference")}</th>
+                  {canApprove ? <th>{t("actions")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -126,6 +132,11 @@ export default async function PaymentOrdersPage() {
                     <td className="num">{formatEur(String(b.control_sum))}</td>
                     <td>{String(b.status)}</td>
                     <td>{b.submission_reference ? String(b.submission_reference) : "-"}</td>
+                    {canApprove ? (
+                      <td>
+                        <PaymentBatchBankStatus batchId={String(b.id)} canApprove={canApprove} />
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -133,6 +144,7 @@ export default async function PaymentOrdersPage() {
           </div>
         )}
       </section>
+      <PaymentBankConfigCard canApprove={canApprove} />
     </div>
   );
 }

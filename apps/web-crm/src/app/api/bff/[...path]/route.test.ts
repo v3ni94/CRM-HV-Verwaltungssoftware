@@ -18,6 +18,14 @@ describe("BFF proxy", () => {
     expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/workspace/calendar.ics");
   });
 
+  it("allows the four eyes second factor reset calls and nothing else under it (AJ08)", async () => {
+    serverFetch.mockResolvedValue(new Response("[]", { status: 200, headers: { "content-type": "application/json" } }));
+    const ok = await GET(new Request("http://crm.localhost/api/bff/auth/mfa-reset/requests"), ctx("auth/mfa-reset/requests"));
+    expect(ok.status).toBe(200);
+    const bad = await GET(new Request("http://crm.localhost/api/bff/auth/mfa-reset/other"), ctx("auth/mfa-reset/other"));
+    expect(bad.status).toBe(404);
+  });
+
   it("rejects operations outside the allowlist", async () => {
     const res = await GET(new Request("http://crm.localhost/api/bff/platform/tenants"), ctx("platform/tenants"));
     expect(res.status).toBe(404);
@@ -104,6 +112,11 @@ describe("BFF proxy", () => {
     ["POST", `banking/payment-orders/${ID}/approve`],
     ["GET", "banking/payment-batches"],
     ["GET", `banking/payment-batches/${ID}`],
+    ["PUT", `banking/payment-bank-config/${ID}`], // AJ16 GAI-403
+    ["POST", `banking/payment-batches/${ID}/bank-status`], // AJ16 GAI-404
+    ["POST", `sepa-mandates/${ID}/revoke`], // AJ16 GAI-411
+    ["POST", "banking/auto-posting/digests/build"], // AJ16 GAI-407
+    ["POST", `banking/transactions/${ID}/clarification`], // AJ16 GAI-406
     ["GET", "banking/connections"],
     ["POST", "banking/connections"],
     ["GET", "banking/runs"],
@@ -272,6 +285,12 @@ describe("BFF proxy", () => {
     ["POST", "banking/automation"],
     ["DELETE", `banking/rules/${ID}`],
     ["POST", `banking/transactions/${ID}/reject`],
+    ["DELETE", `banking/payment-bank-config/${ID}`], // AJ16: config is never deleted
+    ["POST", `banking/payment-bank-config/${ID}`],
+    ["GET", `banking/payment-batches/${ID}/bank-status`],
+    ["DELETE", `sepa-mandates/${ID}/revoke`],
+    ["POST", `sepa-mandates/${ID}/reactivate`],
+    ["POST", `banking/payment-batches/${ID}/submit`],
     ["POST", "banking/csv-mappings/import"],
     ["DELETE", `platform/licenses/${ID}`], // M27-03: licences are ended, never deleted
     ["POST", `accounting/receivable-runs/${ID}/reverse`],
@@ -296,6 +315,24 @@ describe("BFF proxy", () => {
     const res = await GET(new Request(`http://crm.localhost/api/bff/${path}?range=week&mailbox_kind=personal`), ctx(path));
     expect(res.status).toBe(200);
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}?range=week&mailbox_kind=personal`);
+  });
+
+  it("forwards automation/event-types for GET and rejects other methods (GAI-611)", async () => {
+    serverFetch.mockResolvedValue(new Response("[]", { status: 200, headers: { "content-type": "application/json" } }));
+    const ok = await GET(new Request("http://crm.localhost/api/bff/automation/event-types"), ctx("automation/event-types"));
+    expect(ok.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/automation/event-types");
+    serverFetch.mockClear();
+    const bad = await POST(
+      new Request("http://crm.localhost/api/bff/automation/event-types", {
+        method: "POST",
+        headers: { host: "crm.localhost", origin: "http://crm.localhost" },
+        body: "{}",
+      }),
+      ctx("automation/event-types"),
+    );
+    expect(bad.status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
   });
 
   it("forwards the deposit settlement PDF preview (GAG-29)", async () => {
@@ -451,6 +488,148 @@ describe("BFF proxy, Uprotokoll and Objektakte import paths (GAH-409)", () => {
       });
       expect((await DELETE(req, ctx(path))).status).toBe(403);
     }
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+});
+
+/** GAI-412 bis GAI-420 (AJ17): Pfade der neuen Masken, je ein Positiv- und Negativfall. */
+describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
+  const headers = { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" };
+  const handlers = { GET, POST, PUT, PATCH, DELETE } as const;
+  const call = (method: keyof typeof handlers, path: string) => {
+    const init: RequestInit = { method, headers };
+    if (method === "POST" || method === "PUT" || method === "PATCH") init.body = "{}";
+    return handlers[method](new Request(`http://crm.localhost/api/bff/${path}`, init), ctx(path));
+  };
+  beforeEach(() => {
+    serverFetch.mockReset();
+    serverFetch.mockImplementation(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+  });
+
+  it.each([
+    ["POST", "hoa/inspection-requests/ownership-transfers/scan"],
+    ["GET", `hoa/resolutions/${ID}/majority-check`],
+    ["PATCH", `contracts/${ID}/custom-fields`],
+    ["POST", `work-orders/${ID}/steps`],
+    ["POST", "documents/bulk-link"],
+    ["GET", `documents/${ID}/download-url`],
+    ["POST", `documents/${ID}/mirror`],
+    ["POST", `mail/messages/${ID}/attachments/${ID}/invoice-extraction`],
+    ["PUT", `billing/heating-cost-imports/${ID}/rows`],
+    ["GET", `letting/prospects/${ID}/self-disclosure-links`],
+    ["POST", `communication/calls/${ID}/assign`],
+  ] as const)("forwards %s %s", async (method, path) => {
+    const res = await call(method, path);
+    expect(res.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
+  it.each([
+    ["GET", "documents/bulk-link"],
+    ["DELETE", `documents/${ID}/mirror`],
+    ["POST", `documents/${ID}/download-url`],
+    ["POST", "documents/not-a-uuid/mirror"],
+    ["GET", `work-orders/${ID}/steps`],
+    ["PUT", `work-orders/${ID}/steps`],
+    ["POST", "work-orders/not-a-uuid/steps"],
+    ["DELETE", `contracts/${ID}/custom-fields`],
+    ["POST", `hoa/resolutions/${ID}/majority-check`],
+    ["GET", "hoa/inspection-requests/ownership-transfers/scan"],
+    ["POST", `letting/prospects/${ID}/self-disclosure-links`],
+    ["GET", `communication/calls/${ID}/assign`],
+    ["POST", `mail/messages/${ID}/attachments/not-a-uuid/invoice-extraction`],
+  ] as const)("rejects %s %s with 404", async (method, path) => {
+    expect((await call(method, path)).status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+
+  it("requires a same-origin Origin header for the new mutating calls", async () => {
+    for (const path of ["documents/bulk-link", `work-orders/${ID}/steps`]) {
+      const req = new Request(`http://crm.localhost/api/bff/${path}`, {
+        method: "POST",
+        headers: { host: "crm.localhost", origin: "http://evil.example", "content-type": "application/json" },
+        body: "{}",
+      });
+      expect((await POST(req, ctx(path))).status).toBe(403);
+    }
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
+  const headers = { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" };
+  const handlers = { GET, POST, PUT, PATCH, DELETE } as const;
+  const call = (method: keyof typeof handlers, path: string) => {
+    const init: RequestInit = { method, headers };
+    if (method === "POST" || method === "PUT" || method === "PATCH") init.body = "{}";
+    return handlers[method](new Request(`http://crm.localhost/api/bff/${path}`, init), ctx(path));
+  };
+  beforeEach(() => {
+    serverFetch.mockReset();
+    serverFetch.mockImplementation(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+  });
+
+  it.each([
+    ["GET", "privacy/deletion-proposals"],
+    ["POST", "privacy/deletion-proposals/run"],
+    ["POST", `privacy/erasure-requests/${ID}/accept`],
+    ["GET", "privacy/consent-overview"],
+    ["GET", "privacy/request-deadlines/monitor"],
+    ["PUT", "privacy/request-deadlines"],
+    ["GET", "privacy/register/readiness"],
+  ] as const)("forwards %s %s", async (method, path) => {
+    expect((await call(method, path)).status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
+  it.each([
+    ["DELETE", "privacy/deletion-proposals"],
+    ["GET", "privacy/deletion-proposals/run"],
+    ["POST", "privacy/erasure-requests/not-a-uuid/accept"],
+    ["POST", "privacy/request-deadlines"],
+    ["PUT", "privacy/register/readiness"],
+  ] as const)("rejects %s %s with 404", async (method, path) => {
+    expect((await call(method, path)).status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+});
+
+/** GAI-401, 402, 408, 409, 410 (AJ28): gated mask paths, je ein Positiv- und Negativfall. */
+describe("BFF proxy, AJ28 gated mask paths", () => {
+  const headers = { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" };
+  const handlers = { GET, POST, PUT, PATCH, DELETE } as const;
+  const call = (method: keyof typeof handlers, path: string) => {
+    const init: RequestInit = { method, headers };
+    if (method === "POST" || method === "PUT" || method === "PATCH") init.body = "{}";
+    return handlers[method](new Request(`http://crm.localhost/api/bff/${path}`, init), ctx(path));
+  };
+  beforeEach(() => {
+    serverFetch.mockReset();
+    serverFetch.mockImplementation(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+  });
+
+  it.each([
+    ["GET", "accounting/payment-runs/previews"],
+    ["POST", "accounting/payment-runs/previews"],
+    ["POST", "accounting/payment-runs/payout-orders"],
+    ["POST", `accounting/dunning-cases/${ID}/letter/send`],
+    ["GET", `billing/owner-statements/${ID}/pdf`],
+    ["POST", `statements/${ID}/letters/send`],
+    ["POST", `deposit-settlements/${ID}/release`],
+  ] as const)("forwards %s %s", async (method, path) => {
+    expect((await call(method, path)).status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
+  it.each([
+    ["GET", "accounting/payment-runs/payout-orders"],
+    ["DELETE", "accounting/payment-runs/previews"],
+    ["GET", `accounting/dunning-cases/${ID}/letter/send`],
+    ["POST", `billing/owner-statements/${ID}/pdf`],
+    ["POST", "statements/not-a-uuid/letters/send"],
+    ["GET", `deposit-settlements/${ID}/release`],
+  ] as const)("rejects %s %s with 404", async (method, path) => {
+    expect((await call(method, path)).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
   });
 });

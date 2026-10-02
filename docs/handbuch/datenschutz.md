@@ -46,3 +46,15 @@ Das Verzeichnis erkennt zusätzlich das Schadenstool, Makler-CRM-Anbieter, Webho
 EBICS- oder FinTS-Bankzugänge aus der Konfiguration. Je Dienst wird lesend angezeigt, welche
 Rechtsgrundlage für die betroffenen Einwilligungszwecke gilt (Register Rechtsgrundlagen der
 Einwilligung). Ob ein Dienst Auftragsverarbeiter ist, tragen Sie im Registereintrag ein.
+
+## Löschvorschläge
+
+Unter Datenschutz, Löschprofile lässt sich je Datenart der Schalter "Löschvorschläge erzeugen" setzen. Er wirkt erst, wenn das Profil von einer zweiten Person freigegeben ist. Das System löscht nichts selbst: Für Kontakte mit abgelaufenem Löschdatum entsteht jede Nacht ein Löschantrag im Status "Vorschlag". Eine Person übernimmt den Vorschlag als Antrag, eine zweite Person gibt ihn frei. Für Kommunikation, Tickets, Portalzugänge und das Ereignisprotokoll zeigt die Übersicht nur die Anzahl der Einträge, die älter als die Frist sind. Die Löschfristen selbst sind noch nicht entschieden (V17).
+
+## Datenschutzübersicht (Stand 02.10.2026)
+
+Unter Einstellungen, Datenschutz zeigt die Datenschutzübersicht die Einwilligungen aller Kontakte je Zweck (aktiv, widerrufen, Widersprüche, ohne Nachweisdokument). Im Bereich Fristen tragen Personen mit Freigaberecht die Antwortfristen für Auskunft und Löschung sowie eine Vorfrist in Tagen ein. Die Fristen haben bewusst keinen Standardwert; ohne Eintrag erscheinen offene Löschanträge ohne Fälligkeit. Die Vor-G1-Auswertung listet aktiv genutzte Dienste ohne Registereintrag und Einträge mit offenem AVV, Drittland oder rechtlicher Prüfung; sie öffnet kein Gate.
+
+Im Abschnitt Einwilligungsregeln wird festgelegt, ob E-Mail-Zustellung und Datenweitergabe nur mit Einwilligung (Standard) oder auch auf Vertragsgrundlage zulässig sind. Die Änderung ist eine Rechtsentscheidung und wird protokolliert.
+
+Im Abschnitt Umfang der DSGVO-Auskunft lassen sich Vorgänge, Nachrichten und Dokumentbezüge des Kontakts zuschalten. Ausgeschaltet erscheinen sie in der Auskunft nur als Anzahl.

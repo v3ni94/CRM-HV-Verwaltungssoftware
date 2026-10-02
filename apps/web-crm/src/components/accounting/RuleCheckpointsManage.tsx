@@ -27,6 +27,7 @@ export function RuleCheckpointsManage() {
   const [name, setName] = useState("");
   const [source, setSource] = useState("");
   const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
   const base = "/api/bff/accounting/rule-versions/checkpoints";
   const load = useCallback(async () => {
     const res = await bff<Checkpoint[]>(base);
@@ -37,11 +38,14 @@ export function RuleCheckpointsManage() {
     void load();
   }, [load]);
   async function add() {
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const res = await bff<Checkpoint>(base, {
       method: "POST",
       body: JSON.stringify({ title: name, effective_from: date, source, note }),
     });
+    setBusy(false);
     if (!res.ok) return setError(res.message);
     setName("");
     setSource("");
@@ -52,11 +56,14 @@ export function RuleCheckpointsManage() {
   const [by, setBy] = useState("");
   const [on, setOn] = useState("");
   async function confirm(id: string) {
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const res = await bff(`/api/bff/accounting/rule-versions/${id}/confirm`, {
       method: "POST",
       body: JSON.stringify({ confirmed_by: by.trim(), confirmed_on: on }),
     });
+    setBusy(false);
     if (!res.ok) return setError(res.message);
     setConfirming(null);
     setBy("");
@@ -64,7 +71,10 @@ export function RuleCheckpointsManage() {
     await load();
   }
   async function withdraw(id: string) {
+    if (busy) return;
+    setBusy(true);
     const res = await bff(`/api/bff/accounting/rule-versions/${id}/withdraw`, { method: "POST" });
+    setBusy(false);
     if (!res.ok) return setError(res.message);
     await load();
   }
@@ -89,7 +99,7 @@ export function RuleCheckpointsManage() {
           {t("note")}
           <input className={ui.input} value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
-        <button type="button" className={ui.secondary} disabled={!date || !name} onClick={() => void add()}>
+        <button type="button" className={ui.secondary} disabled={!date || !name || busy} onClick={() => void add()}>
           {t("add")}
         </button>
       </div>
@@ -124,7 +134,7 @@ export function RuleCheckpointsManage() {
                       <div className="flex flex-wrap items-end gap-2">
                         <input className={ui.input} aria-label={t("confirmedBy")} placeholder={t("confirmedBy")} value={by} onChange={(e) => setBy(e.target.value)} />
                         <input className={ui.input} type="date" aria-label={t("confirmedOn")} value={on} onChange={(e) => setOn(e.target.value)} />
-                        <button type="button" className={ui.primary} disabled={by.trim().length < 3 || !on} onClick={() => void confirm(r.id)}>
+                        <button type="button" className={ui.primary} disabled={by.trim().length < 3 || !on || busy} onClick={() => void confirm(r.id)}>
                           {t("confirm")}
                         </button>
                         <span className={ui.help}>{t("confirmHint")}</span>
@@ -134,7 +144,7 @@ export function RuleCheckpointsManage() {
                         <button type="button" className={ui.secondary} onClick={() => setConfirming(r.id)}>
                           {t("confirm")}
                         </button>
-                        <button type="button" className={ui.secondary} onClick={() => void withdraw(r.id)}>
+                        <button type="button" className={ui.secondary} disabled={busy} onClick={() => void withdraw(r.id)}>
                           {t("withdraw")}
                         </button>
                       </div>

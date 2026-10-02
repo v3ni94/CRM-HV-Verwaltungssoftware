@@ -23,13 +23,14 @@ import json
 import uuid
 from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing.models import ConsumptionInfo
+from mhvp.core.clock import local_today
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 RULE_VERSION = "consumption-info-h03-draft-v1"
@@ -182,7 +183,7 @@ def _average(values: dict[uuid.UUID, dict[str, Any]], component: str) -> dict[st
     measures = {v[component]["unit_of_measure"] for v in values.values() if v.get(component)}
     total = sum(figures, Decimal(0))
     return {
-        "value": str((total / len(figures)).quantize(Decimal("0.01"))),
+        "value": str((total / len(figures)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
         "units": len(figures),
         "unit_of_measure": measures.pop() if len(measures) == 1 else None,
     }
@@ -419,7 +420,7 @@ async def _store_pdf(
                 ),
             ]
         ),
-        letter_date=datetime.now(UTC).date(),
+        letter_date=local_today(),
         info=[("Regelversion", RULE_VERSION)],
         tables={
             "verbrauch": doc_letters.LetterTable(

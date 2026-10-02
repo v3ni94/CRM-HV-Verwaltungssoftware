@@ -28,7 +28,7 @@ import logging
 import re
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -39,6 +39,7 @@ from mhvp.communication.models import Message
 from mhvp.contacts.models import Contact, ContactEmail, ContactKind, ContactPhone, PartyMember
 from mhvp.contacts.validation import InvalidValueError, normalise_phone
 from mhvp.contracts.models import Contract
+from mhvp.core.clock import local_today
 from mhvp.core.config import Settings
 from mhvp.core.events import emit
 from mhvp.objektakte.masking import mask_identifiers
@@ -359,7 +360,7 @@ async def _people_at(
 
 
 async def resolve(session: AsyncSession, data: CallData, today: date | None = None) -> Resolution:
-    today = today or datetime.now(UTC).date()
+    today = today or local_today()
     result = Resolution()
     prop = await _property(session, data)
     unit: Unit | None = None

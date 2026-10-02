@@ -13,7 +13,7 @@ Two variants as tenant switch (``hoa_reserve_payment_setting.mode``):
 from __future__ import annotations
 
 import uuid
-from decimal import ROUND_HALF_EVEN, Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -50,14 +50,15 @@ NOTE = (
 
 def split_by_plan_ratio(unassigned: Decimal, planned: dict[str, Decimal]) -> dict[str, Decimal]:
     """Split ``unassigned`` in the ratio of ``planned`` (rule AE08-01). Cent rounding half
-    even; the rounding rest goes to the reserve with the largest plan amount (ties: smallest
-    id), so the parts always add up to ``unassigned``. Without a positive plan: empty."""
+    up (GAI-614); the rounding rest goes to the reserve with the largest plan amount
+    (ties: smallest id), so the parts always add up to ``unassigned``. Without a positive
+    plan: empty."""
     positive = {k: v for k, v in planned.items() if v > 0}
     total = sum(positive.values(), ZERO)
     if total <= 0 or unassigned == 0:
         return {}
     parts = {
-        k: (unassigned * v / total).quantize(CENT, rounding=ROUND_HALF_EVEN)
+        k: (unassigned * v / total).quantize(CENT, rounding=ROUND_HALF_UP)
         for k, v in positive.items()
     }
     rest = unassigned - sum(parts.values(), ZERO)

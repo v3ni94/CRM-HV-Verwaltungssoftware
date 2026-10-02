@@ -124,6 +124,7 @@ def test_other_lists_accept_as_of(client: TestClient, world: World) -> None:
         "/api/v1/parties", params={"contact_id": contact["id"], "as_of": "2026-06-01"}, headers=h
     )
     assert rejected.status_code == 422
+    assert "as_of" in rejected.text  # GAI-607: the refusal names the parameter
     # allocation keys: only keys with a unit value in force on the day
     keys = f"/api/v1/properties/{prop['id']}/allocation-keys"
     assert _ok(client.get(keys, params={"as_of": "2026-06-01"}, headers=h), 200) == []

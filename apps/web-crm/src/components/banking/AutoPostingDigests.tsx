@@ -24,9 +24,28 @@ export type Digest = {
  *  Bestätigung mit accounting:review; ohne Bestätigung bleibt L3 in der Folgewoche gesperrt. */
 export function AutoPostingDigests({ canReview }: { canReview: boolean }) {
   const t = useTranslations("Bank.digest");
+  const tb = useTranslations("BankActions.digest");
   const [rows, setRows] = useState<Digest[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState("");
+  const [building, setBuilding] = useState(false);
+  const [builtCount, setBuiltCount] = useState<number | null>(null);
+
+  async function build() {
+    setBuilding(true);
+    setError(null);
+    setBuiltCount(null);
+    const r = await bff<Digest[]>("/api/bff/banking/auto-posting/digests/build", {
+      method: "POST",
+      body: JSON.stringify({ week_start: weekStart }),
+    });
+    setBuilding(false);
+    if (r.ok) {
+      setBuiltCount(r.data.length);
+      await load();
+    } else setError(r.message);
+  }
 
   async function load() {
     const r = await bff<Digest[]>("/api/bff/banking/auto-posting/digests");
@@ -61,6 +80,19 @@ export function AutoPostingDigests({ canReview }: { canReview: boolean }) {
         <p role="alert" className={`${ui.alert} mt-2`}>
           {error}
         </p>
+      ) : null}
+      {canReview ? (
+        <div className="mt-2 flex flex-wrap items-end gap-2" data-testid="digest-build">
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{tb("buildWeek")}</span>
+            <input type="date" className={ui.input} value={weekStart} onChange={(e) => setWeekStart(e.target.value)} />
+          </label>
+          <button type="button" className={ui.buttonSm} onClick={() => void build()} disabled={building || !weekStart}>
+            {tb("build")}
+          </button>
+          <span className="text-xs text-muted">{tb("buildHint")}</span>
+          {builtCount !== null ? <span className="text-xs text-success-fg">{tb("built", { count: builtCount })}</span> : null}
+        </div>
       ) : null}
       {rows && rows.length === 0 ? (
         <p className="mt-2 text-sm text-muted">{t("none")}</p>

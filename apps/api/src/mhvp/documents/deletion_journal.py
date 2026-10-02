@@ -44,6 +44,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from mhvp.core.clock import local_today
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import DomainEvent, emit
 from mhvp.documents import mirror_deletion, trash
@@ -382,7 +383,7 @@ async def replay_journal(
     Each deletion runs in its own tenant transaction, so one refusal or error never rolls back
     the others (6.9.13). Mirror steps of deleted documents are queued after each commit
     (``mhvp.documents.mirror_deletion.enqueue``)."""
-    today = today or datetime.now(UTC).date()
+    today = today or local_today()
     report = ReplayReport(apply=apply)
     seen: set[tuple[str, str]] = set()
     # AE33: the last lifecycle statement per document decides whether a trash entry applies.

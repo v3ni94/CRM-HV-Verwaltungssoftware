@@ -982,6 +982,48 @@ async def checks(session: AsyncSession, ledger: Ledger) -> list[str]:
     return findings
 
 
+async def bank_statement_chain_findings(session: AsyncSession, ledger: Ledger) -> list[str]:
+    """GAI-604 (B09): statement chain of the bank accounts linked to this ledger. A closing
+    balance that differs from the next opening balance, a statement that does not add up and a
+    gap or overlap of statement periods are findings. Read only, nothing is corrected."""
+    from mhvp.banking.services import reconcile
+
+    bank_ids = (
+        await session.scalars(
+            select(LedgerAccount.property_bank_account_id)
+            .where(
+                LedgerAccount.ledger_id == ledger.id,
+                LedgerAccount.property_bank_account_id.is_not(None),
+            )
+            .distinct()
+        )
+    ).all()
+    findings: list[str] = []
+    for bank_id in bank_ids:
+        if bank_id is None:
+            continue
+        for row in await reconcile(session, bank_id):
+            ref = row["statement_ref"]
+            if row["chain_status"] == "break":
+                findings.append(
+                    f"Kontoauszug {ref}: Anfangssaldo weicht um {row['chain_difference']} "
+                    "vom Endsaldo des Vorauszugs ab"
+                )
+            if row["statement_difference"] is not None and row["statement_difference"] != 0:
+                findings.append(
+                    f"Kontoauszug {ref}: Anfangssaldo plus Umsätze ergibt nicht den Endsaldo "
+                    f"(Differenz {row['statement_difference']})"
+                )
+            if row["period_status"] == "gap":
+                findings.append(
+                    f"Kontoauszug {ref}: Lücke im Auszugszeitraum "
+                    f"{row['gap_from']} bis {row['gap_to']}"
+                )
+            elif row["period_status"] == "overlap":
+                findings.append(f"Kontoauszug {ref}: Auszugszeitraum überschneidet den Vorauszug")
+    return findings
+
+
 async def numbering_findings(session: AsyncSession, ledger: Ledger) -> list[str]:
     """B04 sentence 3 (GA05-01): posted numbers per fiscal year run 1..n without gaps and the
     counter row equals the highest assigned number."""

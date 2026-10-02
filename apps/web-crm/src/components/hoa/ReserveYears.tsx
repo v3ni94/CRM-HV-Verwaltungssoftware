@@ -23,6 +23,7 @@ export type AccountOption = { id: string; label: string };
  *  closing). Display only, nothing here posts (M24-01). */
 export function ReserveYearsTable({ rows, caption }: { rows: ReserveYearRow[]; caption?: string }) {
   const t = useTranslations("HoaReserves");
+  const tCommon = useTranslations("Common");
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm" aria-label={caption ?? t("yearTitle")}>
@@ -41,6 +42,13 @@ export function ReserveYearsTable({ rows, caption }: { rows: ReserveYearRow[]; c
           </tr>
         </thead>
         <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={99} className="text-muted">
+                {tCommon("emptyList")}
+              </td>
+            </tr>
+          ) : null}
           {rows.map((r) => (
             <tr key={r.year}>
               <td>{r.year}</td>

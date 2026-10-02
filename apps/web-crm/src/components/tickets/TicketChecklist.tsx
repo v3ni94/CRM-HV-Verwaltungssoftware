@@ -68,6 +68,7 @@ export function TicketChecklist({
             {checklist.map((item) => (
               <li key={item.key} className="flex items-center gap-2 text-sm">
                 <input
+                  aria-label={item.label}
                   type="checkbox"
                   checked={item.done}
                   disabled={busyKey === item.key}

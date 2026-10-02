@@ -82,3 +82,52 @@ describe("ContractMandates", () => {
     expect(screen.getByText("alle Ertragsarten")).toBeInTheDocument();
   });
 });
+
+describe("ContractMandates revoke (GAI-411)", () => {
+  const mandate: MandateOut = {
+    id: "0192abcd-0000-7000-8000-0000000000b1",
+    party_id: "p1",
+    legal_entity_id: "l1",
+    reference: "REF-9",
+    creditor_id: "DE98ZZZ09999999999",
+    signed_at: "2026-01-01",
+    type: "core",
+    sequence: "recurring",
+    valid_until: null,
+    status: "active",
+    iban_masked: null,
+    payment_type_codes: [],
+    exclude_special_levy: false,
+  };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("offers no action without the update right", () => {
+    renderIntl(<ContractMandates mandates={[mandate]} defaultMandateId={null} directDebit />);
+    expect(screen.queryByRole("button", { name: "Widerrufen" })).toBeNull();
+  });
+
+  it("revokes after confirmation and shows the new status", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ...mandate, status: "revoked" }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
+    renderIntl(<ContractMandates mandates={[mandate]} defaultMandateId={null} directDebit canUpdate />);
+    await userEvent.click(screen.getByRole("button", { name: "Widerrufen" }));
+    expect(await screen.findByText("Mandat REF-9 widerrufen.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/bff/sepa-mandates/${mandate.id}/revoke`);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(screen.queryByRole("button", { name: "Widerrufen" })).toBeNull();
+  });
+
+  it("does nothing when the confirmation is declined and hides the action for revoked mandates", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
+    const { unmount } = renderIntl(<ContractMandates mandates={[mandate]} defaultMandateId={null} directDebit canUpdate />);
+    await userEvent.click(screen.getByRole("button", { name: "Widerrufen" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    unmount();
+    renderIntl(<ContractMandates mandates={[{ ...mandate, status: "revoked" }]} defaultMandateId={null} directDebit canUpdate />);
+    expect(screen.queryByRole("button", { name: "Widerrufen" })).toBeNull();
+  });
+});
