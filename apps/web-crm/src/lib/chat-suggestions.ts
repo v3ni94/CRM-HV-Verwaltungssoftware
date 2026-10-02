@@ -140,6 +140,7 @@ export const ROUTES: Rule[] = [
   // Nachkontrolle automatischer Buchungen (Regel M12-05).
   { path: "/bank/nachkontrolle", area: "bank", subArea: "review" },
   { path: "/bank/zahllauf", area: "bank", subArea: "paymentRun" },
+  { path: "/bank/verbindungen", area: "bank", subArea: "connections" },
   { path: "/bank", area: "bank" },
   { path: "/rechnungen/belegeingang", area: "invoices", subArea: "intake" },
   { path: "/rechnungen/kreditoren", area: "invoices", subArea: "creditors" },
@@ -178,6 +179,7 @@ export const ROUTES: Rule[] = [
   { path: "/kalender", area: "calendar", query: { termin: { entityType: "calendar_entry" } } },
   { path: "/fristen", area: "deadlines", query: { kind: {} } },
   { path: "/dokumente/briefe", area: "documents", subArea: "letters" },
+  { path: "/dokumente/eingang", area: "documents", subArea: "intakeProposals" },
   { path: "/dokumente/erzeugt", area: "documents", subArea: "generated" },
   { path: "/dokumente/loeschvorschlaege", area: "documents", subArea: "deletionProposals" },
   { path: "/dokumente/papierkorb", area: "documents", subArea: "trash" },
@@ -198,7 +200,7 @@ export const ROUTES: Rule[] = [
   { path: "/immoware/lernphase", area: "immoware", subArea: "learning" },
   { path: "/immoware", area: "immoware" },
   { path: "/plattform/abnahme", area: "platform", subArea: "acceptance" },
-  { path: "/plattform/audit", area: "platform", subArea: "audit" },
+  { path: "/plattform/audit", area: "platform", subArea: "platformAudit" },
   { path: "/plattform/betrieb", area: "platform", subArea: "operations" },
   { path: "/plattform/domains", area: "platform", subArea: "domains" },
   { path: "/plattform/freigabe-g5", area: "platform", subArea: "gateG5" },
@@ -210,6 +212,8 @@ export const ROUTES: Rule[] = [
   { path: "/plattform/preisliste", area: "platform", subArea: "priceList" },
   { path: "/plattform/uebersicht", area: "platform", subArea: "overview" },
   { path: "/plattform", area: "platform" },
+  { path: "/hilfe/*", area: "assistant", subArea: "help" },
+  { path: "/hilfe", area: "assistant", subArea: "help" },
   { path: "/assistent/*", area: "assistant", subArea: "conversation" },
   { path: "/assistent", area: "assistant" },
 ];

@@ -424,3 +424,7 @@ Tickets in der Liste markieren, in der unteren Leiste Status anwenden oder "Bear
 ## Verlauf bei Priorität und Team
 
 Ändern Sie Priorität oder Team eines Tickets, einzeln oder per Sammelaktion, erscheint im Ticketverlauf ein Eintrag mit altem und neuem Wert, dem Bearbeiter und bei der Sammelaktion dem Hinweis Massenaktion. Gleiche Werte erzeugen keinen Eintrag.
+
+## Offene Zuordnungsprüfungen (Startseite)
+
+Auf der Startseite listet der Arbeitsvorrat Rückfragen zur Zuordnung von Tickets und E-Mails zu Kontakt, Objekt und Einheit. Ein Eintrag führt zum Ticket beziehungsweise zur E-Mail, dort wird entschieden. Die Statusänderung mehrerer Tickets steht in der Ticketliste als Sammelaktion zur Verfügung.

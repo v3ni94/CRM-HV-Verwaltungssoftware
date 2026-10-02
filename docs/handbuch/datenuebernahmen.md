@@ -87,3 +87,7 @@ einer Mietimmobilie mit mehreren Eigentümern, legt die Übernahme das Konto nic
 Nach dem Bestätigen erscheint der Abschnitt "Rechtsträger auswählen": Wählen Sie je Konto den
 Rechtsträger (bei Debitorenkonten die Rechtsträger per Häkchen) und klicken Sie auf "Konten
 anlegen". Erst dann entstehen die Konten, die Rücknahme des Importlaufs umfasst sie.
+
+## Import zurücknehmen mit Vorschau (AF21)
+
+Ein Klick auf "Rückgängig" öffnet einen Dialog. Er nennt, wie viele Datensätze entfernt werden und welche bestehen bleiben, jeweils mit Grund, zum Beispiel "Kaution erfasst" oder "Mitglied einer Vertragspartei". Originaldokumente bleiben immer erhalten. Erst "Jetzt zurücknehmen" führt die Rücknahme aus; "Abbrechen" ändert nichts. Voraussetzung ist das Recht, KI-Importe zurückzunehmen.

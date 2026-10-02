@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { ColumnAssignments } from "@/components/imports/ColumnAssignments";
 import { ExportRequirements } from "@/components/imports/ExportRequirements";
 import { Immoware24Wizard } from "@/components/imports/Immoware24Wizard";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -54,6 +55,7 @@ export default async function Immoware24Page() {
         <Immoware24Wizard fields={fields.data} mappings={mappings.data ?? []} canUndo={canUndo} />
       )}
       {fields.data ? <ExportRequirements /> : null}
+      {fields.data ? <ColumnAssignments /> : null}
       <Link href="/importe/immoware24-listen" className="text-sm font-medium hover:underline">
         {t("listImportLink")}
       </Link>

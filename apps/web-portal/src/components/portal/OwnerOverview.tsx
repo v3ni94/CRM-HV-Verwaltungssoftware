@@ -19,6 +19,7 @@ export function OwnerOverview({
   income = [],
   takeover = [],
   takeoverNote = "",
+  incomeNote = "",
 }: {
   payments: PaymentResolution[];
   note: string;
@@ -27,6 +28,8 @@ export function OwnerOverview({
   income?: OwnerRentalIncome[];
   takeover?: OwnerTakeoverProperty[];
   takeoverNote?: string;
+  /** GAE-15: Hinweis der API (zum Beispiel Schalter aus); leer zeigt den Standardhinweis. */
+  incomeNote?: string;
 }) {
   const t = useTranslations("OwnerOverview");
   const format = useFormatter();
@@ -106,11 +109,16 @@ export function OwnerOverview({
           </ul>
         </section>
       ) : null}
-      {income.length > 0 ? (
-        <section className="flex flex-col gap-3" aria-labelledby="owner-income">
-          <h2 id="owner-income" className={ui.h2}>
-            {t("incomeTitle")}
-          </h2>
+      {/* GAE-15: die Rubrik bleibt sichtbar, eine leere Liste erhält einen Hinweistext. */}
+      <section className="flex flex-col gap-3" aria-labelledby="owner-income">
+        <h2 id="owner-income" className={ui.h2}>
+          {t("incomeTitle")}
+        </h2>
+        {income.length === 0 ? (
+          <p className={ui.notice} data-testid="owner-income-empty">
+            {incomeNote || t("incomeEmpty")}
+          </p>
+        ) : (
           <ul className="flex flex-col gap-3">
             {income.map((row) => (
               <li key={row.property_id} className={`${ui.card} flex flex-col gap-1 text-sm`}>
@@ -125,8 +133,8 @@ export function OwnerOverview({
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        )}
+      </section>
       {takeover.length > 0 ? (
         <section className="flex flex-col gap-3" aria-labelledby="owner-takeover" data-testid="owner-takeover">
           <h2 id="owner-takeover" className={ui.h2}>

@@ -94,7 +94,9 @@
       "security": "Sicherheit",
       "assistant": "Assistent",
       "handover": "Übergabe",
-      "ownerStatements": "Hausgeldabrechnung"
+      "ownerStatements": "Hausgeldabrechnung",
+      "ownerPlans": "Wirtschaftsplan",
+      "ownerRentalStatements": "Eigentümerabrechnung"
     },
     "notifications": {
       "title": "Benachrichtigungen",
@@ -117,6 +119,7 @@
       "contacts": "Ansprechpartner des Objekts",
       "hoaAccount": "Hausgeldkonto ansehen",
       "consumption": "Verbrauchsinformation ansehen",
+      "tenantStatements": "Nebenkostenabrechnung ansehen",
       "notices": "Aushänge lesen",
       "newNotices": "{count, plural, one {Ein neuer Aushang} other {# neue Aushänge}} am Schwarzen Brett.",
       "forms": "Formulare der Verwaltung ausfüllen"
@@ -181,6 +184,7 @@
     "unitNumber": "Einheit {number}",
     "questionField": "Ihre Frage",
     "questionRequired": "Bitte geben Sie eine Frage mit mindestens drei Zeichen ein.",
+    "stillPending": "Die Antwort dauert länger als erwartet. Bitte prüfen Sie den Verlauf später erneut.",
     "ask": "Frage stellen",
     "asking": "Wird beantwortet",
     "answerTitle": "Antwort",
@@ -245,6 +249,34 @@
     "dueDate": "Fällig am",
     "amount": "Betrag",
     "remaining": "Offen"
+  },
+  "TenantStatements": {
+    "title": "Nebenkostenabrechnung",
+    "empty": "Keine ausgegebene Abrechnung vorhanden.",
+    "locked": "Die Abrechnungen sind für Ihren Zugang noch nicht freigeschaltet.",
+    "row": "Abrechnung {from} bis {to}, Einheit {unit}",
+    "open": "Abrechnung ansehen",
+    "additionalPayment": "Nachzahlung {amount}",
+    "credit": "Guthaben {amount}",
+    "balanced": "Ausgeglichen",
+    "costs": "Ihr Kostenanteil",
+    "advances": "Ihre Vorauszahlungen",
+    "balance": "Ergebnis",
+    "download": "Abrechnung als PDF herunterladen",
+    "noPdf": "Das Abrechnungsschreiben liegt im Portal noch nicht vor.",
+    "positions": "Kostenpositionen",
+    "position": "Position",
+    "key": "Umlageschlüssel",
+    "total": "Gesamtkosten",
+    "share": "Ihr Anteil",
+    "explanations": "Erläuterungen",
+    "topic": {
+      "key": "Umlageschlüssel",
+      "consumption": "Verbrauch",
+      "advance": "Vorauszahlungen",
+      "balance": "Saldo"
+    },
+    "firstOpened": "Erstmals abgerufen am {date}."
   },
   "ConsumptionInfo": {
     "title": "Verbrauchsinformation",
@@ -1017,6 +1049,7 @@
     "mustAccept": "Bitte bestätigen Sie die Annahme der Nutzungsbedingungen.",
     "loadFailed": "Der Stand der Nutzungsbedingungen konnte nicht geladen werden.",
     "alreadyAccepted": "Die Nutzungsbedingungen sind angenommen.",
+    "readTerms": "Nutzungsbedingungen lesen (öffnet in neuem Tab)",
     "evidence": "Als Nachweis werden Zeitpunkt, Fassung und eine pseudonymisierte Kennung Ihrer Verbindung gespeichert."
   },
   "Security": {
@@ -1120,6 +1153,7 @@
     "unit": "Einheit",
     "noValue": "kein Wert hinterlegt",
     "incomeTitle": "Mieterträge je Objekt (vereinbarte Miete)",
+    "incomeEmpty": "Für Ihre Einheiten liegen keine Mieterträge zur Anzeige vor.",
     "takeoverTitle": "Objektübernahme",
     "takeoverComplete": "alle Punkte erledigt",
     "takeoverOpen": "{count} Punkte offen",
@@ -1143,7 +1177,45 @@
     "download": "PDF herunterladen",
     "assetTitle": "Vermögensbericht der Gemeinschaft",
     "assetEmpty": "Es liegt noch kein freigegebener Vermögensbericht vor.",
-    "assetRow": "Vermögensbericht zum {date}"
+    "assetRow": "Vermögensbericht zum {date}",
+    "explainTitle": "Erläuterung Einzelabrechnung {year}, Einheit {unit}",
+    "costShare": "Kostenanteil",
+    "advancesResolved": "Vorschüsse Soll",
+    "advancesPaid": "Vorschüsse Ist",
+    "result": "Abrechnungsspitze",
+    "arrears": "Rückstände aus Vorschüssen",
+    "reserveDue": "Zuführung Rücklage Soll",
+    "reservePaid": "Zuführung Rücklage Ist",
+    "reserveOpening": "Rücklage Anfangsbestand Gemeinschaft",
+    "reserveClosing": "Rücklage Endbestand Gemeinschaft"
+  },
+  "OwnerPlans": {
+    "title": "Wirtschaftsplan",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "empty": "Es liegt kein beschlossener Wirtschaftsplan für Ihre Einheiten vor.",
+    "row": "Wirtschaftsplan {year}, Version {version}",
+    "validFrom": "gültig ab {date}",
+    "unit": "Einheit {unit}",
+    "component": "Position",
+    "annual": "Jahresbetrag",
+    "monthly": "Monatlicher Vorschuss",
+    "rounding": "Rundungsdifferenz",
+    "hoaFee": "Hausgeld",
+    "reserve": "Erhaltungsrücklage"
+  },
+  "OwnerRentalStatements": {
+    "title": "Eigentümerabrechnung",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "empty": "Es liegt keine ausgegebene Eigentümerabrechnung vor.",
+    "row": "{kind}, {from} bis {to}",
+    "kind": {
+      "rental_owner": "Mietverwaltung",
+      "sev_owner": "Sondereigentumsverwaltung"
+    },
+    "income": "Einnahmen",
+    "expenses": "Ausgaben",
+    "payouts": "Auszahlungen",
+    "download": "PDF herunterladen"
   },
   "Branding": {
     "logoAlt": "Logo {name}",

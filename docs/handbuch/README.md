@@ -305,3 +305,9 @@ Fragen zu Kontakten, Objekten, Verträgen und Tickets, Vorschläge je Seite und 
 
 Der Assistent schlägt aus Listen Kontakte, Objekte und Verträge vor; nichts wird ohne Bestätigung übernommen, jeder Import lässt sich rückgängig machen. Eine Rolle aus der Chatanweisung (zum Beispiel "Rolle bank hinterlegen", "als Mieter anlegen") wird beim Tabellenimport auf alle Kontakte gesetzt, zusätzlich zu einer Rolle aus der Tabelle; die Werte Bank und Verwalter sind seit 1.24.0 möglich. Ohne erkennbare Rolle fragt der Assistent nach (Welche Rolle sollen die Kontakte erhalten?). Für einen bereits gelaufenen Import lässt sich die Rolle im Importverlauf über Rolle nachträglich setzen ergänzen. Der Immoware24-Import führt durch Hochladen, Zuordnen der Spalten, Prüfen, Testlauf und Übernahme; die Immoware24-Listen (Objektdaten, Kontakte) werden mit Testlauf und Übernahme direkt angelegt. Vorhandene Daten werden nie überschrieben.
 - **Portal, Assistent für die eigenen Unterlagen** ([Portal](portal.md)): Mandantenschalter Chat-Bot und Datenschutz-Feature (beide aus); Fragen werden nur aus den für den Zugang freigegebenen Unterlagen beantwortet, KI-Antworten nur mit freigegebenem Datenschutzhinweis und Kenntnisnahme.
+
+## Handbuch im Produkt
+
+Dieses Handbuch ist im CRM unter Hilfe (`/hilfe`) lesbar, mit Kapitelübersicht und Volltextsuche.
+Die Seiten entstehen aus den Markdown-Dateien in `docs/handbuch` durch
+`python3 scripts/build_handbook.py`; `make lint` prüft, dass die erzeugte Datei aktuell ist.

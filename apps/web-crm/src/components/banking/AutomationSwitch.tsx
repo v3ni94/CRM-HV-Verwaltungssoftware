@@ -60,11 +60,11 @@ export function AutomationSwitch({ canApprove, userId }: { canApprove: boolean; 
     void reload();
   }, [reload]);
 
-  async function act(path: string, body: unknown, done: string) {
+  async function act(path: string, body: unknown, done: string, method: "POST" | "PUT" = "POST") {
     setBusy(true);
     setError(null);
     setMessage(null);
-    const res = await bff<SwitchRequest>(path, { method: "POST", body: JSON.stringify(body) });
+    const res = await bff<unknown>(path, { method, body: JSON.stringify(body) });
     setBusy(false);
     if (!res.ok) {
       setError(res.message);
@@ -94,6 +94,27 @@ export function AutomationSwitch({ canApprove, userId }: { canApprove: boolean; 
               <span className={state.enabled ? ui.badgeSuccess : ui.badge}>{state.enabled ? t("on") : t("off")}</span>{" "}
               <span className={state.g1_open ? ui.badgeSuccess : ui.badgeWarning}>{state.g1_open ? t("g1Open") : t("g1Closed")}</span>
             </p>
+            {canApprove && state.enabled ? (
+              <form
+                className="mt-3 flex flex-col gap-2"
+                data-testid="ae03-switch-off"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  // AF01: PUT /banking/automation only switches off, at once and without request.
+                  void act(BASE, { enabled: false, reason: reason.trim() }, t("switchedOff"), "PUT");
+                }}
+              >
+                <label className="flex flex-col gap-1">
+                  <span className={ui.label}>{t("offReason")}</span>
+                  <textarea className={ui.input} rows={2} required minLength={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+                </label>
+                <div className={ui.formActions}>
+                  <button type="submit" className={ui.danger} disabled={busy || reason.trim().length < 3}>
+                    {t("switchOff")}
+                  </button>
+                </div>
+              </form>
+            ) : null}
             {canApprove && state.can_request ? (
               <form
                 className="mt-3 flex flex-col gap-2"

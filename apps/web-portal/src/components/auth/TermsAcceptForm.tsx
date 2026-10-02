@@ -43,6 +43,12 @@ export function TermsAcceptForm({ version, next = "/start" }: { version: string;
     <form onSubmit={onSubmit} noValidate aria-busy={busy} className="flex flex-col gap-3" aria-label={t("title")}>
       <p className="text-sm text-muted">{t("hint")}</p>
       <p className="text-sm font-medium">{t("version", { version })}</p>
+      {/* GAE-28: Direktlink auf die veröffentlichte Fassung, neuer Tab, damit die Eingabe bleibt. */}
+      <p className="text-sm">
+        <a href="/rechtliches/nutzungsbedingungen" target="_blank" rel="noopener noreferrer" className="underline">
+          {t("readTerms")}
+        </a>
+      </p>
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

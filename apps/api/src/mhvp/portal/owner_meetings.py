@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import tenant_tx
@@ -632,8 +633,14 @@ async def cast_online_vote(
             proxy_id=proxy_id,
             cast_source=source,
         )
-        session.add(row)
-        await session.flush()
+        # AF08 (GAE-14): the unique index (agenda item, unit) closes the race of a parallel
+        # CRM and portal vote; the loser gets 409 and may retry into the AE31 conflict path.
+        try:
+            async with session.begin_nested():
+                session.add(row)
+                await session.flush()
+        except IntegrityError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Stimme bereits erfasst.") from exc
         await emit(
             session,
             tenant_id=principal.tenant_id,

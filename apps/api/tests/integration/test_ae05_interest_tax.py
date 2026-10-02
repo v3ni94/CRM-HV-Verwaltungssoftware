@@ -189,3 +189,33 @@ def test_interest_with_withholdings(client: TestClient, world: World) -> None:
     other = bearer(login(client, world, "ae05other"))
     assert client.get(cfg_url, headers=other).status_code == 404
     assert client.get(tax_url, headers=other).status_code == 404
+
+
+def test_interest_tax_summary_is_tenant_wide(client: TestClient, world: World) -> None:
+    """GAE-38 (AF24): read only summary over all ledgers of the tenant, other tenant sees none."""
+    h = bearer(login(client, world, "ae05admin"))
+    summary_url = f"{A}/interest-tax-config"
+    before = _ok(client.get(summary_url, headers=h))
+    ledger, _, _ = _hoa_ledger(client, h, "952")
+    mid = _ok(client.get(summary_url, headers=h))
+    assert mid["ledgers_total"] == before["ledgers_total"] + 1
+    assert mid["ledgers_configured"] == before["ledgers_configured"]
+    kest = _tax_account(client, h, ledger, "026502")
+    _ok(
+        client.put(
+            f"{A}/ledgers/{ledger}/interest-tax-config",
+            json={"capital_gains_tax_account_id": kest},
+            headers=h,
+        )
+    )
+    after = _ok(client.get(summary_url, headers=h))
+    assert after["ledgers_configured"] == before["ledgers_configured"] + 1
+    reader = bearer(login(client, world, "ae05reader"))
+    assert client.get(summary_url, headers=reader).status_code == 200
+    assert client.get(summary_url + "?x=1", headers=h).status_code == 422
+    other = bearer(login(client, world, "ae05other"))
+    assert _ok(client.get(summary_url, headers=other)) == {
+        "ledgers_total": 0,
+        "ledgers_configured": 0,
+    }
+    assert client.get(summary_url).status_code == 401

@@ -259,3 +259,33 @@ portal accounts only with `portal_required`). `verify_code` keeps returning a se
 existing callers and refuses with `MHVP-AUTH-0015` when a further step is due. The QR
 invitation (A56, M21-01: CRM view with `qrcode`, letter PDF with `segno`, `/einladung?code=`)
 is unchanged; the portal shows the TOTP setup with a QR code at `/anmelden/zweiter-faktor-einrichten`.
+
+### Asynchroner Portal-Assistent (AF17, GAE-29)
+
+`assistant_job.py`: `POST /portal/assistant/questions/async` (202, Status `pending`) legt die maskierte Frage an und stellt einen Celery-Job ein; `GET /portal/assistant/questions/{id}` ist die Statusabfrage (nur eigener Zugang, sonst 404). Der Job übernimmt die Zeile atomar (`job_started_at`), leitet den Umfang aus den Freigaben neu ab und schließt nur `pending`-Zeilen ab. Nach 120 Sekunden gilt `timeout` mit Dokumenttreffern. Migration 0411. Tests rufen `run_job` direkt auf, ohne Broker und Netz.
+
+## Tenant statements (AF16, GAC-02)
+
+`mhvp.portal.tenant_statements`: `GET /portal/tenant-statements` lists issued operating cost
+statements (issued, due, posted, locked) of the own tenancy contracts (access grant scope
+`contract`, role `tenant`); empty with a note while the switch `tenant_statement_enabled`
+(portal feature setting, migration 0410, default off) is off or G3 is closed.
+`GET /portal/tenant-statements/{statement_id}/contracts/{contract_id}` adds the positions with
+the own share from the snapshot and the explanations from approved text blocks
+`portal_tenant_statement_*` (placeholder otherwise); `.../pdf` serves the result document.
+Detail and PDF answer 403 behind switch and G3, 404 for anything foreign, and write read
+receipts (indication only). Rule `docs/rules/AF16-01.md`.
+
+## Owner reports (AF15, GAC-01, GAC-03, GAF-33)
+
+`owner_reports.py`: `GET /portal/owner/rental-statements` (+ `/{id}/pdf`) lists issued owner
+statements (rental/SEV) of the account's own legal entities behind the tenant switch
+`owner_rental_statements_enabled` (default off, migration 0409) and release gate G3;
+`GET /portal/owner/statement-explanations` explains the issued hoa fee statements of the own
+units from the snapshot and `GET /portal/owner/plans` lists resolved economic plans with the own
+units' amounts, both behind G4. Closed gate or switch off: empty list with a note; foreign ids
+404. Rule `docs/rules/AF15-01.md`.
+
+## AF21 (GAC-08)
+
+Die Annahme einer Portaländerung (E-Mail, Telefon, Bankverbindung, Adresse) erzeugt zusätzlich `contact.updated` mit den Feldnamen (`emails`, `phones`, `bank_accounts`, `addresses`), `source=portal` und der Änderungs-ID, ohne Werte. Zusätzlich bleibt `contact.address_changed` für Adressen bestehen.

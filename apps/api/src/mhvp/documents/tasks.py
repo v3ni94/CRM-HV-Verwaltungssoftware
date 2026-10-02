@@ -36,6 +36,7 @@ from mhvp.documents.models import (
     DocumentMirror,
     MirrorStatus,
     StorageKind,
+    TextStatus,
 )
 from mhvp.objektakte.drive_quota import drive_http_client
 from mhvp.platform.models import Tenant, TenantStatus
@@ -45,6 +46,7 @@ log = logging.getLogger(__name__)
 BACKOFF_SECONDS = (60, 300, 1800, 7200, 21600, 86400)
 BATCH = 20
 TIMEOUT_SECONDS = 60.0
+TEXT_LIMIT = 200_000  # same cap as mhvp.documents.intake
 
 
 def store_for(connection: DmsConnection, client: httpx.AsyncClient) -> DocumentStore:
@@ -143,6 +145,8 @@ async def mirror_tenant(
                     mirror.external_ref, mirror.status = resolved, MirrorStatus.DONE
                     # Paperless takes custom fields only on a PATCH after the consume task.
                     mirror.meta_dirty = mirror.kind is StorageKind.PAPERLESS
+                    if isinstance(store, PaperlessStore):
+                        await _adopt_paperless_text(session, store, mirror)
             mirror.last_error = None
             mirror.next_attempt_at = now + timedelta(seconds=60)
         except (DmsError, httpx.HTTPError, ClientError, ProblemError, ValueError, KeyError) as exc:
@@ -160,6 +164,26 @@ async def mirror_tenant(
     await _push_dirty_meta(session, tenant, connections, client, now)
     await session.flush()
     return len(due)
+
+
+async def _adopt_paperless_text(
+    session: AsyncSession, store: PaperlessStore, mirror: DocumentMirror
+) -> bool:
+    """GAB-04 (11.2, 11.4): once Paperless consumed the mirror, its full text (text layer or
+    OCR) replaces a pending text status. The search vector is a generated column; the
+    embedding job picks the document up through ``updated_at`` on its next run. An existing
+    text is never overwritten."""
+    if mirror.external_ref is None:
+        return False
+    document = await session.get(Document, mirror.document_id)
+    if document is None or document.text_status is not TextStatus.PENDING:
+        return False
+    text = await store.content(mirror.external_ref)
+    if text is None:
+        return False
+    document.ocr_text = text[:TEXT_LIMIT]
+    document.text_status = TextStatus.EXTRACTED
+    return True
 
 
 async def _push_dirty_meta(

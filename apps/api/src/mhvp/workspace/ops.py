@@ -59,6 +59,7 @@ ALERTING = {
     "payment_orders_rejected_24h",
     "dunning_cases_blocked",
     "dunning_runs_failed_24h",
+    "payment_run_failed_24h",
     "backup_verify_failed",
     "backup_verify_stale",
     "backup_offsite_failed",
@@ -229,6 +230,7 @@ def job_gauges(jobs: dict[str, dict[str, Any]]) -> dict[str, int]:
 
 
 async def collect(request: Request) -> dict[str, int]:
+    from mhvp.accounting.direct_debit_models import PaymentRunPreview
     from mhvp.accounting.models import DunningCase, DunningRun
     from mhvp.ai.models import AiTaskRun, RunStatus
     from mhvp.banking.models import (
@@ -267,6 +269,7 @@ async def collect(request: Request) -> dict[str, int]:
         "payment_orders_rejected_24h": 0,
         "dunning_cases_blocked": 0,
         "dunning_runs_failed_24h": 0,
+        "payment_run_failed_24h": 0,
     }
     queries: dict[str, Any] = {
         "webhook_deliveries_pending": select(func.count()).where(
@@ -304,6 +307,10 @@ async def collect(request: Request) -> dict[str, int]:
         # M9-01: scheduled dunning runs that raised (status failed, see accounting.tasks).
         "dunning_runs_failed_24h": select(func.count()).where(
             DunningRun.created_at >= since, DunningRun.status == "failed"
+        ),
+        # GAC-06: scheduled payment run previews that raised (banking.payment_run_tasks).
+        "payment_run_failed_24h": select(func.count()).where(
+            PaymentRunPreview.created_at >= since, PaymentRunPreview.trigger == "failed"
         ),
     }
     for tenant_id in tenant_ids:

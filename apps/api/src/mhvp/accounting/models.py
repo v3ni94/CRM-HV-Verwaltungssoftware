@@ -1404,7 +1404,10 @@ class PeriodLock(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "period_lock"
     __table_args__ = (
         CheckConstraint("period_from <= period_to", name="period"),
-        CheckConstraint("source IN ('manual', 'statement', 'owner_statement')", name="source"),
+        CheckConstraint(
+            "source IN ('manual', 'statement', 'owner_statement', 'hoa_statement')",
+            name="source",
+        ),
         Index("ix_period_lock_property", "tenant_id", "ledger_id", "property_id"),
         Index(
             "uq_period_lock_statement_active",

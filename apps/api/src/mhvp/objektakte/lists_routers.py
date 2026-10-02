@@ -29,7 +29,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_path_guard
-from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import schemas as document_schemas
 from mhvp.documents.blobs import BlobStore
@@ -214,14 +213,5 @@ async def store_property_list(
             property_row=property_row,
             kind=kind,
             created_by=principal.user_id,
-        )
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="document.created",
-            entity_type="document",
-            entity_id=document.id,
-            actor_user_id=principal.user_id,
-            payload={"size": document.size, "list_kind": kind, "property_id": str(property_id)},
         )
         return await document_out(session, document)

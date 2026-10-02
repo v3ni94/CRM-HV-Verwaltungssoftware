@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { OwnerStatementExplanations, type OwnerExplanation } from "@/components/portal/OwnerReports";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -42,6 +43,11 @@ export default async function StatementsPage() {
   const assets = assetResponse.ok
     ? ((await assetResponse.json()) as { items: AssetReportItem[]; note: string })
     : { items: [], note: "" };
+  // GAC-03: Erläuterung je Einzelabrechnung aus dem Snapshot (hinter G4, sonst leer mit Hinweis).
+  const explainResponse = await serverFetch("/api/v1/portal/owner/statement-explanations");
+  const explain = explainResponse.ok
+    ? ((await explainResponse.json()) as { items: OwnerExplanation[]; texts: Record<string, string>; note: string })
+    : { items: [], texts: {}, note: "" };
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
@@ -63,6 +69,8 @@ export default async function StatementsPage() {
           </li>
         ))}
       </ul>
+      {explain.note ? <p className="text-xs text-subtle">{explain.note}</p> : null}
+      <OwnerStatementExplanations items={explain.items} texts={explain.texts} />
       <h2 className="text-lg font-semibold">{t("assetTitle")}</h2>
       {assets.note ? <p className="text-xs text-subtle">{assets.note}</p> : null}
       {assets.items.length === 0 ? <p className={ui.notice}>{t("assetEmpty")}</p> : null}

@@ -189,6 +189,20 @@ class PaperlessStore:
             raise DmsError(f"consume: {task.get('status')}")
         return str(task["related_document"])
 
+    async def content(self, ref: str) -> str | None:
+        """Full text Paperless extracted (text layer or OCR) for a consumed document (GAB-04)."""
+        if not ref.isdigit():
+            return None
+        response = await self._client.get(
+            f"{self._base}/api/documents/{ref}/", headers=self._headers
+        )
+        if response.status_code == 404:
+            return None
+        _raise_for(response, "content")
+        body = response.json()
+        text = body.get("content") if isinstance(body, dict) else None
+        return text if isinstance(text, str) and text.strip() else None
+
     async def delete(self, ref: str) -> bool:
         if ref.startswith("task:") or not ref.isdigit():
             raise DmsError("delete: reference is not a Paperless document id")

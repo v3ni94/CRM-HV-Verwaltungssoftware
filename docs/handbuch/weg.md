@@ -509,3 +509,16 @@ Unter WEG, Bereich Versammlungen, steht beim Schalter "Online-Teilnahme im Porta
 Auf der Versammlungsseite führt der Bereich "Online-Teilnahme (Portal)" die Stimmkonflikte mit Einheit, TOP und beiden Stimmen. Mit "Erste Stimme bestätigen" oder "Zweite Stimme zählen" (nur vor der Verkündung) entscheidet die Versammlungsleitung, optional mit Notiz. Beide Stimmen bleiben im Vorgang erhalten. Darüber zeigen die "Prüfpunkte zur Versammlungsform" die erfassten Angaben (Schalter, zulassender Beschluss mit Status und Gültigkeitsende, Dreijahresgrenze als Orientierung, Konferenzlink). Die Liste ist eine Übersicht und stellt keine Zulässigkeit fest (AD06-01).
 
 Der Protokollentwurf übernimmt bei hybrider oder virtueller Form die Zusagen, die Portalvollmachten, die Wortmeldungen mit Uhrzeit und Einheit, je TOP die online abgegebenen Stimmen und die Prüfhinweise zu Stimmkonflikten. Offene Konflikte stehen im Hinweis des Entwurfs und sind vor der Unterschrift zu klären.
+
+## Eigentümerwechsel und offene Einsichtsanfragen; Korrekturbericht (Welle 17, AF08)
+
+Wird ein Eigentümerwechsel erfasst, erhält jede offene Einsichtsanfrage der bisherigen
+Eigentümerseite derselben Liegenschaft innerhalb einer Stunde einen Prüfhinweis im Verlauf
+(Eigentümerprüfung). Die Anfrage bleibt offen; ob eine Bereitstellung widerrufen wird, entscheidet
+der Verwalter. Der Korrekturbericht zwischen zwei Abrechnungsversionen erscheint erst, wenn der
+Schalter Korrekturbericht je Eigentümer unter Einstellungen, Fachliche Regeln eingeschaltet ist
+(Standard aus).
+
+### Ablage der Abrechnungs-PDFs
+
+Beim Bereitstellen einer Hausgeldabrechnung (Status ausgegeben oder fällig) legt die Plattform jede Einzelabrechnung einmalig im Dokumentenarchiv ab und verknüpft sie mit Abrechnung, Objekt, Gemeinschaft, Einheit und Eigentümer. Die Gesamtabrechnung wird bei der ersten Ausgabe abgelegt. Jeder spätere Abruf im CRM und im Eigentümerportal liefert genau die abgelegte Datei, auch Briefdatum und Layout bleiben unverändert. Eine neue Version der Abrechnung erzeugt ein neues Dokument, das alte bleibt erhalten. Voraussetzung bleibt die Freigabestufe G4.

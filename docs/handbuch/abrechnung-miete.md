@@ -192,6 +192,8 @@ In der Abrechnung (Entwurf) zeigt der Abschnitt "Extern gegen eigen" je Nutzer d
 
 Im Mietvertrag erfassen Sie unter "Umlagevereinbarungen" je Betriebskostenart den Klauselbezug (zum Beispiel "§ 4 Mietvertrag"), das Nachweisdokument und die Gültigkeit. Mit "Für alle Mietverträge des Objekts erfassen" legen Sie dieselbe Vereinbarung für alle Mietverträge eines Objekts an; zuerst erscheint eine Vorschau, bestehende Einträge werden nie überschrieben. In der Abrechnung zeigt die Karte "Umlagegrundlagen vor der Abrechnung" fehlende Grundlagen je Position und Mietvertrag. Solange der Mandantenschalter eingeschaltet ist (Standard), sperren Lücken die Ausgabe der Abrechnung. Geprüft wird nur, ob eine Vereinbarung erfasst ist, nicht ihre rechtliche Wirksamkeit.
 
+Auswirkung im Betrieb: Nach der Einrichtung eines Mandanten ist die Sperre eingeschaltet. Ohne erfasste Umlagevereinbarungen lässt sich daher keine Betriebskostenabrechnung ausgeben (Meldung MHVP-BILL-0015, "Umlagegrundlagen fehlen"). Erfassen Sie zuerst die Vereinbarungen je Mietvertrag. Das Ausschalten der Sperre unter Einstellungen ist eine bewusste Entscheidung der Geschäftsführung und wird protokolliert; es ersetzt keine Prüfung der Verträge.
+
 ## Abrechnungsfrist je Mietvertrag
 
 In der Abrechnung zeigt der Abschnitt "Abrechnungsfrist je Mietvertrag" das Fristende als Orientierung (im Einzelfall zu verifizieren), den erfassten Zugang und, falls vorhanden, einen Vorschlag aus dem Versandnachweis. "Zugang übernehmen" speichert den Vorschlag erst auf Klick. Unter dem Verhalten nach Fristablauf wählen Sie "Nachforderung sperren" (Standard) oder "Nur Hinweis"; die Warnung vor Fristablauf ist standardmäßig aus.
@@ -199,3 +201,15 @@ In der Abrechnung zeigt der Abschnitt "Abrechnungsfrist je Mietvertrag" das Fris
 ## Behandlung offener Vorauszahlungen (Mandantenschalter, Welle 16)
 
 Im Bereich "Neue Vorauszahlungen (Vorschlag)" der Betriebskostenabrechnung wählt die Verwaltung, wie Vorauszahlungen behandelt werden, die bei der Abrechnung noch offen sind: "Nur Information (Standard)", "Verrechnung der offenen Posten per Storno" oder "Saldo gegen Soll, Rückstand bleibt bestehen". Die Auswahl gilt für den Mandanten und wirkt erst bei der nächsten Berechnung. Das Anschreiben zeigt den Rechenweg. Die Verrechnung entsteht nur als Buchungsentwurf mit den Ergebnisbuchungen hinter der Freigabestufe G3. Das Verfahren ist nicht freigegeben (Frage AC10-01); vor einer Umstellung ist die Rechtsberatung einzubeziehen.
+
+## Textbausteine: Zweitpersonprüfung und Hinweis im Mieter-Anschreiben
+
+Unter Einstellungen, Fachliche Regeln, "Textbausteine: Freigabe durch eine zweite Person" steht die Prüfung standardmäßig auf "an": Wer einen Baustein verfasst oder eingereicht hat, darf ihn nicht freigeben. Das Abschalten verlangt eine Begründung und wird protokolliert. Der neue Baustein "Mieter-Anschreiben: Hinweis zur Abrechnung" (Code letter_notice) erscheint im Anschreiben nur in der freigegebenen Fassung, bis dahin steht dort "Text nicht freigegeben". Die Texte liefert der Betreiber, die Software enthält keinen Rechtstext.
+
+## Einstellungen Abrechnung, Belegeinsicht und Ergebnisbuchungen
+
+Unter Einstellungen, Abrechnung pflegen Sie die Regeltabellen der Heizkostenabrechnung (CO2-Stufen, Gradtage) und ordnen Kostenkonten einer Betriebskostenart zu. Die Tabellen sind nicht vorbelegt: Zeilen und Quelle tragen Sie nach amtlicher Prüfung selbst ein, der Status bleibt zu prüfen, bis die Prüfung dokumentiert ist. Die Zuordnung der Kostenart ist eine fachliche Entscheidung je Konto, der Vorschlag wird nicht automatisch übernommen.
+
+In der Abrechnung erfassen Sie Anfragen zur Belegeinsicht je Einheit samt Bereitstellung, Einwendung und Abschluss. Die Erfassung ist reine Dokumentation ohne Fristberechnung. Ergebnisbuchungen erzeugen Sie erst im Status fällig, es entstehen Entwürfe. Die Freigabestufe G3 und die Freigabe durch die Geschäftsführung bleiben erforderlich.
+
+Prüfpunkte des Regelregisters bestätigen Sie in der Prüfpunktliste mit Name und Datum der fachkundigen Prüfung. Die Bestätigung hält die Prüfung fest und ändert keine Regel.

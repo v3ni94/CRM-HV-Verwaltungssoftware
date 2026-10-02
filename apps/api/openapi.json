@@ -1978,6 +1978,25 @@
         "title": "AccountingInterestTaxOut",
         "type": "object"
       },
+      "AccountingInterestTaxSummaryOut": {
+        "description": "Tenant wide state of the tax accounts for withholdings on credit interest (GAE-38).",
+        "properties": {
+          "ledgers_configured": {
+            "title": "Ledgers Configured",
+            "type": "integer"
+          },
+          "ledgers_total": {
+            "title": "Ledgers Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ledgers_total",
+          "ledgers_configured"
+        ],
+        "title": "AccountingInterestTaxSummaryOut",
+        "type": "object"
+      },
       "AccountsIn": {
         "additionalProperties": false,
         "properties": {
@@ -25664,6 +25683,40 @@
         "title": "DmsDocumentPageMeta",
         "type": "object"
       },
+      "DocumentBulkLinkIn": {
+        "additionalProperties": false,
+        "description": "Links many documents to one entity as attachment (GAB-16); no money effect. Originals,\nevidence and generated roles are not set in bulk.",
+        "properties": {
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids",
+          "entity_type",
+          "entity_id"
+        ],
+        "title": "DocumentBulkLinkIn",
+        "type": "object"
+      },
       "DocumentChoiceOut": {
         "properties": {
           "filename": {
@@ -26164,6 +26217,33 @@
           "configured"
         ],
         "title": "DocumentIntakeAddressOut",
+        "type": "object"
+      },
+      "DocumentInvoiceIntakeAutoIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "DocumentInvoiceIntakeAutoIn",
+        "type": "object"
+      },
+      "DocumentInvoiceIntakeAutoOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "DocumentInvoiceIntakeAutoOut",
         "type": "object"
       },
       "DocumentOut": {
@@ -32055,6 +32135,50 @@
         "title": "G1AcceptanceItemOut",
         "type": "object"
       },
+      "G1AcceptanceRegisterState": {
+        "description": "GAA-03: read only state of the acceptance register (annex D), never written here.",
+        "properties": {
+          "cases_total": {
+            "title": "Cases Total",
+            "type": "integer"
+          },
+          "g1_cases_total": {
+            "title": "G1 Cases Total",
+            "type": "integer"
+          },
+          "g1_passed": {
+            "title": "G1 Passed",
+            "type": "integer"
+          },
+          "link": {
+            "default": "/plattform/abnahme",
+            "title": "Link",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "passed_total": {
+            "title": "Passed Total",
+            "type": "integer"
+          },
+          "released_total": {
+            "title": "Released Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cases_total",
+          "released_total",
+          "passed_total",
+          "g1_cases_total",
+          "g1_passed",
+          "note"
+        ],
+        "title": "G1AcceptanceRegisterState",
+        "type": "object"
+      },
       "G1AcceptanceStatus": {
         "enum": [
           "open",
@@ -32066,6 +32190,16 @@
       },
       "G1OpeningOut": {
         "properties": {
+          "acceptance_register": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/G1AcceptanceRegisterState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "automation_levels": {
             "additionalProperties": {
               "type": "string"
@@ -34483,6 +34617,20 @@
           "variant"
         ],
         "title": "HoaAcqRuleIn",
+        "type": "object"
+      },
+      "HoaCorrectionReportSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaCorrectionReportSettingIn",
         "type": "object"
       },
       "HoaCostIn": {
@@ -37563,6 +37711,80 @@
         "title": "ImportStatus",
         "type": "string"
       },
+      "ImportUndoPreviewItemOut": {
+        "properties": {
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "kept_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept Reason"
+          },
+          "removable": {
+            "title": "Removable",
+            "type": "boolean"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sequence",
+          "entity_type",
+          "entity_id",
+          "removable",
+          "kept_reason"
+        ],
+        "title": "ImportUndoPreviewItemOut",
+        "type": "object"
+      },
+      "ImportUndoPreviewOut": {
+        "description": "Dry run of the import undo (10.1 step 5): nothing is changed.",
+        "properties": {
+          "import_id": {
+            "format": "uuid",
+            "title": "Import Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportUndoPreviewItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "kept": {
+            "title": "Kept",
+            "type": "integer"
+          },
+          "removable": {
+            "title": "Removable",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "import_id",
+          "removable",
+          "kept",
+          "items"
+        ],
+        "title": "ImportUndoPreviewOut",
+        "type": "object"
+      },
       "InboundMailEventOut": {
         "properties": {
           "created_at": {
@@ -37987,6 +38209,18 @@
             "title": "Occurred At",
             "type": "string"
           },
+          "source_event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Event Id"
+          },
           "to_status": {
             "anyOf": [
               {
@@ -38025,6 +38259,24 @@
           "text"
         ],
         "title": "InspectionNoteIn",
+        "type": "object"
+      },
+      "InspectionOwnershipScanOut": {
+        "properties": {
+          "events": {
+            "title": "Events",
+            "type": "integer"
+          },
+          "noted": {
+            "title": "Noted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "noted"
+        ],
+        "title": "InspectionOwnershipScanOut",
         "type": "object"
       },
       "InspectionTransitionIn": {
@@ -38746,6 +38998,18 @@
             "title": "Booked Before",
             "type": "string"
           },
+          "credit_notes_before": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Notes Before"
+          },
           "exceeded": {
             "title": "Exceeded",
             "type": "boolean"
@@ -38754,6 +39018,30 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Invoice",
             "type": "string"
+          },
+          "invoices_before": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoices Before"
+          },
+          "journal_lines_net": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journal Lines Net"
           },
           "label": {
             "title": "Label",
@@ -57451,7 +57739,9 @@
               "not_answerable",
               "failed",
               "search_hits",
-              "no_sources"
+              "no_sources",
+              "pending",
+              "timeout"
             ],
             "title": "Status",
             "type": "string"
@@ -57904,6 +58194,17 @@
             ],
             "title": "Owner Rental Income Enabled"
           },
+          "owner_rental_statements_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Rental Statements Enabled"
+          },
           "owner_ticket_scope": {
             "anyOf": [
               {
@@ -57956,6 +58257,17 @@
               }
             ],
             "title": "Support Login Enabled"
+          },
+          "tenant_statement_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Statement Enabled"
           }
         },
         "title": "PortalFeaturesPatch",
@@ -59554,6 +59866,20 @@
             "title": "Active",
             "type": "boolean"
           },
+          "consent_basis": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Consent Basis",
+            "type": "object"
+          },
+          "consent_purposes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Consent Purposes",
+            "type": "array"
+          },
           "detail": {
             "title": "Detail",
             "type": "string"
@@ -59573,6 +59899,17 @@
           "key": {
             "title": "Key",
             "type": "string"
+          },
+          "legal_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Basis"
           },
           "name": {
             "title": "Name",
@@ -72935,12 +73272,36 @@
       },
       "SyncRunOut": {
         "properties": {
+          "connection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Id"
+          },
           "counts": {
             "additionalProperties": {
               "type": "integer"
             },
             "title": "Counts",
             "type": "object"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           },
           "document_id": {
             "anyOf": [
@@ -75582,6 +75943,32 @@
         "title": "TextBlockPatch",
         "type": "object"
       },
+      "TextBlockPolicyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "require_second_person": {
+            "title": "Require Second Person",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "require_second_person"
+        ],
+        "title": "TextBlockPolicyIn",
+        "type": "object"
+      },
       "TextBlockReject": {
         "properties": {
           "reason": {
@@ -78113,6 +78500,49 @@
           "version"
         ],
         "title": "UnitAssignmentPatch",
+        "type": "object"
+      },
+      "UnitBulkIn": {
+        "additionalProperties": false,
+        "description": "Bulk action on units (GAB-16, section 12): sets one descriptive field on many units.\nMaster data only; no field with money effect (areas, allocation values, VAT) is offered.",
+        "properties": {
+          "action": {
+            "enum": [
+              "set_floor",
+              "set_location",
+              "set_features"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "ids",
+          "action"
+        ],
+        "title": "UnitBulkIn",
         "type": "object"
       },
       "UnitIn": {
@@ -86594,6 +87024,28 @@
         ]
       }
     },
+    "/api/v1/accounting/interest-tax-config": {
+      "get": {
+        "description": "Read only: how many ledgers have at least one tax account set. Changes nothing.",
+        "operationId": "get_interest_tax_summary_api_v1_accounting_interest_tax_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingInterestTaxSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Steuerkonten für Abzüge auf Habenzinsen: Stand über alle Buchungskreise",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/invoice-check-settings": {
       "get": {
         "operationId": "get_invoice_check_settings_api_v1_accounting_invoice_check_settings_get",
@@ -93072,7 +93524,7 @@
     },
     "/api/v1/accounting/recurring-invoices/{plan_id}/generate": {
       "post": {
-        "description": "Next due recurring invoice as unreviewed draft; nothing is posted automatically.",
+        "description": "Next due recurring invoice as unreviewed draft; nothing is posted automatically.\n\nGAA-06 (rule 0.1.4): conservative gate behaviour like the rent invoices. The number is a\nplan draft number (``PLAN-...``) and never comes from a ledger or MR number range. While\nG1 is closed the result is flagged as draft; in the tenant numbering mode\n``reject_when_g1_closed`` (AC03-01, open question AC03-01) the route refuses (G1).",
         "operationId": "generate_plan_api_v1_accounting_recurring_invoices__plan_id__generate_post",
         "parameters": [
           {
@@ -99105,7 +99557,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Automatik je Mandant ein- oder ausschalten (Standard aus)",
+        "summary": "Automatik je Mandant ausschalten (Einschalten nur per Antrag)",
         "tags": [
           "Bank"
         ]
@@ -100617,6 +101069,43 @@
           }
         },
         "summary": "Daten für INI- und HIA-Brief",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/ebics/subscribers/{subscriber_id}/letters.pdf": {
+      "get": {
+        "description": "GAE-23: the INI and HIA letter on the tenant letterhead (documents.letters, DIN 5008\nlayout of the renderer). Hash values are printed only as the transport computed them; a\nmissing hash is never calculated here (AE23-02): the letter then carries the draft marking\nand the notice not to send it. The layout of the bank's own form is not reproduced.",
+        "operationId": "letters_pdf_api_v1_banking_ebics_subscribers__subscriber_id__letters_pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subscriber_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subscriber Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "INI- und HIA-Brief als PDF (Briefbogen des Mandanten)",
         "tags": [
           "Bank"
         ]
@@ -113896,6 +114385,69 @@
         ]
       }
     },
+    "/api/v1/document-invoice-intake-auto": {
+      "get": {
+        "operationId": "get_invoice_intake_auto_api_v1_document_invoice_intake_auto_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentInvoiceIntakeAutoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Belegerfassung nach Ablage einer Rechnung (Mandantenschalter)",
+        "tags": [
+          "Dokumente",
+          "Dokumente"
+        ]
+      },
+      "put": {
+        "description": "Default off. On: filing a document recognised as invoice starts the receipt extraction\n(``extract_invoice``) as a proposal; nothing is approved, booked or paid. Off: the follow-up\nstays a hint with the action \"Beleg erfassen\".",
+        "operationId": "put_invoice_intake_auto_api_v1_document_invoice_intake_auto_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentInvoiceIntakeAutoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentInvoiceIntakeAutoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Belegerfassung nach Ablage einer Rechnung ein- oder ausschalten",
+        "tags": [
+          "Dokumente",
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/document-templates": {
       "get": {
         "operationId": "list_templates_api_v1_document_templates_get",
@@ -114176,6 +114728,71 @@
         ]
       }
     },
+    "/api/v1/document-text-blocks/policy": {
+      "get": {
+        "operationId": "get_policy_api_v1_document_text_blocks_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Policy Api V1 Document Text Blocks Policy Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Textbausteine: Mandantenschalter Zweitpersonprüfung",
+        "tags": [
+          "Dokumente"
+        ]
+      },
+      "put": {
+        "description": "Default on. Switching off needs a reason of at least 10 characters; the release itself\nstays an explicit step by a user with ``documents:approve`` and is audited.",
+        "operationId": "put_policy_api_v1_document_text_blocks_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextBlockPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Policy Api V1 Document Text Blocks Policy Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Textbausteine: Zweitpersonprüfung ein oder aus",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/document-text-blocks/{block_id}": {
       "get": {
         "operationId": "get_block_api_v1_document_text_blocks__block_id__get",
@@ -114276,7 +114893,7 @@
     },
     "/api/v1/document-text-blocks/{block_id}/approve": {
       "post": {
-        "description": "Four eyes: neither the author nor the submitter may release (Produktschutz). The\npreviously approved version of the code becomes ``retired``.",
+        "description": "Four eyes (tenant switch require_second_person, default on): neither the author nor the\nsubmitter may release (Produktschutz). The\npreviously approved version of the code becomes ``retired``.",
         "operationId": "approve_block_api_v1_document_text_blocks__block_id__approve_post",
         "parameters": [
           {
@@ -114643,6 +115260,48 @@
           }
         },
         "summary": "Dokument hochladen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/bulk-link": {
+      "post": {
+        "description": "Each document on its own (savepoint); an existing link is reported as conflict, a\ndocument outside the scope of the membership as not found.",
+        "operationId": "bulk_link_documents_api_v1_documents_bulk_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentBulkLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrere Dokumente mit einem Objekt verknüpfen (Teilerfolgsbericht)",
         "tags": [
           "Dokumente"
         ]
@@ -120612,6 +121271,70 @@
         ]
       }
     },
+    "/api/v1/hoa/correction-report-settings": {
+      "get": {
+        "operationId": "get_correction_report_setting_api_v1_hoa_correction_report_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Correction Report Setting Api V1 Hoa Correction Report Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Korrekturbericht (Schalter)",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "put": {
+        "operationId": "put_correction_report_setting_api_v1_hoa_correction_report_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaCorrectionReportSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Correction Report Setting Api V1 Hoa Correction Report Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Korrekturbericht (Schalter setzen)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
     "/api/v1/hoa/inspection-requests": {
       "get": {
         "operationId": "list_requests_api_v1_hoa_inspection_requests_get",
@@ -120717,6 +121440,28 @@
           }
         },
         "summary": "Einsichtsanfrage erfassen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/inspection-requests/ownership-transfers/scan": {
+      "post": {
+        "description": "Consumer of ``contract.ownership_transferred``: adds an owner check note to open\nrequests of the previous owner side. Never closes a request or revokes a package.",
+        "operationId": "scan_ownership_transfers_api_v1_hoa_inspection_requests_ownership_transfers_scan_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionOwnershipScanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigentümerwechsel auf offene Einsichtsanfragen prüfen (GAA-02, P08-02)",
         "tags": [
           "hoa"
         ]
@@ -131183,6 +131928,50 @@
           }
         },
         "summary": "Import zurücknehmen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/imports/{import_id}/undo-preview": {
+      "get": {
+        "description": "Per item: removable or stays with the reason (same checks as the undo, nothing written).\nNeeds the permission of the undo itself; chat action runs are refused like the undo.",
+        "operationId": "undo_import_preview_api_v1_imports__import_id__undo_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportUndoPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import-Rücknahme prüfen (ohne Änderung)",
         "tags": [
           "KI-Assistent"
         ]
@@ -149721,7 +150510,9 @@
                     "not_answerable",
                     "failed",
                     "search_hits",
-                    "no_sources"
+                    "no_sources",
+                    "pending",
+                    "timeout"
                   ],
                   "type": "string"
                 },
@@ -150959,6 +151750,92 @@
           }
         },
         "summary": "Frage an den Assistenten (nur Unterlagen des eigenen Zugangs)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/assistant/questions/async": {
+      "post": {
+        "description": "Same checks as the synchronous question (scope first: 404 or empty scope, rate limit).\nWhen the AI stage may run, the row is stored as ``pending`` and the worker answers; the\nportal polls ``GET /questions/{id}``. Otherwise the search hits come back at once.",
+        "operationId": "ask_async_api_v1_portal_assistant_questions_async_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalAssistantQuestionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAssistantAnswerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Frage asynchron stellen (Job im Worker, Status per Abfrage)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/assistant/questions/{question_id}": {
+      "get": {
+        "description": "Own question only (other account or tenant: 404). Overdue pending rows become timeout.\nSources are shown only while the document is still readable for the account.",
+        "operationId": "question_status_api_v1_portal_assistant_questions__question_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAssistantAnswerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status einer Frage (Abfrage bei asynchroner Antwort)",
         "tags": [
           "Portal"
         ]
@@ -154017,6 +154894,29 @@
         ]
       }
     },
+    "/api/v1/portal/owner/plans": {
+      "get": {
+        "operationId": "owner_plans_api_v1_portal_owner_plans_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Owner Plans Api V1 Portal Owner Plans Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Beschlossene Wirtschaftspläne (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/owner/rental-income": {
       "get": {
         "operationId": "rental_income_api_v1_portal_owner_rental_income_get",
@@ -154035,6 +154935,93 @@
           }
         },
         "summary": "Vereinbarte Mieterträge je Objekt (Kapitalanleger)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/rental-statements": {
+      "get": {
+        "operationId": "owner_rental_statements_api_v1_portal_owner_rental_statements_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Owner Rental Statements Api V1 Portal Owner Rental Statements Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ausgegebene Eigentümerabrechnungen Miete/SEV",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/rental-statements/{statement_id}/pdf": {
+      "get": {
+        "operationId": "owner_rental_statement_pdf_api_v1_portal_owner_rental_statements__statement_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerabrechnung Miete/SEV als PDF (nach Ausgabe)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/statement-explanations": {
+      "get": {
+        "operationId": "owner_statement_explanations_api_v1_portal_owner_statement_explanations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Owner Statement Explanations Api V1 Portal Owner Statement Explanations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Erläuterung der Einzelabrechnungen (Eigentümer)",
         "tags": [
           "Portal"
         ]
@@ -154528,6 +155515,135 @@
           }
         },
         "summary": "In die Support-Sicht einwilligen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/tenant-statements": {
+      "get": {
+        "operationId": "list_tenant_statements_api_v1_portal_tenant_statements_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Tenant Statements Api V1 Portal Tenant Statements Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ausgegebene Betriebs- und Heizkostenabrechnungen der eigenen Mietverträge",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/tenant-statements/{statement_id}/contracts/{contract_id}": {
+      "get": {
+        "operationId": "get_tenant_statement_api_v1_portal_tenant_statements__statement_id__contracts__contract_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Tenant Statement Api V1 Portal Tenant Statements  Statement Id  Contracts  Contract Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrechnung eines eigenen Mietvertrags mit Erläuterungen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/tenant-statements/{statement_id}/contracts/{contract_id}/pdf": {
+      "get": {
+        "operationId": "tenant_statement_pdf_api_v1_portal_tenant_statements__statement_id__contracts__contract_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrechnung eines eigenen Mietvertrags als PDF",
         "tags": [
           "Portal"
         ]
@@ -170863,6 +171979,48 @@
         "summary": "Löschungssperre am Vorgang setzen",
         "tags": [
           "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/units/bulk": {
+      "post": {
+        "description": "Each unit on its own (savepoint); a unit outside the tenant or the object assignment of\nthe membership is reported as not found, an overlong value as a validation problem.",
+        "operationId": "bulk_units_api_v1_units_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitBulkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Massenaktion Einheiten mit Teilerfolgsbericht",
+        "tags": [
+          "Objekte"
         ]
       }
     },

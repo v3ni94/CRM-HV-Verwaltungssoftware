@@ -13,8 +13,10 @@ product of Müller Holding AG (master prompt section 1.2).
 - Milestone **M1 Fundament** in progress (`docs/plans/M1.md`).
 - Release gates G1 to G5 are closed for every tenant. The platform is **not** for productive
   bookkeeping, payments or legally relevant statements.
-- Observability (Grafana, Prometheus, Loki), deploy/backup/EBICS/incident runbooks and seed
-  helpers follow in M9 and later milestones.
+- Observability: OpenTelemetry tracing via the OTel collector (`infra/otel-collector.yaml`,
+  ADR 0019), metrics at `/api/v1/platform/ops/metrics` and Uptime Kuma in `infra/compose.prod.yaml`
+  (M9-04, ADR 0024). A Grafana, Prometheus or Loki stack is not part of the repository.
+  Deploy, backup, EBICS and incident runbooks and seed helpers live in `docs/runbooks/`.
 - Open questions: `docs/OPEN_QUESTIONS.md`; assumptions: `docs/ASSUMPTIONS.md`.
 
 ## Quick start (Docker)

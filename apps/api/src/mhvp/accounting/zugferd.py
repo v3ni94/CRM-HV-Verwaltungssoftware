@@ -60,6 +60,7 @@ from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, Invoi
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.documents.pdf_fonts import FALLBACK_HINT
 
 # CII ----------------------------------------------------------------------------------------
 
@@ -761,7 +762,7 @@ def pdfa_precheck(pdf: bytes) -> dict[str, Any]:
     check(
         not missing,
         "Alle Schriften eingebettet",
-        f"Schriften nicht eingebettet: {', '.join(missing)}.",
+        f"Schriften nicht eingebettet: {', '.join(missing)}. {FALLBACK_HINT}",
     )
     return {
         "validator": PRECHECK_NAME,

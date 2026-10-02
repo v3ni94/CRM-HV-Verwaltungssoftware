@@ -1625,6 +1625,34 @@ async def get_import(
         return await _import_out(session, await _get(session, ImportRun, import_id))
 
 
+@router.get(
+    "/imports/{import_id}/undo-preview",
+    summary="Import-Rücknahme prüfen (ohne Änderung)",
+    dependencies=[Depends(strict_query)],
+)
+async def undo_import_preview(
+    import_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UNDO)
+) -> s.ImportUndoPreviewOut:
+    """Per item: removable or stays with the reason (same checks as the undo, nothing written).
+    Needs the permission of the undo itself; chat action runs are refused like the undo."""
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, ImportRun, import_id)
+        if chat_actions.is_chat_action_run(row.source):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Chat-Aktionen werden nicht über die Import-Rücknahme zurückgenommen. "
+                "Bitte den Datensatz direkt bearbeiten.",
+            )
+        items = await imports.undo_preview(session, row)
+        removable = sum(1 for i in items if i["removable"])
+        return s.ImportUndoPreviewOut(
+            import_id=row.id,
+            removable=removable,
+            kept=len(items) - removable,
+            items=[s.ImportUndoPreviewItemOut(**i) for i in items],
+        )
+
+
 @router.post("/imports/{import_id}/undo", summary="Import zurücknehmen")
 async def undo_import(
     import_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UNDO)

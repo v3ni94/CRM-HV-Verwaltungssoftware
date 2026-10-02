@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { UprotokollImport } from "@/components/handover/UprotokollImport";
 import { HandoverList, type ListParams } from "@/components/handover/HandoverList";
 import type { Protocol } from "@/components/handover/types";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -54,6 +55,7 @@ export default async function HandoverListPage({ searchParams }: { searchParams:
       ) : (
         <HandoverList rows={rows} params={listParams} />
       )}
+      <UprotokollImport />
     </div>
   );
 }

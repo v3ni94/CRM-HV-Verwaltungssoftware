@@ -10,11 +10,11 @@ import { ui } from "@/lib/ui";
 
 export type LedgerAccountOption = { id: string; number: string; name: string; category: string; active: boolean };
 
-type Line = { account_id: string; debit: string; credit: string; text: string };
+type Line = { account_id: string; debit: string; credit: string; text: string; property_id: string };
 type Mode = "manual" | "cost_transfer" | "interest";
 
 const MANUAL_KINDS = ["custom", "opening_balance", "bank_transfer"] as const;
-const emptyLine = (): Line => ({ account_id: "", debit: "", credit: "", text: "" });
+const emptyLine = (): Line => ({ account_id: "", debit: "", credit: "", text: "", property_id: "" });
 
 /** "1.234,56" or "1234.56" to the API decimal string; empty stays "0". No float arithmetic. */
 export function toDecimal(value: string): string {
@@ -35,8 +35,9 @@ export function sumCents(values: string[]): number {
 
 /** Draft entry (M10-02), cost transfer and interest (M10-06). Only drafts are created here;
  *  posting is a separate action in the journal. */
-export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: string; accounts: LedgerAccountOption[]; today: string }) {
+export function JournalEntryForm({ ledgerId, accounts, today, properties = [] }: { ledgerId: string; accounts: LedgerAccountOption[]; today: string; properties?: { id: string; label: string }[] }) {
   const t = useTranslations("Bookkeeping");
+  const tx = useTranslations("LedgerExtras");
   const router = useRouter();
   const active = accounts.filter((a) => a.active);
   const [mode, setMode] = useState<Mode>("manual");
@@ -81,7 +82,7 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
         text,
         lines: lines
           .filter((l) => l.account_id)
-          .map((l) => ({ account_id: l.account_id, debit: toDecimal(l.debit), credit: toDecimal(l.credit), text: l.text || null })),
+          .map((l) => ({ account_id: l.account_id, debit: toDecimal(l.debit), credit: toDecimal(l.credit), text: l.text || null, ...(l.property_id ? { property_id: l.property_id } : {}) })),
       };
     } else if (mode === "cost_transfer") {
       path += "/cost-transfer";
@@ -147,7 +148,7 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
           {kind === "opening_balance" ? <p className={ui.notice}>{t("entry.openingNotice")}</p> : null}
           <div className="flex flex-col gap-2">
             {lines.map((line, i) => (
-              <div key={i} className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_2fr_auto]">
+              <div key={i} className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_2fr_2fr_auto]">
                 <select aria-label={t("entry.account")} className={ui.input} value={line.account_id} onChange={(e) => setLine(i, { account_id: e.target.value })}>
                   <option value="">{t("entry.chooseAccount")}</option>
                   {active.map(option)}
@@ -155,6 +156,14 @@ export function JournalEntryForm({ ledgerId, accounts, today }: { ledgerId: stri
                 <input aria-label={t("entry.debit")} inputMode="decimal" placeholder={t("entry.debit")} className={ui.input} value={line.debit} onChange={(e) => setLine(i, { debit: e.target.value })} />
                 <input aria-label={t("entry.credit")} inputMode="decimal" placeholder={t("entry.credit")} className={ui.input} value={line.credit} onChange={(e) => setLine(i, { credit: e.target.value })} />
                 <input aria-label={t("entry.lineText")} placeholder={t("entry.lineText")} className={ui.input} value={line.text} onChange={(e) => setLine(i, { text: e.target.value })} />
+                <select aria-label={tx("line.property")} className={ui.input} value={line.property_id} onChange={(e) => setLine(i, { property_id: e.target.value })}>
+                  <option value="">{tx("line.none")}</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
                 <button type="button" className={ui.buttonSm} disabled={lines.length <= 2} onClick={() => setLines((rows) => rows.filter((_, j) => j !== i))}>
                   {t("entry.removeLine")}
                 </button>

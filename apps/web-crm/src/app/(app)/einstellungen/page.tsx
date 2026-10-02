@@ -18,6 +18,7 @@ export default async function SettingsPage() {
   const tq = await getTranslations("SettingsQ05");
   const tn = await getTranslations("NotificationSettings");
   const ta = await getTranslations("AA17");
+  const tf = await getTranslations("AF19");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
@@ -39,6 +40,8 @@ export default async function SettingsPage() {
     { href: "/einstellungen/telefonie", title: t("telephony.title"), description: t("telephony.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/schnittstellen/messdienstleister", title: tm("card.title"), description: tm("card.description"), show: can("metering_data:read") },
     { href: "/einstellungen/webhooks", title: tw("card.title"), description: tw("card.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/mailquellen", title: tf("mail.title"), description: tf("mail.card"), show: can("tenant_settings:read") },
+    { href: "/einstellungen/api-schluessel", title: tf("keys.title"), description: tf("keys.card"), show: can("api_keys:read") },
     { href: "/einstellungen/weg", title: t("weg.title"), description: t("weg.description"), show: can("accounting:read") },
     { href: "/einstellungen/datenqualitaet", title: t("dataQuality.title"), description: t("dataQuality.description"), show: can("contacts:read") },
     { href: "/einstellungen/kataloge", title: t("catalogs.title"), description: t("catalogs.description"), show: can("properties:read") },
@@ -46,6 +49,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/uebernahme-tickets", title: t("takeoverDefaults.title"), description: t("takeoverDefaults.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/kautionszinsen", title: t("depositRates.title"), description: t("depositRates.description"), show: can("contracts:read") },
     { href: "/einstellungen/fristtypen", title: t("deadlineTypes.title"), description: t("deadlineTypes.description"), show: can("tenant_settings:read") },
+    { href: "/einstellungen/abrechnung", title: t("billingSetup.title"), description: t("billingSetup.description"), show: can("accounting:read") },
     { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     {
       href: "/einstellungen/ticketvorlagen",

@@ -13,6 +13,8 @@ export type PortalFeatures = {
   chat_ai_prequalification_enabled: boolean;
   support_login_enabled: boolean;
   owner_rental_income_enabled?: boolean;
+  /** AF15 (GAC-01): Eigentümerabrechnung Miete/SEV im Portal, Standard aus, zusätzlich G3. */
+  owner_rental_statements_enabled?: boolean;
   /** AE28 (M7-06, SA-04): Assistent für die eigenen Unterlagen und Datenschutz-Feature, beide aus. */
   chat_bot_enabled?: boolean;
   privacy_feature_enabled?: boolean;
@@ -34,6 +36,7 @@ type BoolKey =
   | "chat_ai_prequalification_enabled"
   | "support_login_enabled"
   | "owner_rental_income_enabled"
+  | "owner_rental_statements_enabled"
   | "chat_bot_enabled"
   | "privacy_feature_enabled";
 const KEYS: BoolKey[] = [
@@ -41,6 +44,7 @@ const KEYS: BoolKey[] = [
   "chat_ai_prequalification_enabled",
   "support_login_enabled",
   "owner_rental_income_enabled",
+  "owner_rental_statements_enabled",
   "chat_bot_enabled",
   "privacy_feature_enabled",
 ];

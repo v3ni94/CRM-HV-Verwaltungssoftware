@@ -5,6 +5,107 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.62.0 (02.10.2026) Welle 17, Befunde der Lückenanalyse GAA bis GAF und Prüfung: Buchungsautomatik nur per Antrag, Periodensperre über die Objektspalte, EBICS-Abruf, Abrechnungen im Eigentümer- und Mieterportal, asynchroner Portal-Assistent
+
+- Übersicht: Welle 17 mit 24 Paketen AF01 bis AF24 zu den Befunden der Lückenanalyse GAA bis GAF und Prüfbericht REVIEW-W17-2026-10-02 (AF25, 5 Prüfbefunde, 2 behoben); Migrationen 0395 bis 0418, real sind 5 (0398, 0402, 0409, 0410, 0411), Platzhalter ohne Schemaänderung sind 19 (0395, 0396, 0397, 0399, 0400, 0401, 0403, 0404, 0405, 0406, 0407, 0408, 0412, 0413, 0414, 0415, 0416, 0417, 0418); 95 Befunde, davon 74 done und 18 partial; neue offene Entscheidungen (9): AF01-01, AF02-01, AF06-01, AF06-02, AF07-01, AF08-01, AF10-01, AF15-01, AF16-01.
+- WEG: Die Ablage der Einzelabrechnungen bei Ausgabe und Fälligstellung ist eine Zusatzkopie; ohne konfigurierten Dokumentenspeicher findet der Statuswechsel trotzdem statt und die PDF wird beim ersten Abruf archiviert (Protokollhinweis statt MHVP-DOC-0007).
+- Datenbank: Rückmigration von 0398 behält Periodensperren aus WEG-Abrechnungen als Quelle statement und hebt FORCE RLS nur für diese Transaktion auf; zuvor blieb die Datenbank bei vorhandenen Sperren halb migriert.
+- Bank: Die Buchungsautomatik lässt sich nur noch über einen Antrag mit Freigabe durch eine zweite Person bei offener G1 einschalten; PUT /banking/automation schaltet nur aus und lehnt das Einschalten mit MHVP-BANK-0063 ab.
+- Bank: Automatikschalter in der Oberfläche mit Schaltfläche Sofort ausschalten; die Karte auf der Seite Bankregeln zeigt Haupt- und Ausgangsautomatik und verweist auf den Antragsweg.
+- Bank: Ereignis bank_transaction.booked auch bei automatischer Buchung, Ausführung eines Zahlungsauftrags und Korrektur aus der Nachkontrolle, im Webhook-Katalog wählbar.
+- Betrieb: Neue Alarmmetrik payment_run_failed_24h; fehlgeschlagene geplante Zahllauf-Vorschauen werden mit Fehlertext gespeichert.
+- Bank: Täglicher EBICS-Kontoauszugsabruf als Hintergrundaufgabe je Teilnehmer mit drei Wiederholungen; ohne Übertragung MHVP-BANK-0050 im Protokoll.
+- Bank: Sync-Protokoll mit Zeitpunkt, Quelle, Status, Zählern und Fehlern auf der Seite Bank.
+- Bank: INI-/HIA-Brief als PDF auf dem Briefbogen, Hash-Werte nur aus der Übertragung.
+- Bank: FinTS-Zieladresse wird nach Namensauflösung auf öffentliche Adressen geprüft (MHVP-BANK-0062).
+- Bank: Maske Bankverbindungen mit Sync-Protokoll, Schalter und Entscheidungsprotokoll je Umsatz.
+- Bank: Zahlungsdateien (Sammler) unter Zahlungen nur lesend angezeigt, Erzeugen und Einreichung bleiben hinter G2.
+- Buchhaltung: Gläubiger-ID je Rechtsträger in den Einstellungen pflegbar.
+- Lastschrift: Vorschau einziehbarer Sollstellungen und Vorabinformation als Entwurf im Lastschriftlauf.
+- Buchhaltung: Die Periodensperre je Objekt liest das Objekt direkt aus der Buchungszeile, auch Zeilen ohne Einheit sind gesperrt.
+- WEG: Der Abschluss der Hausgeldabrechnung setzt mit dem Schalter auto_lock_on_close eine Periodensperre des Kalenderjahres für das Objekt (Migration 0398).
+- Buchhaltung: Die Honorarbuchung prüft die Objektsperre bereits beim Erzeugen der Entwürfe.
+- Buchhaltung: Der Storno einer Buchung storniert noch nicht übergebene Zahlungsaufträge ihrer Posten und Rechnungen und wird bei an die Bank übergebenen Aufträgen abgelehnt.
+- Buchhaltung: Umbuchungsentwürfe freigegebener Guthabenposten lassen sich nicht mehr direkt löschen, die Rücknahme läuft über den Posten.
+- CRM Buchhaltung: Objektfilter in Monatsmatrix, Einnahmen und Ausgaben und Journal, Objektwahl je Buchungszeile, neue Auswertungen Driftbericht Zeilenobjekt, Umsatzsteuer je Objekt und Offene Posten Salden.
+- CRM Kontenplan: Steuerkennzeichen je Konto, Erlöskonto je Zahlungsart und Aktion Debitorenkonten aus Verträgen übernehmen.
+- CRM Rechnungen: Schaltfläche Zweite Freigabe über der Betragsgrenze.
+- CRM Kautionen: Bewegungen erfassen und Jahreslauf der Zinsentwürfe, BFF-Allowlist ergänzt.
+- Buchhaltung: G1-Checkliste zeigt den Stand des Abnahmeregisters lesend mit Link zum Register.
+- Buchhaltung: Dauerrechnung erzeugen bleibt Entwurf mit Planentwurfsnummer und wird im Modus Ablehnen bei geschlossenem G1 abgewiesen.
+- Verträge: Nummernmodus der Mietrechnungsentwürfe nur mit Recht Mandanteneinstellungen ändern, sonst Anzeige.
+- Verwalterhonorar: XRechnung Gutschrift mit XML, Prüfung und Ablage je Honorargutschrift.
+- Steuern: Ausweis nach § 35a je Mietvertrag mit Anzeige und PDF Entwurf.
+- Zahllauf: Einstellung der wöchentlichen Vorschau in der Oberfläche.
+- Kontakte: SEPA-Mandate mit Verfahren B2B werden bei der Erfassung mit MHVP-CONT-0033 abgewiesen und im Formular als nicht unterstützt gekennzeichnet.
+- Lastschriften: Der Sperrgrund für Nicht-CORE-Mandate nennt ausdrücklich, dass die B2B-Firmenlastschrift nicht unterstützt wird.
+- Rechnungen: Der Budgetabgleich der sachlichen Prüfung zählt Gutschriften negativ und gebuchte Journalzeilen ohne Rechnungsbezug auf dem Konto der Planposition mit und zeigt die Teilbeträge.
+- Handbuch: Betriebsauswirkung der Standardsperre der Umlagegrundlagen beschrieben.
+- WEG: Ein erfasster Eigentümerwechsel erzeugt in offenen Einsichtsanfragen der bisherigen Eigentümerseite einen Prüfhinweis, ohne die Anfrage zu schließen (stündlicher Job und Prüfaufruf).
+- WEG: Die Datenbank lässt je Abstimmungspunkt und Einheit nur eine gezählte Stimme zu; Konfliktvorgänge bleiben erhalten, die Migration bricht bei Bestandsdubletten ab statt Daten zu löschen.
+- WEG: Der Korrekturbericht je Eigentümer steht hinter einem Mandantenschalter, Standard aus, einstellbar unter Fachliche Regeln.
+- WEG: Neue Integrationstests für Rücklagenbindung fremder Gemeinschaften und die Sonderumlagen-Differenz nach Eigentümerwechsel je Zuordnungsvariante.
+- WEG Versammlung: Empfängerliste der Einladung und Störungsprotokoll der Online-Versammlung mit Erfassung in der Versammlungsmaske.
+- WEG Abrechnung: Korrekturbericht je Eigentümer mit Heizkostenüberleitung und Übernahme von Kosten aus gebuchten Belegen (costs/from-ledger).
+- WEG Rücklagen: Änderungen des Anfangsbestands in der Rücklagenansicht freigeben oder ablehnen.
+- Dokumente: Jedes neu angelegte Dokument erzeugt zentral genau ein Ereignis document.created, unabhängig von der Quelle.
+- Dokumente: Nach der Paperless-Spiegelung wird der Volltext übernommen, solange die Texterkennung aussteht; die Detailseite zeigt bis dahin einen Hinweis.
+- Dokumente: Neuer Mandantenschalter Belegerfassung nach Ablage einer Rechnung (Standard aus) startet die Rechnungsauslesung als Vorschlag; sonst Schaltfläche Beleg erfassen am Eingangsvorschlag.
+- Dokumente: Objektakte-Import stellt Dokumente aus dem Papierkorb protokolliert wieder her statt mit Konflikt abzubrechen; der Mandantenexport enthält Papierkorbdokumente.
+- WEG: Einzel- und Gesamtabrechnungs-PDFs werden einmalig im Dokumentenarchiv abgelegt und mit Abrechnung, Objekt, Gemeinschaft, Einheit und Eigentümer verknüpft; jeder weitere Abruf im CRM und Portal liefert die abgelegte Datei.
+- Dokumente: Verknüpfungsziel hoa_statement ergänzt.
+- Textbausteine: Mandantenschalter Zweitpersonprüfung (Standard an) mit Begründungspflicht beim Abschalten und Audit-Ereignis.
+- Mieter-Anschreiben: Baustein letter_notice wird nur in freigegebener Fassung gedruckt, sonst Platzhalter Text nicht freigegeben.
+- Ablage: Integrationstest für Informationsblatt-PDF mit freigegebenem Text.
+- Dokumente: Briefbogen bettet Liberation Sans oder DejaVu Sans ein (Pfad über MHVP_PDF_FONT_DIR konfigurierbar), Helvetica nur noch als Fallback
+- Infrastruktur: API-Image installiert fonts-liberation und fonts-dejavu-core
+- Buchhaltung: PDF/A-3-Vorprüfung der ZUGFeRD-Rechnung ohne Schriftblocker bei eingebetteter Schrift, im Fallback mit Installationshinweis
+- Billing: Prüfpunkte des Regelregisters lassen sich im CRM mit Name und Datum der fachkundigen Prüfung bestätigen.
+- Billing: Neue Seite Einstellungen Abrechnung zur Pflege der Heizkosten-Regeltabellen (ohne Vorbelegung, Quelle Pflicht) und der Kostenart je Kostenkonto.
+- Billing: Abrechnungswerkbank erfasst Belegeinsicht je Einheit und erzeugt Ergebnisbuchungen als Entwurf im Status fällig (Gate G3 bleibt).
+- Billing: Integrationstest für Fristübersicht und Beat watch_tenant mit echtem Snapshot.
+- Portal: Eigentümer sehen ausgegebene Eigentümerabrechnungen Miete und SEV ihrer eigenen Rechtsträger mit PDF, hinter Freigabestufe G3 und neuem Mandantenschalter (Standard aus).
+- Portal: Hausgeldabrechnung erhält je Einheit eine Erläuterung (Kostenanteil, Vorschüsse Soll und Ist, Abrechnungsspitze, Rücklage) aus dem Snapshot, hinter G4.
+- Portal: neue Seite Wirtschaftsplan mit beschlossenen Plänen und Beträgen der eigenen Einheiten, hinter G4.
+- Portal: Hinweis bei leerer Mieterträge-Liste und Direktlink auf die Nutzungsbedingungen in der Annahmemaske.
+- CRM: Schalter Eigentümerabrechnung im Eigentümerportal in Portalfunktionen und Fachlichen Regeln.
+- Portal: Mieter sehen die ausgegebene Betriebs- und Heizkostenabrechnung ihres eigenen Vertrags mit Positionen, eigenem Anteil, Erläuterungen aus freigegebenen Textbausteinen und PDF-Abruf (Schalter Standard aus, G3).
+- Portal: Abruf der Mieterabrechnung wird als Indiz vermerkt (keine Zustellung).
+- Dokumente: neue Textbausteincodes portal_tenant_statement_key, _consumption, _advance, _balance.
+- Portal: Der Assistent beantwortet Fragen asynchron als Job im Worker (Statusabfrage, Zeitlimit 120 Sekunden, kein doppelter Anbieteraufruf, Berechtigungsfilter unverändert); Migration 0411.
+- CRM: Support-Ansicht je Portalzugang im Kontakt (lesend, Pflichtgrund, Protokoll).
+- CRM: Arbeitsvorrat Offene Zuordnungsprüfungen für Tickets und E-Mails auf der Startseite.
+- Dokumente: Neue Maske Eingangsvorschläge unter /dokumente/eingang zum Annehmen, Ablehnen, Bestätigen von Folgeaktionen und Zurücknehmen automatischer Ablage.
+- Objektakte: Pflichtunterlagen je Verwaltungsart und Status des lokalen Klassifikationsmodells in den Einstellungen.
+- Import: Migrationsabnahme je Objekt, Journalspalten und Jahresausgaben unter /importe/migration.
+- CRM Kontakte: Widerspruch kann in der Kontaktakte erfasst werden, Rechtsgrundlage auf Fachliche Regeln auf Standard zurücksetzbar.
+- CRM Einstellungen: neue Seiten Mailquellen (Geheimnis erneuern, Empfangsprotokoll) und API-Schlüssel (Präfix, Widerruf, Einmalanzeige).
+- CRM Shell: Hinweisband für Demo-Mandanten in der Kopfzeile.
+- CRM Vermietung: Besichtigungstermine je Interessent, Makler Konfiguration und OpenImmo Import sind in der Oberfläche bedienbar.
+- CRM Übergabe: Import aus U-Protokoll (Vorschau, Übernahme) und Mängel als Tickets anlegen.
+- CRM Lexware Office: Laufprotokoll und manueller Beleg Abruf in den Einstellungen.
+- CRM KI: Schalter für schnellen Tabellenimport und Hilfreich Bewertung am Wissenseintrag.
+- CRM Datenqualität: Datensatzprüfung starten und Kontaktrollen neu berechnen.
+- CRM BFF: Allowlist um Besichtigungen, Makler, OpenImmo, U-Protokoll, Lexware Import/Export, Tabellenimport und Datenqualität erweitert.
+- Import: GET /imports/{id}/undo-preview zeigt vor der Rücknahme je Datensatz, ob er entfernt wird oder mit Grund bestehen bleibt; das CRM nutzt dafür einen Dialog statt window.confirm.
+- KI: make ai-eval prüft zusätzlich classify_document, call_summary und rent_increase_check mit je mindestens 22 synthetischen Fällen und eigenen Scorern.
+- Platform: neue Massenendpunkte POST /units/bulk (Geschoss, Lage, Ausstattung) und POST /documents/bulk-link (Anlage) mit Teilerfolgsbericht, ohne Geldwirkung.
+- Portal: die Annahme einer Portaländerung (E-Mail, Telefon, Bankverbindung, Adresse) löst zusätzlich contact.updated mit Feldnamen aus, damit Webhook-Abonnenten sie erhalten.
+- Hilfe: Das Handbuch ist im CRM unter /hilfe mit Kapitelübersicht, Volltextsuche und Abschnittsankern lesbar, erzeugt aus docs/handbuch durch scripts/build_handbook.py, Aktualität wird in make lint geprüft.
+- Datenschutz: Das Verzeichnis erkennt Schadenstool, Makler-CRM, Webhook-Ziele sowie EBICS und FinTS und zeigt je Dienst lesend die Rechtsgrundlage der Einwilligungszwecke.
+- Doku: README zur Observability korrigiert, ADR 0024 (OTel-Collector und Uptime Kuma), Nachträge zu W09-01, P08-01 und P07-01.
+- Tests: 25 neue Komponententests (CRM: ai, banking, accounting, hoa, documents; Portal: Beschlüsse, Ansprechpartner, Ticketkommentare, Zählerstand, Hausgeldkonto, Support-Einwilligung, Anmeldelink, Abmeldung) mit Prüfung von BFF-Pfad, Fehleranzeige und Berechtigungsfall.
+- Import: Verwaltungsansicht der gemerkten Spaltenzuordnungen mit Entfernen auf der Immoware24 Importseite.
+- Buchhaltung: neuer lesender Endpunkt GET /accounting/interest-tax-config mit Stand der Steuerkonten über alle Buchungskreise.
+- Fachliche Regeln: Zinsabzug und Textbausteine zeigen ihren Stand als Zahl statt nur als Link.
+- Plattform: Warnung im Log bei fehlenden Variablen der Verfügbarkeitsmessung und Integrationstest mit echtem HTTP Server auf 127.0.0.1.
+- Banking: Der tägliche Bankabgleich übersprang bereits in 1.61.1 FinTS; in dieser Fassung bleiben auch konfigurierte EBICS-Teilnehmer unberührt, nicht eingerichtete EBICS-Verbindungen behalten den Hinweis.
+- CRM: Doppelte Übersetzungs-Namensräume (BankConnections, Plattformaudit) sind zusammengeführt; die Chat-Vorschläge unterscheiden Rechnungsprüfung und Plattformaudit.
+- Portal: Der EUR-Formatierer liegt in einem serverfähigen Modul; die Wirtschaftsplan-Tabellen der Eigentümerseite sind horizontal scrollbar.
+- Tests: Typfehler in 18 neuen Komponententests behoben, Integrationstest Mieterportal-Nebenkostenabrechnung lauffähig gemacht.
+- Migrationen: Der Rückbau der Migration 0411 behält die Protokollzeilen des Portal-Assistenten und läuft unter erzwungener Zeilensicherheit (Prüfbefund AF25-1).
+- Tests: Der Test der Portal-Betriebskostenabrechnung verwendet eine gültige Objektnummer (Prüfbefund AF25-2).
+
 ## 1.61.1 (02.10.2026) Korrektur: FinTS-Verbindungen überleben den täglichen Bankabgleich, Warteschlangenfehler mit Klartext
 
 - Banking: Der tägliche Bankabgleich (bank.sync_all) setzte aktive FinTS- und EBICS-Verbindungen jeden Morgen auf "nicht eingerichtet" zurück; beide Konnektoren werden jetzt übersprungen, die Verbindung bleibt aktiv (Regressionstest).

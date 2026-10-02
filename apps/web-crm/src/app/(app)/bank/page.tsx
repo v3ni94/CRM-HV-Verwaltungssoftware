@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
 import { BankClarifications } from "@/components/banking/BankClarifications";
 import { BankSetupWizard } from "@/components/banking/BankSetupWizard";
+import { BankSyncLog } from "@/components/banking/BankSyncLog";
 import { EbicsSubscribers } from "@/components/banking/EbicsSubscribers";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
 import { FinTsConnections } from "@/components/banking/FinTsConnections";
@@ -55,6 +56,7 @@ export default async function BankPage() {
       <EbicsSubscribers />
       <FinApiConnections />
       <StatementImport />
+      <BankSyncLog />
       <MatchingMetricsCard />
       <BankClarifications canUpdate={permissions.includes("accounting:update")} />
       <TransactionList canBook={permissions.includes("accounting:create")} canUpdate={permissions.includes("accounting:update")} />

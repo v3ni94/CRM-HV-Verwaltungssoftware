@@ -4,7 +4,8 @@
 issued to owners (status issued, due, posted or locked) with the units the account owns; the
 PDF of exactly such an own unit is served by ``.../statements/{id}/units/{unit_id}/pdf``. A
 statement before release, a foreign unit or a foreign community answers 404 without a hint.
-The release gate G4 applies as for the CRM PDF; the PDF is the same as the manager's output.
+The release gate G4 applies as for the CRM PDF; the PDF is the same filed document as the
+manager's output (GAB-06, ``hoa.statement_archive``).
 """
 
 import uuid
@@ -112,7 +113,23 @@ async def owner_statement_pdf(
             )
         if st is None or unit is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        content = statement_pdf.render(st.year, st.snapshot, unit, st.snapshot_hash or "")
+        from mhvp.accounting.models import Ledger
+        from mhvp.documents.blobs import BlobStore
+        from mhvp.hoa import statement_archive
+
+        ledger = await session.get(Ledger, st.ledger_id)
+        snapshot, snap_hash = st.snapshot, st.snapshot_hash or ""
+        # GAB-06: the same filed document as in the CRM; filed on first output if missing.
+        content, _doc = await statement_archive.archived_pdf(
+            session,
+            BlobStore(request.app.state.settings),
+            st=st,
+            property_id=ledger.property_id if ledger else None,
+            legal_entity_id=ledger.legal_entity_id if ledger else None,
+            unit=unit,
+            render=lambda: statement_pdf.render(st.year, snapshot, unit, snap_hash),
+            created_by=None,
+        )
         return Response(
             content=content,
             media_type="application/pdf",

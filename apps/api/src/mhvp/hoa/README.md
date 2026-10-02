@@ -310,3 +310,30 @@ Rule document: `docs/rules/AE31-online-stimmen-vollmacht.md`. Nothing legal is d
   speak with time, unit and note, checklist), per item the online votes (with proxy share) and
   the review notes on vote conflicts, and open conflicts in the draft notice. A presence meeting
   without portal data renders exactly as before.
+
+## AF08 (wave 17): GAA-02, GAE-11 to GAE-14 (migration 0402)
+
+* `hoa/inspection_transfer.py`: consumer of `contract.ownership_transferred`. Open inspection
+  requests of the previous owner side get an `owner_check` note with `source_event_id` (unique
+  per request and event); nothing is closed or revoked (P08-02). Hourly beat
+  `hoa-inspection-ownership-scan` and `POST /hoa/inspection-requests/ownership-transfers/scan`.
+* `meeting_vote`: unique index `uq_meeting_vote_item_contract` (one counted vote per agenda item
+  and unit); conflict records stay in `meeting_vote_conflict`. Insert races answer 409. The
+  migration aborts on existing duplicates instead of deleting rows.
+* `hoa_correction_report_setting.enabled` (default off) gates
+  `GET /hoa/statements/{id}/correction-report` (409 when off); `GET/PUT
+  /hoa/correction-report-settings` (tenant_settings permissions).
+* Tests: `tests/integration/test_af08_hoa.py` (ownership scan, foreign reserve 422, levy
+  difference after ownership change per AE10 variant), additions in `test_ae11_correction.py`
+  and `test_ae31_online_vote_rule.py`.
+
+## Filed statement PDFs (GAB-06, 11.3)
+
+`statement_archive.archived_pdf` files the individual statement (per unit) and the total
+statement once in the DMS (`documents.services.store_document`, source `generated`, links
+`hoa_statement`, `property`, `legal_entity`, `unit` and the owner contacts of the year). The
+transition to `issued` or `due` files every unit statement; the first CRM or portal output
+files a missing one. Every later output returns the filed bytes (SHA-256 checked), so the
+letter date and layout of an issued document never change. The filename carries version and
+snapshot hash prefix: a new version files a new document. Gate G4 is checked before; no
+statement value changes. Tests: `tests/integration/test_af11_statement_archive.py`.

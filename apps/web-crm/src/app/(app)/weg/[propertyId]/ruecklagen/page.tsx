@@ -2,12 +2,13 @@ import { getTranslations } from "next-intl/server";
 
 import { ReserveDevelopment, type ReserveBlock } from "@/components/hoa/ReserveDevelopment";
 import { ReserveCreateForm, ReserveMovementForm } from "@/components/hoa/ReserveForms";
+import { ReserveOpeningChanges, type OpeningChange } from "@/components/hoa/ReserveOpeningChanges";
 import { ReserveStatementPanel } from "@/components/hoa/ReserveStatementPanel";
 import { ReservePlans, type ResolutionOption } from "@/components/hoa/ReservePlans";
 import { ReserveMovementList, ReservePosition, type ReserveRow } from "@/components/hoa/ReservePositions";
 import type { AccountOption } from "@/components/hoa/ReserveYears";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { hoaContext } from "@/lib/hoa";
 import { ui } from "@/lib/ui";
 
@@ -56,6 +57,13 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
       break;
     }
   }
+  // GAF-16: Protokoll der Änderungen des Anfangsbestands je Rücklage.
+  const openingChanges = await Promise.all(
+    list.map(async (r) => {
+      const res = await serverFetch(`/api/v1/hoa/reserves/${encodeURIComponent(r.id)}/opening-changes`);
+      return { id: r.id, name: r.name, rows: res.ok ? ((await res.json()) as OpeningChange[]) : [] };
+    }),
+  );
   return (
     <div className="flex flex-col gap-5">
       <PageHeader breadcrumb={[{ href: "/weg", label: th("title") }, { href: `/weg/${propertyId}`, label: `${ctx.property?.number ?? ""}` }]} title={t("title")} />
@@ -71,6 +79,9 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
         <p className={ui.help}>{t("accountsHint")}</p>
         {list.map((r) => (
           <ReservePlans key={`plan-${r.id}`} reserveId={r.id} name={r.name} resolutions={resolutions} />
+        ))}
+        {openingChanges.filter((o) => o.rows.length).map((o) => (
+          <ReserveOpeningChanges key={`oc-${o.id}`} name={o.name} rows={o.rows} />
         ))}
         <ReserveCreateForm ledgerId={ctx.ledger.id} bankAccounts={bankAccounts} accounts={accounts} />
       </section>

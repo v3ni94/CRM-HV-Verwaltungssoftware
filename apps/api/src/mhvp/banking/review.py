@@ -440,6 +440,7 @@ async def correct(
             text=body.text,
         ),
     )
+    await matching.emit_booked(session, tx, new, actor_user_id=user_id, origin="review_correction")
     await emit(
         session,
         tenant_id=tenant_id,

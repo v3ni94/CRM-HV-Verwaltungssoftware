@@ -16,6 +16,7 @@ from moto import mock_aws
 
 from mhvp.main import create_app
 from mhvp.platform import services
+from tests.integration.af01_switch import seed_auto_posting
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET, _settings
@@ -83,7 +84,7 @@ def test_d51_configured_rule_is_never_productive_without_decision_and_tests(
     hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
 
     # A posting rule typed in by one person is only a proposal (6.9.4).
-    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test D51"}, headers=h))
+    seed_auto_posting(client, h)
     rule = _ok(
         client.post(
             f"{B}/rules",

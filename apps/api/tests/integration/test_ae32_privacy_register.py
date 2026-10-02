@@ -35,10 +35,14 @@ def _settings(database: Database, redis_url: str) -> Any:
 
 async def _connectors(settings: Any, tenant_id: uuid.UUID) -> None:
     from mhvp.ai.models import AiProvider, AiProviderConfig
+    from mhvp.banking.models import BankConnection, ConnectionStatus, Connector
     from mhvp.communication.models import Mailbox, PostalSettings
     from mhvp.core.db.engine import create_app_engine, create_session_factory
     from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.core.webhooks import WebhookSubscription
     from mhvp.documents.models import DmsConnection, StorageKind
+    from mhvp.integrations.schadenstool.models import SchadenstoolTenantConfig
+    from mhvp.letting.models import BrokerTenantConfig
 
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
@@ -77,6 +81,34 @@ async def _connectors(settings: Any, tenant_id: uuid.UUID) -> None:
                     ),
                     PostalSettings(
                         tenant_id=tenant_id, provider="letterxpress", enabled=False, mode="test"
+                    ),
+                    SchadenstoolTenantConfig(
+                        tenant_id=tenant_id, base_url="https://schaden.ae32.example", enabled=True
+                    ),
+                    BrokerTenantConfig(
+                        tenant_id=tenant_id,
+                        provider="flowfact",
+                        base_url="https://broker.ae32.example",
+                        enabled=False,
+                    ),
+                    WebhookSubscription(
+                        tenant_id=tenant_id,
+                        url="https://hooks.ae32.example/in",
+                        event_types=["contact.created"],
+                        secret="ae32-hook-secret",
+                        active=True,
+                    ),
+                    BankConnection(
+                        tenant_id=tenant_id,
+                        connector=Connector.EBICS,
+                        bank_name="AE32 Bank",
+                        status=ConnectionStatus.ACTIVE,
+                    ),
+                    BankConnection(
+                        tenant_id=tenant_id,
+                        connector=Connector.FINTS,
+                        bank_name="AE32 FinTS Bank",
+                        status=ConnectionStatus.ACTIVE,
                     ),
                 ]
             )
@@ -170,8 +202,21 @@ def test_config_sources_detected_and_synced(client: TestClient, world: World) ->
         "ai:anthropic",
         "postal:letterxpress",
         "objektakte",
+        "schadenstool",
+        "broker:flowfact",
+        "webhook:hooks.ae32.example",
+        "ebics",
+        "fints",
     }
     assert expected <= set(found)
+    # GAE-34: read only display of the consent legal basis per service
+    assert found["gmail"]["consent_purposes"] == ["email_delivery"]
+    assert found["gmail"]["consent_basis"]["email_delivery"] in {"consent", "contract"}
+    assert found["schadenstool"]["consent_purposes"] == ["data_sharing"]
+    assert found["ebics"]["consent_purposes"] == []
+    assert found["broker:flowfact"]["active"] is False
+    assert found["webhook:hooks.ae32.example"]["active"] is True
+    assert "ae32-hook-secret" not in found["webhook:hooks.ae32.example"]["detail"]
     assert found["gmail"]["active"] is True
     assert found["postal:letterxpress"]["active"] is False
     assert found["objektakte"]["scope"] == "platform"

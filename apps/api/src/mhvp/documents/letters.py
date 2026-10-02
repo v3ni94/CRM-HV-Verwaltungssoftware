@@ -31,6 +31,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from mhvp.documents.pdf_fonts import pdf_fonts
+
 PAGE_W, PAGE_H = A4
 LEFT, RIGHT = 25 * mm, 20 * mm
 BOTTOM = 28 * mm
@@ -208,7 +210,7 @@ class _Pages:
 
     def _footer(self, c: Canvas) -> None:
         c.setFillColor(HexColor(MUTED))
-        c.setFont("Helvetica", 7.5)
+        c.setFont(pdf_fonts().regular, 7.5)
         y = 18 * mm
         for line in _footer_lines(self.head.company):
             if line:
@@ -221,13 +223,13 @@ class _Pages:
             return
         c.saveState()
         c.setFillColor(HexColor("#D9D9DC"))
-        c.setFont("Helvetica-Bold", 90)
+        c.setFont(pdf_fonts().bold, 90)
         c.translate(PAGE_W / 2, PAGE_H / 2)
         c.rotate(45)
         c.drawCentredString(0, 0, "ENTWURF")
         c.restoreState()
         c.setFillColor(HexColor("#8A1C1C"))
-        c.setFont("Helvetica-Bold", 8.5)
+        c.setFont(pdf_fonts().bold, 8.5)
         c.drawString(LEFT, PAGE_H - 7.5 * mm, notice[:160])
 
     def first(self, c: Canvas, _doc: Any) -> None:
@@ -253,13 +255,13 @@ class _Pages:
             )
         else:
             c.setFillColor(HexColor(TEXT))
-            c.setFont("Helvetica-Bold", 15)
+            c.setFont(pdf_fonts().bold, 15)
             c.drawString(LEFT, PAGE_H - 22 * mm, head.company.get("name", ""))
         c.setFillColor(HexColor(MUTED))
-        c.setFont("Helvetica", 7.5)
+        c.setFont(pdf_fonts().regular, 7.5)
         c.drawString(LEFT, PAGE_H - 45 * mm, _sender_line(head.company))
         c.setFillColor(HexColor(TEXT))
-        c.setFont("Helvetica", 11)
+        c.setFont(pdf_fonts().regular, 11)
         y = PAGE_H - 53 * mm
         for line in letter.recipient_lines[:6]:
             c.drawString(LEFT, y, line)
@@ -267,10 +269,10 @@ class _Pages:
         y = PAGE_H - 53 * mm
         for label, value in [*letter.info, ("Datum", letter.letter_date.strftime("%d.%m.%Y"))]:
             c.setFillColor(HexColor(MUTED))
-            c.setFont("Helvetica", 8)
+            c.setFont(pdf_fonts().regular, 8)
             c.drawString(125 * mm, y, label)
             c.setFillColor(HexColor(TEXT))
-            c.setFont("Helvetica", 9.5)
+            c.setFont(pdf_fonts().regular, 9.5)
             c.drawString(125 * mm, y - 4 * mm, value)
             y -= 10 * mm
         self._footer(c)
@@ -279,7 +281,7 @@ class _Pages:
         self._draft(c)
         _band(c, self.head.branding, PAGE_H, 1.2 * mm)
         c.setFillColor(HexColor(MUTED))
-        c.setFont("Helvetica", 8)
+        c.setFont(pdf_fonts().regular, 8)
         c.drawRightString(PAGE_W - RIGHT, 12 * mm, f"Seite {doc.page}")
         self._footer(c)
 
@@ -287,7 +289,7 @@ class _Pages:
 def _table(table: LetterTable, width: float, style: ParagraphStyle) -> Table:
     cell = ParagraphStyle("cell", parent=style, spaceAfter=0, fontSize=9.5, leading=12)
     cell_right = ParagraphStyle("cell_right", parent=cell, alignment=2)
-    head = ParagraphStyle("cell_head", parent=cell, fontName="Helvetica-Bold")
+    head = ParagraphStyle("cell_head", parent=cell, fontName=pdf_fonts().bold)
     head_right = ParagraphStyle("cell_head_right", parent=head, alignment=2)
 
     def row(values: list[str], base: ParagraphStyle, right: ParagraphStyle) -> list[Any]:
@@ -405,12 +407,14 @@ def render_pdf(head: Letterhead, letter: Letter) -> bytes:
             PageTemplate("later", [later], onPage=pages.later),
         ]
     )
-    body = ParagraphStyle("body", fontName="Helvetica", fontSize=10.5, leading=14, spaceAfter=7)
-    subject = ParagraphStyle("subject", fontName="Helvetica-Bold", fontSize=11.5, leading=15)
+    body = ParagraphStyle(
+        "body", fontName=pdf_fonts().regular, fontSize=10.5, leading=14, spaceAfter=7
+    )
+    subject = ParagraphStyle("subject", fontName=pdf_fonts().bold, fontSize=11.5, leading=15)
     story: list[Any] = []
     if letter.notice:
         notice = ParagraphStyle(
-            "notice", parent=body, fontName="Helvetica-Bold", textColor=HexColor("#8A1C1C")
+            "notice", parent=body, fontName=pdf_fonts().bold, textColor=HexColor("#8A1C1C")
         )
         story += [Paragraph(html.escape(letter.notice), notice), Spacer(1, 3 * mm)]
     story += [Paragraph(letter.subject, subject), Spacer(1, 8 * mm)]
@@ -421,5 +425,12 @@ def render_pdf(head: Letterhead, letter: Letter) -> bytes:
         story += [Spacer(1, 2 * mm), _qr_block(letter.qr, width, body), Spacer(1, 4 * mm)]
     story += [Spacer(1, 4 * mm), Paragraph(html.escape(letter.closing), body), Spacer(1, 14 * mm)]
     story += [Paragraph(html.escape(line), body) for line in letter.signatory]
-    doc.build(story)
+    fonts = pdf_fonts()
+
+    def _canvas(*args: Any, **kwargs: Any) -> Canvas:
+        # Canvas starts with Helvetica unless told otherwise (would stay unembedded, GAE-37).
+        kwargs["initialFontName"] = fonts.regular
+        return Canvas(*args, **kwargs)
+
+    doc.build(story, canvasmaker=_canvas)
     return buffer.getvalue()

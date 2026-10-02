@@ -396,6 +396,9 @@ async def auto_post_transaction(
             "review_kind": kind if due else None,
         },
     )
+    await matching.emit_booked(
+        session, tx, entry, actor_user_id=None, origin="auto", extra={"level": level}
+    )
     ctx.posted_this_run += 1
     ctx.posted_today += 1
     ctx.rule_hits_today[rule_row.id] = ctx.rule_hits_today.get(rule_row.id, 0) + 1

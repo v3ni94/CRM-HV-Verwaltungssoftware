@@ -23,7 +23,10 @@ export type ViewId =
   | "targetActual"
   | "bankStatement"
   | "vatOverview"
-  | "incomeExpense";
+  | "incomeExpense"
+  | "vatByProperty"
+  | "openItemBalances"
+  | "lineDrift";
 
 export type Column = { key: string; label: string; kind?: "money" | "date" | "text" };
 export type Table = {
@@ -33,17 +36,21 @@ export type Table = {
   notes: string[];
 };
 
-type Needs = { asOf?: boolean; period?: boolean; account?: boolean };
+type Needs = { asOf?: boolean; period?: boolean; account?: boolean; property?: boolean };
 
-export const VIEWS: Record<ViewId, { path: string; needs: Needs; xlsx?: string }> = {
+/** `ledgerPath`: the resource lies directly below the ledger, not below /reports. */
+export const VIEWS: Record<ViewId, { path: string; needs: Needs; xlsx?: string; ledgerPath?: boolean }> = {
   accountSheet: { path: "account-sheet", needs: { period: true, account: true } },
   trialBalance: { path: "trial-balance", needs: { asOf: true }, xlsx: "trial_balance" },
   openItems: { path: "open-items", needs: { asOf: true }, xlsx: "open_items" },
-  monthlyMatrix: { path: "monthly-matrix", needs: { period: true }, xlsx: "monthly_matrix" },
+  monthlyMatrix: { path: "monthly-matrix", needs: { period: true, property: true }, xlsx: "monthly_matrix" },
   targetActual: { path: "target-actual", needs: { period: true }, xlsx: "target_actual" },
   bankStatement: { path: "bank-statement", needs: { period: true, account: true } },
   vatOverview: { path: "vat-overview", needs: { period: true }, xlsx: "vat_overview" },
-  incomeExpense: { path: "income-expense", needs: { period: true }, xlsx: "income_expense" },
+  incomeExpense: { path: "income-expense", needs: { period: true, property: true }, xlsx: "income_expense" },
+  vatByProperty: { path: "vat-overview-by-property", needs: { period: true } },
+  openItemBalances: { path: "open-item-balances", needs: { asOf: true }, ledgerPath: true },
+  lineDrift: { path: "line-property-drift", needs: { period: true } },
 };
 
 type Json = Record<string, unknown>;
@@ -54,7 +61,7 @@ const money = (key: string, label: string): Column => ({ key, label, kind: "mone
 const day = (key: string, label: string): Column => ({ key, label, kind: "date" });
 
 /** `l` liefert die Spaltenüberschrift je Schlüssel (Übersetzung). */
-export function toTable(view: ViewId, data: Json, l: (key: string) => string): Table {
+export function toTable(view: ViewId, data: Json, l: (key: string) => string, propertyLabel: (id: string) => string = (id) => id): Table {
   const notes: string[] = [];
   if (typeof data.note === "string") notes.push(data.note);
   if (typeof data.sign_note === "string") notes.push(data.sign_note);
@@ -152,6 +159,46 @@ export function toTable(view: ViewId, data: Json, l: (key: string) => string): T
         ],
       };
     }
+    case "vatByProperty":
+      return {
+        columns: [text("property_label", l("property")), text("cost_center", l("costCenter")), money("net_revenue", l("netRevenue")), money("output_vat", l("outputVat")), money("net_cost", l("netCost")), money("input_vat_before_deduction", l("inputVat")), text("lines", l("lines"))],
+        rows: rows(list(data.rows), ["property_label", "cost_center", "net_revenue", "output_vat", "net_cost", "input_vat_before_deduction", "lines"]),
+        summary: [
+          { label: l("outputVat"), value: str(data.total_output_vat), kind: "money" },
+          { label: l("inputVat"), value: str(data.total_input_vat_before_deduction), kind: "money" },
+        ],
+        notes,
+      };
+    case "openItemBalances":
+      return {
+        columns: [text("kind", l("kind")), day("due_date", l("due")), money("amount", l("amount")), money("remaining", l("remaining")), text("source", l("source"))],
+        rows: rows(list(data.items), ["kind", "due_date", "amount", "remaining", "source"]),
+        summary: [
+          { label: l("totalReceivable"), value: str(data.total_receivable), kind: "money" },
+          { label: l("totalPayable"), value: str(data.total_payable), kind: "money" },
+        ],
+        notes,
+      };
+    case "lineDrift": {
+      const items = list(data.rows).map((r) => ({
+        number: str(r.number) || l("draft"),
+        booking_date: str(r.booking_date),
+        line_no: str(r.line_no),
+        kind: l(`driftKinds.${str(r.kind)}`),
+        severity: l(`severity.${str(r.severity)}`),
+        property_id: r.property_id ? propertyLabel(str(r.property_id)) : l("noProperty"),
+        expected_property_id: r.expected_property_id ? propertyLabel(str(r.expected_property_id)) : l("noProperty"),
+      }));
+      return {
+        columns: [text("number", l("number")), day("booking_date", l("date")), text("line_no", l("line")), text("kind", l("kind")), text("severity", l("severityTitle")), text("property_id", l("stored")), text("expected_property_id", l("expected"))],
+        rows: items,
+        summary: [
+          { label: l("findings"), value: str(data.findings), kind: "text" },
+          { label: l("hints"), value: str(data.hints), kind: "text" },
+        ],
+        notes: data.rows_truncated === true ? [...notes, l("truncated")] : notes,
+      };
+    }
     case "incomeExpense":
       return {
         columns: [text("kind", l("kind")), text("number", l("account")), text("name", l("name")), money("total", l("amount"))],
@@ -171,7 +218,7 @@ export function toTable(view: ViewId, data: Json, l: (key: string) => string): T
 
 export function buildQuery(
   view: ViewId,
-  p: { asOf: string; start: string; end: string; accountId: string },
+  p: { asOf: string; start: string; end: string; accountId: string; propertyId?: string },
 ): string {
   const needs = VIEWS[view].needs;
   const q = new URLSearchParams();
@@ -181,5 +228,6 @@ export function buildQuery(
     q.set("end", p.end);
   }
   if (needs.account && p.accountId) q.set("account_id", p.accountId);
+  if (needs.property && p.propertyId) q.set("property_id", p.propertyId);
   return q.toString();
 }

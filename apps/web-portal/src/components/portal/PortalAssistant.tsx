@@ -8,6 +8,9 @@ import type { AssistantAnswer, AssistantHistoryRow, AssistantScopeView, Assistan
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+const POLL_MS = 1500;
+const POLL_MAX = 90;
+
 /** Assistent für die eigenen Unterlagen (AE28, M7-06, SA-04): Fragen werden nur aus den
  *  Unterlagen beantwortet, die für diesen Zugang freigegeben sind. Ohne freigegebenen
  *  Datenschutzhinweis, ohne Kenntnisnahme oder ohne freigegebenen KI-Anbieter zeigt der Assistent
@@ -68,16 +71,34 @@ export function PortalAssistant() {
       return;
     }
     setBusy(true);
-    const result = await bff<AssistantAnswer>("/api/bff/portal/assistant/questions", {
+    const result = await bff<AssistantAnswer>("/api/bff/portal/assistant/questions/async", {
       method: "POST",
       body: JSON.stringify({ question: question.trim(), ...(unitId ? { unit_id: unitId } : {}) }),
     });
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       setError(result.message);
       return;
     }
-    setAnswer(result.data);
+    let current = result.data;
+    // GAE-29: the answer is produced by a job in the worker; poll the status (the API closes an
+    // overdue job as timeout, the loop stops after a fixed number of polls as well).
+    for (let i = 0; current.status === "pending" && i < POLL_MAX; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      const next = await bff<AssistantAnswer>(`/api/bff/portal/assistant/questions/${current.id}`);
+      if (!next.ok) {
+        setBusy(false);
+        setError(next.message);
+        return;
+      }
+      current = next.data;
+    }
+    setBusy(false);
+    if (current.status === "pending") {
+      setError(t("stillPending"));
+      return;
+    }
+    setAnswer(current);
     setQuestion("");
     await load();
   }

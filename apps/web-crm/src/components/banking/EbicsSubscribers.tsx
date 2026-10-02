@@ -268,6 +268,13 @@ function SubscriberRow({ subscriber: s, call }: { subscriber: EbicsSubscriber; c
       <p className={`${ui.help} mt-1`}>
         {t("keysLine", { count: subscriberKeys.length, bits: s.key_bits, mode: t(s.signature_key_mode === "server" ? "modeServer" : "modeExternal") })}
       </p>
+      {subscriberKeys.length > 0 && (
+        <p className="mt-1">
+          <a className={ui.buttonSm} href={`/api/bff/banking/ebics${path}/letters.pdf`} download data-testid="ebics-letter-pdf">
+            {t("letterPdf")}
+          </a>
+        </p>
+      )}
       {expiring?.runs_out && <p className={`${ui.help} mt-1`}>{t("runsOut", { date: formatDate(expiring.runs_out) })}</p>}
       {s.last_download_at && <p className={`${ui.help} mt-1`}>{t("lastDownload", { at: formatDateTime(s.last_download_at) })}</p>}
       {step !== "none" && <p className="mt-2 text-sm">{t(`step.${step}`)}</p>}

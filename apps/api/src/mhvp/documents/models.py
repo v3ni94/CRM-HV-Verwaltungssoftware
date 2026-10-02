@@ -409,11 +409,18 @@ TEXT_BLOCK_CODES: dict[str, str] = {
     "owner_letter_tax_note": "Eigentümeranschreiben: steuerlicher Hinweis",
     "owner_s35a_note": "Nachweis § 35a EStG: Erläuterung",
     "portal_chat_privacy_notice": "Portal-Assistent: Datenschutzhinweis zur KI-Antwort",
+    # AF12 / GAE-17: Hinweis im Mieter-Anschreiben zur Betriebskostenabrechnung (billing.letters).
+    "letter_notice": "Mieter-Anschreiben: Hinweis zur Abrechnung",
     # AE29 / M21-04: legal texts of the portal per tenant (same release workflow, shown in the
     # portal footer only when approved; mhvp.platform.legal_texts).
     "impressum": "Portal: Impressum",
     "datenschutz": "Portal: Datenschutzerklärung",
     "nutzungsbedingungen": "Portal: Nutzungsbedingungen",
+    # AF16 (GAC-02): explanations of the operating cost statement in the tenant portal.
+    "portal_tenant_statement_key": "Mieterportal Abrechnung: Erläuterung Umlageschlüssel",
+    "portal_tenant_statement_consumption": "Mieterportal Abrechnung: Erläuterung Verbrauch",
+    "portal_tenant_statement_advance": "Mieterportal Abrechnung: Erläuterung Vorauszahlungen",
+    "portal_tenant_statement_balance": "Mieterportal Abrechnung: Erläuterung Saldo",
 }
 TEXT_BLOCK_STATUSES = ("draft", "submitted", "approved", "retired")
 

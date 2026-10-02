@@ -57,3 +57,17 @@ Sammel-Download (M25-06): siehe `docs/OPEN_QUESTIONS.md` (P08-01 bis P08-03).
   `tenant_settings.updated`. Der Vorschlag 14 Tage aus P08-02 ist nicht voreingestellt; die Frist
   ist eine Produktleistung und keine Rechtsfrist (Quellenstatus wie oben, Prüfung durch
   Rechtsanwalt offen). Abnahmefall: `tests/integration/test_r05_positive_paths.py`.
+
+## Nachtrag AF08 (Welle 17, GAA-02): Eigentümerwechsel prüft offene Anfragen
+
+- ID: P08-02 (technische Vorbereitung), Geltungsbereich: Einsichtsanfragen der GdWE.
+- Ein erfasster Eigentümerwechsel (Ereignis `contract.ownership_transferred`) erzeugt in jeder
+  offenen Anfrage (Status angefragt, freigegeben, bereitgestellt, abgerufen) derselben
+  Liegenschaft, deren Antragsteller zur bisherigen Eigentümerseite gehört, einen Prüfhinweis
+  (Ereignisart `owner_check`, Bezug `source_event_id`). Die Anfrage wird nicht geschlossen, ein
+  Paket wird nicht widerrufen; die Entscheidung bleibt beim Verwalter (P08-02 offen).
+- Ausführung: stündlicher Job `mhvp.hoa.inspection_ownership_scan` und
+  `POST /hoa/inspection-requests/ownership-transfers/scan`; je Anfrage und Ereignis höchstens ein
+  Hinweis (Migration 0402).
+- Quellenstatus: Fachliche Umsetzung, keine Rechtsregel. Abnahmefall:
+  `apps/api/tests/integration/test_af08_hoa.py`. Änderungsgrund: Befund GAA-02.

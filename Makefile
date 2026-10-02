@@ -40,6 +40,7 @@ lint: ## ruff, eslint, agent docs sync check, i18n, client import guards, secret
 	python3 scripts/sync_agent_docs.py --check
 	python3 scripts/check_i18n.py
 	python3 scripts/build_help_index.py --check
+	python3 scripts/build_handbook.py --check
 	python3 scripts/check_i18n_usage.py
 	python3 scripts/check_client_imports.py
 	scripts/secrets-scan.sh

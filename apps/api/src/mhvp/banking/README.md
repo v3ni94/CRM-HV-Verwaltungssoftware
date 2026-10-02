@@ -325,7 +325,17 @@ Buchung aus `posting_decision`, bucht nichts), `GET/POST /banking/automation/swi
 und `POST /banking/automation/switch-requests/{id}/approve|reject`. Einschalten nur bei offener
 G1, Antrag und Freigabe durch verschiedene Personen (`MHVP-GATE-0002`), G1 zu ergibt
 `MHVP-GATE-0001`. Tabelle `auto_posting_switch_request` (Migration 0359, RLS).
-`PUT /banking/automation` bleibt unverändert (API, außerhalb der BFF).
+`PUT /banking/automation` schaltet seit AF01 (Welle 17, GAA-01) nur noch aus: `enabled=true`
+ergibt 409 `MHVP-BANK-0063` mit Verweis auf den Antragsweg, auch bei offener G1. Ausschalten
+bleibt sofort möglich (Grund, Ereignis `tenant.auto_posting_changed`) und ist in der BFF
+freigegeben.
+
+Ereignis `bank_transaction.booked` (GAB-08): außer der manuellen Buchung melden auch der
+Automatiklauf (`origin` `auto`), die Ausführung eines Zahlungsauftrags (`payment_order`) und
+die Korrektur aus der Nachkontrolle (`review_correction`) die Buchung über
+`matching.emit_booked`; das Ereignis steht im Webhook-Katalog. Fehlgeschlagene geplante
+Zahllauf-Vorschauen (`payment_run_tasks`, GAC-06) werden als Zeile mit `trigger = failed` und
+Fehlertext gespeichert und in der Alarmmetrik `payment_run_failed_24h` gezählt.
 
 ## FinTS: Prüfschritte, Adresse je Verbindung, Institutsliste (AE26, Welle 16)
 
@@ -369,3 +379,17 @@ Rule M11-11 (`docs/rules/M11-11-ebics-connector.md`), migration 0379, runbook
   `services.import_file` inside one savepoint (no partial import), raw XML archived (M11-07).
 - Error codes `MHVP-BANK-0050` to `0056`. `EbicsSubmitter` (payments) is unchanged and keeps
   refusing (G2).
+
+## AF03 (Welle 17): Abgleich payment-batches und Bankmasken
+
+- `payment-batches` ist nicht durch `accounting/payment-runs` abgelöst: der Zahllauf sammelt Aufträge (Entwürfe, Vorschau, Limits, Statusbericht), der Sammler erzeugt aus freigegebenen Aufträgen die pain.001 Datei (G2). Keine Veraltet-Kennzeichnung, keine Löschung.
+- Oberfläche: `/bank/zahlungen` zeigt die Sammler nur lesend; `/bank/verbindungen` zeigt Verbindungen, Sync-Protokoll, Schalter des Entscheidungsprotokolls und das Protokoll je Umsatz. Erzeugen, Download und Einreichung der Datei haben weiterhin keinen BFF-Pfad (G2).
+- Lastschrift: Gläubiger-ID unter `/einstellungen/buchhaltung/glaeubiger-id`, Vorschau und Vorabinformation (Entwurf) unter `/bank/lastschriften`.
+
+## AF02 (Welle 17): EBICS-Abruf als Task, Sync-Protokoll, INI/HIA-Brief, FinTS-Zieladresse
+
+- `mhvp.banking.ebics_fetch(tenant_id, subscriber_id)`: C53-Abruf je Mandant und EBICS-Teilnehmer (alle Konten des Vertrags) über die Transportschnittstelle und denselben Import wie der manuelle Abruf (`ebics_routers.import_c53_content`, idempotent über die Bankreferenz, D05). Bank- oder Verbindungsfehler (MHVP-BANK-0056) werden bis zu drei Mal mit 60, 120, 240 s wiederholt. Ohne installierte Übertragung endet der Lauf sauber mit MHVP-BANK-0050 (EbicsOrder und BankSyncRun `ebics:C53` mit Status failed), es wird nichts an eine Bank gesendet.
+- Beat `banking-ebics-scheduled-fetch` (06:40) über `mhvp.banking.ebics_scheduled_fetch`: nur Mandanten mit eingeschaltetem EBICS-Schalter und Teilnehmern im Zustand ready.
+- `SyncRunOut` enthält zusätzlich `created_at` und `connection_id`; CRM-Komponente `BankSyncLog` auf /bank.
+- `GET /banking/ebics/subscribers/{id}/letters.pdf`: INI-/HIA-Brief auf dem Briefbogen des Mandanten (documents.letters). Hash-Werte nur aus der Übertragung; fehlt einer, trägt der Brief den Entwurfsvermerk und darf nicht versandt werden (AE23-02).
+- FinTS: `fints.check_fints_target` prüft im Worker vor dem Aufbau des echten Clients die aufgelösten Adressen; nicht öffentliche Bereiche (Loopback, privat, link local, CGNAT, Multicast, reserviert) ergeben MHVP-BANK-0062. Restrisiko DNS-Rebinding bleibt bei den Egress-Regeln des Betreibers.

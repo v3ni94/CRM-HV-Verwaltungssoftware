@@ -27,3 +27,7 @@
 - Lesen: Profil aus der Spezifikationskennung, Containerangaben aus XMP und Anhang. Abweichungen
   (kein PDF/A-Kennzeichen, Profil MINIMUM oder BASIC WL, Profil laut XMP ungleich XML, fehlende
   AFRelationship) sind Hinweise, die formale Lesung und das Ergebnis bleiben unverändert.
+
+Änderung Welle 17 (AF13, GAE-37): Der Briefbogen bettet Liberation Sans oder DejaVu Sans ein;
+der Schriftblocker der Vorprüfung entfällt bei installierter Schrift und nennt im Fallback
+Helvetica einen Installationshinweis. Konformität bleibt not_verified.

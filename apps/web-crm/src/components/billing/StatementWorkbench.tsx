@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { ResultEntriesPanel } from "@/components/billing/ResultEntriesPanel";
+import { StatementInspectionsPanel, type InspectionContract } from "@/components/billing/StatementInspectionsPanel";
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
 import { useRefreshAfterPost } from "@/lib/useRefreshAfterPost";
@@ -12,7 +14,7 @@ type Key = { id: string; code: string; name: string };
 
 /** Cost items, calculation and status steps of an operating cost statement (M17).
  *  Heating costs come from an external statement (H01) and are entered via the API. */
-export function StatementWorkbench({ id, status, keys, revision = "" }: { id: string; status: string; keys: Key[]; revision?: string }) {
+export function StatementWorkbench({ id, status, keys, revision = "", contracts = [] }: { id: string; status: string; keys: Key[]; revision?: string; contracts?: InspectionContract[] }) {
   const t = useTranslations("Billing");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
@@ -122,6 +124,8 @@ export function StatementWorkbench({ id, status, keys, revision = "" }: { id: st
           {error}
         </p>
       ) : null}
+      {status !== "draft" && contracts.length > 0 ? <StatementInspectionsPanel id={id} contracts={contracts} /> : null}
+      {status !== "draft" ? <ResultEntriesPanel id={id} status={status} /> : null}
     </section>
   );
 }

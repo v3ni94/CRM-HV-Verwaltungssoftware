@@ -88,7 +88,10 @@ def mandate_block_reason(account: Any, collection_date: date) -> str | None:
     if account.mandate_signed_on > collection_date:
         return "Mandat erst nach dem Einzugsdatum erteilt"
     if account.mandate_scheme is not MandateScheme.CORE:
-        return "Mandat ist kein Basislastschriftmandat (CORE)"
+        return (
+            "B2B-Firmenlastschrift wird nicht unterstützt, kein B2B-Lauf (GAA-05);"
+            " nur Basislastschrift (CORE)"
+        )
     if account.valid_to is not None and account.valid_to < collection_date:
         return "Bankverbindung am Einzugsdatum nicht mehr gültig"
     if account.valid_from > collection_date:

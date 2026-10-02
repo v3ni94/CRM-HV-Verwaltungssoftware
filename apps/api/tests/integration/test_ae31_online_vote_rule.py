@@ -622,3 +622,64 @@ def test_protocol_draft_carries_online_data(
     # reader may not create a draft, other tenant does not see the meeting
     assert c.post(f"{H}/meetings/{mid}/protocol-draft", headers=w.reader).status_code == 403
     assert c.post(f"{H}/meetings/{mid}/protocol-draft", headers=w.admin_b).status_code == 404
+
+
+def test_af08_unique_counted_vote_per_item_and_unit(
+    client: TestClient,
+    world: World,
+    w: W,
+    meeting: dict[str, Any],
+    database: Database,
+    redis_url: str,
+) -> None:
+    """GAE-14 (migration 0402): top 4 holds the own vote of unit 03 and the CRM proxy vote as
+    conflict record (test above). The database keeps exactly one counted row per agenda item
+    and unit; a second row is refused by the unique index, the conflict row stays."""
+    import uuid
+
+    from sqlalchemy import func, select
+    from sqlalchemy.exc import IntegrityError
+
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.hoa.models import MeetingVoteConflict, Vote
+
+    top = uuid.UUID(meeting["tops"][3])
+    settings = _settings(database, redis_url)
+
+    async def check() -> tuple[int, int, bool]:
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                votes = await session.scalar(
+                    select(func.count()).select_from(Vote).where(Vote.agenda_item_id == top)
+                )
+                conflicts = await session.scalar(
+                    select(func.count())
+                    .select_from(MeetingVoteConflict)
+                    .where(MeetingVoteConflict.agenda_item_id == top)
+                )
+            refused = False
+            try:
+                async with tenant_transaction(factory, world.tenant_a) as session:
+                    session.add(
+                        Vote(
+                            tenant_id=world.tenant_a,
+                            agenda_item_id=top,
+                            contract_id=uuid.UUID(w.u3),
+                            choice="no",
+                            excluded=False,
+                            channel="presence",
+                            cast_source="proxy",
+                        )
+                    )
+                    await session.flush()
+            except IntegrityError as exc:
+                refused = "uq_meeting_vote_item_contract" in str(exc)
+            return int(votes or 0), int(conflicts or 0), refused
+        finally:
+            await engine.dispose()
+
+    votes, conflicts, refused = asyncio.run(check())
+    assert (votes, conflicts, refused) == (1, 1, True)

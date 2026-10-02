@@ -214,3 +214,11 @@ Vorlagen und erzeugte Dokumente (Version 1.57.0, 01.10.2026): Eine Vorlage kann 
 Erzeugte Dokumente und Vorlagenkontext in der Oberfläche (AB05, 01.10.2026): Unter Dokumente, "Erzeugte Dokumente" listet die Seite die aus Vorlagen erzeugten Briefe mit Vorlage, Version, Kontext, Zustellung und Link zum Dokument. Filter: Vorlage und Zeitraum (von, bis). In "Briefe und Vorlagen" können die erlaubten Kontexte einer Vorlage angehakt und für die gewählte Version gespeichert werden, die verwendeten Platzhalter werden angezeigt. Am Auftrag (Seite des Auftrags) lässt sich der Verweis auf den Freigabe-Workflow pflegen. Es gibt noch keine Tabelle für Freigabeabläufe, der Verweis ist eine Kennung ohne Wirkung (AA05-01).
 
 Verknüpfungsziele (Version 1.59.0): Ein Vermögensbericht und ein Abrechnungslauf können als Ziel einer Dokumentverknüpfung gewählt werden. Der Versandbrief und das Informationsblatt hängen direkt am Bericht beziehungsweise am Lauf.
+
+## Volltext aus Paperless und Belegerfassung nach Ablage (Welle 17)
+
+Ist für ein Dokument noch kein Text erkannt, zeigt die Detailseite den Hinweis "Texterkennung ausstehend". Sobald Paperless das Dokument verarbeitet hat, übernimmt die Plattform den Volltext beim nächsten Spiegellauf; danach ist das Dokument durchsuchbar und für den Assistenten lesbar.
+
+Wird ein Eingangsvorschlag bestätigt und als Rechnung erkannt, erscheint die Schaltfläche "Beleg erfassen". Sie startet die Rechnungsauslesung als Vorschlag im Belegeingang. Unter Einstellungen, Fachliche Regeln lässt sich mit "Belegerfassung nach Ablage einer Rechnung" festlegen, dass dies bei der Bestätigung automatisch geschieht (Standard aus). Gebucht, freigegeben oder bezahlt wird dabei nichts.
+
+Ein erneuter Import aus der Objektakte stellt ein Dokument, das im Papierkorb liegt, wieder her und protokolliert dies.

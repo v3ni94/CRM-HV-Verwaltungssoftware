@@ -35,6 +35,7 @@ from sqlalchemy import (
     String,
     Text,
     select,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -141,6 +142,15 @@ class InspectionEvent(IdMixin, TenantMixin, Base):
             name="kind",
         ),
         Index("ix_hoa_inspection_event_request", "tenant_id", "request_id"),
+        # AF08 (GAA-02, migration 0402): one note per request and ownership transfer event.
+        Index(
+            "uq_hoa_inspection_event_source",
+            "tenant_id",
+            "request_id",
+            "source_event_id",
+            unique=True,
+            postgresql_where=text("source_event_id IS NOT NULL"),
+        ),
     )
 
     request_id: Mapped[uuid.UUID] = _fk(
@@ -154,6 +164,8 @@ class InspectionEvent(IdMixin, TenantMixin, Base):
     note: Mapped[str | None] = mapped_column(Text)
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # AF08 (GAA-02): domain event (contract.ownership_transferred) behind an owner check note.
+    source_event_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class _In(BaseModel):
@@ -194,6 +206,7 @@ class InspectionEventOut(BaseModel):
     note: str | None
     actor_user_id: uuid.UUID | None
     occurred_at: datetime
+    source_event_id: uuid.UUID | None = None
 
 
 class RequestOut(BaseModel):
@@ -818,3 +831,30 @@ async def download_package(
         media_type=mime,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
     )
+
+
+class InspectionOwnershipScanOut(BaseModel):
+    events: int
+    noted: int
+
+
+@router.post(
+    "/inspection-requests/ownership-transfers/scan",
+    summary="Eigentümerwechsel auf offene Einsichtsanfragen prüfen (GAA-02, P08-02)",
+)
+async def scan_ownership_transfers(
+    request: Request, principal: TenantPrincipal = Depends(WRITE)
+) -> InspectionOwnershipScanOut:
+    """Consumer of ``contract.ownership_transferred``: adds an owner check note to open
+    requests of the previous owner side. Never closes a request or revokes a package."""
+    from mhvp.hoa.inspection_transfer import note_ownership_transfers
+
+    async with tenant_tx(request, principal) as session:
+        counts = await note_ownership_transfers(
+            session,
+            principal.tenant_id,
+            principal.user_id,
+            legal_entity_ids=session_allowed_legal_entity_ids(session),
+            property_ids=session_allowed_property_ids(session),
+        )
+        return InspectionOwnershipScanOut(**counts)

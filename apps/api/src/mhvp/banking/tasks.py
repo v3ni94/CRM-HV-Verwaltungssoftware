@@ -2,6 +2,7 @@
 reminder 10 days before expiry."""
 
 import asyncio
+import hashlib
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -1460,3 +1461,190 @@ async def weekly_digest_once(settings: Settings, *, today: date | None = None) -
 @shared_task(name="mhvp.banking.weekly_digest")
 def weekly_digest() -> dict[str, int]:
     return asyncio.run(weekly_digest_once(get_settings()))
+
+
+# --- EBICS C53 fetch (GAB-02, master prompt 8.1/8.2, AE23) ---------------------------------
+
+EBICS_SOURCE = "ebics:C53"
+
+
+def is_transient_ebics_error(code: str | None) -> bool:
+    """Only a bank or connection error of the transport (MHVP-BANK-0056) is retried; a
+    missing transport (0050), a disabled tenant (0051) or a wrong state (0052) would give the
+    same result again."""
+    from mhvp.core.problems import ErrorCodes
+
+    return code == ErrorCodes.EBICS_BANK_ERROR.code
+
+
+async def _ebics_fetch_once(
+    settings: Settings, tenant_id: uuid.UUID, subscriber_id: uuid.UUID
+) -> dict[str, Any]:
+    """One C53 download of one EBICS subscriber (all accounts of its contract) through the
+    transport seam and the same import as the manual download (`import_c53_content`,
+    idempotent by bank reference, D05). Every attempt leaves an `EbicsOrder`; a failure
+    additionally leaves a failed `BankSyncRun` (source ``ebics:C53``) so the sync protocol
+    shows it. Without an installed transport the run ends with MHVP-BANK-0050; nothing is
+    sent to a bank (AE23-01)."""
+    from mhvp.banking import ebics_routers as er
+    from mhvp.banking.ebics_connector import EbicsConnector
+    from mhvp.banking.ebics_models import EbicsOrder, EbicsSubscriber, EbicsSubscriberStatus
+    from mhvp.banking.ebics_transport import (
+        C53,
+        EbicsTransportError,
+        get_transport,
+        is_available,
+    )
+    from mhvp.core.problems import ErrorCodes
+    from mhvp.documents.blobs import BlobStore
+
+    _ensure_crypto(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    runs: list[str] = []
+    result: dict[str, Any] = {"new": 0}
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            sub = await session.get(EbicsSubscriber, subscriber_id, with_for_update=True)
+            if sub is None:
+                return {"new": 0, "error": ErrorCodes.NOT_FOUND.code}
+            setting = await er._setting(session)
+            transport = get_transport()
+            error: ProblemError | None = None
+            fields: dict[str, Any] = {"btf": C53.btf}
+            if setting is None or not setting.enabled:
+                error = ProblemError(ErrorCodes.EBICS_DISABLED)
+            elif sub.status != EbicsSubscriberStatus.READY.value:
+                error = ProblemError(
+                    ErrorCodes.EBICS_STATE, detail=f"Aktueller Zustand: {sub.status}."
+                )
+            elif not is_available():
+                error = ProblemError(ErrorCodes.EBICS_TRANSPORT_UNAVAILABLE)
+            else:
+                try:
+                    keys = await er._keys(session, sub.id)
+                    connector = EbicsConnector(er._ref(sub), er._client_keys(keys), transport)
+                    try:
+                        content, ref = await asyncio.to_thread(
+                            connector.download_statements, None, None
+                        )
+                    except EbicsTransportError as exc:
+                        suffix = f" (Rückmeldung {exc.code})" if exc.code else ""
+                        raise ProblemError(
+                            ErrorCodes.EBICS_BANK_ERROR, detail=f"{exc}{suffix}"[:500]
+                        ) from None
+                    fields["file_sha256"] = hashlib.sha256(content).hexdigest()
+                    fields["transport_ref"] = ref
+                    async with session.begin_nested():
+                        result = await er.import_c53_content(
+                            session,
+                            blobs=BlobStore(settings),
+                            tenant_id=tenant_id,
+                            user_id=None,
+                            content=content,
+                        )
+                except ValueError as exc:
+                    error = ProblemError(ErrorCodes.VALIDATION, detail=str(exc)[:500])
+                except ProblemError as exc:
+                    error = exc
+            order = EbicsOrder(
+                tenant_id=tenant_id,
+                subscriber_id=sub.id,
+                order_type="C53",
+                transport=transport.name,
+                status="failed" if error is not None else "done",
+                error_code=error.error.code if error is not None else None,
+                error_detail=(error.detail or error.error.title)[:2000] if error else None,
+                result=result if error is None else {},
+                **fields,
+            )
+            session.add(order)
+            if error is None:
+                sub.last_download_at = datetime.now(UTC)
+                runs = list(result.get("runs", []))
+            else:
+                message = f"{error.error.code}: {error.detail or error.error.title}"
+                session.add(
+                    BankSyncRun(
+                        tenant_id=tenant_id,
+                        source=EBICS_SOURCE,
+                        status="failed",
+                        counts={},
+                        errors=[message[:500]],
+                    )
+                )
+                result = {"new": 0, "error": error.error.code}
+            await session.flush()
+        for run_id in runs:
+            await _proposals_after_import(settings, tenant_id, uuid.UUID(run_id))
+        return result
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.banking.ebics_fetch", bind=True, max_retries=SYNC_MAX_RETRIES)
+def ebics_fetch(self: Any, tenant_id: str, subscriber_id: str) -> dict[str, Any]:
+    """One task per tenant and EBICS subscriber (8.2). A bank or connection error is retried
+    up to three times with exponential backoff (60, 120, 240 s); the import is idempotent."""
+    result = asyncio.run(
+        _ebics_fetch_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(subscriber_id))
+    )
+    if (
+        is_transient_ebics_error(result.get("error"))
+        and not self.request.called_directly
+        and self.request.retries < SYNC_MAX_RETRIES
+    ):
+        raise self.retry(countdown=retry_countdown(self.request.retries))
+    return result
+
+
+async def ebics_due_subscribers(session: AsyncSession) -> list[uuid.UUID]:
+    """Subscribers of one tenant the daily fetch queues: tenant switch on, state ready."""
+    from mhvp.banking.ebics_models import (
+        EbicsSubscriber,
+        EbicsSubscriberStatus,
+        EbicsTenantSetting,
+    )
+
+    setting = await session.scalar(select(EbicsTenantSetting))
+    if setting is None or not setting.enabled:
+        return []
+    rows = await session.scalars(
+        select(EbicsSubscriber.id).where(
+            EbicsSubscriber.status == EbicsSubscriberStatus.READY.value
+        )
+    )
+    return list(rows.all())
+
+
+async def ebics_scheduled_fetch_once(settings: Settings) -> dict[str, int]:
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"tenants": 0, "queued": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                subs = await ebics_due_subscribers(session)
+            if subs:
+                totals["tenants"] += 1
+            for sub_id in subs:
+                ebics_fetch.delay(str(tenant_id), str(sub_id))
+                totals["queued"] += 1
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.ebics_scheduled_fetch")
+def ebics_scheduled_fetch() -> dict[str, int]:
+    """Celery beat entry: daily C53 fetch for tenants with the EBICS switch on (default off,
+    ADR 0003); queues one `ebics_fetch` per ready subscriber."""
+    return asyncio.run(ebics_scheduled_fetch_once(get_settings()))

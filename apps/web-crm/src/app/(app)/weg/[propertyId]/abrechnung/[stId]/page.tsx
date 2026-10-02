@@ -8,6 +8,8 @@ import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
 import { ReservePayments } from "@/components/hoa/ReservePayments";
 import { ReserveYearsTable, type ReserveYearRow } from "@/components/hoa/ReserveYears";
+import { StatementCorrectionReport, type CorrectionReport } from "@/components/hoa/StatementCorrectionReport";
+import { StatementCostsFromLedger } from "@/components/hoa/StatementCostsFromLedger";
 import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -63,6 +65,9 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const diff = supersedes
     ? ((await ctx.api.GET("/api/v1/hoa/statements/{statement_id}/diff", { params: { path: { statement_id: stId }, query: { against: supersedes } } })).data as StatementDiff | undefined) ?? null
     : null;
+  // GAF-16: Korrekturbericht je Eigentümer, nur wenn diese Version eine andere ersetzt.
+  const correctionResponse = supersedes ? await serverFetch(`/api/v1/hoa/statements/${encodeURIComponent(stId)}/correction-report?against=${encodeURIComponent(supersedes)}`) : null;
+  const correction = correctionResponse?.ok ? ((await correctionResponse.json()) as CorrectionReport) : null;
   const snap = data.snapshot as { units?: Unit[]; reserve?: Reserve; loans?: LoanBlock } | null;
   // M24-03: loans of the community for the display configuration (draft only).
   const loansResponse = data.status === "draft" ? await ctx.api.GET("/api/v1/hoa/loans", { params: { query: { legal_entity_id: ctx.entity.id } } }) : null;
@@ -113,6 +118,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
       </table>
 </div>
       {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} accounts={costAccounts} /> : null}
+      {data.status === "draft" ? <StatementCostsFromLedger statementId={stId} accounts={costAccounts} keys={ctx.keys.map((k) => ({ id: k.id, name: k.name }))} /> : null}
       <HoaSteps target="statement" id={stId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       <AiPlausibilityCard kind="hoa/statements" id={stId} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       {snap?.units ? (
@@ -179,6 +185,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
       ) : null}
       {data.status === "draft" ? <LoanAllocationForm statementId={stId} loans={loanOptions} keys={ctx.keys} current={loanAllocation} /> : null}
       {diff ? <StatementVersionDiff diff={diff} /> : null}
+      {correction ? <StatementCorrectionReport report={correction} /> : null}
       {recon ? (
         <section className={ui.card} data-testid="reconciliation">
           <h2 className={ui.h2}>{tf("reconciliation")}</h2>

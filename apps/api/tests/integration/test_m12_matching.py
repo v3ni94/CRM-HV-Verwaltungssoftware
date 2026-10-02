@@ -15,6 +15,7 @@ from moto import mock_aws
 
 from mhvp.main import create_app
 from mhvp.platform import services
+from tests.integration.af01_switch import seed_auto_posting
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _unit
@@ -224,7 +225,7 @@ def test_matching_set_and_controlled_automation(
 
     # Automation is off by default: nothing is posted.
     assert _ok(client.post(f"{B}/auto-post", headers=h)) == {"enabled": False, "posted": 0}
-    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test M12"}, headers=h))
+    seed_auto_posting(client, h)
     # Since step S6 the runner also needs the decision log and level L2 of the class
     # (rule M12-05); the level is set here as the approved request would (four eyes in
     # test_m12_automation_levels).
@@ -514,7 +515,7 @@ def test_d39_payment_determination_is_not_overridden_by_account_priority(
     assert {c["allocation_reason"] for c in undetermined["candidates"]} == {"Regel ohne Bestimmung"}
 
     # Even an active rule does not pick an item by priority for either payment.
-    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test D39"}, headers=h))
+    seed_auto_posting(client, h)
     rule = _ok(
         client.post(
             f"{B}/rules",
@@ -748,7 +749,7 @@ def test_a45_matching_metrics_coverage_and_error_rate_per_period(
             headers=acc_user,
         )
     )
-    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test A45"}, headers=h))
+    seed_auto_posting(client, h)
     _ok(client.put(f"{B}/learning", json={"enabled": True, "reason": "Test A45"}, headers=h))
     _set_level(_settings(database, redis_url), world.tenant_a, "debtor_full", "L2")
     auto = _ok(client.post(f"{B}/auto-post", headers=h))

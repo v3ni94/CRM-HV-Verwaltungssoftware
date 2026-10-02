@@ -30,6 +30,7 @@ import hashlib
 import ipaddress
 import logging
 import re
+import socket
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
@@ -538,7 +539,48 @@ def is_tan_request(value: Any) -> bool:
     )
 
 
+# GAE-25 (AE26): the name check of `validate_manual_fints_url` is extended in the worker by a
+# check of the resolved addresses. Every address a FinTS host name resolves to must be a
+# global (public) address; loopback, private, link local, carrier grade NAT, multicast and
+# reserved ranges are refused before the PIN leaves the process. No list of allowed targets.
+RESOLVER: Callable[..., Any] = socket.getaddrinfo
+
+
+def check_fints_target(url: str | None, resolver: Callable[..., Any] | None = None) -> None:
+    """Raises ``MHVP-BANK-0062`` when the FinTS host is missing or resolves to a non public
+    address. A name that does not resolve at all passes: the connection attempt then fails
+    with the regular unavailable error. Residual risk: the HTTP library resolves the name
+    again (DNS rebinding); the operator's egress rules remain the second line."""
+    host = fints_host(url)
+    if not host:
+        raise ProblemError(ErrorCodes.FINTS_TARGET_BLOCKED, detail="Kein Rechnername.")
+    try:
+        port = urlsplit(url or "").port or 443
+    except ValueError:
+        port = 443
+    try:
+        infos = (resolver or RESOLVER)(host, port, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError):
+        return
+    for info in infos:
+        address = str(info[4][0]).split("%", 1)[0]
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError:
+            continue
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+            ip = ip.ipv4_mapped
+        if not ip.is_global or ip.is_multicast:
+            raise ProblemError(
+                ErrorCodes.FINTS_TARGET_BLOCKED,
+                detail=f"{host} verweist auf eine interne oder nicht öffentliche Adresse.",
+            )
+
+
 def _build_client(creds: Credentials, client_data: bytes | None) -> Any:
+    if CLIENT_FACTORY is _client_class:
+        # only in front of the real library; test doubles never open a connection
+        check_fints_target(creds.fints_url)
     cls = CLIENT_FACTORY()
     return cls(
         creds.blz,

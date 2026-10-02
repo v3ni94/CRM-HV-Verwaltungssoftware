@@ -42,6 +42,15 @@ export type G1OpeningState = {
   items_without_responsible?: number;
   items_without_evidence?: number;
   gate_checklist_ref?: string;
+  acceptance_register?: {
+    link: string;
+    cases_total: number;
+    released_total: number;
+    passed_total: number;
+    g1_cases_total: number;
+    g1_passed: number;
+    note: string;
+  } | null;
 };
 
 const BASE = "/api/bff/accounting/g1-opening";
@@ -326,6 +335,34 @@ export function G1OpeningChecklist({
           ))}
         </ul>
       </section>
+
+      {state.acceptance_register ? (
+        <section className={ui.card} aria-labelledby="g1-register-title" data-testid="g1-register">
+          <h2 id="g1-register-title" className={ui.h2}>
+            {t("register.title")}
+          </h2>
+          <p className={ui.help}>{t("register.help")}</p>
+          <p className="mt-2 text-sm">
+            <span
+              className={
+                state.acceptance_register.g1_passed === state.acceptance_register.g1_cases_total
+                  ? ui.badgeSuccess
+                  : ui.badgeWarning
+              }
+            >
+              {t("register.state", {
+                passed: state.acceptance_register.g1_passed,
+                total: state.acceptance_register.g1_cases_total,
+                released: state.acceptance_register.released_total,
+                all: state.acceptance_register.cases_total,
+              })}
+            </span>{" "}
+            <a className="underline" href={state.acceptance_register.link}>
+              {t("register.link")}
+            </a>
+          </p>
+        </section>
+      ) : null}
 
       <section className={ui.card} aria-labelledby="g1-cases-title">
         <h2 id="g1-cases-title" className={ui.h2}>

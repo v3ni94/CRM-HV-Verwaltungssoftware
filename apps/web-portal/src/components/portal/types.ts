@@ -513,7 +513,7 @@ export type AssistantScopeView = {
 export type AssistantAnswer = {
   id: string;
   mode: "ai" | "search";
-  status: "answered" | "not_answerable" | "failed" | "search_hits" | "no_sources";
+  status: "answered" | "not_answerable" | "failed" | "search_hits" | "no_sources" | "pending" | "timeout";
   answer: string | null;
   sources: { document_id: string; title: string; excerpt?: string | null }[];
   hits: { document_id: string; title: string }[];

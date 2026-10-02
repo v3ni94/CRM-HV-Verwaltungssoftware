@@ -28,6 +28,18 @@ const base: G1OpeningState = {
 describe("G1OpeningChecklist", () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it("shows the acceptance register state read only with a link", () => {
+    renderIntl(
+      <G1OpeningChecklist
+        initial={{ ...base, acceptance_register: { link: "/plattform/abnahme", cases_total: 58, released_total: 3, passed_total: 2, g1_cases_total: 23, g1_passed: 2, note: "x" } }}
+        canRecord={false}
+        canRequest={false}
+      />,
+    );
+    expect(screen.getByTestId("g1-register")).toHaveTextContent("G1 Fälle bestanden 2 von 23, freigegebene Sollwerte 3 von 58");
+    expect(screen.getByRole("link", { name: "Zum Abnahmeregister" }).getAttribute("href")).toBe("/plattform/abnahme");
+  });
+
   it("shows the derived state, records a result and reloads", async () => {
     let state = base;
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {

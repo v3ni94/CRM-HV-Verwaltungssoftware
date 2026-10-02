@@ -29,3 +29,14 @@ Ob die zweite Stimme gilt, welche Quelle Vorrang hat und wie die Versammlungslei
 ## Tests
 
 `apps/api/tests/unit/test_ae31_online_rules.py`, `apps/api/tests/integration/test_ae31_online_vote_rule.py`, `apps/web-crm/src/components/hoa/OnlineVoteRule.test.tsx`, `apps/web-portal/src/components/portal/OnlineMeetingPanel.test.tsx`.
+
+## Nachtrag AF08 (Welle 17, GAE-14): Eindeutigkeit der gezählten Stimme
+
+- Die Datenbank erlaubt je Abstimmungspunkt und Einheit genau eine gezählte Stimme
+  (`uq_meeting_vote_item_contract`, Migration 0402). Konfliktvorgänge liegen in
+  `meeting_vote_conflict` und bleiben unbeschränkt; der Konfliktpfad ist unverändert.
+- Gleichzeitige Stimmen aus CRM und Portal: die zweite Einfügung scheitert am Index und erhält
+  409; ein erneuter Versuch läuft in den Konfliktpfad.
+- Die Migration prüft den Bestand vorab und bricht bei Dubletten mit Liste ab, ohne Daten zu
+  löschen; die Bereinigung entscheidet die Versammlungsleitung dokumentiert.
+- Quellenstatus: Produktschutz. Abnahmefall: `test_af08_unique_counted_vote_per_item_and_unit`.

@@ -414,3 +414,8 @@ access grants of `input_ref.portal_account_id` (`portal.assistant_scope.audience
 `None`), skips the knowledge base and few shot examples, and `retrieve_keyword` filters by
 `only_ids` before the limit. `tasks.prompt` loads named variants (`<name>_v<n>`) that never
 become the latest numbered prompt. Rule: `docs/rules/AE28-01.md`.
+
+## AF21 (02.10.2026): Rücknahmevorschau und Goldstandard
+
+- `GET /imports/{id}/undo-preview` (`imports.undo_preview`): Trockenlauf der Rücknahme in einem immer zurückgerollten Savepoint, je Datensatz `removable` oder `kept_reason`. Schreibt nichts. Das CRM zeigt die Liste im Dialog `ImportUndoDialog` vor der Bestätigung.
+- `make ai-eval` deckt zusätzlich `classify_document` (Maskierung, Kategorie 01 bis 06, Klassencode, Schwelle der automatischen Stufe), `call_summary` (`call_assistant.merge_ai`) und `rent_increase_check` (`normalize_result`) mit je mindestens 20 synthetischen Fällen ab. Regel docs/rules/AF21-01.md.

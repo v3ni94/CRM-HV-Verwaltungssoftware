@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { GlobalDropZone } from "@/components/documents/GlobalDropZone";
+import { DemoBanner } from "@/components/shell/DemoBanner";
 import { MobileNav } from "@/components/shell/MobileNav";
 import { PwaRegister } from "@/components/shell/PwaRegister";
 import { CommandPalette } from "@/components/shell/CommandPalette";
@@ -130,6 +131,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* AE36: is_demo is served by /auth/me once the API carries it (open point AF19). */}
+        <DemoBanner isDemo={(me as { is_demo?: boolean } | undefined)?.is_demo === true} />
         {/* One row of 56 px (64 px from sm), see --mhvp-header-h; the safe area of a notch is
             added on top (M31). */}
         <header
@@ -175,6 +178,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         >
           <span>{tHome("footer")}</span>
           <span className="mt-1 block">
+            <Link href="/hilfe" className="mr-3 underline-offset-2 hover:underline">
+              Handbuch
+            </Link>
             <Link href="/version" className="underline-offset-2 hover:underline">
               Version {appVersion()}
               {appBuild() ? ` (${appBuild()})` : ""}

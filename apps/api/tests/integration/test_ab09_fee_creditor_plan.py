@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from mhvp.main import create_app
 from mhvp.platform import services
+from tests.integration.af01_switch import seed_auto_posting
 from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 
@@ -295,14 +296,14 @@ def test_plan_auto_post_flag_in_run(client: TestClient, world: World) -> None:
     )
     assert blocked.status_code == 409, blocked.text
 
-    # Switch on: flag settable, the run still creates a draft, G1 closed keeps it locked.
-    _ok(
-        client.put(
-            "/api/v1/banking/automation",
-            json={"enabled": True, "reason": "AB09 Test"},
-            headers=h,
-        )
+    # PUT never switches on (request path only, AF01).
+    direct = client.put(
+        "/api/v1/banking/automation", json={"enabled": True, "reason": "AB09 Test"}, headers=h
     )
+    assert direct.status_code == 409, direct.text
+    assert direct.json()["code"] == "MHVP-BANK-0063"
+    # Switch on: flag settable, the run still creates a draft, G1 closed keeps it locked.
+    seed_auto_posting(client, h)  # simulates the approved request (G1 closed here)
     try:
         on = _ok(
             client.post(f"{A}/recurring-invoices", json=plan_body | {"auto_post": True}, headers=h),
@@ -365,8 +366,21 @@ def test_plan_auto_post_with_g1_open_stays_draft(
             "start_date": "2026-01-31",
             "text": "Wartung",
         }
+        s = bearer(login(c, world, "ab09approver"))
+        req = _ok(
+            c.post(
+                "/api/v1/banking/automation/switch-requests",
+                json={"reason": "AB09 Antrag"},
+                headers=h,
+            ),
+            201,
+        )
         _ok(
-            c.put("/api/v1/banking/automation", json={"enabled": True, "reason": "AB09"}, headers=h)
+            c.post(
+                f"/api/v1/banking/automation/switch-requests/{req['id']}/approve",
+                json={},
+                headers=s,
+            )
         )
         try:
             plan = _ok(

@@ -187,6 +187,8 @@ Im Belegeingang zeigt der Block "E-Rechnung: Prüfergebnis" Profil, Prüfer, Ver
 
 Ist eine Rechnung einer Wirtschaftsplanposition zugeordnet, zeigt die sachliche Prüfung Planansatz, bisher zugeordnete Rechnungen, diese Rechnung und den Rest. Ist ein Beschluss verknüpft, erscheinen Nummer, Datum, Gegenstand und ein Hinweis, ob der Beschluss als wirksam erfasst ist. Alle Angaben sind Hinweise, Freigabe und Prüfschritte bleiben manuell.
 
+Bisher zugeordnet ergibt sich aus drei Teilen, die einzeln angezeigt werden: Rechnungen auf der Planposition, abzüglich Gutschriften auf der Planposition, zuzüglich gebuchter Journalzeilen ohne Rechnungsbezug auf dem Konto der Planposition im selben Buchungskreis und Wirtschaftsjahr (Soll minus Haben, Stornos heben sich auf). Beispiel: Rechnungen 1.000,00 EUR, Gutschrift 150,00 EUR, Journalzeilen 250,00 EUR ergeben 1.100,00 EUR. Auftragspositionen zählen nicht mit.
+
 ## Nummern von Mietrechnungs-Entwürfen
 
 Solange die Freigabestufe G1 geschlossen ist, sind Mietrechnungen und Gutschriften Entwürfe mit Wasserzeichen. Standardmäßig tragen sie eine Entwurfsnummer (ENTWURF-JJJJ-NNNNNN) und verbrauchen die fortlaufende Rechnungsnummer MR nicht. Die reguläre Nummer wird erst bei Ausgabe mit offenem G1 vergeben, ein Entwurf wird nicht umnummeriert. Im Vertrag unter Mietrechnungen kann der Nummernmodus gewählt werden: Entwurfsnummer (Standard), reguläre Nummer auch im Entwurf oder Ablehnung der Ausgabe bei geschlossenem G1. Die Einstufung ist mit Steuerberatung zu klären (OPEN_QUESTIONS AC03-01).

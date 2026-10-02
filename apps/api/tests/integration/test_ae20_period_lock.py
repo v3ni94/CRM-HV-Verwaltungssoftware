@@ -277,3 +277,128 @@ def test_close_statement_sets_lock_only_with_switch(
     assert [(r["source"], r["period_from"], r["period_to"]) for r in rows] == [
         ("statement", "2025-01-01", "2025-12-31")
     ]
+
+
+def test_gae01_line_property_without_unit_is_locked(client: TestClient, world: World) -> None:
+    """GAE-01: a line without unit that names the property itself is covered by the lock."""
+    admin = bearer(login(client, world, "ae20admin"))
+    w = _setup(client, admin, "922")
+    _ok(client.put(f"{L}/settings", json={"lock_mode": "object_period"}, headers=admin))
+    _ok(
+        client.post(
+            L,
+            json={
+                "ledger_id": w["ledger"],
+                "property_id": w["property"],
+                "period_from": "2024-01-01",
+                "period_to": "2024-12-31",
+                "reason": "GAE-01",
+            },
+            headers=admin,
+        ),
+        201,
+    )
+    from sqlalchemy import select
+
+    from mhvp.accounting.models import JournalLine, Ledger
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    body = {
+        "kind": "custom",
+        "booking_date": "2024-03-01",
+        "text": "GAE-01 ohne Einheit",
+        "lines": [
+            {"account_id": w["debtor"], "debit": "5", "credit": "0", "property_id": w["property"]},
+            {"account_id": w["revenue"], "debit": "0", "credit": "5", "property_id": w["property"]},
+        ],
+    }
+    entry = _ok(client.post(f"{A}/ledgers/{w['ledger']}/entries", json=body, headers=admin), 201)
+    refused = _post(client, admin, w, entry["id"])
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "MHVP-ACC-0030"
+
+    # The hook reads the line column directly; a ledger without property still finds it.
+    settings = client.app.state.settings  # type: ignore[attr-defined]
+
+    async def found() -> set[uuid.UUID]:
+        engine = create_app_engine(settings)
+        try:
+            async with tenant_transaction(create_session_factory(engine), world.tenant_a) as s:
+                ledger = await s.get(Ledger, uuid.UUID(w["ledger"]))
+                assert ledger is not None
+                ghost = Ledger(property_id=None)  # transient: only the line column counts
+                ghost.id = ledger.id
+                units = await s.scalars(
+                    select(JournalLine.unit_id).where(
+                        JournalLine.journal_entry_id == uuid.UUID(entry["id"])
+                    )
+                )
+                assert set(units.all()) == {None}
+                return await period_lock.property_ids_of_lines(s, ghost, uuid.UUID(entry["id"]))
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(found()) == {uuid.UUID(w["property"])}
+
+
+def test_gae03_hoa_statement_close_sets_lock_via_endpoint(
+    client: TestClient, world: World, database: Database
+) -> None:
+    """GAE-02/03: closing the WEG statement (transition to locked) over the API sets the
+    object lock only with auto_lock_on_close; a later posting into 2023 is refused (409)."""
+    from sqlalchemy import create_engine, text
+
+    admin = bearer(login(client, world, "ae20admin"))
+    reader = bearer(login(client, world, "ae20reader"))
+    w = _setup(client, admin, "923")
+    ids = {"off": uuid.uuid4(), "on": uuid.uuid4()}
+    engine = create_engine(database.migrator_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        for key, year in (("off", 2022), ("on", 2023)):
+            conn.execute(
+                text(
+                    "INSERT INTO hoa_statement (id, tenant_id, ledger_id, year, status, version, "
+                    "reserve_opening, reserve_withdrawals, reserve_interest, "
+                    "addressing_rule_version, posted_entry_ids) VALUES (:id, :t, :l, :y, "
+                    "'posted', 1, 0, 0, 0, 'owner-at-resolution-v1', '[]'::jsonb)"
+                ),
+                {"id": str(ids[key]), "t": str(world.tenant_a), "l": w["ledger"], "y": year},
+            )
+    engine.dispose()
+    url = "/api/v1/hoa/statements/{}/transition"
+    _ok(client.put(f"{L}/settings", json={"auto_lock_on_close": False}, headers=admin))
+    assert (
+        client.post(url.format(ids["off"]), json={"target": "locked"}, headers=reader).status_code
+        == 403
+    )
+    off = _ok(client.post(url.format(ids["off"]), json={"target": "locked"}, headers=admin))
+    assert (off["status"], off["period_lock_proposed"], off["period_lock_id"]) == (
+        "locked",
+        True,
+        None,
+    )
+    _ok(
+        client.put(
+            f"{L}/settings",
+            json={"auto_lock_on_close": True, "lock_mode": "object_period"},
+            headers=admin,
+        )
+    )
+    on = _ok(client.post(url.format(ids["on"]), json={"target": "locked"}, headers=admin))
+    assert on["period_lock_proposed"] is False
+    lock = _ok(client.get(f"{L}/{on['period_lock_id']}", headers=admin))
+    assert (lock["source"], lock["period_from"], lock["period_to"]) == (
+        "hoa_statement",
+        "2023-01-01",
+        "2023-12-31",
+    )
+    blocked = _draft(client, admin, w, "2023-08-01")
+    refused = _post(client, admin, w, blocked["id"])
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "MHVP-ACC-0030"
+    other = bearer(login(client, world, "ae20other"))
+    assert client.get(f"{L}/{on['period_lock_id']}", headers=other).status_code == 404

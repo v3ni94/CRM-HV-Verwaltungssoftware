@@ -388,3 +388,19 @@ Unter "Honorarrechnungen" steht zu jeder Rechnung und Gutschrift:
 - "ZUGFeRD" lädt das Rechnungsdokument auf dem Briefbogen mit den eingebetteten Rechnungsdaten (Factur-X, Profil EN 16931). Es gelten dieselben Pflichtangaben wie bei der XRechnung.
 - "ZUGFeRD prüfen" zeigt das Ergebnis der eigenen Strukturprüfung und der eigenen PDF/A-Vorprüfung. Die Datei ist als PDF/A-3 gekennzeichnet, die Konformität ist nicht nachgewiesen; angezeigte Hinweise (zum Beispiel nicht eingebettete Schriften) sind vor einem Versand mit einem PDF/A-Prüfprogramm zu klären.
 - "ZUGFeRD ablegen" legt den Beleg einmal mit dem Prüfergebnis im Dokumentenbereich ab. Nichts wird versendet oder gebucht.
+
+## Objektfilter, Kontenpflege, zweite Freigabe und Kautionen (Paket AF05)
+
+- Auswertungen: Monatsmatrix sowie Einnahmen und Ausgaben lassen sich je Objekt filtern. Neue Ansichten: Umsatzsteuer je Objekt und Kostenstelle (Entwurf), Offene Posten Salden (gepflegte Lesekopie) und der Driftbericht zum Objekt der Buchungszeilen. Der Driftbericht ändert nichts, gebuchte Zeilen werden nur per Storno und neuer Buchung berichtigt.
+- Buchungsmaske: je Zeile kann ein Objekt gewählt werden. Ohne Auswahl folgt das Objekt der Einheit oder dem Vertrag. Das Journal lässt sich nach Objekt filtern.
+- Kontenplan: Steuerkennzeichen (EÜR, USt, gemischte Nutzung) je Konto mit dem Recht zur Freigabe, Erlöskonto je Zahlungsart und die Aktion "Debitorenkonten aus Verträgen übernehmen".
+- Rechnung: Die Schaltfläche "Zweite Freigabe erteilen" erscheint, wenn die Betragsgrenze überschritten ist. Die Vier-Augen-Prüfung erfolgt in der API.
+- Kautionen: Bewegungen werden erfasst (keine Buchung vor Freigabe der Buchhaltung). Der Jahreslauf legt Zinsentwürfe an, bucht und zahlt nichts.
+
+## Abnahmeregister in der G1 Checkliste, Dauerrechnungen, Honorar und § 35a (Welle 17, AF06)
+
+* G1 Öffnung zeigt den Stand des Abnahmeregisters (nur Anzeige, Link zum Register). Die Ergebnisse der Checkliste bleiben unverändert.
+* Dauerrechnung erzeugen liefert weiterhin nur einen Entwurf mit Planentwurfsnummer. Im Schalter "Ausgabe bei geschlossenem G1 ablehnen" wird die Erzeugung abgewiesen, solange G1 geschlossen ist.
+* Verwalterhonorar: Honorargutschriften haben XRechnung XML, Prüfung und Ablage.
+* Einstellungen, Buchhaltung, Steuern: Ausweis nach § 35a je Mietvertrag als Anzeige und PDF Entwurf (Einschätzung, Prüfung durch die Steuerberatung).
+* Zahllauf: Schalter der wöchentlichen Vorschau (Recht Mandanteneinstellungen ändern). Der Nummernmodus der Mietrechnungsentwürfe wird unter Fachliche Regeln geändert, am Vertrag nur angezeigt.

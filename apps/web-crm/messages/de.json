@@ -583,6 +583,7 @@
       "sepaSignedRequired": "Bitte das Datum der Erteilung angeben.",
       "sepaGrantedViaRequired": "Bitte die Erteilungsart angeben.",
       "sepaProofRequired": "Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen.",
+      "mandateB2bUnsupported": "Firmenlastschrift (B2B) wird nicht unterstützt. Bitte das Mandat als Basislastschrift (CORE) erfassen.",
       "portalLoginSingle": "Genau eine E-Mail-Adresse darf Portal-Login-Adresse sein.",
       "defaultAccountSingle": "Genau ein Bankkonto darf Standardkonto sein."
     },
@@ -699,7 +700,7 @@
     },
     "mandateScheme": {
       "core": "Basislastschrift (CORE)",
-      "b2b": "Firmenlastschrift (B2B)"
+      "b2b": "Firmenlastschrift (B2B), nicht unterstützt"
     },
     "mandateStatus": {
       "active": "aktiv",
@@ -917,6 +918,11 @@
     "keptHint": "{count, plural, one {# Datensatz wurde beibehalten} other {# Datensätze wurden beibehalten}}, weil spätere Daten darauf aufbauen.",
     "undo": "Rückgängig",
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
+    "undoDialogTitle": "Import zurücknehmen",
+    "undoCancel": "Abbrechen",
+    "undoConfirmAction": "Jetzt zurücknehmen",
+    "undoPreviewLoading": "Folgen werden geprüft ...",
+    "undoPreviewSummary": "{removable, plural, =0 {Kein Datensatz wird entfernt} one {# Datensatz wird entfernt} other {# Datensätze werden entfernt}}, {kept, plural, =0 {kein Datensatz bleibt bestehen.} one {# Datensatz bleibt bestehen:} other {# Datensätze bleiben bestehen:}}",
     "undoneAt": "Zurückgenommen am {at}",
     "immoware24Link": "Importassistent öffnen",
     "reconciliationLink": "Abgleichbericht Parallelbetrieb",
@@ -1067,6 +1073,8 @@
         "withdrawn": "Zurückgezogen"
       },
       "usage": "{count}x verwendet",
+      "feedbackHelpful": "Hilfreich",
+      "feedbackUnhelpful": "Nicht hilfreich",
       "helpfulness": "{helpful} hilfreich, {unhelpful} nicht hilfreich",
       "stale": "Lange nicht geprüft",
       "staleHint": "Freigegeben und seit mehr als {days} Tagen nicht geändert. Bitte prüfen, ob der Eintrag noch stimmt. Ein Hinweis ohne weitere Folgen."
@@ -1362,6 +1370,18 @@
     "colDifference": "Differenz",
     "restart": "Weiteren Bericht importieren",
     "listImportLink": "Listenimport (Objektdaten, Kontakte, Zuordnung) öffnen",
+    "assignments": {
+      "title": "Gemerkte Spaltenzuordnungen",
+      "intro": "Zuordnungen von Spaltenüberschriften zu Zielfeldern, die bei bestätigten Dateien gemerkt wurden. Entfernen Sie eine Zuordnung, wird sie bei der nächsten Datei neu vorgeschlagen. Es wird nichts importiert oder geändert.",
+      "empty": "Keine Zuordnungen gemerkt.",
+      "colHeader": "Spaltenüberschrift",
+      "colTarget": "Zielfeld",
+      "colUses": "Verwendet",
+      "colLastUsed": "Zuletzt verwendet",
+      "ignored": "wird nicht importiert",
+      "remove": "Entfernen",
+      "confirm": "Zuordnung zur Spalte {header} entfernen?"
+    },
     "detect": {
       "autoHeader": "Kopfzeile automatisch erkennen (die ersten 30 Zeilen werden bewertet)",
       "headerDetected": "Kopfzeile in Zeile {row} erkannt: {reason}. Bei Abweichung bitte die Zeilennummer von Hand eintragen.",
@@ -1668,7 +1688,8 @@
       "empty": "Keine Prüfpunkte erfasst.",
       "date": "Datum", "name": "Bezeichnung", "source": "Quelle", "note": "Notiz", "state": "Stand", "add": "Prüfpunkt anlegen", "save": "Speichern", "withdraw": "Zurückziehen",
       "states": {"open": "offen", "upcoming": "in Vorfrist", "due": "fällig", "done": "bestätigt", "withdrawn": "zurückgezogen"},
-      "days": "{days} Tage"
+      "days": "{days} Tage",
+      "confirm": "Bestätigen", "confirmedBy": "Bestätigt durch", "confirmedOn": "Bestätigt am", "confirmHint": "Die Bestätigung hält die fachkundige Prüfung fest, sie ändert keine Regel und ist keine Rechtsauskunft."
     },
     "ruleCheckpoints": {
       "title": "Fällige Prüfpunkte des Regelregisters",
@@ -1742,6 +1763,8 @@
         "total": "Summe"
       },
       "explorer": {
+        "property": "Objekt",
+        "allProperties": "Alle Objekte",
         "title": "Weitere Auswertungen und Excel",
         "view": "Auswertung",
         "asOf": "Stichtag",
@@ -1762,7 +1785,10 @@
           "targetActual": "Soll/Ist der Forderungen",
           "bankStatement": "Bankkontoabrechnung",
           "vatOverview": "Umsatzsteuer und Vorsteuer (Entwurf)",
-          "incomeExpense": "Einnahmen und Ausgaben (keine EÜR)"
+          "incomeExpense": "Einnahmen und Ausgaben (keine EÜR)",
+          "vatByProperty": "Umsatzsteuer je Objekt und Kostenstelle (Entwurf)",
+          "openItemBalances": "Offene Posten Salden (gepflegte Lesekopie)",
+          "lineDrift": "Objekt der Buchungszeilen, Abweichungen"
         },
         "head": {
           "entity": "Rechtsträger",
@@ -1776,6 +1802,30 @@
           "none": "nicht angegeben"
         },
         "cols": {
+          "property": "Objekt",
+          "costCenter": "Kostenstelle",
+          "netRevenue": "Netto Erträge",
+          "netCost": "Netto Aufwand",
+          "lines": "Zeilen",
+          "source": "Quelle",
+          "totalReceivable": "Forderungen gesamt",
+          "totalPayable": "Verbindlichkeiten gesamt",
+          "draft": "Entwurf",
+          "line": "Zeile",
+          "stored": "Objekt der Zeile",
+          "expected": "Erwartetes Objekt",
+          "noProperty": "ohne Objekt",
+          "findings": "Befunde",
+          "hints": "Hinweise",
+          "severityTitle": "Einstufung",
+          "truncated": "Die Liste ist gekürzt. Bitte den Zeitraum eingrenzen.",
+          "driftKinds": {
+            "unit_mismatch": "Objekt weicht von der Einheit ab",
+            "contract_mismatch": "Objekt weicht vom Vertrag ab",
+            "contract_unfilled": "Objekt fehlt, Vertrag nennt eines",
+            "ledger_mismatch": "Objekt weicht vom Buchungskreis ab"
+          },
+          "severity": { "finding": "Befund", "hint": "Hinweis" },
           "date": "Buchungstag",
           "number": "Nr.",
           "text": "Text",
@@ -2192,7 +2242,7 @@
     "skippedPending": "{count} Verträge übersprungen, Freigabe ausstehend"
   },
   "Bank": {
-    "automationSwitch": {"title": "Automatikschalter", "help": "Das Einschalten der Automatik setzt die offene Freigabestufe G1 voraus und braucht einen Antrag mit Grund sowie die Freigabe durch eine zweite Person. Ausschalten ist jederzeit sofort möglich. Der Lauf prüft Stufen, Regeln und Gate weiterhin selbst.", "on": "Automatik eingeschaltet", "off": "Automatik ausgeschaltet", "g1Open": "G1 offen", "g1Closed": "G1 geschlossen", "reason": "Grund des Antrags", "request": "Einschalten beantragen", "requested": "Antrag gestellt. Die Freigabe erteilt eine zweite Person.", "approve": "Freigeben", "reject": "Ablehnen", "approved": "Antrag freigegeben, die Automatik ist eingeschaltet.", "rejected": "Antrag abgelehnt.", "blockedG1": "Gesperrt, solange die Freigabestufe G1 geschlossen ist.", "alreadyOn": "Die Automatik ist eingeschaltet.", "pendingOrNoRight": "Ein Antrag ist offen oder das Recht zum Beantragen fehlt.", "status": {"requested": "Beantragt", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "comparison": {"title": "Vergleichslauf Automatik gegen manuelle Buchung", "help": "Bericht aus dem Entscheidungsspeicher: je abgeschlossener Entscheidung, ob der beste Vorschlag der Automatik der manuellen Buchung entspricht. Der Bericht bucht nichts und ist kein Sicherheitsnachweis.", "summary": "Verglichene Buchungen: {compared}, Übereinstimmungsquote: {rate}", "noRate": "keine Daten", "caseKind": "Fallklasse", "total": "Gesamt", "outcome": {"match": "Übereinstimmung", "other_proposal": "Anderer Vorschlag", "modified": "Geändert gebucht", "no_proposal": "Ohne Vorschlag", "rejected": "Abgelehnt", "auto_posted": "Automatisch gebucht", "reversed": "Storniert"}}},
+    "automationSwitch": {"title": "Automatikschalter", "help": "Das Einschalten der Automatik setzt die offene Freigabestufe G1 voraus und braucht einen Antrag mit Grund sowie die Freigabe durch eine zweite Person. Ausschalten ist jederzeit sofort möglich. Der Lauf prüft Stufen, Regeln und Gate weiterhin selbst.", "on": "Automatik eingeschaltet", "off": "Automatik ausgeschaltet", "g1Open": "G1 offen", "g1Closed": "G1 geschlossen", "reason": "Grund des Antrags", "request": "Einschalten beantragen", "requested": "Antrag gestellt. Die Freigabe erteilt eine zweite Person.", "switchOff": "Sofort ausschalten", "offReason": "Grund für das Ausschalten", "switchedOff": "Die Automatik ist ausgeschaltet.", "approve": "Freigeben", "reject": "Ablehnen", "approved": "Antrag freigegeben, die Automatik ist eingeschaltet.", "rejected": "Antrag abgelehnt.", "blockedG1": "Gesperrt, solange die Freigabestufe G1 geschlossen ist.", "alreadyOn": "Die Automatik ist eingeschaltet.", "pendingOrNoRight": "Ein Antrag ist offen oder das Recht zum Beantragen fehlt.", "status": {"requested": "Beantragt", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "comparison": {"title": "Vergleichslauf Automatik gegen manuelle Buchung", "help": "Bericht aus dem Entscheidungsspeicher: je abgeschlossener Entscheidung, ob der beste Vorschlag der Automatik der manuellen Buchung entspricht. Der Bericht bucht nichts und ist kein Sicherheitsnachweis.", "summary": "Verglichene Buchungen: {compared}, Übereinstimmungsquote: {rate}", "noRate": "keine Daten", "caseKind": "Fallklasse", "total": "Gesamt", "outcome": {"match": "Übereinstimmung", "other_proposal": "Anderer Vorschlag", "modified": "Geändert gebucht", "no_proposal": "Ohne Vorschlag", "rejected": "Abgelehnt", "auto_posted": "Automatisch gebucht", "reversed": "Storniert"}}},
     "title": "Bank",
     "metrics": {
       "title": "Kennzahlen Bankabgleich",
@@ -2538,7 +2588,8 @@
       "loading": "Einstellung wird geladen.",
       "on": "eingeschaltet",
       "off": "ausgeschaltet (Standard)",
-      "gated": "Nur Anzeige. Der Automatiklauf bucht nur Fallklassen auf Stufe L2 oder L3 (Einstellungen, Buchhaltung, Automatikstufen) unter einer aktiven Regel mit deterministischer Prüfung und Nachkontrolle; vor G1 nur im nicht führenden Buchungskreis (ADR 0014, Betreiberentscheidung vom 28.09.2026)."
+      "gated": "Nur Anzeige. Eingeschaltet wird nur über einen Antrag mit Freigabe durch eine zweite Person bei offener Freigabestufe G1. Der Automatiklauf bucht nur Fallklassen auf Stufe L2 oder L3 (Einstellungen, Buchhaltung, Automatikstufen) unter einer aktiven Regel mit deterministischer Prüfung und Nachkontrolle; vor G1 nur im nicht führenden Buchungskreis (ADR 0014, Betreiberentscheidung vom 28.09.2026).",
+      "outgoingOn": "Ausgangsautomatik eingeschaltet", "outgoingOff": "Ausgangsautomatik ausgeschaltet (Standard)", "requestPath": "Antrag, Freigabe und sofortiges Ausschalten:", "requestLink": "Automatikschalter"
     },
     "reviewLink": "Nachkontrolle",
     "levelsLink": "Automatikstufen",
@@ -2662,6 +2713,14 @@
     }
   },
   "Payments": {
+    "batchesTitle": "Zahlungsdateien",
+    "batchesHint": "Nur Anzeige. Erzeugen, Download und Einreichung der Datei sind bis Freigabestufe G2 gesperrt.",
+    "batchesEmpty": "Noch keine Zahlungsdateien.",
+    "batchCreated": "Erzeugt am",
+    "batchFormat": "Format",
+    "batchCount": "Anzahl",
+    "batchSum": "Kontrollsumme",
+    "batchReference": "Bankreferenz",
     "title": "Zahlungsaufträge",
     "notice": "Freigabe durch zwei verschiedene Personen. Jede Änderung hebt Freigaben auf. Die Zahlungsdatei wird erst mit Freigabestufe G2 erzeugt; Export oder Einreichung gilt nie als Zahlung.",
     "empty": "Keine Zahlungsaufträge.",
@@ -6297,6 +6356,7 @@
       "sepa": "SEPA",
       "licenses": "Lizenzen",
       "directDebits": "Lastschriften",
+      "connections": "Bankverbindungen",
       "intake": "Belegeingang",
       "dunningSettings": "Mahneinstellungen",
       "dunning": "Mahnwesen",
@@ -6312,13 +6372,14 @@
       "search": "Suche",
       "document": "Dokument",
       "deletionProposals": "Löschvorschläge",
+      "intakeProposals": "Eingangsvorschläge",
       "reconcile": "Abgleich",
       "immowareLists": "Immoware24-Listen",
       "immoware": "Immoware24",
       "full": "Vollimport",
       "migration": "Migration Immoware24",
       "learning": "Lernphase",
-      "audit": "Plattformaudit",
+      "platformAudit": "Plattformaudit",
       "domains": "Kundendomains",
       "operations": "Betrieb",
       "oidcClients": "OIDC-Clients",
@@ -6332,6 +6393,7 @@
       "priceList": "Preisliste",
       "overview": "Übersicht",
       "conversation": "Gespräch",
+      "help": "Handbuch",
       "reconciliation": "Bankabstimmung",
       "rules": "Bankregeln",
       "review": "Nachkontrolle",
@@ -6645,6 +6707,10 @@
     "dataQuality": {
       "title": "Datenqualität",
       "description": "Datensätze, die vom Erfassungsstandard abweichen, mit Link zur Korrektur."
+    },
+    "billingSetup": {
+      "title": "Abrechnung",
+      "description": "Heizkosten-Regeltabellen und Zuordnung der Kostenkonten zu Betriebskostenarten."
     },
     "deadlineTypes": {
       "title": "Fristtypen",
@@ -7516,6 +7582,14 @@
     },
     "tabsLabel": "Bereiche der SLA-Einstellungen"
   },
+  "Hilfe": {
+    "title": "Handbuch",
+    "description": "Bedienungsanleitung zu allen Bereichen, durchsuchbar.",
+    "searchPlaceholder": "Handbuch durchsuchen",
+    "noHits": "Keine Treffer im Handbuch.",
+    "back": "Zurück zur Kapitelübersicht",
+    "toc": "Abschnitte des Kapitels"
+  },
   "Version": {
     "title": "Versionsverlauf",
     "description": "Was wurde in welcher Version geändert.",
@@ -7671,6 +7745,7 @@
     "started": "Abruf gestartet: {connections} Verbindungen, {queued} Konten in der Warteschlange."
   },
   "BankConnections": {
+    "statusLabel": "Status",
     "balanceColumn": "Saldo",
     "showDisconnected": "Getrennte anzeigen ({count})",
     "title": "Bankverbindungen",
@@ -7710,9 +7785,59 @@
     "consentValidUntil": "Zustimmung gültig bis {date}.",
     "consentUnknown": "Ablaufdatum der Zustimmung liegt nicht vor (vom Anbieter nicht geliefert).",
     "renewConsent": "Zustimmung erneuern",
-    "wizardStep3": "3. Konten einem Buchungskreis/Objekt zuordnen"
+    "wizardStep3": "3. Konten einem Buchungskreis/Objekt zuordnen",
+    "bank": "Bank",
+    "connections": "Verbindungen",
+    "connector": "Anbindung",
+    "connectorName": {
+      "file_import": "Dateiimport",
+      "fints": "FinTS",
+      "ebics": "EBICS",
+      "aggregator_finapi": "finAPI",
+      "aggregator_gocardless": "GoCardless"
+    },
+    "consentUntil": "Zustimmung bis",
+    "bic": "BIC",
+    "create": "Verbindung anlegen",
+    "created": "Verbindung angelegt.",
+    "createHint": "Das Anlegen ruft nichts bei der Bank ab. Zugangsdaten werden hier nicht erfasst; außer dem Dateiimport bleibt jede Anbindung bis zur Einrichtung unkonfiguriert.",
+    "runs": "Sync-Protokoll",
+    "noRuns": "Noch keine Abrufe oder Importe.",
+    "source": "Quelle",
+    "errors": "Fehler",
+    "learning": "Entscheidungsprotokoll (lernender Buchhalter)",
+    "learningNotice": "Protokolliert Vorschläge und Entscheidungen je Umsatz. Bucht nichts und öffnet kein Gate. Standard aus bis zur Datenschutzprüfung.",
+    "learningOn": "Eingeschaltet",
+    "learningOff": "Ausgeschaltet",
+    "reason": "Begründung",
+    "switchOn": "Einschalten",
+    "switchOff": "Ausschalten",
+    "switched": "Schalter gespeichert.",
+    "decisions": "Entscheidungsprotokoll je Umsatz",
+    "transactionId": "Umsatz-ID",
+    "lookup": "Anzeigen",
+    "noDecisions": "Keine Protokolleinträge (oder Protokoll ausgeschaltet).",
+    "round": "Runde",
+    "level": "Stufe",
+    "bestSource": "Beste Quelle",
+    "decidedAt": "Entschieden am"
+  },
+  "BankSyncLog": {
+    "title": "Sync-Protokoll",
+    "help": "Letzte Abrufe und Importe je Lauf mit Zählern und Fehlern.",
+    "empty": "Noch keine Läufe.",
+    "loading": "Lade Protokoll …",
+    "colTime": "Zeitpunkt",
+    "colSource": "Quelle",
+    "colStatus": "Status",
+    "colNew": "Neu",
+    "colDuplicates": "Dubletten",
+    "colAuto": "Automatisch gebucht",
+    "colProposals": "Vorschläge",
+    "colErrors": "Fehler"
   },
   "Ebics": {
+    "letterPdf": "INI-/HIA-Brief als PDF",
     "title": "EBICS (Grundgerüst)",
     "intro": "Abruf von Kontoauszügen über EBICS (Auftragsart C53, camt.053). Schlüssel werden verschlüsselt gespeichert, der Signaturschlüssel bleibt in der Standardvariante bei der unterschreibenden Person. Zahlungen werden über EBICS nicht eingereicht (Freigabetor G2).",
     "transportMissing": "Die Übertragung zur Bank ist nicht verfügbar: Es ist keine geprüfte EBICS-Implementierung installiert (offene Frage AE23-01). Teilnehmer und Schlüssel können vorbereitet werden, an die Bank wird nichts gesendet.",
@@ -9708,6 +9833,81 @@
     "loadFailed": "Regeln konnten nicht geladen werden.",
     "default": "Standard"
   },
+  "HoaAF09": {
+    "recipients": {
+      "title": "Empfänger der Einladung",
+      "hint": "Je Eigentumsvertrag am Versammlungstag: Mitglieder der Partei und Empfänger nach Zustellregel. Eine Person kann mehrfach erscheinen, der Versand fasst sie zusammen.",
+      "unit": "Einheit",
+      "party": "Eigentümer",
+      "recipient": "Empfänger",
+      "channel": "Kanal",
+      "represents": "für {name}",
+      "none": "Keine Empfänger ermittelt."
+    },
+    "disruptions": {
+      "title": "Störungsprotokoll",
+      "hint": "Technische Störungen der Online-Teilnahme werden als Ereignis dokumentiert. Während einer offenen Störung sind Abstimmung und Verkündung gesperrt.",
+      "none": "Keine Störung dokumentiert.",
+      "open": "offen",
+      "resolved": "behoben",
+      "description": "Beschreibung",
+      "occurredAt": "Zeitpunkt",
+      "resolvedCheck": "Störung ist behoben (Wiederaufnahme)",
+      "save": "Eintrag speichern",
+      "required": "Bitte Beschreibung und Zeitpunkt angeben.",
+      "affected": "Betroffene Verträge: {n}"
+    },
+    "correction": {
+      "title": "Korrekturbericht",
+      "hint": "Nur Anzeige. Keine Buchung, keine Forderung, kein Versand.",
+      "reason": "Grund",
+      "basis": "Grundlage",
+      "owner": "Eigentümer",
+      "units": "Einheiten",
+      "costShare": "Kostenanteil",
+      "advances": "Beschlossene Vorschüsse",
+      "result": "Ergebnis",
+      "old": "Alt",
+      "new": "Neu",
+      "difference": "Differenz",
+      "heating": "Heizkostenüberleitung",
+      "cash_outflows": "Zahlungsabgänge",
+      "cost_booked": "Gebuchte Kosten",
+      "cost_distributed": "Verteilte Kosten",
+      "heating_accrual": "Erläuterte Abgrenzung",
+      "unexplained": "Ungeklärt",
+      "noOwners": "Keine Eigentümerabweichung."
+    },
+    "fromLedger": {
+      "title": "Kosten aus gebuchten Belegen übernehmen",
+      "hint": "Je gebuchter Buchung des Kontos im Abrechnungsjahr eine Position. Bereits übernommene, stornierte und Netto-Gutschriften werden übersprungen.",
+      "account": "Kostenkonto",
+      "key": "Verteilerschlüssel",
+      "basis": "Verteilungsgrundlage",
+      "submit": "Positionen übernehmen",
+      "required": "Bitte Konto, Schlüssel und Grundlage angeben.",
+      "created": "{n} Positionen übernommen.",
+      "skipped": "{n} übersprungen",
+      "reason": {
+        "already_taken": "bereits übernommen",
+        "reverses_taken_entry": "Storno einer übernommenen Buchung",
+        "reversed": "storniert",
+        "net_credit": "Netto-Gutschrift"
+      }
+    },
+    "opening": {
+      "title": "Änderungen des Anfangsbestands",
+      "hint": "Eine Änderung braucht die Freigabe einer zweiten Person. Der Antragsteller kann nicht selbst freigeben.",
+      "none": "Keine Änderungen beantragt.",
+      "status": { "pending": "ausstehend", "applied": "freigegeben", "rejected": "abgelehnt" },
+      "reason": "Begründung",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "field": "Feld",
+      "from": "Bisher",
+      "to": "Neu"
+    }
+  },
   "HoaAcquisition": {
     "title": "Sondererwerb im Abrechnungsjahr",
     "intro": "Erwerbsart ungleich Kauf oder Sondernachfolgehaftung: Das Abrechnungspaket bleibt gesperrt, bis eine zweite Person den Fall freigegeben hat.",
@@ -10157,6 +10357,7 @@
     "fourEyes": "Eine manuelle Sperre hebt nur eine zweite Person mit dem Recht Freigabe auf (Vier-Augen-Prinzip). Die Sperre am Vorgang und die automatische Sperre bei Rechtsstreit oder Insolvenz entfallen mit der Aufhebung am Vorgang bzw. in der Buchhaltung."
   },
   "DocumentDetail": {
+    "textPending": "Texterkennung ausstehend: der Volltext wird nach der Spiegelung in Paperless übernommen. Bis dahin kann der Assistent den Inhalt nicht lesen.",
     "area": "Dokumente",
     "created": "Bereitgestellt am",
     "mimeType": "Dateityp",
@@ -10410,6 +10611,85 @@
     "workflowSave": "Speichern",
     "workflowSaved": "Verweis gespeichert.",
     "workflowInvalid": "Die Kennung ist keine gültige UUID."
+  },
+  "AF19": {
+    "readOnlyHint": "Ihnen fehlt das Recht zum Ändern. Die Liste ist nur zur Ansicht.",
+    "secret": {
+      "hint": "Dieser Wert wird nur jetzt angezeigt und danach nie wieder. Bitte sicher übernehmen, er wird nicht protokolliert.",
+      "copy": "In die Zwischenablage kopieren",
+      "copied": "Kopiert.",
+      "dismiss": "Ich habe den Wert gesichert"
+    },
+    "demo": { "banner": "Demo-Mandant: Es werden nur erfundene Daten verwendet. Keine produktive Nutzung." },
+    "objection": {
+      "add": "Widerspruch erfassen",
+      "kind": "Verarbeitung",
+      "source": "Quelle des Widerspruchs",
+      "sourceHint": "z. B. Schreiben vom 01.10.2026",
+      "receivedAt": "Eingegangen am",
+      "save": "Widerspruch speichern",
+      "hint": "Ein Widerspruch sperrt die Verarbeitung für diesen Kontakt, bis er zurückgenommen wird. Eine Einwilligung bleibt davon unberührt.",
+      "sourceInvalid": "Bitte die Quelle mit mindestens 2 Zeichen angeben.",
+      "dateInvalid": "Bitte ein gültiges Datum angeben, nicht in der Zukunft."
+    },
+    "rules": { "reset": "Auf Standard zurücksetzen", "resetConfirm": "Rechtsgrundlage wirklich auf den Standard zurücksetzen?" },
+    "mail": {
+      "title": "Mailquellen",
+      "card": "Mailquellen und Geheimnisse des Eingangs-Webhooks mit Empfangsprotokoll.",
+      "intro": "Quellen für den Eingangs-Webhook des Bestandsprogramms. Das Geheimnis wird bei Anlage und Erneuerung nur einmal angezeigt.",
+      "new": "Mailquelle anlegen",
+      "name": "Name",
+      "nameRequired": "Bitte einen Namen angeben.",
+      "status": "Status",
+      "active": "aktiv",
+      "inactive": "inaktiv",
+      "lastReceived": "Letzter Empfang",
+      "rotated": "Geheimnis erneuert",
+      "never": "nie",
+      "actions": "Aktionen",
+      "log": "Protokoll",
+      "hideLog": "Protokoll ausblenden",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "rotate": "Geheimnis erneuern",
+      "rotateConfirm": "Geheimnis erneuern? Das alte Geheimnis wird sofort ungültig.",
+      "secretTitle": "Geheimnis der Mailquelle {name}",
+      "empty": "Noch keine Mailquelle angelegt.",
+      "loadError": "Die Mailquellen konnten nicht geladen werden.",
+      "logLoadError": "Das Empfangsprotokoll konnte nicht geladen werden.",
+      "logEmpty": "Noch keine Empfänge.",
+      "event": "Ereignis",
+      "receivedAt": "Empfangen am",
+      "created": "Nachricht angelegt",
+      "replays": "Wiederholungen",
+      "yes": "ja",
+      "no": "nein"
+    },
+    "keys": {
+      "title": "API-Schlüssel",
+      "card": "API-Schlüssel des Mandanten: Anzeige des Präfixes, Anlage und Widerruf.",
+      "intro": "Der Schlüssel wird nur bei der Anlage angezeigt. Danach ist nur das Präfix sichtbar.",
+      "new": "API-Schlüssel anlegen",
+      "create": "Schlüssel erzeugen",
+      "name": "Name",
+      "nameInvalid": "Bitte einen Namen mit mindestens 2 Zeichen angeben.",
+      "scopes": "Rechte",
+      "scopesHint": "Es sind nur Leserechte wählbar, die Sie selbst besitzen.",
+      "scopesRequired": "Bitte mindestens ein Recht wählen.",
+      "expires": "Gültig bis (optional)",
+      "prefix": "Präfix",
+      "lastUsed": "Zuletzt genutzt",
+      "never": "nie",
+      "status": "Status",
+      "active": "aktiv",
+      "revoked": "widerrufen",
+      "expiresOn": "läuft ab am {date}",
+      "revoke": "Widerrufen",
+      "revokeConfirm": "Schlüssel wirklich widerrufen? Anwendungen mit diesem Schlüssel verlieren sofort den Zugriff.",
+      "secretTitle": "Neuer API-Schlüssel",
+      "empty": "Noch kein API-Schlüssel angelegt.",
+      "loadError": "Die API-Schlüssel konnten nicht geladen werden."
+    }
   },
   "Webhooks": {
     "card": {
@@ -10720,6 +11000,8 @@
     }
   },
   "DirectDebits": {
+    "preNotify": "Vorabinformation (Entwurf)",
+    "preNotified": "{n} Vorabinformationen als Entwurf angelegt, nichts versendet.",
     "title": "Lastschriftläufe",
     "bank": "Bank",
     "notice": "SEPA-Lastschrift (pain.008) nur mit gültigem Mandat und Vorabinformation. Freigabe durch zwei verschiedene Personen; jede Änderung hebt Freigaben auf. Die Datei wird als Dokument abgelegt, die Ausgabe an die Bank ist bis zur Freigabestufe G2 gesperrt. Nichts wird übermittelt.",
@@ -12391,6 +12673,72 @@
       "resolution": "Beschluss der Eigentümer (Jahresende des Beschlussjahres)"
     }
   },
+  "IntakeProposals": {
+    "breadcrumb": "Dokumente",
+    "title": "Eingangsvorschläge",
+    "intro": "Vorschläge des Dokumenteingangs zur Ablage. Die Zuordnung übernimmt eine Person; Folgeaktionen verknüpfen nur, gebucht wird hier nichts.",
+    "filter": "Entscheidung",
+    "decision": { "pending": "Offen", "accepted": "Angenommen", "modified": "Angepasst", "rejected": "Abgelehnt", "all": "Alle" },
+    "empty": "Keine Vorschläge vorhanden.",
+    "untitled": "Ohne Titel",
+    "source": "Quelle: {source}",
+    "confidence": "Sicherheit {value} %",
+    "reason": "Grund: {reason}",
+    "accept": "Annehmen",
+    "reject": "Ablehnen",
+    "rejectReason": "Grund (optional)",
+    "rejectConfirm": "Ablehnung bestätigen",
+    "revert": "Automatische Ablage zurücknehmen",
+    "captureReceipt": "Beleg erfassen",
+    "confirmFollowup": "Folgeaktion bestätigen: {label}"
+  },
+  "ObjektakteRequired": {
+    "title": "Pflichtunterlagen je Verwaltungsart",
+    "intro": "Diese Kategorien muss die Objektakte enthalten, damit sie als vollständig gilt.",
+    "type": { "rental": "Miete", "hoa": "WEG", "hoa_with_sev": "WEG mit SEV" },
+    "mandatory": "Pflicht",
+    "optional": "Optional",
+    "remove": "Entfernen",
+    "empty": "Keine Pflichtunterlagen festgelegt.",
+    "managementType": "Verwaltungsart",
+    "category": "Dokumentkategorie",
+    "chooseCategory": "Kategorie wählen",
+    "save": "Speichern",
+    "modelTitle": "Lokales Klassifikationsmodell",
+    "modelOn": "Eingeschaltet",
+    "modelOff": "Ausgeschaltet",
+    "modelVersion": "Version {version}",
+    "modelNoVersion": "Keine Version hinterlegt",
+    "caseId": "Prüffall (Kennung)",
+    "propose": "Vorschlag anfordern"
+  },
+  "MigrationExtras": {
+    "acceptanceTitle": "Migrationsabnahme je Objekt",
+    "acceptanceIntro": "Abnahmeprotokoll mit Prüfumfang, Verantwortlichen, Rückfallplan und Archivkonzept. Unterzeichnen muss eine zweite Person.",
+    "property": "Objekt",
+    "chooseProperty": "Objekt wählen",
+    "status": { "draft": "Entwurf", "signed": "Unterzeichnet" },
+    "sign": "Unterzeichnen",
+    "create": "Abnahmeprotokoll anlegen",
+    "field": {
+      "review_scope": "Prüfumfang",
+      "persons": "Verantwortliche (je Zeile: Name, Rolle)",
+      "non_migratable_data": "Nicht migrierbare Daten",
+      "fallback_plan": "Rückfallplan",
+      "archive_concept": "Archivkonzept"
+    },
+    "columnsTitle": "Spalten des Journal-Exports",
+    "columnsCustom": "Angepasste Zuordnung",
+    "columnsDefault": "Standardzuordnung",
+    "saveColumns": "Zuordnung speichern",
+    "expensesTitle": "Jahresausgaben je Buchungskreis",
+    "ledger": "Buchungskreis",
+    "chooseLedger": "Buchungskreis wählen",
+    "year": "Jahr",
+    "load": "Laden",
+    "priorIncomplete": "Das Vorjahr ist nicht als vollständig markiert.",
+    "totals": "Vorperiode {prior}, spätere Periode {later}, gesamt {total}"
+  },
   "DeletionProposals": {
     "checklist": {
       "show": "Löschcheckliste",
@@ -12703,6 +13051,12 @@
     "done": "Aktualisiert."
   },
   "G1Opening": {
+    "register": {
+      "title": "Abnahmeregister Anhang D",
+      "help": "Nur Anzeige. Der Stand kommt aus dem Abnahmeregister (abgenommene Fälle durch die fachkundige Person, offene Frage AE01-01) und überschreibt die Ergebnisse dieser Checkliste nicht.",
+      "state": "G1 Fälle bestanden {passed} von {total}, freigegebene Sollwerte {released} von {all}",
+      "link": "Zum Abnahmeregister"
+    },
     "evidence": {"document": "Dokument", "missing": "Nachweis fehlt"},
     "title": "G1 Öffnung",
     "description": "Checkliste vor der produktiven Buchführung (Freigabestufe G1). Der Stand kommt aus dem System, die Ergebnisse trägt der Betreiber ein. Der Antrag läuft über den bestehenden Freigabepfad mit zweiter Person; diese Seite öffnet die Stufe nie selbst.",
@@ -13162,6 +13516,7 @@
     "noRequests": "Keine Anträge."
   },
   "RentInvoices": {
+    "numberingReadonly": "Nummer für Entwürfe: {mode}. Änderung nur mit dem Recht Mandanteneinstellungen ändern (Einstellungen, Fachliche Regeln).",
     "numberingMode": "Nummer für Entwürfe",
     "modeDraftNumbers": "Entwurfsnummer ENTWURF-JJJJ-NNNNNN (Standard)",
     "modeRegularNumbers": "Reguläre Rechnungsnummer MR auch bei Entwurf",
@@ -13713,6 +14068,90 @@
       "ES-09": "Das Fristdatum liegt in der Vergangenheit.",
       "ES-10": "Für die Frist ist keine verantwortliche Person eingetragen.",
       "ES-11": "Eigentümer oder Mieter ohne E-Mail-Adresse; eingehende Mails können nicht automatisch zugeordnet werden."
+    }
+  },
+  "Af20": {
+    "viewings": {
+      "show": "Besichtigungen anzeigen",
+      "title": "Besichtigungstermine",
+      "empty": "Noch keine Besichtigung erfasst.",
+      "status": "Status",
+      "statuses": {
+        "proposed": "Vorgeschlagen",
+        "confirmed": "Bestätigt",
+        "done": "Durchgeführt",
+        "cancelled": "Abgesagt",
+        "no_show": "Nicht erschienen"
+      },
+      "when": "Termin",
+      "location": "Ort",
+      "add": "Termin anlegen"
+    },
+    "broker": {
+      "title": "Makler Anbindung",
+      "intro": "Zugangsdaten werden nur geschrieben und nicht angezeigt. Die Übergabe einer Anzeige an den Anbieter erfolgt nur auf ausdrückliche Auslösung.",
+      "provider": "Anbieter",
+      "providers": {
+        "flowfact": "FLOWFACT",
+        "propstack": "Propstack",
+        "onoffice": "onOffice"
+      },
+      "baseUrl": "Basis URL",
+      "apiKey": "API Schlüssel",
+      "apiKeySet": "API Schlüssel (hinterlegt, zum Ersetzen neu eingeben)",
+      "enabled": "Anbindung aktiv",
+      "save": "Speichern",
+      "saved": "Gespeichert."
+    },
+    "openimmo": {
+      "title": "OpenImmo Import",
+      "intro": "Die Vorschau legt nichts an. Jede Zeile wird einzeln freigegeben, dafür sind Objekt und Einheit anzugeben.",
+      "file": "OpenImmo Datei (XML oder ZIP)",
+      "count": "{file}: {count} Zeilen",
+      "propertyId": "Objekt ID",
+      "unitId": "Einheit ID",
+      "untitled": "Ohne Titel",
+      "duplicate": "Bereits vorhanden",
+      "errors": "{count} Strukturhinweise",
+      "apply": "Übernehmen",
+      "applied": "Übernommen"
+    },
+    "uprotokoll": {
+      "title": "Import aus U-Protokoll",
+      "intro": "Zuerst die Vorschau prüfen, danach die Übernahme auslösen.",
+      "file": "Exportdatei",
+      "preview": "Vorschau",
+      "apply": "Übernehmen"
+    },
+    "defectTickets": {
+      "create": "Mängel als Tickets anlegen ({count})",
+      "created": "{count} Tickets angelegt."
+    },
+    "lexRuns": {
+      "title": "Läufe",
+      "importReceipts": "Belege abrufen",
+      "exportHint": "Exporte von Kontakten und Rechnungen laufen über die API, weil sie eine ausdrückliche Auswahl der Datensätze verlangen.",
+      "empty": "Noch keine Läufe.",
+      "errors": "{count} Fehler"
+    },
+    "fastTable": {
+      "label": "Schneller Tabellenimport",
+      "hint": "Die KI liefert beim Tabellenimport nur Vorschläge, übernommen wird erst nach Prüfung."
+    },
+    "dq": {
+      "title": "Datensatz prüfen",
+      "entity": "Art",
+      "entities": {
+        "property": "Objekt",
+        "contact": "Kontakt",
+        "ticket": "Ticket"
+      },
+      "data": "Daten als JSON",
+      "start": "Prüfung starten",
+      "invalidJson": "Die Daten sind kein gültiges JSON.",
+      "noFindings": "Keine Abweichungen.",
+      "recompute": "Kontaktrollen neu berechnen",
+      "recomputed": "{count} Kontakte geändert."
     }
   },
   "DataQuality": {
@@ -14403,6 +14842,7 @@
     "stored": "XRechnung abgelegt.",
     "zugferd": "ZUGFeRD",
     "zugferdCheck": "ZUGFeRD prüfen",
+    "creditNoteXml": "XRechnung Gutschrift XML",
     "zugferdStore": "ZUGFeRD ablegen",
     "zugferdStored": "ZUGFeRD-Beleg abgelegt. Nichts wurde versendet; PDF/A-3 ist nicht geprüft.",
     "zugferdFiled": "ZUGFeRD abgelegt",
@@ -14454,6 +14894,7 @@
       "chat_ai_prequalification_enabled": "KI-Vorqualifizierung im Chat",
       "support_login_enabled": "Lesende Support-Sicht mit Einwilligung",
       "owner_rental_income_enabled": "Mieterträge für Kapitalanleger im Eigentümerportal",
+      "owner_rental_statements_enabled": "Eigentümerabrechnung Miete und SEV im Eigentümerportal",
       "chat_bot_enabled": "Assistent für die eigenen Unterlagen (Chat-Bot)",
       "privacy_feature_enabled": "Datenschutz-Feature für KI-Antworten"
     },
@@ -14462,6 +14903,7 @@
       "chat_ai_prequalification_enabled": "Nur Vorschlag zur Einordnung. Setzt den freigegebenen KI-Anbieter mit Auftragsverarbeitungsvertrag voraus und den eingeschalteten Chat.",
       "support_login_enabled": "Die Verwaltung kann nur mit gültiger Einwilligung des Nutzers lesend einsehen, jeder Aufruf wird protokolliert.",
       "owner_rental_income_enabled": "Zeigt Eigentümern mit Sondereigentumsverwaltung die vereinbarte Miete ihrer eigenen Einheiten ohne Mieternamen. Datenschutzfreigabe vor dem Einschalten prüfen.",
+      "owner_rental_statements_enabled": "Zeigt Eigentümern die ausgegebenen Eigentümerabrechnungen ihrer eigenen Rechtsträger mit PDF. Zusätzlich ist die Freigabestufe G3 nötig.",
       "chat_bot_enabled": "Mieter und Eigentümer können Fragen zu den für sie freigegebenen Unterlagen stellen. Ohne weitere Freigaben zeigt der Assistent nur Treffer aus diesen Unterlagen, die Antworten kommen nie aus fremden Unterlagen.",
       "privacy_feature_enabled": "Voraussetzung für KI-Antworten im Assistenten: freigegebener Datenschutzhinweis (Textbaustein portal_chat_privacy_notice, Freigabe durch eine zweite Person) und Kenntnisnahme je Zugang. Zusätzlich braucht die KI-Antwort den freigegebenen KI-Anbieter mit Auftragsverarbeitungsvertrag. Den Text pflegt der Mandant, die Software liefert keinen Rechtstext."
     },
@@ -14596,6 +15038,23 @@
       "source_reversed": "Abrechnung storniert",
       "withdrawn": "Zurückgenommen"
     }
+  },
+  "PaymentRunSettings": {
+    "title": "Einstellung Zahllauf",
+    "help": "Die wöchentliche Vorschau erzeugt nur eine Übersicht der zahlbaren Rechnungen. Es entsteht keine Zahlung und keine Zahlungsdatei.",
+    "weekly": "Wöchentliche Vorschau ({schedule})",
+    "noRight": "Ändern nur mit dem Recht Mandanteneinstellungen ändern."
+  },
+  "Section35aCertificate": {
+    "title": "Ausweis nach § 35a je Mietvertrag",
+    "help": "Einschätzung als Entwurf, kein Versand und keine Buchung. Die steuerliche Behandlung ist mit der Steuerberatung zu klären.",
+    "contract": "Vertrag (Kennung aus der Vertragsseite)",
+    "year": "Kalenderjahr",
+    "share": "Anteil in Prozent",
+    "calculate": "Berechnen",
+    "labor": "Arbeitskosten",
+    "material": "Materialkosten",
+    "pdf": "PDF Entwurf"
   },
   "PaymentRun": {
     "bank": "Bank",
@@ -16030,6 +16489,10 @@
       "security": "Sicherheit und Datenschutz"
     },
     "rules": {
+      "invoice-intake-auto": {
+        "title": "Belegerfassung nach Ablage einer Rechnung",
+        "description": "Eingeschaltet startet die Bestätigung eines Eingangsvorschlags, der als Rechnung erkannt wurde, die Rechnungsauslesung als Vorschlag im Belegeingang. Nichts wird gebucht, freigegeben oder bezahlt. Ausgeschaltet bietet der Hinweis die Schaltfläche Beleg erfassen."
+      },
       "rent-invoice-numbering": {
         "title": "Nummer für Mietrechnungsentwürfe",
         "description": "Welche Nummer ein Entwurf einer Mietrechnung oder Gutschrift bei geschlossenem G1 erhält. Entwurfsnummern verbrauchen die fortlaufende Rechnungsnummer nicht."
@@ -16107,6 +16570,10 @@
         "description": "Platzhalterfeld je Rücklagenplan mit dem Freigabestatus nicht freigegeben. Die Einordnung legt der Steuerberater fest.",
         "defaultText": "Nicht freigegeben"
       },
+      "correction-report": {
+        "title": "Korrekturbericht je Eigentümer",
+        "description": "Ob der Korrekturbericht zwischen zwei Abrechnungsversionen angezeigt wird. Der Bericht ist nur eine Anzeige, es wird nichts gebucht und nichts versendet; die Rechtsfolge einer Korrektur bleibt offen."
+      },
       "reserve-payment-mode": {
         "title": "Zahlungen je Zweckrücklage",
         "description": "Ob nicht gebundene Rücklagenzahlungen als Aufteilung nach dem Planverhältnis vorgeschlagen werden. Der Vorschlag ist nur eine Anzeige, es wird nichts gebucht."
@@ -16160,6 +16627,14 @@
         "title": "Mieterträge im Eigentümerportal",
         "description": "Zeigt Eigentümern die vereinbarte Miete ihrer Einheiten mit Sondereigentumsverwaltung, ohne Mietername. Die datenschutzrechtliche Freigabe ist offen."
       },
+      "owner-rental-statements-portal": {
+        "title": "Eigentümerabrechnung im Eigentümerportal",
+        "description": "Zeigt Eigentümern die ausgegebenen Eigentümerabrechnungen ihrer eigenen Rechtsträger mit PDF. Zusätzlich ist die Freigabestufe G3 nötig."
+      },
+      "tenant-statement-portal": {
+        "title": "Nebenkostenabrechnung im Mieterportal",
+        "description": "Zeigt Mietern die ausgegebene Betriebs- und Heizkostenabrechnung ihres Vertrags mit Erläuterungen aus freigegebenen Textbausteinen. Zusätzlich ist die Freigabestufe G3 nötig."
+      },
       "owner-ticket-scope": {
         "title": "Tickets im Eigentümerportal",
         "description": "Welche Tickets zum Objekt ein Eigentümer lesend sieht."
@@ -16196,7 +16671,7 @@
       },
       "portal-chat-bot": {
         "title": "Portal-Assistent (Chat-Bot)",
-        "description": "Ob Mieter und Eigentümer im Portal Fragen zu den für sie freigegebenen Dokumenten stellen können. KI-Antworten nur hinter AVV und Anbieterfreigabe, mit Quellenangabe."
+        "description": "Ob Mieter und Eigentümer im Portal Fragen zu den für sie freigegebenen Dokumenten stellen können. KI-Antworten nur hinter AVV und Anbieterfreigabe, mit Quellenangabe. Die Antwort entsteht als Job im Worker (Zeitlimit 120 Sekunden, danach Treffer aus den Unterlagen), die Berechtigungsprüfung bleibt unverändert."
       },
       "portal-chat-privacy": {
         "title": "Portal-Assistent: Datenschutzhinweis",
@@ -16225,6 +16700,10 @@
       "access-export-internal-notes": {
         "title": "Auskunftsexport: interne Vermerke",
         "description": "Ob interne Vermerke im Auskunftsexport enthalten sind. Aus bedeutet: zurückgehalten."
+      },
+      "text-block-second-person": {
+        "title": "Textbausteine: Freigabe durch eine zweite Person",
+        "description": "Ob ein Textbaustein nur von einer anderen Person freigegeben werden darf als von der, die ihn verfasst oder eingereicht hat. Standard ist an. Das Abschalten braucht eine Begründung und wird protokolliert."
       },
       "document-trash-enabled": {
         "title": "Dokument-Papierkorb",
@@ -16395,5 +16874,138 @@
     "save": "Speichern",
     "saved": "Gespeichert.",
     "nothingChanged": "Keine Änderung."
+  },
+  "LedgerExtras": {
+    "journalFilter": { "property": "Objekt", "all": "Alle Objekte", "apply": "Filtern" },
+    "line": { "property": "Objekt der Zeile", "none": "Objekt aus Einheit oder Vertrag" },
+    "tax": {
+      "title": "Steuerkennzeichen",
+      "help": "Kennzeichen für EÜR und Umsatzsteuer. Änderungen werden protokolliert und brauchen das Recht zur Freigabe.",
+      "eur": "EÜR relevant",
+      "ust": "USt relevant",
+      "mixed": "Gemischte Nutzung prüfen",
+      "save": "Kennzeichen speichern",
+      "saved": "Steuerkennzeichen gespeichert.",
+      "open": "Steuerkennzeichen",
+      "close": "Schließen"
+    },
+    "debtors": { "sync": "Debitorenkonten aus Verträgen übernehmen", "synced": "{created} Debitorenkonten angelegt." },
+    "paymentType": {
+      "title": "Erlöskonto je Zahlungsart",
+      "help": "Sollstellungen einer Zahlungsart werden auf dieses Erlöskonto gebucht. Der Code vat_output ordnet die Umsatzsteuer der Sollstellung einem Steuerkonto zu.",
+      "code": "Code der Zahlungsart",
+      "account": "Konto",
+      "choose": "Konto wählen",
+      "save": "Zuordnung speichern",
+      "saved": "Zuordnung gespeichert."
+    },
+    "approval": {
+      "title": "Zweite Freigabe",
+      "off": "Für diese Rechnung ist keine zweite Freigabe nötig.",
+      "required": "Über der Betragsgrenze {limit} ist eine zweite Freigabe durch eine dritte Person nötig.",
+      "valid": "Die zweite Freigabe liegt vor.",
+      "action": "Zweite Freigabe erteilen",
+      "done": "Zweite Freigabe erteilt.",
+      "confirm": "Zweite Freigabe für diese Rechnung erteilen? Die Freigabe muss eine andere Person erteilen als Erfasser und erste Freigabe."
+    },
+    "deposit": {
+      "close": "Schließen",
+      "movementTitle": "Kautionsbewegung erfassen",
+      "movementHelp": "Die Bewegung wird nur erfasst. Eine Buchung entsteht erst mit freigegebener Buchhaltung.",
+      "date": "Datum",
+      "amount": "Betrag",
+      "kind": "Art",
+      "reason": "Begründung",
+      "save": "Bewegung erfassen",
+      "saved": "Bewegung erfasst.",
+      "kinds": { "payment": "Einzahlung", "interest": "Zins", "payout": "Auszahlung", "offset": "Verrechnung" },
+      "runTitle": "Zinsentwürfe für alle Kautionen",
+      "runHelp": "Legt für das Jahr Entwürfe der Zinsgutschrift für alle Kautionen mit Zinssatz an. Es wird nichts gebucht und nichts ausgezahlt.",
+      "year": "Jahr",
+      "run": "Entwürfe anlegen",
+      "runResult": "{created} Entwürfe angelegt, {skipped} übersprungen."
+    }
+  }  ,
+  "BillingSetup": {
+    "title": "Einstellungen Abrechnung",
+    "intro": "Regeltabellen der Heizkostenabrechnung und Zuordnung der Kostenkonten zu den Betriebskostenarten.",
+    "settings": "Einstellungen",
+    "ruleTables": {
+      "title": "Regeltabellen Heizkosten",
+      "notice": "Die Tabellen enthalten keine vorbelegten Werte. Zahlen und Quelle trägt der Betreiber nach amtlicher Prüfung ein, der Status zu prüfen bleibt, bis die Prüfung dokumentiert ist.",
+      "empty": "Keine Regeltabelle hinterlegt.",
+      "kind": "Art", "validFrom": "Gültig ab", "source": "Quelle", "status": "Status", "rows": "Zeilen (JSON)", "note": "Notiz", "edit": "Bearbeiten", "save": "Speichern",
+      "invalidJson": "Die Zeilen sind kein gültiges JSON.",
+      "kinds": {"co2_steps": "CO2-Stufen", "degree_days": "Gradtage"},
+      "statuses": {"zu_pruefen": "zu prüfen", "freigegeben": "freigegeben"},
+      "rowsHint": {"co2_steps": "Liste mit from_kg_m2 und tenant_percent je Stufe.", "degree_days": "Objekt mit den Monaten 1 bis 12 als Schlüssel, Werte in Promille, Summe 1000."}
+    },
+    "costTypes": {
+      "title": "Kostenart je Kostenkonto",
+      "notice": "Die Zuordnung ist eine fachliche Entscheidung je Konto. Der Vorschlag stammt aus der Kontenvorlage und wird nicht automatisch übernommen.",
+      "ledger": "Buchungskreis", "choose": "Bitte wählen", "empty": "Keine Kostenkonten im Buchungskreis.", "account": "Konto", "type": "Kostenart", "suggestion": "Vorschlag", "none": "nicht zugeordnet"
+    }
+  },
+  "BillingExtra": {
+    "inspections": {
+      "title": "Belegeinsicht",
+      "notice": "Erfassung von Einsichtsanfragen, Bereitstellung und Einwendungen. Reine Dokumentation, keine Fristberechnung und keine Rechtsfolge.",
+      "load": "Anfragen laden", "add": "Anfrage erfassen", "empty": "Keine Anfragen erfasst.",
+      "unit": "Einheit", "requestedAt": "Eingang am", "channel": "Kanal", "status": "Stand", "provision": "Bereitstellung", "providedAt": "Bereitgestellt am",
+      "provide": "Bereitstellung erfassen", "objection": "Einwendung am", "objectionDate": "Datum der Einwendung", "objectionText": "Einwendung", "recordObjection": "Einwendung erfassen", "close": "Abschließen", "open": "offen", "closed": "abgeschlossen",
+      "channels": {"letter": "Brief", "email": "E-Mail", "phone": "Telefon", "portal": "Portal", "in_person": "persönlich"},
+      "provisions": {"electronic": "elektronisch", "copies": "Kopien", "appointment": "Termin"}
+    },
+    "resultEntries": {
+      "title": "Ergebnisbuchungen",
+      "notice": "Erzeugt Entwürfe für Forderung und Gutschrift. Es wird nichts gebucht, die Freigabestufe G3 und die Freigabe durch die Geschäftsführung bleiben erforderlich.",
+      "onlyDue": "Ergebnisbuchungen sind erst im Status fällig möglich.",
+      "bookingDate": "Buchungsdatum", "dueDate": "Fälligkeit", "create": "Entwürfe erzeugen", "created": "{n} Entwürfe erzeugt."
+    }
+  },
+  "PortalSupport": {
+    "title": "Support-Ansicht des Portalzugangs",
+    "intro": "Lesende Sicht auf das, was die Person im Portal sieht. Nur mit gültiger Einwilligung der Person, jeder Aufruf wird mit Grund protokolliert. Änderungen sind hier nicht möglich.",
+    "noAccount": "Für diesen Kontakt besteht kein Portalzugang.",
+    "reason": "Grund des Aufrufs",
+    "reasonRequired": "Bitte geben Sie einen Grund mit mindestens fünf Zeichen an.",
+    "open": "Support-Ansicht öffnen",
+    "showLog": "Protokoll anzeigen",
+    "roles": "Rollen",
+    "none": "keine",
+    "contracts": "Verträge",
+    "tickets": "Meldungen",
+    "documents": "Freigegebene Unterlagen",
+    "log": "Protokoll der Support-Ansicht",
+    "logEmpty": "Bisher keine Aufrufe."
+  },
+  "AssignmentReviews": {
+    "title": "Offene Zuordnungsprüfungen",
+    "description": "Rückfragen zur Zuordnung von Tickets und E-Mails zu Kontakt, Objekt und Einheit. Die Entscheidung erfolgt am Ticket oder an der Mail.",
+    "loading": "Wird geladen",
+    "empty": "Keine offene Zuordnungsprüfung.",
+    "kind": { "ticket": "Ticket", "mail": "E-Mail" },
+    "dimension": { "contact": "Kontakt", "property": "Objekt", "unit": "Einheit" }
+  },
+  "CreditorIds": {
+    "title": "Gläubiger-ID",
+    "intro": "Gläubiger-Identifikationsnummer je Rechtsträger für SEPA-Lastschriften. Ohne Nummer wird kein Lastschriftlauf angelegt.",
+    "notice": "Betreibereingabe. Format und Prüfung der Nummer sind fachlich offen (M15-01) und werden nicht validiert. Leer speichern entfernt die Nummer.",
+    "target": "Rechtsträger",
+    "tenantFallback": "Rückfall des Mandanten",
+    "creditorId": "Gläubiger-Identifikationsnummer",
+    "save": "Speichern",
+    "saved": "Gläubiger-ID gespeichert.",
+    "removed": "Gläubiger-ID entfernt.",
+    "noPermission": "Für diese Auswahl fehlt die Berechtigung."
+  },
+  "DirectDebitPreview": {
+    "title": "Vorschau einziehbarer Sollstellungen",
+    "ledger": "Buchungskreis",
+    "collectionDate": "Einzug am",
+    "leadDays": "Vorlaufzeit in Tagen",
+    "show": "Vorschau",
+    "result": "{count} Sollstellungen einziehbar, Kontrollsumme {sum}, Einzug am {date}. Die Vorschau legt nichts an.",
+    "noCreditorId": "Für den Rechtsträger ist keine Gläubiger-ID hinterlegt."
   }
 }

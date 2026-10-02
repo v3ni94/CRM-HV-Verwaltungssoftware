@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { EntryActions } from "@/components/accounting/EntryActions";
 import { InterestTaxConfig } from "@/components/accounting/InterestTaxConfig";
+import { JournalPropertyFilter } from "@/components/accounting/JournalPropertyFilter";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
@@ -29,7 +30,7 @@ export default async function LedgerPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; property?: string }>;
 }) {
   const [t, tr, tb, { id }, sp] = await Promise.all([
     getTranslations("Accounting"),
@@ -39,19 +40,25 @@ export default async function LedgerPage({
     searchParams,
   ]);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const propertyFilter = /^[0-9a-f-]{36}$/i.test(sp.property ?? "") ? (sp.property as string) : "";
   const today = new Date().toISOString().slice(0, 10);
   const api = serverApi();
   const me = await getMe();
   const canEditOpenItems = me.data?.permissions.includes("accounting:update") ?? false;
   const canCreate = me.data?.permissions.includes("accounting:create") ?? false;
   const canApprove = me.data?.permissions.includes("accounting:approve") ?? false;
-  const [ledger, journal, trial, open, accounts] = await Promise.all([
+  const [ledger, journal, trial, open, accounts, propertyList] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
-    api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100 } } }),
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100, ...(propertyFilter ? { property_id: propertyFilter } : {}) } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/trial-balance", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/open-items", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: id } } }),
+    api.GET("/api/v1/properties", { params: { query: { page_size: 200 } } }),
   ]);
+  const propertyOptions = ((propertyList.data?.items ?? []) as { id: string; number?: string | null; name?: string | null }[]).map((p) => ({
+    id: p.id,
+    label: [p.number, p.name].filter(Boolean).join(" ") || p.id,
+  }));
   redirectIfUnauthenticated(ledger.response);
   if (!ledger.data) {
     return (
@@ -72,7 +79,12 @@ export default async function LedgerPage({
   const bankAccounts = accountRows
     .filter((a) => a.category === "bank" || a.category === "cash")
     .map((a) => ({ id: a.id, number: a.number, name: a.name }));
-  const pageHref = (target: number) => `/buchhaltung/${id}${target > 1 ? `?page=${String(target)}` : ""}`;
+  const pageHref = (target: number) => {
+    const q = new URLSearchParams();
+    if (target > 1) q.set("page", String(target));
+    if (propertyFilter) q.set("property", propertyFilter);
+    return `/buchhaltung/${id}${q.size ? `?${q.toString()}` : ""}`;
+  };
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -129,6 +141,7 @@ export default async function LedgerPage({
           <JournalEntryForm
             ledgerId={id}
             today={today}
+            properties={propertyOptions}
             accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name, category: a.category, active: a.active }))}
           />
         ) : null}
@@ -138,6 +151,7 @@ export default async function LedgerPage({
             accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name, category: a.category, active: a.active }))}
           />
         ) : null}
+        <JournalPropertyFilter ledgerId={id} current={propertyFilter} properties={propertyOptions} />
         <div className="overflow-x-auto">
 <table className="mhvp-table">
           <thead>

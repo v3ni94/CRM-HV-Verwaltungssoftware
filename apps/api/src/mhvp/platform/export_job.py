@@ -87,7 +87,14 @@ async def _write_entity(
     last: uuid.UUID | None = None
     with archive.open(f"data/{name}.jsonl", "w") as handle:
         while True:
-            query = select(model).order_by(model.id).limit(BATCH)
+            # GAE-35: trashed documents still exist until purged, the export carries them
+            # (``deleted_at`` and ``purge_at`` mark the state).
+            query = (
+                select(model)
+                .order_by(model.id)
+                .limit(BATCH)
+                .execution_options(include_trashed=True)
+            )
             if last is not None:
                 query = query.where(model.id > last)
             rows = (await session.scalars(query)).all()
@@ -119,7 +126,12 @@ async def _write_documents(
     skipped_external = 0
     last: uuid.UUID | None = None
     while True:
-        query = select(Document).order_by(Document.id).limit(BATCH)
+        query = (
+            select(Document)
+            .order_by(Document.id)
+            .limit(BATCH)
+            .execution_options(include_trashed=True)
+        )
         if last is not None:
             query = query.where(Document.id > last)
         rows = (await session.scalars(query)).all()

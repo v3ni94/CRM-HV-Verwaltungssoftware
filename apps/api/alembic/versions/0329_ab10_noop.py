@@ -1,4 +1,5 @@
-"""GA08-01, GA08-02, GA08-05 (AB10): no schema change; placeholder that keeps the revision chain linear.
+"""GA08-01, GA08-02, GA08-05 (AB10): no schema change; placeholder that keeps the revision
+chain linear.
 
 Revision ID: 0329
 Revises: 0328

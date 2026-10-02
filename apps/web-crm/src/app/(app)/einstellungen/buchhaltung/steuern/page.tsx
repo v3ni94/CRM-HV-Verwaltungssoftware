@@ -9,6 +9,7 @@ import {
   type TaxSettings,
 } from "@/components/settings/TaxSettingsAdmin";
 import { ReceivableRulesSettings, type ReceivableRules } from "@/components/settings/ReceivableRulesSettings";
+import { Section35aCertificate } from "@/components/accounting/Section35aCertificate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -72,6 +73,7 @@ export default async function TaxSettingsPage() {
         canManageSettings={permissions.includes("tenant_settings:update")}
         canManageProfiles={permissions.includes("accounting:update")}
       />
+      {permissions.includes("accounting:read") ? <Section35aCertificate /> : null}
     </div>
   );
 }

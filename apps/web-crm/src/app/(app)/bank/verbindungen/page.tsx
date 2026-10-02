@@ -1,0 +1,25 @@
+import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
+
+import { BankConnectionsPanel } from "@/components/banking/BankConnectionsPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
+
+export const dynamic = "force-dynamic";
+
+/** Bankverbindungen (AF03, GAF-03): Verbindungen, Sync-Protokoll, Entscheidungsprotokoll.
+ *  Lesen mit accounting:read, Anlegen und Schalter mit accounting:approve. */
+export default async function BankConnectionsPage() {
+  const t = await getTranslations("BankConnections");
+  const me = await getMe();
+  redirectIfUnauthenticated(me.response);
+  const permissions = me.data?.permissions ?? [];
+  if (!permissions.includes("accounting:read")) notFound();
+  return (
+    <div className="flex flex-col gap-4">
+      <PageHeader breadcrumb={[{ href: "/bank", label: t("bank") }]} title={t("title")} description={t("intro")} />
+      <BankConnectionsPanel canApprove={permissions.includes("accounting:approve")} />
+    </div>
+  );
+}

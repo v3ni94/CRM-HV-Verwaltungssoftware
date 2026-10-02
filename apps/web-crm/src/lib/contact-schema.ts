@@ -121,6 +121,10 @@ export function buildContactSchema(t: Messages) {
       if (b.valid_to && b.valid_to < b.valid_from) {
         ctx.addIssue({ code: "custom", message: t("periodInvalid"), path: ["valid_to"] });
       }
+      if (b.mandate_scheme === "b2b") {
+        // GAA-05: no B2B collection run; the API refuses with MHVP-CONT-0033
+        ctx.addIssue({ code: "custom", message: t("mandateB2bUnsupported"), path: ["mandate_scheme"] });
+      }
       if (b.sepa_enabled) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(b.mandate_signed_on)) {
           ctx.addIssue({ code: "custom", message: t("sepaSignedRequired"), path: ["mandate_signed_on"] });

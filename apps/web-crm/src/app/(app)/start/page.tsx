@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { AssignmentReviewsColumn } from "@/components/dashboard/AssignmentReviewsColumn";
 import { ApprovalsColumn, type ApprovalCounts } from "@/components/dashboard/ApprovalsColumn";
 import { Greeting } from "@/components/dashboard/Greeting";
 import { KpiStrip } from "@/components/dashboard/KpiStrip";
@@ -166,6 +167,7 @@ export default async function StartPage() {
           ) : null}
           <ApprovalsColumn counts={approvals.data ?? {}} />
         </div>
+        {canReadTickets ? <AssignmentReviewsColumn /> : null}
       </div>
       <p className={ui.notice}>{t("accountingLocked")}</p>
     </div>

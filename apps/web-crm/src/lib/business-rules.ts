@@ -51,6 +51,8 @@ export type BusinessRule = {
     /** Document after a successful write; default sets the rule's field. */
     apply?: (doc: unknown, value: RuleValue) => unknown;
   };
+  /** Optional reset to the default (DELETE, AF19): removes the stored value on the server. */
+  reset?: { path: string | ((doc: unknown) => string); permission: string };
   /** Field of the shared document (default for `pick` and `apply`). */
   field?: string;
   range?: readonly [number, number];
@@ -76,6 +78,17 @@ function fieldPick(field: string): (doc: unknown) => RuleValue | undefined {
 /** Partial update: only the changed field (PATCH and PUT bodies with optional fields). */
 function fieldBody(field: string): (doc: unknown, value: RuleValue) => unknown {
   return (_doc, value) => ({ [field]: value });
+}
+
+function numberField(doc: unknown, field: string): RuleValue | undefined {
+  const value = rec(doc)[field];
+  return typeof value === "number" ? value : undefined;
+}
+
+/** Number of released text blocks in the answer of GET /document-text-blocks/codes. */
+function releasedCount(doc: unknown): RuleValue | undefined {
+  const items = rec(doc).items;
+  return Array.isArray(items) ? items.filter((i) => rec(i).released === true).length : undefined;
 }
 
 const SETTINGS = ["tenant_settings:read"] as const;
@@ -179,6 +192,7 @@ const legalBasisRules: BusinessRule[] = LEGAL_BASIS_PURPOSES.map(({ slug, purpos
   questions,
   permission: ["contacts:read"],
   read: { path: "consent-legal-basis", pick: (doc) => scalar(legalBasisItem(doc, purpose).basis) },
+  reset: { path: `consent-legal-basis/${purpose}`, permission: "contacts:approve" },
   write: {
     method: "PUT",
     path: `consent-legal-basis/${purpose}`,
@@ -243,7 +257,7 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     write: {
       method: "PUT",
       path: "accounting/rent-invoices/numbering-mode",
-      permission: "contracts:update",
+      permission: "tenant_settings:update",
       body: fieldBody("mode"),
     },
     field: "mode",
@@ -370,12 +384,14 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     id: "interest-tax",
     group: "accounting",
     pkg: "AE05",
-    kind: "link",
-    default: null,
+    kind: "count",
+    default: 0,
     defaultText: true,
     questions: ["P01-01"],
     href: "/buchhaltung",
     permission: ACCOUNTING,
+    // Buchungskreise mit mindestens einem Steuerkonto (GAE-38, tenantweite Zusammenfassung).
+    read: { path: "accounting/interest-tax-config", pick: (doc) => numberField(doc, "ledgers_configured") },
   },
   {
     id: "rule-checkpoints",
@@ -506,12 +522,35 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     id: "text-blocks",
     group: "billing",
     pkg: "AE16",
-    kind: "link",
-    default: null,
+    kind: "count",
+    default: 0,
     defaultText: true,
     questions: ["AA11-01", "AA11-02"],
     href: "/einstellungen/textbausteine",
     permission: ["documents:read"],
+    // Freigegebene Textbausteine (GAE-38).
+    read: { path: "document-text-blocks/codes", pick: releasedCount },
+  },
+  {
+    // PUT /document-text-blocks/policy: switching off demands a reason (AF12, GAE-16).
+    id: "text-block-second-person",
+    group: "billing",
+    pkg: "AF12",
+    kind: "boolean",
+    default: true,
+    questions: ["AA11-01", "AA11-02"],
+    href: "/einstellungen/textbausteine",
+    permission: SETTINGS,
+    read: { path: "document-text-blocks/policy", pick: fieldPick("require_second_person") },
+    write: {
+      method: "PUT",
+      path: "document-text-blocks/policy",
+      permission: "tenant_settings:update",
+      needsReason: (value) => value === false,
+      reasonMin: 10,
+      body: (_doc, value, reason) => ({ require_second_person: value, reason: reason.trim() || null }),
+    },
+    field: "require_second_person",
   },
   // --- WEG -----------------------------------------------------------------------------------
   {
@@ -581,6 +620,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: fieldBody("mode"),
     },
     field: "mode",
+  },
+  {
+    id: "correction-report",
+    group: "hoa",
+    pkg: "AF08",
+    kind: "boolean",
+    default: false,
+    questions: ["P02"],
+    href: "/weg",
+    permission: SETTINGS,
+    read: { path: "hoa/correction-report-settings", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "hoa/correction-report-settings",
+      permission: "tenant_settings:update",
+      body: fieldBody("enabled"),
+    },
+    field: "enabled",
   },
   ...acquisitionRules,
   {
@@ -692,6 +749,42 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: fieldBody("owner_rental_income_enabled"),
     },
     field: "owner_rental_income_enabled",
+  },
+  {
+    id: "owner-rental-statements-portal",
+    group: "portal",
+    pkg: "AF15",
+    kind: "boolean",
+    default: false,
+    questions: ["AF15-01"],
+    href: "/einstellungen/portalformulare",
+    permission: ["tickets:read"],
+    read: { path: "portal-admin/features", pick: fieldPick("owner_rental_statements_enabled") },
+    write: {
+      method: "PATCH",
+      path: "portal-admin/features",
+      permission: "tenant_settings:update",
+      body: fieldBody("owner_rental_statements_enabled"),
+    },
+    field: "owner_rental_statements_enabled",
+  },
+  {
+    id: "tenant-statement-portal",
+    group: "portal",
+    pkg: "AF16",
+    kind: "boolean",
+    default: false,
+    questions: ["AF16-01"],
+    href: "/einstellungen/portalformulare",
+    permission: ["tickets:read"],
+    read: { path: "portal-admin/features", pick: fieldPick("tenant_statement_enabled") },
+    write: {
+      method: "PATCH",
+      path: "portal-admin/features",
+      permission: "tenant_settings:update",
+      body: fieldBody("tenant_statement_enabled"),
+    },
+    field: "tenant_statement_enabled",
   },
   {
     id: "owner-ticket-scope",
@@ -998,6 +1091,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     questions: ["V16", "AE01-01"],
     href: "/plattform/abnahme",
     permission: ["acceptance:read"],
+  },
+  {
+    id: "invoice-intake-auto",
+    group: "platform",
+    pkg: "AF10",
+    kind: "boolean",
+    default: false,
+    questions: ["AF10-01"],
+    href: "/dokumente/eingang",
+    permission: ["documents:read"],
+    read: { path: "document-invoice-intake-auto", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "document-invoice-intake-auto",
+      permission: "tenant_settings:update",
+      body: fieldBody("enabled"),
+    },
+    field: "enabled",
   },
 ];
 

@@ -19,8 +19,10 @@ FEATURES = (
     "chat_ai_prequalification_enabled",
     "support_login_enabled",
     "owner_rental_income_enabled",
+    "owner_rental_statements_enabled",
     "chat_bot_enabled",
     "privacy_feature_enabled",
+    "tenant_statement_enabled",
 )
 OWNER_TICKET_SCOPES = ("none", "released", "property")
 # AE30 (AA14-02): off keeps the ratings of service providers internal (default), staff shows
@@ -39,8 +41,10 @@ async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
         chat_ai_prequalification_enabled=False,
         support_login_enabled=False,
         owner_rental_income_enabled=False,
+        owner_rental_statements_enabled=False,
         chat_bot_enabled=False,
         privacy_feature_enabled=False,
+        tenant_statement_enabled=False,
         owner_ticket_scope="released",
         provider_rating_display="off",
     )

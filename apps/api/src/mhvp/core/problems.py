@@ -570,6 +570,15 @@ class ErrorCodes:
         "job. Check MHVP_CELERY_BROKER_URL of the api container and that redis and the worker "
         "run.",
     )
+    FINTS_TARGET_BLOCKED = ErrorCode(
+        "MHVP-BANK-0062",
+        422,
+        "FinTS-Adresse verweist auf ein internes Netz",
+        (
+            "The FinTS host resolves to a loopback, private, link local or otherwise non "
+            "public address (GAE-25, AE26). No connection was opened and no PIN was sent."
+        ),
+    )
     FINTS_PIN_BLOCKED = ErrorCode(
         "MHVP-BANK-0016",
         409,
@@ -770,6 +779,16 @@ class ErrorCodes:
         502,
         "Bank hat den EBICS-Auftrag abgelehnt",
         "The EBICS transport reported an error of the bank or the connection.",
+    )
+    AUTO_POSTING_SWITCH_REQUEST_REQUIRED = ErrorCode(
+        "MHVP-BANK-0063",
+        409,
+        "Einschalten der Buchungsautomatik nur über Antrag",
+        (
+            "PUT /banking/automation only switches off. Switching on needs a request "
+            "(POST /banking/automation/switch-requests) approved by a second person while "
+            "release gate G1 is open (AE03, BK2-03)."
+        ),
     )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
@@ -1537,6 +1556,13 @@ class ErrorCodes:
         409,
         "Die Daten haben sich seit der Prüfung geändert",
         "The rebuilt access export no longer matches the reviewed hash; prepare it again (AC07).",
+    )
+    CONTACT_MANDATE_B2B_UNSUPPORTED = ErrorCode(
+        "MHVP-CONT-0033",
+        422,
+        "SEPA-Firmenlastschrift (B2B) wird nicht unterstützt",
+        "B2B direct debit mandates are not supported: no B2B collection run exists, the legal and "
+        "bank agreement is open (GAA-05, AF07-01). Capture the mandate as CORE or not at all.",
     )
     MIG_CUTOFF_MISSING = ErrorCode(
         "MHVP-MIG-0001",

@@ -181,7 +181,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
         ? deposits.map((deposit) => <DepositInterestPanel key={deposit.id} depositId={deposit.id} canUpdate={canUpdate} />)
         : null}
       {contract.kind === "tenancy" ? <AllocationAgreementsPanel contractId={contract.id} propertyId={contract.property_id} canUpdate={canUpdate} /> : null}
-      {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} /> : null}
+      {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} canSettings={permissions.includes("tenant_settings:update")} /> : null}
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel sourceType="contract" sourceId={contract.id} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />
       ) : null}

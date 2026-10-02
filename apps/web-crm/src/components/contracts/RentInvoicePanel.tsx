@@ -28,7 +28,13 @@ export type RentInvoiceOut = {
   hinweis: string;
 };
 
-type Props = { contractId: string; vatOption: string; canUpdate: boolean };
+type Props = { contractId: string; vatOption: string; canUpdate: boolean; canSettings?: boolean };
+
+const MODE_KEYS: Record<string, string> = {
+  draft_numbers: "modeDraftNumbers",
+  regular_numbers: "modeRegularNumbers",
+  reject_when_g1_closed: "modeReject",
+};
 
 function monthBounds(iso: string): { start: string; end: string } {
   const y = Number(iso.slice(0, 4));
@@ -38,7 +44,7 @@ function monthBounds(iso: string): { start: string; end: string } {
   return { start: `${y}-${mm}-01`, end: `${y}-${mm}-${String(last).padStart(2, "0")}` };
 }
 
-export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
+export function RentInvoicePanel({ contractId, vatOption, canUpdate, canSettings = false }: Props) {
   const t = useTranslations("RentInvoices");
   const hasOption = vatOption === "commercial_full_vat" || vatOption === "commercial_reduced_vat";
   const [rows, setRows] = useState<RentInvoiceOut[] | null>(null);
@@ -112,7 +118,12 @@ export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
     <section className={ui.card} data-testid="rent-invoices">
       <h2 className={ui.h2}>{t("title")}</h2>
       <p className={ui.help}>{t("intro")}</p>
-      {canUpdate ? (
+      {!canSettings ? (
+        <p className={ui.help} data-testid="rent-numbering-readonly">
+          {t("numberingReadonly", { mode: t(MODE_KEYS[mode] ?? "modeDraftNumbers") })}
+        </p>
+      ) : null}
+      {canSettings ? (
         <label className={`${ui.label} mt-3`}>
           {t("numberingMode")}
           <select className={ui.input} value={mode} onChange={(e) => void changeMode(e.target.value)} aria-label={t("numberingMode")}>

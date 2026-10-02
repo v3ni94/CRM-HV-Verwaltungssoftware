@@ -621,6 +621,52 @@ async def undo(session: AsyncSession, run: ImportRun, user_id: uuid.UUID | None)
     return run
 
 
+class _PreviewRollback(Exception):  # noqa: N818 - control flow marker, never escapes
+    """Raised inside the savepoint of ``undo_preview`` so that nothing is written."""
+
+
+async def undo_preview(session: AsyncSession, run: ImportRun) -> list[dict[str, Any]]:
+    """Dry run of ``undo`` (10.1 step 5, GAB-05): per open item whether it would be removed or
+    stays, with the reason. The same checks and removals as ``undo`` run in the order of the real
+    undo (later items first, so a removed contract frees its unit) inside a savepoint that is
+    always rolled back; nothing is written, no event is emitted, no state of the run changes."""
+    if run.status is not ImportStatus.APPLIED and run.status is not ImportStatus.PARTIALLY_UNDONE:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Der Import wurde bereits zurückgenommen.")
+    items = (
+        await session.scalars(
+            select(ImportRunItem)
+            .where(ImportRunItem.import_run_id == run.id, ImportRunItem.undone.is_(False))
+            .order_by(ImportRunItem.sequence.desc())
+        )
+    ).all()
+    plan = [(i.sequence, i.entity_type, i.entity_id) for i in items]
+    result: list[dict[str, Any]] = []
+    try:
+        async with session.begin_nested():
+            for sequence, entity_type, entity_id in plan:
+                reason = await _referenced(session, entity_type, entity_id)
+                if reason is None:
+                    try:
+                        async with session.begin_nested():
+                            await _remove(session, entity_type, entity_id)
+                    except ProblemError as exc:
+                        reason = exc.detail or "Entfernen nicht möglich"
+                result.append(
+                    {
+                        "sequence": sequence,
+                        "entity_type": entity_type,
+                        "entity_id": entity_id,
+                        "removable": reason is None,
+                        "kept_reason": reason,
+                    }
+                )
+            raise _PreviewRollback
+    except _PreviewRollback:
+        pass
+    result.sort(key=lambda r: r["sequence"])
+    return result
+
+
 # Apply -------------------------------------------------------------------------------------
 
 

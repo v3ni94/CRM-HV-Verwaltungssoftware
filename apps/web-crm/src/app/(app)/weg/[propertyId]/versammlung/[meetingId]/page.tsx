@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { MeetingClose } from "@/components/hoa/MeetingClose";
 import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
+import { MeetingDisruptions, type DisruptionRow } from "@/components/hoa/MeetingDisruptions";
+import { MeetingInvitationRecipients, type InvitationRecipientRow } from "@/components/hoa/MeetingInvitationRecipients";
 import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
 import { MeetingDetailsForm, type MeetingDetails } from "@/components/hoa/MeetingDetailsForm";
 import { MeetingFormPanel, type AttendanceRow, type MeetingFormData } from "@/components/hoa/MeetingFormPanel";
@@ -32,6 +34,9 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
   // GA03-01: Vorlagen als Auswahlliste (aktive Vorlagen des Mandanten).
   const templatesResponse = await serverFetch("/api/v1/document-templates");
   const templates = templatesResponse.ok ? ((await templatesResponse.json()) as { id: string; name: string }[]) : [];
+  // GAF-15: Empfänger der Einladung (nur Anzeige).
+  const recipientsResponse = await serverFetch(`/api/v1/hoa/meetings/${encodeURIComponent(meetingId)}/invitation-recipients`);
+  const recipients = recipientsResponse.ok ? ((await recipientsResponse.json()) as InvitationRecipientRow[]) : [];
   const attendance = attendanceResponse.ok ? (((await attendanceResponse.json()) as { rows?: AttendanceRow[] }).rows ?? []) : [];
   redirectIfUnauthenticated(response);
   const entity = String(data?.legal_entity_id ?? "");
@@ -63,6 +68,14 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
           meetingId={meetingId}
           deadline={data.resolution_deadline_at ? String(data.resolution_deadline_at) : null}
           source={data.resolution_deadline_source ? String(data.resolution_deadline_source) : null}
+        />
+      ) : null}
+      <MeetingInvitationRecipients rows={recipients} />
+      {data.mode !== "presence" ? (
+        <MeetingDisruptions
+          meetingId={meetingId}
+          rows={((data as { disruptions?: DisruptionRow[] }).disruptions ?? []) as DisruptionRow[]}
+          closed={["closing", "closed"].includes(String(data.status))}
         />
       ) : null}
       <MemberVoting

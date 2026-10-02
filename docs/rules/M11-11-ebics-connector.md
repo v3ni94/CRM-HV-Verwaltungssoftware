@@ -45,3 +45,8 @@
   (`apps/api/tests/ebics_fake.py`) ist kein Produktionsweg.
 - Keine Zahlung: der Einreichungsweg `ebics` bleibt gesperrt (`EbicsSubmitter`,
   `MHVP-BANK-0017`), Freigabetor G2 geschlossen.
+
+## Änderung Welle 17 (AF02)
+
+- Täglicher C53-Abruf als Task `mhvp.banking.ebics_fetch` (8.1, 8.2; Fachliche Umsetzung), nur bei eingeschaltetem Mandantenschalter und Teilnehmer ready; Wiederholung nur bei MHVP-BANK-0056, drei Versuche. Ohne Übertragung MHVP-BANK-0050 im Protokoll. Abnahmefall: tests/integration/test_af02_ebics_fetch.py. Quellenstatus: Übertragung weiter offen (AE23-01).
+- INI-/HIA-Brief als PDF; Hash-Werte ausschließlich aus der Übertragung (AE23-02), sonst Entwurfsvermerk. Änderungsgrund: GAE-23.

@@ -570,6 +570,14 @@ async def record_execution(
     order.executed_amount, order.bank_transaction_id, order.journal_entry_id = paid, tx.id, entry.id
     order.status = OrderStatus.EXECUTED if paid == order.amount else OrderStatus.PARTIALLY_EXECUTED
     await session.flush()
+    await matching.emit_booked(
+        session,
+        tx,
+        entry,
+        actor_user_id=user_id,
+        origin="payment_order",
+        extra={"payment_order_id": str(order.id)},
+    )
     return order
 
 

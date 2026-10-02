@@ -230,6 +230,8 @@ def _setup(
         "entry": entry,
         "debtor": debtor,
         "payee": contact["bank_accounts"][0]["id"],
+        "entity": entity,
+        "property": prop["id"],
     }
 
 
@@ -466,3 +468,238 @@ def test_ae22_reclass_draft_posting_and_reversal(
     _ok(g3.post(f"{C}/{again['id']}/release", json={}, headers=gh))
     discarded = _ok(c.post(f"{C}/{again['id']}/withdraw", json={"reason": "Entwurf"}, headers=h))
     assert (discarded["status"], discarded["reclass_entry_id"]) == ("withdrawn", None)
+
+
+def test_gae05_reversal_cancels_open_payment_order(
+    clients: dict[str, TestClient], world: World, database: Database
+) -> None:
+    """GAE-05: the reversal of the result entry cancels a not yet submitted payout order
+    (status cancelled, nothing executed); an order handed to the bank blocks the reversal."""
+    c, g3, g23 = clients["closed"], clients["g3"], clients["g23"]
+    h = bearer(login(c, world, "ae22admin"))
+    approver = bearer(login(c, world, "ae22approver"))
+    ctx = _setup(c, h, approver, database, world.tenant_a, "223")
+    _ok(c.put(f"{C}/settings", json={"mode": "subledger", "four_eyes_required": True}, headers=h))
+    row = _ok(
+        c.post(
+            C,
+            json={
+                "source_type": "rent_statement",
+                "source_id": ctx["statement"],
+                "contract_id": ctx["contract"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(
+        g3.post(
+            f"{C}/{row['id']}/release", json={}, headers=bearer(login(g3, world, "ae22approver"))
+        )
+    )
+    oh = bearer(login(g23, world, "ae22admin"))
+    order = _ok(
+        g23.post(
+            f"{C}/{row['id']}/payment-order",
+            json={
+                "contact_bank_account_id": ctx["payee"],
+                "property_bank_account_id": ctx["bank"],
+                "execution_date": local_today().isoformat(),
+            },
+            headers=oh,
+        ),
+        201,
+    )
+    reverse = f"{A}/ledgers/{ctx['ledger']}/entries/{ctx['entry']}/reverse"
+    engine = create_engine(database.migrator_url)
+
+    def set_status(status: str) -> None:
+        with engine.begin() as conn:
+            conn.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+            )
+            conn.execute(
+                text(
+                    "UPDATE payment_order SET status = CAST(:s AS payment_order_status) "
+                    "WHERE id = :id"
+                ),
+                {"s": status, "id": order["id"]},
+            )
+
+    try:
+        set_status("submitted")
+        handed = c.post(reverse, json={"reason": "Korrektur"}, headers=h)
+        assert handed.status_code == 409
+        assert "Bank" in handed.json()["detail"]
+        set_status("draft")
+        _ok(c.post(reverse, json={"reason": "Korrektur der Abrechnung"}, headers=h), 201)
+    finally:
+        engine.dispose()
+    listed = _ok(c.get("/api/v1/banking/payment-orders", params={"status": "cancelled"}, headers=h))
+    cancelled = next(o for o in listed if o["id"] == order["id"])
+    assert cancelled.get("executed_amount") in (None, "0.00")
+    assert _ok(c.get(f"{C}/{row['id']}", headers=h))["state"] == "reversed"
+
+
+def test_gae07_delete_reclass_draft_refused(
+    clients: dict[str, TestClient], world: World, database: Database
+) -> None:
+    """GAE-07: the reclass draft of a released payable is not deleted directly (409)."""
+    c, g3 = clients["closed"], clients["g3"]
+    h = bearer(login(c, world, "ae22admin"))
+    approver = bearer(login(c, world, "ae22approver"))
+    ctx = _setup(c, h, approver, database, world.tenant_a, "224")
+    _ok(
+        c.put(
+            f"{C}/settings",
+            json={
+                "mode": "reclass",
+                "four_eyes_required": False,
+                "creditor_account_number": "070900",
+            },
+            headers=h,
+        )
+    )
+    _creditor(c, h, ctx["ledger"])
+    row = _ok(
+        c.post(
+            C,
+            json={
+                "source_type": "rent_statement",
+                "source_id": ctx["statement"],
+                "contract_id": ctx["contract"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    released = _ok(
+        g3.post(f"{C}/{row['id']}/release", json={}, headers=bearer(login(g3, world, "ae22admin")))
+    )
+    url = f"{A}/ledgers/{ctx['ledger']}/entries/{released['reclass_entry_id']}"
+    refused = c.delete(url, headers=h)
+    assert refused.status_code == 409
+    assert "withdraw" in refused.json()["detail"]
+    assert _ok(c.get(url, headers=h))["status"] == "draft"
+    state = _ok(c.get(f"{C}/{row['id']}", headers=h))
+    assert (state["state"], state["reclass_entry_id"]) == (
+        "reclass_draft",
+        released["reclass_entry_id"],
+    )
+    assert c.delete(url, headers=bearer(login(c, world, "ae22reader"))).status_code == 403
+    assert c.delete(url, headers=bearer(login(c, world, "ae22other"))).status_code == 404
+
+
+def _creditor(c: TestClient, h: dict[str, str], ledger: str) -> str:
+    return str(
+        _ok(
+            c.post(
+                f"{A}/ledgers/{ledger}/accounts",
+                json={
+                    "number": "070900",
+                    "name": "Verbindlichkeiten aus Guthaben",
+                    "category": "creditor",
+                    "type": "liability",
+                },
+                headers=h,
+            ),
+            201,
+        )["id"]
+    )
+
+
+def test_gae06_owner_statement_reclass_end_to_end(
+    clients: dict[str, TestClient], world: World, database: Database
+) -> None:
+    """GAE-06: owner statement payout 2.643,00 (income 12.000,00 minus expenses 3.000,00 minus
+    fee 357,00 minus payouts 6.000,00), variant reclass: release writes the draft 2.643,00
+    debit 060900 / credit 070900, posting opens a payable of 2.643,00, the withdrawal (G1)
+    reverses it."""
+    c, g3, g13 = clients["closed"], clients["g3"], clients["g13"]
+    h = bearer(login(c, world, "ae22admin"))
+    approver = bearer(login(c, world, "ae22approver"))
+    ctx = _setup(c, h, approver, database, world.tenant_a, "225")
+    creditor = _creditor(c, h, ctx["ledger"])
+    _ok(
+        c.put(
+            f"{C}/settings",
+            json={
+                "mode": "reclass",
+                "four_eyes_required": False,
+                "creditor_account_number": "070900",
+                "owner_debit_account_number": "060900",
+            },
+            headers=h,
+        )
+    )
+    snapshot = {
+        "results": {
+            "income": {"total": "12000.00"},
+            "expenses": {"total": "3000.00"},
+            "admin_fee": {"gross": "357.00"},
+            "payouts": {"total": "6000.00"},
+            "liquidity": {"free": "0.00"},
+        }
+    }
+    import uuid as _uuid
+
+    sid = str(_uuid.uuid4())
+    engine = create_engine(database.migrator_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        conn.execute(
+            text(
+                "INSERT INTO owner_statement (id, tenant_id, ledger_id, legal_entity_id, "
+                "property_id, kind, period_from, period_to, status, rule_version, snapshot) "
+                "SELECT :id, :t, :l, :e, :p, e.enumlabel::owner_statement_kind, "
+                "'2025-01-01', '2025-12-31', 'issued', 'gae06', CAST(:s AS jsonb) "
+                "FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid "
+                "WHERE t.typname = 'owner_statement_kind' ORDER BY e.enumsortorder LIMIT 1"
+            ),
+            {
+                "id": sid,
+                "t": str(world.tenant_a),
+                "l": ctx["ledger"],
+                "e": ctx["entity"],
+                "p": ctx["property"],
+                "s": json.dumps(snapshot),
+            },
+        )
+    engine.dispose()
+    cands = _ok(c.get(f"{C}/candidates", params={"ledger_id": ctx["ledger"]}, headers=h))
+    assert ("owner_statement", sid, "2643.00") in {
+        (x["source_type"], x["source_id"], x["amount"]) for x in cands
+    }
+    row = _ok(c.post(C, json={"source_type": "owner_statement", "source_id": sid}, headers=h), 201)
+    assert (row["variant"], row["amount"]) == ("reclass", "2643.00")
+    released = _ok(
+        g3.post(f"{C}/{row['id']}/release", json={}, headers=bearer(login(g3, world, "ae22admin")))
+    )
+    draft = _ok(
+        c.get(f"{A}/ledgers/{ctx['ledger']}/entries/{released['reclass_entry_id']}", headers=h)
+    )
+    accounts = {
+        a["number"]: a["id"] for a in _ok(c.get(f"{A}/ledgers/{ctx['ledger']}/accounts", headers=h))
+    }
+    assert {(ln["account_id"], ln["debit"], ln["credit"]) for ln in draft["lines"]} == {
+        (accounts["060900"], "2643.00", "0.00"),
+        (creditor, "0.00", "2643.00"),
+    }
+    _ok(
+        c.post(
+            f"{A}/ledgers/{ctx['ledger']}/entries/{released['reclass_entry_id']}/post", headers=h
+        )
+    )
+    posted = _ok(c.get(f"{C}/{row['id']}", headers=h))
+    assert (posted["state"], posted["remaining"]) == ("open", "2643.00")
+    g1h = bearer(login(g13, world, "ae22approver"))
+    done = _ok(
+        g13.post(f"{C}/{row['id']}/withdraw", json={"reason": "Abrechnung korrigiert"}, headers=g1h)
+    )
+    assert done["status"] == "withdrawn"
+    reversal = _ok(
+        c.get(f"{A}/ledgers/{ctx['ledger']}/entries/{done['reversal_entry_id']}", headers=h)
+    )
+    assert reversal["kind"] == "reversal"

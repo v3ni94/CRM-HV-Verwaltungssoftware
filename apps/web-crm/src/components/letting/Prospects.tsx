@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { ProspectViewings } from "./ProspectViewings";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
@@ -148,6 +149,7 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
                     <input className={ui.input} readOnly value={disclosureUrl[p.id]} />
                   </label>
                 ) : null}
+                <ProspectViewings prospectId={p.id} />
               </td>
             </tr>
           ))}

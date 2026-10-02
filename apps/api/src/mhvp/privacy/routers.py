@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.contacts import consent_rules
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.config import Settings
@@ -94,6 +95,12 @@ class PrivacyConfigSourceOut(BaseModel):
     scope: Literal["tenant", "platform"]
     detail: str
     entry_id: uuid.UUID | None
+    # GAE-34: read only display of the consent legal basis (/consent-legal-basis) of the
+    # purposes this service serves; the register entry's own ``legal_basis`` text stays the
+    # operator's maintenance field.
+    consent_purposes: list[str] = Field(default_factory=list)
+    consent_basis: dict[str, str] = Field(default_factory=dict)
+    legal_basis: str | None = None
 
 
 class PrivacyConfigSyncIn(BaseModel):
@@ -338,19 +345,27 @@ async def list_config_sources(
         detected = await config_sources.detect(
             session, _settings(request), tenant.slug if tenant else ""
         )
-        linked = {e.source_key: e.id for e in await _register_rows(session) if e.source_key}
-        return [
-            PrivacyConfigSourceOut(
-                key=d.key,
-                name=d.name,
-                service=d.service,
-                active=d.active,
-                scope="platform" if d.scope == "platform" else "tenant",
-                detail=d.detail_text,
-                entry_id=linked.get(d.key),
+        rows = {e.source_key: e for e in await _register_rows(session) if e.source_key}
+        policy = await consent_rules.load_policy(session)
+        out: list[PrivacyConfigSourceOut] = []
+        for d in detected:
+            purposes = config_sources.consent_purposes(d.key)
+            entry = rows.get(d.key)
+            out.append(
+                PrivacyConfigSourceOut(
+                    key=d.key,
+                    name=d.name,
+                    service=d.service,
+                    active=d.active,
+                    scope="platform" if d.scope == "platform" else "tenant",
+                    detail=d.detail_text,
+                    entry_id=entry.id if entry else None,
+                    consent_purposes=purposes,
+                    consent_basis={p: policy.basis_for(p) for p in purposes},
+                    legal_basis=entry.legal_basis if entry else None,
+                )
             )
-            for d in detected
-        ]
+        return out
 
 
 @router.post(

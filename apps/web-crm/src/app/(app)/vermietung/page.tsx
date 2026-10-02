@@ -1,3 +1,5 @@
+import { BrokerConfig } from "@/components/letting/BrokerConfig";
+import { OpenImmoImport } from "@/components/letting/OpenImmoImport";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
@@ -70,6 +72,8 @@ export default async function LettingPage() {
         </ul>
         <RentIncreaseCreate contracts={contracts} />
       </section>
+      <OpenImmoImport canApply={permissions.includes("contracts:create")} />
+      <BrokerConfig canManage={permissions.includes("tenant_settings:update")} />
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("vacancies")}</h2>
         {!vac.data ? (

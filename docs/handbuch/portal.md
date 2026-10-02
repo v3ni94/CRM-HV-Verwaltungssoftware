@@ -412,3 +412,19 @@ Der Assistent beantwortet Fragen von Mietern und Eigentümern zu den Unterlagen,
 Fehlt eine Voraussetzung, zeigt der Assistent nur die Treffer und nennt den Grund. Das Protokoll der Fragen (maskiert, mit Ergebnis, Quellen und Grund) steht unter Portalfunktionen, sichtbar mit dem Recht Mandanteneinstellungen.
 
 **Für Mieter und Eigentümer.** Menüpunkt Assistent: Frage eingeben, optional eine Einheit wählen. Eine KI-Antwort ist als solche gekennzeichnet, nennt ihre Quellen und ist Information, keine Auskunft oder Zusage der Verwaltung. Reicht die Grundlage nicht, erscheint ein Hinweis und die Treffer; für verbindliche Fragen bleibt die Meldung an die Verwaltung. Pro Stunde sind höchstens 20 Fragen möglich.
+
+## Support-Ansicht je Portalzugang (CRM)
+
+Im Kontakt, Reiter Freigaben, zeigt die Support-Ansicht lesend, was die Person im Portal sieht (Rollen, Verträge, Meldungen, freigegebene Unterlagen). Sie setzt den Mandantenschalter für die Support-Sicht und eine gültige Einwilligung der Person voraus. Pro Aufruf ist ein Grund Pflicht, jeder Aufruf wird protokolliert; das Protokoll lässt sich anzeigen. Änderungen sind in dieser Ansicht nicht möglich. Recht: Einstellungen ändern (tenant_settings:update).
+
+## Assistent im Portal: Antwort im Hintergrund
+
+Die Antwort der KI entsteht im Hintergrund. Das Portal zeigt den Zustand und fragt ihn ab; dauert die Antwort länger als zwei Minuten, erscheinen stattdessen Treffer aus den eigenen Unterlagen.
+
+## Nebenkostenabrechnung für Mieter (AF16)
+
+Mieter sehen unter "Nebenkostenabrechnung" (`/nebenkosten`) die ausgegebene Betriebs- und Heizkostenabrechnung ihres eigenen Mietvertrags: Kostenanteil, Vorauszahlungen, Ergebnis (Nachzahlung oder Guthaben), die Kostenpositionen mit eigenem Anteil und Erläuterungen zu Umlageschlüssel, Verbrauch, Vorauszahlungen und Saldo. Das Abrechnungsschreiben steht als PDF bereit, sofern es an der Ergebniszeile hinterlegt ist. Die Funktion ist je Mandant unter Fachliche Regeln ("Nebenkostenabrechnung im Mieterportal") einzuschalten, Standard aus; zusätzlich muss die Freigabestufe G3 offen sein, sonst bleibt die Liste leer mit Hinweis. Die Erläuterungen erscheinen nur, wenn die Textbausteine "Mieterportal Abrechnung: Erläuterung ..." freigegeben sind, sonst steht dort ein Platzhalter. Der Abruf wird als Indiz vermerkt und ist keine Zustellung.
+
+## Eigentümerabrechnung, Erläuterung und Wirtschaftsplan (AF15)
+
+Eigentümer sehen unter "Eigentümerabrechnung" (`/eigentuemerabrechnungen`) die ausgegebenen Abrechnungen ihrer Mietverwaltung oder Sondereigentumsverwaltung mit Einnahmen, Ausgaben, Auszahlungen und PDF. Die Anzeige schaltet die Verwaltung unter Portalfunktionen ein (Standard aus); zusätzlich ist die Freigabestufe G3 nötig. Unter "Hausgeldabrechnung" steht je Einheit eine Erläuterung mit Kostenanteil, Vorschüssen (Soll und Ist), Abrechnungsspitze und Rücklage, unter "Wirtschaftsplan" (`/wirtschaftsplaene`) der beschlossene Plan mit Jahresbetrag und monatlichem Vorschuss der eigenen Einheiten; beides erst mit Freigabestufe G4. Die Erklärtexte lassen sich als Textbausteine `portal_owner_explain_*` freigeben. Auf der Seite "Eigentum" erscheint bei leerer Mieterträge-Liste ein Hinweis, die Annahme der Nutzungsbedingungen verlinkt direkt die veröffentlichte Fassung.

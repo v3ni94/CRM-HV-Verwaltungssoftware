@@ -29,6 +29,9 @@ export default async function PaymentOrdersPage() {
   const t = await getTranslations("Payments");
   const { data, error, response } = await serverApi().GET("/api/v1/banking/payment-orders");
   redirectIfUnauthenticated(response);
+  // AF03 (GAF-02): Zahlungsdateien (Sammler) nur lesend; Erzeugen, Download und Einreichung
+  // bleiben bis G2 ohne Oberfläche.
+  const batches = (await serverApi().GET("/api/v1/banking/payment-batches")).data ?? [];
   return (
     <div className="flex flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/bank", label: t("bank") }]} title={t("title")} />
@@ -92,6 +95,42 @@ export default async function PaymentOrdersPage() {
         </table>
 </div>
       )}
+      <section aria-labelledby="pb-title" className="flex flex-col gap-2">
+        <h2 id="pb-title" className="text-base font-semibold">
+          {t("batchesTitle")}
+        </h2>
+        <p className="text-xs text-muted">{t("batchesHint")}</p>
+        {batches.length === 0 ? (
+          <p className="text-sm text-muted">{t("batchesEmpty")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="mhvp-table">
+              <thead>
+                <tr>
+                  <th>{t("batchCreated")}</th>
+                  <th>{t("batchFormat")}</th>
+                  <th className="num">{t("batchCount")}</th>
+                  <th className="num">{t("batchSum")}</th>
+                  <th>{t("status")}</th>
+                  <th>{t("batchReference")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batches.map((b) => (
+                  <tr key={String(b.id)}>
+                    <td>{formatDate(String(b.created_at))}</td>
+                    <td>{String(b.format)}</td>
+                    <td className="num">{String(b.transaction_count)}</td>
+                    <td className="num">{formatEur(String(b.control_sum))}</td>
+                    <td>{String(b.status)}</td>
+                    <td>{b.submission_reference ? String(b.submission_reference) : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -538,4 +538,5 @@ async def store_list(
         category_id=category.id,
         links=[("property", property_row.id, LinkRole.GENERATED)],
         created_by=created_by,
+        event_payload={"list_kind": kind, "property_id": property_row.id},
     )

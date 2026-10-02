@@ -63,8 +63,10 @@ class PortalFeaturesPatch(_In):
     chat_ai_prequalification_enabled: bool | None = None
     support_login_enabled: bool | None = None
     owner_rental_income_enabled: bool | None = None
+    owner_rental_statements_enabled: bool | None = None
     chat_bot_enabled: bool | None = None
     privacy_feature_enabled: bool | None = None
+    tenant_statement_enabled: bool | None = None
     owner_ticket_scope: Literal["none", "released", "property"] | None = None
     provider_rating_display: Literal["off", "staff"] | None = None
 

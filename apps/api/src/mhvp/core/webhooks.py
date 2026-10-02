@@ -68,6 +68,8 @@ EVENT_TYPES: dict[str, str] = {
     "journal_entry.reversed": "Buchung storniert (Buchungs-ID, Stornobuchungs-ID)",
     "bank_transaction.imported": "Bankumsätze importiert (Konto-ID, Importlauf-ID, Anzahl neuer "
     "Umsätze)",
+    "bank_transaction.booked": "Bankumsatz gebucht, manuell, automatisch oder per Zahllauf "
+    "(Umsatz-ID, Buchungs-ID, Herkunft)",
     "invoice.received": "Eingangsrechnung erfasst (Rechnungs-ID)",
     "invoice.approved": "Eingangsrechnung freigegeben (Rechnungs-ID)",
     "invoice.paid": "Eingangsrechnung bezahlt (Rechnungs-ID)",

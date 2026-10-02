@@ -240,6 +240,19 @@ describe("BusinessRulesList", () => {
     });
   });
 
+  it("resets a legal basis to the default through DELETE (AF19)", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ items: [] }));
+    const docs = { ...DOCS, "consent-legal-basis": { items: [{ purpose: "marketing", basis: "legitimate_interest", note: "Bestandskunden und Begründung" }] } };
+    renderIntl(<BusinessRulesList initialDocs={docs} permissions={[...ALL, "contacts:read", "contacts:approve"]} />);
+    const m = within(row("legal-basis-marketing"));
+    await userEvent.click(m.getByRole("button", { name: "Auf Standard zurücksetzen" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("/api/bff/consent-legal-basis/marketing");
+    expect(fetchMock.mock.calls[0]![1]?.method).toBe("DELETE");
+    await waitFor(() => expect(m.getByTestId("current-legal-basis-marketing")).toHaveTextContent(/Einwilligung/));
+  });
+
   it("hides rules without the read permission and blocks the change without the write permission", () => {
     renderIntl(<BusinessRulesList initialDocs={DOCS} permissions={["tenant_settings:read"]} />);
     expect(document.getElementById("period-lock-mode")).toBeNull();

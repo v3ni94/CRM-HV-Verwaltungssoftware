@@ -30,3 +30,12 @@ Konfiguration). Handbuch: `docs/handbuch/datenschutz.md`.
 Keine Rechtsaussage im Code: die Plattform belegt weder Rollen noch Rechtsgrundlagen noch
 Drittlandangaben vor. Die operative Rechtsgrundlage für Einwilligungsprüfungen liegt im Register
 `/consent-legal-basis` (AE34); `legal_basis` im Verzeichnis ist eine Dokumentationsangabe.
+
+## Erkannte Dienste, Stand 02.10.2026 (GAE-34, AF22)
+
+Zusätzliche Detektoren in `config_sources.py`: Schadenstool, Makler-CRM (je Anbieter),
+Webhook-Ziele (je Zielhost, ohne Secret), EBICS und FinTS Bankzugänge. Die Liste
+`GET /privacy/register/config-sources` zeigt je Dienst lesend die Rechtsgrundlage der betroffenen
+Einwilligungszwecke (`consent_purposes`, `consent_basis` aus `/consent-legal-basis`) und den Text
+`legal_basis` des Registereintrags. Das ist eine Anzeige, keine Rechtsfeststellung; der Status als
+Auftragsverarbeiter bleibt Pflegefeld.

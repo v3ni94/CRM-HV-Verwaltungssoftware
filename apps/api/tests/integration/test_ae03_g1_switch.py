@@ -144,6 +144,31 @@ def test_switch_needs_g1(client: TestClient, world: World) -> None:
     assert res.json()["code"] == "MHVP-GATE-0001"
 
 
+def test_put_never_switches_on(client: TestClient, world: World) -> None:
+    """AF01 (GAA-01): PUT only switches off; switching on returns 409 with the request path."""
+    h = bearer(login(client, world, "ae03admin"))
+    res = client.put(B, json={"enabled": True, "reason": "AF01 direkt"}, headers=h)
+    assert res.status_code == 409
+    assert res.json()["code"] == "MHVP-BANK-0063"
+    assert _ok(client.get(f"{B}/switch-requests", headers=h))["enabled"] is False
+    assert client.put(B, json={"enabled": True}, headers=h).status_code == 422
+    r = bearer(login(client, world, "ae03reader"))
+    assert client.put(B, json={"enabled": False, "reason": "AF01"}, headers=r).status_code == 403
+    assert _ok(client.put(B, json={"enabled": False, "reason": "AF01 aus"}, headers=h)) == {
+        "enabled": False
+    }
+
+
+def test_put_on_blocked_even_with_g1_open(database: Database, redis_url: str, world: World) -> None:
+    with TestClient(
+        create_app(_settings(database, redis_url), release_gate_resolver=_OpenG1())
+    ) as c:
+        h = bearer(login(c, world, "ae03admin"))
+        res = c.put(B, json={"enabled": True, "reason": "AF01 direkt"}, headers=h)
+        assert res.status_code == 409
+        assert res.json()["code"] == "MHVP-BANK-0063"
+
+
 def test_switch_four_eyes_with_g1_open(database: Database, redis_url: str, world: World) -> None:
     with TestClient(
         create_app(_settings(database, redis_url), release_gate_resolver=_OpenG1())

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { LexofficeSettings, type LexofficeConfig, type LexofficeKindMapping, type LexofficeLegalEntity, type LexofficeMailbox } from "@/components/settings/LexofficeSettings";
+import { LexofficeRuns } from "@/components/settings/LexofficeRuns";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -50,6 +51,7 @@ export default async function LexofficeSettingsPage() {
         canLinkContacts={permissions.includes("contacts:update")}
         canAccounting={permissions.includes("accounting:create")}
       />
+      <LexofficeRuns canImport={permissions.includes("accounting:create")} />
     </div>
   );
 }

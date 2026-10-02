@@ -30,10 +30,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing.models import Statement, StatementSnapshot
 from mhvp.contacts import recipients
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters
+from mhvp.documents import letters, text_blocks
 from mhvp.documents import services as docs
 from mhvp.documents.models import DocumentSource, LinkRole
 
+NOTICE_CODE = "letter_notice"  # AF12 / GAE-17 text block
+TEXT_NOT_RELEASED = "Text nicht freigegeben"  # same marker as billing.info_sheet
 DRAFT_LABEL = "Entwurf, kein Versand"
 PROPOSAL_LABEL = "Vorschlag, Anpassung erfolgt gesondert"
 MONTHS = Decimal(12)
@@ -171,6 +173,7 @@ def _body(
     proposal_note: str | None,
     cost_lines: list[dict[str, Any]] | None = None,
     open_advance_lines: list[str] | None = None,
+    notice: str | None = None,
 ) -> str:
     lines = [
         html.escape(greeting),
@@ -235,6 +238,9 @@ def _body(
                 "innerhalb des Abrechnungszeitraums geendet hat."
             )
         )
+    # AF12 / GAE-17: operator text block letter_notice, printed only in its approved version,
+    # otherwise the placeholder (the software ships no legal text, AA11-01).
+    lines.append(html.escape(notice if notice else TEXT_NOT_RELEASED))
     lines.append(
         "Dieses Schreiben ist ein Entwurf. Zahlungs- und Erstattungsmodalitäten sowie "
         "Fristen werden mit der Ausgabe der Abrechnung mitgeteilt."
@@ -267,6 +273,7 @@ async def build(
             detail="Kein Mieterergebnis im Snapshot der Abrechnung.",
         )
     out: list[TenantLetter] = []
+    notice = (await text_blocks.approved_texts(session, (NOTICE_CODE,))).get(NOTICE_CODE)
     for row in rows:
         cid = uuid.UUID(str(row["contract_id"]))
         contract = await session.get(Contract, cid)
@@ -295,6 +302,7 @@ async def build(
                     unit=unit,
                     prop=prop,
                     target=target,
+                    notice=notice,
                 )
             )
     return out
@@ -312,6 +320,7 @@ async def _tenant_letter(
     unit: Any,
     prop: Any,
     target: recipients.Recipient,
+    notice: str | None = None,
 ) -> TenantLetter:
     contact, recipient_lines, recipient = await docs.recipient(session, target.contact_id)
     if target.represents is not None:
@@ -369,6 +378,7 @@ async def _tenant_letter(
         proposal_note=proposal_note,
         cost_lines=tenant_lines(snapshot, contract.id),
         open_advance_lines=open_advance_lines(row),
+        notice=notice,
     )
     info = [
         ("Status", DRAFT_LABEL),

@@ -56,6 +56,7 @@ export function BusinessRulesList({
   permissions: string[];
 }) {
   const t = useTranslations("BusinessRules");
+  const tf = useTranslations("AF19");
   const [docs, setDocs] = useState<RuleDocs>(initialDocs);
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const rules = visibleRules(permissions);
@@ -106,6 +107,21 @@ export function BusinessRulesList({
     }
     setDocs((prev) => applyWrite(rule, prev, state.draft));
     patch(rule.id, rule, { busy: false, reason: "", message: t("saved") });
+  }
+
+  async function resetRule(rule: BusinessRule) {
+    if (!rule.reset || !rule.read) return;
+    const doc = docs[rule.read.path];
+    const path = typeof rule.reset.path === "function" ? rule.reset.path(doc) : rule.reset.path;
+    if (!path || !window.confirm(tf("rules.resetConfirm"))) return;
+    patch(rule.id, rule, { busy: true, error: null, message: null });
+    const res = await bff<unknown>(`/api/bff/${path}`, { method: "DELETE" });
+    if (!res.ok) {
+      patch(rule.id, rule, { busy: false, error: res.message });
+      return;
+    }
+    setDocs((prev) => applyWrite(rule, prev, rule.default));
+    patch(rule.id, rule, { busy: false, reason: "", draft: rule.default, confirming: false, message: t("saved") });
   }
 
   function requestSave(rule: BusinessRule) {
@@ -227,6 +243,11 @@ export function BusinessRulesList({
                               onChange={(e) => patch(rule.id, rule, { reason: e.target.value })}
                             />
                           </label>
+                        ) : null}
+                        {rule.reset && permissions.includes(rule.reset.permission) && current !== rule.default ? (
+                          <button type="button" className={ui.secondary} disabled={state.busy} onClick={() => void resetRule(rule)}>
+                            {tf("rules.reset")}
+                          </button>
                         ) : null}
                         {state.confirming ? null : (
                           <button

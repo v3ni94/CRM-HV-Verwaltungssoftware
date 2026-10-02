@@ -64,6 +64,7 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/bank", area: "bank", subArea: null, entityType: null },
   { path: "/bank/zahlungen", area: "bank", subArea: "payments", entityType: null },
   { path: "/bank/lastschriften", area: "bank", subArea: "directDebits", entityType: null },
+  { path: "/bank/verbindungen", area: "bank", subArea: "connections", entityType: null },
   { path: "/rechnungen", area: "invoices", subArea: null, entityType: null },
   { path: "/rechnungen/belegeingang", area: "invoices", subArea: "intake", entityType: null },
   { path: `/rechnungen/${ID}`, area: "invoices", subArea: "detail", entityType: "invoice" },
@@ -98,6 +99,7 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/fristen?kind=contract_end", area: "deadlines", subArea: "contract_end", entityType: null },
   { path: "/dokumente", area: "documents", subArea: null, entityType: null },
   { path: "/dokumente?q=Protokoll", area: "documents", subArea: "search", entityType: null },
+  { path: "/dokumente/eingang", area: "documents", subArea: "intakeProposals", entityType: null },
   { path: "/dokumente/loeschvorschlaege", area: "documents", subArea: "deletionProposals", entityType: null },
   { path: "/dokumente/papierkorb", area: "documents", subArea: "trash", entityType: null },
   { path: `/dokumente/${ID}`, area: "documents", subArea: "detail", entityType: "document" },
@@ -130,6 +132,8 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/plattform/uebersicht", area: "platform", subArea: "overview", entityType: null },
   { path: "/assistent", area: "assistant", subArea: null, entityType: null },
   { path: `/assistent/${ID}`, area: "assistant", subArea: "conversation", entityType: null },
+  { path: "/hilfe", area: "assistant", subArea: "help", entityType: null },
+  { path: "/hilfe/banking", area: "assistant", subArea: "help", entityType: null },
   { path: "/version", area: "other", subArea: null, entityType: null },
 ];
 

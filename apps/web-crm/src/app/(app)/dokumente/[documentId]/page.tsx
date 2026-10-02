@@ -72,6 +72,11 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("mimeType")}</p>
           <p className="mt-1 text-sm">{data.mime_type}</p>
+          {data.text_status === "pending" ? (
+            <p className="mt-1 text-xs text-amber-700" role="status">
+              {t("textPending")}
+            </p>
+          ) : null}
         </div>
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("visibility")}</p>

@@ -118,6 +118,7 @@ async def write_children(
     its release state; every new or changed IBAN starts as pending with ``actor_user_id`` as
     requester and needs a second person's release (M5-01, ``bank_account.pending``)."""
     changed_mandate_references: list[str] = []
+    reject_b2b_mandates(data.bank_accounts or [])
     # fingerprint -> (approval_status, requested_by, decided_by, decided_at) before rewrite
     carried: dict[str, tuple[Any, ...]] = {}
     if data.bank_accounts is not None:
@@ -380,6 +381,26 @@ async def _clear_default(session: AsyncSession, contact_id: uuid.UUID) -> None:
     await session.flush()
 
 
+def reject_b2b_mandates(accounts: list[schemas.BankAccountIn]) -> None:
+    """B2B mandates are refused on capture (GAA-05): the platform has no B2B collection run
+    (other lead time, no refund right) and the legal and bank agreement is open (AF07-01)."""
+    from mhvp.contacts.models import MandateScheme
+
+    for i, account in enumerate(accounts):
+        if account.mandate_scheme is MandateScheme.B2B:
+            raise ProblemError(
+                ErrorCodes.CONTACT_MANDATE_B2B_UNSUPPORTED,
+                errors=[
+                    FieldError(
+                        location=["body", "mandate_scheme"],
+                        field="mandate_scheme",
+                        code="unsupported",
+                        message=f"Bankverbindung {i + 1}: B2B wird nicht unterstützt",
+                    )
+                ],
+            )
+
+
 async def add_bank_account(
     session: AsyncSession,
     contact: Contact,
@@ -392,6 +413,7 @@ async def add_bank_account(
     """New bank account on an existing contact, always ``pending`` for a second person
     (M5-01). With ``replaces`` the row is the new version of that account: the old row keeps
     its IBAN and gets ``valid_to`` on release, never before."""
+    reject_b2b_mandates([data])
     fingerprint = crypto.fingerprint(data.iban)
     duplicate = await session.scalar(
         select(ContactBankAccount.id).where(

@@ -150,6 +150,38 @@ class ProbeResult:
     error_class: str | None
 
 
+def missing_probe_urls(settings: Settings) -> list[str]:
+    """Measuring points without a configured health URL (deploy variables
+    ``MHVP_AVAILABILITY_{API,CRM,PORTAL}_URL``), in the fixed order of ``PROBES``."""
+    urls = settings.availability_probe_urls
+    return [probe for probe in PROBES if probe not in urls]
+
+
+_warned_missing = False
+
+
+def warn_missing_probe_urls(settings: Settings, *, once: bool = True) -> list[str]:
+    """Logs a warning for every measuring point without a URL (GAE-33). Staging and production
+    expect all three; in dev and test a missing URL only gets an info line. With ``once`` the
+    message is written once per process (the beat job runs every minute). Returns the missing
+    measuring points; changes nothing else."""
+    global _warned_missing
+    missing = missing_probe_urls(settings)
+    if not missing or (once and _warned_missing):
+        return missing
+    _warned_missing = True
+    expected = settings.env.value in ("staging", "prod")
+    level = logging.WARNING if expected else logging.INFO
+    names = ", ".join(f"MHVP_AVAILABILITY_{probe.upper()}_URL" for probe in missing)
+    suffix = (
+        " (availability measurement is off for all measuring points)"
+        if len(missing) == len(PROBES)
+        else " (these measuring points are not measured)"
+    )
+    log.log(level, "availability measurement: deploy variable(s) not set: %s%s", names, suffix)
+    return missing
+
+
 async def check_url(
     client: httpx.AsyncClient, probe: str, url: str, timeout_seconds: float
 ) -> ProbeResult:
@@ -191,6 +223,7 @@ async def run_probes_once(
     """Checks every configured measuring point and stores one point per probe and minute
     (idempotent: a repeated run in the same minute keeps the first result). Returns the result
     per probe; without a configured URL nothing happens."""
+    warn_missing_probe_urls(settings)
     urls = settings.availability_probe_urls
     if not urls:
         return {}

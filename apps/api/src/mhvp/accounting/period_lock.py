@@ -151,7 +151,13 @@ async def update_setting(
 async def property_ids_of_lines(
     session: AsyncSession, ledger: Ledger, entry_id: uuid.UUID
 ) -> set[uuid.UUID]:
-    """Properties an entry touches: ledger property plus the property of every line."""
+    """Properties an entry touches: ledger property plus the property of every line.
+
+    GAE-01: the line carries ``property_id`` itself (AE21, unit lines must name it,
+    constraint ``property_with_unit``); the unit join stays as a fallback for older lines.
+    """
+    from sqlalchemy import func
+
     from mhvp.properties.models import Unit
 
     found: set[uuid.UUID] = set()
@@ -159,21 +165,14 @@ async def property_ids_of_lines(
         found.add(ledger.property_id)
     rows = (
         await session.scalars(
-            select(Unit.property_id)
-            .join(JournalLine, JournalLine.unit_id == Unit.id)
+            select(func.coalesce(JournalLine.property_id, Unit.property_id))
+            .select_from(JournalLine)
+            .outerjoin(Unit, JournalLine.unit_id == Unit.id)
             .where(JournalLine.journal_entry_id == entry_id)
             .distinct()
         )
     ).all()
-    found.update(rows)
-    column: Any = getattr(JournalLine, "property_id", None)  # after Q15-01 (AE21)
-    if column is not None:
-        extra = (
-            await session.scalars(
-                select(column).where(JournalLine.journal_entry_id == entry_id, column.is_not(None))
-            )
-        ).all()
-        found.update(extra)
+    found.update(r for r in rows if r is not None)
     return found
 
 

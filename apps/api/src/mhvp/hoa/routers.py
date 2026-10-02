@@ -1,6 +1,7 @@
 """WEG endpoints (/api/v1/hoa, M24): economic plan, resolutions, annual statement with asset
 report. Issuing requires the resolution bound to the snapshot; posting results needs G4."""
 
+import logging
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -30,6 +31,8 @@ from mhvp.hoa.models import (
     Resolution,
 )
 from mhvp.hoa.property_scope import HOA_GUARD
+
+_log = logging.getLogger(__name__)
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
@@ -1177,6 +1180,33 @@ async def put_reconciliation_notes(
         return _st_out(st)
 
 
+async def _file_unit_statements(
+    session: AsyncSession, request: Request, st: HoaStatement, principal: TenantPrincipal
+) -> None:
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.hoa import statement_archive, statement_pdf
+
+    ledger = await _hoa_ledger(session, st.ledger_id)
+    try:
+        blobs = BlobStore(request.app.state.settings)
+    except ProblemError as exc:
+        # Filing is a convenience copy of the deterministic PDF: without object storage the
+        # transition still happens and the PDF is archived on first retrieval.
+        _log.warning("hoa statement %s: filing skipped, %s", st.id, exc.detail)
+        return
+    snapshot, snap_hash = st.snapshot or {}, st.snapshot_hash or ""
+    for unit in snapshot.get("units", []):
+
+        def render(u: dict[str, Any] = unit) -> bytes:
+            return statement_pdf.render(st.year, snapshot, u, snap_hash)
+
+        await statement_archive.archived_pdf(
+            session, blobs, st=st, property_id=ledger.property_id,
+            legal_entity_id=ledger.legal_entity_id, unit=unit,
+            render=render, created_by=principal.user_id,
+        )  # fmt: skip
+
+
 @router.post("/statements/{statement_id}/transition", summary="Statuswechsel (6.9.3, W06)")
 async def transition_statement(
     statement_id: uuid.UUID,
@@ -1195,6 +1225,9 @@ async def transition_statement(
         if body.target is StatementStatus.POSTED:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Buchung über den Buchungsendpunkt.")
         await _move(session, st, body, principal)
+        if body.target in (StatementStatus.ISSUED, StatementStatus.DUE) and st.snapshot:
+            # GAB-06: at provision every individual statement is filed once (G4 checked above).
+            await _file_unit_statements(session, request, st, principal)
         if body.target is StatementStatus.INTERNALLY_APPROVED:
             # Q12 webhook statement.confirmed: a Hausgeldabrechnung counts as confirmed at the
             # internal approval (A-R07-01, docs/ASSUMPTIONS.md); no legal effect, no resolution.
@@ -1207,8 +1240,28 @@ async def transition_statement(
                 actor_user_id=principal.user_id,
                 payload={"kind": "hoa", "status": body.target.value},
             )
+        lock_info: dict[str, Any] = {}
+        if body.target is StatementStatus.LOCKED:
+            # GAE-02 (AE20): closing the WEG statement locks the object period, only with the
+            # tenant switch auto_lock_on_close (default off: proposal only).
+            from mhvp.accounting import period_lock
+            from mhvp.accounting.models import Ledger as _Ledger
+
+            hoa_ledger = await session.get(_Ledger, st.ledger_id)
+            if hoa_ledger is not None and hoa_ledger.property_id is not None:
+                lock_info = await period_lock.lock_for_closed_statement(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    user_id=principal.user_id,
+                    source="hoa_statement",
+                    statement_id=st.id,
+                    ledger_id=st.ledger_id,
+                    property_id=hoa_ledger.property_id,
+                    period_from=date(st.year, 1, 1),
+                    period_to=date(st.year, 12, 31),
+                )
         await session.flush()
-        return _st_out(st)
+        return {**_st_out(st), **lock_info}
 
 
 @router.post("/statements/{statement_id}/post", summary="Abrechnungsergebnis buchen (G4)")
@@ -1531,6 +1584,62 @@ async def diff_hoa_statement(
         } | _snapshot_diff(other.snapshot, st.snapshot)
 
 
+CORRECTION_NOTE = (
+    "Korrekturbericht zur Information: keine Buchung, keine Forderung, kein Versand. Die "
+    "Rechtsfolge einer Korrektur bleibt offen (P02, Gate G4)."
+)
+
+
+class HoaCorrectionReportSettingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+
+
+async def correction_report_enabled(session: AsyncSession) -> bool:
+    """AF08 / GAE-13: tenant switch, default off (no row means off)."""
+    from mhvp.hoa.models import HoaCorrectionReportSetting
+
+    return bool(await session.scalar(select(HoaCorrectionReportSetting.enabled)))
+
+
+@router.get("/correction-report-settings", summary="Korrekturbericht (Schalter)")
+async def get_correction_report_setting(
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:read")),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        return {"enabled": await correction_report_enabled(session), "note": CORRECTION_NOTE}
+
+
+@router.put("/correction-report-settings", summary="Korrekturbericht (Schalter setzen)")
+async def put_correction_report_setting(
+    body: HoaCorrectionReportSettingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> dict[str, Any]:
+    from mhvp.hoa.models import HoaCorrectionReportSetting
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(HoaCorrectionReportSetting).with_for_update())
+        if row is None:
+            row = HoaCorrectionReportSetting(tenant_id=principal.tenant_id, enabled=body.enabled)
+            session.add(row)
+        row.enabled = body.enabled
+        row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa_correction_report_setting.updated",
+            entity_type="hoa_correction_report_setting",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled},
+        )
+        return {"enabled": body.enabled, "note": CORRECTION_NOTE}
+
+
 @router.get(
     "/statements/{statement_id}/correction-report",
     summary="Korrekturbericht je Eigentümer mit Heizkostenüberleitung (P02, D09)",
@@ -1546,6 +1655,11 @@ async def hoa_correction_report(
     from mhvp.hoa import correction
 
     async with tenant_tx(request, principal) as session:
+        if not await correction_report_enabled(session):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Korrekturbericht ist für diesen Mandanten nicht eingeschaltet.",
+            )
         st = await session.get(HoaStatement, statement_id)
         other = await session.get(HoaStatement, against)
         if st is None or other is None:
@@ -1785,7 +1899,8 @@ async def unit_statement_pdf(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
 ) -> Response:
-    from mhvp.hoa import statement_pdf
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.hoa import statement_archive, statement_pdf
 
     await ensure_release_gate_open(
         ReleaseGate.G4, principal.tenant_id, request.app.state.release_gate_resolver
@@ -1799,7 +1914,19 @@ async def unit_statement_pdf(
         unit = next((u for u in st.snapshot.get("units", []) if u["unit_id"] == str(unit_id)), None)
         if unit is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        content = statement_pdf.render(st.year, st.snapshot, unit, st.snapshot_hash or "")
+        snapshot, snap_hash = st.snapshot, st.snapshot_hash or ""
+        ledger = await _hoa_ledger(session, st.ledger_id)
+        # GAB-06: filed once in the DMS, every later output returns the filed bytes.
+        content, _doc = await statement_archive.archived_pdf(
+            session,
+            BlobStore(request.app.state.settings),
+            st=st,
+            property_id=ledger.property_id,
+            legal_entity_id=ledger.legal_entity_id,
+            unit=unit,
+            render=lambda: statement_pdf.render(st.year, snapshot, unit, snap_hash),
+            created_by=principal.user_id,
+        )
         return Response(
             content=content,
             media_type="application/pdf",
@@ -1824,7 +1951,7 @@ async def statement_total_pdf(
     from mhvp.documents import letters as letter_blocks
     from mhvp.documents import services as doc_services
     from mhvp.documents.blobs import BlobStore
-    from mhvp.hoa import statement_pdf
+    from mhvp.hoa import statement_archive, statement_pdf
     from mhvp.properties.models import LegalEntity, Property
     from mhvp.workspace.services import local_today
 
@@ -1838,9 +1965,27 @@ async def statement_total_pdf(
         if st.snapshot is None or st.status in (StatementStatus.DRAFT, StatementStatus.CALCULATED):
             raise ProblemError(ErrorCodes.CONFLICT, detail="Ausgabe nur nach interner Freigabe.")
         ledger = await _hoa_ledger(session, st.ledger_id)
+        blobs = BlobStore(request.app.state.settings)
+        # GAB-06: an already filed total statement is returned unchanged (letter date included).
+        filed = await statement_archive.find_archived(
+            session, st, statement_archive.archive_filename(st, None)
+        )
+        if filed is not None:
+            content, _doc = await statement_archive.archived_pdf(
+                session, blobs, st=st, property_id=ledger.property_id,
+                legal_entity_id=ledger.legal_entity_id, unit=None,
+                render=lambda: b"", created_by=principal.user_id,
+            )  # fmt: skip
+            return Response(
+                content=content,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="gesamtabrechnung-{st.year}.pdf"'
+                },
+            )
         prop = await session.get(Property, ledger.property_id)
         entity = await session.get(LegalEntity, ledger.legal_entity_id)
-        head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
+        head = await doc_services.letterhead(session, blobs)
         property_line = (
             f"{prop.number} {prop.name}, {prop.street or ''} {prop.house_number or ''}, "
             f"{prop.postal_code or ''} {prop.city or ''}".replace("  ", " ").strip(" ,")
@@ -1856,7 +2001,11 @@ async def statement_total_pdf(
             letter_date=local_today(),
             signatory=[s for s in (str(head.company.get("name", "")),) if s],
         )
-        content = letter_blocks.render_pdf(head, letter)
+        content, _doc = await statement_archive.archived_pdf(
+            session, blobs, st=st, property_id=ledger.property_id,
+            legal_entity_id=ledger.legal_entity_id, unit=None,
+            render=lambda: letter_blocks.render_pdf(head, letter), created_by=principal.user_id,
+        )  # fmt: skip
     return Response(
         content=content,
         media_type="application/pdf",

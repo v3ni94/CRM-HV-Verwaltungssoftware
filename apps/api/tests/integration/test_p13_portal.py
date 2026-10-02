@@ -149,6 +149,8 @@ def test_features_default_off_and_permissions(client: TestClient, w: W) -> None:
         "chat_bot_enabled": False,
         "privacy_feature_enabled": False,
         "provider_rating_display": "off",
+        "owner_rental_statements_enabled": False,
+        "tenant_statement_enabled": False,
     }
     assert (
         c.patch(f"{PA}/features", json={"chat_enabled": True}, headers=w.reader).status_code == 403

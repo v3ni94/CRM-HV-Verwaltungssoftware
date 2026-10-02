@@ -94,7 +94,9 @@
       "security": "Security",
       "assistant": "Assistant",
       "handover": "Handover",
-      "ownerStatements": "Annual statement"
+      "ownerStatements": "Annual statement",
+      "ownerPlans": "Budget plan",
+      "ownerRentalStatements": "Owner statement"
     },
     "notifications": {
       "title": "Notifications",
@@ -117,6 +119,7 @@
       "contacts": "Contact persons of the property",
       "hoaAccount": "View HOA fee account",
       "consumption": "View consumption information",
+      "tenantStatements": "View service charge statement",
       "notices": "Read notices",
       "newNotices": "{count, plural, one {One new notice} other {# new notices}} on the notice board.",
       "forms": "Fill in forms of the management"
@@ -181,6 +184,7 @@
     "unitNumber": "Unit {number}",
     "questionField": "Your question",
     "questionRequired": "Please enter a question with at least three characters.",
+    "stillPending": "The answer is taking longer than expected. Please check the history again later.",
     "ask": "Ask question",
     "asking": "Answering",
     "answerTitle": "Answer",
@@ -245,6 +249,34 @@
     "dueDate": "Due on",
     "amount": "Amount",
     "remaining": "Open"
+  },
+  "TenantStatements": {
+    "title": "Service charge statement",
+    "empty": "No issued statement available.",
+    "locked": "Statements are not yet enabled for your account.",
+    "row": "Statement {from} to {to}, unit {unit}",
+    "open": "View statement",
+    "additionalPayment": "Additional payment {amount}",
+    "credit": "Credit {amount}",
+    "balanced": "Balanced",
+    "costs": "Your share of costs",
+    "advances": "Your advance payments",
+    "balance": "Result",
+    "download": "Download statement as PDF",
+    "noPdf": "The statement letter is not yet available in the portal.",
+    "positions": "Cost items",
+    "position": "Item",
+    "key": "Allocation key",
+    "total": "Total costs",
+    "share": "Your share",
+    "explanations": "Explanations",
+    "topic": {
+      "key": "Allocation key",
+      "consumption": "Consumption",
+      "advance": "Advance payments",
+      "balance": "Balance"
+    },
+    "firstOpened": "First retrieved on {date}."
   },
   "ConsumptionInfo": {
     "title": "Consumption information",
@@ -1017,6 +1049,7 @@
     "mustAccept": "Please confirm that you accept the terms of use.",
     "loadFailed": "The status of the terms of use could not be loaded.",
     "alreadyAccepted": "The terms of use have been accepted.",
+    "readTerms": "Read the terms of use (opens in a new tab)",
     "evidence": "As evidence, the time, the version and a pseudonymised identifier of your connection are stored."
   },
   "Security": {
@@ -1120,6 +1153,7 @@
     "unit": "Unit",
     "noValue": "no value on file",
     "incomeTitle": "Rental income per property (agreed rent)",
+    "incomeEmpty": "There is no rental income to show for your units.",
     "takeoverTitle": "Property takeover",
     "takeoverComplete": "all points done",
     "takeoverOpen": "{count} points open",
@@ -1143,7 +1177,45 @@
     "download": "Download PDF",
     "assetTitle": "Asset report of the community",
     "assetEmpty": "No released asset report yet.",
-    "assetRow": "Asset report as of {date}"
+    "assetRow": "Asset report as of {date}",
+    "explainTitle": "Explanation of statement {year}, unit {unit}",
+    "costShare": "Cost share",
+    "advancesResolved": "Advances resolved",
+    "advancesPaid": "Advances paid",
+    "result": "Settlement result",
+    "arrears": "Arrears from advances",
+    "reserveDue": "Reserve contribution resolved",
+    "reservePaid": "Reserve contribution paid",
+    "reserveOpening": "Community reserve opening balance",
+    "reserveClosing": "Community reserve closing balance"
+  },
+  "OwnerPlans": {
+    "title": "Budget plan",
+    "ownersOnly": "This page is only available to owners.",
+    "empty": "There is no resolved budget plan for your units.",
+    "row": "Budget plan {year}, version {version}",
+    "validFrom": "valid from {date}",
+    "unit": "Unit {unit}",
+    "component": "Item",
+    "annual": "Annual amount",
+    "monthly": "Monthly advance",
+    "rounding": "Rounding difference",
+    "hoaFee": "Hoa fee",
+    "reserve": "Maintenance reserve"
+  },
+  "OwnerRentalStatements": {
+    "title": "Owner statement",
+    "ownersOnly": "This page is only available to owners.",
+    "empty": "There is no issued owner statement.",
+    "row": "{kind}, {from} to {to}",
+    "kind": {
+      "rental_owner": "Rental management",
+      "sev_owner": "Special property management"
+    },
+    "income": "Income",
+    "expenses": "Expenses",
+    "payouts": "Payouts",
+    "download": "Download PDF"
   },
   "Branding": {
     "logoAlt": "Logo {name}",

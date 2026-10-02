@@ -3,9 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { InvoiceFactualPanel } from "@/components/invoices/InvoiceFactualPanel";
 import { InvoiceActions } from "@/components/invoices/InvoiceForms";
 import { ReverseChargeGate } from "@/components/invoices/ReverseChargeGate";
+import { InvoiceSecondApproval } from "@/components/invoices/InvoiceSecondApproval";
 import { InvoiceMatchPanel } from "@/components/invoices/InvoiceMatchPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -23,6 +25,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
   });
   redirectIfUnauthenticated(response);
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
+  const me = await getMe();
+  const canApprove = me.data?.permissions.includes("accounting:approve") ?? false;
   const d = data as Record<string, unknown>;
   const findings = (d.findings ?? []) as string[];
   const reviews = (d.reviews ?? []) as Review[];
@@ -79,6 +83,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
           ))}
         </ul>
       </section>
+      <InvoiceSecondApproval invoiceId={invoiceId} canApprove={canApprove} />
       <InvoiceActions
         id={invoiceId}
         reviewStatus={String(d.review_status)}

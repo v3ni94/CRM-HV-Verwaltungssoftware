@@ -692,7 +692,7 @@ def test_answer_question_budget_lock_and_failures(
         client,
         admin,
         "hausordnung.txt",
-        f"Hausordnung Nr. {RUN}: Die Mülltonnen werden dienstags geleert.".encode(),
+        f"Hausordnung Nr. 7-{RUN}: Die Mülltonnen werden dienstags geleert.".encode(),
         "text/plain",
     )
     fake.queue.append(
@@ -702,10 +702,12 @@ def test_answer_question_budget_lock_and_failures(
             "answerable": True,
         }
     )
-    run = _chat(client, admin, "answer_question", f"Wann wird der Müll in {RUN} geleert?", [])
+    # The run id is prefixed with "7-": a hex id starting with two letters and two digits
+    # (bd27d253) is otherwise masked as an IBAN by the conservative PII filter.
+    run = _chat(client, admin, "answer_question", f"Wann wird der Müll in 7-{RUN} geleert?", [])
     assert run["status"] == "succeeded"
     assert run["model"] == "claude-haiku-4-5"  # small tier for questions (9.3)
-    assert f"Hausordnung Nr. {RUN}" in fake.calls[-1]["messages"][0]["content"]
+    assert f"Hausordnung Nr. 7-{RUN}" in fake.calls[-1]["messages"][0]["content"]
     # Small tier schema error, retry, then the cascade to large (M7-08) fails the same way.
     fake.queue += [{"summary": 1}, {"summary": 2}, {"summary": 3}, {"summary": 4}]
     failed = _chat(client, admin, "summarize", "Fasse zusammen", [])

@@ -218,6 +218,40 @@ async def resolution_findings(
     }
 
 
+def budget_booked_before(invoices: Decimal, credit_notes: Decimal, journal_net: Decimal) -> Decimal:
+    """Assigned total on a plan item before this invoice (GAE-21, AE14): invoices on the item,
+    credit notes on the item negative, plus the net (debit minus credit) of posted journal lines
+    on the item's account without invoice reference."""
+    return (invoices - credit_notes + journal_net).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+async def journal_lines_without_invoice(
+    session: AsyncSession, *, ledger_id: uuid.UUID, account_id: uuid.UUID, year: int
+) -> Decimal:
+    """Debit minus credit of posted lines on ``account_id`` in ``ledger_id`` and booking year
+    ``year`` whose entry has no invoice reference; reversals of such entries net out, reversals
+    of invoice postings are left out (the invoice itself is counted via ``Invoice``)."""
+    from sqlalchemy.orm import aliased
+
+    from mhvp.accounting.models import EntryStatus, JournalEntry, JournalLine
+
+    original = aliased(JournalEntry)
+    value = await session.scalar(
+        select(func.coalesce(func.sum(JournalLine.debit - JournalLine.credit), 0))
+        .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
+        .outerjoin(original, original.id == JournalEntry.reverses_id)
+        .where(
+            JournalEntry.ledger_id == ledger_id,
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.invoice_id.is_(None),
+            original.invoice_id.is_(None),
+            JournalLine.account_id == account_id,
+            func.extract("year", JournalEntry.booking_date) == year,
+        )
+    )
+    return Decimal(value or 0).quantize(CENT)
+
+
 async def budget_findings(
     session: AsyncSession,
     invoice: Invoice,
@@ -264,17 +298,26 @@ async def budget_findings(
         )
     )
     own = -invoice.gross if invoice.kind is InvoiceKind.CREDIT_NOTE else invoice.gross
-    total = Decimal(used or 0) - Decimal(credited or 0) + own
+    journal_net = Decimal("0")
+    if item.account_id is not None:
+        journal_net = await journal_lines_without_invoice(
+            session, ledger_id=plan.ledger_id, account_id=item.account_id, year=plan.year
+        )
+    booked_before = budget_booked_before(Decimal(used or 0), Decimal(credited or 0), journal_net)
+    total = booked_before + own
     limit = item.amount + (item.amount * tol.price_percent / 100).quantize(
         CENT, rounding=ROUND_HALF_UP
     )
-    booked_before = (Decimal(used or 0) - Decimal(credited or 0)).quantize(CENT)
     out.budget = {
         "plan_item_id": item.id,
         "label": item.label,
         "year": plan.year,
         "planned": item.amount,
         "booked_before": booked_before,
+        # GAE-21: path of the assigned total, invoices minus credit notes plus journal lines
+        "invoices_before": Decimal(used or 0).quantize(CENT),
+        "credit_notes_before": Decimal(credited or 0).quantize(CENT),
+        "journal_lines_net": journal_net,
         "invoice": own,
         "remaining": (item.amount - booked_before - own).quantize(CENT),
         "tolerance_limit": limit,

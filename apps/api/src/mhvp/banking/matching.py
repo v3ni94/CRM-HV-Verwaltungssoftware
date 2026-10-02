@@ -516,3 +516,29 @@ async def auto_post(
             return None
     _key, entry = await runner.auto_post_transaction(session, tx, ctx)
     return entry if isinstance(entry, JournalEntry) else None
+
+
+async def emit_booked(
+    session: AsyncSession,
+    tx: BankTransaction,
+    entry: JournalEntry,
+    *,
+    actor_user_id: uuid.UUID | None,
+    origin: str,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """``bank_transaction.booked`` for postings outside the manual booking endpoint (GAB-08):
+    automatic runner, payment run execution and review correction. ``origin`` tells them apart;
+    the manual endpoint emits its own richer event."""
+    from mhvp.banking import event_types as ev
+    from mhvp.core.events import emit
+
+    await emit(
+        session,
+        tenant_id=tx.tenant_id,
+        type=ev.BANK_TRANSACTION_BOOKED,
+        entity_type="bank_transaction",
+        entity_id=tx.id,
+        actor_user_id=actor_user_id,
+        payload={"journal_entry_id": str(entry.id), "origin": origin, **(extra or {})},
+    )

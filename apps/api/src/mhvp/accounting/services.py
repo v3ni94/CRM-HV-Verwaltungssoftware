@@ -568,6 +568,7 @@ async def reverse(
                     "Bitte zuerst diese Zahlungen stornieren."
                 ),
             )
+    orders = await _orders_of_entry(session, entry, items)
     lines = await entry_lines(session, entry.id)
     reversal = JournalEntry(
         tenant_id=entry.tenant_id,
@@ -635,8 +636,67 @@ async def reverse(
             )
         )
     entry.reversed_by_id = reversal.id
+    await _cancel_orders(session, orders)
     await session.flush()
     return reversal
+
+
+async def _orders_of_entry(
+    session: AsyncSession, entry: JournalEntry, items: Sequence[OpenItem]
+) -> list[Any]:
+    """GAE-05 (AE22): payment orders still waiting on the items or invoices of ``entry``.
+
+    Orders already handed to the bank cannot be withdrawn here: the reversal is refused
+    (409) until the order is rejected or returned by the bank. Orders not yet handed over
+    are returned and cancelled after the reversal, so nothing is executed on a reversed
+    receivable or payable (0.1.7, no payment without a valid source).
+    """
+    from sqlalchemy import or_
+
+    from mhvp.accounting.models import Invoice
+    from mhvp.banking.models import OrderStatus, PaymentOrder
+
+    item_ids = [i.id for i in items]
+    invoice_ids = select(Invoice.id).where(Invoice.journal_entry_id == entry.id)
+    conds = [PaymentOrder.invoice_id.in_(invoice_ids)]
+    if item_ids:
+        conds.append(PaymentOrder.open_item_id.in_(item_ids))
+    orders = (
+        await session.scalars(
+            select(PaymentOrder)
+            .where(
+                or_(*conds),
+                PaymentOrder.status.in_(
+                    [
+                        OrderStatus.DRAFT,
+                        OrderStatus.APPROVED,
+                        OrderStatus.EXPORTED,
+                        OrderStatus.SUBMITTED,
+                        OrderStatus.ACCEPTED_BY_BANK,
+                    ]
+                ),
+            )
+            .with_for_update()
+        )
+    ).all()
+    if any(o.status not in (OrderStatus.DRAFT, OrderStatus.APPROVED) for o in orders):
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail=(
+                "Zu der Buchung liegt ein an die Bank übergebener Zahlungsauftrag vor. "
+                "Storno erst nach Ablehnung oder Rückgabe durch die Bank."
+            ),
+        )
+    return list(orders)
+
+
+async def _cancel_orders(session: AsyncSession, orders: list[Any]) -> None:
+    from mhvp.banking import payments
+    from mhvp.banking.models import OrderStatus
+
+    for order in orders:
+        order.status = OrderStatus.CANCELLED
+        await payments.invalidate(session, order)
 
 
 async def unreviewed_auto_accounts(session: AsyncSession, ledger: Ledger) -> set[uuid.UUID]:

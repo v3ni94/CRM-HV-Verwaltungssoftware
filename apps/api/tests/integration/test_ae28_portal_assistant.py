@@ -200,7 +200,8 @@ def _switch(c: TestClient, w: W, **flags: bool) -> None:
 def _ask(
     c: TestClient, h: dict[str, str], question: str, status: int = 201, **extra: Any
 ) -> dict[str, Any]:
-    out = c.post(f"{A}/questions", json={"question": question, **extra}, headers=h)
+    path = "questions" if status == 201 else "questions/async"
+    out = c.post(f"{A}/{path}", json={"question": question, **extra}, headers=h)
     assert out.status_code == status, out.text
     return out.json()  # type: ignore[no-any-return]
 
@@ -664,6 +665,114 @@ def test_hourly_limit_protects_the_budget(
     # The limit is per account.
     assert _ask(c, w.owner2, "Hausgeld Frage vier")["status"] in ("search_hits", "no_sources")
     assert fake.calls == []
+
+
+def _queue_capture(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Any, Any]]:
+    from mhvp.portal import assistant_job
+
+    queued: list[tuple[Any, Any]] = []
+    monkeypatch.setattr(assistant_job, "enqueue", lambda t, i: queued.append((t, i)))
+    return queued
+
+
+def test_async_answer_runs_in_the_worker_once_and_is_polled(
+    client: TestClient,
+    w: W,
+    fake: FakeProvider,
+    database: Database,
+    redis_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mhvp.portal import assistant_job
+
+    c = client
+    queued = _queue_capture(monkeypatch)
+    _switch(c, w, chat_bot_enabled=True, privacy_feature_enabled=True)
+    _release_provider(c, w)
+    version = int(_ok(c.get(f"{A}/status", headers=w.owner1))["privacy"]["version"])
+    _ok(c.post(f"{A}/privacy-ack", json={"text_version": version}, headers=w.owner1))
+    calls = len(fake.calls)
+    fake.queue.append(
+        _answer(
+            "Das Hausgeld beträgt 250 EUR im Monat.",
+            [{"document_id": w.d1, "excerpt": "Das Hausgeld der Einheit Eins beträgt 250 EUR"}],
+        )
+    )
+    out = _ask(c, w.owner1, "Wie hoch ist das Hausgeld asyncjob?", status=202)
+    assert out["status"] == "pending"
+    assert out["answer"] is None
+    assert len(queued) == 1  # queued, no provider call inside the request
+    assert len(fake.calls) == calls
+    poll = _ok(c.get(f"{A}/questions/{out['id']}", headers=w.owner1))
+    assert poll["status"] == "pending"
+    # Another account and the other tenant do not see the question.
+    assert c.get(f"{A}/questions/{out['id']}", headers=w.owner2).status_code == 404
+    tenant_id, log_id = queued[0]
+    settings = _settings(database, redis_url)
+    assert asyncio.run(assistant_job.run_job(settings, tenant_id, log_id)) == "answered"
+    assert len(fake.calls) == calls + 1
+    # Redelivery of the same job: claimed already, no second provider call.
+    assert asyncio.run(assistant_job.run_job(settings, tenant_id, log_id)) == "skipped"
+    assert len(fake.calls) == calls + 1
+    done = _ok(c.get(f"{A}/questions/{out['id']}", headers=w.owner1))
+    assert done["status"] == "answered"
+    assert done["answer"] == "Das Hausgeld beträgt 250 EUR im Monat."
+    assert [s["document_id"] for s in done["sources"]] == [w.d1]
+
+
+def test_async_timeout_closes_pending_and_discards_late_result(
+    client: TestClient,
+    w: W,
+    fake: FakeProvider,
+    database: Database,
+    redis_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import timedelta
+
+    from mhvp.portal import assistant_job
+
+    c = client
+    queued = _queue_capture(monkeypatch)
+    out = _ask(c, w.owner1, "Wie hoch ist das Hausgeld asynctimeout?", status=202)
+    assert out["status"] == "pending"
+    monkeypatch.setattr(assistant_job, "JOB_TIMEOUT", timedelta(seconds=-1))
+    timed_out = _ok(c.get(f"{A}/questions/{out['id']}", headers=w.owner1))
+    assert timed_out["status"] == "timeout"
+    assert timed_out["answer"] == assistant_job.TIMEOUT_MESSAGE
+    assert timed_out["sources"] == []
+    # A late job result does not overwrite the timeout.
+    calls = len(fake.calls)
+    fake.queue.append(_answer("zu spät", [{"document_id": w.d1, "excerpt": "Hausgeld"}]))
+    tenant_id, log_id = queued[0]
+    asyncio.run(assistant_job.run_job(_settings(database, redis_url), tenant_id, log_id))
+    again = _ok(c.get(f"{A}/questions/{out['id']}", headers=w.owner1))
+    assert again["status"] == "timeout"
+    assert again["answer"] != "zu spät"
+    assert len(fake.calls) <= calls + 1
+
+
+def test_async_keeps_the_permission_filter_and_gates(
+    client: TestClient, w: W, fake: FakeProvider, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    c = client
+    queued = _queue_capture(monkeypatch)
+    calls = len(fake.calls)
+    # Foreign unit: 404 before anything is queued.
+    foreign = c.post(
+        f"{A}/questions/async",
+        json={"question": "Hausgeld?? foreign", "unit_id": w.unit2},
+        headers=w.owner1,
+    )
+    assert foreign.status_code == 404
+    # No grant: empty scope answers at once, no job, no provider call.
+    none = _ask(c, w.outsider, "Hausgeld Frage asyncnone", status=202)
+    assert none["status"] == "no_sources"
+    assert (
+        c.post(f"{A}/questions/async", json={"question": "x"}, headers=w.owner1).status_code == 422
+    )
+    assert queued == []
+    assert len(fake.calls) == calls
 
 
 def test_switching_off_locks_again_and_keeps_the_log(client: TestClient, w: W) -> None:

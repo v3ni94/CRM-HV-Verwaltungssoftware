@@ -48,6 +48,21 @@ export function RuleCheckpointsManage() {
     setNote("");
     await load();
   }
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [by, setBy] = useState("");
+  const [on, setOn] = useState("");
+  async function confirm(id: string) {
+    setError(null);
+    const res = await bff(`/api/bff/accounting/rule-versions/${id}/confirm`, {
+      method: "POST",
+      body: JSON.stringify({ confirmed_by: by.trim(), confirmed_on: on }),
+    });
+    if (!res.ok) return setError(res.message);
+    setConfirming(null);
+    setBy("");
+    setOn("");
+    await load();
+  }
   async function withdraw(id: string) {
     const res = await bff(`/api/bff/accounting/rule-versions/${id}/withdraw`, { method: "POST" });
     if (!res.ok) return setError(res.message);
@@ -105,10 +120,24 @@ export function RuleCheckpointsManage() {
                   <td>{r.source_status}</td>
                   <td>{t(`states.${r.state}`)}</td>
                   <td>
-                    {r.state === "withdrawn" || r.state === "done" ? null : (
-                      <button type="button" className={ui.secondary} onClick={() => void withdraw(r.id)}>
-                        {t("withdraw")}
-                      </button>
+                    {r.state === "withdrawn" || r.state === "done" ? null : confirming === r.id ? (
+                      <div className="flex flex-wrap items-end gap-2">
+                        <input className={ui.input} aria-label={t("confirmedBy")} placeholder={t("confirmedBy")} value={by} onChange={(e) => setBy(e.target.value)} />
+                        <input className={ui.input} type="date" aria-label={t("confirmedOn")} value={on} onChange={(e) => setOn(e.target.value)} />
+                        <button type="button" className={ui.primary} disabled={by.trim().length < 3 || !on} onClick={() => void confirm(r.id)}>
+                          {t("confirm")}
+                        </button>
+                        <span className={ui.help}>{t("confirmHint")}</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className={ui.secondary} onClick={() => setConfirming(r.id)}>
+                          {t("confirm")}
+                        </button>
+                        <button type="button" className={ui.secondary} onClick={() => void withdraw(r.id)}>
+                          {t("withdraw")}
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

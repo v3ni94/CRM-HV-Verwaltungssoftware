@@ -35,7 +35,10 @@ def upgrade() -> None:
         sa.Column("supersedes_id", sa.Uuid(), nullable=True),
         sa.Column("body", sa.Text(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.CheckConstraint("version >= 1", name=op.f("ck_journal_entry_note_version_positive")),

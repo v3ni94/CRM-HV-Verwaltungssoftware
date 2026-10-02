@@ -230,6 +230,11 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     owner_ticket_scope: Mapped[str] = mapped_column(
         String(16), nullable=False, default="released", server_default="released"
     )
+    # AF15 (GAC-01, migration 0409): owner statements rental/SEV in the portal, off by default;
+    # the output additionally needs release gate G3.
+    owner_rental_statements_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # AE30 (AA14-02, migration 0386): display of the ratings of service providers (rating of a
     # completed work order). off (default): ratings stay internal at the work order; staff:
     # aggregated stars per provider for the management in the portal administration, never
@@ -244,6 +249,11 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False, server_default="false"
     )
     privacy_feature_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AF16 (GAC-02, migration 0410): released operating cost statements of the own tenancy
+    # contracts in the tenant portal; off by default, additionally behind release gate G3.
+    tenant_statement_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
 
@@ -350,13 +360,16 @@ class PortalChatLog(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_portal_chat_log_account", "tenant_id", "account_id", "created_at"),
         CheckConstraint("mode IN ('ai', 'search')", name="mode"),
         CheckConstraint(
-            "status IN ('answered', 'not_answerable', 'failed', 'search_hits', 'no_sources')",
+            "status IN ('answered', 'not_answerable', 'failed', 'search_hits', 'no_sources', "
+            "'pending', 'timeout')",
             name="status",
         ),
     )
 
     account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
     unit_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # GAE-29: claim marker of the worker job (set once, atomically; prevents a second provider call)
+    job_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str | None] = mapped_column(Text)

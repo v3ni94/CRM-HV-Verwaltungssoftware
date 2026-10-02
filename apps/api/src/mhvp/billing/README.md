@@ -152,3 +152,7 @@ Rule: `docs/rules/S69-01-statement-status-model.md`.
 ## Open advances at statement issue (AE15, D24, AC10-01)
 
 Tenant switch `statement_advance_rule.open_advance_mode` (migration 0371): `info_only` (default, unchanged behaviour), `offset_reversal` (variant 1: balance against paid, open advance items offset by a draft entry with settlement plan, created with the result drafts behind G3), `balance_against_due` (variant 2: balance against due, open items stay). `services.open_advance_treatment` is pure NUMERIC arithmetic; the snapshot carries the variant, `net_claim`, `offset_items` and `calculation_steps`, the letter discloses the calculation (`letters.open_advance_lines`). Rule: docs/rules/AC10-d24.md.
+
+## CRM masks for existing endpoints (AF14, GAE-19/20, GAF-12/13)
+
+No new endpoints and no schema change (migration 0408 is a noop). CRM: check points can be confirmed (`POST /accounting/rule-versions/{id}/confirm`, name and date required, no rule change), `/einstellungen/abrechnung` maintains `heating-rule-tables` (no prefilled values, source required, status default `zu_pruefen`) and the cost account to BetrKV type mapping (`/billing/operating-cost-types/accounts`), the statement workbench records Belegeinsicht (`/statements/{id}/inspections`) and creates result entry drafts (`/result-entries`, status due, gate G3 enforced by the API). The deviation report of the heating comparison is shown as a table (CSV stays available). Test: `tests/integration/test_af14_deadline_snapshot.py` (`/deadlines` and `watch_tenant` with a real snapshot).

@@ -144,9 +144,7 @@ async def complete_upload(
             links=[(x.entity_type, x.entity_id, x.role) for x in body.links],
             created_by=principal.user_id,
             settings=request.app.state.settings,
-        )
-        await routers._event(
-            session, principal, "document.created", document.id, size=document.size, direct=True
+            event_payload={"direct": True},
         )
         out = await routers._out(session, document)
     blobs.delete(key)
@@ -593,6 +591,51 @@ async def put_direct_upload(
             enabled=body.enabled,
         )
         return s.DocumentDirectUploadOut(enabled=body.enabled)
+
+
+# Invoice intake after filing (GAB-11, 11.4) ------------------------------------------------
+
+
+@router.get(
+    "/document-invoice-intake-auto",
+    summary="Belegerfassung nach Ablage einer Rechnung (Mandantenschalter)",
+)
+async def get_invoice_intake_auto(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> s.DocumentInvoiceIntakeAutoOut:
+    from mhvp.documents import intake_followup
+
+    async with tenant_tx(request, principal) as session:
+        return s.DocumentInvoiceIntakeAutoOut(
+            enabled=await intake_followup.invoice_intake_auto(session)
+        )
+
+
+@router.put(
+    "/document-invoice-intake-auto",
+    summary="Belegerfassung nach Ablage einer Rechnung ein- oder ausschalten",
+)
+async def put_invoice_intake_auto(
+    body: s.DocumentInvoiceIntakeAutoIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.DocumentInvoiceIntakeAutoOut:
+    """Default off. On: filing a document recognised as invoice starts the receipt extraction
+    (``extract_invoice``) as a proposal; nothing is approved, booked or paid. Off: the follow-up
+    stays a hint with the action "Beleg erfassen"."""
+    from mhvp.documents import intake_followup
+
+    async with tenant_tx(request, principal) as session:
+        row = await _tenant_settings(session)
+        row.sources = {**(row.sources or {}), intake_followup.INVOICE_AUTO_KEY: body.enabled}
+        await _r()._event(
+            session,
+            principal,
+            "document.invoice_intake_auto_set",
+            principal.tenant_id,
+            enabled=body.enabled,
+        )
+        return s.DocumentInvoiceIntakeAutoOut(enabled=body.enabled)
 
 
 # Drive Changes API (M6-05) -----------------------------------------------------------------

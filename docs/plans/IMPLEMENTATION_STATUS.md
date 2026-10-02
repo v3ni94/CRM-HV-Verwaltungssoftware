@@ -61,3 +61,110 @@ Statuslogik: "umgesetzt" bedeutet, dass die Ergebnisdatei des Pakets alle Befund
 - Unverändert geblieben: die Erkennung von GoCardless-Verbindungen im Datenschutzregister über `bank_connection` (AE32) und die Vorkommen aus dem Stand vor Welle 16. In `docs/OPEN_QUESTIONS.md` gibt es keine Zeilen zu AE24.
 - Punkt 23: M11-02 GoCardless bleibt offen. EBICS (AE23, Gerüst) und die FinTS-Hinweise (AE26) sind unabhängig davon umgesetzt.
 - Geprüft nach dem Rückbau: ruff, mypy (banking, privacy), Import von main, worker und models, Unit-Teilmenge (108 bestanden) und Vitest der BFF-Allowlist (209 bestanden). Nicht ausgeführt: volle pytest-Suite, Integrationstests, `make e2e`, `make openapi`.
+
+
+## Welle 17 (Stand 1.62.0, 02.10.2026)
+
+Befunde der Lückenanalyse GAA bis GAF, Pakete AF01 bis AF24 und Prüfung AF25. Quellen: Ergebnisdateien der Pakete (Feld findings), Regeln unter `docs/rules/`, Versionsverlauf 1.62.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.
+
+- Migrationen 0395 bis 0418: 24 Nummern, davon 5 real (0398 Periodensperre Quelle hoa_statement, 0402 Stimm-Eindeutigkeit, 0409 Eigentümerabrechnung Portal, 0410 Mieterabrechnung Portal, 0411 Portal-Assistent asynchron) und 19 Platzhalter ohne Schemaänderung (0395, 0396, 0397, 0399, 0400, 0401, 0403, 0404, 0405, 0406, 0407, 0408, 0412, 0413, 0414, 0415, 0416, 0417, 0418). Die Kette endet bei 0418.
+- Neue offene Entscheidungen (9): AF01-01, AF02-01, AF06-01, AF06-02, AF07-01, AF08-01, AF10-01, AF15-01, AF16-01.
+- Zählung: 95 Befunde in 25 Paketen, davon 74 done, 18 partial, 3 not_done. 20 Befunde der Analyse (insgesamt 110) sind keinem Paket der Welle 17 zugeordnet. Die Zeilen AF25 sind Prüfbefunde (done = behoben, not_done = dokumentiert, Entscheidung beim Betreiber) und zählen mit.
+
+| Befund-ID | Paket | Status | Regel oder Report | Hinweis |
+| --- | --- | --- | --- | --- |
+| AF25-01 | AF25 | not_done | [REVIEW-W17-2026-10-02](../reviews/REVIEW-W17-2026-10-02.md) | niedrig: Ausgangsautomatik ohne Vier-Augen-Antrag (AF01-01, G1) (apps/api/src/mhvp/banking/routers.py) |
+| AF25-02 | AF25 | not_done | [REVIEW-W17-2026-10-02](../reviews/REVIEW-W17-2026-10-02.md) | niedrig: Eigentuemerabrechnung mit Rechtstraeger = Gemeinschaft fuer alle Eigentuemer sichtbar, Entscheidung offen (apps/api/src/mhvp/portal/owner_reports.py) |
+| AF25-03 | AF25 | not_done | [REVIEW-W17-2026-10-02](../reviews/REVIEW-W17-2026-10-02.md) | hinweis: Keine Pfadinjektion, nur Betreiberumgebung (apps/api/src/mhvp/documents/pdf_fonts.py) |
+| AF25-1 | AF25 | done | [REVIEW-W17-2026-10-02](../reviews/REVIEW-W17-2026-10-02.md) | mittel: Downgrade DELETE unter FORCE RLS wirkungslos, CheckViolation; jetzt NO FORCE/FORCE und UPDATE auf failed statt Loeschen (apps/api/alembic/versions/0411_af17_portal_assistant_async.py) |
+| AF25-2 | AF25 | done | [REVIEW-W17-2026-10-02](../reviews/REVIEW-W17-2026-10-02.md) | niedrig: Objektnummer 1601 verletzt Schema, Test rot (apps/api/tests/integration/test_af16_portal_tenant_statement.py) |
+| GAA-01 | AF01 | done | Ergebnisdatei AF01 |  |
+| GAA-02 | AF08 | done | [P08-pruefung-einsicht](../rules/P08-pruefung-einsicht.md), [AE31-online-stimmen-vollmacht](../rules/AE31-online-stimmen-vollmacht.md), [P02-korrekturbericht](../rules/P02-korrekturbericht.md) |  |
+| GAA-03 | AF06 | done | Ergebnisdatei AF06 |  |
+| GAA-05 | AF07 | partial | [PU02-sachliche-pruefung](../rules/PU02-sachliche-pruefung.md), [M3-02-sepa-mandate](../rules/M3-02-sepa-mandate.md) | Lauf schließt B2B nur als Kandidat mit Sperrgrund aus (kein eigener 409-Code); contracts /sepa-mandates check_b2b (fremde Domain) unverändert |
+| GAA-06 | AF06 | done | Ergebnisdatei AF06 |  |
+| GAA-07 | AF22 | done | [GAC-04](../rules/GAC-04.md) |  |
+| GAB-02 | AF02 | done | [M11-11-ebics-connector](../rules/M11-11-ebics-connector.md), [M11-07-fints-pin-tan](../rules/M11-07-fints-pin-tan.md) |  |
+| GAB-03 | AF02 | done | [M11-11-ebics-connector](../rules/M11-11-ebics-connector.md), [M11-07-fints-pin-tan](../rules/M11-07-fints-pin-tan.md) |  |
+| GAB-04 | AF10 | done | [AF10-01](../rules/AF10-01.md) |  |
+| GAB-05 | AF21 | done | [AF21-01](../rules/AF21-01.md) |  |
+| GAB-06 | AF11 | done | Ergebnisdatei AF11 |  |
+| GAB-07 | AF10 | done | [AF10-01](../rules/AF10-01.md) |  |
+| GAB-08 | AF01 | done | Ergebnisdatei AF01 |  |
+| GAB-11 | AF10 | done | [AF10-01](../rules/AF10-01.md) |  |
+| GAB-13 | AF23 | done | Ergebnisdatei AF23 |  |
+| GAB-14 | AF21 | done | [AF21-01](../rules/AF21-01.md) |  |
+| GAB-16 | AF21 | done | [AF21-01](../rules/AF21-01.md) |  |
+| GAC-01 | AF15 | done | [AF15-01](../rules/AF15-01.md) |  |
+| GAC-02 | AF16 | partial | [AF16-01](../rules/AF16-01.md) | Integrationstest geschrieben, aber nicht ausgeführt (Migrationskette lückenhaft, 0399 fehlte) Nach FIX-AF16 lief der Integrationstest (1 bestanden), Status bleibt wie in der Ergebnisdatei. |
+| GAC-03 | AF15 | done | [AF15-01](../rules/AF15-01.md) |  |
+| GAC-04 | AF22 | done | [GAC-04](../rules/GAC-04.md) |  |
+| GAC-06 | AF01 | done | Ergebnisdatei AF01 |  |
+| GAC-08 | AF21 | done | [AF21-01](../rules/AF21-01.md) |  |
+| GAD-02 | AF22 | done | [GAC-04](../rules/GAC-04.md) |  |
+| GAE-01 | AF04 | done | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) |  |
+| GAE-02 | AF04 | partial | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) | Banking-Verifier (Zahlungsabgleich) nicht um Objektsperre erweitert (Domäne banking, nicht im Paket); admin_fee-Vorabprüfung ohne eigenen Integrationstest |
+| GAE-03 | AF04 | done | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) |  |
+| GAE-04 | AF05 | done | Ergebnisdatei AF05 |  |
+| GAE-05 | AF04 | done | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) |  |
+| GAE-06 | AF04 | partial | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) | Kautionsabrechnung reclass nicht als Gesamtablauf getestet (freigegebene DepositSettlement-Fixture aufwendig), nur Eigentümerabrechnung |
+| GAE-07 | AF04 | done | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) |  |
+| GAE-08 | AF04 | done | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) |  |
+| GAE-09 | AF06 | done | Ergebnisdatei AF06 |  |
+| GAE-10 | AF04 | done | [P06-02-periodensperre-objekt](../rules/P06-02-periodensperre-objekt.md), [AE22-credit-payables](../rules/AE22-credit-payables.md) |  |
+| GAE-11 | AF08 | partial | [P08-pruefung-einsicht](../rules/P08-pruefung-einsicht.md), [AE31-online-stimmen-vollmacht](../rules/AE31-online-stimmen-vollmacht.md), [P02-korrekturbericht](../rules/P02-korrekturbericht.md) | Jahresabrechnung mit gebundener Zahlung (contributions_paid_by_reserve im Snapshot) nicht Ende zu Ende getestet, braucht Bank- und Buchungsaufbau |
+| GAE-12 | AF08 | partial | [P08-pruefung-einsicht](../rules/P08-pruefung-einsicht.md), [AE31-online-stimmen-vollmacht](../rules/AE31-online-stimmen-vollmacht.md), [P02-korrekturbericht](../rules/P02-korrekturbericht.md) | Planuebernahme nicht an den Hook calc.allocation_owner angebunden (Zuordnung des Abrechnungsergebnisses W07/P01 offen) |
+| GAE-13 | AF08 | done | [P08-pruefung-einsicht](../rules/P08-pruefung-einsicht.md), [AE31-online-stimmen-vollmacht](../rules/AE31-online-stimmen-vollmacht.md), [P02-korrekturbericht](../rules/P02-korrekturbericht.md) |  |
+| GAE-14 | AF08 | done | [P08-pruefung-einsicht](../rules/P08-pruefung-einsicht.md), [AE31-online-stimmen-vollmacht](../rules/AE31-online-stimmen-vollmacht.md), [P02-korrekturbericht](../rules/P02-korrekturbericht.md) |  |
+| GAE-15 | AF15 | done | [AF15-01](../rules/AF15-01.md) |  |
+| GAE-16 | AF12 | done | [AE16-01](../rules/AE16-01.md) |  |
+| GAE-17 | AF12 | done | [AE16-01](../rules/AE16-01.md) |  |
+| GAE-18 | AF12 | done | [AE16-01](../rules/AE16-01.md) |  |
+| GAE-19 | AF14 | done | Ergebnisdatei AF14 |  |
+| GAE-20 | AF14 | partial | Ergebnisdatei AF14 | Integrationstest test_af14_deadline_snapshot.py geschrieben und mit ruff geprüft, wegen unvollständiger Migrationskette und Fremdfehler im Arbeitsbaum (doppelter Fehlercode MHVP-BANK-0057, alembic upgrade lief unter Last nicht durch) nicht ausgeführt |
+| GAE-21 | AF07 | done | [PU02-sachliche-pruefung](../rules/PU02-sachliche-pruefung.md), [M3-02-sepa-mandate](../rules/M3-02-sepa-mandate.md) |  |
+| GAE-22 | AF07 | partial | [PU02-sachliche-pruefung](../rules/PU02-sachliche-pruefung.md), [M3-02-sepa-mandate](../rules/M3-02-sepa-mandate.md) | Integrationstest nicht ausgeführt (Migrationskette unvollständig) |
+| GAE-23 | AF02 | done | [M11-11-ebics-connector](../rules/M11-11-ebics-connector.md), [M11-07-fints-pin-tan](../rules/M11-07-fints-pin-tan.md) |  |
+| GAE-25 | AF02 | done | [M11-11-ebics-connector](../rules/M11-11-ebics-connector.md), [M11-07-fints-pin-tan](../rules/M11-07-fints-pin-tan.md) |  |
+| GAE-26 | AF19 | done | Ergebnisdatei AF19 |  |
+| GAE-27 | AF19 | done | Ergebnisdatei AF19 |  |
+| GAE-28 | AF15 | done | [AF15-01](../rules/AF15-01.md) |  |
+| GAE-29 | AF17 | done | [AE28-01](../rules/AE28-01.md) |  |
+| GAE-30 | AF19 | done | Ergebnisdatei AF19 |  |
+| GAE-31 | AF19 | partial | Ergebnisdatei AF19 | DemoBanner in Kopfzeile eingebaut, liest is_demo aus /auth/me; die API liefert das Feld an Mandantenbenutzer noch nicht |
+| GAE-33 | AF24 | done | Ergebnisdatei AF24 |  |
+| GAE-34 | AF22 | done | [GAC-04](../rules/GAC-04.md) |  |
+| GAE-35 | AF10 | done | [AF10-01](../rules/AF10-01.md) |  |
+| GAE-36 | AF24 | done | Ergebnisdatei AF24 |  |
+| GAE-37 | AF13 | done | [S13-03-zugferd](../rules/S13-03-zugferd.md) |  |
+| GAE-38 | AF24 | done | Ergebnisdatei AF24 |  |
+| GAF-01 | AF18 | done | Ergebnisdatei AF18 |  |
+| GAF-02 | AF03 | partial | Ergebnisdatei AF03 | Erzeugen, Download, Einreichung, bank-status und payment-bank-config PUT ohne UI/BFF (G2, Entscheidung M15-01 offen) |
+| GAF-03 | AF03 | done | Ergebnisdatei AF03 |  |
+| GAF-04 | AF03 | done | Ergebnisdatei AF03 |  |
+| GAF-05 | AF05 | done | Ergebnisdatei AF05 |  |
+| GAF-06 | AF05 | done | Ergebnisdatei AF05 |  |
+| GAF-07 | AF05 | done | Ergebnisdatei AF05 |  |
+| GAF-08 | AF06 | done | Ergebnisdatei AF06 |  |
+| GAF-09 | AF06 | done | Ergebnisdatei AF06 |  |
+| GAF-10 | AF01 | partial | Ergebnisdatei AF01 | kein eigener Vier-Augen-Antrag fuer die Ausgangsautomatik (Entscheidung M12-05 offen, AF01-01); Ausgangsschalter wirkt nur bei eingeschalteter Hauptautomatik |
+| GAF-12 | AF14 | done | Ergebnisdatei AF14 |  |
+| GAF-13 | AF14 | partial | Ergebnisdatei AF14 | Belegeinsicht (StatementInspectionsPanel) und Ergebnisbuchungen (ResultEntriesPanel, nur Status fällig, G3 per API) in StatementWorkbench; period-lock, heating/consumption-info und co2-split nicht ergänzt (consumption-info und co2-split haben bereits Panels bzw. Heizungstext, period-lock ohne UI) |
+| GAF-14 | AF18 | partial | Ergebnisdatei AF18 | Pflichtdokumente CRUD und lokales Modell (Status, Vorschlag je Prüffall) in Einstellungen Objektakte; Importlauf, ocr-cache, previews/import ohne Maske |
+| GAF-15 | AF09 | done | Ergebnisdatei AF09 |  |
+| GAF-16 | AF09 | partial | Ergebnisdatei AF09 | Mehrheitsprüfung und new-version-Aufrufer nicht neu angefasst (Mehrheitsprüfung besteht als MajorityCheckLine) |
+| GAF-17 | AF20 | done | Ergebnisdatei AF20 |  |
+| GAF-18 | AF20 | partial | Ergebnisdatei AF20 | U-Protokoll Import (Vorschau/Übernahme, JSON-Ausgabe) und Mängel zu Tickets umgesetzt; Datei-Zuordnung imports/uprotokoll/files ohne UI (nur BFF) |
+| GAF-19 | AF17 | done | [AE28-01](../rules/AE28-01.md) |  |
+| GAF-20 | AF19 | done | Ergebnisdatei AF19 |  |
+| GAF-21 | AF19 | done | Ergebnisdatei AF19 |  |
+| GAF-22 | AF17 | done | [AE28-01](../rules/AE28-01.md) |  |
+| GAF-23 | AF18 | partial | Ergebnisdatei AF18 | Abnahme je Objekt (Anlegen, Unterzeichnen), Journalspalten, Jahresausgaben in /importe/migration; Abnahme bearbeiten (PUT), vollimport/exporttypen, history/open-items ohne Maske |
+| GAF-24 | AF20 | done | Ergebnisdatei AF20 |  |
+| GAF-25 | AF20 | done | Ergebnisdatei AF20 |  |
+| GAF-26 | AF20 | done | Ergebnisdatei AF20 |  |
+| GAF-27 | AF05 | done | Ergebnisdatei AF05 |  |
+| GAF-28 | AF20 | done | Ergebnisdatei AF20 |  |
+| GAF-30 | AF23 | partial | Ergebnisdatei AF23 | 17 CRM-Komponenten (banking 4, accounting 4, hoa 4, ai 3, documents 2) getestet; übrige banking/accounting/properties/hoa ohne Test |
+| GAF-31 | AF23 | partial | Ergebnisdatei AF23 | 8 Portal-Komponenten getestet; OnlineMeetingPanel, WorkOrderDetail, DataChangeForm, InvitationForm und Seiten ohne Einzeltest |
+| GAF-33 | AF15 | done | [AF15-01](../rules/AF15-01.md) |  |

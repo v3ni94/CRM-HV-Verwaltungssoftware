@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 type Item = { id: string; label: string; amount: string; basis: string; heating: boolean };
 type Snapshot = {
   hash: string;
-  results?: { unit_number: string; costs: string; advances_due: string; advances_paid: string; balance: string }[];
+  results?: { contract_id?: string; unit_number: string; costs: string; advances_due: string; advances_paid: string; balance: string }[];
   vacancy_owner_share?: string;
   allocability_hints?: AllocabilityHint[];
   rule_register?: { rule_id: string; version: number; status: string; effective_from: string } | null;
@@ -77,6 +77,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         id={id}
         status={String(data.status)}
         revision={[String(data.version), String(data.status), items.length, snap?.hash ?? ""].join(":")}
+        contracts={(snap?.results ?? []).filter((r) => r.contract_id).map((r) => ({ contract_id: String(r.contract_id), unit_number: r.unit_number }))}
         keys={((keys.data ?? []) as { id: string; code: string; name: string }[]).map((k) => ({ id: k.id, code: k.code, name: k.name }))}
       />
       <HeatingPanel id={id} status={String(data.status)} />

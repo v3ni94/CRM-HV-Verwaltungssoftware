@@ -11,6 +11,13 @@ const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh, back: vi.fn() }) }));
 
 describe("terms acceptance (AC06)", () => {
+  it("links the published terms directly (GAE-28)", () => {
+    renderIntl(<TermsAcceptForm version="2026-10" />);
+    const link = screen.getByRole("link", { name: /Nutzungsbedingungen lesen/ });
+    expect(link.getAttribute("href")).toBe("/rechtliches/nutzungsbedingungen");
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
   const fetchMock = vi.fn<typeof fetch>();
   beforeEach(() => {
     push.mockReset();

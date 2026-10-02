@@ -8,6 +8,8 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { PaymentTypeAccounts } from "./PaymentTypeAccounts";
+
 export type ManagedAccount = {
   id: string;
   number: string;
@@ -21,6 +23,9 @@ export type ManagedAccount = {
   active: boolean;
   booking_texts?: string[];
   is_system: boolean;
+  eur_relevant?: boolean;
+  ust_relevant?: boolean;
+  mixed_use_review?: boolean;
 };
 
 const CATEGORIES = ["bank", "cash", "reserve", "loan", "technical", "revenue", "cost", "transit", "tax"] as const;
@@ -80,7 +85,76 @@ function AllocationCell({ ledgerId, account }: { ledgerId: string; account: Mana
   );
 }
 
-function EditRow({ ledgerId, account, canUpdate }: { ledgerId: string; account: ManagedAccount; canUpdate: boolean }) {
+/** GAF-05: EÜR and VAT flags per account (PUT tax-flags, accounting:approve). */
+export function TaxFlagsCell({ ledgerId, account }: { ledgerId: string; account: ManagedAccount }) {
+  const t = useTranslations("LedgerExtras.tax");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [eur, setEur] = useState(account.eur_relevant ?? false);
+  const [ust, setUst] = useState(account.ust_relevant ?? false);
+  const [mixed, setMixed] = useState(account.mixed_use_review ?? false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    const res = await bff(`/api/bff/accounting/ledgers/${ledgerId}/accounts/${account.id}/tax-flags`, {
+      method: "PUT",
+      body: JSON.stringify({ eur_relevant: eur, ust_relevant: ust, mixed_use_review: mixed }),
+    });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setSaved(true);
+    router.refresh();
+  };
+  if (!open) {
+    return (
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
+        {t("open")}
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={save} className="flex flex-col gap-1" aria-label={t("title")}>
+      <p className={ui.help}>{t("help")}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={eur} onChange={(e) => setEur(e.target.checked)} />
+        {t("eur")}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={ust} onChange={(e) => setUst(e.target.checked)} />
+        {t("ust")}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={mixed} onChange={(e) => setMixed(e.target.checked)} />
+        {t("mixed")}
+      </label>
+      <div className={ui.formActions}>
+        <button type="submit" className={ui.primary} disabled={busy}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.secondary} onClick={() => setOpen(false)}>
+          {t("close")}
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className={ui.error}>
+          {error}
+        </p>
+      ) : null}
+      {saved ? (
+        <p role="status" className={ui.success}>
+          {t("saved")}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function EditRow({ ledgerId, account, canUpdate, canApprove }: { ledgerId: string; account: ManagedAccount; canUpdate: boolean; canApprove: boolean }) {
   const t = useTranslations("Bookkeeping");
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -187,6 +261,7 @@ function EditRow({ ledgerId, account, canUpdate }: { ledgerId: string; account: 
             </button>
           </span>
         ) : null}
+        {canApprove ? <TaxFlagsCell ledgerId={ledgerId} account={account} /> : null}
       </td>
     </tr>
   );
@@ -198,13 +273,16 @@ export function AccountsManager({
   accounts,
   canCreate,
   canUpdate,
+  canApprove = false,
 }: {
   ledgerId: string;
   accounts: ManagedAccount[];
   canCreate: boolean;
   canUpdate: boolean;
+  canApprove?: boolean;
 }) {
   const t = useTranslations("Bookkeeping");
+  const tx = useTranslations("LedgerExtras");
   const router = useRouter();
   const [number, setNumber] = useState("");
   const [name, setName] = useState("");
@@ -232,6 +310,18 @@ export function AccountsManager({
     setNumber("");
     setName("");
     setInfo(t("accounts.created"));
+    router.refresh();
+  };
+  const syncDebtors = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ created: number }>(`/api/bff/accounting/ledgers/${ledgerId}/sync-debtors`, { method: "POST" });
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.message);
+      return;
+    }
+    setInfo(tx("debtors.synced", { created: res.data.created }));
     router.refresh();
   };
   const syncCreditors = async () => {
@@ -299,6 +389,9 @@ export function AccountsManager({
             <button type="button" className={ui.secondary} disabled={busy} onClick={syncCreditors}>
               {t("accounts.syncCreditors")}
             </button>
+            <button type="button" className={ui.secondary} disabled={busy} onClick={syncDebtors}>
+              {tx("debtors.sync")}
+            </button>
           </div>
         </form>
       ) : null}
@@ -312,6 +405,7 @@ export function AccountsManager({
           {info}
         </p>
       ) : null}
+      {canUpdate ? <PaymentTypeAccounts ledgerId={ledgerId} accounts={accounts} /> : null}
       <div className="overflow-x-auto">
         <table className="mhvp-table">
           <thead>
@@ -326,7 +420,7 @@ export function AccountsManager({
           </thead>
           <tbody>
             {accounts.map((a) => (
-              <EditRow key={a.id} ledgerId={ledgerId} account={a} canUpdate={canUpdate} />
+              <EditRow key={a.id} ledgerId={ledgerId} account={a} canUpdate={canUpdate} canApprove={canApprove} />
             ))}
           </tbody>
         </table>

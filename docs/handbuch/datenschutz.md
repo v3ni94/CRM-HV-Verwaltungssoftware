@@ -39,3 +39,10 @@ Unter Einstellungen, Datenschutz legt der Bereich „Umfang der DSGVO-Auskunft�
 Der Papierkorb ist standardmäßig aus; eine zulässige Löschung bleibt dann endgültig. Unter Einstellungen, Aufbewahrung schaltet „Papierkorb für Dokumente“ ihn ein und legt die Frist fest (Vorschlag 30 Tage, keine Rechtsfrist; ob personenbezogene Daten so lange im Papierkorb bleiben dürfen, ist offen, AE33-01). Mit eingeschaltetem Papierkorb legt jede zulässige Löschung (einzeln oder durch einen Löschvorschlag) das Dokument unter Dokumente, Papierkorb ab. Dort stehen Löschzeitpunkt, frühestes Datum der endgültigen Löschung und der Grund einer Sperre.
 
 „Wiederherstellen“ holt das Dokument mit Begründung zurück; „Endgültig löschen“ löscht vor Fristende mit Begründung. Beides wird protokolliert. Ein täglicher Auftrag löscht nach Fristende endgültig, prüft dabei Aufbewahrungsfrist und alle Sperren erneut und lässt gesperrte Dokumente im Papierkorb (Status „gesperrt“). Eine Sperre am Dokument selbst setzt man nach der Wiederherstellung. Die Löschcheckliste zeigt ein Dokument im Papierkorb als „im Papierkorb“; die übrigen Ziele folgen mit der endgültigen Löschung. Backups werden vom Papierkorb nicht berührt.
+
+## Erkannte Dienstleister (Stand 02.10.2026)
+
+Das Verzeichnis erkennt zusätzlich das Schadenstool, Makler-CRM-Anbieter, Webhook-Ziele und
+EBICS- oder FinTS-Bankzugänge aus der Konfiguration. Je Dienst wird lesend angezeigt, welche
+Rechtsgrundlage für die betroffenen Einwilligungszwecke gilt (Register Rechtsgrundlagen der
+Einwilligung). Ob ein Dienst Auftragsverarbeiter ist, tragen Sie im Registereintrag ein.

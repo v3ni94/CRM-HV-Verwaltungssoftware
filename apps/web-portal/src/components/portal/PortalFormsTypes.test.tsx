@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PortalForm } from "@/components/portal/types";
-import { jsonResponse, renderIntl } from "@/test/intl";
+import { renderIntl } from "@/test/intl";
 
 import { PortalForms } from "./PortalForms";
 

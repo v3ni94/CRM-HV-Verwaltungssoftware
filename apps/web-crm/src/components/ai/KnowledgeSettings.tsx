@@ -188,6 +188,13 @@ export function KnowledgeSettings({
     await transition(id, "reject", { reason: reason.trim() });
   };
 
+  const sendFeedback = async (id: string, helpful: boolean) => {
+    setError(null);
+    const res = await bff<KnowledgeEntry>(`/api/bff/ai/knowledge/${id}/feedback`, { method: "POST", body: JSON.stringify({ helpful }) });
+    if (res.ok) setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...res.data } : e)));
+    else setError(res.message);
+  };
+
   const loadHistory = async (id: string) => {
     const res = await bff<KnowledgeEntry[]>(`/api/bff/ai/knowledge/${id}/versions`);
     if (res.ok) setHistory(res.data);
@@ -325,6 +332,16 @@ export function KnowledgeSettings({
                 >
                   {t("knowledge.withdraw")}
                 </button>
+              ) : null}
+              {entry.status === "approved" ? (
+                <>
+                  <button type="button" className={ui.buttonSm} onClick={() => void sendFeedback(entry.id, true)} aria-label={t("knowledge.feedbackHelpful")}>
+                    {t("knowledge.feedbackHelpful")}
+                  </button>
+                  <button type="button" className={ui.buttonSm} onClick={() => void sendFeedback(entry.id, false)} aria-label={t("knowledge.feedbackUnhelpful")}>
+                    {t("knowledge.feedbackUnhelpful")}
+                  </button>
+                </>
               ) : null}
               <button type="button" className={ui.buttonSm} onClick={() => void toggleHistory(entry.id)} disabled={busy}>
                 {historyFor === entry.id ? t("knowledge.historyHide") : t("knowledge.history")}

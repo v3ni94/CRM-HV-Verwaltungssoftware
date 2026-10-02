@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { DataQualityActions } from "@/components/settings/DataQualityActions";
 import { DataQualityReport, type DataQualityReportData } from "@/components/settings/DataQualityReport";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -20,6 +21,7 @@ export default async function DataQualityPage() {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/einstellungen", label: t("breadcrumb") }]} title={t("title")} description={t("intro")} />
+      <DataQualityActions canRecompute={me.data.permissions.includes("contacts:update")} />
       <DataQualityReport report={report} />
     </div>
   );

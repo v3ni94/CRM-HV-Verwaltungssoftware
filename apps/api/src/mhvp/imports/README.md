@@ -232,3 +232,7 @@ contract end (`contract.end_date`), never open ended on an ended contract. Test:
   `DELETE /column-assignments/{id}` (`ai:create`).
 - No Immoware24 export format is assumed; the requirement list for the operator is
   `docs/integrations/immoware24-exporte.md`. Rule `docs/rules/Q08-01-spaltenerkennung.md`.
+
+### Verwaltungsansicht gemerkter Zuordnungen (AF24, GAE-36)
+
+Die Seite `/importe/immoware24` zeigt unter den benötigten Exporten die gemerkten Spaltenzuordnungen des Mandanten (`GET /imports/immoware24/column-assignments`) mit Entfernen je Eintrag (`DELETE .../column-assignments/{id}`, mit Rückfrage). Ein entfernter Eintrag wird bei der nächsten Datei von der Kopfzeilen-Heuristik neu vorgeschlagen, es wird nichts importiert oder geändert. Komponente: `apps/web-crm/src/components/imports/ColumnAssignments.tsx`.

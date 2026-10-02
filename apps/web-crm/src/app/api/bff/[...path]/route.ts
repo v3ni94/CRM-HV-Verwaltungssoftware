@@ -133,6 +133,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^deposits/${ID}/interest-rates/[0-9]{4}-[0-9]{2}-[0-9]{2}$`) },
   { method: "POST", pattern: new RegExp(`^deposits/${ID}/interest-drafts$`) },
   { method: "POST", pattern: new RegExp(`^deposit-interest-drafts/${ID}/(confirm|discard)$`) },
+  // AF05 (GAF-27): deposit movements (no posting without G1) and the yearly interest draft run.
+  { method: "POST", pattern: new RegExp(`^deposits/${ID}/movements$`) },
+  { method: "POST", pattern: /^deposit-interest-drafts\/run$/ },
   { method: "GET", pattern: /^sepa-mandates$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
@@ -196,6 +199,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     pattern: new RegExp(`^contacts/${ID}/(export|notes|consents|duplicates|sepa-mandates)$`),
   },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/(notes|consents)$`) },
+  // AE34 (GAE-27): Widerspruch erfassen.
+  { method: "POST", pattern: new RegExp(`^contacts/${ID}/objections$`) },
   // AC07 (GA08-06): Auskunftsexport mit Prüfschritt.
   { method: "GET", pattern: new RegExp(`^contacts/${ID}/access-exports(/${ID}/(preview|download))?$`) },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/access-exports(/${ID}/(review|approve|reject))?$`) },
@@ -215,6 +220,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^consent-policy$/ },
   // AE34 (AC06-01): legal basis per processing purpose, shown and changed on "Fachliche Regeln" (AE39).
   { method: "PUT", pattern: /^consent-legal-basis\/(email_delivery|data_sharing|marketing|portal_terms)$/ },
+  { method: "DELETE", pattern: /^consent-legal-basis\/(email_delivery|data_sharing|marketing|portal_terms)$/ },
   {
     method: "POST",
     pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/mandate/revoke$`),
@@ -327,6 +333,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^tenant/webhooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^tenant/webhooks/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^tenant/webhooks/${ID}/deliveries$`) },
+  // GAE-30, GAF-20, GAF-21: API-Schlüssel (nur Präfix, Widerruf), Branding, Mailquellen mit Geheimnisrotation.
+  { method: "GET", pattern: /^tenant\/(api-keys|branding)$/ },
+  { method: "POST", pattern: /^tenant\/api-keys$/ },
+  { method: "DELETE", pattern: new RegExp(`^tenant/api-keys/${ID}$`) },
+  { method: "GET", pattern: /^mail\/inbound\/sources$/ },
+  { method: "POST", pattern: /^mail\/inbound\/sources$/ },
+  { method: "PATCH", pattern: new RegExp(`^mail/inbound/sources/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^mail/inbound/sources/${ID}/rotate-secret$`) },
+  { method: "GET", pattern: new RegExp(`^mail/inbound/sources/${ID}/events$`) },
   { method: "POST", pattern: new RegExp(`^tenant/webhook-deliveries/${ID}/redeliver$`) },
   { method: "GET", pattern: /^tenant\/settings$/ },
   { method: "PATCH", pattern: /^tenant\/settings$/ },
@@ -389,6 +404,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/preparation/correct$`) },
   { method: "GET", pattern: /^imports$/ },
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^imports/${ID}/undo-preview$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
   { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/apply-role$`) },
   { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/resolve-entities$`) },
@@ -447,6 +463,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/rule-versions\/checkpoints$/ },
   { method: "PATCH", pattern: new RegExp(`^accounting/rule-versions/checkpoints/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/rule-versions/${ID}/withdraw$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/rule-versions/${ID}/confirm$`) },
   // Weitere Auswertungen mit Kopfangaben, Excel und Verfahrensdokumentation (M18-01 bis M18-09).
   {
     method: "GET",
@@ -541,6 +558,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // AE03: comparison report (read only) and the four eyes switch request (G1 checked by the API).
   { method: "GET", pattern: /^banking\/automation\/(comparison|switch-requests)$/ },
   { method: "POST", pattern: /^banking\/automation\/switch-requests$/ },
+  // AF01 (GAA-01): PUT /banking/automation only switches off (switching on returns 409 and
+  // runs through the request above), so the immediate switch off is offered in the CRM.
+  { method: "PUT", pattern: /^banking\/automation$/ },
   { method: "POST", pattern: new RegExp(`^banking/automation/switch-requests/${ID}/(approve|reject)$`) },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(accept|correct)$`) },
   { method: "GET", pattern: /^banking\/rule-proposals$/ },
@@ -554,6 +574,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // reversal with reason, lock, opening balance check, chart of accounts, allocation.
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries(/cost-transfer|/interest)?$`) },
   // P01-01 (AE05): tax accounts for withholdings on credit interest and withholdings per entry.
+  { method: "GET", pattern: /^accounting\/interest-tax-config$/ },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/interest-tax-config$`) },
   { method: "PUT", pattern: new RegExp(`^accounting/ledgers/${ID}/interest-tax-config$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/interest-tax$`) },
@@ -563,6 +584,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/notes$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/notes$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/(lock|sync-creditors)$`) },
+  // AF05 (GAF-05): tax flags per account, revenue account per payment type, debtor accounts from contracts.
+  { method: "PUT", pattern: new RegExp(`^accounting/ledgers/${ID}/accounts/${ID}/tax-flags$`) },
+  { method: "PUT", pattern: new RegExp(`^accounting/ledgers/${ID}/payment-type-accounts$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/sync-debtors$`) },
+  // AF05 (GAF-06): second approval of a tax invoice above the limit (read state, approve by a third person).
+  { method: "GET", pattern: new RegExp(`^accounting/tax/invoices/${ID}/approval$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/tax/invoices/${ID}/second-approval$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/year-carryover$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/year-carryover$`) },
   // S69-04: maintained open item remainders as of a cut-off date; S69-02: approval decisions.
@@ -584,12 +612,30 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/downloads$`) },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/submit$`) },
   { method: "GET", pattern: /^banking\/payment-orders$/ },
+  // AF03 (GAF-02): payment files read only (list, one batch with download log, format per
+  // account). Create, download and submit stay without BFF path: they are G2 actions (API).
+  { method: "GET", pattern: /^banking\/payment-batches$/ },
+  { method: "GET", pattern: new RegExp(`^banking/payment-batches/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^banking/payment-bank-config/${ID}$`) },
+  // AF03 (GAF-03): bank connections, sync log, learning switch (ADR 0014), decision log per
+  // transaction. Connections never return credentials; the switch books nothing.
+  { method: "GET", pattern: /^banking\/(connections|runs|learning)$/ },
+  { method: "POST", pattern: /^banking\/connections$/ },
+  { method: "PUT", pattern: /^banking\/learning$/ },
+  { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/decisions$`) },
+  // AF03 (GAF-04): creditor identifier per legal entity (operator input, not validated),
+  // direct debit preview and pre-notification drafts (delivery only via M23, nothing sent).
+  { method: "PUT", pattern: new RegExp(`^accounting/direct-debits/creditor-ids/(tenant|legal-entities/${ID})$`) },
+  { method: "POST", pattern: /^accounting\/direct-debits\/preview$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/pre-notifications$`) },
   // Payment run (M15-02 to M15-07, S15-02): preview, draft orders, status report import.
   // Approval stays per order (four eyes); the payment file stays behind G2 (API).
   { method: "GET", pattern: /^accounting\/payment-runs\/(preview|bank-status-reports|previews|settings)$/ },
   { method: "POST", pattern: /^accounting\/payment-runs\/(orders|payout-orders|bank-status-reports|previews)$/ },
   { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/reconciliation$`) },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/bank-status$`) },
+  { method: "PUT", pattern: /^accounting\/payment-runs\/settings$/ },
+  { method: "GET", pattern: /^accounting\/tax\/section35a\/certificate(\.pdf)?$/ },
   { method: "GET", pattern: new RegExp(`^accounting/payment-runs/bank-limits/${ID}$`) },
   { method: "PUT", pattern: new RegExp(`^accounting/payment-runs/bank-limits/${ID}$`) },
   // AE22 (P04-04, Q01-01): payables from statement credits. Switch default off; release G3
@@ -621,7 +667,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^banking\/ebics\/(status|subscribers)$/ },
   { method: "PUT", pattern: /^banking\/ebics\/settings$/ },
   { method: "POST", pattern: /^banking\/ebics\/subscribers$/ },
-  { method: "GET", pattern: new RegExp(`^banking/ebics/subscribers/${ID}(/letters)?$`) },
+  { method: "GET", pattern: new RegExp(`^banking/ebics/subscribers/${ID}(/letters|/letters\\.pdf)?$`) },
   {
     method: "POST",
     pattern: new RegExp(
@@ -756,6 +802,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^statements/${ID}/deadlines$`) },
   { method: "GET", pattern: /^billing\/deadline-settings$/ },
   { method: "PUT", pattern: /^billing\/deadline-settings$/ },
+  { method: "GET", pattern: /^billing\/heating-rule-tables$/ },
+  { method: "PUT", pattern: /^billing\/heating-rule-tables$/ },
   { method: "GET", pattern: /^billing\/operating-cost-types$/ },
   { method: "GET", pattern: /^billing\/operating-cost-types\/accounts$/ },
   { method: "PUT", pattern: new RegExp(`^billing/operating-cost-types/accounts/${ID}$`) },
@@ -836,6 +884,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^hoa/ledgers/${ID}/reserve-payments$`) },
   { method: "GET", pattern: /^hoa\/reserve-payment-settings$/ },
   { method: "PUT", pattern: /^hoa\/reserve-payment-settings$/ },
+  { method: "GET", pattern: /^hoa\/correction-report-settings$/ },
+  { method: "PUT", pattern: /^hoa\/correction-report-settings$/ },
+  { method: "POST", pattern: new RegExp(`^hoa/inspection-requests/ownership-transfers/scan$`) },
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements$`) },
   { method: "DELETE", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
@@ -847,6 +898,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/close(/confirm|/withdraw)?$`) },
+  // AF09 (GAF-15): Empfängerliste der Einladung, Störungsprotokoll der Online-Versammlung.
+  { method: "GET", pattern: new RegExp(`^hoa/meetings/${ID}/invitation-recipients$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/disruptions$`) },
   // Mehrheitsregeln je Beschlussgegenstand (M25-01): Prüfung nur als Anzeige, keine Statusänderung.
   { method: "GET", pattern: /^hoa\/majority-rules\/subject-rules$/ },
   { method: "POST", pattern: /^hoa\/majority-rules\/subject-rules$/ },
@@ -1209,7 +1263,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^dispatches/${ID}/evidence$`) },
   { method: "GET", pattern: /^document-templates$/ },
   // AE16 (AA11-01/02): Textbausteine mit Freigabe.
-  { method: "GET", pattern: new RegExp(`^document-text-blocks(/codes|/${ID})?$`) },
+  { method: "GET", pattern: new RegExp(`^document-text-blocks(/codes|/policy|/${ID})?$`) },
+  { method: "PUT", pattern: /^document-text-blocks\/policy$/ },
   { method: "POST", pattern: /^document-text-blocks$/ },
   { method: "PATCH", pattern: new RegExp(`^document-text-blocks/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^document-text-blocks/${ID}/(submit|approve|reject|retire)$`) },
@@ -1237,10 +1292,17 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^documents/${ID}/redactions$`) },
   { method: "POST", pattern: new RegExp(`^documents/${ID}/redactions$`) },
   { method: "POST", pattern: new RegExp(`^documents/${ID}/redactions/${ID}/release$`) },
+  // Dokumenteingang (GAF-01): Eingangsvorschläge annehmen, ablehnen, Folgeaktionen, Automatik zurücknehmen.
+  { method: "GET", pattern: /^documents\/intake-proposals$/ },
+  { method: "GET", pattern: new RegExp(`^documents/intake-proposals/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^documents/intake-proposals/${ID}/(accept|reject|revert-auto)$`) },
+  { method: "POST", pattern: new RegExp(`^documents/intake-proposals/${ID}/followups/[a-z_]+/confirm$`) },
   { method: "GET", pattern: /^document-intake-address$/ },
   { method: "PUT", pattern: /^document-intake-address$/ },
   { method: "GET", pattern: /^document-direct-upload$/ },
   { method: "PUT", pattern: /^document-direct-upload$/ },
+  { method: "GET", pattern: /^document-invoice-intake-auto$/ },
+  { method: "PUT", pattern: /^document-invoice-intake-auto$/ },
   { method: "POST", pattern: /^documents\/uploads$/ },
   { method: "POST", pattern: new RegExp(`^documents/uploads/${ID}/complete$`) },
   // Q03 (M6-01 to M6-09): ZIP bulk upload, letter templates, letters with preview, serial
@@ -1446,6 +1508,21 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^platform\/oidc-clients$/ },
   { method: "POST", pattern: /^platform\/oidc-clients$/ },
   { method: "POST", pattern: /^platform\/oidc-clients\/[a-z0-9][a-z0-9._-]{1,99}\/(rotate-secret|activate|deactivate)$/ },
+  // AF20 (GAF-17/18/24/25/26): Besichtigungen, Makler-Anbindung, OpenImmo-Import, U-Protokoll-Import, Lexware-Läufe, KI-Schalter, Datenqualität.
+  { method: "GET", pattern: new RegExp(`^letting/prospects/${ID}/(viewings|self-disclosure-links)$`) },
+  { method: "POST", pattern: new RegExp(`^letting/prospects/${ID}/viewings$`) },
+  { method: "PATCH", pattern: new RegExp(`^letting/prospects/viewings/${ID}$`) },
+  { method: "GET", pattern: /^letting\/broker\/[a-z0-9_-]+\/config$/ },
+  { method: "PUT", pattern: /^letting\/broker\/[a-z0-9_-]+\/config$/ },
+  { method: "POST", pattern: new RegExp(`^letting/listings/${ID}/broker/[a-z0-9_-]+/sync$`) },
+  { method: "POST", pattern: /^letting\/openimmo-import\/preview$/ },
+  { method: "POST", pattern: new RegExp(`^letting/openimmo-import/${ID}/rows/${ID}/apply$`) },
+  { method: "POST", pattern: /^handover\/imports\/uprotokoll(\/files)?$/ },
+  { method: "POST", pattern: /^integrations\/lexoffice\/(import\/receipts|export\/contacts|export\/invoices)$/ },
+  { method: "GET", pattern: /^ai\/fast-table-import$/ },
+  { method: "PUT", pattern: /^ai\/fast-table-import$/ },
+  { method: "GET", pattern: /^data-quality\/report$/ },
+  { method: "POST", pattern: /^data-quality\/check$/ },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */

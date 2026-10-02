@@ -41,3 +41,7 @@ Budgetabgleich als Kennzahlen (Planansatz, bisher zugeordnet, diese Rechnung, Re
 (Status, Gegenstand passt zum Wirtschaftsplan). Quellenstatus: Produktschutz, keine Rechtsgrundlage; eine
 Wertgrenze für eine Beschlusspflicht wird nicht angenommen. Abnahmefall: tests/integration/test_ae14_invoice_budget.py
 (Soll 2.000,00 EUR, bisher 952,00 EUR, Rechnung 1.190,00 EUR, Rest -142,00 EUR). Änderungsgrund: Prioritätenliste Punkt 14.
+
+## Änderung Welle 17 (AF07, GAE-21, 02.10.2026)
+
+Bisher zugeordnet = Rechnungen auf der Planposition minus Gutschriften auf der Planposition plus Saldo (Soll minus Haben) gebuchter Journalzeilen ohne Rechnungsbezug auf dem Konto der Planposition, gleicher Buchungskreis und Buchungsjahr gleich Wirtschaftsjahr; Stornos von Rechnungsbuchungen bleiben außen vor. Quellenstatus: Fachliche Umsetzung (AE14), keine Rechtsgrundlage. Abnahmefall: `tests/unit/test_af07_budget_b2b.py` (1.000,00 minus 150,00 plus 250,00 = 1.100,00; mit 400,00 Summe 1.500,00 über Grenze 1.470,00 bei Plan 1.400,00 und 5 %). Änderungsgrund: Lückenbefund GAE-21.

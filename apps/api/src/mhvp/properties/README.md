@@ -196,3 +196,7 @@ results_created, confirmed, closed (one step, back allowed, never out of closed;
 `locked_at` and blocks delete, codes `MHVP-PROP-0006/0007`). New columns (migration 0310):
 `building.energy_certificate_document_id`, `documents` on `maintenance_item` and
 `service_provider_relation` (tenant checked). Rule: `docs/rules/AA08-abrechnungszeitraum-status.md`.
+
+## AF21 (GAB-16)
+
+`POST /units/bulk` setzt Geschoss, Lage oder Ausstattung vieler Einheiten (Teilerfolgsbericht über `core/bulk.py`, Savepoint je Einheit, Ereignis `unit.updated`). Felder mit Geldwirkung (Flächen, Umlagewerte, USt) gibt es bewusst nicht.

@@ -72,6 +72,8 @@ GATE_CONDITIONAL_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("POST", "/api/v1/contracts/{contract_id}/rent-invoices", "G1"),
     ("POST", "/api/v1/contracts/{contract_id}/rent-invoices/{invoice_id}/credit-note", "G1"),
     ("POST", "/api/v1/banking/auto-post", "G1"),
+    # AF06 (GAA-06): plan draft number, never an MR number; reject mode refuses while G1 is closed.
+    ("POST", "/api/v1/accounting/recurring-invoices/{plan_id}/generate", "G1"),
 )
 
 REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(

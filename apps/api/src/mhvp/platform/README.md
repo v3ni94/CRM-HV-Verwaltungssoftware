@@ -128,3 +128,7 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * Ausschluss: Lizenz, `count_usage` (Nutzungszählung, Abrechnungsvorschau), Nutzungsjobs, Mandantenexport (Job und Antrag), dazu Journal-, DATEV- und Prüfexport in `mhvp.accounting`. Die Bereitschaftsansicht (`/platform/tenants/{id}/readiness`) zeigt `demo: true` und Nullwerte.
 * `scale_models.py`: `PlatformScaleSetting` (eine Zeile, Schwellen aus ADR 0021) und `PlatformScaleSnapshot` (eine Messung je ISO-Woche), Plattformtabellen ohne RLS. Logik und API: `mhvp.workspace.scale`, `mhvp.workspace.scale_routers`.
 * `demo_seed.py`: setzt das Kennzeichen, erzeugt nur synthetische IBANs (Bankleitzahl 00000000, `assert_synthetic_ibans`) und gibt dem Demo-Mandanten die Zweitfaktor-Richtlinie freiwillig (Runbook `docs/runbooks/demo-mandant.md`).
+
+### Eigenmessung: Deploy-Variablen und HTTP-Test (AF24, GAE-33)
+
+`warn_missing_probe_urls` schreibt beim Start der API und beim ersten Messlauf je Prozess eine Logzeile mit den nicht gesetzten Variablen `MHVP_AVAILABILITY_{API,CRM,PORTAL}_URL` (Warnung in staging und prod, Info in dev und test). `tests/integration/test_af24_availability_http.py` prüft `check_url` gegen einen echten uvicorn Server in einem Thread, ausschließlich auf 127.0.0.1 (Status 200, 503, Weiterleitung, Zeitüberschreitung, geschlossener Port).

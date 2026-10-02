@@ -48,7 +48,7 @@ export default async function LedgerReportsPage({
     );
   }
 
-  const [liquidity, paymentsByDebtor, revenue, auditExports, accounts, checks] = await Promise.all([
+  const [liquidity, paymentsByDebtor, revenue, auditExports, accounts, checks, propertyList] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/liquidity", {
       params: { path: { ledger_id: id }, query: { as_of: asOf } },
     }),
@@ -63,7 +63,12 @@ export default async function LedgerReportsPage({
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/checks", {
       params: { path: { ledger_id: id }, query: { as_of: asOf } },
     }),
+    api.GET("/api/v1/properties", { params: { query: { page_size: 200 } } }),
   ]);
+  const propertyOptions = ((propertyList.data?.items ?? []) as { id: string; number?: string | null; name?: string | null }[]).map((p) => ({
+    id: p.id,
+    label: [p.number, p.name].filter(Boolean).join(" ") || p.id,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -149,6 +154,7 @@ export default async function LedgerReportsPage({
           defaultAsOf={asOf}
           defaultStart={start}
           defaultEnd={end}
+          properties={propertyOptions}
         />
       </section>
 

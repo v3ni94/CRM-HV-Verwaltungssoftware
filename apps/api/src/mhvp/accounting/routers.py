@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,6 +57,7 @@ from mhvp.accounting.models import (
     LeadingSystem,
     Ledger,
     LedgerAccount,
+    LedgerInterestTaxConfig,
     OpenItem,
     PaymentTypeAccount,
     PostingStatus,
@@ -576,6 +577,20 @@ async def delete_entry(
         entry = await _entry(session, await _ledger(session, ledger_id), entry_id, lock=True)
         if entry.status is EntryStatus.POSTED:
             raise ProblemError(ErrorCodes.ACC_POSTED_IMMUTABLE)
+        # GAE-07 (AE40-05): a reclass draft of a released credit payable is withdrawn through
+        # the payable, never deleted behind its back (the release would stay dangling).
+        from mhvp.accounting.credit_payable_models import CreditPayable
+
+        if await session.scalar(
+            select(CreditPayable.id).where(CreditPayable.reclass_entry_id == entry.id).limit(1)
+        ):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=(
+                    "Der Entwurf gehört zu einem freigegebenen Guthabenposten. Bitte den Posten "
+                    "über /credit-payables/{id}/withdraw zurücknehmen."
+                ),
+            )
         # AE40: withholdings recorded with an interest draft (P01-01, AE05) belong to the draft;
         # the foreign key is RESTRICT, so they go first (drafts are no postings, 0.1.7).
         from sqlalchemy import delete as sa_delete
@@ -1028,6 +1043,41 @@ async def get_interest_tax_config(
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
         return _tax_config_out(ledger.id, await ledger_ops.interest_tax_config(session, ledger))
+
+
+class AccountingInterestTaxSummaryOut(BaseModel):
+    """Tenant wide state of the tax accounts for withholdings on credit interest (GAE-38)."""
+
+    ledgers_total: int
+    ledgers_configured: int
+
+
+@router.get(
+    "/interest-tax-config",
+    summary="Steuerkonten für Abzüge auf Habenzinsen: Stand über alle Buchungskreise",
+    dependencies=[Depends(strict_query)],
+)
+async def get_interest_tax_summary(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> AccountingInterestTaxSummaryOut:
+    """Read only: how many ledgers have at least one tax account set. Changes nothing."""
+    async with tenant_tx(request, principal) as session:
+        total = int(await session.scalar(select(func.count()).select_from(Ledger)) or 0)
+        configured = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(LedgerInterestTaxConfig)
+                .where(
+                    or_(
+                        LedgerInterestTaxConfig.capital_gains_tax_account_id.is_not(None),
+                        LedgerInterestTaxConfig.solidarity_tax_account_id.is_not(None),
+                        LedgerInterestTaxConfig.church_tax_account_id.is_not(None),
+                    )
+                )
+            )
+            or 0
+        )
+        return AccountingInterestTaxSummaryOut(ledgers_total=total, ledgers_configured=configured)
 
 
 @router.put(
@@ -2010,6 +2060,9 @@ class InvoiceFactualBudgetOut(BaseModel):
     year: int
     planned: Decimal
     booked_before: Decimal
+    invoices_before: Decimal | None = None
+    credit_notes_before: Decimal | None = None
+    journal_lines_net: Decimal | None = None
     invoice: Decimal
     remaining: Decimal
     tolerance_limit: Decimal
@@ -2542,8 +2595,23 @@ async def create_plan(
 async def generate_plan(
     plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
-    """Next due recurring invoice as unreviewed draft; nothing is posted automatically."""
+    """Next due recurring invoice as unreviewed draft; nothing is posted automatically.
+
+    GAA-06 (rule 0.1.4): conservative gate behaviour like the rent invoices. The number is a
+    plan draft number (``PLAN-...``) and never comes from a ledger or MR number range. While
+    G1 is closed the result is flagged as draft; in the tenant numbering mode
+    ``reject_when_g1_closed`` (AC03-01, open question AC03-01) the route refuses (G1).
+    """
+    from mhvp.accounting import rent_invoice as ri
+
     async with tenant_tx(request, principal) as session:
+        resolver = request.app.state.release_gate_resolver
+        try:
+            g1_open = (await resolver.is_open(principal.tenant_id, ReleaseGate.G1)) is True
+        except Exception:
+            g1_open = False
+        if not g1_open and await ri.numbering_mode(session) == "reject_when_g1_closed":
+            await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
         plan = await session.get(RecurringInvoicePlan, plan_id, with_for_update=True)
         if plan is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -2591,6 +2659,8 @@ async def generate_plan(
         out = await _invoice_full(session, inv)
         # GA03-07: the flag decides what the run may do. Off: draft only. On: the request is
         # recorded, but nothing is posted here (G1 and the 7.4 automatic switch decide later).
+        out["draft_number"] = True
+        out["g1_open"] = g1_open
         out["auto_post_requested"] = bool(plan.auto_post)
         out["auto_post_state"] = await creditor_routers.auto_post_state(
             session, request, principal, bool(plan.auto_post)

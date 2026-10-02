@@ -2525,7 +2525,7 @@ async def upload_listing_image(
     async with tenant_tx(request, principal) as session:
         if await session.get(Listing, listing_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        document = await document_services.store_document(
+        await document_services.store_document(
             session,
             _blobs_store(request),
             tenant_id=principal.tenant_id,
@@ -2537,15 +2537,7 @@ async def upload_listing_image(
             category_id=None,
             links=[("listing", listing_id, LinkRole.ATTACHMENT)],
             created_by=principal.user_id,
-        )
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="document.created",
-            entity_type="document",
-            entity_id=document.id,
-            actor_user_id=principal.user_id,
-            payload={"size": document.size, "listing_id": str(listing_id)},
+            event_payload={"listing_id": listing_id},
         )
         return await _listing_image_rows(session, listing_id)
 

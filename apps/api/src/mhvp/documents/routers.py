@@ -9,12 +9,13 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import session_allowed_legal_entity_ids, session_allowed_property_ids
+from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
 from mhvp.core.escaping import content_disposition
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
@@ -298,7 +299,6 @@ async def upload(
             created_by=principal.user_id,
             settings=request.app.state.settings,
         )
-        await _event(session, principal, "document.created", document.id, size=document.size)
         return await _out(session, document)
 
 
@@ -879,6 +879,56 @@ async def patch_document(
         await session.refresh(document, ["updated_at"])
         response.headers["ETag"] = etag_of(document.updated_at)
         return await _out(session, document)
+
+
+class DocumentBulkLinkIn(BaseModel):
+    """Links many documents to one entity as attachment (GAB-16); no money effect. Originals,
+    evidence and generated roles are not set in bulk."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
+    entity_type: str = Field(min_length=1, max_length=63)
+    entity_id: uuid.UUID
+
+
+@router.post(
+    "/documents/bulk-link",
+    summary="Mehrere Dokumente mit einem Objekt verknüpfen (Teilerfolgsbericht)",
+    response_model=BulkResultOut,
+)
+async def bulk_link_documents(
+    body: DocumentBulkLinkIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BulkResultOut:
+    """Each document on its own (savepoint); an existing link is reported as conflict, a
+    document outside the scope of the membership as not found."""
+    async with tenant_tx(request, principal) as session:
+        await svc.check_link_target(session, body.entity_type, body.entity_id)
+
+        async def act(document_id: uuid.UUID) -> None:
+            document = await _get(session, Document, document_id)
+            session.add(
+                DocumentLink(
+                    tenant_id=principal.tenant_id,
+                    document_id=document.id,
+                    entity_type=body.entity_type,
+                    entity_id=body.entity_id,
+                    role=LinkRole.ATTACHMENT,
+                )
+            )
+            await _flush(session, "Die Verknüpfung besteht bereits.")
+            await _event(
+                session,
+                principal,
+                "document.linked",
+                document.id,
+                target_type=body.entity_type,
+                target_id=body.entity_id,
+                bulk=True,
+            )
+            await svc.mark_mirrors_dirty(session, document.id)
+
+        return await run_bulk(body.ids, act, savepoint=session.begin_nested)
 
 
 @router.post("/documents/{document_id}/links", status_code=201, summary="Verknüpfen")

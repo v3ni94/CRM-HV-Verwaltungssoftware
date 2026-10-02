@@ -153,6 +153,149 @@ function DeductionLine({ label, amount }: { label: string; amount: string }) {
   );
 }
 
+const MOVEMENT_KINDS = ["payment", "interest", "payout", "offset"] as const;
+
+/** GAF-27: record a deposit movement (POST deposits/{id}/movements). No posting arises here;
+ *  payout and offset need a reason (API rule). */
+export function DepositMovementForm({ depositId }: { depositId: string }) {
+  const t = useTranslations("LedgerExtras.deposit");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [amount, setAmount] = useState("");
+  const [kind, setKind] = useState<(typeof MOVEMENT_KINDS)[number]>("payment");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const needsReason = kind === "payout" || kind === "offset";
+  if (!open) {
+    return (
+      <button type="button" className={`${ui.buttonSm} self-start`} onClick={() => setOpen(true)}>
+        {t("movementTitle")}
+      </button>
+    );
+  }
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+    const parsed = parseAmount(amount);
+    if (!parsed || Number(parsed) <= 0) {
+      setError(t("amount"));
+      return;
+    }
+    setBusy(true);
+    const res = await bff(`/api/bff/deposits/${depositId}/movements`, {
+      method: "POST",
+      body: JSON.stringify({ date, amount: parsed, kind, reason: reason.trim() || null }),
+    });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setSaved(true);
+    setAmount("");
+    setReason("");
+    router.refresh();
+  };
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-2 rounded-md border border-border p-3" aria-label={t("movementTitle")}>
+      <h3 className={ui.label}>{t("movementTitle")}</h3>
+      <p className={ui.notice}>{t("movementHelp")}</p>
+      <div className="grid gap-2 sm:grid-cols-4">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("date")}</span>
+          <input type="date" required className={ui.input} value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("amount")}</span>
+          <input required inputMode="decimal" className={ui.input} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("kind")}</span>
+          <select className={ui.input} value={kind} onChange={(e) => setKind(e.target.value as (typeof MOVEMENT_KINDS)[number])}>
+            {MOVEMENT_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {t(`kinds.${k}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("reason")}</span>
+          <input required={needsReason} className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} />
+        </label>
+      </div>
+      <div className={ui.formActions}>
+        <button type="submit" className={ui.primary} disabled={busy}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.secondary} onClick={() => setOpen(false)}>
+          {t("close")}
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className={ui.error}>
+          {error}
+        </p>
+      ) : null}
+      {saved ? (
+        <p role="status" className={ui.success}>
+          {t("saved")}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/** GAF-27: yearly interest draft run for all deposits with a rate (drafts only, nothing posted). */
+export function DepositInterestRun() {
+  const t = useTranslations("LedgerExtras.deposit");
+  const router = useRouter();
+  const [year, setYear] = useState(String(new Date().getFullYear() - 1));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const run = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    const res = await bff<{ year: number; created: number; skipped: unknown[] }>("/api/bff/deposit-interest-drafts/run", {
+      method: "POST",
+      body: JSON.stringify({ year: Number(year) }),
+    });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setResult(t("runResult", { created: res.data.created, skipped: res.data.skipped.length }));
+    router.refresh();
+  };
+  return (
+    <form onSubmit={run} className="flex flex-col gap-2 rounded-md border border-border p-3" aria-label={t("runTitle")}>
+      <h3 className={ui.label}>{t("runTitle")}</h3>
+      <p className={ui.help}>{t("runHelp")}</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("year")}</span>
+          <input type="number" min={1900} max={2200} required className={ui.input} value={year} onChange={(e) => setYear(e.target.value)} />
+        </label>
+        <button type="submit" className={ui.secondary} disabled={busy || !year}>
+          {t("run")}
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className={ui.error}>
+          {error}
+        </p>
+      ) : null}
+      {result ? (
+        <p role="status" className={ui.success}>
+          {result}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 /** Kautionen eines Mietvertrags (M5-02): Stand, Bewegungen, gespeicherte Abrechnungsentwürfe und
  *  das Formular Kautionsabrechnung mit Zinsart (individuell je Jahr, Referenzzinssatz je Jahr,
  *  keine Verzinsung). Der Entwurf bucht nichts und zahlt nichts aus; die Freigabe liegt hinter G3. */
@@ -290,6 +433,7 @@ export function DepositPanel({
                   ))}
                 </ul>
               ) : null}
+              {canUpdate && d.status !== "settled" ? <DepositMovementForm depositId={d.id} /> : null}
               {(settlements[d.id] ?? []).map((s) => (
                 <details key={s.id ?? s.settlement_date} className="rounded-md border border-border p-2">
                   <summary className="cursor-pointer">
@@ -421,6 +565,7 @@ export function DepositPanel({
           </div>
         </form>
       ) : null}
+      {canUpdate && deposits.length > 0 ? <DepositInterestRun /> : null}
     </section>
   );
 }

@@ -88,6 +88,8 @@ export default async function PortalLayout({ children }: { children: React.React
               { href: "/ansprechpartner", label: t("nav.contacts") },
               { href: "/hausgeldkonto", label: t("nav.hoaAccount") },
               { href: "/abrechnungen", label: t("nav.ownerStatements") },
+              { href: "/wirtschaftsplaene", label: t("nav.ownerPlans") },
+              { href: "/eigentuemerabrechnungen", label: t("nav.ownerRentalStatements") },
               { href: "/eigentum", label: t("nav.ownerOverview") },
             ]
           : []),

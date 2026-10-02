@@ -42,6 +42,7 @@ export default async function LedgerAccountsPage({ params }: { params: Promise<{
         accounts={(accounts.data ?? []) as unknown as ManagedAccount[]}
         canCreate={perms.includes("accounting:create")}
         canUpdate={perms.includes("accounting:update")}
+        canApprove={perms.includes("accounting:approve")}
       />
     </div>
   );

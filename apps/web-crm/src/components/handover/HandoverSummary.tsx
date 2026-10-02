@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { formatDate, formatDateTime, formatDecimal } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { DefectTicketsButton } from "./DefectTicketsButton";
 import { PhotoStrip } from "./PhotoStrip";
 import type { Step } from "./steps";
 import { type Doc, type Full, type Item, itemTitle } from "./types";
@@ -67,6 +68,7 @@ export function HandoverSummary({ p, mode, onGoTo }: HandoverSummaryProps) {
         </div>
       ) : null}
       {mode === "locked" ? <p className={ui.notice}>{t("summary.readOnlyHint")}</p> : null}
+      {mode === "overview" && p.status !== "cancelled" ? <DefectTicketsButton protocolId={p.id} defectCount={p.defects.length} /> : null}
 
       <section className={`${ui.card} flex flex-col gap-2`} aria-labelledby="summary-object">
         <div className="flex flex-wrap items-center justify-between gap-2">

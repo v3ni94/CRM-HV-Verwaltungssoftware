@@ -22,7 +22,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -929,6 +929,92 @@ async def letters(
     )
 
 
+def _hex_rows(value: str, width: int = 64) -> list[str]:
+    return [value[i : i + width] for i in range(0, len(value), width)] or [""]
+
+
+@router.get(
+    "/subscribers/{subscriber_id}/letters.pdf",
+    summary="INI- und HIA-Brief als PDF (Briefbogen des Mandanten)",
+    response_class=Response,
+)
+async def letters_pdf(
+    subscriber_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    """GAE-23: the INI and HIA letter on the tenant letterhead (documents.letters, DIN 5008
+    layout of the renderer). Hash values are printed only as the transport computed them; a
+    missing hash is never calculated here (AE23-02): the letter then carries the draft marking
+    and the notice not to send it. The layout of the bank's own form is not reproduced."""
+    from mhvp.documents import letters as letters_mod
+    from mhvp.documents.services import letterhead
+
+    data = await letters(subscriber_id, request, principal)
+    async with tenant_tx(request, principal) as session:
+        head = await letterhead(session, BlobStore(request.app.state.settings))
+        sub = await _subscriber(session, subscriber_id)
+    missing_hash = any(item.letter_hash is None for item in data.letters)
+    tables: dict[str, letters_mod.LetterTable] = {}
+    parts = [
+        "Wir übermitteln die öffentlichen Schlüssel des EBICS-Teilnehmers zur Freischaltung. "
+        "Die Hash-Werte entsprechen den elektronisch übertragenen Schlüsseln.",
+    ]
+    for index, item in enumerate(data.letters):
+        name = f"k{index}"
+        rows = [
+            ["Auftragsart", item.order_type],
+            ["Verwendung", item.usage],
+            ["Version", item.version],
+            ["Schlüssellänge", f"{item.key_bits} Bit"],
+            ["Exponent (hex)", item.exponent_hex],
+        ]
+        rows += [
+            ["Modulus (hex)" if i == 0 else "", line]
+            for i, line in enumerate(_hex_rows(item.modulus_hex))
+        ]
+        rows.append(
+            [
+                "Hash-Wert",
+                item.letter_hash or "nicht verfügbar (Übertragung liefert keinen Wert, AE23-02)",
+            ]
+        )
+        tables[name] = letters_mod.LetterTable(
+            header=["Angabe", "Wert"], rows=rows, widths=(0.25, 0.75)
+        )
+        parts.append(f"[[table:{name}]]")
+    parts.append(
+        "Ort, Datum und Unterschrift des Teilnehmers:\n\n"
+        "______________________________________________"
+    )
+    letter = letters_mod.Letter(
+        recipient_lines=[sub.label],
+        subject=f"EBICS-Initialisierung (INI/HIA), Teilnehmer {data.ebics_user_id}",
+        body="\n\n".join(parts),
+        tables=tables,
+        letter_date=local_today(),
+        info=[
+            ("Host-ID", data.host_id),
+            ("Kunden-ID", data.partner_id),
+            ("Teilnehmer-ID", data.ebics_user_id),
+            ("EBICS-Version", data.ebics_version),
+        ],
+        notice=data.notice,
+        draft_notice=(
+            "ENTWURF: Hash-Wert fehlt, nicht an die Bank senden" if missing_hash else None
+        ),
+    )
+    content = await asyncio.to_thread(letters_mod.render_pdf, head, letter)
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "content-disposition": (
+                f'attachment; filename="ebics-ini-hia-{data.ebics_user_id}.pdf"'
+            ),
+            "cache-control": "no-store",
+        },
+    )
+
+
 @router.post(
     "/subscribers/{subscriber_id}/activation",
     summary="Freischaltung durch die Bank bestätigen",
@@ -1105,6 +1191,23 @@ async def _import_c53(
     principal: TenantPrincipal,
     content: bytes,
 ) -> dict[str, Any]:
+    return await import_c53_content(
+        session,
+        blobs=BlobStore(request.app.state.settings),
+        tenant_id=principal.tenant_id,
+        user_id=principal.user_id,
+        content=content,
+    )
+
+
+async def import_c53_content(
+    session: AsyncSession,
+    *,
+    blobs: BlobStore,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    content: bytes,
+) -> dict[str, Any]:
     """Imports every camt.053 of the download whose accounts are known; members of unknown
     accounts are skipped and reported (suffix only). Re-delivered statements add nothing (B08:
     bank reference per account, D05)."""
@@ -1125,8 +1228,8 @@ async def _import_c53(
         try:
             run = await svc.import_file(
                 session,
-                tenant_id=principal.tenant_id,
-                user_id=principal.user_id,
+                tenant_id=tenant_id,
+                user_id=user_id,
                 parsed=file,
                 document_id=None,
             )
@@ -1142,24 +1245,24 @@ async def _import_c53(
             try:
                 await archive_raw(
                     session,
-                    BlobStore(request.app.state.settings),
-                    tenant_id=principal.tenant_id,
+                    blobs,
+                    tenant_id=tenant_id,
                     account_id=run.property_bank_account_id,
                     data=member.data,
                     ext="xml",
                     day=local_today(),
-                    created_by=principal.user_id,
+                    created_by=user_id,
                     label="EBICS C53 Rohdatei",
                 )
             except ProblemError:
                 log.warning("bank.ebics_raw_archive_failed", exc_info=True)
         await emit(
             session,
-            tenant_id=principal.tenant_id,
+            tenant_id=tenant_id,
             type="bank_sync_run.completed",
             entity_type="bank_sync_run",
             entity_id=run.id,
-            actor_user_id=principal.user_id,
+            actor_user_id=user_id,
             payload=run.counts,
         )
     return {

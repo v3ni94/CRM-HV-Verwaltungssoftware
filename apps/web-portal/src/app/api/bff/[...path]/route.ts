@@ -63,7 +63,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // die lesende Support-Sicht (SA-02).
   // AE28 (M7-06, SA-04): Assistent für die eigenen Unterlagen (Berechtigungsfilter in der API).
   { method: "GET", pattern: /^portal\/assistant\/(status|scope|questions)$/ },
-  { method: "POST", pattern: /^portal\/assistant\/(questions|privacy-ack)$/ },
+  { method: "POST", pattern: /^portal\/assistant\/(questions|questions\/async|privacy-ack)$/ },
+  // GAE-29: asynchrone Antwort, Status der eigenen Frage (nur eigener Zugang, API prüft).
+  { method: "GET", pattern: new RegExp(`^portal/assistant/questions/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info|allocation-properties|rental-income|statements|takeover-checklist)$/ },

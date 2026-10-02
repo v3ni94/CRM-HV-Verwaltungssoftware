@@ -7,6 +7,7 @@ provider data (M7-05). Usage: ``python -m mhvp.ai.evaluate [folder]``.
 """
 
 import json
+import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -255,6 +256,77 @@ def _propose_posting(
     ]
 
 
+def _classify_document(
+    output: dict[str, Any], expected: dict[str, Any], case_input: dict[str, Any]
+) -> list[tuple[Any, Any]]:
+    """GAB-14, M35 Stufe 3: what the review centre does with a recorded answer. The input text
+    passes ``mask_text`` first (no IBAN, e-mail, phone number or probable name reaches the
+    provider, rule 0.1.13); the answer is a proposal only: the category counts only as a two
+    digit code 01 to 06, the class only as a lower case code, and the confidence decides
+    whether the proposal is shown as confident (threshold of the automatic stage). Nothing is
+    ever applied."""
+    from mhvp.objektakte.classification import DEFAULT_AUTO_APPLY_THRESHOLD
+    from mhvp.objektakte.masking import mask_text
+
+    masked = mask_text(f"{case_input['filename']}\n{case_input.get('text', '')}")
+    category = output["category"]
+    if category not in {"01", "02", "03", "04", "05", "06"}:
+        category = None
+    document_class = output["document_class"]
+    if document_class is not None and not re.fullmatch(r"[a-z][a-z0-9_]{1,63}", document_class):
+        document_class = None
+    return [
+        (document_class, expected["document_class"]),
+        (category, expected["category"]),
+        (output["confidence"] >= DEFAULT_AUTO_APPLY_THRESHOLD, expected["confident"]),
+        (1 <= len(output["reasons"]) <= 4, expected["reasons_ok"]),
+        (sorted(p for p in MASK_PLACEHOLDERS if p in masked), sorted(expected["placeholders"])),
+    ]
+
+
+MASK_PLACEHOLDERS = ("[IBAN]", "[E-MAIL]", "[TELEFON]", "[NAME]")
+
+
+def _call_summary(
+    output: dict[str, Any], expected: dict[str, Any], case_input: dict[str, Any]
+) -> list[tuple[Any, Any]]:
+    """GAB-14, Telefonassistenz: deterministic extraction of the protocol mail merged with the
+    recorded answer (``call_assistant.merge_ai``: the model fills gaps only, below the minimum
+    confidence it is ignored, the phone number always comes from the deterministic stage)
+    compared with independently expected caller, property number, unit number, concern,
+    callback flag, phone number and source of the name."""
+    from mhvp.tickets import call_assistant
+
+    data = call_assistant.merge_ai(
+        call_assistant.extract(case_input.get("subject"), case_input.get("body")), output
+    )
+    return [
+        (data.caller_name, expected["caller_name"]),
+        (data.property_number, expected["property_number"]),
+        (data.unit_number, expected["unit_number"]),
+        (data.concern is not None, expected["has_concern"]),
+        (data.callback_requested, expected["callback"]),
+        (data.caller_phone, expected["phone"]),
+        (data.sources.get("caller_name"), expected["name_source"]),
+    ]
+
+
+def _rent_increase_check(output: dict[str, Any], expected: dict[str, Any]) -> list[tuple[Any, Any]]:
+    """GAB-14, M26-01: ``rent_increase_check.normalize_result`` (deduplication, severity order,
+    overall derived from the highest severity instead of the model's own word) on a recorded
+    answer, compared with independently expected overall, highest severity, counts and the
+    order of the finding fields."""
+    from mhvp.ai.rent_increase_check import normalize_result
+
+    result = normalize_result(output)
+    return [
+        (result["overall"], expected["overall"]),
+        (result["max_severity"], expected["max_severity"]),
+        (result["counts"], expected["counts"]),
+        ([f["field"] for f in result["findings"]], expected["fields"]),
+    ]
+
+
 Scorer = Callable[[dict[str, Any], Any], list[tuple[Any, Any]]]
 InputScorer = Callable[[dict[str, Any], Any, dict[str, Any]], list[tuple[Any, Any]]]
 
@@ -265,6 +337,7 @@ SCORERS: dict[AiTask, Scorer] = {
     AiTask.ANSWER_QUESTION: _answer,
     AiTask.SUMMARIZE: _summary,
     AiTask.EXTRACT_INVOICE: _invoice,
+    AiTask.RENT_INCREASE_CHECK: _rent_increase_check,
 }
 # Scorers whose post-processing also needs the case input (mail text, ticket title, table).
 INPUT_SCORERS: dict[AiTask, InputScorer] = {
@@ -273,6 +346,8 @@ INPUT_SCORERS: dict[AiTask, InputScorer] = {
     AiTask.MAP_COLUMNS: _map_columns,
     AiTask.CONTACT_MASTER_DATA_CHANGE: _contact_change,
     AiTask.PROPOSE_POSTING: _propose_posting,
+    AiTask.CLASSIFY_DOCUMENT: _classify_document,
+    AiTask.CALL_SUMMARY: _call_summary,
 }
 
 

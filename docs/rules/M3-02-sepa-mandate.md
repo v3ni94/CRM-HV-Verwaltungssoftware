@@ -138,3 +138,7 @@ Einreichung bleiben offene Entscheidung (`docs/OPEN_QUESTIONS.md` M3-03). Tests
   freigegebenen CRM-Pfad und erst nach G2 verwendet. Die KI entscheidet nie.
 - Portalnutzer sehen ausschließlich ihre eigenen Vorschläge (`GET /api/v1/portal/sepa-mandates`);
   ein anderer Mandant sieht und entscheidet nichts (RLS, 404).
+
+## Änderung Welle 17 (AF07, GAA-05, 02.10.2026)
+
+Mandate mit Verfahren B2B (Firmenlastschrift) werden bei der Erfassung einer Bankverbindung mit 422 `MHVP-CONT-0033` abgewiesen; das CRM kennzeichnet B2B als nicht unterstützt. Der Lastschriftlauf schließt jedes Nicht-CORE-Mandat mit sichtbarem Sperrgrund aus. Ein B2B-Lauf (eigene Vorlauffrist, kein Erstattungsanspruch, Bankvereinbarung) ist nicht umgesetzt; die Entscheidung ist offen (AF07-01, Gate G2). Quellenstatus: Produktschutz. Abnahmefall: `tests/unit/test_af07_budget_b2b.py`, `apps/web-crm/src/lib/contact-schema-b2b.test.ts`. Änderungsgrund: Lückenbefund GAA-05.

@@ -495,6 +495,23 @@ class ImportItemOut(_Out):
     kept_reason: str | None
 
 
+class ImportUndoPreviewItemOut(_Out):
+    sequence: int
+    entity_type: str
+    entity_id: uuid.UUID
+    removable: bool
+    kept_reason: str | None
+
+
+class ImportUndoPreviewOut(_Out):
+    """Dry run of the import undo (10.1 step 5): nothing is changed."""
+
+    import_id: uuid.UUID
+    removable: int
+    kept: int
+    items: list[ImportUndoPreviewItemOut]
+
+
 class ImportOut(_Out):
     id: uuid.UUID
     source: str

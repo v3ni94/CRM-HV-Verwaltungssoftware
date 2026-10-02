@@ -17,12 +17,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.documents.models import Document
+from mhvp.platform.models import TenantSettings
 from mhvp.tickets.models import Ticket, TicketStatus
 
 INVOICE_RE = re.compile(r"\b(rechnung|rechnungsnummer|invoice)\b", re.I)
 DAMAGE_RE = re.compile(r"(schaden|mangel|defekt|leck|wasserschaden|feuchtigkeit|schimmel)", re.I)
 CONTRACT_RE = re.compile(r"(\bvertrag\b|mietvertrag|verwaltervertrag|dienstleistungsvertrag)", re.I)
 MINUTES_RE = re.compile(r"(protokoll|beschlusssammlung|versammlung)", re.I)
+
+# GAB-11: tenant switch (TenantSettings.sources), default off. On, filing an invoice starts the
+# receipt extraction as a proposal; off, the hint offers the action "Beleg erfassen".
+INVOICE_AUTO_KEY = "invoice_intake_auto"
+
+
+async def invoice_intake_auto(session: AsyncSession) -> bool:
+    row = await session.scalar(select(TenantSettings))
+    return bool(row is not None and (row.sources or {}).get(INVOICE_AUTO_KEY) is True)
+
+
+def invoice_followup(followups: list[dict[str, Any]]) -> dict[str, Any] | None:
+    return next((f for f in followups if f.get("kind") == "invoice"), None)
+
 
 # Kinds that confirm() may turn into a document link; the others stay hints.
 LINKABLE_KINDS = {"ticket": "ticket", "contract_file": "contract"}

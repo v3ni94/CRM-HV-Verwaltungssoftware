@@ -62,6 +62,7 @@ const RULE_SEARCH: Record<string, [title: string, keywords: string[]]> = {
   "opening-lock-mode": ["Anfangsbestand der Rücklage, Sperre", ["anfangsbestand", "rücklage", "sperre", "protokolliert", "v01-01"]],
   "reserve-plan-tax": ["Steuerliche Einordnung der Rücklagenzuführung", ["rücklagenplan", "steuerliche einordnung", "platzhalter"]],
   "reserve-payment-mode": ["Zahlungen je Zweckrücklage", ["zweckrücklage", "planverhältnis", "aufteilung", "rücklagenzahlung"]],
+  "correction-report": ["Korrekturbericht je Eigentümer", ["korrekturbericht", "abrechnungsversion", "korrektur", "differenz"]],
   "plan-change-mode": ["Unterjährige Planänderung", ["wirtschaftsplan", "differenz", "nachforderung", "gutschrift", "nächste rate", "planänderung"]],
   "acquisition-purchase": ["Zuordnung bei Eigentümerwechsel je Erwerbsart", ["erwerbsart", "eigentümerwechsel", "erbfall", "zwangsversteigerung", "schenkung", "ersterwerb", "kauf", "abrechnungsspitze"]],
   "virtual-meetings": ["Virtuelle Versammlung zulassen", ["virtuelle versammlung", "online", "hybrid", "v13"]],
@@ -70,6 +71,9 @@ const RULE_SEARCH: Record<string, [title: string, keywords: string[]]> = {
   "online-meeting": ["Online-Versammlung im Portal", ["online teilnahme", "abstimmung portal", "eigentümerversammlung"]],
   "proxy-conflict-mode": ["Vollmacht gegen eigene Stimme", ["vollmacht", "stimme", "konflikt", "online abstimmung"]],
   "owner-rental-income": ["Mieterträge im Eigentümerportal", ["mieterträge", "kapitalanleger", "sondereigentumsverwaltung", "datenschutz"]],
+  "owner-rental-statements-portal": ["Eigentümerabrechnung im Eigentümerportal", ["eigentümerabrechnung", "eigentümerportal", "sev", "mietverwaltung"]],
+  "tenant-statement-portal": ["Nebenkostenabrechnung im Mieterportal", ["nebenkostenabrechnung", "mieterportal", "betriebskosten", "heizkosten"]],
+  "invoice-intake-auto": ["Belegerfassung aus dem Dokumenteingang", ["belegerfassung", "dokumenteingang", "rechnung", "eingangsvorschlag"]],
   "owner-ticket-scope": ["Tickets im Eigentümerportal", ["ticketumfang", "eigentümer tickets", "objekt tickets"]],
   "provider-rating-display": ["Bewertungen von Dienstleistern", ["dienstleister bewertung", "rating", "auftragsbewertung"]],
   "terms-version-mode": ["Fassung der Nutzungsbedingungen", ["nutzungsbedingungen", "einwilligungsrichtlinie", "fassung", "nb"]],
@@ -86,6 +90,7 @@ const RULE_SEARCH: Record<string, [title: string, keywords: string[]]> = {
   "mfa-portal-required": ["Zweiter Faktor im Portal", ["totp", "portal anmeldung", "2fa", "mfa"]],
   "access-export-third-party": ["Auskunftsexport, andere Personen", ["auskunft", "art 15", "dsgvo", "dritte", "name oder rolle"]],
   "access-export-internal-notes": ["Auskunftsexport, interne Vermerke", ["auskunft", "interne notizen", "dsgvo", "vermerke"]],
+  "text-block-second-person": ["Textbausteine, Zweitpersonprüfung", ["textbaustein", "zweite person", "vier augen", "freigabe", "letter_notice"]],
   "document-trash-enabled": ["Dokument-Papierkorb", ["papierkorb", "wiederherstellen", "gelöschte dokumente", "löschfrist"]],
   "document-trash-days": ["Dokument-Papierkorb, Frist in Tagen", ["papierkorb frist", "30 tage", "aufbewahrung gelöscht"]],
   "credit-payable-mode": ["Guthaben aus Abrechnungen, Verbindlichkeitsposten", ["guthaben", "verbindlichkeit", "auszahlung ohne rechnung", "umbuchung", "kreditor", "nebenbuch", "zahlungsauftrag"]],
@@ -532,6 +537,22 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tenant_settings:update"],
   },
   {
+    id: "mailquellen",
+    title: "Mailquellen",
+    breadcrumb: [ROOT, "Schnittstellen", "Mailquellen"],
+    href: "/einstellungen/mailquellen",
+    keywords: ["mailquelle", "eingangs-webhook", "geheimnis erneuern", "empfangsprotokoll"],
+    permission: ["tenant_settings:read"],
+  },
+  {
+    id: "api-schluessel",
+    title: "API-Schlüssel",
+    breadcrumb: [ROOT, "Schnittstellen", "API-Schlüssel"],
+    href: "/einstellungen/api-schluessel",
+    keywords: ["api key", "schlüssel widerrufen", "token", "präfix"],
+    permission: ["api_keys:read"],
+  },
+  {
     id: "immoware",
     title: "Immoware24-Anbindung",
     breadcrumb: [ROOT, "Schnittstellen", "Immoware24"],
@@ -644,6 +665,16 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     href: "/einstellungen/fristtypen",
     keywords: ["frist", "fristtyp", "verwalterwechsel", "kautionsabrechnung", "mieterhöhung", "kündigungsfrist", "vorfrist", "dauer"],
     permission: ["tenant_settings:read"],
+  },
+
+  // --- Abrechnung (GAF-12) ---------------------------------------------------------------------
+  {
+    id: "abrechnung-einstellungen",
+    title: "Abrechnung, Heizkosten-Regeltabellen und Kostenart je Konto",
+    breadcrumb: [ROOT, "Abrechnung"],
+    href: "/einstellungen/abrechnung",
+    keywords: ["heizkosten", "regeltabelle", "co2 stufen", "gradtage", "kostenart", "betriebskostenart", "kostenkonto", "betrkv"],
+    permission: ["accounting:read"],
   },
 
   // --- SLA -----------------------------------------------------------------------------------
@@ -837,6 +868,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     breadcrumb: [ROOT, "Buchhaltung", "Honorarbuchung"],
     href: "/einstellungen/buchhaltung/honorarbuchung",
     keywords: ["honorar konten", "verwalterhonorar buchung", "erlöskonto honorar", "kontenzuordnung honorar", "forderungskonto honorar"],
+    permission: ["accounting:read"],
+  },
+  {
+    id: "buchhaltung-glaeubiger-id",
+    title: "Buchhaltung, Gläubiger-ID",
+    breadcrumb: [ROOT, "Buchhaltung", "Gläubiger-ID"],
+    href: "/einstellungen/buchhaltung/glaeubiger-id",
+    keywords: ["gläubiger-id", "gläubiger identifikationsnummer", "sepa lastschrift", "creditor id", "lastschrift rechtsträger"],
     permission: ["accounting:read"],
   },
   {

@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { ImportRoleForm } from "./ImportRoleForm";
+import { ImportUndoDialog } from "./ImportUndoDialog";
 
 const ENTITY_KEYS = ["contact", "party", "property", "building", "unit", "contract", "property_owner"] as const;
 
@@ -26,13 +27,14 @@ export function ImportResult({
   const [run, setRun] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [undoOpen, setUndoOpen] = useState(false);
 
   const undo = async () => {
-    if (!window.confirm(t("undoConfirm"))) return;
     setBusy(true);
     setError(null);
     const res = await bff<ImportRun>(`/api/bff/imports/${run.id}/undo`, { method: "POST" });
     setBusy(false);
+    setUndoOpen(false);
     if (res.ok) setRun(res.data);
     else setError(res.message);
   };
@@ -52,11 +54,12 @@ export function ImportResult({
           {t(`status.${run.status}`)}
         </span>
         {canUndo && run.status !== "undone" ? (
-          <button type="button" className={`${ui.button} ml-auto`} onClick={undo} disabled={busy}>
+          <button type="button" className={`${ui.button} ml-auto`} onClick={() => setUndoOpen(true)} disabled={busy}>
             {t("undo")}
           </button>
         ) : null}
       </div>
+      {undoOpen ? <ImportUndoDialog importId={run.id} open busy={busy} onConfirm={undo} onCancel={() => setUndoOpen(false)} /> : null}
       <p className="text-sm">{t("itemCount", { count: items.length })}</p>
       {run.undone_at ? <p className="text-xs text-muted">{t("undoneAt", { at: formatDateTime(run.undone_at) })}</p> : null}
       {notes.length> 0 ? (

@@ -4,6 +4,8 @@ Only the approved version of a code is printed. Without it the output keeps the 
 "Text nicht freigegeben". The software ships no legal text.
 """
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,3 +24,13 @@ async def approved_texts(
 
 def status_by_code(texts: dict[str, str], codes: tuple[str, ...]) -> dict[str, str]:
     return {c: ("released" if c in texts else "not_released") for c in codes}
+
+
+POLICY_KEY = "text_block_policy"
+
+
+def second_person_required(sources: dict[str, Any] | None) -> bool:
+    """AF12 / GAE-16: tenant switch ``require_second_person`` (default on = four eyes).
+    Only an explicit ``false`` switches the second person check off."""
+    raw = (sources or {}).get(POLICY_KEY)
+    return not (isinstance(raw, dict) and raw.get("require_second_person") is False)

@@ -76,12 +76,25 @@ describe("RentInvoicePanel", () => {
       if (url.endsWith("/numbering-mode")) return jsonResponse({ mode: init?.method === "PUT" ? "regular_numbers" : "draft_numbers" });
       return jsonResponse([]);
     });
-    renderIntl(<RentInvoicePanel contractId="c1" vatOption="commercial_full_vat" canUpdate={true} />);
+    renderIntl(<RentInvoicePanel contractId="c1" vatOption="commercial_full_vat" canUpdate={true} canSettings={true} />);
     const select = await screen.findByLabelText("Nummer für Entwürfe");
     await userEvent.selectOptions(select, "regular_numbers");
     await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
     const put = calls.find((c) => c.method === "PUT");
     expect(put?.url).toBe("/api/bff/accounting/rent-invoices/numbering-mode");
     expect(JSON.parse(put?.body ?? "{}")).toEqual({ mode: "regular_numbers" });
+  });
+
+  it("shows the numbering mode switch only with the tenant settings permission", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/numbering-mode") ? jsonResponse({ mode: "draft_numbers" }) : jsonResponse([]),
+    );
+    const { unmount } = renderIntl(<RentInvoicePanel contractId="c1" vatOption="commercial_full_vat" canUpdate={true} />);
+    expect(await screen.findByTestId("rent-numbering-readonly")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Nummer für Entwürfe")).not.toBeInTheDocument();
+    unmount();
+    renderIntl(<RentInvoicePanel contractId="c1" vatOption="commercial_full_vat" canUpdate={false} canSettings={true} />);
+    expect(await screen.findByLabelText("Nummer für Entwürfe")).toBeInTheDocument();
+    expect(screen.queryByTestId("rent-numbering-readonly")).not.toBeInTheDocument();
   });
 });

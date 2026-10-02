@@ -93,6 +93,17 @@ describe("BFF proxy", () => {
     ["POST", `banking/transactions/${ID}/book`],
     ["POST", `banking/transactions/${ID}/ignore`],
     ["POST", `banking/payment-orders/${ID}/approve`],
+    ["GET", "banking/payment-batches"],
+    ["GET", `banking/payment-batches/${ID}`],
+    ["GET", "banking/connections"],
+    ["POST", "banking/connections"],
+    ["GET", "banking/runs"],
+    ["PUT", "banking/learning"],
+    ["GET", `banking/transactions/${ID}/decisions`],
+    ["PUT", `accounting/direct-debits/creditor-ids/legal-entities/${ID}`],
+    ["PUT", "accounting/direct-debits/creditor-ids/tenant"],
+    ["POST", "accounting/direct-debits/preview"],
+    ["POST", `accounting/direct-debits/${ID}/pre-notifications`],
     // Bankabgleich-Kennzahlen (A45) und Lastschriftläufe (M15): der Download der pain.008
     // ist erreichbar, die API sperrt ihn selbst hinter G2 (M15-01 Folgepunkt).
     ["GET", "banking/matching-metrics"],
@@ -216,6 +227,7 @@ describe("BFF proxy", () => {
     ["POST", `integrations/lexoffice/invoice-copies/${ID}/accept`],
     ["POST", `integrations/lexoffice/invoice-copies/${ID}/reject`],
     ["POST", `integrations/lexoffice/invoice-copies/${ID}/link-recipient`],
+    ["PUT", "banking/automation"], // AF01: switch off only, the API refuses switching on
   ])("forwards the operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
@@ -249,7 +261,6 @@ describe("BFF proxy", () => {
     // BK-2: the automation runner and the switch stay outside (ADR 0014, operator decision open).
     ["POST", "banking/auto-post"],
     ["POST", "banking/automation"],
-    ["PUT", "banking/automation"],
     ["DELETE", `banking/rules/${ID}`],
     ["POST", `banking/transactions/${ID}/reject`],
     ["POST", `banking/transactions/${ID}/reopen`],

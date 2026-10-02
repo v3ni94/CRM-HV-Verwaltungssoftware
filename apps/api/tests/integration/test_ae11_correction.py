@@ -104,8 +104,37 @@ def _calc(client: TestClient, h: dict[str, str], sid: str) -> dict[str, Any]:
     return _ok(client.post(f"{H}/statements/{sid}/calculate", headers=h))
 
 
+def _enable(client: TestClient, h: dict[str, str]) -> None:
+    _ok(client.put(f"{H}/correction-report-settings", json={"enabled": True}, headers=h))
+
+
+def test_af08_switch_default_off(client: TestClient, world: World) -> None:
+    """GAE-13: default off -> report 409; reader 403 on PUT; 422 on unknown fields; the other
+    tenant keeps its own switch."""
+    h = bearer(login(client, world, "ae11admin"))
+    reader = bearer(login(client, world, "ae11reader"))
+    other = bearer(login(client, world, "ae11other"))
+    _ok(client.put(f"{H}/correction-report-settings", json={"enabled": False}, headers=h))
+    assert _ok(client.get(f"{H}/correction-report-settings", headers=h))["enabled"] is False
+    w = _weg(client, h, "819")
+    v1 = _statement(client, h, w)
+    _cost(client, h, w, v1["id"], "100.00")
+    _calc(client, h, v1["id"])
+    v2 = _ok(client.post(f"{H}/statements/{v1['id']}/new-version", headers=h), 201)
+    _calc(client, h, v2["id"])
+    url = f"{H}/statements/{v2['id']}/correction-report"
+    assert client.get(url, params={"against": v1["id"]}, headers=h).status_code == 409
+    put = f"{H}/correction-report-settings"
+    assert client.put(put, json={"enabled": True}, headers=reader).status_code == 403
+    assert client.put(put, json={"enabled": True, "x": 1}, headers=h).status_code == 422
+    _enable(client, h)
+    assert _ok(client.get(url, params={"against": v1["id"]}, headers=h))["new"]["version"] == 2
+    assert _ok(client.get(put, headers=other))["enabled"] is False
+
+
 def test_correction_report_per_owner_and_no_postings(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "ae11admin"))
+    _enable(client, h)
     w = _weg(client, h, "811")
     v1 = _statement(client, h, w)
     _cost(client, h, w, v1["id"], "5500.00")
@@ -147,6 +176,7 @@ def test_correction_report_per_owner_and_no_postings(client: TestClient, world: 
 
 def test_new_version_without_body_and_validation(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "ae11admin"))
+    _enable(client, h)
     w = _weg(client, h, "812")
     v1 = _statement(client, h, w)
     bad = client.post(
@@ -184,6 +214,7 @@ def test_authorization_and_tenant_separation(client: TestClient, world: World) -
 
 def test_d09_heating_block_in_correction(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "ae11admin"))
+    _enable(client, h)
     w = _weg(client, h, "814", cost="0.00")
     _book_cost(
         client, h, w["ledger"], w["acc"]["001200"], w["acc"]["041000"], "10000.00", "2025-02-10"

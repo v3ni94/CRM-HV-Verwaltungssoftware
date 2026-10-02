@@ -23,6 +23,9 @@ from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today
 
+# Trigger of a stored failed scheduled run (GAC-06); never a preview.
+FAILED_TRIGGER = "failed"
+
 
 async def store_preview(
     session: AsyncSession, tenant_id: uuid.UUID, *, trigger: str, user_id: uuid.UUID | None
@@ -43,37 +46,53 @@ async def weekly_previews(settings: Settings) -> dict[str, int]:
     )
     factory = create_session_factory(engine)
     runs = 0
+    failed = 0
     try:
         async with platform_transaction(factory) as session:
             ids: list[uuid.UUID] = list(
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                enabled = await session.scalar(
-                    select(PaymentRunSetting.weekly_preview_enabled).where(
-                        PaymentRunSetting.tenant_id == tenant_id
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    enabled = await session.scalar(
+                        select(PaymentRunSetting.weekly_preview_enabled).where(
+                            PaymentRunSetting.tenant_id == tenant_id
+                        )
                     )
-                )
-                if not enabled:
-                    continue
-                # GA12-01: per tenant job setting (switch and start time).
-                if not await job_allowed(session, tenant_id, "payments-payment-run-preview"):
-                    continue
-                # GA12-06: one scheduled preview per tenant and day, also against a parallel run.
-                await lock_job(session, tenant_id, "payments-payment-run-preview")
-                if await session.scalar(
-                    select(PaymentRunPreview.id).where(
-                        PaymentRunPreview.trigger == "schedule",
-                        PaymentRunPreview.as_of == local_today(),
+                    if not enabled:
+                        continue
+                    # GA12-01: per tenant job setting (switch and start time).
+                    if not await job_allowed(session, tenant_id, "payments-payment-run-preview"):
+                        continue
+                    # GA12-06: one scheduled preview per tenant and day, also against a
+                    # parallel run.
+                    await lock_job(session, tenant_id, "payments-payment-run-preview")
+                    if await session.scalar(
+                        select(PaymentRunPreview.id).where(
+                            PaymentRunPreview.trigger == "schedule",
+                            PaymentRunPreview.as_of == local_today(),
+                        )
+                    ):
+                        continue
+                    await store_preview(session, tenant_id, trigger="schedule", user_id=None)
+                    runs += 1
+            except Exception as exc:
+                # GAC-06: the failed preview rolled back; keep a failed row as evidence (alert
+                # metric payment_run_failed_24h) and continue with the next tenant.
+                failed += 1
+                async with tenant_transaction(factory, tenant_id) as session:
+                    session.add(
+                        PaymentRunPreview(
+                            tenant_id=tenant_id,
+                            as_of=local_today(),
+                            trigger=FAILED_TRIGGER,
+                            summary={"error": f"{type(exc).__name__}: {exc}"[:2000]},
+                        )
                     )
-                ):
-                    continue
-                await store_preview(session, tenant_id, trigger="schedule", user_id=None)
-                runs += 1
     finally:
         await engine.dispose()
-    return {"runs": runs}
+    return {"runs": runs, "failed": failed}
 
 
 @shared_task(name="mhvp.payments.payment_run")

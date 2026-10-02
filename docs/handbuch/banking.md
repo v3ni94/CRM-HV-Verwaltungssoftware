@@ -531,3 +531,18 @@ vorbereiten, an die Bank wird nichts gesendet.
 
 Zahlungen werden über EBICS nicht eingereicht (Freigabetor G2). Ausführliche Schritte:
 Runbook `docs/runbooks/ebics-setup.md`, Abschnitt 9.
+
+## Bankverbindungen, Gläubiger-ID und Lastschriftvorschau (AF03)
+
+- Unter Bank, Bankverbindungen sehen Sie Verbindungen, das Sync-Protokoll und das Entscheidungsprotokoll je Umsatz. Das Anlegen einer Verbindung ruft nichts bei der Bank ab; der Schalter des Entscheidungsprotokolls erfordert eine Begründung und bucht nichts.
+- Die Gläubiger-ID pflegen Sie unter Einstellungen, Buchhaltung, Gläubiger-ID je Rechtsträger. Die Nummer wird nicht geprüft; Format und Prüfung sind fachlich offen (M15-01).
+- Im Lastschriftlauf zeigt die Vorschau einziehbare Sollstellungen, ohne etwas anzulegen. Die Vorabinformation je Zahler wird als Entwurf angelegt und nicht versendet.
+- Zahlungsdateien (Sammler) sind unter Zahlungen nur lesbar; Erzeugen, Download und Einreichung bleiben bis G2 gesperrt.
+
+## Sync-Protokoll und INI-/HIA-Brief (Welle 17)
+
+Auf der Seite Bank zeigt die Karte Sync-Protokoll die letzten Läufe mit Zeitpunkt, Quelle, Status, neuen Umsätzen, Dubletten, automatisch gebuchten Umsätzen, Vorschlägen und Fehlern. EBICS-Kontoauszüge werden täglich um 06:40 Uhr abgerufen, sobald EBICS für den Mandanten eingeschaltet und der Teilnehmer bereit ist. Solange keine geprüfte Übertragung installiert ist, steht im Protokoll der Fehler MHVP-BANK-0050. Beim EBICS-Teilnehmer lässt sich der INI-/HIA-Brief als PDF herunterladen. Trägt der Brief den Vermerk ENTWURF, fehlt ein Hash-Wert der Übertragung; dieser Brief wird nicht an die Bank gesendet.
+
+## Buchungsautomatik ein- und ausschalten (AF01, Welle 17)
+
+Eingeschaltet wird die Buchungsautomatik nur unter Einstellungen, Buchhaltung, Automatik: Antrag mit Grund, Freigabe durch eine zweite Person, Freigabestufe G1 offen. Ein direktes Einschalten über die Schnittstelle wird abgelehnt. Ist die Automatik eingeschaltet, steht dort die Schaltfläche "Sofort ausschalten" mit Pflichtgrund bereit; das Ausschalten wirkt sofort und ohne Antrag. Die Karte auf der Seite Bankregeln zeigt den Stand der Automatik und der Ausgangsautomatik und verweist auf den Antragsweg.

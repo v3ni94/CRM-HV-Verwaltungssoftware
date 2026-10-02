@@ -132,6 +132,18 @@ class ChartState(BaseModel):
     status: str | None
 
 
+class G1AcceptanceRegisterState(BaseModel):
+    """GAA-03: read only state of the acceptance register (annex D), never written here."""
+
+    link: str = "/plattform/abnahme"
+    cases_total: int
+    released_total: int
+    passed_total: int
+    g1_cases_total: int
+    g1_passed: int
+    note: str
+
+
 class G1OpeningOut(BaseModel):
     chart: ChartState
     cases: list[G1AcceptanceItemOut]
@@ -150,6 +162,7 @@ class G1OpeningOut(BaseModel):
     items_without_responsible: int = 0
     items_without_evidence: int = 0
     gate_checklist_ref: str = GATE_CHECKLIST_REF
+    acceptance_register: G1AcceptanceRegisterState | None = None
 
 
 def _item_out(key: str, title: str, row: G1AcceptanceItem | None) -> G1AcceptanceItemOut:
@@ -208,7 +221,22 @@ async def overview(session: AsyncSession) -> G1OpeningOut:
     gate_open = any(r.status is GateRequestStatus.APPROVED for r in requests)
     learning = await session.scalar(select(TenantSettings.learning_bookkeeper_enabled))
     passed = G1AcceptanceStatus.PASSED.value
+    from mhvp.accounting import acceptance as register
+
+    reg = await register.list_cases(session)
+    g1_rows = [r for r in reg.items if r.g1_scope]
+    g1_passed = sum(
+        1 for r in g1_rows if r.last_result is not None and r.last_result.outcome == "passed"
+    )
     return G1OpeningOut(
+        acceptance_register=G1AcceptanceRegisterState(
+            cases_total=reg.cases_total,
+            released_total=reg.released_total,
+            passed_total=reg.passed_total,
+            g1_cases_total=len(g1_rows),
+            g1_passed=g1_passed,
+            note=reg.note,
+        ),
         chart=ChartState(
             released=template is not None,
             code=shown.code if shown else None,

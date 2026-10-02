@@ -111,7 +111,9 @@ class PortalAssistantHitOut(BaseModel):
 class PortalAssistantAnswerOut(BaseModel):
     id: uuid.UUID
     mode: Literal["ai", "search"]
-    status: Literal["answered", "not_answerable", "failed", "search_hits", "no_sources"]
+    status: Literal[
+        "answered", "not_answerable", "failed", "search_hits", "no_sources", "pending", "timeout"
+    ]
     answer: str | None
     sources: list[PortalAssistantSourceOut]
     hits: list[PortalAssistantHitOut]
@@ -486,6 +488,92 @@ async def ask(
         return out
 
 
+@router.post(
+    "/questions/async",
+    status_code=202,
+    summary="Frage asynchron stellen (Job im Worker, Status per Abfrage)",
+    response_model=PortalAssistantAnswerOut,
+)
+async def ask_async(
+    body: PortalAssistantQuestionIn, request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """Same checks as the synchronous question (scope first: 404 or empty scope, rate limit).
+    When the AI stage may run, the row is stored as ``pending`` and the worker answers; the
+    portal polls ``GET /questions/{id}``. Otherwise the search hits come back at once."""
+    from mhvp.ai.masking import mask_personal_data
+    from mhvp.portal import assistant_job
+
+    principal, account = ctx
+    masked_question = mask_personal_data(body.question).strip()
+    async with tenant_tx(request, principal) as session:
+        row = await _enabled(session)
+        await _check_rate(session, account)
+        scope = await assistant_scope.build_scope(
+            session, account, local_today(), unit_id=body.unit_id, document_id=body.document_id
+        )
+        state = await ai_state(session, row, account)
+        hits = [_hit_out(d) for d in await _hits(session, scope, masked_question)]
+        if scope.empty:
+            code = _no_scope_code(scope)
+            log = await _write_log(
+                session, principal, account, body, masked_question, scope,
+                mode="search", status="no_sources", answer=MESSAGES[code], reason_code=code,
+            )  # fmt: skip
+            return _answer_out(log, [], state)
+        if not state.available:
+            log = await _write_log(
+                session, principal, account, body, masked_question, scope,
+                mode="search", status="search_hits" if hits else "no_sources",
+                answer=state.message, reason_code=state.code, technical_reason=state.technical,
+            )  # fmt: skip
+            return _answer_out(log, hits, state)
+        log = await _write_log(
+            session, principal, account, body, masked_question, scope,
+            mode="ai", status="pending", answer=None,
+        )  # fmt: skip
+        out = _answer_out(log, hits, state)
+    assistant_job.enqueue(principal.tenant_id, log.id)
+    return out
+
+
+@router.get(
+    "/questions/{question_id}",
+    summary="Status einer Frage (Abfrage bei asynchroner Antwort)",
+    response_model=PortalAssistantAnswerOut,
+    dependencies=[Depends(strict_query)],
+)
+async def question_status(
+    question_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """Own question only (other account or tenant: 404). Overdue pending rows become timeout.
+    Sources are shown only while the document is still readable for the account."""
+    from mhvp.portal import access, assistant_job
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        row = await _enabled(session)
+        log = await session.scalar(
+            select(PortalChatLog).where(
+                PortalChatLog.id == question_id, PortalChatLog.account_id == account.id
+            )
+        )
+        if log is None:
+            raise ProblemError(ErrorCodes.NOT_FOUND)
+        await assistant_job.expire(session, log)
+        state = await ai_state(session, row, account)
+        readable = {
+            str(i) for i in await access.visible_document_ids(session, account, local_today())
+        }
+        out = _answer_out(log, [], state)
+        out["sources"] = [s for s in (log.sources or []) if s.get("document_id") in readable]
+        if log.status in ("failed", "timeout", "no_sources"):
+            scope = await assistant_scope.build_scope(
+                session, account, local_today(), unit_id=log.unit_id, document_id=log.document_id
+            )
+            out["hits"] = [_hit_out(d) for d in await _hits(session, scope, log.question)]
+        return out
+
+
 def _failed_state(result: Any) -> AiState:
     return AiState(False, result.reason_code, MESSAGES["ai_run_failed"], result.technical_reason)
 
@@ -587,7 +675,9 @@ async def my_questions(
 async def assistant_log(
     request: Request,
     account_id: uuid.UUID | None = Query(default=None),
-    status: Literal["answered", "not_answerable", "failed", "search_hits", "no_sources"]
+    status: Literal[
+        "answered", "not_answerable", "failed", "search_hits", "no_sources", "pending", "timeout"
+    ]
     | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),

@@ -16,6 +16,7 @@ from mhvp.contacts.models import Contact, ContactAddress
 from mhvp.contracts.models import Contract
 from mhvp.core.config import Settings
 from mhvp.core.escaping import sanitize_filename
+from mhvp.core.events import emit
 from mhvp.core.ids import uuid7
 from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -42,7 +43,13 @@ from mhvp.handover.models import (
     HandoverProtocol,
     HandoverRoom,
 )
-from mhvp.hoa.models import HoaAssetReport, HoaInsuranceClaim, HoaLoan, HoaMeasure
+from mhvp.hoa.models import (
+    HoaAssetReport,
+    HoaInsuranceClaim,
+    HoaLoan,
+    HoaMeasure,
+    HoaStatement,
+)
 from mhvp.letting.models import Listing, RentIncreaseCase
 from mhvp.objektakte.drive_quota import drive_http_client
 from mhvp.platform.models import TenantSettings
@@ -81,6 +88,8 @@ LINKABLE: dict[str, Any] = {
     # operating cost statement run (GA06-02, GA06-03).
     "asset_report": HoaAssetReport,
     "statement": Statement,
+    # GAB-06: filed hoa statement PDFs (individual and total) hang at the statement.
+    "hoa_statement": HoaStatement,
     # Released version of another document (E06, D31): a redacted copy links to its original
     # with role "generated"; the portal shows the copy with a redaction note, never the original.
     "document": Document,
@@ -137,6 +146,7 @@ async def store_document(
     visibility: list[str] | None = None,
     scan_for_malware: bool = True,
     settings: Settings | None = None,
+    event_payload: dict[str, Any] | None = None,
 ) -> Document:
     """Index row, links and mirror jobs in this transaction; the original goes to S3 first.
     ``settings`` (the app settings) decide the upload to objektakte; without them the
@@ -222,6 +232,21 @@ async def store_document(
 
     await objektakte_upload.plan(session, tenant_id, document.id, settings)
     await queue_mirrors(session, tenant_id, document.id)
+    # Webhook event for every new document, whatever the source (section 12, GAB-07):
+    # uploads, generated letters, intake, Paperless webhook, dunning and imports alike.
+    # ``event_payload`` carries caller context (list kind, listing); values are stringified.
+    payload: dict[str, Any] = {"size": document.size, "source": str(source)}
+    for k, v in (event_payload or {}).items():
+        payload[k] = v if isinstance(v, int | bool | None) else str(v)
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="document.created",
+        entity_type="document",
+        entity_id=document.id,
+        actor_user_id=created_by,
+        payload=payload,
+    )
     await session.flush()
     return document
 

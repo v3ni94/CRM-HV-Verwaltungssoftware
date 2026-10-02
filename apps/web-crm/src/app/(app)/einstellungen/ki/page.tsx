@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EmbeddingsStatus } from "@/components/ai/EmbeddingsStatus";
 import { AiAutomationSwitches } from "@/components/ai/AiAutomationSwitches";
 import { AiPostingSwitch } from "@/components/banking/AiPostingPanel";
+import { FastTableImportSwitch } from "@/components/ai/FastTableImportSwitch";
 import { KnowledgeSettings } from "@/components/ai/KnowledgeSettings";
 import { ProviderSettings } from "@/components/ai/ProviderSettings";
 import { RoutingSettings, type Strategy } from "@/components/ai/RoutingSettings";
@@ -53,6 +54,7 @@ export default async function AiSettingsPage() {
       <p className="text-xs text-muted">{t("openaiHint")}</p>
       <AiPostingSwitch />
       <AiAutomationSwitches />
+      <FastTableImportSwitch />
       <EmbeddingsStatus initial={null} />
       <KnowledgeSettings initial={knowledge.data ?? []} properties={propertyOptions} />
     </div>

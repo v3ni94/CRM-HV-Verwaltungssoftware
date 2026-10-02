@@ -238,3 +238,34 @@ trash (refusal logged once per reason). The deletion checklist has the target `t
 overall status `in_trash`; the journal export carries `document.trashed` and
 `document.restored`, and the replay applies the last statement per document (`trashed`,
 `restored`). Backups are not edited. Rule: `docs/rules/AE33-papierkorb-auskunft.md`.
+
+## Eingebettete Schriften im Briefbogen (GAE-37, Welle 17)
+
+`pdf_fonts.py` registriert eine freie TrueType-Schrift (Liberation Sans, sonst DejaVu Sans) für
+`letters.render_pdf`, damit alle Schriften eingebettet sind (Voraussetzung der PDF/A-3-Vorprüfung
+in `accounting/zugferd.py`). Suchreihenfolge: Verzeichnis aus `MHVP_PDF_FONT_DIR`, dann
+`/usr/share/fonts/truetype/liberation`, `liberation2`, `dejavu` (Pakete `fonts-liberation` und
+`fonts-dejavu-core` im API-Image). Fehlt jede Schrift, gilt Helvetica als Fallback; die
+Vorprüfung meldet dann den Blocker "Schriften nicht eingebettet" mit Installationshinweis.
+
+## Textbausteine, Zweitpersonprüfung (AF12)
+
+`/document-text-blocks/policy` (GET, PUT) liest und setzt den Mandantenschalter `require_second_person` (Standard an, gespeichert in `tenant_settings.sources["text_block_policy"]`). Abschalten braucht eine Begründung; die Freigabe ohne zweite Person erzeugt das Ereignis `text_block.approved_without_second_person`. Der Code `letter_notice` ist der Hinweis im Mieter-Anschreiben (`billing/letters.py`), gedruckt nur freigegeben, sonst "Text nicht freigegeben".
+
+## AF10: pipeline follow-ups (wave 17, rule AF10-01)
+
+* `services.store_document` emits `document.created` for every source (payload `size`,
+  `source`, caller context via `event_payload`); routers no longer emit it (GAB-07).
+* `tasks.mirror_tenant`: after a Paperless consume task resolves, `PaperlessStore.content`
+  fills `ocr_text` of a `pending` document (GAB-04). Search vector is generated; embeddings
+  follow through `updated_at`.
+* Tenant switch `invoice_intake_auto` (`GET/PUT /document-invoice-intake-auto`, default off):
+  accepting an invoice intake proposal starts `paperless_webhook.intake_document` (receipt
+  draft, proposal only). Off: the CRM button "Beleg erfassen" calls `POST /receipts/drafts`.
+* `trash.restore_for_reimport`: the objektakte import queries with `include_trashed` and
+  restores its own trashed row instead of hitting `uq_document_source`; the tenant export
+  includes trashed documents (GAE-35).
+
+## AF21 (GAB-16)
+
+`POST /documents/bulk-link` verknüpft viele Dokumente mit einem Objekt als Anlage (Teilerfolgsbericht, Savepoint je Dokument, Ereignis `document.linked`). Original, Beleg und erzeugte Rollen werden nicht gesammelt gesetzt.

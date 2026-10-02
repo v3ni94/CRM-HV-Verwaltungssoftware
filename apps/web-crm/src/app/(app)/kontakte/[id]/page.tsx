@@ -15,6 +15,7 @@ import { ContactQuickActions } from "@/components/contacts/ContactQuickActions";
 import { CreditorPropertiesSection, type CreditorProperty } from "@/components/contacts/CreditorPropertiesSection";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { PartiesPanel } from "@/components/contacts/PartiesPanel";
+import { PortalSupportPanel } from "@/components/contacts/PortalSupportPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { PortalProposalsPanel } from "@/components/contacts/PortalProposalsPanel";
 import { PortalRepresentationsPanel } from "@/components/contacts/PortalRepresentationsPanel";
@@ -408,6 +409,9 @@ export default async function ContactDetailPage({
           emails={contact.emails}
           canInvite={canInvitePortal}
         />
+      ) : null}
+      {tab === "freigaben" && (me.data?.permissions.includes("tenant_settings:update") ?? false) ? (
+        <PortalSupportPanel contactId={contact.id} />
       ) : null}
       {tab === "freigaben" ? (
         <section>

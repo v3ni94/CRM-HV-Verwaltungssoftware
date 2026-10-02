@@ -307,7 +307,7 @@ def test_precheck_names_non_embedded_fonts_and_never_claims_conformance() -> Non
     assert check["official"] is False
     assert check["claimed"] == "PDF/A-3B"
     assert check["conformance"] == "not_verified"
-    assert check["blockers"] == ["Schriften nicht eingebettet: Helvetica."]
+    assert check["blockers"][0].startswith("Schriften nicht eingebettet: Helvetica.")
     assert "factur-x.xml: im Katalog /AF verknüpft" in check["passed"]
     assert check["not_checked"] == list(z.NOT_CHECKED)
 

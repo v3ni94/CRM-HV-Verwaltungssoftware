@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { DirectDebitPreview } from "@/components/banking/DirectDebitPreview";
 import { DirectDebitReconciliation } from "@/components/banking/DirectDebitReconciliation";
 import { DirectDebitRunActions } from "@/components/banking/DirectDebitRunActions";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,6 +31,7 @@ export default async function DirectDebitRunsPage() {
       <Link href="/bank/zahlungen" className="text-sm font-medium hover:underline">
         {t("ordersLink")}
       </Link>
+      <DirectDebitPreview ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, name: l.name }))} />
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

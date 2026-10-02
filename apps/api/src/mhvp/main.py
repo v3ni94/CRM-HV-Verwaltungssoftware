@@ -143,6 +143,7 @@ from mhvp.objektakte.routers import sync_router as objektakte_sync_router
 from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.objektakte.webhook import router as objektakte_webhook_router
 from mhvp.platform.admin_routers import router as platform_admin_additions_router
+from mhvp.platform.availability_probe import warn_missing_probe_urls
 from mhvp.platform.demo_routers import router as platform_demo_router
 from mhvp.platform.export_routers import router as tenant_export_job_router
 from mhvp.platform.gates import DbReleaseGateResolver
@@ -172,12 +173,14 @@ from mhvp.portal.owner_assets import router as portal_owner_assets_router
 from mhvp.portal.owner_extra import router as portal_owner_extra_router
 from mhvp.portal.owner_meetings import router as portal_owner_meetings_router
 from mhvp.portal.owner_overview import router as portal_owner_overview_router
+from mhvp.portal.owner_reports import router as portal_owner_reports_router
 from mhvp.portal.owner_statements import router as portal_owner_statements_router
 from mhvp.portal.provider_einvoice import router as portal_provider_einvoice_router
 from mhvp.portal.provider_info import admin as portal_provider_info_admin_router
 from mhvp.portal.provider_info import router as portal_provider_info_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
+from mhvp.portal.tenant_statements import router as portal_tenant_statements_router
 from mhvp.privacy.routers import router as privacy_router
 from mhvp.properties.routers import router as properties_router
 from mhvp.properties.routers_catalogs import router as catalogs_router
@@ -256,6 +259,7 @@ def create_app(
             ),
             s3=create_s3_client(settings) if settings.s3_configured else None,
         )
+        warn_missing_probe_urls(settings)
         app.state.resources = resources
         instrument_engine(engine, app.state.tracer_provider)
         app.state.readiness_checks = checks_factory(settings, resources)
@@ -450,6 +454,8 @@ def create_app(
     app.include_router(portal_owner_extra_router, prefix=API_PREFIX)
     app.include_router(portal_owner_overview_router, prefix=API_PREFIX)
     app.include_router(portal_owner_statements_router, prefix=API_PREFIX)
+    app.include_router(portal_owner_reports_router, prefix=API_PREFIX)
+    app.include_router(portal_tenant_statements_router, prefix=API_PREFIX)
     app.include_router(portal_owner_assets_router, prefix=API_PREFIX)
     app.include_router(portal_provider_einvoice_router, prefix=API_PREFIX)
     app.include_router(portal_provider_info_router, prefix=API_PREFIX)

@@ -274,8 +274,15 @@ async def create_posting_drafts(
                 ErrorCodes.ACC_WRONG_ENTITY,
                 detail="Zahler und Verwalter müssen verschiedene Buchungskreise haben.",
             )
+        from mhvp.accounting import period_lock
+
         for ledger in (payer_ledger, manager_ledger):
             svc.ensure_open_period(ledger, invoice.invoice_date)
+            # GAE-02 (AE20): object period lock checked up front, not only at post().
+            if ledger.property_id is not None:
+                await period_lock.ensure_open_for_properties(
+                    session, ledger, {ledger.property_id}, invoice.invoice_date
+                )
         expense = await _payer_account(
             session, payer_ledger, config.payer_expense_account_number, AccountType.EXPENSE
         )

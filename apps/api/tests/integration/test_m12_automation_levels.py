@@ -24,6 +24,7 @@ from mhvp.banking.tasks import levels_refresh_once, process_events_once
 from mhvp.main import create_app
 from mhvp.platform import services
 from mhvp.platform.models import TenantSettings
+from tests.integration.af01_switch import seed_auto_posting
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET
@@ -194,7 +195,7 @@ def _active_rule(
 
 def _switch_on(client: TestClient, h: dict[str, str]) -> None:
     _ok(client.put(f"{B}/learning", json={"enabled": True, "reason": "Test S4 bis S6"}, headers=h))
-    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test S6"}, headers=h))
+    seed_auto_posting(client, h)
 
 
 def test_levels_requests_four_eyes_and_one_click(
@@ -407,6 +408,10 @@ def test_runner_debtor_full_verifier_review_and_correction(
     assert mine["payload"]["rule_id"] == rule_id
     assert mine["payload"]["verifier_fingerprint"] == done["verifier_fingerprint"]
     assert mine["payload"]["review_kind"] == "daily"
+    # AF01 (GAB-08): the shared booking path also emits bank_transaction.booked.
+    booked = [e for e in _events(client, h, "bank_transaction.booked") if e["entity_id"] == t1]
+    assert [e["payload"]["origin"] for e in booked] == ["auto"]
+    assert booked[0]["payload"]["journal_entry_id"] == mine["payload"]["journal_entry_id"]
     reviews = _ok(client.get(f"{B}/auto-posting/reviews", headers=h))
     item = next(r for r in reviews if r["bank_transaction_id"] == t1)
     assert item["status"] == "open"
@@ -531,6 +536,8 @@ def test_runner_debtor_full_verifier_review_and_correction(
     corrected_events = _events(client, h, "bank_transaction.corrected")
     assert corrected_events[0]["entity_id"] == t1
     assert corrected_events[0]["payload"]["reason_code"] == "automation_error"
+    rebooked = [e for e in _events(client, h, "bank_transaction.booked") if e["entity_id"] == t1]
+    assert sorted(e["payload"]["origin"] for e in rebooked) == ["auto", "review_correction"]
     processed = asyncio.run(
         process_events_once(settings, now=datetime.now(UTC) + timedelta(seconds=30))
     )

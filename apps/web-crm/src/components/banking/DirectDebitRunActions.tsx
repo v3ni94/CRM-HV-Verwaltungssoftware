@@ -32,6 +32,7 @@ export function DirectDebitRunActions({
   const [error, setError] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<ProtocolEntry[] | null>(null);
   const [reference, setReference] = useState("");
+  const [preNotified, setPreNotified] = useState<number | null>(null);
   const act = async (action: "approve" | "cancel" | "file") => {
     if (action === "cancel" && !window.confirm(t("confirmCancel"))) return;
     setBusy(true);
@@ -67,6 +68,16 @@ export function DirectDebitRunActions({
       void loadProtocol();
     } else setError(res.message);
   };
+  // AF03 (GAF-04): Vorabinformationen je Zahler als Entwurf (nur Dokumente, kein Versand).
+  const preNotify = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<unknown[]>(`/api/bff/accounting/direct-debits/${id}/pre-notifications`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) setPreNotified(res.data.length);
+    else setError(res.message);
+  };
+  const canPreNotify = status === "draft" || status === "approved" || status === "file_generated";
   const canApprove = status === "draft";
   const canFile = status === "approved" && approvals >= 2;
   const canCancel = status === "draft" || status === "approved" || status === "file_generated";
@@ -96,6 +107,11 @@ export function DirectDebitRunActions({
             {t("showProtocol")}
           </button>
         ) : null}
+        {canPreNotify ? (
+          <button type="button" className={ui.button} onClick={preNotify} disabled={busy}>
+            {t("preNotify")}
+          </button>
+        ) : null}
         {canCancel ? (
           <button type="button" className={ui.button} onClick={() => act("cancel")} disabled={busy}>
             {t("cancel")}
@@ -114,6 +130,11 @@ export function DirectDebitRunActions({
           <button type="button" className={ui.button} onClick={submit} disabled={busy || !reference.trim()}>
             {t("confirmSubmission")}
           </button>
+        </span>
+      ) : null}
+      {preNotified !== null ? (
+        <span role="status" className="text-xs text-muted">
+          {t("preNotified", { n: preNotified })}
         </span>
       ) : null}
       {protocol ? (

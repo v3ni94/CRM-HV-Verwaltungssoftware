@@ -59,4 +59,28 @@ describe("AutomationSwitch", () => {
     await user.click(await screen.findByRole("button", { name: "Freigeben" }));
     expect(calls.at(-1)).toMatch(/switch-requests\/r1\/approve$/);
   }, 20000);
+
+  it("switches off at once with PUT and never offers PUT for switching on", async () => {
+    let state: SwitchState = { enabled: true, g1_open: true, can_request: false, items: [] };
+    const puts: { url: string; body: string }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (init?.method === "PUT") {
+        puts.push({ url, body: String(init.body) });
+        state = { ...state, enabled: false, can_request: true };
+        return jsonResponse({ enabled: false });
+      }
+      if (url.endsWith("/switch-requests")) return jsonResponse(state);
+      if (url.endsWith("/comparison")) return jsonResponse(report);
+      return jsonResponse({}, 500);
+    });
+    renderIntl(<AutomationSwitch canApprove userId="u1" />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Grund für das Ausschalten"), "Stopp");
+    await user.click(screen.getByRole("button", { name: "Sofort ausschalten" }));
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(puts[0]!.url).toMatch(/\/banking\/automation$/);
+    expect(JSON.parse(puts[0]!.body)).toEqual({ enabled: false, reason: "Stopp" });
+    await screen.findByRole("button", { name: "Einschalten beantragen" });
+  }, 20000);
 });

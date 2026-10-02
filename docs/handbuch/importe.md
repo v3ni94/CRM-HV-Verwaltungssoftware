@@ -119,3 +119,7 @@ Beim Hochladen im Importassistenten ist „Kopfzeile automatisch erkennen“ vor
 Im Schritt Zuordnung sind die Spalten vorbelegt. Die Spalte „Vorschlag“ zeigt je Zielfeld die Grundlage (gespeicherte Zuordnung, Feldbezeichnung, Fachbegriff, ähnliche Schreibweise) und einen Prozentwert: „sicher“ ab 90 %, sonst „bitte prüfen“. Vorschläge werden erst mit dem Speichern der Vorlage verwendet. „Prüfbericht erstellen“ zeigt ohne zu speichern, ob alle Pflichtspalten zugeordnet und gefüllt sind, welche Spalten nicht übernommen werden, Beispielwerte je Feld und Beispielzeilen mit Fehlermeldungen.
 
 Mit dem Haken „Zuordnung für diesen Berichtstyp merken“ merkt sich die Plattform beim Speichern der Vorlage die Zuordnung je Mandant und Berichtsart; die nächste Datei derselben Berichtsart wird damit vorbelegt. Der Abschnitt „Benötigte Exporte“ zeigt je Berichtsart, ob eine Datei vorliegt, ob die Pflichtfelder gemerkt sind und ob schon übernommen wurde. Welche Immoware24-Exporte die Spalten liefern, trägt der Betreiber in `docs/integrations/immoware24-exporte.md` ein.
+
+## Gemerkte Spaltenzuordnungen verwalten
+
+Auf der Seite Immoware24 Import steht unter den benötigten Exporten die Liste der gemerkten Spaltenzuordnungen. Mit Entfernen löschen Sie eine einzelne Zuordnung nach Rückfrage. Bei der nächsten Datei schlägt die Plattform die Zuordnung neu vor, es wird nichts importiert oder geändert.

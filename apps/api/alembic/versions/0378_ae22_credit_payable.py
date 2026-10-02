@@ -148,9 +148,7 @@ def upgrade() -> None:
             name=op.f("fk_credit_payable_reversal_entry_id_journal_entry"),
         ),
     )
-    op.create_index(
-        "ix_credit_payable_tenant_ledger", "credit_payable", ["tenant_id", "ledger_id"]
-    )
+    op.create_index("ix_credit_payable_tenant_ledger", "credit_payable", ["tenant_id", "ledger_id"])
     op.create_index(
         "uq_credit_payable_active_source",
         "credit_payable",

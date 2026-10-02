@@ -232,6 +232,16 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   const storeZugferd = (inv: Invoice) =>
     run(() => bff(`${base}/admin-fee-invoices/${inv.id}/zugferd/document`, { method: "POST" }), t("zugferdStored"));
 
+  // GAF-08: XRechnung credit note (type 381) of a fee credit note: XML, structural check, filing.
+  const checkCreditNote = async (inv: Invoice) => {
+    setError(null);
+    const res = await bff<Check>(`${base}/admin-fee-invoices/${inv.id}/xrechnung-credit-note/check`);
+    if (!res.ok) setError(res.message);
+    else setInfo(res.data.structure_ok ? t("checkOk") : res.data.findings.map((f) => `${f.code}: ${f.message}`).join(" · "));
+  };
+  const storeCreditNote = (inv: Invoice) =>
+    run(() => bff(`${base}/admin-fee-invoices/${inv.id}/xrechnung-credit-note/document`, { method: "POST" }), t("stored"));
+
   const makePdf = async (inv: Invoice) => {
     setBusy(true);
     setError(null);
@@ -508,6 +518,19 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                     <button type="button" className={ui.buttonSm} onClick={() => release(inv)} disabled={busy}>
                       {t("release")}
                     </button>
+                  ) : null}
+                  {inv.kind === "credit_note" ? (
+                    <>
+                      <a className={ui.buttonSm} href={`${base}/admin-fee-invoices/${inv.id}/xrechnung-credit-note.xml`}>
+                        {t("creditNoteXml")}
+                      </a>
+                      <button type="button" className={ui.buttonSm} onClick={() => checkCreditNote(inv)}>
+                        {t("check")}
+                      </button>
+                      <button type="button" className={ui.buttonSm} onClick={() => storeCreditNote(inv)} disabled={busy}>
+                        {t("store")}
+                      </button>
+                    </>
                   ) : null}
                   {inv.kind === "invoice" && !inv.cancelled_at ? (
                     <>

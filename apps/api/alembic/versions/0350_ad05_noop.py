@@ -1,4 +1,5 @@
-"""AD05: documentation and tests only, no schema change; placeholder that keeps the revision chain linear.
+"""AD05: documentation and tests only, no schema change; placeholder that keeps the revision
+chain linear.
 
 Revision ID: 0350
 Revises: 0349

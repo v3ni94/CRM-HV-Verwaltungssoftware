@@ -10,6 +10,7 @@ import { ui } from "@/lib/ui";
 
 import { VIEWS, buildQuery, toTable, type Column, type ReportHeader, type Table, type ViewId } from "./reportViews";
 
+export type PropertyOption = { id: string; label: string };
 export type ExplorerAccount = { id: string; number: string; name: string; category: string };
 
 type Loaded = { header: ReportHeader; table: Table };
@@ -29,12 +30,14 @@ export function ReportsExplorer({
   defaultAsOf,
   defaultStart,
   defaultEnd,
+  properties = [],
 }: {
   ledgerId: string;
   accounts: ExplorerAccount[];
   defaultAsOf: string;
   defaultStart: string;
   defaultEnd: string;
+  properties?: PropertyOption[];
 }) {
   const t = useTranslations("Accounting.reports.explorer");
   const [view, setView] = useState<ViewId>("trialBalance");
@@ -42,13 +45,14 @@ export function ReportsExplorer({
   const [start, setStart] = useState(defaultStart);
   const [end, setEnd] = useState(defaultEnd);
   const [accountId, setAccountId] = useState("");
+  const [propertyId, setPropertyId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   const config = VIEWS[view];
   const base = `/api/bff/accounting/ledgers/${ledgerId}`;
-  const params = { asOf, start, end, accountId };
+  const params = { asOf, start, end, accountId, propertyId };
   const needsAccount = config.needs.account === true;
   const pickable = needsAccount && view === "bankStatement" ? accounts.filter((a) => a.category === "bank" || a.category === "cash") : accounts;
   const labels = (key: string) => t(`cols.${key}`);
@@ -60,17 +64,17 @@ export function ReportsExplorer({
     }
     setBusy(true);
     setError(null);
-    const res = await bff<Record<string, unknown>>(`${base}/reports/${config.path}?${buildQuery(view, params)}`);
+    const res = await bff<Record<string, unknown>>(`${base}/${config.ledgerPath ? "" : "reports/"}${config.path}?${buildQuery(view, params)}`);
     setBusy(false);
     if (!res.ok) {
       setError(res.message);
       setLoaded(null);
       return;
     }
-    setLoaded({ header: res.data.header as ReportHeader, table: toTable(view, res.data, labels) });
+    setLoaded({ header: res.data.header as ReportHeader, table: toTable(view, res.data, labels, (id) => properties.find((p) => p.id === id)?.label ?? id) });
   };
 
-  const xlsxHref = config.xlsx ? `${base}/reports/xlsx?report=${config.xlsx}&${new URLSearchParams({ as_of: asOf, start, end }).toString()}` : null;
+  const xlsxHref = config.xlsx ? `${base}/reports/xlsx?report=${config.xlsx}&${new URLSearchParams({ as_of: asOf, start, end }).toString()}` : null; // xlsx export has no object filter (API)
   const header = loaded?.header;
   const filters = header ? Object.entries(header.filters).map(([k, v]) => `${k}: ${String(v)}`).join(", ") : "";
 
@@ -114,6 +118,21 @@ export function ReportsExplorer({
           </>
         ) : null}
       </div>
+      {config.needs.property ? (
+        <div>
+          <label htmlFor="explorer-property" className={ui.label}>
+            {t("property")}
+          </label>
+          <select id="explorer-property" className={ui.input} value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+            <option value="">{t("allProperties")}</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       {needsAccount ? (
         <div>
           <label htmlFor="explorer-account" className={ui.label}>

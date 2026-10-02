@@ -49,3 +49,15 @@
   Korrektur dann nur über die Rückbuchung der Zahlung (0.1.7). Wird die Ergebnisbuchung nach
   einer gebuchten Umbuchung storniert, zeigt der Posten `source_reversed` und ist nicht
   auszahlbar.
+
+Ergänzung Welle 17 (AF04, GAE-05, GAE-07):
+
+- Storno einer Buchung mit offenen Posten oder Rechnungen: noch nicht an die Bank übergebene
+  Zahlungsaufträge (Entwurf, freigegeben) werden mit dem Storno auf `cancelled` gesetzt, die
+  Freigaben entfallen; an die Bank übergebene Aufträge (exportiert, eingereicht, angenommen)
+  sperren den Storno (409) bis zur Ablehnung oder Rückgabe. Abnahmefall
+  `test_gae05_reversal_cancels_open_payment_order`.
+- Ein Umbuchungsentwurf eines freigegebenen Guthabenpostens wird nicht über `DELETE` der
+  Buchung gelöscht (409), sondern über `/credit-payables/{id}/withdraw` zurückgenommen.
+  Abnahmefall `test_gae07_delete_reclass_draft_refused`; Gesamtablauf Eigentümerabrechnung
+  `test_gae06_owner_statement_reclass_end_to_end` (2.643,00 EUR).

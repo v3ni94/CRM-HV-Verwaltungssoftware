@@ -23,8 +23,10 @@ ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     MHVP_APP_VERSION=${MHVP_APP_VERSION}
-# Apply Debian security fixes (Trivy gate in CI).
+# Apply Debian security fixes (Trivy gate in CI). Free TrueType fonts (Liberation Sans, DejaVu
+# Sans) are embedded into letter PDFs (GAE-37, PDF/A-3 precheck); MHVP_PDF_FONT_DIR overrides.
 RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 mhvp \
     && useradd --system --uid 10001 --gid mhvp --no-create-home --home-dir /app mhvp

@@ -735,6 +735,15 @@ async def change_requests(
         ]
 
 
+# Contact master data fields a portal change request of this kind touches (GAC-08).
+_PORTAL_CONTACT_FIELDS = {
+    "email": "emails",
+    "phone": "phones",
+    "bank_account": "bank_accounts",
+    "address": "addresses",
+}
+
+
 @admin.post("/change-requests/{request_id}/decide", summary="Vorschlag annehmen oder ablehnen")
 async def decide(
     request_id: uuid.UUID,
@@ -805,6 +814,23 @@ async def decide(
                 # M22-02: the accepted submission becomes a receipt draft (Belegeingang),
                 # never a posting; the order moves to invoiced.
                 receipt_draft_id = await _apply_invoice_submission(session, principal, row, payload)
+            changed_field = _PORTAL_CONTACT_FIELDS.get(row.kind)
+            if changed_field is not None:
+                # GAC-08: subscribers of contact.updated (smart-einzug, lexoffice mirror) also
+                # learn about an accepted portal change; field names only, never the values.
+                await emit(
+                    session,
+                    tenant_id=row.tenant_id,
+                    type="contact.updated",
+                    entity_type="contact",
+                    entity_id=account.contact_id,
+                    actor_user_id=principal.user_id,
+                    payload={
+                        "fields": [changed_field],
+                        "source": "portal",
+                        "change_request_id": str(row.id),
+                    },
+                )
         row.status, row.decided_by, row.decision_note = (
             ("accepted" if body.accept else "rejected"),
             principal.user_id,

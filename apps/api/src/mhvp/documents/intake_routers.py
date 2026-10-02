@@ -259,6 +259,13 @@ async def accept_intake_proposal(
             text=text,
             final=final,
         )
+        start_receipt: tuple[uuid.UUID, str] | None = None
+        invoice = intake_followup.invoice_followup(final["followups"])
+        if invoice is not None and await intake_followup.invoice_intake_auto(session):
+            # GAB-11: the tenant switch hands the invoice to the receipt extraction (proposal
+            # only); the follow-up is marked confirmed so it is not offered twice.
+            invoice["status"], invoice["receipt_intake"] = "confirmed", "started"
+            start_receipt = (document.id, _receipt_source(document))
         proposal.final = final
         await session.flush()
         await emit(
@@ -270,7 +277,43 @@ async def accept_intake_proposal(
             actor_user_id=principal.user_id,
             payload={"proposal_id": str(proposal.id), "decision": proposal.decision.value, **final},
         )
-        return _out(proposal, document)
+        out = _out(proposal, document)
+    if start_receipt is not None:
+        await _start_receipt_intake(request, principal.tenant_id, *start_receipt)
+    return out
+
+
+def _receipt_source(document: Document) -> str:
+    from mhvp.documents.models import DocumentSource, StorageKind
+    from mhvp.receipts.models import ReceiptDraftSource
+
+    if document.storage is StorageKind.PAPERLESS:
+        return ReceiptDraftSource.PAPERLESS.value
+    if document.source is DocumentSource.EMAIL:
+        return ReceiptDraftSource.MAIL_ATTACHMENT.value
+    return ReceiptDraftSource.UPLOAD.value
+
+
+async def _start_receipt_intake(
+    request: Request, tenant_id: uuid.UUID, document_id: uuid.UUID, source: str
+) -> None:
+    """After the commit: ``extract_invoice`` through the receipt functions of the Paperless
+    webhook (``paperless_webhook.intake_document``); the AI gates (AVV, provider release,
+    masking) apply there. Inline when ``ai_inline`` is set, otherwise as a Celery job."""
+    from mhvp.documents import paperless_webhook
+    from mhvp.documents.blobs import BlobStore
+
+    settings = request.app.state.settings
+    if settings.ai_inline:
+        await paperless_webhook.intake_document(
+            request.app.state.resources.session_factory,
+            BlobStore(settings),
+            tenant_id,
+            document_id,
+            source,
+        )
+    else:
+        paperless_webhook.paperless_receipt_intake.delay(str(tenant_id), str(document_id), source)
 
 
 class IntakeFollowupConfirmIn(BaseModel):

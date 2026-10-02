@@ -1,6 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { LocalModelStatus } from "@/components/objektakte/LocalModelStatus";
+import { RequiredDocuments } from "@/components/objektakte/RequiredDocuments";
 import { RulesSettings, type CategoryOption, type ClassificationRule } from "@/components/objektakte/RulesSettings";
 import { SyncStatus, type SyncState } from "@/components/objektakte/SyncStatus";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -37,6 +39,8 @@ export default async function ObjektakteRulesSettingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("rules.title")} description={t("rules.intro")} />
       <RulesSettings initial={rules} categories={categories} />
+      <RequiredDocuments categories={categories} canManage={can("objektakte:approve")} canDelete={can("objektakte:delete")} />
+      <LocalModelStatus canPropose={can("objektakte:update")} />
       {sync ? <SyncStatus initial={sync} canEdit={can("tenant_settings:update")} canRun={can("documents:create")} /> : null}
     </div>
   );

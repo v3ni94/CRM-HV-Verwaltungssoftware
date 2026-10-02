@@ -1544,6 +1544,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/interest-tax-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Steuerkonten für Abzüge auf Habenzinsen: Stand über alle Buchungskreise
+         * @description Read only: how many ledgers have at least one tax account set. Changes nothing.
+         */
+        get: operations["get_interest_tax_summary_api_v1_accounting_interest_tax_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/invoice-check-settings": {
         parameters: {
             query?: never;
@@ -3098,6 +3118,11 @@ export interface paths {
         /**
          * Fällige Dauerrechnung als Entwurf erzeugen
          * @description Next due recurring invoice as unreviewed draft; nothing is posted automatically.
+         *
+         *     GAA-06 (rule 0.1.4): conservative gate behaviour like the rent invoices. The number is a
+         *     plan draft number (``PLAN-...``) and never comes from a ledger or MR number range. While
+         *     G1 is closed the result is flagged as draft; in the tenant numbering mode
+         *     ``reject_when_g1_closed`` (AC03-01, open question AC03-01) the route refuses (G1).
          */
         post: operations["generate_plan_api_v1_accounting_recurring_invoices__plan_id__generate_post"];
         delete?: never;
@@ -5214,7 +5239,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Automatik je Mandant ein- oder ausschalten (Standard aus) */
+        /** Automatik je Mandant ausschalten (Einschalten nur per Antrag) */
         put: operations["set_automation_api_v1_banking_automation_put"];
         post?: never;
         delete?: never;
@@ -5721,6 +5746,29 @@ export interface paths {
          *     no letter may be sent to the bank. The layout of the letter is not reproduced here.
          */
         get: operations["letters_api_v1_banking_ebics_subscribers__subscriber_id__letters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/ebics/subscribers/{subscriber_id}/letters.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * INI- und HIA-Brief als PDF (Briefbogen des Mandanten)
+         * @description GAE-23: the INI and HIA letter on the tenant letterhead (documents.letters, DIN 5008
+         *     layout of the renderer). Hash values are printed only as the transport computed them; a
+         *     missing hash is never calculated here (AE23-02): the letter then carries the draft marking
+         *     and the notice not to send it. The layout of the bank's own form is not reproduced.
+         */
+        get: operations["letters_pdf_api_v1_banking_ebics_subscribers__subscriber_id__letters_pdf_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9763,6 +9811,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/document-invoice-intake-auto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Belegerfassung nach Ablage einer Rechnung (Mandantenschalter) */
+        get: operations["get_invoice_intake_auto_api_v1_document_invoice_intake_auto_get"];
+        /**
+         * Belegerfassung nach Ablage einer Rechnung ein- oder ausschalten
+         * @description Default off. On: filing a document recognised as invoice starts the receipt extraction
+         *     (``extract_invoice``) as a proposal; nothing is approved, booked or paid. Off: the follow-up
+         *     stays a hint with the action "Beleg erfassen".
+         */
+        put: operations["put_invoice_intake_auto_api_v1_document_invoice_intake_auto_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/document-templates": {
         parameters: {
             query?: never;
@@ -9839,6 +9910,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/document-text-blocks/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Textbausteine: Mandantenschalter Zweitpersonprüfung */
+        get: operations["get_policy_api_v1_document_text_blocks_policy_get"];
+        /**
+         * Textbausteine: Zweitpersonprüfung ein oder aus
+         * @description Default on. Switching off needs a reason of at least 10 characters; the release itself
+         *     stays an explicit step by a user with ``documents:approve`` and is audited.
+         */
+        put: operations["put_policy_api_v1_document_text_blocks_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/document-text-blocks/{block_id}": {
         parameters: {
             query?: never;
@@ -9868,7 +9961,8 @@ export interface paths {
         put?: never;
         /**
          * Freigeben (zweite Person)
-         * @description Four eyes: neither the author nor the submitter may release (Produktschutz). The
+         * @description Four eyes (tenant switch require_second_person, default on): neither the author nor the
+         *     submitter may release (Produktschutz). The
          *     previously approved version of the code becomes ``retired``.
          */
         post: operations["approve_block_api_v1_document_text_blocks__block_id__approve_post"];
@@ -9944,6 +10038,27 @@ export interface paths {
         put?: never;
         /** Dokument hochladen */
         post: operations["upload_api_v1_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/bulk-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mehrere Dokumente mit einem Objekt verknüpfen (Teilerfolgsbericht)
+         * @description Each document on its own (savepoint); an existing link is reported as conflict, a
+         *     document outside the scope of the membership as not found.
+         */
+        post: operations["bulk_link_documents_api_v1_documents_bulk_link_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11664,6 +11779,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/correction-report-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Korrekturbericht (Schalter) */
+        get: operations["get_correction_report_setting_api_v1_hoa_correction_report_settings_get"];
+        /** Korrekturbericht (Schalter setzen) */
+        put: operations["put_correction_report_setting_api_v1_hoa_correction_report_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/inspection-requests": {
         parameters: {
             query?: never;
@@ -11676,6 +11809,27 @@ export interface paths {
         put?: never;
         /** Einsichtsanfrage erfassen */
         post: operations["create_request_api_v1_hoa_inspection_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/inspection-requests/ownership-transfers/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eigentümerwechsel auf offene Einsichtsanfragen prüfen (GAA-02, P08-02)
+         * @description Consumer of ``contract.ownership_transferred``: adds an owner check note to open
+         *     requests of the previous owner side. Never closes a request or revokes a package.
+         */
+        post: operations["scan_ownership_transfers_api_v1_hoa_inspection_requests_ownership_transfers_scan_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14979,6 +15133,27 @@ export interface paths {
          *     undoable here, otherwise the log would record a rollback that reverted nothing (0.1.7).
          */
         post: operations["undo_import_api_v1_imports__import_id__undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{import_id}/undo-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Import-Rücknahme prüfen (ohne Änderung)
+         * @description Per item: removable or stays with the reason (same checks as the undo, nothing written).
+         *     Needs the permission of the undo itself; chat action runs are refused like the undo.
+         */
+        get: operations["undo_import_preview_api_v1_imports__import_id__undo_preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -21287,6 +21462,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/assistant/questions/async": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Frage asynchron stellen (Job im Worker, Status per Abfrage)
+         * @description Same checks as the synchronous question (scope first: 404 or empty scope, rate limit).
+         *     When the AI stage may run, the row is stored as ``pending`` and the worker answers; the
+         *     portal polls ``GET /questions/{id}``. Otherwise the search hits come back at once.
+         */
+        post: operations["ask_async_api_v1_portal_assistant_questions_async_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/assistant/questions/{question_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Status einer Frage (Abfrage bei asynchroner Antwort)
+         * @description Own question only (other account or tenant: 404). Overdue pending rows become timeout.
+         *     Sources are shown only while the document is still readable for the account.
+         */
+        get: operations["question_status_api_v1_portal_assistant_questions__question_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/assistant/scope": {
         parameters: {
             query?: never;
@@ -22498,6 +22716,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/owner/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Beschlossene Wirtschaftspläne (Eigentümer) */
+        get: operations["owner_plans_api_v1_portal_owner_plans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/owner/rental-income": {
         parameters: {
             query?: never;
@@ -22507,6 +22742,57 @@ export interface paths {
         };
         /** Vereinbarte Mieterträge je Objekt (Kapitalanleger) */
         get: operations["rental_income_api_v1_portal_owner_rental_income_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/owner/rental-statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ausgegebene Eigentümerabrechnungen Miete/SEV */
+        get: operations["owner_rental_statements_api_v1_portal_owner_rental_statements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/owner/rental-statements/{statement_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigentümerabrechnung Miete/SEV als PDF (nach Ausgabe) */
+        get: operations["owner_rental_statement_pdf_api_v1_portal_owner_rental_statements__statement_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/owner/statement-explanations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Erläuterung der Einzelabrechnungen (Eigentümer) */
+        get: operations["owner_statement_explanations_api_v1_portal_owner_statement_explanations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -22757,6 +23043,57 @@ export interface paths {
         post: operations["grant_consent_api_v1_portal_support_consent_post"];
         /** Einwilligung widerrufen */
         delete: operations["revoke_consent_api_v1_portal_support_consent_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/tenant-statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ausgegebene Betriebs- und Heizkostenabrechnungen der eigenen Mietverträge */
+        get: operations["list_tenant_statements_api_v1_portal_tenant_statements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/tenant-statements/{statement_id}/contracts/{contract_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abrechnung eines eigenen Mietvertrags mit Erläuterungen */
+        get: operations["get_tenant_statement_api_v1_portal_tenant_statements__statement_id__contracts__contract_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/tenant-statements/{statement_id}/contracts/{contract_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abrechnung eines eigenen Mietvertrags als PDF */
+        get: operations["tenant_statement_pdf_api_v1_portal_tenant_statements__statement_id__contracts__contract_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -27475,6 +27812,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/units/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Massenaktion Einheiten mit Teilerfolgsbericht
+         * @description Each unit on its own (savepoint); a unit outside the tenant or the object assignment of
+         *     the membership is reported as not found, an overlong value as a validation problem.
+         */
+        post: operations["bulk_units_api_v1_units_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/units/{unit_id}": {
         parameters: {
             query?: never;
@@ -28980,6 +29338,16 @@ export interface components {
             net_amount: string;
             /** Solidarity Tax */
             solidarity_tax: string;
+        };
+        /**
+         * AccountingInterestTaxSummaryOut
+         * @description Tenant wide state of the tax accounts for withholdings on credit interest (GAE-38).
+         */
+        AccountingInterestTaxSummaryOut: {
+            /** Ledgers Configured */
+            ledgers_configured: number;
+            /** Ledgers Total */
+            ledgers_total: number;
         };
         /** AccountsIn */
         AccountsIn: {
@@ -36561,6 +36929,22 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * DocumentBulkLinkIn
+         * @description Links many documents to one entity as attachment (GAB-16); no money effect. Originals,
+         *     evidence and generated roles are not set in bulk.
+         */
+        DocumentBulkLinkIn: {
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Entity Type */
+            entity_type: string;
+            /** Ids */
+            ids: string[];
+        };
         /** DocumentChoiceOut */
         DocumentChoiceOut: {
             /** Filename */
@@ -36777,6 +37161,16 @@ export interface components {
             enabled: boolean;
             /** Mailbox Address */
             mailbox_address?: string | null;
+        };
+        /** DocumentInvoiceIntakeAutoIn */
+        DocumentInvoiceIntakeAutoIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** DocumentInvoiceIntakeAutoOut */
+        DocumentInvoiceIntakeAutoOut: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** DocumentOut */
         DocumentOut: {
@@ -38602,12 +38996,36 @@ export interface components {
             title: string;
         };
         /**
+         * G1AcceptanceRegisterState
+         * @description GAA-03: read only state of the acceptance register (annex D), never written here.
+         */
+        G1AcceptanceRegisterState: {
+            /** Cases Total */
+            cases_total: number;
+            /** G1 Cases Total */
+            g1_cases_total: number;
+            /** G1 Passed */
+            g1_passed: number;
+            /**
+             * Link
+             * @default /plattform/abnahme
+             */
+            link: string;
+            /** Note */
+            note: string;
+            /** Passed Total */
+            passed_total: number;
+            /** Released Total */
+            released_total: number;
+        };
+        /**
          * G1AcceptanceStatus
          * @enum {string}
          */
         G1AcceptanceStatus: "open" | "passed" | "failed";
         /** G1OpeningOut */
         G1OpeningOut: {
+            acceptance_register?: components["schemas"]["G1AcceptanceRegisterState"] | null;
             /** Automation Levels */
             automation_levels: {
                 [key: string]: string;
@@ -39338,6 +39756,11 @@ export interface components {
             source_note?: string | null;
             /** Variant */
             variant: string;
+        };
+        /** HoaCorrectionReportSettingIn */
+        HoaCorrectionReportSettingIn: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** HoaCostIn */
         HoaCostIn: {
@@ -40258,6 +40681,39 @@ export interface components {
          * @enum {string}
          */
         ImportStatus: "applied" | "undone" | "partially_undone";
+        /** ImportUndoPreviewItemOut */
+        ImportUndoPreviewItemOut: {
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Entity Type */
+            entity_type: string;
+            /** Kept Reason */
+            kept_reason: string | null;
+            /** Removable */
+            removable: boolean;
+            /** Sequence */
+            sequence: number;
+        };
+        /**
+         * ImportUndoPreviewOut
+         * @description Dry run of the import undo (10.1 step 5): nothing is changed.
+         */
+        ImportUndoPreviewOut: {
+            /**
+             * Import Id
+             * Format: uuid
+             */
+            import_id: string;
+            /** Items */
+            items: components["schemas"]["ImportUndoPreviewItemOut"][];
+            /** Kept */
+            kept: number;
+            /** Removable */
+            removable: number;
+        };
         /** InboundMailEventOut */
         InboundMailEventOut: {
             /**
@@ -40398,6 +40854,8 @@ export interface components {
              * Format: date-time
              */
             occurred_at: string;
+            /** Source Event Id */
+            source_event_id?: string | null;
             /** To Status */
             to_status: string | null;
         };
@@ -40405,6 +40863,13 @@ export interface components {
         InspectionNoteIn: {
             /** Text */
             text: string;
+        };
+        /** InspectionOwnershipScanOut */
+        InspectionOwnershipScanOut: {
+            /** Events */
+            events: number;
+            /** Noted */
+            noted: number;
         };
         /** InspectionTransitionIn */
         InspectionTransitionIn: {
@@ -40629,10 +41094,16 @@ export interface components {
         InvoiceFactualBudgetOut: {
             /** Booked Before */
             booked_before: string;
+            /** Credit Notes Before */
+            credit_notes_before?: string | null;
             /** Exceeded */
             exceeded: boolean;
             /** Invoice */
             invoice: string;
+            /** Invoices Before */
+            invoices_before?: string | null;
+            /** Journal Lines Net */
+            journal_lines_net?: string | null;
             /** Label */
             label: string;
             /**
@@ -46861,7 +47332,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "answered" | "not_answerable" | "failed" | "search_hits" | "no_sources";
+            status: "answered" | "not_answerable" | "failed" | "search_hits" | "no_sources" | "pending" | "timeout";
         };
         /** PortalAssistantHitOut */
         PortalAssistantHitOut: {
@@ -47017,6 +47488,8 @@ export interface components {
             chat_enabled?: boolean | null;
             /** Owner Rental Income Enabled */
             owner_rental_income_enabled?: boolean | null;
+            /** Owner Rental Statements Enabled */
+            owner_rental_statements_enabled?: boolean | null;
             /** Owner Ticket Scope */
             owner_ticket_scope?: ("none" | "released" | "property") | null;
             /** Privacy Feature Enabled */
@@ -47025,6 +47498,8 @@ export interface components {
             provider_rating_display?: ("off" | "staff") | null;
             /** Support Login Enabled */
             support_login_enabled?: boolean | null;
+            /** Tenant Statement Enabled */
+            tenant_statement_enabled?: boolean | null;
         };
         /**
          * PortalFormPreviewIn
@@ -47543,12 +48018,20 @@ export interface components {
         PrivacyConfigSourceOut: {
             /** Active */
             active: boolean;
+            /** Consent Basis */
+            consent_basis?: {
+                [key: string]: string;
+            };
+            /** Consent Purposes */
+            consent_purposes?: string[];
             /** Detail */
             detail: string;
             /** Entry Id */
             entry_id: string | null;
             /** Key */
             key: string;
+            /** Legal Basis */
+            legal_basis?: string | null;
             /** Name */
             name: string;
             /**
@@ -51814,10 +52297,14 @@ export interface components {
         SyncKind: "webdav" | "carddav" | "caldav";
         /** SyncRunOut */
         SyncRunOut: {
+            /** Connection Id */
+            connection_id?: string | null;
             /** Counts */
             counts: {
                 [key: string]: number;
             };
+            /** Created At */
+            created_at?: string | null;
             /** Document Id */
             document_id: string | null;
             /** Errors */
@@ -52714,6 +53201,13 @@ export interface components {
             /** Title */
             title?: string | null;
         };
+        /** TextBlockPolicyIn */
+        TextBlockPolicyIn: {
+            /** Reason */
+            reason?: string | null;
+            /** Require Second Person */
+            require_second_person: boolean;
+        };
         /** TextBlockReject */
         TextBlockReject: {
             /** Reason */
@@ -53417,6 +53911,22 @@ export interface components {
             valid_to?: string | null;
             /** Version */
             version: number;
+        };
+        /**
+         * UnitBulkIn
+         * @description Bulk action on units (GAB-16, section 12): sets one descriptive field on many units.
+         *     Master data only; no field with money effect (areas, allocation values, VAT) is offered.
+         */
+        UnitBulkIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "set_floor" | "set_location" | "set_features";
+            /** Ids */
+            ids: string[];
+            /** Value */
+            value?: string | null;
         };
         /** UnitIn */
         UnitIn: {
@@ -57802,6 +58312,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_interest_tax_summary_api_v1_accounting_interest_tax_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountingInterestTaxSummaryOut"];
                 };
             };
         };
@@ -66721,6 +67251,35 @@ export interface operations {
             };
         };
     };
+    letters_pdf_api_v1_banking_ebics_subscribers__subscriber_id__letters_pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriber_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upload_signature_key_api_v1_banking_ebics_subscribers__subscriber_id__signature_key_post: {
         parameters: {
             query?: never;
@@ -75345,6 +75904,59 @@ export interface operations {
             };
         };
     };
+    get_invoice_intake_auto_api_v1_document_invoice_intake_auto_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentInvoiceIntakeAutoOut"];
+                };
+            };
+        };
+    };
+    put_invoice_intake_auto_api_v1_document_invoice_intake_auto_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentInvoiceIntakeAutoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentInvoiceIntakeAutoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_templates_api_v1_document_templates_get: {
         parameters: {
             query?: {
@@ -75532,6 +76144,63 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_policy_api_v1_document_text_blocks_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_policy_api_v1_document_text_blocks_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextBlockPolicyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -75800,6 +76469,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_link_documents_api_v1_documents_bulk_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentBulkLinkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkResultOut"];
                 };
             };
             /** @description Validation Error */
@@ -79393,6 +80095,63 @@ export interface operations {
             };
         };
     };
+    get_correction_report_setting_api_v1_hoa_correction_report_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_correction_report_setting_api_v1_hoa_correction_report_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaCorrectionReportSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_requests_api_v1_hoa_inspection_requests_get: {
         parameters: {
             query?: {
@@ -79454,6 +80213,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_ownership_transfers_api_v1_hoa_inspection_requests_ownership_transfers_scan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspectionOwnershipScanOut"];
                 };
             };
         };
@@ -86663,6 +87442,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_import_preview_api_v1_imports__import_id__undo_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportUndoPreviewOut"];
                 };
             };
             /** @description Validation Error */
@@ -99014,7 +99824,7 @@ export interface operations {
         parameters: {
             query?: {
                 account_id?: string | null;
-                status?: ("answered" | "not_answerable" | "failed" | "search_hits" | "no_sources") | null;
+                status?: ("answered" | "not_answerable" | "failed" | "search_hits" | "no_sources" | "pending" | "timeout") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -99865,6 +100675,70 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalAssistantAnswerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_async_api_v1_portal_assistant_questions_async_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalAssistantQuestionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalAssistantAnswerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    question_status_api_v1_portal_assistant_questions__question_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -101993,7 +102867,104 @@ export interface operations {
             };
         };
     };
+    owner_plans_api_v1_portal_owner_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     rental_income_api_v1_portal_owner_rental_income_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    owner_rental_statements_api_v1_portal_owner_rental_statements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    owner_rental_statement_pdf_api_v1_portal_owner_rental_statements__statement_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    owner_statement_explanations_api_v1_portal_owner_statement_explanations_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -102416,6 +103387,94 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_tenant_statements_api_v1_portal_tenant_statements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_tenant_statement_api_v1_portal_tenant_statements__statement_id__contracts__contract_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_statement_pdf_api_v1_portal_tenant_statements__statement_id__contracts__contract_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -113125,6 +114184,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TicketHoldOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_units_api_v1_units_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkResultOut"];
                 };
             };
             /** @description Validation Error */

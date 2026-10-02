@@ -604,6 +604,14 @@ class DocumentDirectUploadOut(BaseModel):
     enabled: bool
 
 
+class DocumentInvoiceIntakeAutoIn(_In):
+    enabled: bool
+
+
+class DocumentInvoiceIntakeAutoOut(BaseModel):
+    enabled: bool
+
+
 class DocumentDriveChangesOut(BaseModel):
     started: bool
     changes: int

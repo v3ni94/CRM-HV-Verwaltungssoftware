@@ -168,6 +168,24 @@ async def restore(
     await session.flush()
 
 
+async def restore_for_reimport(
+    session: AsyncSession, document: Document, *, tenant_id: uuid.UUID, source_system: str
+) -> bool:
+    """GAE-35 (AE33): an import that meets its own source row in the trash restores it instead
+    of failing on ``uq_document_source``. Logged as ``document.restored`` with the source."""
+    if document.deleted_at is None:
+        return False
+    await restore(
+        session,
+        document,
+        tenant_id=tenant_id,
+        actor_user_id=None,
+        reason=f"Erneuter Import ({source_system})",
+        extra={"reimport": True, "source_system": source_system},
+    )
+    return True
+
+
 # Listing ----------------------------------------------------------------------------------
 
 

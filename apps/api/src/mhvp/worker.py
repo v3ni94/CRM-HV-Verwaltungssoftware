@@ -36,6 +36,7 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "mhvp.core.tasks",
             "mhvp.core.webhook_tasks",
             "mhvp.portal.tasks",
+            "mhvp.portal.assistant_job",
             "mhvp.documents.tasks",
             "mhvp.documents.paperless_webhook",
             "mhvp.documents.intake",
@@ -67,6 +68,7 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "mhvp.metering.tasks",
             "mhvp.billing.consumption_info_tasks",
             "mhvp.billing.deadline_tasks",
+            "mhvp.hoa.inspection_transfer",
         ],
     )
     app.conf.update(
@@ -236,6 +238,13 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
                 "schedule": crontab(hour=6, minute=30),
                 "options": {"queue": "io"},
             },
+            # GAB-02: daily EBICS C53 fetch, only tenants with the EBICS switch on (default
+            # off) and subscribers in state ready; without transport the run logs BANK-0050.
+            "banking-ebics-scheduled-fetch": {
+                "task": "mhvp.banking.ebics_scheduled_fetch",
+                "schedule": crontab(hour=6, minute=40),
+                "options": {"queue": "io"},
+            },
             # Consent reminder 10 days before an aggregator consent expires (A29, 8.2): daily,
             # per tenant, one notification per connection and expiry date.
             # M11-05: tenants with a configured sync hour other than 06:00 (bank_sync_setting).
@@ -268,6 +277,12 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Tr
             "billing-deadline-watch": {
                 "task": "mhvp.billing.deadline_watch",
                 "schedule": crontab(hour=5, minute=25),
+            },
+            # AF08 / GAA-02: ownership transfers -> owner check note on open inspection
+            # requests (hint only, never closes a request).
+            "hoa-inspection-ownership-scan": {
+                "task": "mhvp.hoa.inspection_ownership_scan",
+                "schedule": crontab(minute=23),
             },
             "billing-consumption-info": {
                 "task": "mhvp.billing.consumption_info",

@@ -349,6 +349,15 @@ class Vote(IdMixin, TenantMixin, Base):
         CheckConstraint(
             "cast_source IS NULL OR cast_source IN ('own', 'proxy')", name="cast_source"
         ),
+        # AF08 (GAE-14, migration 0402): one counted vote per agenda item and unit; a second
+        # vote of the other source goes to meeting_vote_conflict (AE31).
+        Index(
+            "uq_meeting_vote_item_contract",
+            "tenant_id",
+            "agenda_item_id",
+            "contract_id",
+            unique=True,
+        ),
     )
 
     agenda_item_id: Mapped[uuid.UUID] = _fk(
@@ -1002,6 +1011,19 @@ class HoaReserveOpeningChange(IdMixin, TimestampMixin, TenantMixin, Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HoaCorrectionReportSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AF08 / GAE-13 (AE11, P02, migration 0402): tenant switch for the correction report
+    ``GET /hoa/statements/{id}/correction-report``. Default off (no row means off); display
+    only, no posting, no claim, no dispatch."""
+
+    __tablename__ = "hoa_correction_report_setting"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class HoaReservePaymentSetting(IdMixin, TimestampMixin, TenantMixin, Base):

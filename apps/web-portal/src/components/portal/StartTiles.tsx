@@ -27,6 +27,8 @@ export function StartTiles({ me, newNotices = 0 }: { me: Me; newNotices?: number
         { href: "/zaehlerstand", label: t("start.meter") },
         // Regel H03: Verbrauchsinformation (die API sperrt bis zur Freigabe durch die Verwaltung).
         { href: "/verbrauch", label: t("start.consumption") },
+        // GAC-02: Nebenkostenabrechnung der eigenen Mietverträge (leer mit Hinweis bis zur Freigabe).
+        ...(me.roles.includes("tenant") ? [{ href: "/nebenkosten", label: t("start.tenantStatements") }] : []),
         { href: "/daten", label: t("start.data") },
         ...(showsHandover(me) ? [{ href: "/uebergabe", label: t("start.handover") }] : []),
         // A51: owner tiles (read only), owners only.

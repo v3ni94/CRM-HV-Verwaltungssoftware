@@ -415,9 +415,10 @@ async def build_plan(
         row.source_id: (row.source_meta or {}).get("row_hash")
         for row in (
             await session.scalars(
-                select(Document).where(
-                    Document.tenant_id == tenant_id, Document.source_system == SOURCE_SYSTEM
-                )
+                select(Document)
+                .where(Document.tenant_id == tenant_id, Document.source_system == SOURCE_SYSTEM)
+                # GAE-35: trashed rows hold the unique source key, the import must see them.
+                .execution_options(include_trashed=True)
             )
         ).all()
         if row.source_id is not None
@@ -1268,9 +1269,10 @@ async def _import_documents(
         row.source_id: row
         for row in (
             await session.scalars(
-                select(Document).where(
-                    Document.tenant_id == tenant_id, Document.source_system == SOURCE_SYSTEM
-                )
+                select(Document)
+                .where(Document.tenant_id == tenant_id, Document.source_system == SOURCE_SYSTEM)
+                # GAE-35: trashed rows hold the unique source key, the import must see them.
+                .execution_options(include_trashed=True)
             )
         ).all()
         if row.source_id is not None
@@ -1321,6 +1323,11 @@ async def _import_documents(
         row_hash = _row_hash(row)
         doc = existing.get(source_id)
         if doc is not None:
+            from mhvp.documents import trash  # local: keeps the import graph of this module
+
+            await trash.restore_for_reimport(
+                session, doc, tenant_id=tenant_id, source_system=SOURCE_SYSTEM
+            )
             if (doc.source_meta or {}).get("row_hash") == row_hash:
                 skipped("documents_document")
                 continue

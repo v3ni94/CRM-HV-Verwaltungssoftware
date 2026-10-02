@@ -362,7 +362,19 @@ as the sum of other non reversed invoices minus credit notes on the same plan it
 `effective`, `subject_matches_plan`). New findings: `resolution_subject_mismatch` (resolution on
 another economic plan) and `resolution_none_with_order` (order requires approval, invoice has no
 resolution). Hints only; no threshold for a mandatory resolution is assumed (legal question,
-P03-03 stays open). `booked_before` counts invoices only, not journal lines without invoice.
+P03-03 stays open).
+
+Wave 17 (AF07, GAE-21): `booked_before = invoices_before - credit_notes_before + journal_lines_net`
+(`budget_booked_before`). `journal_lines_net` is debit minus credit of posted journal lines on the
+plan item's account, same ledger and booking year, whose entry has no invoice reference
+(reversals of such entries net out; reversals of invoice postings are left out). The three
+parts are returned for traceability. Order positions are not counted.
+
+### SEPA B2B not supported (Wave 17 AF07, GAA-05)
+
+Capturing a contact bank account with `mandate_scheme = b2b` answers 422 `MHVP-CONT-0033`; the
+direct debit run excludes any non CORE mandate with a visible block reason. No B2B run
+(pain.008 B2B, lead time, no refund right) exists; the decision is open (AF07-01).
 
 ## AE02: Kontenrahmen Vier-Augen-Freigabe und Prüfbericht (01.10.2026)
 
@@ -431,3 +443,21 @@ proposal; `GET /accounting/templates/{id}/coverage-report` lists gaps. Migration
 - Endpoints `/api/v1/accounting/credit-payables` (`settings`, `candidates`, list, `{id}`,
   `{id}/payout-options`, `{id}/release`, `{id}/payment-order`, `{id}/withdraw`).
 - Rule `docs/rules/AE22-credit-payables.md`; booking rule open (OPEN_QUESTIONS Q01-01, AE22-01).
+
+## Periodensperre und Guthabenposten, Nacharbeiten (Welle 17, AF04)
+
+`period_lock.property_ids_of_lines` nutzt `coalesce(journal_line.property_id, unit.property_id)`. WEG-Abschluss (`hoa` Übergang `locked`) ruft `period_lock.lock_for_closed_statement` mit Quelle `hoa_statement` (Migration 0398, Check `ck_period_lock_source`). `admin_fee_posting` prüft die Objektsperre vorab. `services.reverse` storniert offene Zahlungsaufträge der Posten und Rechnungen der Buchung (`cancelled`) und lehnt den Storno ab, solange ein Auftrag bei der Bank liegt. `DELETE /ledgers/{id}/entries/{entry_id}` lehnt Umbuchungsentwürfe eines Guthabenpostens mit 409 ab.
+
+## AF06 (Welle 17)
+
+* `POST /accounting/recurring-invoices/{id}/generate` bleibt Entwurf mit Planentwurfsnummer
+  (`PLAN-...`, nie MR-Kreis). Im Mandantenschalter `reject_when_g1_closed` (AC03-01) weist die
+  Route bei geschlossenem G1 mit MHVP-GATE-0001 ab. Antwort enthaelt `draft_number` und
+  `g1_open`. Register: `GATE_CONDITIONAL_ROUTES` in `tests/unit/test_ga14_gate_coverage.py`.
+* `GET /accounting/g1-opening` liefert `acceptance_register` (lesend, Stand des
+  Abnahmeregisters, Link `/plattform/abnahme`); `g1_acceptance` wird nie ueberschrieben.
+
+
+### Mandantenweite Zusammenfassung Zinsabzug (AF24, GAE-38)
+
+`GET /accounting/interest-tax-config` (Leserecht, keine Parameter) liefert `ledgers_total` und `ledgers_configured` (Buchungskreise mit mindestens einem Steuerkonto). Rein lesend. Die Seite Fachliche Regeln zeigt damit den Zinsabzug und, über `GET /document-text-blocks/codes`, die freigegebenen Textbausteine als Zahl statt nur als Link.

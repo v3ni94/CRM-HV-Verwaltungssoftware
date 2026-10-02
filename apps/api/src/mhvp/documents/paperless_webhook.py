@@ -216,6 +216,7 @@ async def intake_document(
     blobs: BlobStore,
     tenant_id: uuid.UUID,
     document_id: uuid.UUID,
+    source: str | None = None,
 ) -> uuid.UUID | None:
     """Creates the receipt draft for an indexed Paperless document with the existing receipts
     functions (`mhvp.receipts.extraction.prepare`, then the AI run of `mhvp.ai.jobs`). Returns
@@ -245,7 +246,7 @@ async def intake_document(
             tenant_id=tenant_id,
             user_id=None,
             document=document,
-            source=ReceiptDraftSource.PAPERLESS.value,
+            source=source or ReceiptDraftSource.PAPERLESS.value,
             message_id=None,
             data=data,
         )
@@ -257,7 +258,7 @@ async def intake_document(
             entity_id=draft.id,
             actor_user_id=None,
             payload={
-                "source": ReceiptDraftSource.PAPERLESS.value,
+                "source": source or ReceiptDraftSource.PAPERLESS.value,
                 "automatic": True,
                 "ai_run": draft.task_run_id is not None,
             },
@@ -268,7 +269,9 @@ async def intake_document(
     return draft_id
 
 
-async def _intake_once(settings: Settings, tenant_id: uuid.UUID, document_id: uuid.UUID) -> str:
+async def _intake_once(
+    settings: Settings, tenant_id: uuid.UUID, document_id: uuid.UUID, source: str | None = None
+) -> str:
     if settings.master_key is not None and not crypto.is_configured():
         crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
     engine = create_async_engine(
@@ -276,7 +279,7 @@ async def _intake_once(settings: Settings, tenant_id: uuid.UUID, document_id: uu
     )
     try:
         draft_id = await intake_document(
-            create_session_factory(engine), BlobStore(settings), tenant_id, document_id
+            create_session_factory(engine), BlobStore(settings), tenant_id, document_id, source
         )
         return str(draft_id) if draft_id else ""
     finally:
@@ -284,8 +287,10 @@ async def _intake_once(settings: Settings, tenant_id: uuid.UUID, document_id: uu
 
 
 @shared_task(name="mhvp.documents.paperless_receipt_intake", acks_late=True)
-def paperless_receipt_intake(tenant_id: str, document_id: str) -> str:
-    return asyncio.run(_intake_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(document_id)))
+def paperless_receipt_intake(tenant_id: str, document_id: str, source: str | None = None) -> str:
+    return asyncio.run(
+        _intake_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(document_id), source)
+    )
 
 
 async def _receive(request: Request, tenant_key: str | None) -> dict[str, Any]:

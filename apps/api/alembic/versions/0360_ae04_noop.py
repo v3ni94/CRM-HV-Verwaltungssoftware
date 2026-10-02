@@ -1,4 +1,5 @@
-"""AE04: draft numbers for rent invoices use the existing counter table (negated year), no schema change.
+"""AE04: draft numbers for rent invoices use the existing counter table (negated year), no
+schema change.
 
 Revision ID: 0360
 Revises: 0359

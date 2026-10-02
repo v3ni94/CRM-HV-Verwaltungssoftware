@@ -60,3 +60,7 @@
 - Die Institutsliste wird mit `scripts/update_fints_institutes.py` aus der DK-Datei
   aktualisiert (Trockenlauf als Standard, URLs werden nie stillschweigend entfernt, Zeilen
   ohne DK-Eintrag bleiben unverändert).
+
+## Änderung Welle 17 (AF02, GAE-25)
+
+Produktschutz: Vor jedem FinTS-Dialog prüft der Worker die aufgelösten Adressen der FinTS-Adresse; nur globale (öffentliche) Adressen sind zulässig, sonst MHVP-BANK-0062 ohne Verbindungsaufbau. Keine Zielliste. Abnahmefall: tests/unit/test_af02_fints_target.py.

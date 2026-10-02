@@ -15,6 +15,10 @@ const ALLOWED: RegExp[] = [
   new RegExp(`^portal/documents/${ID}/download$`),
   // M24-03: Einzelabrechnung Hausgeld (PDF) des Eigentümers nach Freigabe.
   new RegExp(`^portal/owner/statements/${ID}/units/${ID}/pdf$`),
+  // GAC-01: Eigentümerabrechnung Miete/SEV (PDF), nur ausgegeben, hinter G3 und Mandantenschalter.
+  new RegExp(`^portal/owner/rental-statements/${ID}/pdf$`),
+  // GAC-02: Nebenkostenabrechnung des eigenen Mietvertrags (PDF), Abruf als Indiz vermerkt.
+  new RegExp(`^portal/tenant-statements/${ID}/contracts/${ID}/pdf$`),
   // GA07-02: Vermögensbericht der Gemeinschaft (PDF), Abruf wird je Eigentümer protokolliert.
   new RegExp(`^portal/owner/asset-reports/${ID}/pdf$`),
   // Anlage eines Aushangs (Schwarzes Brett, A54); visibility follows the notice.

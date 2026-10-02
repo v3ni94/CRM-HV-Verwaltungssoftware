@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { MigrationExtras } from "@/components/imports/MigrationExtras";
 import { MigrationStatus } from "@/components/imports/MigrationStatus";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -27,6 +28,9 @@ export default async function MigrationPage() {
           canUpdate={permissions.includes("accounting:update")}
           canApprove={permissions.includes("accounting:approve")}
         />
+      ) : null}
+      {permissions.includes("accounting:read") ? (
+        <MigrationExtras canUpdate={permissions.includes("accounting:update")} canApprove={permissions.includes("accounting:approve")} />
       ) : (
         <p role="alert" className="rounded-md border border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-fg" data-testid="migration-forbidden">
           {t("noPermission")}

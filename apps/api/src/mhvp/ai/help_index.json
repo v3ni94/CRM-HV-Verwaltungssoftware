@@ -1105,6 +1105,38 @@
  },
  {
   "kind": "page",
+  "title": "Mailquellen",
+  "source": "Einstellungen",
+  "href": "/einstellungen/mailquellen",
+  "keywords": [
+   "mailquelle",
+   "eingangs-webhook",
+   "geheimnis erneuern",
+   "empfangsprotokoll"
+  ],
+  "permission": [
+   "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "API-Schlüssel",
+  "source": "Einstellungen",
+  "href": "/einstellungen/api-schluessel",
+  "keywords": [
+   "api key",
+   "schlüssel widerrufen",
+   "token",
+   "präfix"
+  ],
+  "permission": [
+   "api_keys:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Immoware24-Anbindung",
   "source": "Einstellungen",
   "href": "/einstellungen/immoware",
@@ -1310,6 +1342,26 @@
   ],
   "permission": [
    "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Abrechnung, Heizkosten-Regeltabellen und Kostenart je Konto",
+  "source": "Einstellungen",
+  "href": "/einstellungen/abrechnung",
+  "keywords": [
+   "heizkosten",
+   "regeltabelle",
+   "co2 stufen",
+   "gradtage",
+   "kostenart",
+   "betriebskostenart",
+   "kostenkonto",
+   "betrkv"
+  ],
+  "permission": [
+   "accounting:read"
   ],
   "excerpt": ""
  },
@@ -1687,6 +1739,23 @@
    "erlöskonto honorar",
    "kontenzuordnung honorar",
    "forderungskonto honorar"
+  ],
+  "permission": [
+   "accounting:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
+  "title": "Buchhaltung, Gläubiger-ID",
+  "source": "Einstellungen",
+  "href": "/einstellungen/buchhaltung/glaeubiger-id",
+  "keywords": [
+   "gläubiger-id",
+   "gläubiger identifikationsnummer",
+   "sepa lastschrift",
+   "creditor id",
+   "lastschrift rechtsträger"
   ],
   "permission": [
    "accounting:read"
@@ -2079,6 +2148,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Bereich \"Neue Vorauszahlungen (Vorschlag)\" der Betriebskostenabrechnung wählt die Verwaltung, wie Vorauszahlungen behandelt werden, die bei der Abrechnung noch offen sind: \"Nur Information (Standard)\", \"Verrechnung der offenen Posten per Storno\" oder \"Saldo gegen Soll, Rücksta",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Textbausteine: Zweitpersonprüfung und Hinweis im Mieter-Anschreiben",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln, \"Textbausteine: Freigabe durch eine zweite Person\" steht die Prüfung standardmäßig auf \"an\": Wer einen Baustein verfasst oder eingereicht hat, darf ihn nicht freigeben. Das Abschalten verlangt eine Begründung und wird protokolliert. Der neue",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Einstellungen Abrechnung, Belegeinsicht und Ergebnisbuchungen",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Abrechnung pflegen Sie die Regeltabellen der Heizkostenabrechnung (CO2-Stufen, Gradtage) und ordnen Kostenkonten einer Betriebskostenart zu. Die Tabellen sind nicht vorbelegt: Zeilen und Quelle tragen Sie nach amtlicher Prüfung selbst ein, der Status bleibt z",
   "file": "docs/handbuch/abrechnung-miete.md"
  },
  {
@@ -3603,6 +3692,36 @@
  },
  {
   "kind": "handbook",
+  "title": "Bankverbindungen, Gläubiger-ID und Lastschriftvorschau (AF03)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Unter Bank, Bankverbindungen sehen Sie Verbindungen, das Sync-Protokoll und das Entscheidungsprotokoll je Umsatz. Das Anlegen einer Verbindung ruft nichts bei der Bank ab; der Schalter des Entscheidungsprotokolls erfordert eine Begründung und bucht nichts. - Die Gläubiger-ID pf",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sync-Protokoll und INI-/HIA-Brief (Welle 17)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Bank zeigt die Karte Sync-Protokoll die letzten Läufe mit Zeitpunkt, Quelle, Status, neuen Umsätzen, Dubletten, automatisch gebuchten Umsätzen, Vorschlägen und Fehlern. EBICS-Kontoauszüge werden täglich um 06:40 Uhr abgerufen, sobald EBICS für den Mandanten eingesch",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Buchungsautomatik ein- und ausschalten (AF01, Welle 17)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Eingeschaltet wird die Buchungsautomatik nur unter Einstellungen, Buchhaltung, Automatik: Antrag mit Grund, Freigabe durch eine zweite Person, Freigabestufe G1 offen. Ein direktes Einschalten über die Schnittstelle wird abgelehnt. Ist die Automatik eingeschaltet, steht dort die S",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4223,6 +4342,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Objektfilter, Kontenpflege, zweite Freigabe und Kautionen (Paket AF05)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Auswertungen: Monatsmatrix sowie Einnahmen und Ausgaben lassen sich je Objekt filtern. Neue Ansichten: Umsatzsteuer je Objekt und Kostenstelle (Entwurf), Offene Posten Salden (gepflegte Lesekopie) und der Driftbericht zum Objekt der Buchungszeilen. Der Driftbericht ändert nicht",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Abnahmeregister in der G1 Checkliste, Dauerrechnungen, Honorar und § 35a (Welle 17, AF06)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "G1 Öffnung zeigt den Stand des Abnahmeregisters (nur Anzeige, Link zum Register). Die Ergebnisse der Checkliste bleiben unverändert. Dauerrechnung erzeugen liefert weiterhin nur einen Entwurf mit Planentwurfsnummer. Im Schalter \"Ausgabe bei geschlossenem G1 ablehnen\" wird die Erz",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschprofile",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -4299,6 +4438,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Der Papierkorb ist standardmäßig aus; eine zulässige Löschung bleibt dann endgültig. Unter Einstellungen, Aufbewahrung schaltet „Papierkorb für Dokumente“ ihn ein und legt die Frist fest (Vorschlag 30 Tage, keine Rechtsfrist; ob personenbezogene Daten so lange im Papierkorb bleib",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Erkannte Dienstleister (Stand 02.10.2026)",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Verzeichnis erkennt zusätzlich das Schadenstool, Makler-CRM-Anbieter, Webhook-Ziele und EBICS- oder FinTS-Bankzugänge aus der Konfiguration. Je Dienst wird lesend angezeigt, welche Rechtsgrundlage für die betroffenen Einwilligungszwecke gilt (Register Rechtsgrundlagen der Ein",
   "file": "docs/handbuch/datenschutz.md"
  },
  {
@@ -4389,6 +4538,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Passen bei einem Bankkonto oder bei den Debitorenkonten mehrere Rechtsträger, zum Beispiel bei einer Mietimmobilie mit mehreren Eigentümern, legt die Übernahme das Konto nicht selbst an. Nach dem Bestätigen erscheint der Abschnitt \"Rechtsträger auswählen\": Wählen Sie je Konto den",
+  "file": "docs/handbuch/datenuebernahmen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Import zurücknehmen mit Vorschau (AF21)",
+  "source": "Handbuch: Datenübernahmen",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ein Klick auf \"Rückgängig\" öffnet einen Dialog. Er nennt, wie viele Datensätze entfernt werden und welche bestehen bleiben, jeweils mit Grund, zum Beispiel \"Kaution erfasst\" oder \"Mitglied einer Vertragspartei\". Originaldokumente bleiben immer erhalten. Erst \"Jetzt zurücknehmen\" ",
   "file": "docs/handbuch/datenuebernahmen.md"
  },
  {
@@ -4629,6 +4788,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Der Eingangsvorschlag erkennt zusätzlich Einheit (zum Beispiel \"Einheit 12\"), den am Dokumentdatum gültigen Vertrag, die IBAN und die Kundennummer eines Kontakts. Beim Bestätigen werden Einheit und Vertrag mit verknüpft. - Nach dem Bestätigen erscheinen Folgevorschläge je Dokum",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Volltext aus Paperless und Belegerfassung nach Ablage (Welle 17)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist für ein Dokument noch kein Text erkannt, zeigt die Detailseite den Hinweis \"Texterkennung ausstehend\". Sobald Paperless das Dokument verarbeitet hat, übernimmt die Plattform den Volltext beim nächsten Spiegellauf; danach ist das Dokument durchsuchbar und für den Assistenten l",
   "file": "docs/handbuch/dokumente-dms.md"
  },
  {
@@ -5589,6 +5758,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Hochladen im Importassistenten ist „Kopfzeile automatisch erkennen“ voreingestellt: die Plattform bewertet die ersten 30 Zeilen und nimmt die Zeile mit den meisten Spaltenüberschriften (Titelzeilen darüber werden übersprungen). Die erkannte Zeile und die Begründung stehen üb",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Gemerkte Spaltenzuordnungen verwalten",
+  "source": "Handbuch: Importe (Imports)",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Immoware24 Import steht unter den benötigten Exporten die Liste der gemerkten Spaltenzuordnungen. Mit Entfernen löschen Sie eine einzelne Zuordnung nach Rückfrage. Bei der nächsten Datei schlägt die Plattform die Zuordnung neu vor, es wird nichts importiert oder geä",
   "file": "docs/handbuch/importe.md"
  },
  {
@@ -7183,6 +7362,46 @@
  },
  {
   "kind": "handbook",
+  "title": "Support-Ansicht je Portalzugang (CRM)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Kontakt, Reiter Freigaben, zeigt die Support-Ansicht lesend, was die Person im Portal sieht (Rollen, Verträge, Meldungen, freigegebene Unterlagen). Sie setzt den Mandantenschalter für die Support-Sicht und eine gültige Einwilligung der Person voraus. Pro Aufruf ist ein Grund P",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Assistent im Portal: Antwort im Hintergrund",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Antwort der KI entsteht im Hintergrund. Das Portal zeigt den Zustand und fragt ihn ab; dauert die Antwort länger als zwei Minuten, erscheinen stattdessen Treffer aus den eigenen Unterlagen.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Nebenkostenabrechnung für Mieter (AF16)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mieter sehen unter \"Nebenkostenabrechnung\" (/nebenkosten) die ausgegebene Betriebs- und Heizkostenabrechnung ihres eigenen Mietvertrags: Kostenanteil, Vorauszahlungen, Ergebnis (Nachzahlung oder Guthaben), die Kostenpositionen mit eigenem Anteil und Erläuterungen zu Umlageschlüss",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Eigentümerabrechnung, Erläuterung und Wirtschaftsplan (AF15)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Eigentümer sehen unter \"Eigentümerabrechnung\" (/eigentuemerabrechnungen) die ausgegebenen Abrechnungen ihrer Mietverwaltung oder Sondereigentumsverwaltung mit Einnahmen, Ausgaben, Auszahlungen und PDF. Die Anzeige schaltet die Verwaltung unter Portalfunktionen ein (Standard aus);",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Rechnungen (Invoices)",
   "href": "/rechnungen",
@@ -7679,6 +7898,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Ändern Sie Priorität oder Team eines Tickets, einzeln oder per Sammelaktion, erscheint im Ticketverlauf ein Eintrag mit altem und neuem Wert, dem Bearbeiter und bei der Sammelaktion dem Hinweis Massenaktion. Gleiche Werte erzeugen keinen Eintrag.",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Offene Zuordnungsprüfungen (Startseite)",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Startseite listet der Arbeitsvorrat Rückfragen zur Zuordnung von Tickets und E-Mails zu Kontakt, Objekt und Einheit. Ein Eintrag führt zum Ticket beziehungsweise zur E-Mail, dort wird entschieden. Die Statusänderung mehrerer Tickets steht in der Ticketliste als Sammelakti",
   "file": "docs/handbuch/tickets.md"
  },
  {
@@ -8299,6 +8528,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter WEG, Bereich Versammlungen, steht beim Schalter \"Online-Teilnahme im Portal zulassen\" die Regel für den Fall, dass für eine Einheit eine Stimme des Eigentümers und eine Stimme des Bevollmächtigten vorliegen. Standard ist \"Konflikt als Prüfhinweis markieren\": Die erste Stimm",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Eigentümerwechsel und offene Einsichtsanfragen; Korrekturbericht (Welle 17, AF08)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Wird ein Eigentümerwechsel erfasst, erhält jede offene Einsichtsanfrage der bisherigen Eigentümerseite derselben Liegenschaft innerhalb einer Stunde einen Prüfhinweis im Verlauf (Eigentümerprüfung). Die Anfrage bleibt offen; ob eine Bereitstellung widerrufen wird, entscheidet der",
   "file": "docs/handbuch/weg.md"
  }
 ]

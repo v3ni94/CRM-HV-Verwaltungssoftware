@@ -312,6 +312,63 @@ async def bulk_properties(
         return await run_bulk(body.ids, act, savepoint=session.begin_nested)
 
 
+class UnitBulkIn(BaseModel):
+    """Bulk action on units (GAB-16, section 12): sets one descriptive field on many units.
+    Master data only; no field with money effect (areas, allocation values, VAT) is offered."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
+    action: Literal["set_floor", "set_location", "set_features"]
+    value: str | None = Field(default=None, max_length=1000)
+
+
+_UNIT_BULK_FIELD = {
+    "set_floor": ("floor", 20),
+    "set_location": ("location", 100),
+    "set_features": ("features", 1000),
+}
+
+
+@router.post(
+    "/units/bulk",
+    summary="Massenaktion Einheiten mit Teilerfolgsbericht",
+    response_model=BulkResultOut,
+)
+async def bulk_units(
+    body: UnitBulkIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BulkResultOut:
+    """Each unit on its own (savepoint); a unit outside the tenant or the object assignment of
+    the membership is reported as not found, an overlong value as a validation problem."""
+    field, limit = _UNIT_BULK_FIELD[body.action]
+    value = (body.value or "").strip() or None
+    if value is not None and len(value) > limit:
+        raise svc.invalid(f"Wert zu lang (höchstens {limit} Zeichen).")
+    async with tenant_tx(request, principal) as session:
+
+        async def act(unit_id: uuid.UUID) -> None:
+            unit = await _get(session, Unit, unit_id)
+            if getattr(unit, field) == value:
+                return
+            before = {field: getattr(unit, field)}
+            setattr(unit, field, value)
+            unit.version += 1
+            unit.updated_by = principal.user_id
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="unit.updated",
+                entity_type="unit",
+                entity_id=unit.id,
+                actor_user_id=principal.user_id,
+                payload={"bulk": body.action},
+                changes=diff(before, {field: value}),
+            )
+
+        return await run_bulk(body.ids, act, savepoint=session.begin_nested)
+
+
 @router.post("/properties", status_code=201, summary="Objekt anlegen")
 async def create_property(
     body: s.PropertyIn, request: Request, principal: TenantPrincipal = Depends(CREATE)

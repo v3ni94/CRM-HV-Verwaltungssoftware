@@ -33,7 +33,8 @@ export default async function OwnerOverviewPage() {
   const allocationData = allocations.ok
     ? ((await allocations.json()) as { items: OwnerAllocationUnit[] }).items
     : [];
-  const incomeData = income.ok ? ((await income.json()) as { items: OwnerRentalIncome[] }).items : [];
+  const incomeBody = income.ok ? ((await income.json()) as { items: OwnerRentalIncome[]; note?: string }) : { items: [] };
+  const incomeData = incomeBody.items;
   const takeoverData = takeover.ok
     ? ((await takeover.json()) as { items: OwnerTakeoverProperty[]; note: string })
     : { items: [], note: "" };
@@ -46,6 +47,7 @@ export default async function OwnerOverviewPage() {
         tickets={ticketData}
         allocations={allocationData}
         income={incomeData}
+        incomeNote={incomeBody.note ?? ""}
         takeover={takeoverData.items}
         takeoverNote={takeoverData.note}
       />

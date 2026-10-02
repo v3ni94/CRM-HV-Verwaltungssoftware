@@ -61,7 +61,7 @@ function mockApi(routes: Routes) {
 const STATUS = "GET /api/bff/portal/assistant/status";
 const SCOPE_URL = "GET /api/bff/portal/assistant/scope";
 const HISTORY = "GET /api/bff/portal/assistant/questions?limit=10";
-const ASK = "POST /api/bff/portal/assistant/questions";
+const ASK = "POST /api/bff/portal/assistant/questions/async";
 const ACK = "POST /api/bff/portal/assistant/privacy-ack";
 
 describe("PortalAssistant", () => {
@@ -114,8 +114,32 @@ describe("PortalAssistant", () => {
     expect(card).toHaveTextContent("Treffer in Ihren Unterlagen");
     expect(card).not.toHaveTextContent("KI-Antwort, automatisch erstellt");
     expect(screen.getByTestId("assistant-hits")).toHaveTextContent("Wirtschaftsplan");
-    const call = vi.mocked(fetch).mock.calls.find((c) => String(c[0]).endsWith("/questions") && (c[1] as RequestInit | undefined)?.method === "POST");
+    const call = vi.mocked(fetch).mock.calls.find((c) => String(c[0]).endsWith("/questions/async") && (c[1] as RequestInit | undefined)?.method === "POST");
     expect(JSON.parse(String((call![1] as RequestInit).body))).toEqual({ question: "Wie hoch ist das Hausgeld?" });
+  });
+
+  it("polls the status of an asynchronous answer until it is final", async () => {
+    const user = userEvent.setup();
+    let polls = 0;
+    mockApi({
+      [STATUS]: () => jsonResponse(statusBody()),
+      [SCOPE_URL]: () => jsonResponse(SCOPE),
+      [HISTORY]: () => jsonResponse([]),
+      [ASK]: () => jsonResponse(answerBody({ id: "q1", mode: "ai", status: "pending", answer: null }), 202),
+      "GET /api/bff/portal/assistant/questions/q1": () => {
+        polls += 1;
+        return jsonResponse(
+          answerBody({ id: "q1", mode: "ai", status: "timeout", answer: "Die KI-Antwort hat zu lange gedauert." }),
+        );
+      },
+    });
+    renderIntl(<PortalAssistant />);
+    await screen.findByTestId("portal-assistant");
+    await user.type(screen.getByLabelText("Ihre Frage"), "Wie hoch ist das Hausgeld?");
+    await user.click(screen.getByRole("button", { name: "Frage stellen" }));
+    const card = await screen.findByTestId("assistant-answer", undefined, { timeout: 4000 });
+    expect(polls).toBe(1);
+    expect(card).toHaveTextContent("zu lange gedauert");
   });
 
   it("marks an AI answer and lists the checked sources", async () => {

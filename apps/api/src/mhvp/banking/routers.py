@@ -118,6 +118,10 @@ class SyncRunOut(BaseModel):
     errors: list[str]
     property_bank_account_id: uuid.UUID | None
     document_id: uuid.UUID | None
+    # GAB-03: time of the run and the bank connection it belongs to (None for file imports
+    # and EBICS downloads, which have no bank connection row).
+    connection_id: uuid.UUID | None = None
+    created_at: datetime | None = None
 
 
 class TransactionOut(BaseModel):
@@ -1343,7 +1347,7 @@ class AutomationIn(_In):
     reason: str = Field(min_length=3, max_length=2000)
 
 
-@router.put("/automation", summary="Automatik je Mandant ein- oder ausschalten (Standard aus)")
+@router.put("/automation", summary="Automatik je Mandant ausschalten (Einschalten nur per Antrag)")
 async def set_automation(
     body: AutomationIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, bool]:
@@ -1353,11 +1357,21 @@ async def set_automation(
         raise ProblemError(
             ErrorCodes.FORBIDDEN, developer_message="Missing tenant_settings:update."
         )
+    if body.enabled:
+        # Switching on only via the request path (AE03, BK2-03): request plus second person
+        # while G1 is open. No bypass through this endpoint.
+        raise ProblemError(
+            ErrorCodes.AUTO_POSTING_SWITCH_REQUEST_REQUIRED,
+            detail=(
+                "Die Buchungsautomatik wird nur über einen Antrag mit Freigabe durch eine "
+                "zweite Person eingeschaltet (POST /banking/automation/switch-requests)."
+            ),
+        )
     async with tenant_tx(request, principal) as session:
         settings = await session.scalar(select(TenantSettings).with_for_update())
         if settings is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        settings.auto_posting_enabled = body.enabled
+        settings.auto_posting_enabled = False
         await emit(
             session,
             tenant_id=principal.tenant_id,
