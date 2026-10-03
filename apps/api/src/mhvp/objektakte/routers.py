@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import MAX_PAGE_SIZE
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.uploads import (
     check_dump_file,
@@ -307,7 +308,7 @@ async def trigger_sync_run(
 async def list_source_deletions(
     request: Request,
     include_resolved: bool = Query(default=False),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:

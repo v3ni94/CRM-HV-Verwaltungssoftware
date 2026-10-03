@@ -432,6 +432,15 @@ class ErrorCodes:
         "Aufhebung der Periodensperre nicht freigeschaltet",
         "Releasing a period lock needs the tenant switch reopen_enabled (AA08-01 open).",
     )
+    ACC_S35A_IN_USE = ErrorCode(
+        "MHVP-ACC-0040",
+        409,
+        "§-35a-Kennzeichen bereits verwendet",
+        (
+            "The marker lies in a locked period or was used in an issued § 35a certificate; "
+            "correction only through a new version (GAK-103, 7.6 A01, B03)."
+        ),
+    )
     ACC_ACCOUNT_RANGE_CATEGORY = ErrorCode(
         "MHVP-ACC-0032",
         422,
@@ -757,6 +766,44 @@ class ErrorCodes:
             "booking of an incoming payment, for a contact of the debtor party, when the IBAN "
             "is not yet known there (7.4 no. 6). The proposal itself stays pending for four "
             "eyes release."
+        ),
+    )
+    # AN16 (GAK-105, GAK-107, GAK-108).
+    BANK_BULK_PREVIEW_REQUIRED = ErrorCode(
+        "MHVP-BANK-0031",
+        409,
+        "Massenbestätigung ohne gültige Vorschau",
+        (
+            "Booking a bulk confirmation needs the preview_id of a preview over exactly the "
+            "same items, amounts and states, not yet expired (7.4 Massenbestätigung, GAK-105)."
+        ),
+    )
+    BANK_BULK_EXCEPTIONS_UNCONFIRMED = ErrorCode(
+        "MHVP-BANK-0032",
+        409,
+        "Ausnahmen der Massenbestätigung nicht bestätigt",
+        (
+            "The request contains transactions listed as exceptions in the preview; they are "
+            "only booked with confirm_exceptions=true in preview and booking (GAK-105)."
+        ),
+    )
+    BANK_COUNTER_ACCOUNT_NOT_ALLOWED = ErrorCode(
+        "MHVP-BANK-0033",
+        422,
+        "Gegenkonto für Restbetrag oder Skonto nicht zulässig",
+        (
+            "An overpayment remainder may only go to a debtor, creditor, technical or transit "
+            "account, never to income (7.4 no. 5, D07); a discount needs a revenue or cost "
+            "account and a reason (7.3 Skonto, GAK-107)."
+        ),
+    )
+    BANK_RECON_ACCOUNT_AMBIGUOUS = ErrorCode(
+        "MHVP-BANK-0034",
+        409,
+        "Sachkonto des Bankkontos nicht eindeutig",
+        (
+            "More than one ledger account of the ledger points to this bank account; the "
+            "reconciliation does not pick one silently (B09, GAK-108)."
         ),
     )
     # EBICS connector scaffold (M11-01, AE23, docs/integrations/ebics.md, rule M11-11).
@@ -1564,6 +1611,21 @@ class ErrorCodes:
         "The majority rule of the agenda item is not valid on the meeting day (valid_from to "
         "valid_to); assignment and tally are refused (AM02, GAJ-601).",
     )
+    # AN06 / GAJ-602: four eyes approval of meeting majority rules (tenant switch).
+    HOA_MAJORITY_RULE_NOT_APPROVED = ErrorCode(
+        "MHVP-HOA-0040",
+        422,
+        "Mehrheitsregel ist noch nicht freigegeben",
+        "The majority rule was created under the four eyes switch and has no approval by a "
+        "second person yet; assignment and tally are refused (AN06, GAJ-602).",
+    )
+    HOA_MAJORITY_RULE_SELF_APPROVAL = ErrorCode(
+        "MHVP-HOA-0041",
+        409,
+        "Mehrheitsregel braucht die Freigabe einer zweiten Person",
+        "The person who created the majority rule cannot approve it, or it is already "
+        "approved or needs no approval (AN06, GAJ-602).",
+    )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
     CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(
         "MHVP-CONT-0001",
@@ -1698,6 +1760,13 @@ class ErrorCodes:
         "Der Datenschutzhinweis ist nicht freigegeben oder hat sich geändert",
         "The privacy feature is off, no approved privacy notice exists or the acknowledged "
         "version is not the approved one; nothing is recorded.",
+    )
+    PORTAL_METER_PHOTO_REQUIRED = ErrorCode(
+        "MHVP-PORTAL-0003",
+        422,
+        "Bitte ein Foto des Zählerstands beifügen",
+        "The tenant switch meter_photo_mode is 'required' and the reading carries no own "
+        "photo upload (AN02, GAJ-401); nothing is recorded.",
     )
 
 

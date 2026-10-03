@@ -21,6 +21,7 @@ from moto import mock_aws
 
 from mhvp.main import create_app
 from mhvp.platform import services
+from tests.integration.an16_bulk import bulk_book
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _party, _unit
@@ -435,13 +436,13 @@ def test_d04_pair_guard_error_code_retry_and_tenant_separation(
     assert again.status_code == 409, again.text
     assert again.json()["code"] == "MHVP-PLAT-0002"
     bulk = _ok(
-        client.post(
-            f"{B}/bulk-confirm",
-            json={
+        bulk_book(
+            client,
+            h,
+            {
                 "preview": False,
                 "items": [{"transaction_id": w["into"]["id"], "counter_account_id": w["bank_a"]}],
             },
-            headers=h,
         )
     )
     assert [r["ok"] for r in bulk["results"]] == [False]

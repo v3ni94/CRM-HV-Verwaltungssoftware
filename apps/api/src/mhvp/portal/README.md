@@ -320,3 +320,8 @@ Belegsuche für Eigentümer: `GET /portal/owner/receipts?year=&q=` (Modul `porta
 - `GET /portal/tickets` returns `work_orders` per ticket (id, status, scheduled_at; drafts excluded; no provider, price or notes) (GAJ-402).
 - `GET|POST /portal/owner/inspection-requests`, `GET /portal/owner/inspection-requests/{id}` (`portal/owner_inspection.py`, GAJ-202): owners file inspection requests for their own community into the existing `hoa_inspection_request` process and follow the status trail (status events only). Behind switch `portal_owner_receipts_enabled` (AG09, default off: list empty with note, POST 403); foreign community or tenant 404.
 - Portal: camera capture (`capture="environment"`) in MeterReadingForm, NewTicket and WorkOrderDetail (GAJ-404); `TicketOrderStatus` and `OwnerInspectionPanel` components.
+
+## Meter photo mode (AN02, Welle 24, GAJ-401)
+
+- `portal_feature_setting.meter_photo_mode` (migration 0451, check constraint `ck_portal_feature_setting_meter_photo_mode`): `off`, `hint` (default, behaviour before 0451), `required`. Set via `PATCH /portal-admin/features`, exposed in `GET /portal-admin/features` and `GET /portal/me` (`features.meter_photo_mode`).
+- `required`: `POST /portal/meter-readings` without own photo returns 422 `MHVP-PORTAL-0003`, nothing recorded. `off`: `photo_missing` false, no note. Decision AM06-01 stays open.

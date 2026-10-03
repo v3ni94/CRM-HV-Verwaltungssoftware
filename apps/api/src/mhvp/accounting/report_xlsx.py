@@ -340,6 +340,7 @@ async def build_report_xlsx(
                 ("segregated_deposits", "Getrennt angelegte Kautionen"),
                 ("expected_inflows", "Erwartete Einzahlungen (nicht projiziert)"),
                 ("expected_outflows", "Erwartete Auszahlungen"),
+                ("debtor_credits", "Guthaben von Debitoren (gebunden)"),
                 ("projected_free_funds", "Freie Mittel nach Auszahlungen"),
             )
         ]

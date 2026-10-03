@@ -18,6 +18,7 @@ from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 from tests.integration.test_m5_contracts import _party, _unit
+from tests.runtime_limits import scaled_limit
 
 pytestmark = pytest.mark.integration
 A = "/api/v1/accounting"
@@ -161,7 +162,7 @@ def test_receivable_run(client: TestClient, world: World) -> None:
     run = _ok(
         client.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=h), 201
     )
-    assert time.monotonic() - started < 120
+    assert time.monotonic() - started < scaled_limit(120)  # load scaled
     assert run["totals"]["ready"] == {"count": 4, "amount": "700.00"}
     manual = [i for i in run["items"] if i["status"] == "manual"]
     assert {i["contract_id"] for i in manual} == {late["id"]}
@@ -938,7 +939,7 @@ def test_a27_receivable_run_runtime_67_properties_869_units(
         f"\nA27 scope=property, 67 Läufe Juli 2026: Vorschau {preview_s:.1f} s, "
         f"Buchung {post_s:.1f} s, gesamt {preview_s + post_s:.1f} s, {posted} Positionen"
     )
-    assert preview_s + post_s < LOAD_LIMIT_SECONDS
+    assert preview_s + post_s < scaled_limit(LOAD_LIMIT_SECONDS)  # load scaled
 
     t0 = time.perf_counter()
     run_all = _ok(
@@ -955,4 +956,4 @@ def test_a27_receivable_run_runtime_67_properties_869_units(
         f"\nA27 scope=all, ein Lauf August 2026: Vorschau {all_preview_s:.1f} s, "
         f"Buchung {all_post_s:.1f} s, gesamt {all_preview_s + all_post_s:.1f} s"
     )
-    assert all_preview_s + all_post_s < LOAD_LIMIT_SECONDS
+    assert all_preview_s + all_post_s < scaled_limit(LOAD_LIMIT_SECONDS)

@@ -142,3 +142,7 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 `PATCH /tenant/settings` kennt `insurance_broker_access` (Standard aus, gespeichert in
 `tenant_settings.sources`, keine Migration). Nur bei gesetztem Schalter erhält die Systemrolle
 `insurance_broker` die Rechte `insurance:read` und `claims:read` (Regel GAC-07).
+
+### Mandantenvollexport und Zahlungsdateien (AN08)
+
+Bei geschlossenem G2 enthält das Export-ZIP keinen Inhalt von Zahlungsdateien (GAJ-301); die Metadaten bleiben in `data/documents.jsonl`, das Manifest listet sie unter `documents.withheld`.

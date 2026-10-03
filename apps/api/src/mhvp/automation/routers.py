@@ -120,6 +120,41 @@ def _rule_out(rule: AutomationRule) -> dict[str, Any]:
     }
 
 
+def _has_ai_task(rule: AutomationRule) -> bool:
+    return any(isinstance(a, dict) and a.get("type") == "ai_task" for a in rule.actions or [])
+
+
+async def mark_needs_ai_approval(
+    session: AsyncSession, tenant_id: uuid.UUID, rules: list[AutomationRule]
+) -> dict[uuid.UUID, bool]:
+    """AM04-03: existing rules with an ``ai_task`` action whose last editor does not hold
+    ``ai:approve`` (or has no active membership) are flagged ``needs_ai_approval``. Read only,
+    execution stays bound to the tenant switch ``ai_automation.automation_ai_task``."""
+    from mhvp.core.auth.permissions import effective_permissions
+    from mhvp.platform.models import Membership
+
+    verdict: dict[uuid.UUID, bool] = {}
+    by_user: dict[uuid.UUID | None, bool] = {}
+    for rule in rules:
+        if not _has_ai_task(rule):
+            continue
+        editor = rule.updated_by or rule.created_by
+        if editor not in by_user:
+            ok = False
+            if editor is not None:
+                membership = await session.scalar(
+                    select(Membership).where(
+                        Membership.tenant_id == tenant_id, Membership.user_id == editor
+                    )
+                )
+                if membership is not None:
+                    perms, _ = await effective_permissions(session, tenant_id, membership.id)
+                    ok = "ai:approve" in perms
+            by_user[editor] = ok
+        verdict[rule.id] = not by_user[editor]
+    return verdict
+
+
 def _run_out(
     run: AutomationRun,
     rule_name: str | None = None,
@@ -233,7 +268,10 @@ async def list_rules(
                 select(AutomationRule), params, (AutomationRule.name, AutomationRule.id)
             )
         )
-        return sparse([_rule_out(r) for r in rows], params, None)  # type: ignore[no-any-return]
+        rule_list = list(rows)
+        gaps = await mark_needs_ai_approval(session, principal.tenant_id, rule_list)
+        out = [{**_rule_out(r), "needs_ai_approval": gaps.get(r.id, False)} for r in rule_list]
+        return sparse(out, params, None)  # type: ignore[no-any-return]
 
 
 def _assert_ai_task_permission(principal: TenantPrincipal, actions: Any) -> None:
@@ -289,7 +327,8 @@ async def get_rule(
     async with tenant_tx(request, principal) as session:
         rule = await _get_rule(session, rule_id)
         response.headers["ETag"] = etag_of(rule.updated_at)  # GA04-06
-        return _rule_out(rule)
+        gaps = await mark_needs_ai_approval(session, principal.tenant_id, [rule])
+        return {**_rule_out(rule), "needs_ai_approval": gaps.get(rule.id, False)}
 
 
 @router.patch("/rules/{rule_id}", summary="Regel ändern")
@@ -305,6 +344,7 @@ async def patch_rule(
         rule = await _get_rule(session, rule_id, lock=True)
         check_if_match(if_match, rule.updated_at)  # GA04-06
         values = body.model_dump(exclude_unset=True)
+        _assert_ai_task_permission(principal, rule.actions)  # AN14-13: any change, not only actions
         if "name" in values and values["name"] is not None:
             await _assert_unique_name(session, values["name"], rule.id)
         if values.get("actions") is not None:
@@ -371,6 +411,8 @@ async def activate_rule(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         rule = await _get_rule(session, rule_id)
+        if body.active:  # AN14-13: enabling an ai_task rule needs ai:approve
+            _assert_ai_task_permission(principal, rule.actions)
         if rule.active != body.active:
             rule.active = body.active
             rule.updated_by = principal.user_id

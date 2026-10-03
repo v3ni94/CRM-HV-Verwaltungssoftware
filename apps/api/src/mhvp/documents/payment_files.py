@@ -67,6 +67,22 @@ async def payment_file_ids(session: AsyncSession, ids: list[uuid.UUID]) -> set[u
     return result
 
 
+WITHHELD_NOTE = "Inhalt zurückgehalten: Zahlungsdatei, Freigabe G2 (Zahlungsveranlassung) fehlt."
+
+
+async def content_released(tenant_id: uuid.UUID, resolver: Any | None = None) -> bool:
+    """True only when G2 is open for the tenant (fail closed). Without a resolver the job
+    resolver installed at worker start is used (closed by default, ADR 0003). Exports use this
+    to keep payment file content out of archives while G2 is closed (AM01)."""
+    from mhvp.core import release_gates
+
+    try:
+        active = resolver if resolver is not None else release_gates.job_release_gate_resolver
+        return await active.is_open(tenant_id, ReleaseGate.G2) is True
+    except Exception:
+        return False
+
+
 async def is_payment_file(session: AsyncSession, document: Document) -> bool:
     return bool(await payment_file_ids(session, [document.id]))
 

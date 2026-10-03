@@ -265,11 +265,18 @@ async def ensure_different_person(
 ) -> None:
     """Four eyes need two persons, not two accounts (D36): the new approver must differ from every
     other approver in user id, e-mail and linked contact."""
+    await ensure_different_person_in_tenant(session, order.tenant_id, user_id, others)
+
+
+async def ensure_different_person_in_tenant(
+    session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, others: set[uuid.UUID]
+) -> None:
+    """GAK-106: the D36 check by tenant, shared by payment orders and direct debit runs."""
     if user_id in others:
         return  # the same account repeating a click is handled by the caller (B08)
-    email, contact_id = await _identity(session, order.tenant_id, user_id)
+    email, contact_id = await _identity(session, tenant_id, user_id)
     for other in others:
-        other_email, other_contact = await _identity(session, order.tenant_id, other)
+        other_email, other_contact = await _identity(session, tenant_id, other)
         same_email = email is not None and email == other_email
         same_contact = contact_id is not None and contact_id == other_contact
         if same_email or same_contact:

@@ -11,7 +11,11 @@ import { ui } from "@/lib/ui";
  *  Kamera; ohne Foto erscheint ein Hinweis, die Meldung bleibt möglich. */
 const MAX_PHOTOS = 5;
 
-export function MeterReadingForm() {
+/** AN02 (GAJ-401, AM06-01): Mandantenschalter, off ohne Fotohinweis, hint (Standard) mit
+ *  Hinweis, required verlangt ein Foto (die API lehnt die Meldung ohne Foto mit 422 ab). */
+export type MeterPhotoMode = "off" | "hint" | "required";
+
+export function MeterReadingForm({ photoMode = "hint" }: { photoMode?: MeterPhotoMode }) {
   const t = useTranslations("Meter");
   const tPortal = useTranslations("Portal");
   const [meterId, setMeterId] = useState("");
@@ -36,6 +40,10 @@ export function MeterReadingForm() {
     }
     if (!readAt) {
       setError(t("dateRequired"));
+      return;
+    }
+    if (photoMode === "required" && photos.length === 0) {
+      setError(t("photoRequired"));
       return;
     }
     setBusy(true);
@@ -102,6 +110,7 @@ export function MeterReadingForm() {
       <div>
         <label htmlFor="meter-photo" className={ui.label}>
           {t("photo")}
+          {photoMode === "required" ? ` (${t("photoRequiredLabel")})` : ""}
         </label>
         <input
           id="meter-photo"
@@ -130,13 +139,13 @@ export function MeterReadingForm() {
         <p id="meter-photo-hint" className={ui.help}>
           {t("photoHint")}
         </p>
-        {photos.length === 0 ? (
+        {photos.length === 0 && photoMode === "hint" ? (
           <p className={ui.notice} data-testid="meter-photo-missing">
             {t("photoMissing")}
           </p>
-        ) : (
+        ) : photos.length > 0 ? (
           <p className={ui.help}>{photos.map((p) => p.name).join(", ")}</p>
-        )}
+        ) : null}
       </div>
       <p className={ui.help}>{tPortal("proposalNotice")}</p>
       <div className={ui.formActions}>

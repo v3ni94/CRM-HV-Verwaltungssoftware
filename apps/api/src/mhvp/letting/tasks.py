@@ -14,6 +14,7 @@ from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.letting.models import Prospect, SelfDisclosureLink
+from mhvp.letting.prospect_erasure import propose_for
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today
 
@@ -24,6 +25,7 @@ async def purge_prospects_once(settings: Settings, today: date | None = None) ->
     )
     factory = create_session_factory(engine)
     deleted = 0
+    outcomes: dict[str, int] = {}
     try:
         async with platform_transaction(factory) as session:
             ids: list[uuid.UUID] = list(
@@ -31,13 +33,20 @@ async def purge_prospects_once(settings: Settings, today: date | None = None) ->
             )
         for tenant_id in ids:
             async with tenant_transaction(factory, tenant_id) as session:
-                result = await session.execute(
-                    delete(Prospect).where(Prospect.delete_after < (today or local_today()))
-                )
+                day = today or local_today()
+                # GAK-201: contact and documents go into a deletion proposal, never deleted here.
+                due = (
+                    await session.scalars(select(Prospect).where(Prospect.delete_after < day))
+                ).all()
+                for prospect in due:
+                    outcome = await propose_for(session, tenant_id, prospect, day)
+                    outcomes[outcome] = outcomes.get(outcome, 0) + 1
+                await session.flush()
+                result = await session.execute(delete(Prospect).where(Prospect.delete_after < day))
                 deleted += int(getattr(result, "rowcount", 0) or 0)
     finally:
         await engine.dispose()
-    return {"deleted": deleted}
+    return {"deleted": deleted, **{f"contact_{k}": v for k, v in sorted(outcomes.items())}}
 
 
 @shared_task(name="mhvp.letting.purge_prospects")

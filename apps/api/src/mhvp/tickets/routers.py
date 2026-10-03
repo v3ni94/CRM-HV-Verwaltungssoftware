@@ -21,6 +21,7 @@ from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
+    MAX_PAGE_SIZE,
     ListParams,
     apply_filters,
     apply_sort,
@@ -49,6 +50,7 @@ from mhvp.tickets.models import (
     WorkOrder,
     WorkOrderEvent,
 )
+from mhvp.tickets.order_events import emit_completed_if_done
 from mhvp.tickets.resolution_kinds import assert_resolution_kind_allowed, load_resolution_kinds
 from mhvp.tickets.status import (
     CLOSING_STATUSES,
@@ -2074,12 +2076,12 @@ async def list_tickets(
             " sonst allgemeine Sortierung feld,-feld (Abschnitt 12)"
         ),
     ),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
         default=None,
         ge=1,
-        le=500,
+        le=MAX_PAGE_SIZE,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
     params: ListParams = Depends(list_params),
@@ -3106,17 +3108,14 @@ async def order_step(
             actor_user_id=principal.user_id,
             payload={},
         )
-        if body.status is OrderStatus.DONE:
-            # S12-01: catalogue name of the completion (section 12); work_order.done stays.
-            await emit(
-                session,
-                tenant_id=principal.tenant_id,
-                type="work_order.completed",
-                entity_type="work_order",
-                entity_id=order.id,
-                actor_user_id=principal.user_id,
-                payload={},
-            )
+        # S12-01 and GAK-302: catalogue name of the completion; work_order.done stays.
+        await emit_completed_if_done(
+            session,
+            tenant_id=principal.tenant_id,
+            order_id=order.id,
+            new_status=body.status,
+            actor_user_id=principal.user_id,
+        )
         await session.flush()
         return _order_out(order)
 

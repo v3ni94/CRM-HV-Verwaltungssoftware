@@ -373,8 +373,12 @@ async def _apply_contract(
             )
         notes: list[str] = []
         ended = [o for o in open_owners if o.valid_from < start]
+        previous_ends = {o.id: o.valid_to for o in ended}
         for old in ended:
+            previous_to = old.valid_to
             old.valid_to = start - timedelta(days=1)
+            if rec:  # AM03: undo restores the previous end
+                rec.add_owner_end(old.id, previous_to, old.valid_to)
             notes.append(f"Bisheriger Eigentümer zum {old.valid_to.strftime('%d.%m.%Y')} beendet")
         await session.flush()
         problems = await property_services.owner_period_problems(
@@ -389,6 +393,7 @@ async def _apply_contract(
         await session.flush()
         await property_services.owner_entity(session, prop, party.id)
         for old in ended:
+            previous = previous_ends[old.id]
             await emit(
                 session,
                 tenant_id=principal.tenant_id,
@@ -399,7 +404,7 @@ async def _apply_contract(
                 payload={"owner_id": str(old.id), "source": "import"},
                 changes={
                     "valid_to": {
-                        "old": None,
+                        "old": previous.isoformat() if previous else None,
                         "new": old.valid_to.isoformat() if old.valid_to else None,
                     }
                 },

@@ -65,7 +65,7 @@ describe("BulkConfirm", () => {
       if (url.endsWith("/banking/bulk-confirm")) {
         const body = JSON.parse(init!.body as string);
         if (body.preview) {
-          return jsonResponse({ preview: true, count: 2, total: "200.00", legal_entities: ["le1", "le2"], exceptions: [ids(2)], allocations: {} });
+          return jsonResponse({ preview: true, count: 2, total: "200.00", legal_entities: ["le1", "le2"], exceptions: [ids(2)], preview_id: "1999999999.abc", allocations: {} });
         }
         return jsonResponse({
           preview: false,
@@ -111,6 +111,8 @@ describe("BulkConfirm", () => {
     const confirm = calls.filter((c) => c.url.endsWith("/banking/bulk-confirm")).at(-1)!;
     const confirmBody = JSON.parse(confirm.init!.body as string);
     expect(confirmBody.preview).toBe(false);
+    // GAK-105: the booking call carries the token of the preview.
+    expect(confirmBody.preview_id).toBe("1999999999.abc");
     expect(confirmBody.items).toEqual([{ transaction_id: ids(1), settlements: split() }]);
     await userEvent.click(screen.getByRole("button", { name: "Schließen" }));
     expect(onDone).toHaveBeenCalled();

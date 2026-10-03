@@ -439,3 +439,13 @@ Adresszeile des Browsers, die Ansicht lässt sich daher als Lesezeichen speicher
 ## Sollstellungslauf stornieren (GAJ-101, Welle 23)
 
 Bei einem gebuchten Sollstellungslauf steht die Schaltfläche "Lauf stornieren" (Recht Buchungen freigeben). Sie verlangt eine Begründung, fragt vor der Ausführung nach und storniert die Sollstellungen durch Gegenbuchungen; die ursprünglichen Buchungen bleiben erhalten. Die Geschäftsführung ist über den Vorgang zu informieren.
+
+### G1 Öffnung: Nachweisart und Gate-Antrag (GAJ-504)
+
+Auf der Seite "G1 Öffnung" zeigt die Spalte Nachweis je Prüfpunkt die Nachweisart (Testlauf CI, Teststand, Dokument, Verweis) und den Hinweis "Nachweis Pflicht", wo ein Nachweis verlangt ist. Der Hinweis "Bestandene Anhang D Fälle ohne verknüpften Testlauf" nennt die Zahl der bestandenen Fälle ohne Verweis der Form ci-run:Lauf@Commit; sie gelten nicht als maschinell nachgewiesen. In der Plattformansicht der Freigabestufen listet der Gate-Antrag bestätigte Checklistenpunkte ohne prüfbaren Nachweisverweis in der Notiz als "Checkliste ohne prüfbaren Nachweis"; sie sind vor der Entscheidung manuell zu prüfen. Die Anzeige ändert keine Prüfregel. Ob der maschinelle Nachweis für G1 bis G4 Pflicht wird, ist offen (AM10-01) und nicht entschieden.
+
+## Rücklastschrift belegen und Forderungen zur Ausbuchung vorschlagen (Welle 24, AN15)
+
+Bei einer Rücklastschrift erfassen Sie in der Bankrückmeldung des Lastschriftlaufs zusätzlich das Rückgabedatum der Bank, die tatsächlich berechnete Gebühr und den Gebührenbeleg. Der Verweis auf den ursprünglichen Einzug bleibt erhalten. Bereits erfasste Angaben lassen sich ergänzen, aber nicht überschreiben. Beim Import einer camt.054 übernimmt die Plattform den Buchungstag der Rückbelastung als Rückgabedatum. Die Gebühr wird nicht weiterbelastet; mit dem Schalter "Rücklastschriftgebühr als Weiterbelastungsvorschlag" erscheint sie in der Abstimmung nur als Vorschlag.
+
+Eine Forderung, die nicht mehr eingezogen werden soll, schlagen Sie zur Ausbuchung vor (Grund, Stichtag, Beleg). Der Vorschlag ändert keine Salden. Freigeben kann ihn nur eine zweite Person, wenn der Schalter "Freigabe von Forderungsausbuchungen" an und die Freigabestufe G1 offen ist. Die Nebenbuchprüfung zeigt den Posten erst ab dem Stichtag als ausgebucht.

@@ -8,7 +8,16 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    PrivateAttr,
+    SerializationInfo,
+    SerializerFunctionWrapHandler,
+    ValidatorFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 
 class _Open(BaseModel):
@@ -84,3 +93,34 @@ class AccountingEntityCreditorIdOut(_Open):
 class AccountingTenantCreditorIdOut(_Open):
     tenant_id: uuid.UUID
     sepa_creditor_id: str | None = None
+
+
+class RawJsonOut(BaseModel):
+    """AN11 (GAI-304, ADR 0037): documents a response while keeping its bytes unchanged.
+
+    Routes annotated ``dict[str, Any]`` (or ``Any``) serialize the handler result through
+    Pydantic, so ``Decimal`` is already a JSON string (``"1234.50"``) today. Subclasses
+    declare the fields for OpenAPI and validate the handler result, but serialize the
+    original handler value in JSON mode, so declared field types never coerce a value
+    (``7`` stays ``7``, it does not become ``"7"``) and the bytes stay identical.
+    """
+
+    model_config = ConfigDict(extra="allow", json_schema_mode_override="validation")
+    _raw: Any = PrivateAttr(default=None)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _keep_raw(cls, data: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        instance = handler(data)
+        if isinstance(instance, RawJsonOut) and not isinstance(data, RawJsonOut):
+            instance._raw = data
+        return instance
+
+    @model_serializer(mode="wrap")
+    def _dump_raw(  # type: ignore[no-untyped-def]
+        self, handler: SerializerFunctionWrapHandler, info: SerializationInfo
+    ):
+        # No return annotation on purpose: Pydantic then documents the declared fields.
+        if info.mode_is_json() and self._raw is not None:
+            return self._raw
+        return handler(self)

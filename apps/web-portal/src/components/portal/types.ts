@@ -17,7 +17,7 @@ export type Me = {
   /** Portal permissions of a staff account (M2-08); absent or empty for external users. */
   permissions?: string[];
   /** M21-08: Funktionsschalter des Mandanten (Chat, KI-Vorqualifizierung, Support-Sicht). */
-  features?: { chat_enabled: boolean; chat_ai_prequalification_enabled: boolean; support_login_enabled: boolean; owner_rental_income_enabled?: boolean; owner_ticket_scope?: string; chat_bot_enabled?: boolean; privacy_feature_enabled?: boolean };
+  features?: { chat_enabled: boolean; chat_ai_prequalification_enabled: boolean; support_login_enabled: boolean; owner_rental_income_enabled?: boolean; owner_ticket_scope?: string; chat_bot_enabled?: boolean; privacy_feature_enabled?: boolean; meter_photo_mode?: "off" | "hint" | "required" };
   /** M21-05: Vollmachten dieses Zugangs (Vertreterrolle). */
   representations?: { id: string; principal_contact_id: string; valid_from: string; valid_to: string | null }[];
 };

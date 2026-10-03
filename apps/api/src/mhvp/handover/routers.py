@@ -2573,3 +2573,79 @@ async def delete_item(
             response=None,
         )
     return Response(status_code=204)
+
+
+# AN19 (GAK-206): deposit and refund IBAN of the protocol -> deposit and payee release ------
+
+
+class DepositLinkIn(_In):
+    contact_id: uuid.UUID | None = None
+
+
+class DepositLinkOut(BaseModel):
+    protocol_id: uuid.UUID
+    contract_id: uuid.UUID | None
+    deposit_id: uuid.UUID | None
+    deposit_status: str | None
+    deposit_amount_due: Decimal | None
+    protocol_deposit_amount: Decimal | None
+    difference: Decimal | None
+    iban_suffix: str | None
+    contact_id: uuid.UUID | None
+    bank_account_id: uuid.UUID | None
+    bank_account_approval: str | None
+    hints: list[str]
+    draft_only: bool = True
+    bank_account_created: bool | None = None
+
+
+@router.get(
+    "/protocols/{protocol_id}/deposit/link",
+    summary="Kaution und Rückzahlungskonto: Abgleich mit Vertrag und Freigabe",
+    response_model=DepositLinkOut,
+)
+async def deposit_link_state(
+    protocol_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.handover import deposit_link
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        return await deposit_link.state(session, p)
+
+
+@router.post(
+    "/protocols/{protocol_id}/deposit/link",
+    summary="Rückzahlungs-IBAN zur Freigabe (Vier Augen) an den Kontakt geben",
+    response_model=DepositLinkOut,
+    dependencies=[Depends(require_permission("contacts:update"))],
+)
+async def deposit_link_apply(
+    protocol_id: uuid.UUID,
+    body: DepositLinkIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Nothing is paid and the deposit is not changed; the IBAN waits for a second person with
+    ``contacts:approve`` like every new payee account (M5-01)."""
+    from mhvp.handover import deposit_link
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        result = await deposit_link.link(
+            session,
+            p,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            contact_id=body.contact_id,
+        )
+        await _event(
+            session,
+            principal,
+            "handover.deposit_linked",
+            p,
+            deposit_id=str(result["deposit_id"]) if result["deposit_id"] else None,
+            bank_account_id=str(result["bank_account_id"]) if result["bank_account_id"] else None,
+            created=result["bank_account_created"],
+        )
+        return result

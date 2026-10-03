@@ -33,6 +33,7 @@ export type GateRequest = {
   evidence_document_id: string | null;
   scope_property_ids: string[] | null;
   checklist: Record<string, string> | null;
+  checklist_unverified?: string[];
 };
 
 export type GateOverview = { tenant_id: string; gates: GateState[]; requests: GateRequest[] };
@@ -217,6 +218,15 @@ export function ReleaseGatesAdmin({
                     ? `${row.revoked_by}, ${formatDateTime(row.revoked_at)}${row.revoke_comment ? `: ${row.revoke_comment}` : ""}`
                     : t("none")}
                 </dd>
+                {row.checklist_unverified && row.checklist_unverified.length > 0 ? (
+                  <>
+                    <dt>{t("checklistUnverified")}</dt>
+                    <dd data-testid={`unverified-${row.id}`}>
+                      {row.checklist_unverified.join(", ")}
+                      <span className={`block ${ui.help}`}>{t("checklistUnverifiedHint")}</span>
+                    </dd>
+                  </>
+                ) : null}
                 {row.scope_property_ids ? (
                   <>
                     <dt>{t("properties")}</dt>

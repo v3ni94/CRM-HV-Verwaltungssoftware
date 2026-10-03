@@ -24,7 +24,7 @@ from mhvp.accounting.audit_events import record_change, snap
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, AdminFeeSetting
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
@@ -294,7 +294,7 @@ async def list_fees(
     property_id: uuid.UUID | None = None,
     active_on: date | None = None,
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=100, ge=1, le=500),
+    page_size: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[AdminFeeSettingOut]:
     async with tenant_tx(request, principal) as session:
@@ -473,7 +473,7 @@ async def list_invoices(
     year: int | None = Query(default=None, ge=2000, le=2100),
     status: AdminFeeInvoiceStatus | None = None,
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=100, ge=1, le=500),
+    page_size: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[AdminFeeInvoiceOut]:
     async with tenant_tx(request, principal) as session:

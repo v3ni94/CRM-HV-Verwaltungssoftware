@@ -52,4 +52,15 @@ describe("PortalManagement", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(JSON.parse(String(fetchMock.mock.calls.at(0)?.[1]?.body))).toEqual({ owner_ticket_scope: "none" });
   });
+
+  it("shows the meter photo mode with default hint and saves required (AN02)", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ...OFF, meter_photo_mode: "required" }));
+    renderIntl(<PortalManagement initialFeatures={OFF} canManage statistics={null} />);
+    const select = screen.getByTestId("meter-photo-mode");
+    expect(select).toHaveValue("hint");
+    await user.selectOptions(select, "required");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(String(fetchMock.mock.calls.at(0)?.[1]?.body))).toEqual({ meter_photo_mode: "required" });
+  });
 });

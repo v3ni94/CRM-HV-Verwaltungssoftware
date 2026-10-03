@@ -370,3 +370,8 @@ Alle `quantize` Aufrufe runden ausdrücklich ROUND_HALF_UP. `billing.calc.distri
 ## Ereignisse der Finanzierung (AJ04, Welle 21)
 
 Maßnahmen, Darlehen, Versicherungsfälle und ihre Positionen erzeugen Domainereignisse `hoa.measure.*`, `hoa.loan.*`, `hoa.insurance_claim.*` mit alt und neu (GAI-105).
+
+## Folgen eines Beschlussstatus und Sonderumlage mit Ertragskonto (AN19, Welle 24)
+
+- GAK-204: `PATCH /hoa/resolutions/{id}` mit Status `contested`, `annulled` oder `void` benachrichtigt die Nutzer mit `accounting:approve` (Art `hoa.resolution_contested`), sofern abhängige Wirtschaftspläne, Sonderumlagen oder Abrechnungen bestehen; nichts wird storniert (D54). `GET /hoa/resolutions/{id}/dependents` listet diese mit Kennzeichen `contested`. `POST /hoa/resolutions/{id}/review-deadline` legt eine Frist der Fristart `beschlussanfechtung` an (ohne Dauer: Datum Pflicht; mit vom Betreiber hinterlegter Dauer berechnet, zu verifizieren). Frage AN19-01, G4.
+- GAK-205: Sonderumlage mit `revenue_account_id` (Ertragskonto der GdWE) und `reference_date` (nicht nach der ersten Fälligkeit), gespeichert in `snapshot.terms` und damit im beschlossenen Hash. Die Berechnung zeigt je Einheit den Eigentümer zum Stichtag und zur Fälligkeit (`owner_changed`); die Sollstellung folgt unverändert dem Eigentümer zur ersten Fälligkeit (AN19-03). Buchungsvorschlag nur als Entwurf hinter G4.

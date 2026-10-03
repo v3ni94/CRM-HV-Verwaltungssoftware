@@ -218,6 +218,10 @@ def property_preview(output: dict[str, Any]) -> dict[str, Any]:
 # Apply and undo ---------------------------------------------------------------------------
 
 
+# AM03: undo item restoring the end of an owner period ("<old or empty>:<new>").
+OWNER_END_PREFIX = "property_owner_end:"
+
+
 class Recorder:
     def __init__(self, session: AsyncSession, run: ImportRun) -> None:
         self.session, self.run, self.sequence = session, run, 0
@@ -233,6 +237,18 @@ class Recorder:
                 entity_id=entity_id,
             )
         )
+
+    def add_owner_end(
+        self, owner_id: uuid.UUID, old_valid_to: date | None, new_valid_to: date
+    ) -> None:
+        """AM03: an owner period ended by the import; undo restores ``old_valid_to``."""
+        old = old_valid_to.isoformat() if old_valid_to else ""
+        self.add(f"{OWNER_END_PREFIX}{old}:{new_valid_to.isoformat()}", owner_id)
+
+
+def _owner_end_values(entity_type: str) -> tuple[date | None, date]:
+    old, new = entity_type.removeprefix(OWNER_END_PREFIX).split(":")
+    return (date.fromisoformat(old) if old else None), date.fromisoformat(new)
 
 
 async def create_contact(
@@ -275,6 +291,26 @@ async def create_party(
 
 async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> str | None:
     """Reason why an imported entity must stay (bound by later data), or None."""
+    if entity_type.startswith(OWNER_END_PREFIX):
+        owner = await session.get(PropertyOwner, entity_id)
+        if owner is None:
+            return None
+        from mhvp.properties import services as property_services
+
+        old_to, new_to = _owner_end_values(entity_type)
+        if owner.valid_to != new_to:
+            return "Ende des Eigentümers nach dem Import geändert"
+        if await property_services.owner_period_problems(
+            session,
+            owner.property_id,
+            owner.party_id,
+            owner.valid_from,
+            old_to,
+            owner.share_percent,
+            exclude_ids=[owner.id],
+        ):
+            return "Wiederherstellung des Eigentumszeitraums ergäbe eine Überschneidung"
+        return None
     if entity_type == "document":
         return await _document_kept(session, entity_id)
     linked = await session.scalar(
@@ -446,6 +482,12 @@ async def _document_kept(session: AsyncSession, document_id: uuid.UUID) -> str:
 
 
 async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> None:
+    if entity_type.startswith(OWNER_END_PREFIX):
+        owner = await session.get(PropertyOwner, entity_id)
+        if owner is not None:
+            owner.valid_to = _owner_end_values(entity_type)[0]
+            await session.flush()
+        return
     if entity_type == "document":  # pragma: no cover - _referenced always keeps documents
         raise ProblemError(
             ErrorCodes.RETENTION_LOCKED,
@@ -910,6 +952,13 @@ async def apply_property(
             notes.append(f"{label}: Beginn fehlt, Vertrag nicht angelegt.")
             continue
         if party_data["role"] == "owner" and management is ManagementType.RENTAL:
+            # AM03 (PROP-OWNER-PERIOD): a conflicting period is left out with a note.
+            problems = await property_services.owner_period_problems(
+                session, prop.id, party.id, start, None, None
+            )
+            if problems:
+                notes.append(f"{label}: Eigentümer nicht angelegt. " + " ".join(problems))
+                continue
             owner = PropertyOwner(
                 tenant_id=principal.tenant_id,
                 property_id=prop.id,

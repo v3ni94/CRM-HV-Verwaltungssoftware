@@ -22,6 +22,7 @@ from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
+    MAX_PAGE_SIZE,
     ListParams,
     apply_filters,
     apply_sort,
@@ -626,7 +627,7 @@ async def put_trash_settings(
 )
 async def list_trash(
     request: Request,
-    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 200,
     principal: TenantPrincipal = Depends(DELETE),
 ) -> list[s.DocumentTrashEntryOut]:
     async with tenant_tx(request, principal) as session:

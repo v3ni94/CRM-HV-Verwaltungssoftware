@@ -139,3 +139,7 @@ Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anl
 Im Importassistenten stehen die Berichtsarten "Altabrechnungen je Version (nur Ablage)" und "Beschlusssammlung (nur Ablage)" bereit. Die Spalten des Exports werden wie bei den anderen Berichtsarten zugeordnet. Jede Version einer Abrechnung wird als eigene Zeile abgelegt; ein erneuter Import legt nichts doppelt an, abweichende Angaben erscheinen als Konflikt. Das Ergebnis laut Abrechnung ist nur eine Information, es entsteht keine Forderung und keine Buchung. Der Prüfbericht zeigt fehlende Beschlüsse, fehlende Beschlussbezüge, unbekannte Einheiten und mehrfache Versionen.
 
 Der tägliche Abgleichbericht enthält zusätzlich den Abschnitt Stammdaten: je Berichtsart die offenen Zeilen der neuesten Datei und übernommene Datensätze, die auf der Plattform nicht mehr vorhanden sind.
+
+## Altabrechnungen und Beschlüsse (nur lesend)
+
+Auf der Seite Importe, Migration zeigt der Bereich "Altabrechnungen und Beschlüsse (nur lesend)" die übernommenen historischen Abrechnungen je Version, die Beschlusssammlung und den Prüfbericht mit Prüfhinweisen je Objekt. Objekt wählen (oder alle Objekte) und "Laden" drücken. Es wird nichts gebucht, korrigiert oder versendet. Ohne übernommene Daten erscheinen Leerzustände. Die Frage nach Exportquelle, Umfang und maßgeblicher Version (AM09-01) bleibt offen.

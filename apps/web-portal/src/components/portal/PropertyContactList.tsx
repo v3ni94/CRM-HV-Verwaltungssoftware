@@ -46,7 +46,7 @@ function ContactRow({ contact }: { contact: PropertyContacts["contacts"][number]
           <a
             key={phone}
             href={`tel:${phone}`}
-            className="inline-flex min-h-9 w-fit items-center rounded-sm text-muted underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="inline-flex min-h-11 pointer-fine:min-h-9 w-fit items-center rounded-sm text-muted underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             {phone}
           </a>

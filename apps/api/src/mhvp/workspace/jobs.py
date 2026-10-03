@@ -15,6 +15,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.config import Settings
@@ -1204,7 +1205,15 @@ async def digest_tenant(
             counts={k: v["count"] for k, v in digest["sections"].items()},
             mail_status="empty" if digest["total"] == 0 else "not_sent",
         )
-        session.add(run)
+        # Claim the day for this user before anything is sent: a parallel run that passed the
+        # select above loses the race on uq_digest_run_day and skips instead of notifying twice.
+        try:
+            async with session.begin_nested():
+                session.add(run)
+                await session.flush()
+        except IntegrityError:
+            counts["skipped"] += 1
+            continue
         if digest["total"] == 0:
             counts["empty"] += 1
             continue

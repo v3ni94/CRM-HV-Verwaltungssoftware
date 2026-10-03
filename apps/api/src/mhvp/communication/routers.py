@@ -35,7 +35,7 @@ from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_tran
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
-from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.integrations.lexoffice_ext import invoice_copy as lexoffice_invoice_copy
 from mhvp.platform.services import gate_superadmin_bypass_enabled
@@ -1065,7 +1065,7 @@ async def messages(
             " führende Kopie, außer bei Filter nach mailbox_id)"
         ),
     ),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
         default=None,

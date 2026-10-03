@@ -42,6 +42,12 @@ class LevyIn(BaseModel):
     first_due: date
     instalments: int = Field(default=1, ge=1, le=60)
     account_id: uuid.UUID | None = None
+    # AN19 (GAK-205): revenue account of the charges and the reference date of the owner
+    # determination. Kept in ``snapshot["terms"]`` (no column, no migration in this wave) and
+    # therefore part of the hash the resolution binds. The owner of record stays the owner at
+    # the first due date until the reference date rule is decided (GA06-01, G4).
+    revenue_account_id: uuid.UUID | None = None
+    reference_date: date | None = None
 
 
 class LevyAmendIn(BaseModel):
@@ -87,7 +93,42 @@ def _out(lv: SpecialLevy) -> dict[str, Any]:
         "supersedes_id": lv.supersedes_id,
         "difference_due": lv.difference_due,
         "change_reason": lv.change_reason,
+        "revenue_account_id": _terms(lv).get("revenue_account_id"),
+        "reference_date": _terms(lv).get("reference_date"),
     }
+
+
+def _terms(lv: SpecialLevy) -> dict[str, Any]:
+    """AN19 (GAK-205): revenue account and reference date stored in the snapshot."""
+    terms = (lv.snapshot or {}).get("terms")
+    return dict(terms) if isinstance(terms, dict) else {}
+
+
+async def _check_terms(
+    session: AsyncSession, ledger_id: uuid.UUID, body: LevyIn
+) -> dict[str, Any] | None:
+    """Validate the revenue account (revenue account of the community's ledger) and the
+    reference date (not after the first due date); returns the terms to store."""
+    from mhvp.accounting.models import AccountCategory, LedgerAccount
+
+    terms: dict[str, Any] = {}
+    if body.revenue_account_id is not None:
+        account = await session.get(LedgerAccount, body.revenue_account_id)
+        if account is None or account.ledger_id != ledger_id:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Ertragskonto gehört nicht zur Buchhaltung der GdWE."
+            )
+        if account.category != AccountCategory.REVENUE:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Konto ist kein Ertragskonto.")
+        terms["revenue_account_id"] = str(account.id)
+    if body.reference_date is not None:
+        if body.reference_date > body.first_due:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Stichtag darf nicht nach der ersten Fälligkeit liegen.",
+            )
+        terms["reference_date"] = body.reference_date.isoformat()
+    return terms or None
 
 
 async def _levy(session: AsyncSession, levy_id: uuid.UUID, lock: bool = False) -> SpecialLevy:
@@ -107,11 +148,16 @@ async def create_levy(
         raise ProblemError(ErrorCodes.VALIDATION, detail="Fälligkeit ab dem Monatsersten.")
     async with tenant_tx(request, principal) as session:
         ledger = await _hoa_ledger(session, body.ledger_id)
+        terms = await _check_terms(session, body.ledger_id, body)
         row = SpecialLevy(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             legal_entity_id=ledger.legal_entity_id,
-            **(body.model_dump() | {"unit_ids": [str(u) for u in body.unit_ids]}),
+            snapshot={"terms": terms} if terms else None,
+            **(
+                body.model_dump(exclude={"revenue_account_id", "reference_date"})
+                | {"unit_ids": [str(u) for u in body.unit_ids]}
+            ),
         )
         session.add(row)
         await session.flush()
@@ -163,7 +209,7 @@ async def calculate_levy(
                     ErrorCodes.VALIDATION, detail="Betroffene Einheit ohne Schlüsselwert."
                 )
         parts = distribute(lv.total, shares)
-        units = []
+        units: list[dict[str, Any]] = []
         for (number, unit_id), amount in sorted(parts.items()):
             base = (amount / lv.instalments).quantize(CENT, rounding="ROUND_DOWN")
             rates = [base] * lv.instalments
@@ -199,10 +245,34 @@ async def calculate_levy(
                         "difference": str(-amount),
                     }
                 )
-        snapshot = {"total": str(lv.total), "units": units, "purpose": lv.purpose}
+        snapshot: dict[str, Any] = {"total": str(lv.total), "units": units, "purpose": lv.purpose}
+        terms = _terms(lv)
+        if terms:
+            snapshot["terms"] = terms
+        if terms.get("reference_date"):
+            # AN19 (GAK-205): owner at the reference date next to the owner at the first due
+            # date; information only, the charge follows the first due date (GA06-01, G4).
+            ref_day = date.fromisoformat(terms["reference_date"])
+            for u in units:
+                at_ref = await calc.owner_at(session, uuid.UUID(u["unit_id"]), ref_day)
+                at_due = await calc.owner_at(session, uuid.UUID(u["unit_id"]), lv.first_due)
+                u["owner_contract_at_reference"] = str(at_ref.id) if at_ref else None
+                u["owner_contract_at_first_due"] = str(at_due.id) if at_due else None
+                u["owner_changed"] = (at_ref.id if at_ref else None) != (
+                    at_due.id if at_due else None
+                )
         lv.snapshot, lv.snapshot_hash, lv.status = snapshot, calc.digest(snapshot), "calculated"
         await session.flush()
-        return _out(lv)
+        proposal = None
+        if terms.get("revenue_account_id"):
+            # Booking proposal only; WEG postings stay behind G4 (nothing is booked here).
+            proposal = {
+                "revenue_account_id": terms["revenue_account_id"],
+                "total": str(lv.total),
+                "gate": "G4",
+                "draft_only": True,
+            }
+        return _out(lv) | {"booking_proposal": proposal}
 
 
 @router.post("/special-levies/{levy_id}/resolve", summary="Beschluss zuordnen (W06, W09)")
@@ -427,6 +497,7 @@ async def amend_levy(
             supersedes_id=old.id,
             difference_due=body.difference_due,
             change_reason=body.reason,
+            snapshot={"terms": _terms(old)} if _terms(old) else None,  # AN19 (GAK-205)
         )
         session.add(new)
         await session.flush()
@@ -544,3 +615,90 @@ async def _apply_amendment(
         payload={"charges": charges, "credit_drafts": credits},
     )
     return {"charges_created": charges, "credit_drafts": credits}
+
+
+# AN19 (GAK-204): dependents of a resolution and the review date of a possible contest -------
+
+
+class ResolutionDependentOut(BaseModel):
+    type: str
+    id: uuid.UUID
+    label: str
+    status: str
+    applied: bool
+    contested: bool
+
+
+class ResolutionDependentsOut(BaseModel):
+    resolution_id: uuid.UUID
+    status: str
+    contested: bool
+    items: list[ResolutionDependentOut]
+
+
+class ReviewDeadlineIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    due_on: date | None = None
+    responsible_user_id: uuid.UUID | None = None
+    note: str | None = Field(default=None, max_length=4000)
+
+
+class ReviewDeadlineOut(BaseModel):
+    id: uuid.UUID
+    resolution_id: uuid.UUID
+    due_on: date
+    due_computed: bool
+    verify: bool
+    deadline_type_id: uuid.UUID
+
+
+@router.get(
+    "/resolutions/{resolution_id}/dependents",
+    summary="Abhängige Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses",
+    response_model=ResolutionDependentsOut,
+    dependencies=[Depends(strict_query)],
+)
+async def resolution_dependents(
+    resolution_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.hoa.resolution_effects import CONTESTED, dependents
+
+    async with tenant_tx(request, principal) as session:
+        res = await session.get(Resolution, resolution_id)
+        if res is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return {
+            "resolution_id": res.id,
+            "status": res.status,
+            "contested": res.status in CONTESTED,
+            "items": await dependents(session, res),
+        }
+
+
+@router.post(
+    "/resolutions/{resolution_id}/review-deadline",
+    status_code=201,
+    summary="Prüfdatum Anfechtung als Frist anlegen (Datum zu verifizieren)",
+    response_model=ReviewDeadlineOut,
+)
+async def resolution_review_deadline(
+    resolution_id: uuid.UUID,
+    body: ReviewDeadlineIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    from mhvp.hoa.resolution_effects import review_deadline
+
+    async with tenant_tx(request, principal) as session:
+        res = await session.get(Resolution, resolution_id)
+        if res is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return await review_deadline(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            resolution=res,
+            due_on=body.due_on,
+            responsible_user_id=body.responsible_user_id,
+            note=body.note,
+        )

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AssistantTab } from "@/components/ai/AssistantTab";
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { LexofficeContactBadge, LexofficeContactSection } from "@/components/lexoffice/LexofficeContactStatus";
+import { AddressHistoryPanel } from "@/components/contacts/AddressHistoryPanel";
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
 import { DispatchPanel } from "@/components/contacts/DispatchPanel";
 import { HistoryPanel, type HistoryEvent } from "@/components/contacts/HistoryPanel";
@@ -266,6 +267,7 @@ export default async function ContactDetailPage({
       {tab === "stammdaten" ? (
         <>
         <ContactMasterData contact={contact} canEdit={canEditMaster} />
+        <AddressHistoryPanel contactId={contact.id} />
         <h2 className="text-sm font-semibold">{t("masterData.readOnly")}</h2>
         <dl>
           <Row label={tf("tags")} value={contact.tags.join(", ")} />

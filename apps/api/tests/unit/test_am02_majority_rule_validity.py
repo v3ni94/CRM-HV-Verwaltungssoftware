@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date
 
 import pytest
 from pydantic import ValidationError
@@ -43,3 +43,38 @@ def test_schema_refuses_valid_to_before_valid_from() -> None:
     MajorityRuleIn.model_validate(base | {"valid_to": "2026-01-01"})
     with pytest.raises(ValidationError):
         MajorityRuleIn.model_validate(base | {"valid_to": "2025-12-31"})
+
+
+def test_an06_unapproved_rule_refused_approved_or_legacy_rule_usable() -> None:
+    """AN06 / GAJ-602: a rule created under the four eyes switch applies only after approval;
+    rules without requires_approval keep the behaviour before AN06."""
+    from mhvp.hoa.meetings import _ensure_rule_usable
+
+    day = date(2026, 6, 20)
+    draft = _rule(date(2020, 1, 1), None)
+    draft.requires_approval = True
+    draft.approved_by = None
+    with pytest.raises(ProblemError) as exc:
+        _ensure_rule_usable(draft, day)
+    assert exc.value.error == ErrorCodes.HOA_MAJORITY_RULE_NOT_APPROVED
+    draft.approved_by = uuid.uuid4()
+    _ensure_rule_usable(draft, day)
+    legacy = _rule(date(2020, 1, 1), None)
+    legacy.requires_approval = False
+    _ensure_rule_usable(legacy, day)
+
+
+def test_an06_meeting_day_is_business_date_not_utc() -> None:
+    """AN14-09: a meeting at 00:30 Berlin time on 21.06.2026 is 22:30 UTC on 20.06.2026; the
+    rule check uses the business date 21.06.2026."""
+    from datetime import datetime, timedelta, timezone
+
+    from mhvp.hoa.meetings import _ensure_rule_usable, meeting_day
+    from mhvp.hoa.models import Meeting
+
+    at = datetime(2026, 6, 21, 0, 30, tzinfo=timezone(timedelta(hours=2)))
+    meeting = Meeting(scheduled_at=at.astimezone(UTC))
+    assert meeting_day(meeting) == date(2026, 6, 21)
+    rule = _rule(date(2026, 6, 21), None)
+    rule.requires_approval = False
+    _ensure_rule_usable(rule, meeting_day(meeting))

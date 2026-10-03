@@ -16,6 +16,7 @@ from moto import mock_aws
 from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.af01_switch import seed_auto_posting
+from tests.integration.an16_bulk import bulk_book
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _unit
@@ -303,9 +304,10 @@ def test_matching_set_and_controlled_automation(
     assert preview["total"] == "500.00"
     assert txs["T1"]["id"] in preview["exceptions"]
     done = _ok(
-        client.post(
-            f"{B}/bulk-confirm",
-            json={
+        bulk_book(
+            client,
+            h,
+            {
                 "preview": False,
                 "items": [
                     {
@@ -320,7 +322,6 @@ def test_matching_set_and_controlled_automation(
                     {"transaction_id": txs["T1"]["id"]},
                 ],
             },
-            headers=h,
         )
     )
     assert [r["ok"] for r in done["results"]] == [
@@ -537,11 +538,7 @@ def test_d39_payment_determination_is_not_overridden_by_account_priority(
     _ok(client.post(f"{B}/rules/{rule['id']}/disable", headers=h))
     # Bulk confirmation without an explicit settlement books nothing for this payment.
     bulk = _ok(
-        client.post(
-            f"{B}/bulk-confirm",
-            json={"preview": False, "items": [{"transaction_id": txs["D39-1"]["id"]}]},
-            headers=h,
-        )
+        bulk_book(client, h, {"preview": False, "items": [{"transaction_id": txs["D39-1"]["id"]}]})
     )
     assert [r["ok"] for r in bulk["results"]] == [False]
     still_new = {

@@ -71,6 +71,7 @@ class PortalFeaturesPatch(_In):
     owner_hoa_rental_statements_enabled: bool | None = None
     owner_ticket_scope: Literal["none", "released", "property"] | None = None
     provider_rating_display: Literal["off", "staff", "all"] | None = None
+    meter_photo_mode: Literal["off", "hint", "required"] | None = None
 
 
 class PortalRepresentationIn(_In):

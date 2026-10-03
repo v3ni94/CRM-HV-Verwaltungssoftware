@@ -22,6 +22,7 @@ from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m2_platform import _settings as base_settings
+from tests.runtime_limits import scaled_limit
 from tests.synthetic_immoware import OBJEKTDATEN_HEADER, Dataset, generate
 
 pytestmark = pytest.mark.integration
@@ -239,9 +240,23 @@ def test_full_import_67_objects_869_units_zero_differences(
     assert after["contracts"] == before["contracts"] + dataset.tenancy_rows + (
         dataset.ownership_rows - dataset.landlord_rows
     )
-    assert elapsed < 600
+    assert elapsed < scaled_limit(600)  # load scaled
     # Imported contracts wait for the management approval; nothing is posted.
-    pending = _ok(client.get("/api/v1/contracts/pending-approval", headers=h))
+    # GAK-301: lists are capped at 200 rows per page, so collect every page.
+    pending: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        chunk = _ok(
+            client.get(
+                "/api/v1/contracts/pending-approval",
+                params={"page": page, "page_size": 200},
+                headers=h,
+            )
+        )
+        pending.extend(chunk)
+        if len(chunk) < 200:
+            break
+        page += 1
     assert len(pending) >= dataset.tenancy_rows
 
     run = _ok(client.get(f"/api/v1/imports/{applied['import_run_id']}", headers=h))

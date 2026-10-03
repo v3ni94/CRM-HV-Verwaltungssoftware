@@ -24,7 +24,7 @@ export function RoleSwitcher({ roles, current }: { roles: string[]; current: str
       <select
         value={current ?? ""}
         onChange={(event) => choose(event.target.value)}
-        className="min-h-9 rounded-md border border-border bg-surface px-2 text-sm"
+        className="min-h-11 pointer-fine:min-h-9 rounded-md border border-border bg-surface px-2 text-sm"
       >
         <option value="">{t("all")}</option>
         {roles.map((role) => (

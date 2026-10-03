@@ -30,7 +30,7 @@ from mhvp.core.auth.scope import (
     session_principal,
 )
 from mhvp.core.events import emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGateResolver
 from mhvp.core.uploads import read_limited
@@ -469,7 +469,7 @@ async def get_journal(
     ledger_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(READ),
-    limit: int = Query(default=200, ge=1, le=2000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
 ) -> JournalOut:
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)

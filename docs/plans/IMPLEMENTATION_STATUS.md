@@ -223,6 +223,38 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 24 (Stand 1.69.0, 03.10.2026)
+
+Technische Reste der Welle 23 (AN01 bis AN14, darunter die Gegenprüfung AN14 in docs/reviews/REVIEW-W23-2026-10-03.md mit 13 Befunden, zwei G2-Lücken sofort behoben: Zahlungsdateien als Mailanhang und im Belegeinsichtspaket des Eigentümerportals) und die Lückenanalyse GAK (25 Befunde GAK-101 bis GAK-406 aus vier lesenden Prüfpaketen zu Abschnitt 7, Mietverwaltung und WEG, Portale und Automatisierung, Betrieb und Anhang D und E; Pakete AN15 bis AN20). Quellen: Ergebnisdateien der Pakete, Versionsverlauf 1.69.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen.
+
+- Migrationen 0451 (portal_feature_setting.meter_photo_mode), 0452 (contact_address valid_to, superseded_at, CHECK und Index), 0453 (Vier-Augen-Freigabe majority_rule), 0454 (Rücklastschrift-Belege, Tabelle open_item_write_off mit RLS, zwei Schalter), 0455 (Platzhalter), Rundlauf 0448 bis 0455 getestet.
+- Entscheidungsfragen bleiben offen und sind technisch als Mandantenschalter mit heutigem Verhalten als Standard vorbereitet: Fotopflicht Zählerstand (AM06-01), Adresshistorie und Aufbewahrung (AM14-01), Mehrheitsregelmodell (AM02-01), KI-Regelaktionen (AM04-03), Gebührenweiterbelastung Rücklastschrift (AN15-01), Ausbuchungsverfahren (AN15-02), Mieterhöhungssperre (AN18-01), Interessentenlöschung (AN18-02), Anfechtungsfrist (AN19-01), Verkaufsinserate (AN19-02), Stichtag Sonderumlage (AN19-03), Zahlungsdateien im Vollexport (AN08-01), Nachweispflicht Gates (AM10-01, AN04-01).
+- Betrieb: backup.sh exportiert das Löschjournal verschlüsselt mit jedem Dump und bricht ohne Konfiguration mit Exit 3 ab (GAK-405); neues Lint compose-exposure; Seitengröße aller Listen auf 200 begrenzt (GAK-301); Massenbestätigung nur mit Vorschau-Token (GAK-105, API-Verhalten geändert, 409 ohne Token).
+- Teilweise (Grundlage Welle 25): GAK-104 (Buchungsweg der Ausbuchung, CRM-Maske, Stichtag im Prüfexport), GAK-203 (Vertragsfelder Index und Staffel, VPI-Tabelle, Job, Migration nötig), GAK-205 (eigene Spalten Ertragskonto und Stichtag der Sonderumlage), GAK-303 (Hinweis im Regel-Editor), GAK-402 (zweite Tests D04, D17, D31, D34, D47, D55), GAK-107 (Mandantenstandard Klärungskonto), GAK-108 (gespeicherter Schalter, CRM-Anzeige Zeitversatz), AN19 CRM-Masken (Beschlussfolgen, Prüfdatum, Kautionsverknüpfung), AN11 Rest (rund 86 untypisierte Geldrouten).
+
+| Paket | Befunde | Stand | Migration |
+| --- | --- | --- | --- |
+| AN01 | GAJ-102 | done | none |
+| AN02 | GAJ-401 | done | 0451 an02_meter_photo_mode |
+| AN03 | GAJ-501 | done | none |
+| AN04 | GAJ-504 | done | none |
+| AN05 | GAJ-610 | done | 0452 contact_address valid_to, superseded_at, ck_contact_address_valid_range, ix_contact_address_tenant_contact_from |
+| AN06 | GAJ-602, AN14-09 | done, done | 0453 an06_majority_rule_approval (tenant_settings.hoa_majority_rule_four_eyes, majority_rule.requires_approval/approved_by/approved_at) |
+| AN07 | AM04 | done | none |
+| AN08 | AM01 | done | none |
+| AN09 | AM03 | done | none |
+| AN10 | AL06-02 | done | none |
+| AN11 | GAI-304 | done | none |
+| AN12 | AL03 | done | none |
+| AN13 | GAJ-403 | done | none |
+| AN14 | Review | done | none |
+| AN15 | GAK-101, GAK-104 | done, partial | 0454 an15_returned_debit_writeoff (Spalten direct_debit_order und open_item, Tabelle open_item_write_off mit RLS, zwei Schalter, open_item_guard erweitert) |
+| AN16 | GAK-102, GAK-105, GAK-107, GAK-108 | done, done, done, done | 0455_an16_accounting_checks.py (noop, down_revision 0454) |
+| AN17 | GAK-103, GAK-106 | done, done | none |
+| AN18 | GAK-201, GAK-202, GAK-203, GAK-207 | done, done, partial, done | none |
+| AN19 | GAK-204, GAK-205, GAK-206, GAK-208 | done, partial, done, done | none |
+| AN20 | GAK-301, GAK-302, GAK-303, GAK-401, GAK-402, GAK-403, GAK-404, GAK-405, GAK-406 | done, done, partial, done, partial, done, done, done, done | none |
+
 ## Welle 23 (Stand 1.68.0, 03.10.2026)
 
 Reste der Welle 22 (AL01 bis AL06, darunter die Gegenprüfung AL06 in docs/reviews/REVIEW-W22-2026-10-03.md, keine Codefehler, zwei Härtungen AL06-01 und AL06-02 in AM15 umgesetzt) und die Lückenanalyse GAJ (39 Befunde GAJ-101 bis GAJ-610 entlang der durchgängigen Geschäftsprozesse, Pakete AM01 bis AM15). Quellen: Ergebnisdateien der Pakete, Versionsverlauf 1.68.0 in `CHANGELOG.md`, Lückenliste `docs/plans/LUECKENLISTE-2026-10-03.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen.

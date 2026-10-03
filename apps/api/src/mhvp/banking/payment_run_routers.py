@@ -28,7 +28,7 @@ from mhvp.banking.payment_run_tasks import store_preview
 from mhvp.banking.routers import OrderOut, _order_out
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_today
@@ -263,7 +263,7 @@ async def import_status_report(
 )
 async def list_status_reports(
     request: Request,
-    limit: int = Query(default=50, ge=1, le=500),
+    limit: int = Query(default=50, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[PaymentRunStatusReportOut]:
     async with tenant_tx(request, principal) as session:

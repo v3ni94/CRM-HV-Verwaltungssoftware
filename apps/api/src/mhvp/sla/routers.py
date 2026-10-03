@@ -12,7 +12,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.config import get_settings
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
-from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.sla.channels import (
     SMS_TEST_TEXT,
@@ -568,7 +568,7 @@ async def list_clocks(
     request: Request,
     state: ClockState | None = None,
     color: SlaColor | None = None,
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     params: ListParams = Depends(_CLOCK_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
@@ -685,7 +685,7 @@ _ALERT_LIST = ListSpec(  # GA04-05
 async def list_alerts(
     request: Request,
     unacknowledged: bool = False,
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     params: ListParams = Depends(_ALERT_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:

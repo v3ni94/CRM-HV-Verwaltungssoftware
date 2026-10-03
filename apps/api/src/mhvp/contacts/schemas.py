@@ -45,6 +45,23 @@ class AddressIn(_Strict):
     country: str = Field(default="DE", pattern=r"^[A-Z]{2}$")
     addition: str | None = Field(default=None, max_length=200)
     is_primary: bool = False
+    # AN05 (GAJ-610): the history fields of ``AddressOut`` are server managed. They are accepted
+    # here only as ``null`` so that a client can send a read result back unchanged (PUT round
+    # trip); any value is refused.
+    valid_from: date | None = None
+    valid_to: date | None = None
+    superseded_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def _history_fields_read_only(self) -> Self:
+        if type(self) is not AddressIn:
+            return self  # output models carry the real values
+        if any(v is not None for v in (self.valid_from, self.valid_to, self.superseded_at)):
+            raise ValueError(
+                "valid_from, valid_to und superseded_at werden vom Adressverlauf gesetzt und "
+                "sind nur lesend."
+            )
+        return self
 
 
 class PhoneIn(_Strict):
@@ -232,14 +249,30 @@ class ContactPatch(_Strict):
 
 class AddressOut(AddressIn):
     id: uuid.UUID
+    valid_from: date | None = None
+    valid_to: date | None = None
+    superseded_at: datetime | None = None
 
 
 class ContactAddressListOut(BaseModel):
-    """Current addresses of a contact (AM14, GAJ-610). ``history_available`` stays false until
-    the address history (valid_to, AM14-01) exists; ``as_of`` is refused with 422 until then."""
+    """Addresses of a contact (AM14, AN05, GAJ-610). ``history_available`` mirrors the tenant
+    switch contacts.address_history; while it is off ``as_of`` and ``include_history`` are
+    refused with 422 MHVP-CONT-0034 (AM14-01 open)."""
 
     items: list[AddressOut]
     history_available: bool = False
+    as_of: date | None = None
+
+
+class ContactAddressHistorySettingOut(BaseModel):
+    """Tenant switch contacts.address_history (AN05, OPEN_QUESTIONS AM14-01)."""
+
+    enabled: bool
+    open_question: str = "AM14-01"
+
+
+class ContactAddressHistorySettingIn(_Strict):
+    enabled: bool
 
 
 class PhoneOut(BaseModel):

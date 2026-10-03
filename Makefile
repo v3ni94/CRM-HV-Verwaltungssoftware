@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test pitr-drill pitr-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint compose-exposure i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test pitr-drill pitr-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -43,6 +43,7 @@ lint: ## ruff, eslint, agent docs sync check, i18n, client import guards, secret
 	python3 scripts/build_handbook.py --check
 	python3 scripts/check_i18n_usage.py
 	python3 scripts/check_client_imports.py
+	python3 scripts/check_compose_exposure.py
 	scripts/secrets-scan.sh
 
 secrets-scan: ## gitleaks over the working tree (skips with a notice if the binary is missing)
@@ -132,3 +133,6 @@ kosit-test: kosit-fetch ## Check generator XRechnung files with the pinned KoSIT
 
 kosit-validate: kosit-fetch ## Validate own XRechnung files: make kosit-validate FILES="a.xml b.xml"
 	MHVP_KOSIT_DIR=$(KOSIT_DIR) scripts/kosit_validate.sh $(FILES)
+
+compose-exposure: ## no published ports on api, web-crm, web-portal in the compose files (AL06-02)
+	python3 scripts/check_compose_exposure.py

@@ -47,6 +47,7 @@ from mhvp.portal.property_scope import (
 )
 from mhvp.portal.public_terms import PortalPublicTermsOut
 from mhvp.portal.status import LOGIN_STATUSES, target_status, user_locked
+from mhvp.tickets.order_events import emit_completed_if_done
 from mhvp.workspace.models import Notification
 from mhvp.workspace.routers import NotificationOut, notification_out
 from mhvp.workspace.services import local_today
@@ -127,9 +128,10 @@ class PortalMeterIn(_In):
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=5)
 
 
-# AM06 (GAJ-401): the reading photo is expected (section 14). Without a migration the switch
-# is a code default (on = hint and ``photo_missing`` flag, never a rejection, so the reading
-# still reaches the review); a persisted tenant switch needs a column (open point AM06-01).
+# AM06/AN02 (GAJ-401): the reading photo is expected (section 14). The tenant switch
+# ``portal_feature_setting.meter_photo_mode`` (migration 0451) decides: off, hint (default,
+# ``photo_missing`` flag and note, the reading still reaches the review) or required (422).
+# Decision AM06-01 stays open; the default keeps the behaviour before 0451.
 METER_PHOTO_REQUIRED_DEFAULT = True
 METER_PHOTO_MISSING_NOTE = (
     "Ohne Foto des Zählerstands kann die Verwaltung die Ablesung nur eingeschränkt prüfen. "
@@ -2312,9 +2314,14 @@ async def meter_reading(
         from mhvp.documents.models import DocumentLink, LinkRole
 
         photos = await _own_uploads(session, account, body.document_ids)
+        from mhvp.portal import features as portal_features
+
+        photo_mode = (await portal_features.get_or_default(session)).meter_photo_mode or "hint"
+        if photo_mode == "required" and not photos:
+            raise ProblemError(ErrorCodes.PORTAL_METER_PHOTO_REQUIRED)
         payload = body.model_dump(mode="json")
         payload["document_ids"] = [str(d.id) for d in photos]
-        photo_missing = METER_PHOTO_REQUIRED_DEFAULT and not photos
+        photo_missing = photo_mode != "off" and not photos
         payload["photo_missing"] = photo_missing
         out = await _propose(session, principal, account, "meter_reading", payload)
         for doc in photos:
@@ -2463,6 +2470,14 @@ async def _announce_provider_step(
         entity_id=order.id,
         actor_user_id=principal.user_id,
         payload={"source": "portal", "from": previous.value, "note": note},
+    )
+    await emit_completed_if_done(
+        session,
+        tenant_id=order.tenant_id,
+        order_id=order.id,
+        new_status=target,
+        actor_user_id=principal.user_id,
+        payload={"source": "portal", "from": previous.value},
     )
     _ticket_history(session, order, previous.value, target.value, principal, note)
 

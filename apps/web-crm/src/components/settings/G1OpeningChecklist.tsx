@@ -19,6 +19,8 @@ export type G1Item = {
   evidence_document_id?: string | null;
   evidence_ref?: string | null;
   evidence_missing?: boolean;
+  evidence_kind?: string | null;
+  evidence_required?: boolean;
 };
 
 type G1Member = { user_id: string; display_name: string; email: string };
@@ -42,6 +44,7 @@ export type G1OpeningState = {
   documents: Record<string, string>;
   items_without_responsible?: number;
   items_without_evidence?: number;
+  cases_passed_without_test_run?: number;
   gate_checklist_ref?: string;
   acceptance_register?: {
     link: string;
@@ -232,6 +235,12 @@ export function G1OpeningChecklist({
                 ) : item.evidence_ref ? (
                   <span className={ui.mono}>{item.evidence_ref}</span>
                 ) : null}
+                {item.evidence_kind ? (
+                  <span className={`block ${ui.help}`} data-testid={`g1-kind-${item.item_key}`}>
+                    {t.has(`evidenceKind.${item.evidence_kind}`) ? t(`evidenceKind.${item.evidence_kind}`) : item.evidence_kind}
+                  </span>
+                ) : null}
+                {item.evidence_required ? <span className={`block ${ui.help}`}>{t("evidence.required")}</span> : null}
                 {item.evidence_missing ? <span className={ui.badgeWarning}>{t("evidence.missing")}</span> : null}
               </td>
               {canRecord ? (
@@ -323,6 +332,11 @@ export function G1OpeningChecklist({
               responsible: state.items_without_responsible,
               evidence: state.items_without_evidence ?? 0,
             })}
+          </p>
+        ) : null}
+        {state.cases_passed_without_test_run ? (
+          <p className={ui.notice} data-testid="g1-no-test-run">
+            {t("documents.noTestRun", { count: state.cases_passed_without_test_run })}
           </p>
         ) : null}
         <ul className="mt-2 list-disc pl-5 text-sm">

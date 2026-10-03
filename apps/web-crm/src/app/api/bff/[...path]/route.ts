@@ -100,6 +100,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/reject-import$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
+  // Versionsverlauf im Vertragsdetail (GAK-207, AN18).
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/versions$`) },
   // Eigentümerwechsel in der Oberfläche (operator 28.09.2026): Vorschau und Erfassung.
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/ownership-transfer/preview$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/ownership-transfer$`) },
@@ -226,6 +228,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
   { method: "GET", pattern: /^consent-policy$/ },
   { method: "PUT", pattern: /^consent-policy$/ },
+  // AN05 (GAJ-610, AM14-01): address history switch and the address list with cut off date.
+  { method: "GET", pattern: /^contact-address-history$/ },
+  { method: "PUT", pattern: /^contact-address-history$/ },
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/addresses$`) },
   // AE34 (AC06-01): legal basis per processing purpose, shown and changed on "Fachliche Regeln" (AE39).
   { method: "PUT", pattern: /^consent-legal-basis\/(email_delivery|data_sharing|marketing|portal_terms)$/ },
   { method: "DELETE", pattern: /^consent-legal-basis\/(email_delivery|data_sharing|marketing|portal_terms)$/ },
@@ -469,6 +475,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports\/immoware24\/vollimport(\/exporttypen)?$/ },
   { method: "GET", pattern: /^imports\/immoware24\/history\/(tickets|open-items|open-items\/summary|bank-links)$/ },
   { method: "GET", pattern: /^imports\/immoware24\/history\/open-items\/balance-check$/ },
+  { method: "GET", pattern: /^imports\/immoware24\/history\/(statements|statements\/check|resolutions)$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/history/bank-links/${ID}/candidates$`) },
   { method: "POST", pattern: /^imports\/immoware24\/vollimport(\/vorpruefung)?$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/vollimport/${ID}(/pdf)?$`) },
@@ -971,7 +978,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}/approve$`) },
+  // AN06 / GAJ-602: four eyes approval of meeting majority rules and its tenant switch.
+  { method: "POST", pattern: new RegExp(`^hoa/majority-rules/${ID}/approve$`) },
+  { method: "GET", pattern: /^hoa\/majority-rule-four-eyes$/ },
+  { method: "PUT", pattern: /^hoa\/majority-rule-four-eyes$/ },
   { method: "GET", pattern: new RegExp(`^hoa/resolutions/${ID}/majority-check$`) },
+  // AN19 (GAK-204): abhängige Pläne, Sonderumlagen, Abrechnungen; Prüfdatum Anfechtung.
+  { method: "GET", pattern: new RegExp(`^hoa/resolutions/${ID}/dependents$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/resolutions/${ID}/review-deadline$`) },
   // Beschlussfrist der virtuellen Versammlung (M9-07).
   { method: "PATCH", pattern: new RegExp(`^hoa/meetings/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
@@ -1031,6 +1045,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}/hints$`) },
+  // AN19 (GAK-206): Kaution und Rückzahlungs-IBAN zur Empfängerfreigabe.
+  { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}/deposit/link$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/deposit/link$`) },
+  // AN19 (GAK-208): Schalter Verkaufsinserate.
+  { method: "GET", pattern: /^letting\/settings\/sale-marketing$/ },
+  { method: "PUT", pattern: /^letting\/settings\/sale-marketing$/ },
+  // Schalter Mieterhöhung: Sperrdauer je Begründung, Vorschläge (GAK-202, GAK-203, AN18).
+  { method: "GET", pattern: /^letting\/rent-increase-settings$/ },
+  { method: "PUT", pattern: /^letting\/rent-increase-settings$/ },
   // Zählerstände übernehmen (Package F): Zählerstände des Protokolls in die Stammdaten der Einheit.
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/meters/transfer$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures|complete|versions|status|dispatches)$`) },

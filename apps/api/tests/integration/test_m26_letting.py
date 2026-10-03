@@ -597,6 +597,8 @@ def test_listings(
     dup = client.patch(f"{L}/listings/{second['id']}", json={"status": "active"}, headers=h)
     assert dup.status_code == 409
 
+    # AN19 (GAK-208): sale listings need the tenant switch letting.sale_marketing (AN19-02).
+    _ok(client.put(f"{L}/settings/sale-marketing", json={"enabled": True}, headers=h))
     # a sale listing for the same unit does not conflict with the active rental listing
     sale = _ok(client.post(f"{L}/listings", json={"unit_id": unit, "kind": "sale"}, headers=h), 201)
     _ok(client.patch(f"{L}/listings/{sale['id']}", json={"price": "250000.00"}, headers=h))
@@ -783,6 +785,8 @@ def test_listing_flow_fields(
     assert active["warnings"] == []
 
     # activation with energy_status in_erstellung (default) is allowed but carries a warning
+    # AN19 (GAK-208): sale listings need the tenant switch letting.sale_marketing (AN19-02).
+    _ok(client.put(f"{L}/settings/sale-marketing", json={"enabled": True}, headers=h))
     warn_listing = _ok(
         client.post(
             f"{L}/listings",

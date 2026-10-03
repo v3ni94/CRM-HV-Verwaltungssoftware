@@ -109,9 +109,11 @@ class RentIncreaseAction(LettingBaseIn):
     # ``receipt`` records the access date (Zugangsdatum) of a letter sent outside the
     # software while G3 keeps ``send`` locked; it changes no status (handbook Mieterhöhung,
     # gap "Zugangsdatum nur über die Schnittstelle").
-    action: str = Field(pattern="^(approve|send|consent|reject|apply|cancel|receipt)$")
+    # ``set_block`` (GAK-202) writes the confirmed blocking date to the contract after apply.
+    action: str = Field(pattern="^(approve|send|consent|reject|apply|cancel|receipt|set_block)$")
     document_id: uuid.UUID | None = None
     received_on: date | None = None
+    block_until: date | None = None
 
 
 class ProspectProfileIn(LettingBaseIn):
@@ -795,7 +797,12 @@ NEXT = {
     "cancel": ({"draft", "approved"}, "cancelled"),
     # Access date only; the status stays (None = keep).
     "receipt": ({"draft", "approved", "sent"}, None),
+    # GAK-202: confirmed blocking date on the contract; the status stays ``applied``.
+    "set_block": ({"applied"}, None),
 }
+
+# GAK-202: payment reason of the new rent line from the basis of the case.
+REASON_BY_BASIS = {"index": "index", "graduated": "graduated"}
 
 
 async def _record_receipt(session: Any, case: RentIncreaseCase, received_on: date) -> None:
@@ -889,7 +896,7 @@ async def rent_increase_action(
                 vat_percent=old.vat_percent,
                 gross=gross,
                 valid_from=case.effective_date,
-                reason=PaymentReason.INCREASE,
+                reason=PaymentReason(REASON_BY_BASIS.get(case.basis, PaymentReason.INCREASE.value)),
                 document_id=case.consent_document_id,
             )
             if old.valid_to is not None:
@@ -899,6 +906,37 @@ async def rent_increase_action(
             await contract_services.add_payment(session, contract, new)
             await session.flush()
             case.new_payment_id = new.id
+            # GAK-202: blocking date only as proposal from the tenant switch (AN18-01).
+            from mhvp.letting import increase_settings
+
+            proposal = increase_settings.block_proposal(
+                await increase_settings.load(session), case.basis, case.effective_date
+            )
+            case.check = case.check | {"block_proposal": proposal.isoformat() if proposal else None}
+        if body.action == "set_block":
+            if body.block_until is None or body.block_until < case.effective_date:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Sperrdatum fehlt oder liegt vor der Wirksamkeit der Erhöhung.",
+                )
+            contract = await session.get(Contract, case.contract_id, with_for_update=True)
+            if contract is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            from mhvp.accounting.audit_events import record_change
+
+            before = {"rent_increase_block_until": contract.rent_increase_block_until}
+            contract.rent_increase_block_until = body.block_until
+            case.check = case.check | {"block_set": body.block_until.isoformat()}
+            await record_change(
+                session,
+                tenant_id=principal.tenant_id,
+                actor_user_id=principal.user_id,
+                type="contract.updated",
+                entity_type="contract",
+                entity_id=contract.id,
+                before={k: v.isoformat() if v else None for k, v in before.items()},
+                after={"rent_increase_block_until": body.block_until.isoformat()},
+            )
         new_status = case.status if target is None else target
         await emit(
             session,
@@ -1505,6 +1543,10 @@ async def delete_prospect(
         row = await session.get(Prospect, prospect_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        from mhvp.letting.prospect_erasure import propose_for
+
+        # GAK-201: contact and documents only as deletion proposal (privacy process).
+        outcome = await propose_for(session, principal.tenant_id, row, local_today())
         await session.delete(row)
         await emit(
             session,
@@ -1513,7 +1555,7 @@ async def delete_prospect(
             entity_type="prospect",
             entity_id=prospect_id,
             actor_user_id=principal.user_id,
-            payload={},
+            payload={"contact_erasure": outcome},
         )
 
 
@@ -1941,6 +1983,10 @@ async def patch_listing(
             _compute_warm_rent(listing)
         if new_status is not None and new_status != listing.status:
             if new_status == "active":
+                # AN19 (GAK-208): sale listings only with the tenant switch (AN19-02).
+                from mhvp.letting.sale_scope import ensure_sale_allowed
+
+                await ensure_sale_allowed(session, listing.kind)
                 if not listing.title or listing.price is None:
                     raise ProblemError(
                         ErrorCodes.VALIDATION, detail="Titel und Preis sind für Aktiv nötig."
@@ -3122,6 +3168,9 @@ async def sync_listing_to_broker(
         config = await _broker_config(session, principal.tenant_id, provider)
         if config is None or not config.enabled or not config.api_key:
             raise ProblemError(ErrorCodes.BROKER_NOT_CONFIGURED)
+        from mhvp.letting.sale_scope import ensure_sale_allowed  # AN19 (GAK-208)
+
+        await ensure_sale_allowed(session, listing.kind)
         prop = await session.get(Property, listing.property_id)
         client = get_provider(provider, api_key=config.api_key, settings=config.settings)
         payload = BrokerListingPayload(
@@ -3287,3 +3336,120 @@ async def apply_openimmo_import_row(
             payload={"run_id": str(run_id), "external_ref": external_ref},
         )
         return {"listing_id": listing.id, "run_id": run.id}
+
+
+class LettingIncreaseSettingsIo(BaseModel):
+    """Tenant switches of the rent increase process (GAK-202, GAK-203, AN18-01)."""
+
+    model_config = ConfigDict(extra="forbid")
+    block_months: dict[str, int] = Field(default_factory=dict)
+    proposals: str = Field(default="off", pattern="^(off|draft)$")
+
+    @field_validator("block_months")
+    @classmethod
+    def _bases(cls, value: dict[str, int]) -> dict[str, int]:
+        from mhvp.letting.increase_settings import BASES
+
+        for basis, months in value.items():
+            if basis not in BASES or not 0 < months <= 120:
+                raise ValueError(f"Ungültige Sperrdauer für {basis}.")
+        return value
+
+
+@router.get(
+    "/rent-increase-settings",
+    summary="Schalter Mieterhöhung (Sperrdauer, Vorschläge)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_rent_increase_settings(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> LettingIncreaseSettingsIo:
+    from mhvp.letting import increase_settings
+
+    async with tenant_tx(request, principal) as session:
+        value = await increase_settings.load(session)
+    return LettingIncreaseSettingsIo(block_months=value.block_months, proposals=value.proposals)
+
+
+@router.put("/rent-increase-settings", summary="Schalter Mieterhöhung setzen")
+async def put_rent_increase_settings(
+    body: LettingIncreaseSettingsIo,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> LettingIncreaseSettingsIo:
+    """No legal duration is fixed by the platform: the operator enters the value per basis
+    after legal review (AN18-01); without a value no blocking date is proposed."""
+    from mhvp.accounting.audit_events import record_change
+    from mhvp.letting import increase_settings
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        old = increase_settings.parse(row.sources)
+        new = increase_settings.IncreaseSettings(dict(body.block_months), body.proposals)
+        row.sources = increase_settings.store(row.sources, new)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="tenant_settings.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            before={"block_months": old.block_months, "proposals": old.proposals},
+            after={"block_months": new.block_months, "proposals": new.proposals},
+        )
+    return body
+
+
+# AN19 (GAK-208): tenant switch for sale listings (default off, question AN19-02) -----------
+
+
+class SaleMarketingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+
+
+class SaleMarketingOut(BaseModel):
+    enabled: bool
+    switch: str
+    open_question: str = "AN19-02"
+
+
+@router.get(
+    "/settings/sale-marketing",
+    summary="Schalter Verkaufsinserate (Standard aus)",
+    response_model=SaleMarketingOut,
+)
+async def get_sale_marketing(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.letting import sale_scope
+
+    async with tenant_tx(request, principal) as session:
+        return {"enabled": await sale_scope.is_enabled(session), "switch": sale_scope.SWITCH_KEY}
+
+
+@router.put(
+    "/settings/sale-marketing",
+    summary="Schalter Verkaufsinserate setzen",
+    response_model=SaleMarketingOut,
+)
+async def put_sale_marketing(
+    body: SaleMarketingIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> dict[str, Any]:
+    from mhvp.letting import sale_scope
+
+    async with tenant_tx(request, principal) as session:
+        before = await sale_scope.set_enabled(session, body.enabled)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="tenant_settings.sale_marketing_changed",
+            entity_type="tenant_settings",
+            entity_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            payload={"from": before, "to": body.enabled},
+        )
+        return {"enabled": body.enabled, "switch": sale_scope.SWITCH_KEY}

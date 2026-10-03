@@ -132,8 +132,9 @@ def test_other_lists_accept_as_of(client: TestClient, world: World) -> None:
 
 def test_postal_jobs_limit_bound(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "ai08admin"))
-    assert client.get("/api/v1/postal/jobs", params={"limit": 500}, headers=h).status_code == 200
-    assert client.get("/api/v1/postal/jobs", params={"limit": 501}, headers=h).status_code == 422
+    # GAK-301 (AN20): every list is capped at 200 rows per page.
+    assert client.get("/api/v1/postal/jobs", params={"limit": 200}, headers=h).status_code == 200
+    assert client.get("/api/v1/postal/jobs", params={"limit": 201}, headers=h).status_code == 422
     assert client.get("/api/v1/postal/jobs", params={"limit": 0}, headers=h).status_code == 422
 
 

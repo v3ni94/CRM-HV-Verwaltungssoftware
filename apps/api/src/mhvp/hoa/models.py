@@ -513,6 +513,13 @@ class MajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
     source: Mapped[str] = mapped_column(Text, nullable=False)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    # AN06 / GAJ-602 (migration 0453): set when the rule was created under the tenant switch
+    # hoa_majority_rule_four_eyes; such a rule applies only after approval by a second person.
+    requires_approval: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 # W10 (A59): loans, insurance claims and larger measures. None of these tables carries a balance

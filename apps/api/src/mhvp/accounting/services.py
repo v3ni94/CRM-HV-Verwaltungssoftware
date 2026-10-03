@@ -1002,8 +1002,13 @@ async def bank_statement_chain_findings(session: AsyncSession, ledger: Ledger) -
     for bank_id in bank_ids:
         if bank_id is None:
             continue
-        for row in await reconcile(session, bank_id):
+        for row in await reconcile(session, bank_id, strict=False):
             ref = row["statement_ref"]
+            if row.get("ledger_status") == "ambiguous":
+                # GAK-108: several ledger accounts point to one bank account.
+                findings.append(
+                    f"Kontoauszug {ref}: Sachkonto des Bankkontos nicht eindeutig zugeordnet"
+                )
             if row["chain_status"] == "break":
                 findings.append(
                     f"Kontoauszug {ref}: Anfangssaldo weicht um {row['chain_difference']} "
@@ -1119,14 +1124,18 @@ async def subledger_reconciliation(
     AC01-02: items written off and items of reversed entries are counted separately
     (``excluded_written_off``, ``excluded_reversed``). With ``exclude_written_off`` they stay
     out of ``open_items_remaining`` and ``difference``; otherwise they are included. Display
-    only, nothing is posted."""
+    only, nothing is posted.
+
+    AN15 (GAK-104): an item counts as written off only from its ``written_off_on`` onwards,
+    so earlier as of dates show it as open (B07)."""
     rows = await session.execute(
         text(
             """
             WITH s AS (SELECT open_item_id, sum(amount) AS settled FROM open_item_settlement
             WHERE (CAST(:as_of AS date) IS NULL OR date <= CAST(:as_of AS date))
             GROUP BY open_item_id),
-            it AS (SELECT i.account_id, i.written_off,
+            it AS (SELECT i.account_id, (i.written_off AND (CAST(:as_of AS date) IS NULL OR
+            i.written_off_on IS NULL OR i.written_off_on <= CAST(:as_of AS date))) AS written_off,
             EXISTS (SELECT 1 FROM journal_entry r WHERE r.reverses_id = i.journal_entry_id
             AND r.status = 'posted' AND (CAST(:as_of AS date) IS NULL OR r.booking_date <=
             CAST(:as_of AS date))) AS reversed,

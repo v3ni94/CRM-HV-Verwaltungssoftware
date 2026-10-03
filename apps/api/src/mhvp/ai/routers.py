@@ -46,7 +46,7 @@ from mhvp.ai.models import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.events import emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -627,7 +627,7 @@ async def list_conversations(
     date_from: date | None = Query(default=None, description="Erstellt ab (einschließlich)"),
     date_to: date | None = Query(default=None, description="Erstellt bis (einschließlich)"),
     q: str | None = Query(default=None, max_length=200, description="Suche in Titel und Text"),
-    limit: int = Query(default=50, ge=1, le=500),
+    limit: int = Query(default=50, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.ConversationOut]:
     """Chronological overview, newest first. ``scope=all`` is the audit view: it lists the chats
@@ -1811,7 +1811,9 @@ async def list_knowledge(
     property_id: uuid.UUID | None = None,
     kind: AiKnowledgeKind | None = None,
     status: AiKnowledgeStatus | None = None,
-    limit: int = Query(default=200, ge=1, le=500, description="Höchstzahl Einträge je Abruf"),
+    limit: int = Query(
+        default=200, ge=1, le=MAX_PAGE_SIZE, description="Höchstzahl Einträge je Abruf"
+    ),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.KnowledgeEntryOut]:

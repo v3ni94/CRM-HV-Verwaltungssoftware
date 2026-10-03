@@ -10,8 +10,10 @@ import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAcco
 import { ContractCustomFieldsForm } from "@/components/aj17/ContractCustomFieldsForm";
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
 import { ContractMandates } from "@/components/contracts/ContractMandates";
+import { ContractVersionHistory } from "@/components/contracts/ContractVersionHistory";
 import { DepositInterestPanel } from "@/components/contracts/DepositInterestPanel";
 import { DepositPanel } from "@/components/contracts/DepositPanel";
+import { SchedulePanel } from "@/components/contracts/SchedulePanel";
 import { OwnershipTransfer } from "@/components/contracts/OwnershipTransfer";
 import { RentInvoicePanel } from "@/components/contracts/RentInvoicePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -148,21 +150,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
         <OwnershipTransfer contractId={contract.id} sevAllowed={managementType === "hoa_with_sev"} canUpdate={canUpdate} />
       ) : null}
       <AmountsPanel contractId={contract.id} amounts={amounts} paymentTypes={paymentTypes} canUpdate={canUpdate} startDate={contract.start_date} endDate={contract.end_date} />
-      <section className={ui.card}>
-        <h2 className={ui.h2}>{t("page.schedules")}</h2>
-        {contract.schedules.length === 0 ? (
-          <p className={ui.help}>{t("schedule.none")}</p>
-        ) : (
-          <ul className="text-sm">
-            {contract.schedules.map((s) => (
-              <li key={s.id}>
-                {t(`intervals.${s.interval}`)}, {t(`dueDayRules.${s.due_day_rule}`)} {s.due_day}, {t("schedule.from")} {formatDate(s.valid_from)}
-                {s.valid_to ? ` ${t("schedule.to")} ${formatDate(s.valid_to)}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <SchedulePanel contractId={contract.id} schedules={contract.schedules} canUpdate={canUpdate} />
       <ContractAllocationValues contractId={contract.id} values={allocationValues} keys={allocationKeys} canUpdate={canUpdate} startDate={contract.start_date} />
       <ContractMandates mandates={mandates} defaultMandateId={contract.sepa_mandate_id} directDebit={contract.direct_debit} canUpdate={canUpdate} />
       {contract.debtor_account ? (
@@ -187,6 +175,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel sourceType="contract" sourceId={contract.id} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />
       ) : null}
+      <ContractVersionHistory contractId={contract.id} />
       <AuditLogPanel entityType="contract" entityId={contract.id} />
     </div>
   );

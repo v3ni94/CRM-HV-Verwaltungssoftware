@@ -23,6 +23,20 @@ from mhvp.accounting.models import (
     LedgerAccount,
     RuleVersion,
 )
+from mhvp.accounting.response_models import (
+    AccountingReportAccountSheetOut,
+    AccountingReportBankStatementOut,
+    AccountingReportIncomeExpenseOut,
+    AccountingReportLinePropertyDriftOut,
+    AccountingReportLiquidityOut,
+    AccountingReportMonthlyMatrixOut,
+    AccountingReportOpenItemsOut,
+    AccountingReportRowsOut,
+    AccountingReportTargetActualOut,
+    AccountingReportTrialBalanceOut,
+    AccountingReportVatByPropertyOut,
+    AccountingReportVatOverviewOut,
+)
 from mhvp.accounting.schemas import AccountOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed, property_column_guard
@@ -70,7 +84,11 @@ def _period(start: date, end: date) -> None:
 # Evaluations with header ---------------------------------------------------------------
 
 
-@router.get("/ledgers/{ledger_id}/reports/monthly-matrix", summary="Monatsmatrix (M18-01)")
+@router.get(
+    "/ledgers/{ledger_id}/reports/monthly-matrix",
+    summary="Monatsmatrix (M18-01)",
+    response_model=AccountingReportMonthlyMatrixOut,
+)
 async def report_monthly_matrix(
     ledger_id: uuid.UUID,
     start: date,
@@ -90,7 +108,11 @@ async def report_monthly_matrix(
         )
 
 
-@router.get("/ledgers/{ledger_id}/reports/target-actual", summary="Soll/Ist der Forderungen")
+@router.get(
+    "/ledgers/{ledger_id}/reports/target-actual",
+    summary="Soll/Ist der Forderungen",
+    response_model=AccountingReportTargetActualOut,
+)
 async def report_target_actual(
     ledger_id: uuid.UUID,
     start: date,
@@ -106,7 +128,11 @@ async def report_target_actual(
         return await report_views.target_actual(session, ledger, start, end, unit_id, component)
 
 
-@router.get("/ledgers/{ledger_id}/reports/bank-statement", summary="Bankkontoabrechnung")
+@router.get(
+    "/ledgers/{ledger_id}/reports/bank-statement",
+    summary="Bankkontoabrechnung",
+    response_model=AccountingReportBankStatementOut,
+)
 async def report_bank_statement(
     ledger_id: uuid.UUID,
     account_id: uuid.UUID,
@@ -121,7 +147,11 @@ async def report_bank_statement(
         return await report_views.bank_statement(session, ledger, account_id, start, end)
 
 
-@router.get("/ledgers/{ledger_id}/reports/vat-overview", summary="USt-Übersicht (Entwurf)")
+@router.get(
+    "/ledgers/{ledger_id}/reports/vat-overview",
+    summary="USt-Übersicht (Entwurf)",
+    response_model=AccountingReportVatOverviewOut,
+)
 async def report_vat_overview(
     ledger_id: uuid.UUID,
     start: date,
@@ -137,6 +167,7 @@ async def report_vat_overview(
 @router.get(
     "/ledgers/{ledger_id}/reports/vat-overview-by-property",
     summary="USt-Übersicht je Objekt und Kostenstelle (Entwurf)",
+    response_model=AccountingReportVatByPropertyOut,
 )
 async def report_vat_overview_by_property(
     ledger_id: uuid.UUID,
@@ -154,6 +185,7 @@ async def report_vat_overview_by_property(
 @router.get(
     "/ledgers/{ledger_id}/reports/income-expense",
     summary="Einnahmen und Ausgaben (keine EÜR)",
+    response_model=AccountingReportIncomeExpenseOut,
 )
 async def report_income_expense(
     ledger_id: uuid.UUID,
@@ -175,6 +207,7 @@ async def report_income_expense(
     "/ledgers/{ledger_id}/reports/line-property-drift",
     summary="Objekt der Buchungszeilen gegen Einheit, Vertrag und Buchungskreis (Q15-01)",
     dependencies=[Depends(strict_query)],
+    response_model=AccountingReportLinePropertyDriftOut,
 )
 async def report_line_property_drift(
     ledger_id: uuid.UUID,
@@ -199,7 +232,11 @@ async def report_line_property_drift(
         return {"header": header, **result}
 
 
-@router.get("/ledgers/{ledger_id}/reports/revenue", summary="Erträge mit Kopfangaben")
+@router.get(
+    "/ledgers/{ledger_id}/reports/revenue",
+    summary="Erträge mit Kopfangaben",
+    response_model=AccountingReportRowsOut,
+)
 async def report_revenue(
     ledger_id: uuid.UUID,
     start: date,
@@ -219,7 +256,9 @@ async def report_revenue(
 
 
 @router.get(
-    "/ledgers/{ledger_id}/reports/payments-by-debtor", summary="Zahlungen je Debitor mit Kopf"
+    "/ledgers/{ledger_id}/reports/payments-by-debtor",
+    summary="Zahlungen je Debitor mit Kopf",
+    response_model=AccountingReportRowsOut,
 )
 async def report_payments_by_debtor(
     ledger_id: uuid.UUID,
@@ -239,7 +278,11 @@ async def report_payments_by_debtor(
         }
 
 
-@router.get("/ledgers/{ledger_id}/reports/trial-balance", summary="Saldenliste mit Kopfangaben")
+@router.get(
+    "/ledgers/{ledger_id}/reports/trial-balance",
+    summary="Saldenliste mit Kopfangaben",
+    response_model=AccountingReportTrialBalanceOut,
+)
 async def report_trial_balance(
     ledger_id: uuid.UUID,
     as_of: date,
@@ -258,7 +301,11 @@ async def report_trial_balance(
         }
 
 
-@router.get("/ledgers/{ledger_id}/reports/open-items", summary="OP-Liste mit Kopfangaben")
+@router.get(
+    "/ledgers/{ledger_id}/reports/open-items",
+    summary="OP-Liste mit Kopfangaben",
+    response_model=AccountingReportOpenItemsOut,
+)
 async def report_open_items(
     ledger_id: uuid.UUID,
     as_of: date,
@@ -280,7 +327,11 @@ async def report_open_items(
         }
 
 
-@router.get("/ledgers/{ledger_id}/reports/account-sheet", summary="Kontenblatt mit Kopfangaben")
+@router.get(
+    "/ledgers/{ledger_id}/reports/account-sheet",
+    summary="Kontenblatt mit Kopfangaben",
+    response_model=AccountingReportAccountSheetOut,
+)
 async def report_account_sheet(
     ledger_id: uuid.UUID,
     account_id: uuid.UUID,
@@ -308,7 +359,11 @@ async def report_account_sheet(
         }
 
 
-@router.get("/ledgers/{ledger_id}/reports/liquidity", summary="Liquiditätsvorschau mit Kopfangaben")
+@router.get(
+    "/ledgers/{ledger_id}/reports/liquidity",
+    summary="Liquiditätsvorschau mit Kopfangaben",
+    response_model=AccountingReportLiquidityOut,
+)
 async def report_liquidity(
     ledger_id: uuid.UUID,
     request: Request,

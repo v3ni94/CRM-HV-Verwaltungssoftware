@@ -30,7 +30,7 @@ export const ui = {
   formActions: "flex w-full flex-col gap-2 sm:w-auto sm:flex-row",
   actionFull: "w-full justify-center sm:w-auto",
   buttonSm:
-    `inline-flex min-h-9 items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs pointer-coarse:min-h-11 pointer-coarse:px-3 font-medium text-fg transition duration-150 hover:border-accent hover:bg-surface-2 ${focusRing} disabled:opacity-50`,
+    `inline-flex min-h-11 items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-fg transition duration-150 hover:border-accent hover:bg-surface-2 ${focusRing} disabled:opacity-50 pointer-fine:min-h-9`,
   alert: "rounded-md border border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-fg",
   success: "rounded-md border border-success-line bg-success-bg px-3 py-2 text-sm text-success-fg",
   notice: "rounded-md border-l-2 border-accent bg-surface-2 px-3 py-2 text-sm text-muted",

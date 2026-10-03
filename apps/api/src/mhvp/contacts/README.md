@@ -184,3 +184,19 @@ false). The parameter `as_of` is refused with 422 `MHVP-CONT-0034` until the add
 a past date would be a wrong delivery proof. A contact merge moves the source addresses, phones
 and emails to the target; moved rows lose `is_primary` when the target already has a primary
 row, so the target keeps exactly one.
+
+## Address history (AN05, GAJ-610, migration 0452)
+
+`contact_address` has `valid_to` and `superseded_at` (check `ck_contact_address_valid_range`,
+index `ix_contact_address_tenant_contact_from`). Tenant switch `contacts.address_history` in
+`tenant_settings.sources`, `GET/PUT /contact-address-history` (write `contacts:approve`, event
+`contact_address_history.updated`), default off. Off: `PUT /contacts/{id}` replaces the
+addresses as before and `as_of` / `include_history` answer 422 `MHVP-CONT-0034`. On: unchanged
+addresses are kept, removed or changed ones are closed (`valid_to` yesterday, at the earliest
+`valid_from`; `superseded_at` now; no longer primary), new ones start with `valid_from` today;
+`GET /contacts/{id}/addresses?as_of=` returns rows with `valid_from` empty or on/before the
+date and `valid_to` empty or on/after it, `include_history=true` every row. Closed rows are
+hidden from every other ORM select by a `do_orm_execute` filter in `contacts/models.py`
+(execution option `contact_address_history` opts out); bulk DELETE (erasure) still covers them.
+Retention of former addresses is not decided (AM14-01): nothing deletes them on a timer.
+Rule `docs/rules/AM14-adresshistorie.md`.

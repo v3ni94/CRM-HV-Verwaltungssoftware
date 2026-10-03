@@ -7,6 +7,7 @@ date from the append-only domain events. Run it before a restore; replay it afte
 
 import argparse
 import asyncio
+import json
 import sys
 import uuid
 from pathlib import Path
@@ -25,7 +26,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Beginn (TT.MM.JJJJ ist nicht erlaubt, ISO 8601: JJJJ-MM-TT oder Zeitstempel). "
         "Wählen Sie den Zeitpunkt des ältesten Backups, das zurückgespielt werden könnte.",
     )
-    parser.add_argument("--out", required=True, type=Path, help="Zieldatei (JSON)")
+    parser.add_argument(
+        "--out",
+        required=True,
+        type=Path,
+        help="Zieldatei (JSON); '-' schreibt das Journal auf die Standardausgabe "
+        "(für scripts/backup.sh, GAK-405)",
+    )
     parser.add_argument(
         "--tenant",
         action="append",
@@ -47,6 +54,9 @@ async def run(argv: list[str] | None = None) -> int:
         journal = await export_journal(
             factory, since=parse_since(args.since), tenant_ids=args.tenant
         )
+        if str(args.out) == "-":
+            sys.stdout.write(json.dumps(journal, indent=2, ensure_ascii=False) + "\n")
+            return 0
         write_journal(journal, args.out)
         log.info(
             "deletion_journal_exported",

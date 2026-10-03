@@ -68,6 +68,11 @@ from mhvp.accounting.models import (
     RecurringInvoicePlan,
     ReviewStatus,
 )
+from mhvp.accounting.response_models import (
+    AccountingAccountSheetOut,
+    AccountingOpenItemOut,
+    AccountingTrialBalanceOut,
+)
 from mhvp.accounting.schemas import (
     AccountIn,
     AccountingAllocationIn,
@@ -115,6 +120,7 @@ from mhvp.core.events import diff, emit
 from mhvp.core.ids import uuid7
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
+    MAX_PAGE_SIZE,
     ListParams,
     ListSpec,
     apply_filters,
@@ -924,13 +930,13 @@ async def journal(
     status: EntryStatus | None = None,
     start: date | None = None,
     end: date | None = None,
-    limit: int = Query(default=100, ge=1, le=1000),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
         default=None,
         ge=1,
-        le=1000,
+        le=MAX_PAGE_SIZE,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
     property_id: uuid.UUID | None = Query(
@@ -1498,7 +1504,11 @@ async def get_interest_tax(
 # Reports ------------------------------------------------------------------------------
 
 
-@router.get("/ledgers/{ledger_id}/accounts/{account_id}/sheet", summary="Kontenblatt")
+@router.get(
+    "/ledgers/{ledger_id}/accounts/{account_id}/sheet",
+    summary="Kontenblatt",
+    response_model=AccountingAccountSheetOut,
+)
 async def account_sheet(
     ledger_id: uuid.UUID,
     account_id: uuid.UUID,
@@ -1514,7 +1524,11 @@ async def account_sheet(
         return await svc.account_sheet(session, account, start, end)
 
 
-@router.get("/ledgers/{ledger_id}/trial-balance", summary="Saldenliste zum Stichtag")
+@router.get(
+    "/ledgers/{ledger_id}/trial-balance",
+    summary="Saldenliste zum Stichtag",
+    response_model=AccountingTrialBalanceOut,
+)
 async def trial_balance(
     ledger_id: uuid.UUID,
     request: Request,
@@ -1530,6 +1544,7 @@ async def trial_balance(
     "/ledgers/{ledger_id}/open-items",
     summary="Offene Posten zum Stichtag",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingOpenItemOut],
 )
 async def open_items(
     ledger_id: uuid.UUID,
@@ -1946,7 +1961,7 @@ async def list_runs(
     scope_id: uuid.UUID | None = None,
     status: str | None = Query(default=None, pattern="^(preview|posted|reversed)$"),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=1, le=500),
+    page_size: int = Query(default=50, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     """M13-08: earlier runs per month and scope, newest first, without items."""
@@ -2777,12 +2792,12 @@ async def list_invoices(
     response: Response,
     ledger_id: uuid.UUID | None = None,
     review_status: ReviewStatus | None = None,
-    limit: int = Query(default=500, ge=1, le=1000),
+    limit: int = Query(default=MAX_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
         default=None,
         ge=1,
-        le=1000,
+        le=MAX_PAGE_SIZE,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
     params: ListParams = Depends(list_params),
@@ -4683,3 +4698,7 @@ router.include_router(zugferd.router)
 from mhvp.accounting import dunning_interest_routers  # noqa: E402
 
 router.include_router(dunning_interest_routers.router)
+# AN15 (GAK-104): write off of open items as proposal and four eyes approval.
+from mhvp.accounting import write_offs  # noqa: E402
+
+router.include_router(write_offs.router)

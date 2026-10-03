@@ -681,7 +681,7 @@ export function AiChatWidget() {
           <form onSubmit={submit} className="flex flex-col gap-2 border-t border-border-soft p-3">
             {files.length ? <p className="text-xs text-muted">{files.map((f) => f.name).join(", ")}</p> : null}
             <div className="flex items-end gap-2">
-              <label className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-fg transition duration-150 hover:border-gold hover:bg-surface-2" title={t("attach")}>
+              <label className="inline-flex h-11 w-11 shrink-0 pointer-fine:h-9 pointer-fine:w-9 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-fg transition duration-150 hover:border-gold hover:bg-surface-2" title={t("attach")}>
                 <span aria-hidden>📎</span>
                 <input ref={fileInput} type="file" multiple aria-label={t("attach")} className="sr-only" onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 20))} />
               </label>

@@ -213,3 +213,12 @@ Betriebsvoraussetzung (AL06-02, Welle 23, AM15): Das CRM reicht `X-Forwarded-For
 ### Auth-Limit auf CRM- und Portal-Host (GAI-116, Welle 21, AJ07)
 
 `compose.prod.yaml` und `compose.dev.yaml` enthalten die Router `crm-auth` und `portal-auth` (Priorität 100) mit der Middleware `auth-ratelimit` für `/api/session/login`, `/mfa`, `/totp`, `/webauthn` sowie im Portal `/magic-link` und `/invitation`. Deploy-Hinweis: nach dem Ausrollen per `docker compose up -d web-crm web-portal` prüfen, ob Traefik die Router übernommen hat (Dashboard oder 429 nach 10 schnellen Anmeldeversuchen).
+
+## Vertrauenswürdige Proxys (AL06-02)
+
+Die Next.js-Apps (CRM, Portal) kennen die Socketadresse des Clients nicht, sie reichen nur `X-Forwarded-For` aus Traefik an die API weiter. Das ist nur sicher, wenn kein Client die Apps oder die API direkt erreicht.
+
+1. Netz: `web-crm`, `web-portal` und `api` veröffentlichen in `infra/compose.yaml` und `infra/compose.prod.yaml` keine Ports (`ports:`) und laufen nicht mit `network_mode: host`. Erreichbar sind sie nur über das externe Traefik-Netz (`TRAEFIK_NETWORK`) und das Stacknetz. Die Prüfung `make compose-exposure` (Teil von `make lint`, `scripts/check_compose_exposure.py`) schlägt bei jedem Verstoß fehl. Die Loopback-Bindung von `beszel` (127.0.0.1:8090) ist bewusst ausgenommen. Auf dem Server zusätzlich prüfen: `docker compose -p mhvp ps` zeigt für diese drei Dienste keine Host-Ports, und `ss -ltn` zeigt keinen Listener auf 3000, 3001 oder 8000 an einer öffentlichen Adresse.
+2. API: `MHVP_RATE_LIMIT_TRUSTED_PROXIES` als JSON-Liste von CIDR setzen, die das Stacknetz mit Traefik und den App-Containern abdeckt (Netz ermitteln mit `docker network inspect <Netz>`, Beispiel `["172.18.0.0/16"]`). Die API nimmt dann den rechtesten `X-Forwarded-For`-Eintrag, der kein vertrauter Proxy ist. Ohne Liste gilt das bisherige Verhalten (Standard aus, Freigabe AJ07-01).
+3. CRM und Portal hinter Traefik: dieselbe Variable im Container der jeweiligen App setzen, sonst reichen CRM-BFF und Sitzungsrouten den Header nicht weiter. Traefik muss der einzige Zugang sein; wird ein weiterer Proxy (z. B. CDN) vorgeschaltet, muss dessen Netz in die Liste und Traefik so konfiguriert werden, dass es dessen Header vertraut (`forwardedHeaders.trustedIPs`).
+4. Nach jeder Änderung an Compose-Dateien `make compose-exposure` ausführen.

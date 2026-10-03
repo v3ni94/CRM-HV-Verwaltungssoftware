@@ -2,7 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { ContractApprovalPanel, type PendingContract } from "@/components/contracts/ContractApprovalPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { fetchAllListPages } from "@/lib/list-all";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
@@ -12,9 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function ContractApprovalPage() {
   const t = await getTranslations("ContractApproval");
   const tf = await getTranslations("ContractForm");
-  const [me, response] = await Promise.all([getMe(), serverFetch("/api/v1/contracts/pending-approval?limit=5000")]);
+  const [me, { response, items: rows }] = await Promise.all([getMe(), fetchAllListPages<PendingContract>("/api/v1/contracts/pending-approval")]);
   redirectIfUnauthenticated(response);
-  const rows = response.ok ? ((await response.json()) as PendingContract[]) : null;
   const canApprove = (me.data?.permissions ?? []).includes("contracts:approve");
   return (
     <div className={ui.pageGap}>

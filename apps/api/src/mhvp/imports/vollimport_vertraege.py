@@ -395,6 +395,13 @@ async def _apply_owner_of_rental(
         await _register_key(ctx, KEY_ENTITY_OWNER, row.contract_no, owner.id, ctx.owner_keys)
         return None
     assert row.start is not None  # noqa: S101 - checked by the parser
+    # AM03 (PROP-OWNER-PERIOD): overlapping period or shares over 100 % is a report conflict.
+    problems = await property_services.owner_period_problems(
+        ctx.session, prop.id, party.id, row.start, row.end, None
+    )
+    if problems:
+        counts["conflict"] += 1
+        return {**row.where(), "grund": " ".join(problems)}
     owner = PropertyOwner(
         tenant_id=ctx.tenant_id,
         property_id=prop.id,

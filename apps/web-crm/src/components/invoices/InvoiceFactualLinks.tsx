@@ -100,7 +100,7 @@ export function InvoiceFactualLinks({
       ),
     );
     void bff<{ id: string; text: string; gross: string; ended_at: string | null }[]>(
-      `/api/bff/accounting/recurring-invoices?ledger_id=${encodeURIComponent(ledgerId)}&active=true&page_size=500`,
+      `/api/bff/accounting/recurring-invoices?ledger_id=${encodeURIComponent(ledgerId)}&active=true&page_size=200`,
     ).then((r) =>
       set(setRecurring)(
         r.ok

@@ -42,7 +42,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
   // Umlaufbeschluss (M25-02): owners of the community for the text form votes and the per
   // tenant switch for the lowered majority (default off).
   const [owners, circularSwitch, meetingSettingsResponse, onlineSwitchResponse] = await Promise.all([
-    ctx.api.GET("/api/v1/contracts", { params: { query: { property_id: ctx.property.id, kind: "ownership", limit: 500 } } }),
+    ctx.api.GET("/api/v1/contracts", { params: { query: { property_id: ctx.property.id, kind: "ownership", limit: 200 } } }),
     serverFetch("/api/v1/hoa/circular-lower-majority"),
     // M25-03 / V13: Einladungsfrist in Wochen und Schalter für virtuelle Versammlungen.
     serverFetch("/api/v1/hoa/meeting-settings"),

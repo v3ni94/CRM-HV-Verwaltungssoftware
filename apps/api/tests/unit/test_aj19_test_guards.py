@@ -1,6 +1,6 @@
 """AJ19 guards on the test suite itself (GAI-612, GAI-616, GAI-617).
 
-* every annex D case (D01 to D49) is named by at least one test, by name token ``dNN`` or
+* every annex D case (D01 to D58) is named by at least one test, by name token ``dNN`` or
   by the marker ``annex_d("DNN")``; cases with a single test are an exact ratchet list
   (rule 8 asks for two independent tests, the list may only shrink),
 * CI runs pytest with ``MHVP_REQUIRE_INTEGRATION=1`` so integration tests fail instead of
@@ -19,7 +19,7 @@ from tests.conftest import REQUIRED_TEST_PACKAGES, forbidden_skip_reason
 
 TESTS = Path(__file__).resolve().parents[1]
 REPO = TESTS.parents[2]
-CASES = [f"D{i:02d}" for i in range(1, 50)]
+CASES = [f"D{i:02d}" for i in range(1, 59)]
 _NAME_TOKEN = re.compile(r"(?:^|_)d(\d\d)(?=_|$)")
 
 # Cases covered by exactly one test today (GAI-612, rule 8). Remove an entry once a second

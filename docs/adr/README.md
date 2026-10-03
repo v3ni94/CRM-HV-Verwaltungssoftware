@@ -42,5 +42,6 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0034](0034-kettenpruefung-kontoauszuege.md) | Chain check of bank statements (balances and periods, B09) | Accepted |
 | [0035](0035-snapshot-trigger.md) | Immutable `statement_snapshot` by database trigger (B03, migration 0439) | Accepted |
 | [0036](0036-abhaengigkeitsaudit-ci.md) | Dependency audit in CI with allowlist (GAH-310) | Accepted |
+| [0037](0037-json-format-decimal.md) | JSON format of Decimal amounts in API responses, as built (GAI-304) | Accepted |
 
 Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0017 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration; the CRM shell ADR was written as 0016 in parallel to the handover offline ADR and renumbered to 0017.

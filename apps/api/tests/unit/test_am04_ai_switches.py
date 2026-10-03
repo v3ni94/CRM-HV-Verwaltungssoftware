@@ -129,3 +129,49 @@ def test_ai_task_rule_needs_ai_approve() -> None:
     _assert_ai_task_permission(
         _principal("tenant_settings:update"), [{"type": "create_ticket", "title": "x"}]
     )
+
+
+@pytest.mark.asyncio
+async def test_needs_ai_approval_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AM04-03: legacy ai_task rules whose editor lacks ai:approve are flagged (read only)."""
+    from mhvp.automation import routers
+    from mhvp.core.auth import permissions
+
+    good, bad = uuid.uuid4(), uuid.uuid4()
+
+    class FakeSession:
+        """Memberships are looked up once per editor, in rule order: good, then bad."""
+
+        def __init__(self) -> None:
+            self.queue = [good, bad]
+
+        async def scalar(self, _stmt: Any) -> Any:
+            return SimpleNamespace(id=self.queue.pop(0))
+
+    async def fake_perms(_s: Any, _t: Any, membership_id: Any) -> Any:
+        return (frozenset({"ai:approve"}) if membership_id == good else frozenset()), []
+
+    monkeypatch.setattr(permissions, "effective_permissions", fake_perms)
+
+    def rule(editor: uuid.UUID, kind: str) -> Any:
+        return SimpleNamespace(
+            id=uuid.uuid4(), updated_by=editor, created_by=editor, actions=[{"type": kind}]
+        )
+
+    r_ok, r_bad, r_plain = rule(good, "ai_task"), rule(bad, "ai_task"), rule(bad, "notify")
+    out = await routers.mark_needs_ai_approval(
+        FakeSession(),
+        uuid.uuid4(),
+        [r_ok, r_bad, r_plain],  # type: ignore[arg-type]
+    )
+    assert out == {r_ok.id: False, r_bad.id: True}
+
+
+def test_existing_ai_task_rule_blocked_without_approve() -> None:
+    """AN14-13: PATCH and enable check the stored actions, so no ai:approve gives 403."""
+    stored = [{"type": "ai_task", "task": "summarize"}]
+    for perms in ((), ("automation:read",)):
+        with pytest.raises(ProblemError):
+            _assert_ai_task_permission(_principal(*perms), stored)
+    _assert_ai_task_permission(_principal("ai:approve"), stored)
+    _assert_ai_task_permission(_principal(), [{"type": "notify"}])

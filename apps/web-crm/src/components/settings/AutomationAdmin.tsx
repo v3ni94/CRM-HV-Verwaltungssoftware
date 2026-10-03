@@ -55,6 +55,9 @@ export type Rule = {
   // M9-08 Kleinbefund 27.09.2026: rule owner notified first on a dead webhook delivery,
   // ahead of the last editor fallback.
   owner_user_id?: string | null;
+  // AM04-03: ai_task rule whose last editor lacks ai:approve (legacy); runs only with the
+  // tenant switch ai_automation.automation_ai_task on.
+  needs_ai_approval?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -1977,6 +1980,11 @@ export function AutomationAdmin({
                 {rule.active ? t("active") : t("inactive")}
               </span>
               <span className={ui.badge}>{triggerBadge(rule, t)}</span>
+              {rule.needs_ai_approval ? (
+                <span className={ui.badge} data-testid="rule-needs-ai-approval" title={t("needsAiApprovalHint")}>
+                  {t("needsAiApproval")}
+                </span>
+              ) : null}
               {rule.test_mode ? (
                 <span className={ui.badge} data-testid="rule-test-mode">
                   {t("testModeBadge")}

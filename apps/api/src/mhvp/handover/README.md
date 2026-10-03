@@ -111,3 +111,4 @@ Konfliktfrage, Abgleichsprotokoll). Test: `tests/integration/test_m30_handover_o
 
 - `POST /handover/protocols/{id}/defects/tickets`: Tickets aus Mängeln, `handover_defect.ticket_id` macht es idempotent.
 - `move_direction` (`in`/`out`): `complete` setzt `contract.move_in_on` oder `move_out_on` nur, wenn leer.
+- AN19 (GAK-206): `GET /handover/protocols/{id}/deposit/link` gleicht den Kautionsbetrag mit der Kaution des Vertrags ab und zeigt das Rückzahlungskonto; `POST` (nach Abschluss, zusätzlich `contacts:update`) legt die Rückzahlungs-IBAN als Bankverbindung des ausziehenden Mieters mit Status `pending` an (Vier Augen, M5-01), vorhandene gleiche IBAN wird wiederverwendet. Kaution und Zahlungen bleiben unverändert (G2, G3).

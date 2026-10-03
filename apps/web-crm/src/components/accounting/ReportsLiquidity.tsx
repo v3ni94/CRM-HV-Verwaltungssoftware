@@ -25,6 +25,8 @@ export type LiquiditySnapshot = {
   expected_inflows: string;
   expected_outflows: string;
   projected_free_funds: string;
+  /** GAK-102: credit balances of debtors (overpayments), bound funds deducted from the projection. */
+  debtor_credits?: string;
   note: string;
   /** Common report header of GET /reports/liquidity (7.7 Absatz 1). */
   header?: ReportHeader;
@@ -83,6 +85,12 @@ export function LiquidityReport({ data, ledgerId }: { data: LiquiditySnapshot | 
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.expectedOutflows")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.expected_outflows)}</dd>
         </div>
+        {data.debtor_credits !== undefined ? (
+          <div className="rounded-md border border-border bg-surface p-3" data-testid="liquidity-debtor-credits">
+            <dt className="mhvp-label text-subtle">{t("reports.liquidity.debtorCredits")}</dt>
+            <dd className="text-lg font-semibold tabular-nums">{formatEur(data.debtor_credits)}</dd>
+          </div>
+        ) : null}
         <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.projectedFreeFunds")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.projected_free_funds)}</dd>

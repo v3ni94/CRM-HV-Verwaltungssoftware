@@ -240,6 +240,14 @@ Unter einem gespeicherten Entwurf der Kautionsabrechnung steht Kautionsabrechnun
 
 ## Zahlungsposition korrigieren und Zustellung der Verbrauchsinformation (GAJ-102, GAJ-103, Welle 23)
 
-In der Tabelle der Sollbeträge öffnet "Korrigieren" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst meldet das System den Konflikt. Die Korrektur eines Zahlungsplans bleibt vorerst der Schnittstelle vorbehalten.
+In der Tabelle der Sollbeträge öffnet "Korrigieren" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst meldet das System den Konflikt. Die Korrektur eines Zahlungsplans steht seit Welle 24 in der Planliste des Vertrags bereit.
 
 Im Panel Verbrauchsinformation eines Objekts erfasst "Zustellung erfassen" (Recht Objekte bearbeiten) im Ersatzprozess ohne Portal den Weg (Post, E-Mail, persönliche Übergabe), das Datum und einen Nachweis. Die Erfassung versendet nichts und dient dem Nachweis der Zustellung.
+
+## Zahlungsplan korrigieren (GAJ-102, Welle 24)
+
+Im Vertragsdetail listet der Abschnitt Zahlungspläne alle Pläne des Vertrags. "Korrigieren" (Recht Verträge bearbeiten) öffnet ein Formular für Intervall, Fälligkeitsregel, Tag, Zahlweise, Betragsbasis und Gültigkeit. Ist der Plan bereits Grundlage gebuchter Sollstellungen, lehnt das System die Änderung ab (Konflikt); dann ist ein neuer Plan anzulegen. Die Korrektur bucht nichts.
+
+## Versionsverlauf (GAK-207, Welle 24)
+
+Das Vertragsdetail zeigt unten den Versionsverlauf: alle Versionen mit Gültigkeit, die aktuelle Version markiert und frühere Versionen als Link. Je Version erscheinen die Zahlungszeilen, die gegenüber der Vorversion neu sind oder entfallen. Frühere Versionen bleiben unverändert erhalten.

@@ -153,6 +153,8 @@ def test_features_default_off_and_permissions(client: TestClient, w: W) -> None:
         "tenant_statement_enabled": False,
         "portal_owner_receipts_enabled": False,
         "owner_hoa_rental_statements_enabled": False,
+        # AN02 (GAJ-401): photo requirement for meter readings, default hint.
+        "meter_photo_mode": "hint",
     }
     assert (
         c.patch(f"{PA}/features", json={"chat_enabled": True}, headers=w.reader).status_code == 403

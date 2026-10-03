@@ -4,7 +4,8 @@ PostgreSQL, never in the shared CI run. Each test prints its measurement as a
 ``PERF`` line (collected in docs/runbooks/leistungsmessung.md).
 
 Targets (16): P95 below 300 ms for a list of 10.000 rows; monthly receivable run of 1.000
-contracts below 2 minutes (covered by ``test_m13_receivables.py::test_a27_...``, 869 units);
+contracts below 2 minutes (``test_an20_perf_receivable_run.py``, 1.000 contracts; the 869 unit
+run is ``test_m13_receivables.py::test_a27_...``);
 statement of 100 units below 1 minute; bank retrieval of 100 accounts (connector stub in
 ``tests/bank_connector_stub.py``, no network). The seeds live in ``perf_seed.py``."""
 
@@ -21,6 +22,7 @@ from fastapi.testclient import TestClient
 from mhvp.main import create_app
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import RUN, World, _settings, bearer, login
+from tests.runtime_limits import scaled_limit
 
 pytestmark = [
     pytest.mark.integration,
@@ -31,7 +33,7 @@ ROWS = 10_000
 SAMPLES = 40
 P95_LIMIT_SECONDS = 0.3
 STATEMENT_LIMIT_SECONDS = 60.0
-RETRIEVAL_LIMIT_SECONDS = 60.0  # operator threshold, spec names no limit
+RETRIEVAL_LIMIT_SECONDS = 60.0  # operator threshold (stricter than section 16: 10 minutes)
 
 
 async def _seed(settings: Any) -> World:
@@ -109,7 +111,7 @@ def test_list_of_10000_contacts_p95_below_300_ms(client: TestClient, world: Worl
         f"PERF contacts_list rows={ROWS} samples={SAMPLES} "
         f"median={statistics.median(timings) * 1000:.0f}ms p95={p95 * 1000:.0f}ms"
     )
-    assert p95 < P95_LIMIT_SECONDS
+    assert p95 < scaled_limit(P95_LIMIT_SECONDS)  # load scaled
 
 
 def test_seed_of_100_units_and_100_bank_accounts(client: TestClient, world: World) -> None:
@@ -147,7 +149,7 @@ def test_statement_of_100_units_below_one_minute(client: TestClient, world: Worl
     print(  # noqa: T201 - measurement protocol
         f"PERF statement_calculate units={data['units']} seconds={seconds:.1f}"
     )
-    assert seconds < STATEMENT_LIMIT_SECONDS
+    assert seconds < scaled_limit(STATEMENT_LIMIT_SECONDS)
 
 
 async def _retrieve(
@@ -231,4 +233,4 @@ def test_bank_retrieval_of_100_accounts(
         f"PERF bank_retrieval accounts={accounts} transactions={new} seconds={seconds:.1f}"
     )
     assert (accounts, new) == (ACCOUNTS, ACCOUNTS * 20)
-    assert seconds < RETRIEVAL_LIMIT_SECONDS
+    assert seconds < scaled_limit(RETRIEVAL_LIMIT_SECONDS)

@@ -2494,6 +2494,26 @@
     {
      "t": "p",
      "text": "Im Mieterhöhungsfall startet die Schaltfläche KI-Prüfung starten eine Prüfung der erfassten Angaben auf Stimmigkeit, zum Beispiel fehlende Quellen oder Widersprüche zur Regelprüfung. Voraussetzung ist ein freigegebener KI-Anbieter. Das Ergebnis sind Hinweise mit Schweregrad. Sie sind keine Freigabe und keine Rechtsprüfung und verändern den Fall nicht; die Entscheidung trifft eine Person."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Mieterhöhungssperre nach Anwendung (Welle 24)",
+     "id": "mieterhoehungssperre-nach-anwendung-welle-24"
+    },
+    {
+     "t": "p",
+     "text": "Nach dem Schritt Anwenden zeigt der Fall den Abschnitt Mieterhöhungssperre. Ist unter Einstellungen, Fachliche Regeln, für die Begründung eine Sperrdauer in Monaten hinterlegt, erscheint das vorgeschlagene Datum. Mit Sperre übernehmen wird das Datum am Vertrag gespeichert und im Verlauf protokolliert; ohne Bestätigung ändert sich der Vertrag nicht. Die Software legt keine Sperrdauer fest, ohne Eintrag gibt es keinen Vorschlag. Die neue Mietzeile trägt als Grund Index, Staffel oder Erhöhung je nach Begründung des Falls."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Interessenten löschen (Welle 24)",
+     "id": "interessenten-loeschen-welle-24"
+    },
+    {
+     "t": "p",
+     "text": "Wird ein Interessent gelöscht, von Hand oder durch den Löschlauf nach dem Löschdatum, bleibt der Kontakt zunächst erhalten. Hat der Kontakt keine andere Rolle, entsteht unter Datenschutz, Löschanträge, ein Löschvorschlag mit der Anzahl der verknüpften Dokumente. Kontakt und Dokumente werden erst im Löschprozess mit Freigabe durch eine zweite Person bearbeitet."
     }
    ]
   },
@@ -6703,6 +6723,33 @@
     {
      "t": "p",
      "text": "Auf der Seite Zahllauf lassen sich die gespeicherten Vorschauen nach Stichtag und Auslöser (manuell, wöchentlich, fehlgeschlagen) eingrenzen. Eine Filterkombination kann unter einem Namen gespeichert werden und steht danach als Schnellauswahl über der Liste bereit. Das Filtern ändert keine Daten und löst keine Zahlung aus."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Massenbestätigung, Restbetrag, Skonto und Bankabstimmung (Welle 24)",
+     "id": "massenbestaetigung-restbetrag-skonto-und-bankabstimmung-welle-24"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Massenbestätigung: Die Vorschau zeigt Anzahl und Summen je Rechtsträger. Gebucht wird nur, was die Vorschau gezeigt hat; ändert sich ein Umsatz dazwischen oder ist die Vorschau älter als 15 Minuten, wird sie neu erzeugt."
+      },
+      {
+       "depth": 0,
+       "text": "Restbetrag einer Überzahlung bleibt Guthaben des Zahlers. Ein Gegenkonto für den Rest ist nur ein Personen-, Klärungs- oder Transitkonto. Skonto geht auf ein Erlös- oder Aufwandskonto und braucht die Skontoangabe der Rechnung oder eine Begründung im Buchungstext."
+      },
+      {
+       "depth": 0,
+       "text": "Bankabstimmung: Wahlweise nach Buchungsdatum oder nach Bankbuchungstag; die Spalte Zeitversatz zeigt den Unterschied. Sind einem Bankkonto mehrere Sachkonten zugeordnet, wird nicht abgestimmt und nicht gebucht, bis die Zuordnung bereinigt ist."
+      },
+      {
+       "depth": 0,
+       "text": "Liquiditätsvorschau (Buchhaltung): Guthaben von Debitoren werden als gebundene Mittel gezeigt und mindern die projizierten freien Mittel."
+      }
+     ]
     }
    ]
   },
@@ -8251,6 +8298,30 @@
     {
      "t": "p",
      "text": "Bei einem gebuchten Sollstellungslauf steht die Schaltfläche \"Lauf stornieren\" (Recht Buchungen freigeben). Sie verlangt eine Begründung, fragt vor der Ausführung nach und storniert die Sollstellungen durch Gegenbuchungen; die ursprünglichen Buchungen bleiben erhalten. Die Geschäftsführung ist über den Vorgang zu informieren."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "G1 Öffnung: Nachweisart und Gate-Antrag (GAJ-504)",
+     "id": "g1-oeffnung-nachweisart-und-gate-antrag-gaj-504"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite \"G1 Öffnung\" zeigt die Spalte Nachweis je Prüfpunkt die Nachweisart (Testlauf CI, Teststand, Dokument, Verweis) und den Hinweis \"Nachweis Pflicht\", wo ein Nachweis verlangt ist. Der Hinweis \"Bestandene Anhang D Fälle ohne verknüpften Testlauf\" nennt die Zahl der bestandenen Fälle ohne Verweis der Form ci-run:Lauf@Commit; sie gelten nicht als maschinell nachgewiesen. In der Plattformansicht der Freigabestufen listet der Gate-Antrag bestätigte Checklistenpunkte ohne prüfbaren Nachweisverweis in der Notiz als \"Checkliste ohne prüfbaren Nachweis\"; sie sind vor der Entscheidung manuell zu prüfen. Die Anzeige ändert keine Prüfregel. Ob der maschinelle Nachweis für G1 bis G4 Pflicht wird, ist offen (AM10-01) und nicht entschieden."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Rücklastschrift belegen und Forderungen zur Ausbuchung vorschlagen (Welle 24, AN15)",
+     "id": "ruecklastschrift-belegen-und-forderungen-zur-ausbuchung-vorschlagen-welle-24-an15"
+    },
+    {
+     "t": "p",
+     "text": "Bei einer Rücklastschrift erfassen Sie in der Bankrückmeldung des Lastschriftlaufs zusätzlich das Rückgabedatum der Bank, die tatsächlich berechnete Gebühr und den Gebührenbeleg. Der Verweis auf den ursprünglichen Einzug bleibt erhalten. Bereits erfasste Angaben lassen sich ergänzen, aber nicht überschreiben. Beim Import einer camt.054 übernimmt die Plattform den Buchungstag der Rückbelastung als Rückgabedatum. Die Gebühr wird nicht weiterbelastet; mit dem Schalter \"Rücklastschriftgebühr als Weiterbelastungsvorschlag\" erscheint sie in der Abstimmung nur als Vorschlag."
+    },
+    {
+     "t": "p",
+     "text": "Eine Forderung, die nicht mehr eingezogen werden soll, schlagen Sie zur Ausbuchung vor (Grund, Stichtag, Beleg). Der Vorschlag ändert keine Salden. Freigeben kann ihn nur eine zweite Person, wenn der Schalter \"Freigabe von Forderungsausbuchungen\" an und die Freigabestufe G1 offen ist. Die Nebenbuchprüfung zeigt den Posten erst ab dem Stichtag als ausgebucht."
     }
    ]
   },
@@ -11423,6 +11494,16 @@
     {
      "t": "p",
      "text": "Ist Ihre Mitgliedschaft auf einzelne Objekte beschränkt, zeigt der Abgleichbericht nur diese Objekte samt ihren Zeilen und Summen. Hinweise zu fremden Objekten werden ausgeblendet. Die Immoware24 Datei- und Vollimporte wirken mandantenweit und stehen nur Mitgliedern ohne Objektzuordnung zur Verfügung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Abschnitt Stammdaten",
+     "id": "abschnitt-stammdaten"
+    },
+    {
+     "t": "p",
+     "text": "Der geöffnete Bericht enthält, sofern Stammdatenexporte eingelesen sind und der Bericht nicht auf einzelne Objekte eingeschränkt ist, den Abschnitt \"Stammdaten\": je Reporttyp Zeilen, offene Zeilen und fehlende Objekte oder Einheiten sowie Zähler der Plattform. Ohne Stammdatenexporte erscheint ein Hinweis statt des Abschnitts. Auch dieser Abschnitt liest nur."
     }
    ]
   },
@@ -13693,6 +13774,16 @@
     {
      "t": "p",
      "text": "In der Anrufliste bietet jeder nicht eindeutig zugeordnete Anruf (Schreibrecht Kommunikation) die Auswahl der Kandidaten oder die Eingabe einer Kontakt-ID mit \"Zuordnen\"."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Adresshistorie und Stichtag (GAJ-610, Welle 24)",
+     "id": "adresshistorie-und-stichtag-gaj-610-welle-24"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Fachliche Regeln, schaltet der Schalter \"Adresshistorie der Kontakte\" (Berechtigung Kontakte freigeben) die Adresshistorie ein. Standard ist aus: geänderte Anschriften werden wie bisher ersetzt. Bei an bleibt eine geänderte oder entfernte Anschrift als ersetzt mit \"gültig bis\" erhalten. In der Kontaktakte, Reiter Stammdaten, zeigt der Abschnitt \"Adresshistorie\" alle Anschriften mit Gültigkeit; mit einem Stichtag sehen Sie die Anschriften, die an diesem Tag galten. Wie lange frühere Anschriften aufbewahrt werden, ist noch nicht entschieden (Frage AM14-01); Ausschalten löscht nichts."
     }
    ]
   },
@@ -14964,6 +15055,16 @@
     {
      "t": "p",
      "text": "Der tägliche Abgleichbericht enthält zusätzlich den Abschnitt Stammdaten: je Berichtsart die offenen Zeilen der neuesten Datei und übernommene Datensätze, die auf der Plattform nicht mehr vorhanden sind."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Altabrechnungen und Beschlüsse (nur lesend)",
+     "id": "altabrechnungen-und-beschluesse-nur-lesend"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Importe, Migration zeigt der Bereich \"Altabrechnungen und Beschlüsse (nur lesend)\" die übernommenen historischen Abrechnungen je Version, die Beschlusssammlung und den Prüfbericht mit Prüfhinweisen je Objekt. Objekt wählen (oder alle Objekte) und \"Laden\" drücken. Es wird nichts gebucht, korrigiert oder versendet. Ohne übernommene Daten erscheinen Leerzustände. Die Frage nach Exportquelle, Umfang und maßgeblicher Version (AM09-01) bleibt offen."
     }
    ]
   },
@@ -16784,6 +16885,16 @@
     {
      "t": "p",
      "text": "Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die Verwaltungsunterlagen ihrer Gemeinschaft (Umfang Abrechnung, Belege, Verträge, Beschlüsse oder eine Beschreibung) und sehen den Stand ihrer Anfragen. Die Anfrage geht in die Einsichtsanfragen des CRM; Freigabe, Bereitstellung und Ablehnung bleiben bei der Verwaltung. Die Funktion erscheint nur, wenn die Verwaltung den Schalter der Belegeinsicht (Portalverwaltung, Funktionen) eingeschaltet hat. Interne Vermerke der Verwaltung sind im Portal nicht sichtbar."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Fotopflicht beim Zählerstand einstellen (AN02)",
+     "id": "fotopflicht-beim-zaehlerstand-einstellen-an02"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Portalformulare legen Sie mit \"Foto beim Zählerstand\" fest, ob beim Melden eines Zählerstands ein Foto erwartet wird: kein Foto erwartet, Hinweis bei fehlendem Foto (Standard) oder Foto ist Pflicht. Bei Pflicht lehnt das Portal eine Meldung ohne Foto ab. In der Vorschlagsprüfung am Kontakt sehen Sie zu jeder Zählerstandsmeldung die beigefügten Fotos als Link zur Dokumentansicht und den Vermerk, wenn kein Foto beigefügt wurde. Die Entscheidung über eine Fotopflicht liegt beim Betreiber (AM06-01)."
     }
    ]
   },
@@ -19407,11 +19518,31 @@
     },
     {
      "t": "p",
-     "text": "In der Tabelle der Sollbeträge öffnet \"Korrigieren\" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst meldet das System den Konflikt. Die Korrektur eines Zahlungsplans bleibt vorerst der Schnittstelle vorbehalten."
+     "text": "In der Tabelle der Sollbeträge öffnet \"Korrigieren\" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst meldet das System den Konflikt. Die Korrektur eines Zahlungsplans steht seit Welle 24 in der Planliste des Vertrags bereit."
     },
     {
      "t": "p",
      "text": "Im Panel Verbrauchsinformation eines Objekts erfasst \"Zustellung erfassen\" (Recht Objekte bearbeiten) im Ersatzprozess ohne Portal den Weg (Post, E-Mail, persönliche Übergabe), das Datum und einen Nachweis. Die Erfassung versendet nichts und dient dem Nachweis der Zustellung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zahlungsplan korrigieren (GAJ-102, Welle 24)",
+     "id": "zahlungsplan-korrigieren-gaj-102-welle-24"
+    },
+    {
+     "t": "p",
+     "text": "Im Vertragsdetail listet der Abschnitt Zahlungspläne alle Pläne des Vertrags. \"Korrigieren\" (Recht Verträge bearbeiten) öffnet ein Formular für Intervall, Fälligkeitsregel, Tag, Zahlweise, Betragsbasis und Gültigkeit. Ist der Plan bereits Grundlage gebuchter Sollstellungen, lehnt das System die Änderung ab (Konflikt); dann ist ein neuer Plan anzulegen. Die Korrektur bucht nichts."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Versionsverlauf (GAK-207, Welle 24)",
+     "id": "versionsverlauf-gak-207-welle-24"
+    },
+    {
+     "t": "p",
+     "text": "Das Vertragsdetail zeigt unten den Versionsverlauf: alle Versionen mit Gültigkeit, die aktuelle Version markiert und frühere Versionen als Link. Je Version erscheinen die Zahlungszeilen, die gegenüber der Vorversion neu sind oder entfallen. Frühere Versionen bleiben unverändert erhalten."
     }
    ]
   },
@@ -20257,6 +20388,16 @@
     {
      "t": "p",
      "text": "Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläche \"Einheit ...\" für die Einzelabrechnung als PDF-Entwurf. Sie bleibt gesperrt, solange die Freigabestufe G4 geschlossen ist oder die Abrechnung nicht intern freigegeben wurde. Der Abschnitt \"Zuordnungsvorschlag bei Eigentümerwechsel\" lädt auf Klick den Vorschlag, wer das Ergebnis je Einheit trägt, und zeigt Abweichungen zur verwendeten Zuordnung. Der Vorschlag hat keine Buchungswirkung und ist nur bei eingeschaltetem Mandantenschalter abrufbar."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Mehrheitsregel freigeben (Vier Augen)",
+     "id": "mehrheitsregel-freigeben-vier-augen"
+    },
+    {
+     "t": "p",
+     "text": "Ist unter Einstellungen, Fachliche Regeln der Schalter „Vier-Augen-Freigabe der Mehrheitsregeln“ eingeschaltet (Standard aus), erscheint eine neu angelegte Mehrheitsregel auf der Versammlungsseite als „Entwurf“. Eine zweite Person mit Freigaberecht gibt sie mit „Freigeben“ frei. Bis dahin kann die Regel keinem Tagesordnungspunkt zugeordnet und nicht ausgezählt werden."
     }
    ]
   }

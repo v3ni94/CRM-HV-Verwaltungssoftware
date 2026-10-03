@@ -800,6 +800,11 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     hoa_circular_lower_majority_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # AN06 / GAJ-602 (migration 0453): four eyes approval of meeting majority rules, default
+    # off (behaviour before AN06). Model question AM02-01 stays open.
+    hoa_majority_rule_four_eyes: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Einladungsfrist in Wochen (M25-03, migration 0187): draft default 3, source status
     # "to be verified"; the check only warns and asks for a documented reason.
     hoa_invitation_weeks: Mapped[int] = mapped_column(

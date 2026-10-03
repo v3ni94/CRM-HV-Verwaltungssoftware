@@ -637,3 +637,10 @@ Unter Bank, Zahlungen bietet Bankrückmeldung erfassen zusätzlich die Status Au
 ## Gespeicherte Zahllauf-Vorschauen filtern
 
 Auf der Seite Zahllauf lassen sich die gespeicherten Vorschauen nach Stichtag und Auslöser (manuell, wöchentlich, fehlgeschlagen) eingrenzen. Eine Filterkombination kann unter einem Namen gespeichert werden und steht danach als Schnellauswahl über der Liste bereit. Das Filtern ändert keine Daten und löst keine Zahlung aus.
+
+## Massenbestätigung, Restbetrag, Skonto und Bankabstimmung (Welle 24)
+
+- Massenbestätigung: Die Vorschau zeigt Anzahl und Summen je Rechtsträger. Gebucht wird nur, was die Vorschau gezeigt hat; ändert sich ein Umsatz dazwischen oder ist die Vorschau älter als 15 Minuten, wird sie neu erzeugt.
+- Restbetrag einer Überzahlung bleibt Guthaben des Zahlers. Ein Gegenkonto für den Rest ist nur ein Personen-, Klärungs- oder Transitkonto. Skonto geht auf ein Erlös- oder Aufwandskonto und braucht die Skontoangabe der Rechnung oder eine Begründung im Buchungstext.
+- Bankabstimmung: Wahlweise nach Buchungsdatum oder nach Bankbuchungstag; die Spalte Zeitversatz zeigt den Unterschied. Sind einem Bankkonto mehrere Sachkonten zugeordnet, wird nicht abgestimmt und nicht gebucht, bis die Zuordnung bereinigt ist.
+- Liquiditätsvorschau (Buchhaltung): Guthaben von Debitoren werden als gebundene Mittel gezeigt und mindern die projizierten freien Mittel.

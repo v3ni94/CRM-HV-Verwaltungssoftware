@@ -20,6 +20,7 @@ async def attach_documents(
     """Fügt die Dokumente als Anhänge an ``msg`` an; gibt die Anzahl zurück."""
     if not document_ids:
         return 0
+    from mhvp.documents import payment_files
     from mhvp.documents import services as document_services
     from mhvp.documents.blobs import BlobStore
     from mhvp.documents.models import Document, StorageKind
@@ -29,6 +30,11 @@ async def attach_documents(
         document = await session.get(Document, document_id)
         if document is None:
             raise ProblemError(ErrorCodes.CONFLICT, detail=f"Anhang nicht gefunden: {document_id}")
+        # GAJ-301 (AN14-01): a payment file leaves the platform as a mail attachment only
+        # with release gate G2, like on the document download routes.
+        await payment_files.ensure_released(
+            session, document, document.tenant_id, request.app.state.release_gate_resolver
+        )
         if document.storage is StorageKind.GOOGLE_DRIVE:
             data = await document_services.download_from_drive(session, request, document)
         else:

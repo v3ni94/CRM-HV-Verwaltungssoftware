@@ -247,3 +247,10 @@ Die Seite `/importe/immoware24` zeigt unter den benötigten Exporten die gemerkt
 - Report types `historical_statement` and `resolution` (`statement_reports.py`, tables `migrated_statement` and `migrated_resolution` in `history_models.py`, migration 0450). Filing and checking only: no posting, no receivable from a stated result, no dispatch. Versions are separate rows; equal rows `unchanged`, different `conflict`; undo through the import run.
 - Read endpoints `GET /imports/immoware24/history/statements`, `/resolutions` and `/statements/check` (check report with codes `resolution_missing`, `resolution_ref_empty`, `unit_unknown`, `several_versions`), permission `accounting:read`, property scope applied.
 - Reconciliation report: section `master_data` (`reconciliation.master_data_section`) with row status counters and missing entities per report type of the newest file (master data, deposits, allocation keys, meters, SEPA, service providers, statements, resolutions); the report also runs without journal or bank rows; scoped members get `master_data: null`. Rule: `docs/rules/AM09-altabrechnungen-beschluesse.md`, open question AM09-01.
+
+## Eigentumszeiträume (AN09, Regel PROP-OWNER-PERIOD)
+
+All paths that create a `PropertyOwner` (contract import, assignment landlord, full contract
+import, AI property import) call `properties.services.owner_period_problems`. When the contract
+import ends a previous owner, the recorder stores `property_owner_end:<old>:<new>`; undo restores
+the old `valid_to` unless it was changed after the import or the restore would overlap.

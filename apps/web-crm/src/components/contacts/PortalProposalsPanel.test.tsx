@@ -79,4 +79,16 @@ describe("PortalProposalsPanel", () => {
     const link = await screen.findByTestId("receipt-draft-link");
     expect(link).toHaveAttribute("href", "/rechnungen/belegeingang?entwurf=dr1");
   });
+
+  it("shows meter photos and the missing photo flag of meter reading proposals (AN02)", async () => {
+    const base = { kind: "meter_reading", status: "proposed", contact_id: CONTACT, created_at: "2026-09-30T09:00:00Z", decision_note: null };
+    const withPhoto = { ...base, id: "mr1", payload: { meter_id: "x", value: "12.5", read_at: "2026-09-30", document_ids: ["doc1", "doc2"], photo_missing: false } };
+    const without = { ...base, id: "mr2", payload: { meter_id: "x", value: "13", read_at: "2026-09-30", document_ids: [], photo_missing: true } };
+    fetchMock.mockResolvedValueOnce(jsonResponse([withPhoto, without])).mockResolvedValueOnce(jsonResponse([]));
+    renderIntl(<PortalProposalsPanel contactId={CONTACT} canDecide />);
+    const links = await screen.findAllByTestId("meter-photo-link");
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/dokumente/doc1", "/dokumente/doc2"]);
+    expect(screen.getAllByTestId("meter-photo-missing")).toHaveLength(1);
+    expect(screen.getByText(/Stand 12.5/)).toBeInTheDocument();
+  });
 });

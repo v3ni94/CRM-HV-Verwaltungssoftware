@@ -18,6 +18,7 @@ interpreted here.
 import hashlib
 import uuid
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from xml.etree import ElementTree as ET
@@ -53,6 +54,8 @@ class StatusLine:
     reason_code: str | None
     amount: Decimal | None
     original_message_id: str | None = None
+    # AN15 (GAK-101): booking date of the camt.054 entry, recorded as the return date.
+    booked_on: date | None = None
 
 
 @dataclass
@@ -62,6 +65,16 @@ class ParsedReport:
     original_message_id: str | None
     group_status: str | None
     lines: list[StatusLine]
+
+
+def _date(value: str | None) -> date | None:
+    """ISO date of a camt element; None when missing or malformed (no guessing)."""
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
 
 
 def _local(tag: str) -> str:
@@ -171,6 +184,7 @@ def _parse_camt054(body: ET.Element) -> ParsedReport:
             direction = _text(entry, "CdtDbtInd")
             reversal = (_text(entry, "RvslInd") or "").lower() == "true"
             entry_amount = _amount(_text(entry, "Amt"))
+            booked_on = _date(_text(entry, "BookgDt", "Dt"))
             details = [
                 tx for d in _children(entry, "NtryDtls") for tx in _children(d, "TxDtls")
             ] or [entry]
@@ -195,6 +209,7 @@ def _parse_camt054(body: ET.Element) -> ParsedReport:
                         code=direction,
                         reason_code=reason,
                         amount=amount,
+                        booked_on=booked_on if returned else None,
                     )
                 )
     return ParsedReport(
@@ -270,6 +285,7 @@ async def _apply_debit(
             collected_amount=amount,
             user_id=user_id,
             source="bank_status_report",
+            returned_on=line.booked_on if status is DirectDebitOrderStatus.RETURNED else None,
         )
     except ProblemError as exc:
         return f"nicht übernommen: {exc.detail}"

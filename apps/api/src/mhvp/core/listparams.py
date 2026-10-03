@@ -32,6 +32,9 @@ from sqlalchemy.orm import InstrumentedAttribute
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 
 MAX_FILTER_VALUES = 100
+# Section 12 (GAK-301): page_size and limit of every list are capped at 200. Larger volumes
+# belong to export or bulk endpoints; a guard test reads the OpenAPI schema.
+MAX_PAGE_SIZE = 200
 
 
 @dataclass(frozen=True, slots=True)

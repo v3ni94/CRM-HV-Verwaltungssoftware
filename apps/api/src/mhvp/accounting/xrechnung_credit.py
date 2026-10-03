@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, Request, Response
 
 from mhvp.accounting import xrechnung as xr
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus
+from mhvp.accounting.response_models import AccountingEInvoiceCheckOut
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -149,6 +150,7 @@ async def credit_note_xml(
 @router.get(
     "/admin-fee-invoices/{invoice_id}/xrechnung-credit-note/check",
     summary="Strukturprüfung der Gutschrift-XRechnung",
+    response_model=AccountingEInvoiceCheckOut,
 )
 async def credit_note_check(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(xr.READ)

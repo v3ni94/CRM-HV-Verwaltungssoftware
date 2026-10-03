@@ -113,6 +113,7 @@ async def liquidity(session: AsyncSession, ledger: Ledger, as_of: date) -> dict[
         ),
         Decimal("0.00"),
     )
+    debtor_credits = await debtor_credit_balances(session, ledger, as_of)
     return {
         "ledger_id": ledger.id,
         "as_of": as_of,
@@ -123,9 +124,36 @@ async def liquidity(session: AsyncSession, ledger: Ledger, as_of: date) -> dict[
         "segregated_deposits": deposit,
         "expected_inflows": inflow,
         "expected_outflows": outflow,
-        "projected_free_funds": free - outflow,
-        "note": "Erwartete Einzahlungen sind keine vorhandene Liquidität (nicht projiziert).",
+        # GAK-102 (7.4 Nr. 5, 7.5): credit balances of debtors (overpayments) are bound funds,
+        # owed back or to be offset, never free liquidity.
+        "debtor_credits": debtor_credits,
+        "projected_free_funds": free - outflow - debtor_credits,
+        "note": (
+            "Erwartete Einzahlungen sind keine vorhandene Liquidität (nicht projiziert). "
+            "Guthaben von Debitoren aus Überzahlungen sind gebundene Mittel."
+        ),
     }
+
+
+async def debtor_credit_balances(session: AsyncSession, ledger: Ledger, as_of: date) -> Decimal:
+    """GAK-102: sum of credit balances (credit above debit) on debtor accounts at the key date."""
+    balance = func.sum(JournalLine.debit) - func.sum(JournalLine.credit)
+    rows = (
+        await session.execute(
+            select(balance)
+            .select_from(JournalLine)
+            .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
+            .join(LedgerAccount, LedgerAccount.id == JournalLine.account_id)
+            .where(
+                LedgerAccount.ledger_id == ledger.id,
+                LedgerAccount.category == AccountCategory.DEBTOR,
+                JournalEntry.status == EntryStatus.POSTED,
+                JournalEntry.booking_date <= as_of,
+            )
+            .group_by(JournalLine.account_id)
+        )
+    ).scalars()
+    return sum((-Decimal(b) for b in rows if b is not None and b < 0), Decimal("0.00"))
 
 
 async def payments_by_debtor(

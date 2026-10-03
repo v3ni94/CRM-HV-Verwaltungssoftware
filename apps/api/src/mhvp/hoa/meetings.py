@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
-from mhvp.core.clock import local_today
+from mhvp.core.clock import local_date, local_today
 from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -239,6 +239,26 @@ def _ensure_rule_in_force(rule: MajorityRule, day: date) -> None:
                 + f", Versammlungstag {day:%d.%m.%Y}."
             ),
         )
+
+
+def meeting_day(meeting: Meeting) -> date:
+    """AN06 (AN14-09): business date of the meeting in Europe/Berlin, not the UTC date."""
+    return local_date(meeting.scheduled_at)
+
+
+def _ensure_rule_approved(rule: MajorityRule) -> None:
+    """AN06 / GAJ-602: a rule created under the four eyes switch applies only once a second
+    person approved it. Rules without requires_approval keep the behaviour before AN06."""
+    if rule.requires_approval and rule.approved_by is None:
+        raise ProblemError(
+            ErrorCodes.HOA_MAJORITY_RULE_NOT_APPROVED,
+            detail=f"Mehrheitsregel „{rule.label}“ ist noch nicht freigegeben.",
+        )
+
+
+def _ensure_rule_usable(rule: MajorityRule, day: date) -> None:
+    _ensure_rule_approved(rule)
+    _ensure_rule_in_force(rule, day)
 
 
 class InviteIn(MeetingBaseIn):
@@ -562,7 +582,7 @@ async def add_agenda(
             rule = await session.get(MajorityRule, body.rule_id)
             if rule is None or rule.legal_entity_id != meeting.legal_entity_id:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Regel gehört nicht zur GdWE.")
-            _ensure_rule_in_force(rule, meeting.scheduled_at.date())
+            _ensure_rule_usable(rule, meeting_day(meeting))
         _validate_item_principle(body.voting_principle, body.voting_principle_basis)
         row = AgendaItem(
             tenant_id=principal.tenant_id,
@@ -869,10 +889,10 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
     from mhvp.contracts.models import Contract
 
     prop = await _hoa_property(session, meeting.legal_entity_id)
-    day = meeting.scheduled_at.date()
+    day = meeting_day(meeting)
     rule = await session.get(MajorityRule, item.rule_id) if item.rule_id else None
     if rule is not None:
-        _ensure_rule_in_force(rule, day)
+        _ensure_rule_usable(rule, day)
     principle = rule.principle if rule else (item.voting_principle or meeting.voting_principle)
     votes = (await session.scalars(select(Vote).where(Vote.agenda_item_id == item.id))).all()
     sums = {"yes": ZERO, "no": ZERO, "abstain": ZERO}
@@ -2124,12 +2144,154 @@ async def create_rule(
         raise ProblemError(ErrorCodes.VALIDATION, detail="Regel ohne Schwelle.")
     async with tenant_tx(request, principal) as session:
         await _hoa_property(session, body.legal_entity_id)
+        four_eyes = await majority_rule_four_eyes_enabled(session, principal.tenant_id)
         row = MajorityRule(
-            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            requires_approval=four_eyes,
+            **body.model_dump(),
         )
         session.add(row)
         await session.flush()
-        return {"id": row.id, **body.model_dump()}
+        return {"id": row.id, **body.model_dump(), **_rule_approval(row)}
+
+
+def _rule_approval(row: MajorityRule) -> dict[str, Any]:
+    """AN06: approval state; status draft only for rules created under the switch."""
+    return {
+        "requires_approval": row.requires_approval,
+        "approval_status": (
+            "draft" if row.requires_approval and row.approved_by is None else "approved"
+        ),
+        "created_by": row.created_by,
+        "approved_by": row.approved_by,
+        "approved_at": row.approved_at,
+    }
+
+
+async def majority_rule_four_eyes_enabled(session: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    return bool(
+        await session.scalar(
+            select(TenantSettings.hoa_majority_rule_four_eyes).where(
+                TenantSettings.tenant_id == tenant_id
+            )
+        )
+    )
+
+
+HOA_APPROVE = require_permission("hoa:approve")
+
+
+class HoaMajorityRuleApprovalOut(BaseModel):
+    """AN06 (GAJ-602): result of the approval of a meeting majority rule."""
+
+    model_config = ConfigDict(extra="allow")
+    id: uuid.UUID
+    requires_approval: bool
+    approval_status: str
+    created_by: uuid.UUID | None = None
+    approved_by: uuid.UUID | None = None
+    approved_at: datetime | None = None
+
+
+@router.post(
+    "/majority-rules/{rule_id}/approve",
+    summary="Mehrheitsregel freigeben (Vier Augen, AN06)",
+    response_model=HoaMajorityRuleApprovalOut,
+)
+async def approve_rule(
+    rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(HOA_APPROVE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(MajorityRule).where(MajorityRule.id == rule_id).with_for_update()
+        )
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_session_legal_entity_allowed(session, row.legal_entity_id)
+        if not row.requires_approval or row.approved_by is not None:
+            raise ProblemError(
+                ErrorCodes.HOA_MAJORITY_RULE_SELF_APPROVAL,
+                detail="Regel ist bereits freigegeben oder braucht keine Freigabe.",
+            )
+        if row.created_by == principal.user_id:
+            raise ProblemError(
+                ErrorCodes.HOA_MAJORITY_RULE_SELF_APPROVAL,
+                detail="Die anlegende Person kann die eigene Regel nicht freigeben.",
+            )
+        row.approved_by = principal.user_id
+        row.approved_at = datetime.now(UTC)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa_majority_rule_meeting.approved",
+            entity_type="majority_rule",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"label": row.label},
+        )
+        await session.flush()
+        return {"id": row.id, **_rule_approval(row)}
+
+
+class HoaMajorityFourEyesIn(BaseModel):
+    enabled: bool
+
+
+class HoaMajorityFourEyesOut(BaseModel):
+    """AN06 (GAJ-602): tenant switch hoa_majority_rule_four_eyes."""
+
+    model_config = ConfigDict(extra="allow")
+    enabled: bool
+
+
+@router.get(
+    "/majority-rule-four-eyes",
+    summary="Vier-Augen-Freigabe der Mehrheitsregeln (Schalter)",
+    response_model=HoaMajorityFourEyesOut,
+    dependencies=[Depends(strict_query)],
+)
+async def get_majority_four_eyes(
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:read")),
+) -> dict[str, bool]:
+    async with tenant_tx(request, principal) as session:
+        return {"enabled": await majority_rule_four_eyes_enabled(session, principal.tenant_id)}
+
+
+@router.put(
+    "/majority-rule-four-eyes",
+    summary="Vier-Augen-Freigabe der Mehrheitsregeln setzen",
+    response_model=HoaMajorityFourEyesOut,
+)
+async def put_majority_four_eyes(
+    body: HoaMajorityFourEyesIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> dict[str, bool]:
+    """AN06: default off (behaviour before AN06). Model question AM02-01 stays open."""
+    from mhvp.accounting.audit_events import record_change
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        old = row.hoa_majority_rule_four_eyes
+        row.hoa_majority_rule_four_eyes = body.enabled
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa_majority_rule_four_eyes.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            before={"enabled": old},
+            after={"enabled": body.enabled},
+        )
+        return {"enabled": body.enabled}
 
 
 @router.get(
@@ -2156,6 +2318,7 @@ async def list_rules(
                 "source": r.source,
                 "valid_from": r.valid_from,
                 "valid_to": r.valid_to,
+                **_rule_approval(r),
             }
             for r in rows.all()
         ]

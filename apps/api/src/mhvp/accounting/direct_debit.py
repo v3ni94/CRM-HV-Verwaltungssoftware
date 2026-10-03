@@ -614,6 +614,12 @@ async def approve(
     valid = await valid_approvals(session, run, orders)
     if any(a.user_id == user_id for a in valid):
         return run  # repeated click (B08)
+    # GAK-106 (7.5, 6.9.9, D36): no self approval through a second account of the same person.
+    from mhvp.banking.payments import ensure_different_person_in_tenant
+
+    await ensure_different_person_in_tenant(
+        session, run.tenant_id, user_id, {a.user_id for a in valid}
+    )
     session.add(
         DirectDebitApproval(
             tenant_id=run.tenant_id,

@@ -31,6 +31,7 @@ from tests.integration.test_m6_documents import COMPANY
 from tests.integration.test_m8_import import BUCKET
 from tests.integration.test_m8_import import _settings as s3_settings
 from tests.integration.test_m24_hoa import H, OpenG4, _ok
+from tests.runtime_limits import scaled_limit
 
 pytestmark = [
     pytest.mark.integration,
@@ -84,7 +85,7 @@ def test_receivable_run_with_1000_contracts_below_two_minutes(
         f"PERF receivable_run contracts={CONTRACTS} items={CONTRACTS * 2} "
         f"preview={preview_s:.1f}s post={post_s:.1f}s total={preview_s + post_s:.1f}s"
     )
-    assert preview_s + post_s < RUN_LIMIT_SECONDS
+    assert preview_s + post_s < scaled_limit(RUN_LIMIT_SECONDS)
 
 
 async def _world(settings: Any) -> World:
@@ -156,4 +157,4 @@ def test_statement_output_of_100_units_below_one_minute(database: Database, redi
         f"PERF statement_output units={UNITS} total_pdf={total_s:.1f}s "
         f"unit_pdfs={units_s:.1f}s unit_pages={pages} all={total_s + units_s:.1f}s"
     )
-    assert total_s + units_s < OUTPUT_LIMIT_SECONDS
+    assert total_s + units_s < scaled_limit(OUTPUT_LIMIT_SECONDS)

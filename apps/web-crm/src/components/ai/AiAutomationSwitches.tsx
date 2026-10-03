@@ -9,6 +9,9 @@ import { ui } from "@/lib/ui";
 type Automation = {
   rent_increase_check: boolean;
   batch_mail_classification: boolean;
+  realtime_mail_classification?: boolean;
+  master_data_change_proposals?: boolean;
+  automation_ai_task?: boolean;
   provider_released: boolean;
   blocked_reason: string | null;
 };
@@ -29,7 +32,16 @@ export function AiAutomationSwitches() {
     });
   }, []);
 
-  const change = async (patch: Partial<Pick<Automation, "rent_increase_check" | "batch_mail_classification">>) => {
+  const change = async (patch: Partial<
+      Pick<
+        Automation,
+        | "rent_increase_check"
+        | "batch_mail_classification"
+        | "realtime_mail_classification"
+        | "master_data_change_proposals"
+        | "automation_ai_task"
+      >
+    >) => {
     setBusy(true);
     setError(null);
     const res = await bff<Automation>("/api/bff/ai/automation", { method: "PUT", body: JSON.stringify(patch) });
@@ -58,6 +70,33 @@ export function AiAutomationSwitches() {
           onChange={(e) => void change({ batch_mail_classification: e.target.checked })}
         />
         {t("batchMail")}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={state?.realtime_mail_classification ?? true}
+          disabled={busy || !state}
+          onChange={(e) => void change({ realtime_mail_classification: e.target.checked })}
+        />
+        {t("realtimeMail")}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={state?.master_data_change_proposals ?? true}
+          disabled={busy || !state}
+          onChange={(e) => void change({ master_data_change_proposals: e.target.checked })}
+        />
+        {t("masterData")}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={state?.automation_ai_task ?? true}
+          disabled={busy || !state}
+          onChange={(e) => void change({ automation_ai_task: e.target.checked })}
+        />
+        {t("ruleAiTask")}
       </label>
       <p className="text-xs text-muted">{t("hint")}</p>
       {state && !state.provider_released ? (

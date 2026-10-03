@@ -157,6 +157,35 @@ describe("MajorityRules", () => {
     );
     expect(screen.getByText(/mehr als 66,67 %, mindestens 50 % aller MEA/)).toBeInTheDocument();
   });
+
+  it("offers the four eyes approval only for draft rules (AN06)", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "r2" }));
+    const base = {
+      principle: "head",
+      share_of_votes_cast: "0.5",
+      strictly_greater: true,
+      min_mea_share_of_all: null,
+      unanimous: false,
+      source: "Testfundstelle",
+      valid_from: "2020-01-01",
+      valid_to: null,
+    };
+    renderIntl(
+      <MajorityRules
+        legalEntityId={LE}
+        rules={[
+          { ...base, id: "r1", label: "Alt", approval_status: "approved" },
+          { ...base, id: "r2", label: "Neu", approval_status: "draft" },
+        ]}
+      />,
+    );
+    expect(screen.queryByTestId("rule-draft-r1")).toBeNull();
+    expect(screen.getByTestId("rule-draft-r2")).toHaveTextContent("Entwurf");
+    await userEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/bff/hoa/majority-rules/r2/approve");
+  });
 });
 
 describe("HoaCreate meeting", () => {

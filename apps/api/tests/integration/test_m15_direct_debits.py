@@ -903,3 +903,65 @@ def test_ai03_direct_debit_approval_concurrency(
     assert [code for code, _ in results] == [200, 200], results
     assert all(b["approvals"] == 2 and b["status"] == "approved" for _, b in results)
     assert _ok(client.get(f"{D}/{run_id}", headers=h))["approvals"] == 2
+
+
+async def _an17_twin_user(settings: Any, world: World, name: str, role: str) -> None:
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        uid = await services.create_user(
+            factory, email=world.email(name), display_name=name, password=PASSWORD
+        )
+        world.users[name] = uid
+        await services.add_member(
+            factory, tenant_id=world.tenant_a, user_id=uid, role_codes=[role], actor_user_id=None
+        )
+    finally:
+        await engine.dispose()
+
+
+def _an17_link_contact(world: World, name: str, contact_id: str) -> None:
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(world.app_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE membership SET contact_id = :c WHERE user_id = :u AND tenant_id = :t"),
+            {"c": contact_id, "u": world.users[name], "t": world.tenant_a},
+        )
+    engine.dispose()
+
+
+def test_an17_direct_debit_no_self_approval_by_second_account(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """GAK-106 (7.5, 6.9.9, D36): a second account of the same person (same linked contact) is
+    no second approver of a direct debit run; another person still completes the approval."""
+    client, _ = clients
+    h, acc_user, run_id = _ai03_draft_run(client, world, "717")
+    asyncio.run(
+        _an17_twin_user(_settings(database, redis_url), world, "ddtwin", "accountant_banking")
+    )
+    person = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "person", "first_name": "Timo", "last_name": f"DD {RUN}"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _an17_link_contact(world, "ddadmin", person)
+    _an17_link_contact(world, "ddtwin", person)
+    twin = bearer(login(client, world, "ddtwin"))
+    assert _ok(client.post(f"{D}/{run_id}/approve", headers=h))["approvals"] == 1
+    blocked = client.post(f"{D}/{run_id}/approve", headers=twin)
+    assert blocked.status_code == 403, blocked.text
+    assert blocked.json()["code"] == "MHVP-GATE-0002"
+    state = _ok(client.get(f"{D}/{run_id}", headers=h))
+    assert state["approvals"] == 1
+    assert state["status"] == "draft"
+    approved = _ok(client.post(f"{D}/{run_id}/approve", headers=acc_user))
+    assert approved["approvals"] == 2
+    assert approved["status"] == "approved"

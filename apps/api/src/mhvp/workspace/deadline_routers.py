@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Membership, MembershipStatus, User
 from mhvp.workspace import deadlines, jobs
@@ -254,7 +254,7 @@ async def list_deadline_entries(
     source_type: str | None = Query(default=None, pattern=SOURCE_PATTERN),
     source_id: uuid.UUID | None = None,
     status: str = Query(default="open", pattern="^(open|done|all)$"),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(require_permission("tickets:read")),
 ) -> list[DeadlineEntryOut]:
     query = select(DeadlineEntry)

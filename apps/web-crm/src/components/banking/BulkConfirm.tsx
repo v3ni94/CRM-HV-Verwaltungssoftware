@@ -16,6 +16,8 @@ type PreviewOut = {
   total: string;
   legal_entities: string[];
   exceptions: string[];
+  /** GAK-105: token binding the booking call to this preview (expires). */
+  preview_id?: string;
   allocations: Record<string, { open_item_id: string; amount: string; allocation_reason: string }[]>;
 };
 type ResultOut = {
@@ -114,7 +116,7 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
     setError(null);
     const res = await bff<ResultOut>("/api/bff/banking/bulk-confirm", {
       method: "POST",
-      body: JSON.stringify({ items: bookable, preview: false }),
+      body: JSON.stringify({ items: bookable, preview: false, preview_id: preview?.preview_id }),
     });
     setBusy(false);
     if (res.ok) setResult(res.data);

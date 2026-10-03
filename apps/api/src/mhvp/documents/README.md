@@ -289,3 +289,7 @@ answer 404; `queue_mirrors` queues no DMS mirror and the mirror job marks older 
 (created on demand); `POST /document-categories/ensure-defaults` aligns older files. Events
 `direct_debit_run.file_generated` and `.file_downloaded` carry no document id. Rule
 `docs/rules/GAJ-301-zahlungsdateien.md`.
+
+### Zahlungsdateien in Exporten (AN08, Rest AM01)
+
+pain.001 wird bei der Erzeugung direkt in der Kategorie `payment_file` abgelegt. `payment_files.content_released(tenant_id)` prüft G2 über den Job-Resolver (fail closed); Mandantenvollexport (`platform/export_job`) und Objektakte-Export halten den Inhalt von Zahlungsdateien bei geschlossenem G2 zurück und weisen sie aus (Manifest `documents.withheld`, Übergabeprotokoll). Regel: docs/rules/GAJ-301-zahlungsdateien.md.

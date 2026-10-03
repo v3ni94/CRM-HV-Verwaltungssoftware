@@ -588,4 +588,20 @@ describe("AutomationAdmin event catalogue (GAH-307)", () => {
     await userEvent.type(input, "contract.created");
     expect(screen.queryByText(/nicht ausgelöst/)).toBeNull();
   });
+
+  it("flags legacy ai_task rules without ai:approve editor", () => {
+    renderIntl(
+      <AutomationAdmin
+        initialRules={[
+          { ...rule, id: "r-ai", name: "KI Regel", needs_ai_approval: true },
+          { ...rule, id: "r-ok", name: "Ohne Hinweis" },
+        ]}
+        initialRuns={[]}
+        pickers={pickers}
+        canManage={true}
+      />,
+    );
+    expect(screen.getAllByTestId("rule-needs-ai-approval")).toHaveLength(1);
+    expect(screen.getByText("KI-Freigabe fehlt")).toBeInTheDocument();
+  });
 });

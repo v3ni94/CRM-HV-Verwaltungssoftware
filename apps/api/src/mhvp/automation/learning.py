@@ -55,7 +55,7 @@ from mhvp.automation.models import (
 from mhvp.automation.rules import is_automation_event
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import DomainEvent, emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 log = logging.getLogger(__name__)
@@ -900,7 +900,7 @@ def proposal_out(
 async def list_proposals(
     request: Request,
     status: StatusFilter = Query(default="proposed"),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[RuleProposalOut]:
     async with tenant_tx(request, principal) as session:

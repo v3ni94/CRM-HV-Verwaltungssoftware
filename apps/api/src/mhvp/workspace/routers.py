@@ -29,7 +29,7 @@ from mhvp.communication import gcal, gmail
 from mhvp.communication.models import Mailbox, MailboxUser
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import jobs, links, services
 from mhvp.workspace import ticket_analytics as ticket_analytics_module
@@ -910,7 +910,7 @@ async def deadlines(
     status: str = Query(default="open", pattern="^(open|done|all)$"),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(member),
 ) -> list[DeadlineOut]:
     """Only kinds the caller may read (contracts, properties, accounting, documents). Own and

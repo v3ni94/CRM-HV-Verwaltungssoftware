@@ -35,6 +35,13 @@ export type Report = ReportSummary & {
   warnings: string[];
   properties: { number: string; name: string | null; on_platform: boolean; compared: number; deviations: number }[];
   lines: ReportLine[];
+  master_data?: MasterData | null;
+};
+
+export type MasterData = {
+  types: { report_type: string; rows: number; open_rows: number; missing_entities: number; deviates: boolean }[];
+  platform: Record<string, number>;
+  open_differences: number;
 };
 
 /** Reconciliation reports of the parallel operation (A68): list, manual run, detail with
@@ -180,6 +187,45 @@ export function ReconciliationReports({ canCreate }: { canCreate: boolean }) {
               </ul>
             </div>
           ) : null}
+          {selected.master_data ? (
+            <div data-testid="reconciliation-master-data">
+              <h3 className="text-sm font-medium">{t("masterTitle")}</h3>
+              <p className={selected.master_data.open_differences > 0 ? ui.alert : ui.notice}>
+                {t("masterOpen", { count: selected.master_data.open_differences })}
+              </p>
+              <div className="overflow-x-auto">
+                <table className={ui.table}>
+                  <thead>
+                    <tr>
+                      <th>{t("masterType")}</th>
+                      <th className="text-right">{t("masterRows")}</th>
+                      <th className="text-right">{t("masterOpenRows")}</th>
+                      <th className="text-right">{t("masterMissing")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.master_data.types.map((m) => (
+                      <tr key={m.report_type} className={m.deviates ? "font-medium" : undefined}>
+                        <td>{m.report_type}</td>
+                        <td className="text-right">{m.rows}</td>
+                        <td className="text-right">{m.open_rows}</td>
+                        <td className="text-right">{m.missing_entities}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className={ui.help}>
+                {Object.entries(selected.master_data.platform)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(", ")}
+              </p>
+            </div>
+          ) : (
+            <p className={ui.help} data-testid="reconciliation-master-empty">
+              {t("masterEmpty")}
+            </p>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={onlyDeviations} onChange={(event) => setOnlyDeviations(event.target.checked)} />
             {t("onlyDeviations")}

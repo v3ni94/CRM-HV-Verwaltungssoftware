@@ -13,7 +13,7 @@ from sqlalchemy import select
 from mhvp.accounting import period_lock as svc
 from mhvp.accounting.models import PeriodLock
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/accounting/period-locks", tags=["Buchhaltung"])
@@ -44,7 +44,7 @@ async def list_locks(
     ledger_id: uuid.UUID | None = None,
     property_id: uuid.UUID | None = None,
     active: bool | None = None,
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(0, ge=0),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[svc.PeriodLockOut]:

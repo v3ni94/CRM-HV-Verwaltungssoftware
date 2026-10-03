@@ -31,7 +31,7 @@ export function LanguageSwitch({ className = "", persist = true }: { className?:
       <select
         value={locale}
         onChange={(event) => void change(event.target.value)}
-        className="min-h-9 rounded-full border border-border bg-surface px-2 text-xs text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        className="min-h-11 pointer-fine:min-h-9 rounded-full border border-border bg-surface px-2 text-xs text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         {SUPPORTED_LOCALES.map((code) => (
           <option key={code} value={code} lang={code}>

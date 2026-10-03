@@ -8,6 +8,12 @@
 #       pg_dump runs inside the postgres container; no client tools on the server needed.
 # Optional:
 #   BACKUP_OBJECTSTORE_VOLUME=mhvp_objectstore-data  also archives the document store volume
+#   BACKUP_JOURNAL_CMD="docker compose ... exec -T api python -m mhvp.documents.export_deletions"
+#       Deletion journal (D47, GAK-405): exported with every dump as mhvp-deletions-<STAMP>.json,
+#       encrypted like the dump and copied off-site with it. Default in compose mode:
+#       $BACKUP_COMPOSE exec -T api python -m mhvp.documents.export_deletions. Without a command
+#       the backup is refused (exit 3), unless BACKUP_SKIP_JOURNAL=1 is set on purpose.
+#   BACKUP_JOURNAL_SINCE=2000-01-01                   start of the exported journal (ISO date)
 #   BACKUP_REMOTE=user@host:/path                    copies the new files off the server (rsync)
 #   ALERT_WEBHOOK_URL=https://...                    on any failure a short JSON message is posted
 #                                                    there (same target as healthcheck.sh, M9-04;
@@ -47,6 +53,15 @@ if [[ -z "${BACKUP_AGE_RECIPIENT:-}" && "${BACKUP_ALLOW_UNENCRYPTED:-0}" != "1" 
   exit 3
 fi
 
+JOURNAL_CMD="${BACKUP_JOURNAL_CMD:-}"
+if [[ -z "$JOURNAL_CMD" && -n "${BACKUP_COMPOSE:-}" ]]; then
+  JOURNAL_CMD="$BACKUP_COMPOSE exec -T api python -m mhvp.documents.export_deletions"
+fi
+if [[ -z "$JOURNAL_CMD" && "${BACKUP_SKIP_JOURNAL:-0}" != "1" ]]; then
+  echo "backup: BACKUP_JOURNAL_CMD missing; the deletion journal must be backed up (D47, 7.11)" >&2
+  exit 3
+fi
+
 # Writes stdin to $1 (encrypted with age when a recipient is set) plus a checksum file.
 store() {
   local out="$1"
@@ -67,6 +82,14 @@ if [[ -n "${BACKUP_COMPOSE:-}" ]]; then
     | store "$BACKUP_DIR/mhvp-$STAMP.dump"
 else
   pg_dump --format=custom --no-owner --no-privileges "$PGDATABASE" | store "$BACKUP_DIR/mhvp-$STAMP.dump"
+fi
+
+if [[ -n "$JOURNAL_CMD" ]]; then
+  # Deletion journal next to the dump (D47): after a total loss of the database it is the only
+  # record of lawful deletions made after the dump. A failing export fails the backup.
+  # shellcheck disable=SC2086 # the journal command is a command line on purpose
+  $JOURNAL_CMD --since "${BACKUP_JOURNAL_SINCE:-2000-01-01}" --out - \
+    | store "$BACKUP_DIR/mhvp-deletions-$STAMP.json"
 fi
 
 if [[ -n "${BACKUP_OBJECTSTORE_VOLUME:-}" ]]; then

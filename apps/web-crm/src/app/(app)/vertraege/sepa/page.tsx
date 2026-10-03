@@ -2,7 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { SepaOverview, type SepaMandateRow } from "@/components/contracts/SepaOverview";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { fetchAllListPages } from "@/lib/list-all";
 import { ui } from "@/lib/ui";
 import { today as businessToday } from "@/lib/today";
 
@@ -12,9 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function SepaOverviewPage() {
   const t = await getTranslations("SepaOverview");
   const tf = await getTranslations("ContractForm");
-  const response = await serverFetch("/api/v1/sepa-mandates?limit=1000");
+  const { response, items: rows } = await fetchAllListPages<SepaMandateRow>("/api/v1/sepa-mandates");
   redirectIfUnauthenticated(response);
-  const rows = response.ok ? ((await response.json()) as SepaMandateRow[]) : null;
   const today = businessToday();
   return (
     <div className={ui.pageGap}>

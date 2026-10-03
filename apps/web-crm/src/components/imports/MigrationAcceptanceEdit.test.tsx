@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
@@ -24,7 +24,7 @@ describe("GAG-14 migration masks", () => {
     });
     renderIntl(<MigrationExtras canUpdate canApprove />);
     await screen.findByText(/Buchungsdatum/);
-    await userEvent.selectOptions(screen.getByLabelText("Objekt"), "p1");
+    await userEvent.selectOptions(within(screen.getByRole("region", { name: "Migrationsabnahme je Objekt" })).getByLabelText("Objekt"), "p1");
     expect(await screen.findAllByTestId("acceptance")).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: "Bearbeiten" })).toHaveLength(1);
     await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));

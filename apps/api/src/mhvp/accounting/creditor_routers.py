@@ -32,7 +32,7 @@ from mhvp.accounting.models import (
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
 from mhvp.core.events import emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
@@ -348,7 +348,7 @@ async def list_plans(
     ledger_id: uuid.UUID | None = None,
     active: bool | None = None,
     page: int = Query(default=1, ge=1),
-    page_size: int | None = Query(default=None, ge=1, le=500),
+    page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[RecurringPlanOut]:
     async with tenant_tx(request, principal) as session:

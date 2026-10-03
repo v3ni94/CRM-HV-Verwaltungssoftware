@@ -328,6 +328,8 @@
     "photoCamera": "Take photo",
     "photoHint": "A photo of the meter with a clearly legible reading serves the management as evidence of the reading.",
     "photoMissing": "Without a photo the management can check the reading only to a limited extent. Please attach a photo if possible.",
+    "photoRequired": "Please attach a photo of the meter reading.",
+    "photoRequiredLabel": "required",
     "photoMissingSent": "The reading was sent without a photo. Please provide a photo if the management asks for it.",
     "title": "Report meter reading",
     "meterId": "Meter ID",

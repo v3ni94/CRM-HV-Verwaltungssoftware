@@ -57,6 +57,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import xrechnung as xr
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, Invoice
+from mhvp.accounting.response_models import AccountingEInvoiceCheckOut, AccountingZugferdStoredOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -884,6 +885,7 @@ async def zugferd_pdf(
 @router.get(
     "/admin-fee-invoices/{invoice_id}/zugferd/check",
     summary="Prüfung des ZUGFeRD-Belegs (CII-Struktur und eigene PDF/A-Vorprüfung)",
+    response_model=AccountingEInvoiceCheckOut,
 )
 async def zugferd_check(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -899,6 +901,7 @@ async def zugferd_check(
     "/admin-fee-invoices/{invoice_id}/zugferd/document",
     status_code=201,
     summary="ZUGFeRD-Beleg als Dokument ablegen (Prüfergebnis gespeichert)",
+    response_model=AccountingZugferdStoredOut,
 )
 async def zugferd_store(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)

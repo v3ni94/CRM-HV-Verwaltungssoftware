@@ -27,6 +27,7 @@ from mhvp.billing.owner_statement import (
     OwnerStatementKind,
     OwnerStatementStatus,
 )
+from mhvp.billing.response_models import BillingOwnerStatementOut, BillingOwnerStatementOutputsOut
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.billing.write_responses import BillingOwnerOutputsFiledOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -135,7 +136,12 @@ def _os_event_kw(
     }
 
 
-@router.post("", status_code=201, summary="Eigentümerabrechnung anlegen (Entwurf)")
+@router.post(
+    "",
+    status_code=201,
+    summary="Eigentümerabrechnung anlegen (Entwurf)",
+    response_model=BillingOwnerStatementOut,
+)
 async def create(
     body: OwnerStatementIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -178,7 +184,12 @@ async def create(
         return _out(st)
 
 
-@router.get("", summary="Eigentümerabrechnungen", dependencies=[Depends(strict_query)])
+@router.get(
+    "",
+    summary="Eigentümerabrechnungen",
+    dependencies=[Depends(strict_query)],
+    response_model=list[BillingOwnerStatementOut],
+)
 async def list_statements(
     request: Request,
     ledger_id: uuid.UUID | None = None,
@@ -197,7 +208,11 @@ async def list_statements(
         return [_out(r, with_snapshot=False) for r in rows]
 
 
-@router.get("/{statement_id}", summary="Eigentümerabrechnung mit Blöcken")
+@router.get(
+    "/{statement_id}",
+    summary="Eigentümerabrechnung mit Blöcken",
+    response_model=BillingOwnerStatementOut,
+)
 async def get(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -205,7 +220,11 @@ async def get(
         return _out(await _statement(session, statement_id))
 
 
-@router.post("/{statement_id}/calculate", summary="Berechnen (Snapshot aus dem Ledger)")
+@router.post(
+    "/{statement_id}/calculate",
+    summary="Berechnen (Snapshot aus dem Ledger)",
+    response_model=BillingOwnerStatementOut,
+)
 async def calculate(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -222,7 +241,11 @@ async def calculate(
         return _out(st)
 
 
-@router.post("/{statement_id}/approve", summary="Interne Freigabe (zweite Person)")
+@router.post(
+    "/{statement_id}/approve",
+    summary="Interne Freigabe (zweite Person)",
+    response_model=BillingOwnerStatementOut,
+)
 async def approve(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -263,7 +286,11 @@ def _approve(st: OwnerStatement, principal: TenantPrincipal, note: str | None) -
     st.approved_by = principal.user_id
 
 
-@router.post("/{statement_id}/transition", summary="Statuswechsel (6.9.3, S69-01)")
+@router.post(
+    "/{statement_id}/transition",
+    summary="Statuswechsel (6.9.3, S69-01)",
+    response_model=BillingOwnerStatementOut,
+)
 async def transition(
     statement_id: uuid.UUID,
     body: OwnerStatementTransitionIn,
@@ -329,7 +356,9 @@ async def transition(
 
 
 @router.patch(
-    "/{statement_id}/options", summary="Ausgabeoptionen der Eigentümerabrechnung (Belege anfügen)"
+    "/{statement_id}/options",
+    summary="Ausgabeoptionen der Eigentümerabrechnung (Belege anfügen)",
+    response_model=BillingOwnerStatementOut,
 )
 async def options(
     statement_id: uuid.UUID,
@@ -611,7 +640,12 @@ async def file_outputs(
         }
 
 
-@router.get("/{statement_id}/outputs", summary="Abgelegte Ausgaben der Eigentümerabrechnung")
+@router.get(
+    "/{statement_id}/outputs",
+    summary="Abgelegte Ausgaben der Eigentümerabrechnung",
+    response_model=BillingOwnerStatementOutputsOut,
+    dependencies=[Depends(strict_query)],
+)
 async def list_outputs(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:

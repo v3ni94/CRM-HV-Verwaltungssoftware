@@ -5,7 +5,8 @@ import type { ContractOut } from "@/components/contracts/ContractForm";
 import { ContractList, ContractSearch } from "@/components/contracts/ContractList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedFilters } from "@/components/workspace/SavedFilters";
-import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { fetchAllListPages } from "@/lib/list-all";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
@@ -20,7 +21,7 @@ export default async function ContractsPage({ searchParams }: { searchParams?: P
   // Filters from the URL (the object page links to /vertraege?property_id=..., the unit page
   // to unit_id=...); only well formed ids are passed on to GET /contracts.
   const params = (await searchParams) ?? {};
-  const query = new URLSearchParams({ limit: "500" });
+  const query = new URLSearchParams();
   const filters: string[] = [];
   const hidden: Record<string, string> = {};
   for (const key of ["property_id", "unit_id"] as const) {
@@ -36,9 +37,8 @@ export default async function ContractsPage({ searchParams }: { searchParams?: P
   const rawQ = Array.isArray(params.q) ? params.q[0] : params.q;
   const q = (rawQ ?? "").trim().slice(0, 200);
   if (q) query.set("q", q);
-  const [me, response] = await Promise.all([getMe(), serverFetch(`/api/v1/contracts?${query.toString()}`)]);
+  const [me, { response, items: rows }] = await Promise.all([getMe(), fetchAllListPages<ContractOut>(`/api/v1/contracts?${query.toString()}`)]);
   redirectIfUnauthenticated(response);
-  const rows = response.ok ? ((await response.json()) as ContractOut[]) : null;
   const pending = (rows ?? []).filter((c) => c.approval_status === "pending").length;
   const canCreate = (me.data?.permissions ?? []).includes("contracts:create");
 

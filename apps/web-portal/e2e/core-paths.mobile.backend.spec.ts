@@ -148,6 +148,7 @@ test.describe("Portal core paths on phone width @backend @mobile", () => {
     const quote = page.getByRole("form", { name: "Angebot abgeben" });
     await quote.getByLabel("Angebotsbetrag (EUR)").fill("245,90");
     await quote.getByLabel("Angebot als Datei anhängen (optional)").setInputFiles({ name: `angebot-${run}.pdf`, mimeType: "application/pdf", buffer: PDF });
+    await expectTouchTarget(quote.getByRole("button", { name: "Angebot abgeben" }));
     await quote.getByRole("button", { name: "Angebot abgeben" }).click();
     await expect(page.getByText("Das Angebot wurde übermittelt.")).toBeVisible();
 
@@ -161,6 +162,7 @@ test.describe("Portal core paths on phone width @backend @mobile", () => {
     if ((await camera.count()) > 0) await expect(camera).toHaveAttribute("capture", "environment");
     await complete.getByLabel("Ausführungsbericht").fill("Wasserhahn getauscht, Dichtheit geprüft.");
     await complete.locator("#photos").setInputFiles({ name: `ausfuehrung-${run}.png`, mimeType: "image/png", buffer: PNG_1X1 });
+    await expectTouchTarget(complete.getByRole("button", { name: "Ausführung dokumentieren" }));
     await complete.getByRole("button", { name: "Ausführung dokumentieren" }).click();
     await expect(page.getByText("Die Ausführung wurde dokumentiert.")).toBeVisible();
     await expect(page.getByText(new RegExp(`ausfuehrung-${run}\\.png`))).toBeVisible();
@@ -171,6 +173,7 @@ test.describe("Portal core paths on phone width @backend @mobile", () => {
     await invoice.getByLabel("Rechnungsdatum").fill("2026-10-02");
     await invoice.getByLabel("Rechnungsbetrag brutto (EUR)").fill("245,90");
     await invoice.getByLabel("Rechnung als Datei anhängen").setInputFiles({ name: `rechnung-${run}.pdf`, mimeType: "application/pdf", buffer: PDF });
+    await expectTouchTarget(invoice.getByRole("button", { name: "Rechnung einreichen" }));
     await invoice.getByRole("button", { name: "Rechnung einreichen" }).click();
     await expect(page.getByText("Die Rechnung wurde als Vorschlag zur Prüfung eingereicht.")).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -202,6 +205,7 @@ test.describe("Portal core paths on phone width @backend @mobile", () => {
 
     // Search narrows the list inside the visible documents.
     await page.getByRole("search").getByRole("searchbox").fill("Hausordnung");
+    await expectTouchTarget(page.getByRole("button", { name: "Anwenden" }));
     await page.getByRole("button", { name: "Anwenden" }).click();
     await expect(page.getByText(titles[0])).toBeVisible();
     await expect(page.getByText(titles[1])).toHaveCount(0);
@@ -214,6 +218,7 @@ test.describe("Portal core paths on phone width @backend @mobile", () => {
 
     // Bundle download of all documents.
     await page.goto("/dokumente");
+    await expectTouchTarget(page.getByRole("button", { name: "Alle auswählen" }));
     await page.getByRole("button", { name: "Alle auswählen" }).click();
     const bundle = page.getByRole("button", { name: /Sammel-Download \(2 ausgewählt\)/ });
     await expectTouchTarget(bundle);

@@ -538,3 +538,7 @@ Auf der Seite Einsichtsanfragen einer Gemeinschaft prüft die Schaltfläche "Eig
 ## Einzelabrechnung als PDF und Zuordnungsvorschlag (GAJ-201, GAJ-203, Welle 23)
 
 Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläche "Einheit ..." für die Einzelabrechnung als PDF-Entwurf. Sie bleibt gesperrt, solange die Freigabestufe G4 geschlossen ist oder die Abrechnung nicht intern freigegeben wurde. Der Abschnitt "Zuordnungsvorschlag bei Eigentümerwechsel" lädt auf Klick den Vorschlag, wer das Ergebnis je Einheit trägt, und zeigt Abweichungen zur verwendeten Zuordnung. Der Vorschlag hat keine Buchungswirkung und ist nur bei eingeschaltetem Mandantenschalter abrufbar.
+
+### Mehrheitsregel freigeben (Vier Augen)
+
+Ist unter Einstellungen, Fachliche Regeln der Schalter „Vier-Augen-Freigabe der Mehrheitsregeln“ eingeschaltet (Standard aus), erscheint eine neu angelegte Mehrheitsregel auf der Versammlungsseite als „Entwurf“. Eine zweite Person mit Freigaberecht gibt sie mit „Freigeben“ frei. Bis dahin kann die Regel keinem Tagesordnungspunkt zugeordnet und nicht ausgezählt werden.

@@ -84,6 +84,7 @@ from mhvp.tickets.models import (
     TicketSource,
     TicketTemplate,
 )
+from mhvp.tickets.order_events import emit_completed_if_done
 from mhvp.workspace.services import notify
 
 log = logging.getLogger(__name__)
@@ -1455,6 +1456,14 @@ async def _set_order_field(
             type=f"work_order.{target.value}",
             entity_type="work_order",
             entity_id=order.id,
+            actor_user_id=None,
+            payload={"via": "automation", **automation_marker(rule.id, event_id)},
+        )
+        await emit_completed_if_done(
+            session,
+            tenant_id=tenant_id,
+            order_id=order.id,
+            new_status=target,
             actor_user_id=None,
             payload={"via": "automation", **automation_marker(rule.id, event_id)},
         )

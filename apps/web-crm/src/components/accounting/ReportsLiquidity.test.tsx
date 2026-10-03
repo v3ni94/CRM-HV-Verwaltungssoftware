@@ -78,4 +78,26 @@ describe("LiquidityReport", () => {
     );
     expect(screen.getByText(/nur nach Kontonummer 001201/)).toBeInTheDocument();
   });
+
+  it("shows debtor credit balances as bound funds (GAK-102)", () => {
+    renderIntl(
+      <LiquidityReport
+        data={{
+          as_of: "2026-06-30",
+          horizon: "2026-09-28",
+          accounts: [{ number: "10000", name: "Girokonto", balance: "1000.00", kind: "free" }],
+          free_funds: "1000.00",
+          reserve_funds: "0.00",
+          segregated_deposits: "0.00",
+          expected_inflows: "0.00",
+          expected_outflows: "150.00",
+          debtor_credits: "120.00",
+          projected_free_funds: "730.00",
+          note: "",
+        }}
+      />,
+    );
+    expect(screen.getByTestId("liquidity-debtor-credits")).toHaveTextContent("120,00 EUR");
+    expect(screen.getByText("730,00 EUR")).toBeInTheDocument();
+  });
 });

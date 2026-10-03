@@ -328,6 +328,8 @@
     "photoCamera": "Foto aufnehmen",
     "photoHint": "Ein Foto des Zählers mit gut lesbarem Stand dient der Verwaltung als Ablesebeleg.",
     "photoMissing": "Ohne Foto kann die Verwaltung die Ablesung nur eingeschränkt prüfen. Bitte fügen Sie nach Möglichkeit ein Foto bei.",
+    "photoRequired": "Bitte fügen Sie ein Foto des Zählerstands bei.",
+    "photoRequiredLabel": "erforderlich",
     "photoMissingSent": "Der Stand wurde ohne Foto übermittelt. Bitte reichen Sie ein Foto nach, falls die Verwaltung danach fragt.",
     "title": "Zählerstand melden",
     "meterId": "Zähler-ID",

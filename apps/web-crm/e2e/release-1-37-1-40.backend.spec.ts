@@ -293,7 +293,7 @@ test.describe("CRM 1.37.0 to 1.40.0 core paths @backend", () => {
       }
     }
     type Proposal = { id: string; sender_key: string; field: string; scope: string; evidence_count: number };
-    const proposals = await call<Proposal[]>("GET", "/automation/rule-proposals?status=proposed&limit=500");
+    const proposals = await call<Proposal[]>("GET", "/automation/rule-proposals?status=proposed&limit=200");
     for (const sender of senders) {
       const row = proposals.find((p) => p.sender_key === sender && p.field === "topic" && p.scope === "address");
       expect(row, `proposal for ${sender}`).toBeTruthy();
@@ -323,10 +323,10 @@ test.describe("CRM 1.37.0 to 1.40.0 core paths @backend", () => {
     await expect(page.getByRole("status").filter({ hasText: "Vorschlag abgelehnt." })).toBeVisible();
     await expect(rowB).toHaveCount(0);
 
-    const accepted = await call<(Proposal & { rule_id: string | null })[]>("GET", "/automation/rule-proposals?status=accepted&limit=500");
+    const accepted = await call<(Proposal & { rule_id: string | null })[]>("GET", "/automation/rule-proposals?status=accepted&limit=200");
     const acceptedA = accepted.find((p) => p.sender_key === senders[0] && p.field === "topic");
     expect(acceptedA?.rule_id).toBeTruthy();
-    const rejected = await call<Proposal[]>("GET", "/automation/rule-proposals?status=rejected&limit=500");
+    const rejected = await call<Proposal[]>("GET", "/automation/rule-proposals?status=rejected&limit=200");
     expect(rejected.some((p) => p.sender_key === senders[1] && p.field === "topic")).toBe(true);
 
     // Threshold: invalid input is refused, a valid one is saved and shown after a reload;

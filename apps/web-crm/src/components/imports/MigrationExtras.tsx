@@ -7,6 +7,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { HistoryStatements } from "./HistoryStatements";
 import { MigrationHistory } from "./MigrationHistory";
 import { useBusy } from "@/lib/use-busy";
 
@@ -262,6 +263,7 @@ export function MigrationExtras({ canUpdate, canApprove, canTickets = false }: {
         ) : null}
       </section>
       <MigrationHistory ledgers={ledgers} canTickets={canTickets} />
+      <HistoryStatements properties={properties} />
     </div>
   );
 }

@@ -306,7 +306,7 @@ export function SideNav({
                 type="button"
                 aria-expanded={!isCollapsed}
                 onClick={() => toggleGroup(g.label)}
-                className={`${FULL_ONLY[mode]} mhvp-label min-h-9 w-full items-center pointer-fine:min-h-0 justify-between gap-2 rounded-md px-3 pb-1 pt-2 text-left text-rail-muted transition duration-150 hover:text-rail-fg`}
+                className={`${FULL_ONLY[mode]} mhvp-label min-h-11 w-full items-center pointer-fine:min-h-0 justify-between gap-2 rounded-md px-3 pb-1 pt-2 text-left text-rail-muted transition duration-150 hover:text-rail-fg`}
               >
                 <span>{g.label}</span>
                 <ChevronIcon className={`h-3 w-3 shrink-0 transition-transform duration-150 ${isCollapsed ? "-rotate-90" : ""}`} />

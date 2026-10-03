@@ -669,11 +669,17 @@ async def create_package(
                 )
             ).all()
         )
+        from mhvp.documents import payment_files  # local: import cycle
+
+        # GAJ-301 (AN14-03): payment files never reach the owner portal, not even via a package.
+        locked = await payment_files.payment_file_ids(session, wanted)
         problems: list[str] = []
         for doc_id in wanted:
             doc = docs.get(doc_id)
             if doc is None:
                 problems.append(f"{doc_id}: nicht gefunden")
+            elif doc.id in locked:
+                problems.append(f"{doc.filename}: Zahlungsdatei, nicht bereitstellbar")
             elif doc.id not in linked:
                 problems.append(f"{doc.filename}: nicht dem Objekt zugeordnet")
             elif RELEASED_VISIBILITY not in (doc.visibility or []):

@@ -281,6 +281,11 @@ def test_synthetic_payment_run_to_file(
     assert Decimal(batch["control_sum"]) == expected_sum
     assert batch["file_sha256"] == hashlib.sha256(batch["xml"].encode()).hexdigest()
     assert batch["document_id"]
+    # AN08 (AM01): filed directly in the locked payment_file category, no ensure-defaults.
+    filed = _ok(gated.get(f"/api/v1/documents/{batch['document_id']}", headers=gh))
+    categories = _ok(gated.get("/api/v1/document-categories", headers=gh))
+    codes = {c["id"]: c["code"] for c in categories}
+    assert codes[filed["category_id"]] == "payment_file"
     assert _xsd_errors("pain.001.001.03", batch["xml"].encode()) == []
     assert payments.validate_pain001(batch["xml"].encode()) == []
     assert batch["xml"].count("<CdtTrfTxInf>") == TRANSFERS

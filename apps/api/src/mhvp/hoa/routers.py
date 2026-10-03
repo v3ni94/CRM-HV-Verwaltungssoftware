@@ -388,6 +388,7 @@ async def patch_resolution(
         if not fields or ("status" in fields and fields["status"] is None):
             raise ProblemError(ErrorCodes.VALIDATION, detail="Status oder Vermerk angeben.")
         if "status" in fields:
+            old_status = row.status  # AN19 (GAK-204)
             await emit(
                 session,
                 tenant_id=principal.tenant_id,
@@ -398,6 +399,18 @@ async def patch_resolution(
                 payload={"from": row.status, "to": body.status},
             )
             row.status = fields["status"]
+            # AN19 (GAK-204): consumer of resolution.status_changed; notifies only, never
+            # cancels a dependent plan, levy or statement (D54).
+            from mhvp.hoa.resolution_effects import on_status_changed
+
+            await on_status_changed(
+                session,
+                tenant_id=principal.tenant_id,
+                actor_user_id=principal.user_id,
+                resolution=row,
+                old_status=old_status,
+                new_status=row.status,
+            )
         notes = {k: fields[k] for k in ("court_notes", "location") if k in fields}
         if notes:
             await emit(

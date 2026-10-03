@@ -14,6 +14,7 @@ from sqlalchemy import select
 from mhvp.accounting.audit_events import record_change, snap
 from mhvp.billing import heating_import
 from mhvp.billing.models import HeatingCostImport, Statement
+from mhvp.billing.response_models import BillingHeatingCostImportOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_property_allowed, session_allowed_property_ids
 from mhvp.core.listparams import strict_query
@@ -179,7 +180,12 @@ async def _refs(session: Any, body: HeatingImportHeaderIn) -> None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Messdienst (Kontakt) nicht gefunden.")
 
 
-@router.get(P, summary="Messdienstimporte Heizkosten", dependencies=[Depends(strict_query)])
+@router.get(
+    P,
+    summary="Messdienstimporte Heizkosten",
+    dependencies=[Depends(strict_query)],
+    response_model=list[BillingHeatingCostImportOut],
+)
 async def list_heating_cost_imports(
     request: Request,
     property_id: uuid.UUID | None = Query(default=None),
@@ -195,7 +201,12 @@ async def list_heating_cost_imports(
         return [_out(r) for r in (await session.scalars(q)).all()]
 
 
-@router.post(P, status_code=201, summary="Messdienstimport Heizkosten anlegen (Entwurf)")
+@router.post(
+    P,
+    status_code=201,
+    summary="Messdienstimport Heizkosten anlegen (Entwurf)",
+    response_model=BillingHeatingCostImportOut,
+)
 async def create_heating_cost_import(
     body: HeatingImportHeaderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -224,7 +235,11 @@ async def create_heating_cost_import(
         return _out(row)
 
 
-@router.get(f"{P}/{{import_id}}", summary="Messdienstimport Heizkosten")
+@router.get(
+    f"{P}/{{import_id}}",
+    summary="Messdienstimport Heizkosten",
+    response_model=BillingHeatingCostImportOut,
+)
 async def get_heating_cost_import(
     import_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -232,7 +247,11 @@ async def get_heating_cost_import(
         return _out(await _load(session, import_id))
 
 
-@router.put(f"{P}/{{import_id}}", summary="Messdienstimport: Kopfdaten ändern")
+@router.put(
+    f"{P}/{{import_id}}",
+    summary="Messdienstimport: Kopfdaten ändern",
+    response_model=BillingHeatingCostImportOut,
+)
 async def update_heating_cost_import(
     import_id: uuid.UUID,
     body: HeatingImportHeaderIn,
@@ -261,7 +280,11 @@ async def update_heating_cost_import(
         return _out(row)
 
 
-@router.put(f"{P}/{{import_id}}/mapping", summary="Messdienstimport: Nutzernummern zuordnen")
+@router.put(
+    f"{P}/{{import_id}}/mapping",
+    summary="Messdienstimport: Nutzernummern zuordnen",
+    response_model=BillingHeatingCostImportOut,
+)
 async def put_heating_cost_import_mapping(
     import_id: uuid.UUID,
     body: HeatingImportMappingIn,
@@ -289,7 +312,11 @@ async def put_heating_cost_import_mapping(
         return _out(row)
 
 
-@router.put(f"{P}/{{import_id}}/rows", summary="Messdienstimport: Kostenzeilen manuell erfassen")
+@router.put(
+    f"{P}/{{import_id}}/rows",
+    summary="Messdienstimport: Kostenzeilen manuell erfassen",
+    response_model=BillingHeatingCostImportOut,
+)
 async def put_heating_cost_import_rows(
     import_id: uuid.UUID,
     body: HeatingImportRowsIn,
@@ -310,7 +337,11 @@ async def put_heating_cost_import_rows(
         return _out(row)
 
 
-@router.post(f"{P}/{{import_id}}/csv", summary="Messdienstimport: CSV mit Spaltenzuordnung")
+@router.post(
+    f"{P}/{{import_id}}/csv",
+    summary="Messdienstimport: CSV mit Spaltenzuordnung",
+    response_model=BillingHeatingCostImportOut,
+)
 async def import_heating_cost_csv(
     import_id: uuid.UUID,
     body: HeatingImportCsvIn,
@@ -344,7 +375,11 @@ async def import_heating_cost_csv(
         return _out(row)
 
 
-@router.post(f"{P}/{{import_id}}/check", summary="Messdienstimport prüfen (Summen, CO2, Dubletten)")
+@router.post(
+    f"{P}/{{import_id}}/check",
+    summary="Messdienstimport prüfen (Summen, CO2, Dubletten)",
+    response_model=BillingHeatingCostImportOut,
+)
 async def check_heating_cost_import(
     import_id: uuid.UUID,
     body: HeatingImportCheckIn,
@@ -357,7 +392,11 @@ async def check_heating_cost_import(
         return _out(row)
 
 
-@router.post(f"{P}/{{import_id}}/apply", summary="Geprüften Messdienstimport übernehmen")
+@router.post(
+    f"{P}/{{import_id}}/apply",
+    summary="Geprüften Messdienstimport übernehmen",
+    response_model=BillingHeatingCostImportOut,
+)
 async def apply_heating_cost_import(
     import_id: uuid.UUID,
     body: HeatingImportApplyIn,

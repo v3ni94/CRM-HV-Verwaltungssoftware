@@ -469,6 +469,8 @@ export type MajorityRule = {
   source: string;
   valid_from: string;
   valid_to: string | null;
+  /** AN06 / GAJ-602: "draft" only for rules created under the four eyes switch. */
+  approval_status?: "draft" | "approved";
 };
 
 /** Majority rules per community with their source (M25-01, decided 24.09.2026). The tally
@@ -527,6 +529,20 @@ export function MajorityRules({ legalEntityId, rules }: { legalEntityId: string;
             <li key={r.id}>
               <span className="font-medium">{r.label}</span> ({t(`principle.${r.principle}`)}): {describe(r)} ·{" "}
               <span className="text-muted">{r.source}</span>
+              {r.approval_status === "draft" ? (
+                <span className="ml-2 inline-flex flex-wrap items-center gap-2" data-testid={`rule-draft-${r.id}`}>
+                  <span className={ui.badge}>{t("rule.draft")}</span>
+                  <button
+                    type="button"
+                    className={ui.buttonSm}
+                    disabled={busy}
+                    title={t("rule.approveHint")}
+                    onClick={() => void call(`majority-rules/${r.id}/approve`, undefined, t("rule.approveHint"))}
+                  >
+                    {t("rule.approve")}
+                  </button>
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>

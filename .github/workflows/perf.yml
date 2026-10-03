@@ -81,9 +81,11 @@ jobs:
       - name: Migrationen
         working-directory: apps/api
         run: uv run alembic upgrade head
-      - name: Messung Detailseiten und Listen
+      - name: Messung Detailseiten, Listen und Sollstellungslauf
         working-directory: apps/api
-        run: uv run pytest tests/integration/test_ga12_perf.py tests/integration/test_p15_perf.py -m slow -s --no-cov | tee perf.txt
+        env:
+          MHVP_PERF_LIST_LIMIT: "1.0"  # shared runner; the 300 ms target applies on staging
+        run: uv run pytest tests/integration/test_ga12_perf.py tests/integration/test_p15_perf.py tests/integration/test_an20_perf_receivable_run.py -m slow -s --no-cov | tee perf.txt
       - name: Messzeilen
         working-directory: apps/api
         run: grep '^PERF' perf.txt >> "$GITHUB_STEP_SUMMARY" || true

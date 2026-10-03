@@ -115,10 +115,20 @@ def _safe_name(value: str) -> str:
 
 
 async def _write_documents(
-    session: AsyncSession, archive: zipfile.ZipFile, client: Any, bucket: str
+    session: AsyncSession,
+    archive: zipfile.ZipFile,
+    client: Any,
+    bucket: str,
+    tenant_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
-    """Originals of the object store; each failure is listed, never silently dropped."""
+    """Originals of the object store; each failure is listed, never silently dropped.
+    Payment files (GAJ-301) keep their metadata in data/documents.jsonl, but their content is
+    withheld while G2 is closed for the tenant (AM01) and listed under ``withheld``."""
+    from mhvp.documents import payment_files
     from mhvp.documents.models import Document, StorageKind
+
+    released = tenant_id is not None and await payment_files.content_released(tenant_id)
+    withheld: list[dict[str, str]] = []
 
     written = 0
     bytes_total = 0
@@ -138,7 +148,22 @@ async def _write_documents(
         if not rows:
             break
         last = rows[-1].id
+        locked = (
+            set()
+            if released
+            else await payment_files.payment_file_ids(session, [doc.id for doc in rows])
+        )
         for doc in rows:
+            if doc.id in locked:
+                withheld.append(
+                    {
+                        "document_id": str(doc.id),
+                        "filename": doc.filename,
+                        "reason": "payment_file_g2_closed",
+                        "note": payment_files.WITHHELD_NOTE,
+                    }
+                )
+                continue
             if doc.storage != StorageKind.MINIO:
                 skipped_external += 1
                 continue
@@ -156,6 +181,7 @@ async def _write_documents(
         "written": written,
         "bytes": bytes_total,
         "external_storage_not_exported": skipped_external,
+        "withheld": withheld,
         "errors": errors,
     }
 
@@ -194,7 +220,7 @@ async def build_full_export(
                 )
             for name, model in _entities():
                 counts[name] = await _write_entity(session, archive, name, model)
-            documents = await _write_documents(session, archive, client, bucket)
+            documents = await _write_documents(session, archive, client, bucket, tenant_id)
         manifest = {
             "tenant_id": str(tenant_id),
             "purpose": purpose,

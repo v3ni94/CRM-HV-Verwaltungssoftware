@@ -52,6 +52,19 @@ describe("ReleaseGatesAdmin", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it("flags confirmed checklist codes without checkable evidence", () => {
+    renderIntl(
+      <ReleaseGatesAdmin
+        tenants={tenants}
+        activeTenantId="t-a"
+        initial={overview([{ ...request, checklist_unverified: ["sepa_test"] }])}
+        checklists={checklists}
+      />,
+    );
+    expect(screen.getByTestId("unverified-r-1")).toHaveTextContent("sepa_test");
+    expect(screen.getByTestId("unverified-r-1")).toHaveTextContent("manuell prüfen");
+  });
+
   it("approves with comment and shows the opening", async () => {
     const approved = { ...request, status: "approved", opened_by: "u-2", opened_at: "2026-10-01T08:00:00Z" };
     fetchMock.mockImplementation(async (input) => {

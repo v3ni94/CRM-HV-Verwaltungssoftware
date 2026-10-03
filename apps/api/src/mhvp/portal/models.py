@@ -216,6 +216,10 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
             "provider_rating_display IN ('off', 'staff', 'all')",
             name="provider_rating_display",
         ),
+        CheckConstraint(
+            "meter_photo_mode IN ('off', 'hint', 'required')",
+            name="meter_photo_mode",
+        ),
     )
 
     chat_enabled: Mapped[bool] = mapped_column(
@@ -271,6 +275,12 @@ class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     # contracts in the tenant portal; off by default, additionally behind release gate G3.
     tenant_statement_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AN02 (GAJ-401, AM06-01, migration 0451): photo of a meter reading reported in the portal.
+    # off: no photo expected; hint (default, behaviour before 0451): reading accepted, proposal
+    # flagged photo_missing with a note; required: reading without photo rejected (422).
+    meter_photo_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="hint", server_default="hint"
     )
 
 

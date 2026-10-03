@@ -95,4 +95,22 @@ describe("MeterReadingForm", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("requires a photo in the required mode without a request (AN02)", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<MeterReadingForm photoMode="required" />);
+    expect(screen.getByText(/erforderlich/)).toBeInTheDocument();
+    fill("M-1", "7", "2026-10-01");
+    await act(async () => {
+      await userEvent.click(screen.getByRole("button"));
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Foto des Zählerstands bei/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows no photo hint in the off mode (AN02)", () => {
+    renderIntl(<MeterReadingForm photoMode="off" />);
+    expect(screen.queryByTestId("meter-photo-missing")).toBeNull();
+  });
 });

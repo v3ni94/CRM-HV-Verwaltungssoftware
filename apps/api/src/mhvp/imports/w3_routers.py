@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from mhvp.accounting.models import Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import statement_reports, w3_reports
 from mhvp.imports.history_models import (
@@ -86,7 +86,7 @@ class HistoryBankLinkOut(BaseModel):
 async def history_tickets(
     request: Request,
     property_id: uuid.UUID | None = None,
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ_TICKETS),
 ) -> list[HistoryTicketOut]:
@@ -116,7 +116,7 @@ async def history_open_items(
     kind: str | None = Query(
         default=None, pattern="^(receivable|credit|deposit|reserve|loan|special_levy)$"
     ),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ_ACCOUNTING),
 ) -> list[HistoryOpenItemOut]:
@@ -165,7 +165,7 @@ async def history_open_item_summary(
 async def history_bank_links(
     request: Request,
     open_only: bool = False,
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ_ACCOUNTING),
 ) -> list[HistoryBankLinkOut]:
@@ -319,7 +319,7 @@ async def history_statements(
     kind: str | None = Query(
         default=None, pattern="^(hoa_annual|hoa_budget|operating_costs|heating_costs|other)$"
     ),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ_ACCOUNTING),
 ) -> list[HistoryStatementOut]:
@@ -354,7 +354,7 @@ async def history_statements(
 async def history_resolutions(
     request: Request,
     property_id: uuid.UUID | None = None,
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ_ACCOUNTING),
 ) -> list[HistoryResolutionOut]:

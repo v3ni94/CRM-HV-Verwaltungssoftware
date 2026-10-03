@@ -11,6 +11,7 @@ from sqlalchemy import exists, or_, select
 
 from mhvp.contacts.models import Contact, ContactEmail
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import MAX_PAGE_SIZE
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.dataquality import rules
 from mhvp.properties.models import Property, PropertyStatus
@@ -76,7 +77,7 @@ def _section(key: Any, items: list[DataQualityReportItem], limit: int) -> DataQu
 @router.get("/data-quality/report", summary="Datenqualität: Verstöße gegen Erfassungsstandards")
 async def report(
     request: Request,
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> DataQualityReportOut:
     today = local_today()

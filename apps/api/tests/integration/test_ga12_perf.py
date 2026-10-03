@@ -17,6 +17,7 @@ from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
+from tests.runtime_limits import scaled_limit
 
 pytestmark = [
     pytest.mark.integration,
@@ -115,11 +116,13 @@ def test_detail_pages_p95(client: TestClient, world: World) -> None:
             f"PERF {name} samples={SAMPLES} median={median * 1000:.0f}ms p95={p95 * 1000:.0f}ms "
             f"target={TARGET_SECONDS * 1000:.0f}ms"
         )
-        assert p95 < CI_LIMIT_SECONDS, (name, p95)
+        assert p95 < scaled_limit(CI_LIMIT_SECONDS), (name, p95)
 
 
 LIST_SAMPLES = 20
-LIST_LIMIT_SECONDS = float(os.environ.get("MHVP_PERF_LIST_LIMIT", "1.0"))
+# Section 16: 300 ms. MHVP_PERF_LIST_LIMIT only loosens the limit on noisy shared runners
+# (set in .github/workflows/perf.yml, documented in docs/runbooks/leistungsmessung.md).
+LIST_LIMIT_SECONDS = float(os.environ.get("MHVP_PERF_LIST_LIMIT", "0.3"))
 
 
 def _report(name: str, rows: int, client: TestClient, url: str, headers: dict[str, str]) -> None:
@@ -128,7 +131,7 @@ def _report(name: str, rows: int, client: TestClient, url: str, headers: dict[st
         f"PERF {name} rows={rows} samples={LIST_SAMPLES} median={median * 1000:.0f}ms "
         f"p95={p95 * 1000:.0f}ms target=300ms"
     )
-    assert p95 < LIST_LIMIT_SECONDS, (name, p95)
+    assert p95 < scaled_limit(LIST_LIMIT_SECONDS), (name, p95)
 
 
 def _p95_n(

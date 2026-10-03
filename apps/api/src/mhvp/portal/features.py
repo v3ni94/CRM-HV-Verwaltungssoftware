@@ -31,6 +31,8 @@ OWNER_TICKET_SCOPES = ("none", "released", "property")
 # them aggregated to the management only. Publication to providers or third parties is not
 # offered (data protection, decision AA14-02 open).
 PROVIDER_RATING_MODES = ("off", "staff", "all")
+# AN02 (GAJ-401, AM06-01 open): photo for portal meter readings; hint is the default.
+METER_PHOTO_MODES = ("off", "hint", "required")
 
 
 async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
@@ -51,12 +53,15 @@ async def get_or_default(session: AsyncSession) -> PortalFeatureSetting:
         owner_hoa_rental_statements_enabled=False,
         owner_ticket_scope="released",
         provider_rating_display="off",
+        meter_photo_mode="hint",
     )
 
 
 def feature_dict(row: PortalFeatureSetting) -> dict[str, Any]:
     out: dict[str, Any] = {name: bool(getattr(row, name)) for name in FEATURES}
     out["owner_ticket_scope"] = row.owner_ticket_scope or "released"
+    # AN02 (GAJ-401): the portal form shows the photo field as optional, hint or required.
+    out["meter_photo_mode"] = row.meter_photo_mode or "hint"
     return out
 
 

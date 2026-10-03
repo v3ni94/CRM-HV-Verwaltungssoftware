@@ -203,6 +203,19 @@ def test_inspection_request_flow_and_package(
     assert again["sha256"] == pack["sha256"], "same selection must give the same ZIP"
     assert again["document_id"] != pack["document_id"]
 
+    # AN14-03 (GAJ-301): a payment file never goes into a package, even released for owners.
+    d4 = _doc(client, h, "zahlung.xml", b"%PDF-1.4 d", hoa, owner=True)
+    _ok(client.post("/api/v1/document-categories/ensure-defaults", headers=h))
+    pay_cat = next(
+        c["id"]
+        for c in _ok(client.get("/api/v1/document-categories", headers=h))
+        if c["code"] == "payment_file"
+    )
+    _ok(client.patch(f"/api/v1/documents/{d4}", json={"category_id": pay_cat}, headers=h))
+    locked = client.post(f"{H}/{rid}/package", json={"document_ids": [d1, d4]}, headers=h)
+    assert locked.status_code == 422, locked.text
+    assert "Zahlungsdatei" in locked.json()["detail"]
+
     # The package is a document linked to the request and to the community.
     links = _ok(client.get(f"/api/v1/documents/{again['document_id']}", headers=h))["links"]
     assert {(x["entity_type"], x["entity_id"]) for x in links} >= {

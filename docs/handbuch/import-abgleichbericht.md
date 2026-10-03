@@ -199,3 +199,7 @@ Ist Ihre Mitgliedschaft auf einzelne Objekte beschränkt, zeigt der Abgleichberi
 Objekte samt ihren Zeilen und Summen. Hinweise zu fremden Objekten werden ausgeblendet. Die
 Immoware24 Datei- und Vollimporte wirken mandantenweit und stehen nur Mitgliedern ohne
 Objektzuordnung zur Verfügung.
+
+## Abschnitt Stammdaten
+
+Der geöffnete Bericht enthält, sofern Stammdatenexporte eingelesen sind und der Bericht nicht auf einzelne Objekte eingeschränkt ist, den Abschnitt "Stammdaten": je Reporttyp Zeilen, offene Zeilen und fehlende Objekte oder Einheiten sowie Zähler der Plattform. Ohne Stammdatenexporte erscheint ein Hinweis statt des Abschnitts. Auch dieser Abschnitt liest nur.

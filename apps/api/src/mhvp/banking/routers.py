@@ -52,6 +52,22 @@ from mhvp.banking.property_scope import (
     session_account_filter,
     transaction_account_filter,
 )
+from mhvp.banking.response_models import (
+    BankingAutoMetricsOut,
+    BankingAutoPostRunOut,
+    BankingLearningOut,
+    BankingLevelRequestOut,
+    BankingLevelsOut,
+    BankingMatchingMetricsOut,
+    BankingPaymentBankConfigOut,
+    BankingPaymentBatchCreatedOut,
+    BankingPaymentBatchDetailOut,
+    BankingPaymentBatchOut,
+    BankingPaymentBatchSubmittedOut,
+    BankingSwitchRequestListOut,
+    BankingSwitchRequestOut,
+    BankingSwitchStateOut,
+)
 from mhvp.core.auth.permissions import ACCOUNTING_REVIEW
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
@@ -62,7 +78,7 @@ from mhvp.core.auth.scope import (
 from mhvp.core.db.tenancy import after_commit
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import diff, emit
-from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -396,7 +412,7 @@ async def transactions(
     status: TransactionStatus | None = None,
     start: date | None = None,
     end: date | None = None,
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     params: ListParams = Depends(_TX_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
@@ -459,14 +475,20 @@ async def review(
     dependencies=[Depends(strict_query)],
 )
 async def reconciliation(
-    bank_account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    bank_account_id: uuid.UUID,
+    request: Request,
+    basis: Literal["booking_date", "bank_date"] = Query(
+        "booking_date",
+        description="GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag",
+    ),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         from mhvp.properties.models import PropertyBankAccount
 
         if await session.get(PropertyBankAccount, bank_account_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        return await svc.reconcile(session, bank_account_id)
+        return await svc.reconcile(session, bank_account_id, basis)
 
 
 # Matching and controlled automation (M12, 7.4, 6.9.4) ---------------------------------
@@ -499,6 +521,73 @@ class BulkItem(BookIn):
 class BankBulkIn(_In):
     items: list[BulkItem] = Field(min_length=1, max_length=1000)
     preview: bool = True
+    # GAK-105 (7.4 Massenbestätigung): booking needs the preview_id of a preview over exactly
+    # these items; exceptions are only booked when confirmed explicitly in both calls.
+    preview_id: str | None = Field(default=None, max_length=200)
+    confirm_exceptions: bool = False
+
+
+BULK_PREVIEW_TTL_SECONDS = 900
+
+
+def _bulk_fingerprint(
+    principal: TenantPrincipal,
+    rows: list[tuple[BulkItem, Any]],
+    confirm_exceptions: bool,
+    expires: int,
+) -> str:
+    """Keyed hash over tenant, user, expiry and every item with its amount and state."""
+    import json
+
+    from mhvp.core import crypto
+
+    canonical = json.dumps(
+        {
+            "tenant": str(principal.tenant_id),
+            "user": str(principal.user_id),
+            "expires": expires,
+            "confirm_exceptions": confirm_exceptions,
+            "items": sorted(
+                (
+                    {
+                        "item": item.model_dump(mode="json"),
+                        "amount": str(row.amount),
+                        "status": str(row.status),
+                        "legal_entity_id": str(row.legal_entity_id),
+                        "journal_entry_id": str(row.journal_entry_id),
+                    }
+                    for item, row in rows
+                ),
+                key=lambda x: str(x["item"]["transaction_id"]),
+            ),
+        },
+        sort_keys=True,
+    )
+    return crypto.fingerprint(canonical, scope=f"bulk-confirm:{principal.tenant_id}")
+
+
+def _bulk_totals(rows: list[tuple[BulkItem, Any]]) -> list[dict[str, Any]]:
+    """GAK-105: count, incoming and outgoing sums per legal entity, never offset."""
+    per: dict[str, dict[str, Any]] = {}
+    for _item, row in rows:
+        bucket = per.setdefault(
+            str(row.legal_entity_id),
+            {"count": 0, "incoming": Decimal("0.00"), "outgoing": Decimal("0.00")},
+        )
+        bucket["count"] += 1
+        if row.amount >= 0:
+            bucket["incoming"] += row.amount
+        else:
+            bucket["outgoing"] += -row.amount
+    return [
+        {
+            "legal_entity_id": key,
+            "count": v["count"],
+            "incoming": str(v["incoming"]),
+            "outgoing": str(v["outgoing"]),
+        }
+        for key, v in sorted(per.items())
+    ]
 
 
 class RuleIn(_In):
@@ -1017,6 +1106,32 @@ async def list_decisions(
         ]
 
 
+def _check_bulk_preview(
+    principal: TenantPrincipal, body: BankBulkIn, rows: list[tuple[BulkItem, Any]]
+) -> None:
+    import hmac
+
+    expires_raw, _, digest = (body.preview_id or "").partition(".")
+    try:
+        expires = int(expires_raw)
+    except ValueError:
+        expires = 0
+    if not digest or expires < int(datetime.now(UTC).timestamp()):
+        raise ProblemError(
+            ErrorCodes.BANK_BULK_PREVIEW_REQUIRED,
+            detail="Vorschau fehlt oder ist abgelaufen; bitte die Vorschau neu erzeugen.",
+        )
+    expected = _bulk_fingerprint(principal, rows, body.confirm_exceptions, expires)
+    if not hmac.compare_digest(expected, digest):
+        raise ProblemError(
+            ErrorCodes.BANK_BULK_PREVIEW_REQUIRED,
+            detail=(
+                "Positionen, Beträge oder Zustände weichen von der Vorschau ab; bitte die "
+                "Vorschau neu erzeugen."
+            ),
+        )
+
+
 @router.post(
     "/bulk-confirm", summary="Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht)"
 )
@@ -1037,7 +1152,25 @@ async def bulk_confirm(
                 if r.status is not TransactionStatus.NEW or r.transfer_pair_id is not None
             ],
         }
+        summary["totals_by_legal_entity"] = _bulk_totals(rows)
+        excepted = {
+            str(r.id)
+            for _, r in rows
+            if r.status is not TransactionStatus.NEW or r.transfer_pair_id is not None
+        }
+        # The bookable set: exceptions stay out unless confirmed explicitly.
+        bookable = [
+            (item, row)
+            for item, row in rows
+            if body.confirm_exceptions or str(row.id) not in excepted
+        ]
         if body.preview:
+            expires = int(datetime.now(UTC).timestamp()) + BULK_PREVIEW_TTL_SECONDS
+            digest = _bulk_fingerprint(principal, bookable, body.confirm_exceptions, expires)
+            summary["preview_id"] = f"{expires}.{digest}"
+            summary["preview_expires_at"] = datetime.fromtimestamp(expires, UTC).isoformat()
+            summary["bookable_count"] = len(bookable)
+            summary["bookable_transaction_ids"] = [str(row.id) for _, row in bookable]
             allocations: dict[str, list[dict[str, str]]] = {}
             for item, row in rows:
                 reasons = await matching.allocation_reasons(
@@ -1052,6 +1185,15 @@ async def bulk_confirm(
                     for s in item.settlements
                 ]
             return {"preview": True, **summary, "allocations": allocations}
+        if excepted and not body.confirm_exceptions:
+            raise ProblemError(
+                ErrorCodes.BANK_BULK_EXCEPTIONS_UNCONFIRMED,
+                detail=(
+                    f"{len(excepted)} Umsätze sind Ausnahmen der Vorschau; ohne ausdrückliche "
+                    "Bestätigung werden sie nicht gebucht."
+                ),
+            )
+        _check_bulk_preview(principal, body, rows)
         results = []
         for item, row in rows:
             nested = await session.begin_nested()
@@ -1283,7 +1425,9 @@ async def learn(
 
 
 @router.post(
-    "/auto-post", summary="Automatik über aktive Regeln (nur bei Freischaltung je Mandant)"
+    "/auto-post",
+    summary="Automatik über aktive Regeln (nur bei Freischaltung je Mandant)",
+    response_model=BankingAutoPostRunOut,
 )
 async def run_auto_post(
     request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -1307,7 +1451,11 @@ async def run_auto_post(
         }
 
 
-@router.get("/matching/metrics", summary="Abdeckung und Fehlerquote der Automatik getrennt")
+@router.get(
+    "/matching/metrics",
+    summary="Abdeckung und Fehlerquote der Automatik getrennt",
+    response_model=BankingAutoMetricsOut,
+)
 async def metrics(request: Request, principal: TenantPrincipal = Depends(READ)) -> dict[str, Any]:
     """Coverage = automatically booked / incoming; error rate = automatic bookings later reversed
     / automatic bookings. Operational figures, no proof of safety (7.4)."""
@@ -1334,6 +1482,7 @@ async def metrics(request: Request, principal: TenantPrincipal = Depends(READ)) 
 @router.get(
     "/matching-metrics",
     summary="Abdeckungsgrad und Fehlerquote des Bankabgleichs je Zeitraum (getrennt)",
+    response_model=BankingMatchingMetricsOut,
 )
 async def matching_metrics(
     request: Request,
@@ -1358,7 +1507,11 @@ class AutomationIn(_In):
     reason: str = Field(min_length=3, max_length=2000)
 
 
-@router.put("/automation", summary="Automatik je Mandant ausschalten (Einschalten nur per Antrag)")
+@router.put(
+    "/automation",
+    summary="Automatik je Mandant ausschalten (Einschalten nur per Antrag)",
+    response_model=BankingSwitchStateOut,
+)
 async def set_automation(
     body: AutomationIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, bool]:
@@ -1432,7 +1585,7 @@ async def automation_comparison(
     request: Request,
     date_from: Annotated[date | None, Query()] = None,
     date_to: Annotated[date | None, Query()] = None,
-    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 100,
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     from mhvp.banking import automation_switch
@@ -1449,6 +1602,7 @@ async def automation_comparison(
     "/automation/switch-requests",
     summary="Anträge zum Einschalten der Automatik",
     dependencies=[Depends(strict_query)],
+    response_model=BankingSwitchRequestListOut,
 )
 async def list_switch_requests(
     request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1479,6 +1633,7 @@ async def list_switch_requests(
     "/automation/switch-requests",
     status_code=201,
     summary="Einschalten der Automatik beantragen (G1 und Vier Augen)",
+    response_model=BankingSwitchRequestOut,
 )
 async def create_switch_request(
     body: BankingSwitchRequestIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -1502,6 +1657,7 @@ async def create_switch_request(
 @router.post(
     "/automation/switch-requests/{request_id}/{decision}",
     summary="Antrag zum Einschalten freigeben oder ablehnen (andere Person)",
+    response_model=BankingSwitchRequestOut,
 )
 async def decide_switch_request(
     request_id: uuid.UUID,
@@ -1530,7 +1686,11 @@ async def decide_switch_request(
         return automation_switch.switch_out(row)
 
 
-@router.get("/learning", summary="Lernender Buchhalter: Schalter je Mandant lesen")
+@router.get(
+    "/learning",
+    summary="Lernender Buchhalter: Schalter je Mandant lesen",
+    response_model=BankingLearningOut,
+)
 async def get_learning(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -1551,6 +1711,7 @@ async def get_learning(
 @router.put(
     "/learning",
     summary="Lernender Buchhalter: Entscheidungsprotokoll je Mandant ein- oder ausschalten",
+    response_model=BankingSwitchStateOut,
 )
 async def set_learning(
     body: LearningSwitchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -1642,7 +1803,11 @@ def _actor(principal: TenantPrincipal) -> levels_svc.LevelActor:
     )
 
 
-@router.get("/automation/levels", summary="Automatikstufen je Fallklasse mit Anträgen")
+@router.get(
+    "/automation/levels",
+    summary="Automatikstufen je Fallklasse mit Anträgen",
+    response_model=BankingLevelsOut,
+)
 async def get_levels(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -1723,7 +1888,12 @@ def _entity_allowed(principal: TenantPrincipal, legal_entity_id: uuid.UUID) -> b
     return True
 
 
-@router.post("/automation/level-requests", status_code=201, summary="Stufenanhebung beantragen")
+@router.post(
+    "/automation/level-requests",
+    status_code=201,
+    summary="Stufenanhebung beantragen",
+    response_model=BankingLevelRequestOut,
+)
 async def create_level_request(
     body: LevelRequestIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -1742,6 +1912,7 @@ async def create_level_request(
 @router.post(
     "/automation/level-requests/{request_id}/approve",
     summary="Stufenanhebung freigeben (andere Person)",
+    response_model=BankingLevelRequestOut,
 )
 async def approve_level_request(
     request_id: uuid.UUID,
@@ -1756,7 +1927,11 @@ async def approve_level_request(
         return levels_svc.request_out(row)
 
 
-@router.post("/automation/level-requests/{request_id}/reject", summary="Stufenanhebung ablehnen")
+@router.post(
+    "/automation/level-requests/{request_id}/reject",
+    summary="Stufenanhebung ablehnen",
+    response_model=BankingLevelRequestOut,
+)
 async def reject_level_request(
     request_id: uuid.UUID,
     body: LevelDecisionIn,
@@ -1785,7 +1960,11 @@ async def lower_level(
         return await levels_svc.current_levels(session)
 
 
-@router.put("/automation/outgoing", summary="Ausgangsautomatik je Mandant (Standard aus)")
+@router.put(
+    "/automation/outgoing",
+    summary="Ausgangsautomatik je Mandant (Standard aus)",
+    response_model=BankingSwitchStateOut,
+)
 async def set_outgoing(
     body: OutgoingSwitchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, bool]:
@@ -2274,7 +2453,7 @@ async def list_orders(
     status: str | None = Query(
         default=None, pattern="^(" + "|".join(s.value for s in OrderStatus) + ")$"
     ),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     params: ListParams = Depends(_ORDER_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[OrderOut]:
@@ -2368,7 +2547,12 @@ async def cancel_order(
         return await _order_out(session, order)
 
 
-@router.post("/payment-batches", status_code=201, summary="Zahlungsdatei erzeugen (G2)")
+@router.post(
+    "/payment-batches",
+    status_code=201,
+    summary="Zahlungsdatei erzeugen (G2)",
+    response_model=BankingPaymentBatchCreatedOut,
+)
 async def create_batch(
     body: BatchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -2428,6 +2612,7 @@ async def create_batch(
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Zahlungsdatei fehlerhaft: " + " ".join(problems)
             )
+        from mhvp.documents import payment_files
         from mhvp.documents import services as docs
         from mhvp.documents.models import DocumentSource, LinkRole
 
@@ -2440,7 +2625,8 @@ async def create_batch(
             filename=f"{batch.message_id}.xml",
             mime_type="application/xml",
             source=DocumentSource.GENERATED,
-            category_id=None,
+            # AM01/GAJ-301: filed directly in the locked payment_file category.
+            category_id=await payment_files.category_id(session, principal.tenant_id),
             links=[("legal_entity", bank.legal_entity_id, LinkRole.GENERATED)],
             created_by=principal.user_id,
             scan_for_malware=False,
@@ -2523,7 +2709,10 @@ async def _batch(session: Any, batch_id: uuid.UUID, *, lock: bool = False) -> Pa
 
 
 @router.get(
-    "/payment-batches", summary="Zahlungsdateien (Sammler)", dependencies=[Depends(strict_query)]
+    "/payment-batches",
+    summary="Zahlungsdateien (Sammler)",
+    dependencies=[Depends(strict_query)],
+    response_model=list[BankingPaymentBatchOut],
 )
 async def list_batches(
     request: Request, principal: TenantPrincipal = Depends(READ)
@@ -2535,7 +2724,11 @@ async def list_batches(
         return [_batch_out(b) for b in rows]
 
 
-@router.get("/payment-batches/{batch_id}", summary="Sammler mit Download-Protokoll")
+@router.get(
+    "/payment-batches/{batch_id}",
+    summary="Sammler mit Download-Protokoll",
+    response_model=BankingPaymentBatchDetailOut,
+)
 async def get_batch(
     batch_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -2622,7 +2815,11 @@ class PaymentBatchSubmitIn(_In):
     reference: str | None = Field(default=None, max_length=140)
 
 
-@router.post("/payment-batches/{batch_id}/submit", summary="Einreichung (G2)")
+@router.post(
+    "/payment-batches/{batch_id}/submit",
+    summary="Einreichung (G2)",
+    response_model=BankingPaymentBatchSubmittedOut,
+)
 async def submit_batch(
     batch_id: uuid.UUID,
     body: PaymentBatchSubmitIn,
@@ -2698,7 +2895,11 @@ def _config_out(config: PaymentBankConfig) -> dict[str, Any]:
     }
 
 
-@router.get("/payment-bank-config/{account_id}", summary="Zahlungsformat je Bankkonto")
+@router.get(
+    "/payment-bank-config/{account_id}",
+    summary="Zahlungsformat je Bankkonto",
+    response_model=BankingPaymentBankConfigOut,
+)
 async def get_bank_config(
     account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -2720,7 +2921,11 @@ async def get_bank_config(
         return _config_out(config)
 
 
-@router.put("/payment-bank-config/{account_id}", summary="Zahlungsformat je Bankkonto setzen")
+@router.put(
+    "/payment-bank-config/{account_id}",
+    summary="Zahlungsformat je Bankkonto setzen",
+    response_model=BankingPaymentBankConfigOut,
+)
 async def put_bank_config(
     account_id: uuid.UUID,
     body: BankConfigIn,

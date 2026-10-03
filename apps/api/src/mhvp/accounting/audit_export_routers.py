@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import audit_export
 from mhvp.accounting.models import ExportRun, Ledger
+from mhvp.accounting.response_models import AccountingAuditExportRunOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
     ensure_legal_entity_allowed,
@@ -75,7 +76,12 @@ async def _run(session: AsyncSession, run_id: uuid.UUID) -> ExportRun:
     return run
 
 
-@router.post("", status_code=201, summary="Prüfexport je Rechtsträger und Zeitraum erstellen")
+@router.post(
+    "",
+    status_code=201,
+    summary="Prüfexport je Rechtsträger und Zeitraum erstellen",
+    response_model=AccountingAuditExportRunOut,
+)
 async def create_audit_export(
     body: AuditExportIn, request: Request, principal: TenantPrincipal = Depends(EXPORT)
 ) -> dict[str, Any]:
@@ -135,7 +141,12 @@ def dispatch_audit_export(run_id: str, tenant_id: str) -> None:
     audit_export_run.delay(run_id, tenant_id)
 
 
-@router.get("", summary="Prüfexporte auflisten", dependencies=[Depends(strict_query)])
+@router.get(
+    "",
+    summary="Prüfexporte auflisten",
+    dependencies=[Depends(strict_query)],
+    response_model=list[AccountingAuditExportRunOut],
+)
 async def list_audit_exports(
     request: Request,
     ledger_id: uuid.UUID | None = Query(default=None),
@@ -156,7 +167,9 @@ async def list_audit_exports(
         return [audit_export.run_out(r) for r in runs]
 
 
-@router.get("/{run_id}", summary="Status eines Prüfexports")
+@router.get(
+    "/{run_id}", summary="Status eines Prüfexports", response_model=AccountingAuditExportRunOut
+)
 async def get_audit_export(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:

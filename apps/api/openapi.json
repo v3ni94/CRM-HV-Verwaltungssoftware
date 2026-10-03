@@ -1472,6 +1472,103 @@
         "title": "AccountVatOption",
         "type": "string"
       },
+      "AccountingAccountSheetOut": {
+        "additionalProperties": true,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "closing_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Closing Balance"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Debit"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "movements": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingSheetMovementOut"
+            },
+            "title": "Movements",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Opening Balance"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "number",
+          "name",
+          "start",
+          "end",
+          "opening_balance",
+          "debit",
+          "credit",
+          "closing_balance",
+          "movements"
+        ],
+        "title": "AccountingAccountSheetOut",
+        "type": "object"
+      },
       "AccountingAdminFeeCreatedOut": {
         "additionalProperties": true,
         "properties": {
@@ -1600,6 +1697,165 @@
           "total_percent"
         ],
         "title": "AccountingAllocationOut",
+        "type": "object"
+      },
+      "AccountingAuditExportRunOut": {
+        "additionalProperties": true,
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ledger_id",
+          "format",
+          "status"
+        ],
+        "title": "AccountingAuditExportRunOut",
         "type": "object"
       },
       "AccountingCostTransferIn": {
@@ -1956,6 +2212,120 @@
           "active"
         ],
         "title": "AccountingDunningBlockOut",
+        "type": "object"
+      },
+      "AccountingEInvoiceCheckOut": {
+        "additionalProperties": true,
+        "description": "Structure check of an XRechnung, credit note or ZUGFeRD invoice (no official run).",
+        "properties": {
+          "attachment_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Name"
+          },
+          "corrects_invoice_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrects Invoice Id"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "guideline_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guideline Id"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "official_validation": {
+            "title": "Official Validation",
+            "type": "string"
+          },
+          "pdfa": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdfa"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          },
+          "structure_ok": {
+            "title": "Structure Ok",
+            "type": "boolean"
+          },
+          "type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type Code"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "structure_ok",
+          "findings",
+          "official_validation"
+        ],
+        "title": "AccountingEInvoiceCheckOut",
         "type": "object"
       },
       "AccountingEntityCreditorIdOut": {
@@ -2725,6 +3095,129 @@
         "title": "AccountingOpenItemNoticeOut",
         "type": "object"
       },
+      "AccountingOpenItemOut": {
+        "additionalProperties": true,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Number"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "booking_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Date"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "journal_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journal Entry Id"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "notice_received_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Received On"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Remaining"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "kind",
+          "amount",
+          "remaining"
+        ],
+        "title": "AccountingOpenItemOut",
+        "type": "object"
+      },
       "AccountingPaperlessIntakeOut": {
         "additionalProperties": true,
         "properties": {
@@ -2828,6 +3321,1018 @@
         "title": "AccountingRecurringPlanCreatedOut",
         "type": "object"
       },
+      "AccountingReportAccountSheetOut": {
+        "additionalProperties": true,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "closing_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Closing Balance"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Debit"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "movements": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingSheetMovementOut"
+            },
+            "title": "Movements",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Opening Balance"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "number",
+          "name",
+          "start",
+          "end",
+          "opening_balance",
+          "debit",
+          "credit",
+          "closing_balance",
+          "movements",
+          "header"
+        ],
+        "title": "AccountingReportAccountSheetOut",
+        "type": "object"
+      },
+      "AccountingReportBankStatementOut": {
+        "additionalProperties": true,
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "closing_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Balance"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debit"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "movements": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movements"
+          },
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Balance"
+          },
+          "reconciliation": {
+            "title": "Reconciliation"
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "AccountingReportBankStatementOut",
+        "type": "object"
+      },
+      "AccountingReportHeaderOut": {
+        "additionalProperties": true,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "ledger_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Name"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "legal_entity_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Kind"
+          },
+          "legal_entity_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Name"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "report": {
+            "title": "Report",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Note"
+          }
+        },
+        "required": [
+          "report",
+          "ledger_id",
+          "status"
+        ],
+        "title": "AccountingReportHeaderOut",
+        "type": "object"
+      },
+      "AccountingReportIncomeExpenseOut": {
+        "additionalProperties": true,
+        "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "revenue": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue"
+          },
+          "surplus": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surplus"
+          },
+          "total_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost"
+          },
+          "total_revenue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Revenue"
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "AccountingReportIncomeExpenseOut",
+        "type": "object"
+      },
+      "AccountingReportLinePropertyDriftOut": {
+        "additionalProperties": true,
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "AccountingReportLinePropertyDriftOut",
+        "type": "object"
+      },
+      "AccountingReportLiquidityOut": {
+        "additionalProperties": true,
+        "properties": {
+          "accounts": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accounts"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "debtor_credits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debtor Credits"
+          },
+          "expected_inflows": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Inflows"
+          },
+          "expected_outflows": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Outflows"
+          },
+          "free_funds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Funds"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "horizon": {
+            "title": "Horizon"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "projected_free_funds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Free Funds"
+          },
+          "reserve_funds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserve Funds"
+          },
+          "segregated_deposits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segregated Deposits"
+          }
+        },
+        "required": [
+          "header",
+          "as_of"
+        ],
+        "title": "AccountingReportLiquidityOut",
+        "type": "object"
+      },
+      "AccountingReportMonthlyMatrixOut": {
+        "additionalProperties": true,
+        "properties": {
+          "accounts": {
+            "items": {},
+            "title": "Accounts",
+            "type": "array"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "months": {
+            "items": {},
+            "title": "Months",
+            "type": "array"
+          },
+          "sign_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign Note"
+          },
+          "totals_by_category": {
+            "title": "Totals By Category"
+          }
+        },
+        "required": [
+          "header",
+          "months",
+          "accounts"
+        ],
+        "title": "AccountingReportMonthlyMatrixOut",
+        "type": "object"
+      },
+      "AccountingReportOpenItemsOut": {
+        "additionalProperties": true,
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingOpenItemOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "header",
+          "rows"
+        ],
+        "title": "AccountingReportOpenItemsOut",
+        "type": "object"
+      },
+      "AccountingReportRowsOut": {
+        "additionalProperties": true,
+        "description": "Report with the common header and a list of rows (revenue, payments by debtor).",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "rows": {
+            "items": {},
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "header",
+          "rows"
+        ],
+        "title": "AccountingReportRowsOut",
+        "type": "object"
+      },
+      "AccountingReportTargetActualOut": {
+        "additionalProperties": true,
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rows": {
+            "items": {},
+            "title": "Rows",
+            "type": "array"
+          },
+          "total_actual_on_target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Total Actual On Target"
+          },
+          "total_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Total Difference"
+          },
+          "total_receipts_in_period": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Total Receipts In Period"
+          },
+          "total_target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Total Target"
+          }
+        },
+        "required": [
+          "header",
+          "rows",
+          "total_target",
+          "total_actual_on_target",
+          "total_difference",
+          "total_receipts_in_period"
+        ],
+        "title": "AccountingReportTargetActualOut",
+        "type": "object"
+      },
+      "AccountingReportTrialBalanceOut": {
+        "additionalProperties": true,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingTrialBalanceRowOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "balanced": {
+            "title": "Balanced",
+            "type": "boolean"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Debit"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          }
+        },
+        "required": [
+          "as_of",
+          "accounts",
+          "debit",
+          "credit",
+          "balanced",
+          "header"
+        ],
+        "title": "AccountingReportTrialBalanceOut",
+        "type": "object"
+      },
+      "AccountingReportVatByPropertyOut": {
+        "additionalProperties": true,
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "total_input_vat_before_deduction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Input Vat Before Deduction"
+          },
+          "total_output_vat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Output Vat"
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "AccountingReportVatByPropertyOut",
+        "type": "object"
+      },
+      "AccountingReportVatOverviewOut": {
+        "additionalProperties": true,
+        "properties": {
+          "by_month": {
+            "title": "By Month"
+          },
+          "by_rate": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "By Rate"
+          },
+          "checkpoints": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoints"
+          },
+          "header": {
+            "$ref": "#/components/schemas/AccountingReportHeaderOut"
+          },
+          "mixed_use_review_accounts": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mixed Use Review Accounts"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Months"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "total_input_vat_before_deduction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Input Vat Before Deduction"
+          },
+          "total_output_vat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Output Vat"
+          },
+          "ust_flagged_accounts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ust Flagged Accounts"
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "AccountingReportVatOverviewOut",
+        "type": "object"
+      },
       "AccountingS35aCertificateDocumentOut": {
         "additionalProperties": true,
         "properties": {
@@ -2861,6 +4366,87 @@
           "year"
         ],
         "title": "AccountingS35aCertificateDocumentOut",
+        "type": "object"
+      },
+      "AccountingSheetMovementOut": {
+        "additionalProperties": true,
+        "properties": {
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Balance"
+          },
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Debit"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "entry_id",
+          "number",
+          "booking_date",
+          "kind",
+          "debit",
+          "credit",
+          "balance"
+        ],
+        "title": "AccountingSheetMovementOut",
         "type": "object"
       },
       "AccountingSyncDebtorsOut": {
@@ -2902,6 +4488,370 @@
           "tenant_id"
         ],
         "title": "AccountingTenantCreditorIdOut",
+        "type": "object"
+      },
+      "AccountingTrialBalanceOut": {
+        "additionalProperties": true,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingTrialBalanceRowOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "balanced": {
+            "title": "Balanced",
+            "type": "boolean"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Debit"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          }
+        },
+        "required": [
+          "as_of",
+          "accounts",
+          "debit",
+          "credit",
+          "balanced"
+        ],
+        "title": "AccountingTrialBalanceOut",
+        "type": "object"
+      },
+      "AccountingTrialBalanceRowOut": {
+        "additionalProperties": true,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Balance"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Debit"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "number",
+          "name",
+          "category",
+          "debit",
+          "credit",
+          "balance"
+        ],
+        "title": "AccountingTrialBalanceRowOut",
+        "type": "object"
+      },
+      "AccountingWriteOffDecideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "AccountingWriteOffDecideIn",
+        "type": "object"
+      },
+      "AccountingWriteOffOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "approval_enabled": {
+            "default": false,
+            "title": "Approval Enabled",
+            "type": "boolean"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "effective_on": {
+            "format": "date",
+            "title": "Effective On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "open_item_id": {
+            "format": "uuid",
+            "title": "Open Item Id",
+            "type": "string"
+          },
+          "posting_effect": {
+            "default": false,
+            "title": "Posting Effect",
+            "type": "boolean"
+          },
+          "proposed_at": {
+            "format": "date-time",
+            "title": "Proposed At",
+            "type": "string"
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          },
+          "question": {
+            "default": "AN15-02",
+            "title": "Question",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "open_item_id",
+          "status",
+          "effective_on",
+          "amount",
+          "reason",
+          "document_id",
+          "proposed_by",
+          "proposed_at",
+          "decided_by",
+          "decided_at",
+          "decision_note"
+        ],
+        "title": "AccountingWriteOffOut",
+        "type": "object"
+      },
+      "AccountingWriteOffProposeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "effective_on": {
+            "format": "date",
+            "title": "Effective On",
+            "type": "string"
+          },
+          "open_item_id": {
+            "format": "uuid",
+            "title": "Open Item Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open_item_id",
+          "effective_on",
+          "reason"
+        ],
+        "title": "AccountingWriteOffProposeIn",
+        "type": "object"
+      },
+      "AccountingZugferdStoredOut": {
+        "additionalProperties": true,
+        "properties": {
+          "check": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "created"
+        ],
+        "title": "AccountingZugferdStoredOut",
         "type": "object"
       },
       "AccountsIn": {
@@ -3100,6 +5050,42 @@
               }
             ],
             "title": "Street"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
           }
         },
         "title": "AddressIn",
@@ -3210,6 +5196,42 @@
               }
             ],
             "title": "Street"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
           }
         },
         "required": [
@@ -9395,6 +11417,11 @@
       "BankBulkIn": {
         "additionalProperties": false,
         "properties": {
+          "confirm_exceptions": {
+            "default": false,
+            "title": "Confirm Exceptions",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/BulkItem"
@@ -9408,6 +11435,18 @@
             "default": true,
             "title": "Preview",
             "type": "boolean"
+          },
+          "preview_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Id"
           }
         },
         "required": [
@@ -9609,6 +11648,69 @@
         "title": "BankStatusIn",
         "type": "object"
       },
+      "BankingAutoMetricsOut": {
+        "additionalProperties": true,
+        "properties": {
+          "auto_booked": {
+            "title": "Auto Booked",
+            "type": "integer"
+          },
+          "auto_reversed": {
+            "title": "Auto Reversed",
+            "type": "integer"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Rate"
+          },
+          "incoming": {
+            "title": "Incoming",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "incoming",
+          "auto_booked",
+          "auto_reversed"
+        ],
+        "title": "BankingAutoMetricsOut",
+        "type": "object"
+      },
+      "BankingAutoPostRunOut": {
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "posted": {
+            "title": "Posted"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BankingAutoPostRunOut",
+        "type": "object"
+      },
       "BankingConsentSyncIn": {
         "additionalProperties": false,
         "properties": {
@@ -9737,6 +11839,377 @@
         "title": "BankingDigestOut",
         "type": "object"
       },
+      "BankingLearningOut": {
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rule_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Version"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BankingLearningOut",
+        "type": "object"
+      },
+      "BankingLevelRequestOut": {
+        "additionalProperties": true,
+        "properties": {
+          "case_kind": {
+            "title": "Case Kind",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Comment"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "level_from": {
+            "title": "Level From",
+            "type": "string"
+          },
+          "level_to": {
+            "title": "Level To",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "case_kind",
+          "level_from",
+          "level_to",
+          "reason",
+          "status"
+        ],
+        "title": "BankingLevelRequestOut",
+        "type": "object"
+      },
+      "BankingLevelsOut": {
+        "additionalProperties": true,
+        "properties": {
+          "auto_posting_enabled": {
+            "title": "Auto Posting Enabled",
+            "type": "boolean"
+          },
+          "auto_posting_outgoing_enabled": {
+            "title": "Auto Posting Outgoing Enabled",
+            "type": "boolean"
+          },
+          "blocked": {
+            "title": "Blocked"
+          },
+          "caps": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caps"
+          },
+          "labels": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labels"
+          },
+          "learning_enabled": {
+            "title": "Learning Enabled",
+            "type": "boolean"
+          },
+          "levels": {
+            "additionalProperties": true,
+            "title": "Levels",
+            "type": "object"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/BankingLevelRequestOut"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thresholds"
+          }
+        },
+        "required": [
+          "levels",
+          "auto_posting_enabled",
+          "auto_posting_outgoing_enabled",
+          "learning_enabled",
+          "requests"
+        ],
+        "title": "BankingLevelsOut",
+        "type": "object"
+      },
+      "BankingMatchingMetricsOut": {
+        "additionalProperties": true,
+        "properties": {
+          "auto_cancelled": {
+            "title": "Auto Cancelled",
+            "type": "integer"
+          },
+          "auto_corrected": {
+            "title": "Auto Corrected",
+            "type": "integer"
+          },
+          "auto_matched": {
+            "title": "Auto Matched",
+            "type": "integer"
+          },
+          "auto_reversed": {
+            "title": "Auto Reversed",
+            "type": "integer"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Rate"
+          },
+          "ignored": {
+            "title": "Ignored",
+            "type": "integer"
+          },
+          "incoming": {
+            "title": "Incoming",
+            "type": "integer"
+          },
+          "manual_booked": {
+            "title": "Manual Booked",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "transactions": {
+            "title": "Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "transactions",
+          "incoming",
+          "auto_matched",
+          "manual_booked",
+          "open",
+          "ignored",
+          "auto_reversed",
+          "auto_corrected",
+          "auto_cancelled"
+        ],
+        "title": "BankingMatchingMetricsOut",
+        "type": "object"
+      },
       "BankingPayerIbanCandidatesOut": {
         "properties": {
           "bank_transaction_id": {
@@ -9845,6 +12318,716 @@
         "title": "BankingPayerIbanProposalOut",
         "type": "object"
       },
+      "BankingPaymentBankConfigOut": {
+        "additionalProperties": true,
+        "properties": {
+          "confirmed_with_bank_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed With Bank On"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "pain001_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pain001 Version"
+          },
+          "pain008_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pain008 Version"
+          },
+          "property_bank_account_id": {
+            "format": "uuid",
+            "title": "Property Bank Account Id",
+            "type": "string"
+          },
+          "submission_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Channel"
+          },
+          "supported": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Supported",
+            "type": "object"
+          }
+        },
+        "required": [
+          "property_bank_account_id",
+          "supported"
+        ],
+        "title": "BankingPaymentBankConfigOut",
+        "type": "object"
+      },
+      "BankingPaymentBatchCreatedOut": {
+        "additionalProperties": true,
+        "properties": {
+          "control_sum": {
+            "title": "Control Sum",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "file_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Sha256"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submission_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Channel"
+          },
+          "submission_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Reference"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "submitted_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          },
+          "xml": {
+            "title": "Xml",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "format",
+          "status",
+          "transaction_count",
+          "control_sum",
+          "xml"
+        ],
+        "title": "BankingPaymentBatchCreatedOut",
+        "type": "object"
+      },
+      "BankingPaymentBatchDetailOut": {
+        "additionalProperties": true,
+        "properties": {
+          "control_sum": {
+            "title": "Control Sum",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "downloads": {
+            "items": {
+              "$ref": "#/components/schemas/BankingPaymentBatchDownloadOut"
+            },
+            "title": "Downloads",
+            "type": "array"
+          },
+          "file_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Sha256"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submission_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Channel"
+          },
+          "submission_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Reference"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "submitted_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "format",
+          "status",
+          "transaction_count",
+          "control_sum",
+          "downloads"
+        ],
+        "title": "BankingPaymentBatchDetailOut",
+        "type": "object"
+      },
+      "BankingPaymentBatchDownloadOut": {
+        "additionalProperties": true,
+        "properties": {
+          "downloaded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloaded At"
+          },
+          "file_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Sha256"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "BankingPaymentBatchDownloadOut",
+        "type": "object"
+      },
+      "BankingPaymentBatchOut": {
+        "additionalProperties": true,
+        "properties": {
+          "control_sum": {
+            "title": "Control Sum",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "file_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Sha256"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submission_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Channel"
+          },
+          "submission_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Reference"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "submitted_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "format",
+          "status",
+          "transaction_count",
+          "control_sum"
+        ],
+        "title": "BankingPaymentBatchOut",
+        "type": "object"
+      },
+      "BankingPaymentBatchSubmittedOut": {
+        "additionalProperties": true,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "control_sum": {
+            "title": "Control Sum",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "file_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Sha256"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submission_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Channel"
+          },
+          "submission_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Reference"
+          },
+          "submitted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "submitted_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "format",
+          "status",
+          "transaction_count",
+          "control_sum"
+        ],
+        "title": "BankingPaymentBatchSubmittedOut",
+        "type": "object"
+      },
       "BankingSwitchDecisionIn": {
         "additionalProperties": false,
         "properties": {
@@ -9887,6 +13070,151 @@
           "reason"
         ],
         "title": "BankingSwitchRequestIn",
+        "type": "object"
+      },
+      "BankingSwitchRequestListOut": {
+        "additionalProperties": true,
+        "properties": {
+          "can_request": {
+            "title": "Can Request",
+            "type": "boolean"
+          },
+          "can_request_outgoing": {
+            "title": "Can Request Outgoing",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "g1_open": {
+            "title": "G1 Open",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BankingSwitchRequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "outgoing_enabled": {
+            "title": "Outgoing Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "outgoing_enabled",
+          "g1_open",
+          "can_request",
+          "can_request_outgoing",
+          "items"
+        ],
+        "title": "BankingSwitchRequestListOut",
+        "type": "object"
+      },
+      "BankingSwitchRequestOut": {
+        "additionalProperties": true,
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Comment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "target",
+          "status"
+        ],
+        "title": "BankingSwitchRequestOut",
+        "type": "object"
+      },
+      "BankingSwitchStateOut": {
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BankingSwitchStateOut",
         "type": "object"
       },
       "BankingSyncRunOut": {
@@ -10321,6 +13649,229 @@
         "title": "BillingDeadlineSettingOut",
         "type": "object"
       },
+      "BillingHeatingCostImportOut": {
+        "additionalProperties": true,
+        "properties": {
+          "applied_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "applied_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Item Id"
+          },
+          "check_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Result"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "checked_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked By"
+          },
+          "co2": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Co2"
+          },
+          "csv_meta": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csv Meta"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "document_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Document Total"
+          },
+          "duplicate_ack_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate Ack Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "provider_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Contact Id"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "statement_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "user_mapping": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Mapping"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "provider_name",
+          "period_from",
+          "period_to",
+          "document_total",
+          "status"
+        ],
+        "title": "BillingHeatingCostImportOut",
+        "type": "object"
+      },
       "BillingHeatingRuleTableOut": {
         "additionalProperties": true,
         "properties": {
@@ -10639,6 +14190,217 @@
           "text_status"
         ],
         "title": "BillingOwnerOutputsFiledOut",
+        "type": "object"
+      },
+      "BillingOwnerStatementOut": {
+        "additionalProperties": true,
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "attach_receipts": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attach Receipts"
+          },
+          "calculated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculated At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "findings": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "posted_entry_ids": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted Entry Ids"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "results": {
+            "title": "Results"
+          },
+          "rule_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Version"
+          },
+          "settlement": {
+            "title": "Settlement"
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Hash"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_log": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Log"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "ledger_id",
+          "period_from",
+          "period_to",
+          "status"
+        ],
+        "title": "BillingOwnerStatementOut",
+        "type": "object"
+      },
+      "BillingOwnerStatementOutputsOut": {
+        "additionalProperties": true,
+        "properties": {
+          "items": {
+            "items": {},
+            "title": "Items",
+            "type": "array"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement_id",
+          "items"
+        ],
+        "title": "BillingOwnerStatementOutputsOut",
         "type": "object"
       },
       "BillingPeriodIn": {
@@ -18567,9 +22329,54 @@
         "title": "ContactAccessExportSettingsOut",
         "type": "object"
       },
-      "ContactAddressListOut": {
-        "description": "Current addresses of a contact (AM14, GAJ-610). ``history_available`` stays false until\nthe address history (valid_to, AM14-01) exists; ``as_of`` is refused with 422 until then.",
+      "ContactAddressHistorySettingIn": {
+        "additionalProperties": false,
         "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ContactAddressHistorySettingIn",
+        "type": "object"
+      },
+      "ContactAddressHistorySettingOut": {
+        "description": "Tenant switch contacts.address_history (AN05, OPEN_QUESTIONS AM14-01).",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "open_question": {
+            "default": "AM14-01",
+            "title": "Open Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ContactAddressHistorySettingOut",
+        "type": "object"
+      },
+      "ContactAddressListOut": {
+        "description": "Addresses of a contact (AM14, AN05, GAJ-610). ``history_available`` mirrors the tenant\nswitch contacts.address_history; while it is off ``as_of`` and ``include_history`` are\nrefused with 422 MHVP-CONT-0034 (AM14-01 open).",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
           "history_available": {
             "default": false,
             "title": "History Available",
@@ -26075,6 +29882,190 @@
         "title": "DepositKind",
         "type": "string"
       },
+      "DepositLinkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          }
+        },
+        "title": "DepositLinkIn",
+        "type": "object"
+      },
+      "DepositLinkOut": {
+        "properties": {
+          "bank_account_approval": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Approval"
+          },
+          "bank_account_created": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Created"
+          },
+          "bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Id"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "deposit_amount_due": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Amount Due"
+          },
+          "deposit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Id"
+          },
+          "deposit_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Status"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "draft_only": {
+            "default": true,
+            "title": "Draft Only",
+            "type": "boolean"
+          },
+          "hints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hints",
+            "type": "array"
+          },
+          "iban_suffix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iban Suffix"
+          },
+          "protocol_deposit_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Deposit Amount"
+          },
+          "protocol_id": {
+            "format": "uuid",
+            "title": "Protocol Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol_id",
+          "contract_id",
+          "deposit_id",
+          "deposit_status",
+          "deposit_amount_due",
+          "protocol_deposit_amount",
+          "difference",
+          "iban_suffix",
+          "contact_id",
+          "bank_account_id",
+          "bank_account_approval",
+          "hints"
+        ],
+        "title": "DepositLinkOut",
+        "type": "object"
+      },
       "DepositListRow": {
         "description": "Row of the deposit list ``GET /deposits`` (4.5 Kaution).",
         "properties": {
@@ -27021,6 +31012,46 @@
               }
             ],
             "title": "Reason Code"
+          },
+          "return_fee_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Fee Amount"
+          },
+          "return_fee_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Fee Document Id"
+          },
+          "returned_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned On"
           },
           "status": {
             "pattern": "^(accepted|rejected|collected|returned)$",
@@ -37478,6 +41509,96 @@
         "title": "HoaCostsFromLedgerIn",
         "type": "object"
       },
+      "HoaMajorityFourEyesIn": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaMajorityFourEyesIn",
+        "type": "object"
+      },
+      "HoaMajorityFourEyesOut": {
+        "additionalProperties": true,
+        "description": "AN06 (GAJ-602): tenant switch hoa_majority_rule_four_eyes.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaMajorityFourEyesOut",
+        "type": "object"
+      },
+      "HoaMajorityRuleApprovalOut": {
+        "additionalProperties": true,
+        "description": "AN06 (GAJ-602): result of the approval of a meeting majority rule.",
+        "properties": {
+          "approval_status": {
+            "title": "Approval Status",
+            "type": "string"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requires_approval": {
+            "title": "Requires Approval",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "requires_approval",
+          "approval_status"
+        ],
+        "title": "HoaMajorityRuleApprovalOut",
+        "type": "object"
+      },
       "HoaNewVersionIn": {
         "additionalProperties": false,
         "description": "P02 (AE11): why the new version corrects its predecessor (optional).",
@@ -44712,6 +48833,27 @@
         "title": "LettersIn",
         "type": "object"
       },
+      "LettingIncreaseSettingsIo": {
+        "additionalProperties": false,
+        "description": "Tenant switches of the rent increase process (GAK-202, GAK-203, AN18-01).",
+        "properties": {
+          "block_months": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Block Months",
+            "type": "object"
+          },
+          "proposals": {
+            "default": "off",
+            "pattern": "^(off|draft)$",
+            "title": "Proposals",
+            "type": "string"
+          }
+        },
+        "title": "LettingIncreaseSettingsIo",
+        "type": "object"
+      },
       "LevelDecisionIn": {
         "additionalProperties": false,
         "properties": {
@@ -44880,6 +49022,30 @@
             "minLength": 3,
             "title": "Purpose",
             "type": "string"
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Date"
+          },
+          "revenue_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue Account Id"
           },
           "total": {
             "anyOf": [
@@ -61052,6 +65218,22 @@
             ],
             "title": "Chat Enabled"
           },
+          "meter_photo_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "hint",
+                  "required"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Photo Mode"
+          },
           "owner_hoa_rental_statements_enabled": {
             "anyOf": [
               {
@@ -70600,9 +74782,21 @@
         "additionalProperties": false,
         "properties": {
           "action": {
-            "pattern": "^(approve|send|consent|reject|apply|cancel|receipt)$",
+            "pattern": "^(approve|send|consent|reject|apply|cancel|receipt|set_block)$",
             "title": "Action",
             "type": "string"
+          },
+          "block_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Until"
           },
           "document_id": {
             "anyOf": [
@@ -72118,6 +76312,77 @@
         "title": "RequiredDocumentIn",
         "type": "object"
       },
+      "ResolutionDependentOut": {
+        "properties": {
+          "applied": {
+            "title": "Applied",
+            "type": "boolean"
+          },
+          "contested": {
+            "title": "Contested",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "label",
+          "status",
+          "applied",
+          "contested"
+        ],
+        "title": "ResolutionDependentOut",
+        "type": "object"
+      },
+      "ResolutionDependentsOut": {
+        "properties": {
+          "contested": {
+            "title": "Contested",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ResolutionDependentOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "resolution_id": {
+            "format": "uuid",
+            "title": "Resolution Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution_id",
+          "status",
+          "contested",
+          "items"
+        ],
+        "title": "ResolutionDependentsOut",
+        "type": "object"
+      },
       "ResolutionIn": {
         "additionalProperties": false,
         "description": "Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der\nFreitext ist bei ``sonstiges`` Pflicht. ``kind`` ist ein Code (Slug); ob er für den\nMandanten wirksam ist (aktive eingebaute oder eigene Art), prüft ``transition_status``\nüber ``assert_resolution_kind_allowed``.",
@@ -72566,6 +76831,91 @@
           }
         },
         "title": "RevertGmailDecisionIn",
+        "type": "object"
+      },
+      "ReviewDeadlineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible User Id"
+          }
+        },
+        "title": "ReviewDeadlineIn",
+        "type": "object"
+      },
+      "ReviewDeadlineOut": {
+        "properties": {
+          "deadline_type_id": {
+            "format": "uuid",
+            "title": "Deadline Type Id",
+            "type": "string"
+          },
+          "due_computed": {
+            "title": "Due Computed",
+            "type": "boolean"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "resolution_id": {
+            "format": "uuid",
+            "title": "Resolution Id",
+            "type": "string"
+          },
+          "verify": {
+            "title": "Verify",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "resolution_id",
+          "due_on",
+          "due_computed",
+          "verify",
+          "deadline_type_id"
+        ],
+        "title": "ReviewDeadlineOut",
         "type": "object"
       },
       "ReviewDecisionIn": {
@@ -74051,6 +78401,43 @@
         ],
         "title": "RunStatus",
         "type": "string"
+      },
+      "SaleMarketingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "SaleMarketingIn",
+        "type": "object"
+      },
+      "SaleMarketingOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "open_question": {
+            "default": "AN19-02",
+            "title": "Open Question",
+            "type": "string"
+          },
+          "switch": {
+            "title": "Switch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "switch"
+        ],
+        "title": "SaleMarketingOut",
+        "type": "object"
       },
       "ScheduleIn": {
         "additionalProperties": false,
@@ -78052,6 +82439,17 @@
             "title": "Input Tax Enabled",
             "type": "boolean"
           },
+          "return_fee_pass_on_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Fee Pass On Enabled"
+          },
           "section_35a_basis": {
             "default": "invoice_date",
             "enum": [
@@ -78070,6 +82468,17 @@
             "default": true,
             "title": "Subledger Exclude Written Off",
             "type": "boolean"
+          },
+          "write_off_approval_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Write Off Approval Enabled"
           }
         },
         "title": "TaxSettingsIn",
@@ -78113,6 +82522,11 @@
             "title": "Input Tax Enabled",
             "type": "boolean"
           },
+          "return_fee_pass_on_enabled": {
+            "default": false,
+            "title": "Return Fee Pass On Enabled",
+            "type": "boolean"
+          },
           "section_35a_basis": {
             "default": "invoice_date",
             "title": "Section 35A Basis",
@@ -78125,6 +82539,11 @@
           "subledger_exclude_written_off": {
             "default": true,
             "title": "Subledger Exclude Written Off",
+            "type": "boolean"
+          },
+          "write_off_approval_enabled": {
+            "default": false,
+            "title": "Write Off Approval Enabled",
             "type": "boolean"
           }
         },
@@ -86243,7 +90662,7 @@
   "info": {
     "description": "Offene REST-API der MH Verwaltungsplattform. Fachbegriffe deutsch, Feldnamen englisch. Fehler als RFC 9457 Problem Details (application/problem+json).",
     "title": "MH Verwaltungsplattform API",
-    "version": "1.68.0"
+    "version": "1.69.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -86892,7 +91311,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
@@ -87389,9 +91808,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Credit Note Check Api V1 Accounting Admin Fee Invoices  Invoice Id  Xrechnung Credit Note Check Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingEInvoiceCheckOut"
                 }
               }
             },
@@ -87584,9 +92001,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Zugferd Check Api V1 Accounting Admin Fee Invoices  Invoice Id  Zugferd Check Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingEInvoiceCheckOut"
                 }
               }
             },
@@ -87651,9 +92066,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Zugferd Store Api V1 Accounting Admin Fee Invoices  Invoice Id  Zugferd Document Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingZugferdStoredOut"
                 }
               }
             },
@@ -87860,7 +92273,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
@@ -88612,8 +93025,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/AccountingAuditExportRunOut"
                   },
                   "title": "Response List Audit Exports Api V1 Accounting Audit Exports Get",
                   "type": "array"
@@ -88672,9 +93084,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Audit Export Api V1 Accounting Audit Exports Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingAuditExportRunOut"
                 }
               }
             },
@@ -88737,9 +93147,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Audit Export Api V1 Accounting Audit Exports  Run Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingAuditExportRunOut"
                 }
               }
             },
@@ -90338,7 +94746,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -93687,8 +98095,8 @@
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 500,
-              "maximum": 1000,
+              "default": 200,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -93715,7 +98123,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 1000,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -94555,9 +98963,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Xrechnung Check Api V1 Accounting Invoices  Invoice Id  Xrechnung Check Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingEInvoiceCheckOut"
                 }
               }
             },
@@ -95361,9 +99767,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Account Sheet Api V1 Accounting Ledgers  Ledger Id  Accounts  Account Id  Sheet Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingAccountSheetOut"
                 }
               }
             },
@@ -95953,7 +100357,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -95991,7 +100395,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 1000,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -97991,8 +102395,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/AccountingOpenItemOut"
                   },
                   "title": "Response Open Items Api V1 Accounting Ledgers  Ledger Id  Open Items Get",
                   "type": "array"
@@ -98544,9 +102947,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Account Sheet Api V1 Accounting Ledgers  Ledger Id  Reports Account Sheet Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportAccountSheetOut"
                 }
               }
             },
@@ -98639,9 +103040,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Bank Statement Api V1 Accounting Ledgers  Ledger Id  Reports Bank Statement Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportBankStatementOut"
                 }
               }
             },
@@ -98753,9 +103152,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Income Expense Api V1 Accounting Ledgers  Ledger Id  Reports Income Expense Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportIncomeExpenseOut"
                 }
               }
             },
@@ -98853,9 +103250,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Line Property Drift Api V1 Accounting Ledgers  Ledger Id  Reports Line Property Drift Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportLinePropertyDriftOut"
                 }
               }
             },
@@ -98936,9 +103331,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Liquidity Api V1 Accounting Ledgers  Ledger Id  Reports Liquidity Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportLiquidityOut"
                 }
               }
             },
@@ -99069,9 +103462,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Monthly Matrix Api V1 Accounting Ledgers  Ledger Id  Reports Monthly Matrix Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportMonthlyMatrixOut"
                 }
               }
             },
@@ -99161,9 +103552,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Open Items Api V1 Accounting Ledgers  Ledger Id  Reports Open Items Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportOpenItemsOut"
                 }
               }
             },
@@ -99246,9 +103635,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Payments By Debtor Api V1 Accounting Ledgers  Ledger Id  Reports Payments By Debtor Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportRowsOut"
                 }
               }
             },
@@ -99331,9 +103718,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Revenue Api V1 Accounting Ledgers  Ledger Id  Reports Revenue Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportRowsOut"
                 }
               }
             },
@@ -99450,9 +103835,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Target Actual Api V1 Accounting Ledgers  Ledger Id  Reports Target Actual Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportTargetActualOut"
                 }
               }
             },
@@ -99542,9 +103925,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Trial Balance Api V1 Accounting Ledgers  Ledger Id  Reports Trial Balance Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportTrialBalanceOut"
                 }
               }
             },
@@ -99627,9 +104008,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Vat Overview Api V1 Accounting Ledgers  Ledger Id  Reports Vat Overview Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportVatOverviewOut"
                 }
               }
             },
@@ -99712,9 +104091,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Report Vat Overview By Property Api V1 Accounting Ledgers  Ledger Id  Reports Vat Overview By Property Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReportVatByPropertyOut"
                 }
               }
             },
@@ -100175,9 +104552,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Trial Balance Api V1 Accounting Ledgers  Ledger Id  Trial Balance Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingTrialBalanceOut"
                 }
               }
             },
@@ -100371,6 +104746,236 @@
           }
         ],
         "summary": "Schlussbestand als Anfangsbestand übernehmen (Entwurf, Vier-Augen)",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/open-item-write-offs": {
+      "get": {
+        "operationId": "list_write_offs_api_v1_accounting_open_item_write_offs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "open_item_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Open Item Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "proposed",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountingWriteOffOut"
+                  },
+                  "title": "Response List Write Offs Api V1 Accounting Open Item Write Offs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Ausbuchungsvorschläge offener Posten (AN15, ohne Buchungswirkung)",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "propose_write_off_api_v1_accounting_open_item_write_offs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountingWriteOffProposeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingWriteOffOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Ausbuchung eines offenen Postens vorschlagen (Grund, Datum, Beleg; keine Wirkung)",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/open-item-write-offs/{write_off_id}/decision": {
+      "post": {
+        "operationId": "decide_write_off_api_v1_accounting_open_item_write_offs__write_off_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "write_off_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Write Off Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountingWriteOffDecideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingWriteOffOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Ausbuchungsvorschlag freigeben (Schalter, Vier Augen, G1) oder ablehnen",
         "tags": [
           "Buchhaltung",
           "Buchhaltung"
@@ -100681,7 +105286,7 @@
             "required": false,
             "schema": {
               "default": 50,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -101321,7 +105926,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -101849,7 +106454,7 @@
             "required": false,
             "schema": {
               "default": 50,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
@@ -102303,7 +106908,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 500,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -105776,7 +110381,7 @@
             "required": false,
             "schema": {
               "default": 50,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -106634,7 +111239,7 @@
             "schema": {
               "default": 200,
               "description": "Höchstzahl Einträge je Abruf",
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -110109,7 +114714,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -111405,6 +116010,22 @@
               "title": "Bank Account Id",
               "type": "string"
             }
+          },
+          {
+            "description": "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag",
+            "in": "query",
+            "name": "basis",
+            "required": false,
+            "schema": {
+              "default": "booking_date",
+              "description": "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag",
+              "enum": [
+                "booking_date",
+                "bank_date"
+              ],
+              "title": "Basis",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -111469,9 +116090,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Auto Post Api V1 Banking Auto Post Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingAutoPostRunOut"
                 }
               }
             },
@@ -111819,11 +116438,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Set Automation Api V1 Banking Automation Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingSwitchStateOut"
                 }
               }
             },
@@ -111910,7 +116525,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -111982,9 +116597,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Level Request Api V1 Banking Automation Level Requests Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingLevelRequestOut"
                 }
               }
             },
@@ -112057,9 +116670,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Approve Level Request Api V1 Banking Automation Level Requests  Request Id  Approve Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingLevelRequestOut"
                 }
               }
             },
@@ -112135,9 +116746,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Reject Level Request Api V1 Banking Automation Level Requests  Request Id  Reject Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingLevelRequestOut"
                 }
               }
             },
@@ -112191,9 +116800,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Levels Api V1 Banking Automation Levels Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingLevelsOut"
                 }
               }
             },
@@ -112392,11 +116999,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Set Outgoing Api V1 Banking Automation Outgoing Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingSwitchStateOut"
                 }
               }
             },
@@ -112447,9 +117050,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Switch Requests Api V1 Banking Automation Switch Requests Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingSwitchRequestListOut"
                 }
               }
             },
@@ -112495,9 +117096,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Switch Request Api V1 Banking Automation Switch Requests Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingSwitchRequestOut"
                 }
               }
             },
@@ -112579,9 +117178,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Decide Switch Request Api V1 Banking Automation Switch Requests  Request Id   Decision  Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingSwitchRequestOut"
                 }
               }
             },
@@ -116012,9 +120609,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Learning Api V1 Banking Learning Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingLearningOut"
                 }
               }
             },
@@ -116061,11 +120656,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Set Learning Api V1 Banking Learning Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingSwitchStateOut"
                 }
               }
             },
@@ -116153,9 +120744,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Matching Metrics Api V1 Banking Matching Metrics Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingMatchingMetricsOut"
                 }
               }
             },
@@ -116204,9 +120793,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Metrics Api V1 Banking Matching Metrics Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingAutoMetricsOut"
                 }
               }
             },
@@ -116256,9 +120843,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Bank Config Api V1 Banking Payment Bank Config  Account Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingPaymentBankConfigOut"
                 }
               }
             },
@@ -116330,9 +120915,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Bank Config Api V1 Banking Payment Bank Config  Account Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingPaymentBankConfigOut"
                 }
               }
             },
@@ -116387,8 +120970,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/BankingPaymentBatchOut"
                   },
                   "title": "Response List Batches Api V1 Banking Payment Batches Get",
                   "type": "array"
@@ -116437,9 +121019,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Batch Api V1 Banking Payment Batches Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingPaymentBatchCreatedOut"
                 }
               }
             },
@@ -116502,9 +121082,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Batch Api V1 Banking Payment Batches  Batch Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingPaymentBatchDetailOut"
                 }
               }
             },
@@ -116716,9 +121294,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Submit Batch Api V1 Banking Payment Batches  Batch Id  Submit Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BankingPaymentBatchSubmittedOut"
                 }
               }
             },
@@ -116791,7 +121367,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -118088,7 +122664,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -119962,8 +124538,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                   },
                   "title": "Response List Heating Cost Imports Api V1 Billing Heating Cost Imports Get",
                   "type": "array"
@@ -120023,9 +124598,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Heating Cost Import Api V1 Billing Heating Cost Imports Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120089,9 +124662,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120163,9 +124734,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Update Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120242,9 +124811,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Apply Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Apply Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120321,9 +124888,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Check Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Check Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120400,9 +124965,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Import Heating Cost Csv Api V1 Billing Heating Cost Imports  Import Id  Csv Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120479,9 +125042,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Heating Cost Import Mapping Api V1 Billing Heating Cost Imports  Import Id  Mapping Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120558,9 +125119,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Heating Cost Import Rows Api V1 Billing Heating Cost Imports  Import Id  Rows Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingCostImportOut"
                 }
               }
             },
@@ -120920,8 +125479,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/BillingOwnerStatementOut"
                   },
                   "title": "Response List Statements Api V1 Billing Owner Statements Get",
                   "type": "array"
@@ -120980,9 +125538,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Api V1 Billing Owner Statements Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOut"
                 }
               }
             },
@@ -121045,9 +125601,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Api V1 Billing Owner Statements  Statement Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOut"
                 }
               }
             },
@@ -121110,9 +125664,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Approve Api V1 Billing Owner Statements  Statement Id  Approve Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOut"
                 }
               }
             },
@@ -121178,9 +125730,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Calculate Api V1 Billing Owner Statements  Statement Id  Calculate Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOut"
                 }
               }
             },
@@ -121256,9 +125806,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Options Api V1 Billing Owner Statements  Statement Id  Options Patch",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOut"
                 }
               }
             },
@@ -121324,9 +125872,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Outputs Api V1 Billing Owner Statements  Statement Id  Outputs Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOutputsOut"
                 }
               }
             },
@@ -121595,9 +126141,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Transition Api V1 Billing Owner Statements  Statement Id  Transition Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerStatementOut"
                 }
               }
             },
@@ -123276,6 +127820,104 @@
           }
         ],
         "summary": "Auskunftsexport: Umfang Dritter und interne Vermerke setzen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contact-address-history": {
+      "get": {
+        "operationId": "get_contact_address_history_setting_api_v1_contact_address_history_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAddressHistorySettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Schalter Adresshistorie der Kontakte lesen (AN05)",
+        "tags": [
+          "Kontakte"
+        ]
+      },
+      "put": {
+        "description": "Scope and retention of former addresses are open (AM14-01); switching on keeps former\naddresses instead of deleting them, switching off stops new history rows but deletes\nnothing. Recorded as an event with the previous value.",
+        "operationId": "put_contact_address_history_setting_api_v1_contact_address_history_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactAddressHistorySettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAddressHistorySettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Schalter Adresshistorie der Kontakte setzen (AN05)",
         "tags": [
           "Kontakte"
         ]
@@ -125219,7 +129861,7 @@
     },
     "/api/v1/contacts/{contact_id}/addresses": {
       "get": {
-        "description": "GAJ-610: addresses have no valid_to yet, a change overwrites the previous one. A cut off\ndate query is refused explicitly (422) instead of returning today's addresses for a past\ndate, which would be a wrong delivery proof.",
+        "description": "GAJ-610, AN05: with the tenant switch contacts.address_history off (default, AM14-01\nopen) a change overwrites the previous address and a cut off date query is refused (422)\ninstead of returning today's addresses for a past date, which would be a wrong delivery\nproof. With the switch on, replaced addresses are closed and can be queried by date.",
         "operationId": "list_contact_addresses_api_v1_contacts__contact_id__addresses_get",
         "parameters": [
           {
@@ -125233,21 +129875,34 @@
             }
           },
           {
-            "description": "Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden.",
+            "description": "Stichtag (ISO); nur mit Schalter contacts.address_history (AN05).",
             "in": "query",
             "name": "as_of",
             "required": false,
             "schema": {
               "anyOf": [
                 {
+                  "format": "date",
                   "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden.",
+              "description": "Stichtag (ISO); nur mit Schalter contacts.address_history (AN05).",
               "title": "As Of"
+            }
+          },
+          {
+            "description": "Auch geschlossene frühere Anschriften; nur mit Adresshistorie.",
+            "in": "query",
+            "name": "include_history",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Auch geschlossene frühere Anschriften; nur mit Adresshistorie.",
+              "title": "Include History",
+              "type": "boolean"
             }
           }
         ],
@@ -125293,7 +129948,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Aktuelle Anschriften eines Kontakts (Stichtag noch nicht verfügbar)",
+        "summary": "Anschriften eines Kontakts, optional zum Stichtag oder mit Historie",
         "tags": [
           "Kontakte"
         ]
@@ -127526,7 +132181,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -127553,7 +132208,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 1000,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -127913,8 +132568,8 @@
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 1000,
-              "maximum": 5000,
+              "default": 200,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -127938,7 +132593,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 5000,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -130540,7 +135195,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -131567,7 +136222,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -131591,7 +136246,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 1000,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -135671,7 +140326,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -138648,6 +143303,144 @@
           }
         ],
         "summary": "Mängel als Tickets anlegen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/deposit/link": {
+      "get": {
+        "operationId": "deposit_link_state_api_v1_handover_protocols__protocol_id__deposit_link_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Kaution und Rückzahlungskonto: Abgleich mit Vertrag und Freigabe",
+        "tags": [
+          "handover"
+        ]
+      },
+      "post": {
+        "description": "Nothing is paid and the deposit is not changed; the IBAN waits for a second person with\n``contacts:approve`` like every new payee account (M5-01).",
+        "operationId": "deposit_link_apply_api_v1_handover_protocols__protocol_id__deposit_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Rückzahlungs-IBAN zur Freigabe (Vier Augen) an den Kontakt geben",
         "tags": [
           "handover"
         ]
@@ -144956,6 +149749,104 @@
         ]
       }
     },
+    "/api/v1/hoa/majority-rule-four-eyes": {
+      "get": {
+        "operationId": "get_majority_four_eyes_api_v1_hoa_majority_rule_four_eyes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoaMajorityFourEyesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Vier-Augen-Freigabe der Mehrheitsregeln (Schalter)",
+        "tags": [
+          "hoa"
+        ]
+      },
+      "put": {
+        "description": "AN06: default off (behaviour before AN06). Model question AM02-01 stays open.",
+        "operationId": "put_majority_four_eyes_api_v1_hoa_majority_rule_four_eyes_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaMajorityFourEyesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoaMajorityFourEyesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Vier-Augen-Freigabe der Mehrheitsregeln setzen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/majority-rules": {
       "get": {
         "operationId": "list_rules_api_v1_hoa_majority_rules_get",
@@ -145415,6 +150306,72 @@
         "summary": "Mehrheitsregel fachlich freigeben (zweite Person)",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/majority-rules/{rule_id}/approve": {
+      "post": {
+        "operationId": "approve_rule_api_v1_hoa_majority_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoaMajorityRuleApprovalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Mehrheitsregel freigeben (Vier Augen, AN06)",
+        "tags": [
+          "hoa"
         ]
       }
     },
@@ -150515,6 +155472,69 @@
         ]
       }
     },
+    "/api/v1/hoa/resolutions/{resolution_id}/dependents": {
+      "get": {
+        "operationId": "resolution_dependents_api_v1_hoa_resolutions__resolution_id__dependents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resolution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resolution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolutionDependentsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Abhängige Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/resolutions/{resolution_id}/majority-check": {
       "get": {
         "operationId": "resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get",
@@ -150577,6 +155597,82 @@
         "summary": "Mehrheitsprüfung eines Beschlusses (nur Anzeige, keine Statusänderung)",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/resolutions/{resolution_id}/review-deadline": {
+      "post": {
+        "operationId": "resolution_review_deadline_api_v1_hoa_resolutions__resolution_id__review_deadline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resolution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resolution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDeadlineIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDeadlineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Prüfdatum Anfechtung als Frist anlegen (Datum zu verifizieren)",
+        "tags": [
+          "hoa"
         ]
       }
     },
@@ -154939,7 +160035,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -155235,7 +160331,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -155438,7 +160534,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -155674,7 +160770,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -155785,7 +160881,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -155946,7 +161042,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -157369,7 +162465,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 2000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -162229,7 +167325,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
@@ -166530,6 +171626,104 @@
         ]
       }
     },
+    "/api/v1/letting/rent-increase-settings": {
+      "get": {
+        "operationId": "get_rent_increase_settings_api_v1_letting_rent_increase_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettingIncreaseSettingsIo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Schalter Mieterhöhung (Sperrdauer, Vorschläge)",
+        "tags": [
+          "letting"
+        ]
+      },
+      "put": {
+        "description": "No legal duration is fixed by the platform: the operator enters the value per basis\nafter legal review (AN18-01); without a value no blocking date is proposed.",
+        "operationId": "put_rent_increase_settings_api_v1_letting_rent_increase_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LettingIncreaseSettingsIo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettingIncreaseSettingsIo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Schalter Mieterhöhung setzen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
     "/api/v1/letting/rent-increases": {
       "get": {
         "operationId": "list_rent_increases_api_v1_letting_rent_increases_get",
@@ -167845,6 +173039,103 @@
         },
         "security": [],
         "summary": "Selbstauskunft absenden (Portal, ohne Anmeldung)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/settings/sale-marketing": {
+      "get": {
+        "operationId": "get_sale_marketing_api_v1_letting_settings_sale_marketing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleMarketingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Schalter Verkaufsinserate (Standard aus)",
+        "tags": [
+          "letting"
+        ]
+      },
+      "put": {
+        "operationId": "put_sale_marketing_api_v1_letting_settings_sale_marketing_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaleMarketingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleMarketingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Schalter Verkaufsinserate setzen",
         "tags": [
           "letting"
         ]
@@ -169946,7 +175237,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -173811,7 +179102,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 500,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -173828,7 +179119,7 @@
             "required": false,
             "schema": {
               "default": 50,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -179725,7 +185016,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -195468,7 +200759,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -203178,7 +208469,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -204188,7 +209479,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -204215,7 +209506,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 1000,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -204783,7 +210074,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -205096,7 +210387,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -214343,7 +219634,7 @@
             "required": false,
             "schema": {
               "default": 100,
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -214370,7 +219661,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 500,
+                  "maximum": 200,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -221176,7 +226467,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -221677,7 +226968,7 @@
             "required": false,
             "schema": {
               "default": 200,
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"

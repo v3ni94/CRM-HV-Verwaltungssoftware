@@ -512,3 +512,7 @@ In der Einzelansicht einer Meldung zeigt der Abschnitt Stand der Aufträge den l
 ## Einsichtsanfrage im Eigentümerportal (GAJ-202)
 
 Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die Verwaltungsunterlagen ihrer Gemeinschaft (Umfang Abrechnung, Belege, Verträge, Beschlüsse oder eine Beschreibung) und sehen den Stand ihrer Anfragen. Die Anfrage geht in die Einsichtsanfragen des CRM; Freigabe, Bereitstellung und Ablehnung bleiben bei der Verwaltung. Die Funktion erscheint nur, wenn die Verwaltung den Schalter der Belegeinsicht (Portalverwaltung, Funktionen) eingeschaltet hat. Interne Vermerke der Verwaltung sind im Portal nicht sichtbar.
+
+## Fotopflicht beim Zählerstand einstellen (AN02)
+
+Unter Einstellungen, Portalformulare legen Sie mit "Foto beim Zählerstand" fest, ob beim Melden eines Zählerstands ein Foto erwartet wird: kein Foto erwartet, Hinweis bei fehlendem Foto (Standard) oder Foto ist Pflicht. Bei Pflicht lehnt das Portal eine Meldung ohne Foto ab. In der Vorschlagsprüfung am Kontakt sehen Sie zu jeder Zählerstandsmeldung die beigefügten Fotos als Link zur Dokumentansicht und den Vermerk, wenn kein Foto beigefügt wurde. Die Entscheidung über eine Fotopflicht liegt beim Betreiber (AM06-01).

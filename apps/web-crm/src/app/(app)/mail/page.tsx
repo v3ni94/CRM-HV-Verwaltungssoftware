@@ -24,7 +24,7 @@ export default async function MailPage() {
   // Lern-Workflow (Regel M9-11): Hinweis auf offene Regelvorschläge, nur mit Leserecht.
   let proposals = 0;
   if (permissions.includes("tenant_settings:read")) {
-    const res = await serverFetch("/api/v1/automation/rule-proposals?status=proposed&limit=500");
+    const res = await serverFetch("/api/v1/automation/rule-proposals?status=proposed&limit=200");
     if (res.ok) proposals = ((await res.json()) as unknown[]).length;
   }
   return (

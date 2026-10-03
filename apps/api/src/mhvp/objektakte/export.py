@@ -144,15 +144,31 @@ async def _documents(
         )
         .order_by(DocumentCategory.sort_order.nulls_last(), Document.title, Document.id)
     )
+    from mhvp.documents import payment_files
+
     files: list[tuple[str, bytes]] = []
     seen: set[uuid.UUID] = set()
     used: set[str] = set()
-    for document, category in (await session.execute(stmt)).all():
+    rows = (await session.execute(stmt)).all()
+    # AM01/GAJ-301: payment files linked to the property stay out while G2 is closed.
+    locked = (
+        set()
+        if await payment_files.content_released(property_row.tenant_id)
+        else await payment_files.payment_file_ids(session, [d.id for d, _ in rows])
+    )
+    for document, category in rows:
         if document.id in seen:
             continue
         seen.add(document.id)
         if category is not None and category.code == EXPORT_CATEGORY_CODE:
             continue  # earlier exports are not nested into the next one
+        if document.id in locked:
+            result.log.append(
+                f"Nicht enthalten ({payment_files.WITHHELD_NOTE}): "
+                f"{document.title} ({document.filename})"
+            )
+            result.counts["documents_withheld"] = result.counts.get("documents_withheld", 0) + 1
+            continue
         if document.storage is not StorageKind.MINIO:
             result.log.append(
                 f"Nicht enthalten (nur in Google Drive): {document.title} ({document.filename})"

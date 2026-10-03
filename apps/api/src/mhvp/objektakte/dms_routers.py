@@ -36,6 +36,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessio
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction
 from mhvp.core.events import emit
+from mhvp.core.listparams import MAX_PAGE_SIZE
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import DocumentLink
 from mhvp.objektakte import dms_service as svc
@@ -208,7 +209,7 @@ async def object_documents(
     number: str,
     request: Request,
     page: int = Query(default=1, ge=1, le=10_000),
-    page_size: int = Query(default=100, ge=1, le=500),
+    page_size: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
     folder: str | None = Query(default=None, max_length=100),
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:

@@ -4,7 +4,9 @@
 
 **Hinweis Regel 0.1.8:** Ein Testbezug in apps/api/tests ist kein bestandener Fall. Anhang-D-Fälle sind Anforderungen. Ein Fall gilt erst als abgenommen, wenn Ergebnis, Datum, Name und Nachweis eingetragen sind. Sollwerte dürfen nicht an das Ist-Ergebnis angepasst werden (D.3).
 
-**Angaben zur Abnahme:** Version: ______ Commit: ______ Umgebung: ______ Abnehmende Personen: ______
+**Angaben zur Abnahme:** Version: ______ Commit (Softwarestand): ______ Umgebung: ______ Regelversion (Regeldatei in docs/rules mit Stand): ______ Prüfer: ______ Abnehmende Personen: ______
+
+**Pflichtangaben je Test (Anhang D.3):** Kennung, geprüfte Regelversion, fachliche Annahmen, anonymisierte Eingaben, erwartetes Ergebnis, tatsächlich beobachtetes Ergebnis, Differenz, ausgeführter Testbefehl oder manueller Prüfablauf, Softwarestand, Prüfer und Status. Die Kopfangaben gelten für alle Zeilen, die Spalten der Detailtabelle stehen je Test. Neue Protokolle (docs/acceptance/PROTOKOLL-*.md) werden von `scripts/check_acceptance_protocols.py` auf diese Pflichtangaben geprüft.
 
 **Ergebnis:** bestanden, nicht bestanden, zurückgestellt (mit Begründung im Nachweis).
 **Nachweis:** Testlauf (Befehl und Ausgabe), Bildschirmfoto, Beleg oder Rechenweg, jeweils mit Ablageort.
@@ -69,5 +71,11 @@
 | D56 | Private Kaution neben GdWE- und Miet-Bankmitteln | G1 | | | | |
 | D57 | KI-Ausgabe enthält Anweisung | ohne eigene Stufe | | | | |
 | D58 | Gebührenrechnung der Verwaltung für SEV | G1 | | | | |
+
+## Detailprotokoll je Test (D.3)
+
+| Kennung | Regelversion | Annahmen | Eingaben (anonymisiert) | Erwartet | Beobachtet | Differenz | Testbefehl oder Prüfablauf | Softwarestand | Prüfer | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| D__ | | | | | | | | | | |
 
 **Unterschriften:** Betreiber ______ Datum ______ Fachkundige Person ______ Datum ______

@@ -94,4 +94,24 @@ describe("ReconciliationReports loading state (review 26.09.2026)", () => {
     expect(screen.queryByText("Berichte werden geladen.")).not.toBeInTheDocument();
     expect(screen.getByTestId("reconciliation-empty")).toBeInTheDocument();
   });
+
+  it("shows the master data section or an empty state", async () => {
+    const md = {
+      types: [{ report_type: "objektdaten", rows: 10, open_rows: 2, missing_entities: 1, deviates: true }],
+      platform: { properties: 3 },
+      open_differences: 3,
+    };
+    fetchMock.mockImplementation((url: string) => Promise.resolve(jsonResponse(url === API ? [summary] : { ...report, master_data: md })));
+    renderIntl(<ReconciliationReports canCreate={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: /26\.09\.2026/ }));
+    expect(await screen.findByTestId("reconciliation-master-data")).toHaveTextContent("3 offene Abweichungen bei den Stammdaten");
+    expect(screen.getByTestId("reconciliation-master-data")).toHaveTextContent("objektdaten");
+  });
+
+  it("shows an empty state without master data", async () => {
+    fetchMock.mockImplementation((url: string) => Promise.resolve(jsonResponse(url === API ? [summary] : { ...report, master_data: null })));
+    renderIntl(<ReconciliationReports canCreate={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: /26\.09\.2026/ }));
+    expect(await screen.findByTestId("reconciliation-master-empty")).toBeInTheDocument();
+  });
 });

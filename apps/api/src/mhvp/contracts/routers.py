@@ -43,6 +43,7 @@ from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
+    MAX_PAGE_SIZE,
     ListParams,
     apply_filters,
     apply_sort,
@@ -423,12 +424,12 @@ async def list_contracts(
         description="Freitextsuche: Vertragsnummer, Name der Vertragspartei oder eines "
         "Mitglieds (Mieter, Eigentümer), Objektnummer, Objektname, Objektanschrift, Einheit",
     ),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
         default=None,
         ge=1,
-        le=1000,
+        le=MAX_PAGE_SIZE,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
     params: ListParams = Depends(list_params),
@@ -658,9 +659,9 @@ async def pending_approval(
     source: str | None = None,
     property_id: uuid.UUID | None = None,
     kind: ContractKind | None = None,
-    limit: int = Query(default=1000, ge=1, le=5000),
+    limit: int = Query(default=MAX_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1),
-    page_size: int | None = Query(default=None, ge=1, le=5000),
+    page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.PendingContractOut]:
     """Verträge mit ``approval_status = pending``. Ihre Zahlungspläne erzeugen im
@@ -1344,12 +1345,12 @@ async def list_mandates(
         default=None,
         description="Stichtag: unterschrieben bis zum Tag und nicht vor dem Tag abgelaufen",
     ),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
         default=None,
         ge=1,
-        le=1000,
+        le=MAX_PAGE_SIZE,
         description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
     ),
     principal: TenantPrincipal = Depends(READ),
@@ -1582,9 +1583,9 @@ async def list_all_deposits(
     property_id: uuid.UUID | None = None,
     status: str | None = Query(default=None, description="Kautionsstatus, z. B. open"),
     outstanding_only: bool = Query(default=False, description="Nur mit offenem Sollbetrag"),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     page: int = Query(default=1, ge=1),
-    page_size: int | None = Query(default=None, ge=1, le=1000),
+    page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.DepositListRow]:
     """Kautionen über alle Verträge mit Objekt, Einheit, Partei, Sollbetrag, erhaltenem

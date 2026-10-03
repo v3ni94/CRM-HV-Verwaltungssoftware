@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
@@ -353,31 +353,99 @@ async def get_contact(
 
 @router.get(
     "/contacts/{contact_id}/addresses",
-    summary="Aktuelle Anschriften eines Kontakts (Stichtag noch nicht verfügbar)",
+    summary="Anschriften eines Kontakts, optional zum Stichtag oder mit Historie",
     dependencies=[Depends(strict_query)],
 )
 async def list_contact_addresses(
     contact_id: uuid.UUID,
     request: Request,
     as_of: Annotated[
-        str | None,
-        Query(description="Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden."),
+        date | None,
+        Query(description="Stichtag (ISO); nur mit Schalter contacts.address_history (AN05)."),
     ] = None,
+    include_history: Annotated[
+        bool,
+        Query(description="Auch geschlossene frühere Anschriften; nur mit Adresshistorie."),
+    ] = False,
     principal: TenantPrincipal = Depends(READ),
 ) -> schemas.ContactAddressListOut:
-    """GAJ-610: addresses have no valid_to yet, a change overwrites the previous one. A cut off
-    date query is refused explicitly (422) instead of returning today's addresses for a past
-    date, which would be a wrong delivery proof."""
+    """GAJ-610, AN05: with the tenant switch contacts.address_history off (default, AM14-01
+    open) a change overwrites the previous address and a cut off date query is refused (422)
+    instead of returning today's addresses for a past date, which would be a wrong delivery
+    proof. With the switch on, replaced addresses are closed and can be queried by date."""
+    from mhvp.contacts import address_history
+
     async with tenant_tx(request, principal) as session:
         out = await services.load(session, contact_id)
         if out is None:
             raise _not_found()
-        if as_of is not None:
-            raise ProblemError(
-                ErrorCodes.CONTACT_ADDRESS_HISTORY_MISSING,
-                extensions={"open_question": "AM14-01", "as_of": as_of},
-            )
-        return schemas.ContactAddressListOut(items=out.addresses)
+        enabled = await address_history.is_enabled(session)
+        if not enabled:
+            if as_of is not None or include_history:
+                raise ProblemError(
+                    ErrorCodes.CONTACT_ADDRESS_HISTORY_MISSING,
+                    extensions={
+                        "open_question": "AM14-01",
+                        "as_of": as_of.isoformat() if as_of else None,
+                    },
+                )
+            return schemas.ContactAddressListOut(items=out.addresses)
+        rows = await address_history.addresses_as_of(session, contact_id, as_of, include_history)
+        return schemas.ContactAddressListOut(
+            items=[schemas.AddressOut.model_validate(r, from_attributes=True) for r in rows],
+            history_available=True,
+            as_of=as_of,
+        )
+
+
+@router.get(
+    "/contact-address-history",
+    summary="Schalter Adresshistorie der Kontakte lesen (AN05)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_contact_address_history_setting(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> schemas.ContactAddressHistorySettingOut:
+    from mhvp.contacts import address_history
+
+    async with tenant_tx(request, principal) as session:
+        return schemas.ContactAddressHistorySettingOut(
+            enabled=await address_history.is_enabled(session)
+        )
+
+
+@router.put(
+    "/contact-address-history", summary="Schalter Adresshistorie der Kontakte setzen (AN05)"
+)
+async def put_contact_address_history_setting(
+    body: schemas.ContactAddressHistorySettingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.ContactAddressHistorySettingOut:
+    """Scope and retention of former addresses are open (AM14-01); switching on keeps former
+    addresses instead of deleting them, switching off stops new history rows but deletes
+    nothing. Recorded as an event with the previous value."""
+    from mhvp.contacts import address_history
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        before = address_history.enabled_from(row.sources)
+        row.sources = {**(row.sources or {}), address_history.SWITCH_KEY: body.enabled}
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact_address_history.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"before": before, "after": body.enabled},
+        )
+        return schemas.ContactAddressHistorySettingOut(enabled=body.enabled)
 
 
 @router.get("/contacts/{contact_id}/name", summary="Anzeigename eines Kontakts (nur Name)")

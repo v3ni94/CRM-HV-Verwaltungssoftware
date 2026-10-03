@@ -81,6 +81,59 @@ async def _log_certificate(
     await session.flush()
 
 
+async def _ensure_section35a_mutable(session: AsyncSession, line: InvoiceLine) -> None:
+    """GAK-103 (7.6 A01, B03): a § 35a marker of a line in a locked period (ledger lock or
+    property period lock, which also covers closed statements) or of an invoice that an issued
+    certificate may contain is not changed silently; 409, correction through a new version."""
+    from mhvp.accounting import period_lock
+    from mhvp.accounting.models import Ledger
+    from mhvp.accounting.services import ensure_open_period
+    from mhvp.properties.models import LegalEntity
+
+    invoice = await session.get(Invoice, line.invoice_id)
+    if invoice is None:
+        return
+    ledger = await session.get(Ledger, invoice.ledger_id)
+    day = invoice.invoice_date
+    if ledger is not None:
+        try:
+            ensure_open_period(ledger, day)
+            entity = await session.get(LegalEntity, ledger.legal_entity_id)
+            props = {entity.property_id} if entity and entity.property_id else set()
+            if ledger.property_id is not None:
+                props.add(ledger.property_id)
+            await period_lock.ensure_open_for_properties(session, ledger, props, day)
+        except ProblemError as exc:
+            raise ProblemError(
+                ErrorCodes.ACC_S35A_IN_USE,
+                detail=f"{exc.detail} Das §-35a-Kennzeichen bleibt unverändert.",
+            ) from exc
+        property_id = entity.property_id if entity else None
+        if property_id is not None:
+            year = day.year
+            issued = await session.scalar(
+                select(Section35aCertificateLog.id)
+                .join(Contract, Contract.id == Section35aCertificateLog.contract_id)
+                .where(
+                    Contract.property_id == property_id,
+                    (
+                        (Section35aCertificateLog.basis == "payment_date")
+                        & (Section35aCertificateLog.year >= year)
+                    )
+                    | (Section35aCertificateLog.year == year),
+                )
+                .limit(1)
+            )
+            if issued is not None:
+                raise ProblemError(
+                    ErrorCodes.ACC_S35A_IN_USE,
+                    detail=(
+                        "Für dieses Objekt und Jahr wurde bereits ein §-35a-Ausweis erzeugt; "
+                        "eine Korrektur erfolgt über einen neuen Ausweis (neue Version)."
+                    ),
+                )
+
+
 # Schemas ----------------------------------------------------------------------------------------
 
 
@@ -101,6 +154,8 @@ class TaxSettingsOut(BaseModel):
     approval_limits: list[dict[str, Any]]
     subledger_exclude_written_off: bool = True
     section_35a_basis: str = "invoice_date"
+    return_fee_pass_on_enabled: bool = False
+    write_off_approval_enabled: bool = False
 
 
 class TaxSettingsIn(BaseModel):
@@ -115,6 +170,9 @@ class TaxSettingsIn(BaseModel):
     subledger_exclude_written_off: bool = True
     # AI18 (GAH-101): selection basis of the § 35a certificate, default unchanged.
     section_35a_basis: Literal["invoice_date", "payment_date"] = "invoice_date"
+    # AN15: questions AN15-01 and AN15-02, default off; omitted keeps the stored value.
+    return_fee_pass_on_enabled: bool | None = None
+    write_off_approval_enabled: bool | None = None
 
 
 class PropertyProfileOut(BaseModel):
@@ -307,6 +365,10 @@ async def put_settings(
         row.approval_limits_enabled = body.approval_limits_enabled
         row.subledger_exclude_written_off = body.subledger_exclude_written_off
         row.section_35a_basis = body.section_35a_basis
+        if body.return_fee_pass_on_enabled is not None:
+            row.return_fee_pass_on_enabled = body.return_fee_pass_on_enabled
+        if body.write_off_approval_enabled is not None:
+            row.write_off_approval_enabled = body.write_off_approval_enabled
         row.approval_limits = [
             {"role_code": lim.role_code, "limit_amount": str(lim.limit_amount)}
             for lim in body.approval_limits
@@ -578,6 +640,7 @@ async def put_section35a(
         line = await session.get(InvoiceLine, line_id)
         if line is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await _ensure_section35a_mutable(session, line)
         if body.labor_amount + body.material_amount > line.net + line.vat:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
@@ -628,6 +691,9 @@ async def delete_section35a(
         )
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        del_line = await session.get(InvoiceLine, line_id)
+        if del_line is not None:
+            await _ensure_section35a_mutable(session, del_line)
         before_d = Section35aOut.model_validate(row).model_dump(mode="json")
         await session.delete(row)
         await session.flush()

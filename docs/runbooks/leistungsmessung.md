@@ -127,8 +127,9 @@ cd apps/api
 MHVP_PERF=1 uv run pytest tests/integration/test_ga12_perf.py -m slow -s --no-cov -k large
 ```
 
-Die CI-Schwelle ist 1 Sekunde (`MHVP_PERF_LIST_LIMIT`), der Zielwert 300 ms (P95) wird auf dem Staging-Server
-mit `MHVP_PERF_LIST_LIMIT=0.3` geprüft. Der Wächter `journal_line_guard` wird vom Generator auf der
+Seit Welle 24 (GAK-406) gilt standardmäßig 0,3 Sekunden (P95, Abschnitt 16). Nur der geplante Lauf auf
+geteilten Runnern lockert die Grenze über `MHVP_PERF_LIST_LIMIT=1.0` (`.github/workflows/perf.yml`); auf dem Staging-Server
+gilt der Standard. Der Wächter `journal_line_guard` wird vom Generator auf der
 Testdatenbank für die Dauer des Ladens deaktiviert und im `finally` wieder eingeschaltet (Begründung im
 ADR 0021, Befund 3). Nie gegen eine produktive Datenbank verwenden.
 
@@ -208,3 +209,7 @@ Messlauf mit `MHVP_PERF=1` auf der Entwicklungsmaschine (4 Kerne, PostgreSQL 16 
 | Journalwächter aktiv, 200.000 Zeilen (`test_ad01_line_guard.py::test_bulk_load_200k_lines_with_guard_active`) | 16,0 s, also 0,08 ms je Zeile (Schwelle 300 s); Welle 15 hatte den Lauf nicht abgeschlossen |
 
 Der Beat-Eintrag `ops-scale-snapshot` ist über den Katalogabgleich `tests/unit/test_ag18_job_keys.py` und `test_ga12_jobs.py` geprüft (jeder Katalogschlüssel kommt in `worker.py` vor). Ein Lauf mit mehr als 1.000.000 Zeilen wurde weiterhin nicht gemessen; ab dieser Grenze schätzt die Kennzahl die Zeilenzahl aus `pg_class.reltuples` (Abschnitt AE36).
+
+## Sollstellungslauf 1.000 Verträge (GAK-406)
+
+`tests/integration/test_an20_perf_receivable_run.py` (Marker `slow`, nur mit `MHVP_PERF=1`) baut einen Mandanten mit 1.000 Eigentumsverträgen (je zwei Monatskomponenten) und misst Vorschau plus Buchung eines Laufs über alle Objekte. Grenze 120 Sekunden (Abschnitt 16, lastskaliert über `tests/runtime_limits.py`); die Messzeile beginnt mit `PERF receivable_run`. Der Lauf ist Teil von `.github/workflows/perf.yml`.

@@ -40,6 +40,23 @@ describe("G1OpeningChecklist", () => {
     expect(screen.getByRole("link", { name: "Zum Abnahmeregister" }).getAttribute("href")).toBe("/plattform/abnahme");
   });
 
+  it("shows evidence kind, required flag and the passed cases without test run", () => {
+    renderIntl(
+      <G1OpeningChecklist
+        initial={{
+          ...base,
+          cases_passed_without_test_run: 2,
+          cases: [{ ...base.cases[1]!, evidence_kind: "test_run", evidence_required: true }, base.cases[0]!],
+        }}
+        canRecord={false}
+        canRequest={false}
+      />,
+    );
+    expect(screen.getByTestId("g1-kind-D05")).toHaveTextContent("Testlauf (CI)");
+    expect(screen.getByText("Nachweis Pflicht")).toBeInTheDocument();
+    expect(screen.getByTestId("g1-no-test-run")).toHaveTextContent("ohne verknüpften Testlauf: 2");
+  });
+
   it("shows the derived state, records a result and reloads", async () => {
     let state = base;
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {

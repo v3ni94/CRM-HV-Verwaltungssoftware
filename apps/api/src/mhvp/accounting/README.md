@@ -522,3 +522,20 @@ Writing routes without money amounts declare response models from `accounting/wr
 ## AL03 (GAI-307 Rest): Ereignisse auf den restlichen Geldrouten
 
 Über `audit_events.record_change` (alt und neu) emittieren jetzt zusätzlich: Standardvorlage anlegen (`chart_template.default_saved`), Debitoren- und Kreditorenabgleich (`ledger.debtors_synced`, `ledger.creditors_synced`), Prüfung eines Buchungsentwurfs durch die zweite Person (`journal_entry.approved`), Kostenumbuchung und Zinsbuchung als Entwurf (`journal_entry.cost_transfer_drafted`, `journal_entry.interest_drafted`), Storno eines Sollstellungslaufs (`receivable_run.reversed`), Zustellnachweis (`dunning_delivery_proof.created`) und Mahnbescheid-Vorbereitung (`dunning_mahnbescheid.prepared`, ohne Name und Anschrift des Schuldners im Ereignis). In der Abrechnung: Abrechnung anlegen und neue Version (`statement.created`, `statement.version_created`), Heizkosteneingaben (`statement_heating.*`), Messdienstimport (`heating_cost_import.*`) und Eigentümerabrechnung anlegen, Optionen, Freigabe (`owner_statement.*`). Die CO2-Aufteilung (`/statements/co2-split`) ist eine reine Berechnung ohne Speicherung und emittiert bewusst nichts; ebenso Vorschau- und Prüfrouten.
+
+## AN16 (Welle 24): gebundene Debitorenguthaben
+
+Die Liquiditätsvorschau weist `debtor_credits` (Habensalden der Debitorenkonten, Überzahlungen) getrennt aus und zieht sie von `projected_free_funds` ab (GAK-102, 7.4 Nr. 5, 7.5).
+
+### Typed money responses (AN11, GAI-304, ADR 0037)
+
+`write_responses.RawJsonOut` documents a response for OpenAPI and validates it, but writes the
+handler value unchanged (amounts stay JSON strings, as before). Models: `response_models.py`
+here, in `billing/response_models.py` and `banking/response_models.py`; 60 routes, list in
+`tests/unit/test_an11_raw_json_out.py`.
+
+## AN15 (Welle 24): Rücklastschrift mit Nachweis, Forderungsausbuchung als Vorgang
+
+GAK-101: `direct_debit_feedback.apply_status` überschreibt bei `returned` den Einzugsverweis `bank_transaction_id` nicht mehr; der Rückbelastungsumsatz steht in `return_transaction_id`, dazu `returned_on` (Eingabe, Buchungstag des Umsatzes oder `BookgDt` aus camt.054), `return_fee_amount` und `return_fee_document_id` (Migration 0454). Erfasste Angaben werden nur ergänzt (abweichend 409, Ereignis `direct_debit_order.return_evidence_added`). Die Abstimmung zeigt die Felder und `return_fee_pass_on` (`locked`, mit Schalter `return_fee_pass_on_enabled` nur `proposal`); nichts wird gebucht (Frage AN15-01).
+
+GAK-104: `write_offs.py` mit `GET/POST /accounting/open-item-write-offs` und `POST /accounting/open-item-write-offs/{id}/decision`. Vorschlag mit Grund, Stichtag, Restbetrag, Beleg, Urheber ohne Wirkung; Freigabe nur mit Schalter `write_off_approval_enabled`, G1, zweiter Person und offener Periode; setzt `open_item.written_off*`, danach durch `mhvp_open_item_guard` unveränderlich. `subledger_reconciliation` und die Soll-Ist-Auswertung werten `written_off_on` stichtagsbezogen aus. Regel: `docs/rules/AN15-ruecklastschrift-ausbuchung.md`.

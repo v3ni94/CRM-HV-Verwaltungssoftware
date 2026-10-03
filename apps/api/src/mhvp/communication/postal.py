@@ -36,7 +36,7 @@ from mhvp.communication.postal_providers import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 
@@ -675,7 +675,7 @@ async def list_jobs(
     provider: str | None = None,
     contact_id: uuid.UUID | None = None,
     dunning_only: bool = False,
-    limit: int = Query(default=200, ge=1, le=500),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         query = select(PostalJob)

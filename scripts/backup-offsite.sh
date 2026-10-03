@@ -326,7 +326,7 @@ db_files = sorted(p for p in BACKUP_DIR.glob(f"mhvp-*{stamp}*") if p.is_file())
 if not any(p.name.endswith(".dump.age") for p in db_files):
     step_fail(f"run {stamp}: no encrypted dump found; unencrypted dumps are never copied off-site (3.5)")
 for p in db_files:
-    if p.name.endswith(".dump") or p.name.endswith(".tar"):
+    if p.name.endswith((".dump", ".tar", ".json")):
         step_fail(f"run {stamp}: {p.name} is unencrypted; refused")
 log(f"run {stamp}: {len(db_files)} database file(s)")
 

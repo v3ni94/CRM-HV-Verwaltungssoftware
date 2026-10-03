@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
@@ -23,7 +23,7 @@ describe("MigrationExtras", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderIntl(<MigrationExtras canUpdate canApprove />);
     await screen.findByText(/Buchungsdatum/);
-    await userEvent.selectOptions(screen.getByLabelText("Objekt"), "p1");
+    await userEvent.selectOptions(within(screen.getByRole("region", { name: "Migrationsabnahme je Objekt" })).getByLabelText("Objekt"), "p1");
     expect(await screen.findByTestId("acceptance")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Unterzeichnen" }));
     expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/acceptance/a1/sign"))).toBe(true);

@@ -27,6 +27,7 @@ from sqlalchemy import text
 from mhvp.banking.tasks import compute_proposals_once, process_events_once
 from mhvp.main import create_app
 from mhvp.platform import services
+from tests.integration.an16_bulk import bulk_book
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m2_platform import _settings as _base_settings
@@ -688,15 +689,15 @@ def test_decision_log_behind_switch_and_full_cycle(
 
     # Bulk confirmation is recorded with the bulk marker (lower evidence weight).
     bulk = _ok(
-        client.post(
-            f"{B}/bulk-confirm",
-            json={
+        bulk_book(
+            client,
+            h,
+            {
                 "preview": False,
                 "items": [
                     {"transaction_id": t5, "settlements": [], "counter_account_id": w["income"]}
                 ],
             },
-            headers=h,
         )
     )
     assert bulk["results"][0]["ok"] is True

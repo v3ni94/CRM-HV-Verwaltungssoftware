@@ -16,3 +16,11 @@
 ## Änderungsgrund
 
 Lückenanalyse GAJ (03.10.2026): Regel wurde ohne Gültigkeitsprüfung verwendet; Zeitraumprüfung fehlte auf Datenbankebene.
+
+## Ergänzung AN06 (GAJ-602): Vier-Augen-Freigabe hinter Mandantenschalter
+
+- Schalter `tenant_settings.hoa_majority_rule_four_eyes` (API `GET/PUT /hoa/majority-rule-four-eyes`, Recht tenant_settings), Standard aus: Verhalten wie vor AN06.
+- Bei eingeschaltetem Schalter wird eine neue Regel mit `requires_approval = true` als Entwurf angelegt. Freigabe über `POST /hoa/majority-rules/{id}/approve` nur durch eine zweite Person mit Recht `hoa:approve` (setzt approved_by, approved_at); die anlegende Person erhält 409 MHVP-HOA-0041.
+- Eine nicht freigegebene Regel wird weder einem Tagesordnungspunkt zugeordnet noch in der Auszählung angewendet (422 MHVP-HOA-0040). Regeln, die vor dem Einschalten angelegt wurden, bleiben unverändert anwendbar.
+- Der Versammlungstag für die Gültigkeitsprüfung ist das fachliche Datum in Europe/Berlin (mhvp.core.clock.local_date), nicht das UTC-Datum (Befund AN14-09).
+- Migration 0453. Die Modellfrage AM02-01 bleibt offen; Prüfung: tests/integration/test_an06_majority_rule_four_eyes.py, tests/unit/test_am02_majority_rule_validity.py.

@@ -182,3 +182,11 @@ Kalender.
 ## KI-Plausibilität (Nachtrag 30.09.2026)
 
 Im Mieterhöhungsfall startet die Schaltfläche KI-Prüfung starten eine Prüfung der erfassten Angaben auf Stimmigkeit, zum Beispiel fehlende Quellen oder Widersprüche zur Regelprüfung. Voraussetzung ist ein freigegebener KI-Anbieter. Das Ergebnis sind Hinweise mit Schweregrad. Sie sind keine Freigabe und keine Rechtsprüfung und verändern den Fall nicht; die Entscheidung trifft eine Person.
+
+## Mieterhöhungssperre nach Anwendung (Welle 24)
+
+Nach dem Schritt Anwenden zeigt der Fall den Abschnitt Mieterhöhungssperre. Ist unter Einstellungen, Fachliche Regeln, für die Begründung eine Sperrdauer in Monaten hinterlegt, erscheint das vorgeschlagene Datum. Mit Sperre übernehmen wird das Datum am Vertrag gespeichert und im Verlauf protokolliert; ohne Bestätigung ändert sich der Vertrag nicht. Die Software legt keine Sperrdauer fest, ohne Eintrag gibt es keinen Vorschlag. Die neue Mietzeile trägt als Grund Index, Staffel oder Erhöhung je nach Begründung des Falls.
+
+## Interessenten löschen (Welle 24)
+
+Wird ein Interessent gelöscht, von Hand oder durch den Löschlauf nach dem Löschdatum, bleibt der Kontakt zunächst erhalten. Hat der Kontakt keine andere Rolle, entsteht unter Datenschutz, Löschanträge, ein Löschvorschlag mit der Anzahl der verknüpften Dokumente. Kontakt und Dokumente werden erst im Löschprozess mit Freigabe durch eine zweite Person bearbeitet.

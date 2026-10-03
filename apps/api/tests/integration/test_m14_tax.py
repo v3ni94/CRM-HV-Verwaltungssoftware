@@ -563,6 +563,16 @@ def test_section35a_markers_and_certificate_draft(
     )
     assert marker["labor_amount"] == "400.00"
     assert marker["kind"] == "craftsman"
+    # GAK-103: before any certificate the marker can still be removed and set again.
+    assert client.delete(f"{T}/invoice-lines/{line_id}/section35a", headers=h).status_code == 204
+    assert _ok(client.get(f"{T}/invoices/{target['id']}/section35a", headers=h)) == []
+    marker = _ok(
+        client.put(
+            f"{T}/invoice-lines/{line_id}/section35a",
+            json={"kind": "craftsman", "labor_amount": "400.00", "material_amount": "200.00"},
+            headers=h,
+        )
+    )
     listed = _ok(client.get(f"{T}/invoices/{target['id']}/section35a", headers=read))
     assert [m["invoice_line_id"] for m in listed] == [line_id]
     params: dict[str, str | int] = {
@@ -619,6 +629,18 @@ def test_section35a_markers_and_certificate_draft(
     assert (
         client.get(f"{T}/section35a/certificate", params=params, headers=foreign).status_code == 404
     )
-    assert client.delete(f"{T}/invoice-lines/{line_id}/section35a", headers=h).status_code == 204
-    assert _ok(client.get(f"{T}/invoices/{target['id']}/section35a", headers=h)) == []
+    # GAK-103 (7.6 A01, B03): a marker used in an issued certificate is neither removed nor
+    # changed silently; 409 MHVP-ACC-0040, correction through a new certificate version.
+    removed = client.delete(f"{T}/invoice-lines/{line_id}/section35a", headers=h)
+    assert removed.status_code == 409, removed.text
+    assert removed.json()["code"] == "MHVP-ACC-0040"
+    changed = client.put(
+        f"{T}/invoice-lines/{line_id}/section35a",
+        json={"kind": "craftsman", "labor_amount": "300.00", "material_amount": "200.00"},
+        headers=h,
+    )
+    assert changed.status_code == 409, changed.text
+    assert changed.json()["code"] == "MHVP-ACC-0040"
+    kept = _ok(client.get(f"{T}/invoices/{target['id']}/section35a", headers=h))
+    assert [m["labor_amount"] for m in kept] == ["400.00"]
     _ok(client.put(f"{T}/settings", json=_settings_body(), headers=h))

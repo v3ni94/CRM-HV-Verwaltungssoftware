@@ -13,7 +13,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import extract, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import services as acc
@@ -210,7 +210,11 @@ async def target_actual(
         .where(
             OpenItem.ledger_id == ledger.id,
             OpenItem.kind == OpenItemKind.RECEIVABLE,
-            OpenItem.written_off.is_(False),
+            # AN15 (GAK-104): written off only from written_off_on onwards (B07).
+            or_(
+                OpenItem.written_off.is_(False),
+                OpenItem.written_off_on.is_not(None) & (OpenItem.written_off_on > end),
+            ),
             due.between(start, end),
         )
         .group_by(LedgerAccount.id)
@@ -228,7 +232,11 @@ async def target_actual(
         .where(
             OpenItem.ledger_id == ledger.id,
             OpenItem.kind == OpenItemKind.RECEIVABLE,
-            OpenItem.written_off.is_(False),
+            # AN15 (GAK-104): written off only from written_off_on onwards (B07).
+            or_(
+                OpenItem.written_off.is_(False),
+                OpenItem.written_off_on.is_not(None) & (OpenItem.written_off_on > end),
+            ),
             due.between(start, end),
             OpenItemSettlement.date <= end,
         )

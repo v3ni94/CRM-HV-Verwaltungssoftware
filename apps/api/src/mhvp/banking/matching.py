@@ -30,6 +30,7 @@ from mhvp.accounting.models import (
 )
 from mhvp.banking import allocation, posting_proposal
 from mhvp.banking.models import BankRule, BankTransaction, TransactionStatus
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 SCORES = {"mandate": 40, "end_to_end": 40, "contract_number": 30, "iban": 15, "amount": 15}
@@ -55,17 +56,106 @@ async def ledger_for(session: AsyncSession, tx: BankTransaction) -> tuple[Ledger
             ErrorCodes.CONFLICT,
             detail="Für den Rechtsträger des Kontos gibt es keinen Buchungskreis.",
         )
-    bank = await session.scalar(
-        select(LedgerAccount).where(
-            LedgerAccount.ledger_id == ledger.id,
-            LedgerAccount.property_bank_account_id == tx.property_bank_account_id,
+    linked = (
+        await session.scalars(
+            select(LedgerAccount).where(
+                LedgerAccount.ledger_id == ledger.id,
+                LedgerAccount.property_bank_account_id == tx.property_bank_account_id,
+            )
         )
-    )
+    ).all()
+    if len(linked) > 1:
+        # GAK-108: never book silently against the first of several linked accounts.
+        raise ProblemError(
+            ErrorCodes.BANK_RECON_ACCOUNT_AMBIGUOUS,
+            detail="Mehrere Sachkonten verweisen auf das Bankkonto des Umsatzes.",
+        )
+    bank = linked[0] if linked else None
     if bank is None:
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Das Bankkonto ist keinem Sachkonto zugeordnet."
         )
     return ledger, bank
+
+
+REMAINDER_CATEGORIES = (
+    AccountCategory.DEBTOR,
+    AccountCategory.CREDITOR,
+    AccountCategory.TECHNICAL,
+    AccountCategory.TRANSIT,
+)
+DISCOUNT_CATEGORIES = (AccountCategory.REVENUE, AccountCategory.COST)
+# The chart's designated holding account for discounts of payment orders (banking/payments.py
+# _discount_account, "027000 Durchlaufposten Skonti"): a transit account by category, but the
+# documented parking place until the discount treatment is decided, so it stays allowed.
+DISCOUNT_HOLDING_ACCOUNT_NUMBER = "027000"
+
+
+async def _check_counter_account(
+    session: AsyncSession,
+    ledger: Ledger,
+    counter_account_id: uuid.UUID,
+    rest: Decimal,
+    discount: Decimal,
+    settlements: list[tuple[uuid.UUID, Decimal]],
+    text: str | None,
+) -> None:
+    """GAK-107 (7.4 Nr. 5, 7.3 Skonto, D07): with an open item settlement the counter account of
+    an overpayment remainder is a personal, technical or transit account (credit, never
+    income); a discount goes to a revenue or cost account and needs a reason, the discount terms
+    of the settled invoice or an explicit booking text."""
+    from mhvp.accounting.models import Invoice
+
+    counter = await session.get(LedgerAccount, counter_account_id)
+    if counter is None or counter.ledger_id != ledger.id:
+        raise ProblemError(
+            ErrorCodes.BANK_COUNTER_ACCOUNT_NOT_ALLOWED,
+            detail="Gegenkonto gehört nicht zum Buchungskreis des Umsatzes.",
+        )
+    if rest > 0 and counter.category not in REMAINDER_CATEGORIES:
+        raise ProblemError(
+            ErrorCodes.BANK_COUNTER_ACCOUNT_NOT_ALLOWED,
+            detail=(
+                f"Restbetrag {rest} EUR bleibt Guthaben: Gegenkonto {counter.number} "
+                f"({counter.category.value}) ist nicht zulässig, nur Personen-, Klärungs- oder "
+                "Transitkonten."
+            ),
+        )
+    if discount > 0:
+        if (
+            counter.category not in DISCOUNT_CATEGORIES
+            and counter.number != DISCOUNT_HOLDING_ACCOUNT_NUMBER
+        ):
+            raise ProblemError(
+                ErrorCodes.BANK_COUNTER_ACCOUNT_NOT_ALLOWED,
+                detail=(
+                    f"Skonto braucht ein Erlös- oder Aufwandskonto, nicht {counter.number} "
+                    f"({counter.category.value})."
+                ),
+            )
+        has_terms = False
+        for item_id, _value in settlements:
+            item = await session.get(OpenItem, item_id)
+            if item is None:
+                continue
+            invoice = await session.scalar(
+                select(Invoice).where(
+                    Invoice.journal_entry_id == item.journal_entry_id,
+                    Invoice.discount_percent.is_not(None),
+                )
+            )
+            if invoice is not None and invoice.discount_percent is not None:
+                limit = round_cents(abs(item.amount) * invoice.discount_percent / 100)
+                if discount <= limit:
+                    has_terms = True
+        if not has_terms and not (text and text.strip()):
+            raise ProblemError(
+                ErrorCodes.BANK_COUNTER_ACCOUNT_NOT_ALLOWED,
+                detail=(
+                    "Skonto ohne Skontoangabe der Rechnung braucht eine ausdrückliche "
+                    "Begründung im Buchungstext."
+                ),
+            )
 
 
 async def _payer_accounts(session: AsyncSession, tx: BankTransaction) -> set[uuid.UUID]:
@@ -423,6 +513,10 @@ async def book_payment(
     if discount > 0 and counter_account_id is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Skonto braucht ein Gegenkonto.")
     rest = amount + discount - total
+    if counter_account_id is not None and per_account and (rest > 0 or discount > 0):
+        await _check_counter_account(
+            session, ledger, counter_account_id, rest, discount, settlements, text
+        )
     if rest > 0 and counter_account_id is None:
         if len(per_account) != 1:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Restbetrag braucht ein Gegenkonto.")

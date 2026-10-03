@@ -87,7 +87,7 @@ async def _reconciliation(
     for account_id in account_ids:
         statements = [
             {k: _jsonable(v) for k, v in row.items()}
-            for row in await reconcile(session, account_id)
+            for row in await reconcile(session, account_id, strict=False)
             if row["closing_date"] is not None and first <= row["closing_date"] <= last
         ]
         out.append(

@@ -436,3 +436,9 @@ Wechsel (`POST /banking/ebics/subscribers/{id}/keys` mit Grund) und Sperre (`...
 The event consumer recomputes pending proposal snapshots on `contact.deleted`,
 `bank_account.approved`, `bank_account.ended` and `contact.mandate_iban_changed`
 (`event_types.PAYER_EVIDENCE_EVENTS`). Nothing is posted.
+
+## AN16 (Welle 24): Massenbestätigung, Gegenkonten, Bankabstimmung
+
+- `POST /bulk-confirm`: Vorschau liefert `preview_id` (15 Minuten), `totals_by_legal_entity`, `bookable_transaction_ids`; Buchung nur mit passender `preview_id` (`MHVP-BANK-0031`), Ausnahmen nur mit `confirm_exceptions` (`MHVP-BANK-0032`), GAK-105.
+- Postenausgleich mit Rest oder Skonto: zulässige Kontenklassen, `MHVP-BANK-0033` (GAK-107).
+- `GET /accounts/{id}/reconciliation?basis=booking_date|bank_date`: `timing_difference`, `ledger_status`; mehrere verknüpfte Sachkonten ergeben `MHVP-BANK-0034` (GAK-108). Regel: docs/rules/AN16-bank-buchhaltungspruefungen.md.

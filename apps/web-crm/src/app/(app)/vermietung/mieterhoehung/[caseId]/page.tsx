@@ -4,6 +4,7 @@ import { LetterRecordForm } from "@/components/documents/LetterRecordForm";
 import { RentIncreaseActions } from "@/components/letting/RentIncreaseForms";
 import { RentIncreaseAiCheck } from "@/components/letting/RentIncreaseAiCheck";
 import { RentIndexAdopt } from "@/components/letting/RentIndexAdopt";
+import { RentIncreaseBlock } from "@/components/letting/RentIncreaseBlock";
 import { RentIncreaseReceipt } from "@/components/letting/RentIncreaseReceipt";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
@@ -147,6 +148,7 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
         />
       ) : null}
       <RentIncreaseReceipt caseId={caseId} status={String(data.status)} receivedOn={receivedOn} canRecord={permissions.includes("contracts:approve")} />
+      <RentIncreaseBlock caseId={caseId} status={String(data.status)} proposal={(data.check as { block_proposal?: string | null }).block_proposal ?? null} blockSet={(data.check as { block_set?: string | null }).block_set ?? null} canRecord={permissions.includes("contracts:approve")} />
       <RentIncreaseAiCheck caseId={caseId} canStart={permissions.includes("contracts:create")} />
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel

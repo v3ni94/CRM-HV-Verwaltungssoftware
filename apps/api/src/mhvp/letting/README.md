@@ -53,3 +53,14 @@ Gates: no money flows; sending to portals or FLOWFACT is not implemented (M28 st
 ### Begrenzung der Selbstauskunft (GAI-309, Welle 21, AJ07)
 
 `POST /letting/self-disclosure/{token}` begrenzt `payload` (Produktschutz): höchstens 64 KiB als JSON, 200 Felder und Listeneinträge, Tiefe 3, Feldnamen bis 100 Zeichen, Texte bis 5.000 Zeichen; sonst 422. Die Abgabe erzeugt das Ereignis `self_disclosure.submitted` nur mit der Interessenten-Id, ohne Inhalt. Eigenes Limit je Token ist nicht umgesetzt (offener Punkt); Speicherdauer nach DSGVO ist mit dem Datenschutz abzustimmen.
+
+### Verkaufsinserate hinter Schalter (GAK-208, Welle 24, AN19)
+
+Schalter `letting.sale_marketing` in `tenant_settings.sources` (Standard aus, `GET/PUT /letting/settings/sale-marketing`). Aus: Verkaufsinserate nur als Entwurf; Aktivierung und Übergabe an Makleranbieter antworten 409. Abgrenzung Abschnitt 1, Frage AN19-02.
+
+## Mieterhöhungssperre, Vorschläge, Interessentenlöschung (Welle 24, AN18)
+
+- `increase_settings.py`: Schalter in `tenant_settings.sources` (`rent_increase_block_months.<basis>`, `rent_increase_proposals`), API `GET/PUT /letting/rent-increase-settings`.
+- Aktion `apply` setzt den Zahlungsgrund aus der Begründung und legt `check.block_proposal` ab; Aktion `set_block` schreibt `contract.rent_increase_block_until` nach Bestätigung.
+- `increase_proposals.py`: Rechenkern für fällige Staffelstufen und Indexanpassungen (nur Vorschlag, ohne Job, bis die Vertragsfelder existieren).
+- `prospect_erasure.py`: Löschvorschlag (privacy_erasure_request proposed) für den Kontakt eines gelöschten Interessenten.

@@ -1,0 +1,13 @@
+# AN16 Prüfungen Bank und Buchhaltung (GAK-102, GAK-105, GAK-107, GAK-108)
+
+- ID: AN16-bank-buchhaltungspruefungen
+- Geltungsbereich: `GET /accounting/ledgers/{id}/liquidity` und `/reports/liquidity` (Excel), `POST /banking/bulk-confirm`, `POST /banking/transactions/{id}/book` und Massenbestätigung (Postenausgleich), `GET /banking/accounts/{id}/reconciliation`, Prüfungen des Buchungskreises.
+- Regelart: Fachliche Umsetzung (7.4, 7.5, 7.1 B07, B09), keine neue Rechtsregel.
+- Inhalt:
+  - GAK-102: Kennzahl `debtor_credits` = Summe der Habensalden der Debitorenkonten zum Stichtag (Überzahlungen). Sie wird von `projected_free_funds` abgezogen und getrennt ausgewiesen; Guthaben ist kein Ertrag und keine freie Liquidität.
+  - GAK-105: Die Vorschau liefert `preview_id` (Ablauf 15 Minuten, schlüsselgebundener Hash über Mandant, Benutzer, Positionen, Beträge, Zustände und Rechtsträger), `totals_by_legal_entity` (Anzahl, Eingänge, Ausgänge je Rechtsträger, nicht verrechnet) und die buchbaren Umsätze. Die Buchung verlangt eine passende, nicht abgelaufene `preview_id` (sonst 409 `MHVP-BANK-0031`). Ausnahmen werden nur mit `confirm_exceptions=true` in Vorschau und Buchung gebucht (sonst 409 `MHVP-BANK-0032`).
+  - GAK-107: Bei Postenausgleich geht ein Überzahlungsrest nur auf Debitor, Kreditor, technisches Konto oder Transitkonto; Skonto nur auf Erlös- oder Aufwandskonto und nur mit Skontoangabe der Rechnung (Betrag höchstens Prozentsatz des Postens) oder ausdrücklichem Buchungstext. Sonst 422 `MHVP-BANK-0033`. Ohne Gegenkonto bleibt der Rest wie bisher Guthaben des Debitors.
+  - GAK-108: Abfrageschalter `basis` = `booking_date` (Standard, bisheriges Verhalten) oder `bank_date` (Buchungstag des zugeordneten Bankumsatzes). Beide Werte werden berechnet, der Unterschied steht als eigene Differenzart `timing_difference`. Verweisen mehrere Sachkonten auf ein Bankkonto, lehnen Abstimmung und Buchung mit 409 `MHVP-BANK-0034` ab; Prüfungen und Wochenbericht zeigen `ledger_status = ambiguous`.
+- Quellenstatus (Anhang C): keine Norm; Master-Prompt 7.1 B07, B09, 7.3 Skonto, 7.4 Nr. 5 und Massenbestätigung, 7.5.
+- Abnahmefall: tests/integration/test_an16_accounting_checks.py (vorberechnete Werte); Anhang D D07 (Überzahlung bleibt Guthaben).
+- Änderungsgrund: Welle 24, AN16 (Lückenanalyse GAK).

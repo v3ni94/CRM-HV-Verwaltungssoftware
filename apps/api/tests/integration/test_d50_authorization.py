@@ -151,6 +151,7 @@ def test_endpoint_list_is_derived_from_openapi_and_complete() -> None:
     assert all(method != "GET" for method, _ in ENDPOINTS)
 
 
+@pytest.mark.annex_d("D50")
 @pytest.mark.parametrize(("method", "path"), ENDPOINTS, ids=[f"{m} {p}" for m, p in ENDPOINTS])
 def test_read_only_role_is_rejected(
     client: TestClient, world: World, reader_headers: dict[str, str], method: str, path: str
@@ -162,6 +163,7 @@ def test_read_only_role_is_rejected(
     _assert_forbidden(response, f"read_only {method} {path}", path)
 
 
+@pytest.mark.annex_d("D50")
 @pytest.mark.parametrize(("method", "path"), ENDPOINTS, ids=[f"{m} {p}" for m, p in ENDPOINTS])
 def test_read_only_api_key_is_rejected(
     client: TestClient, world: World, read_key_headers: dict[str, str], method: str, path: str

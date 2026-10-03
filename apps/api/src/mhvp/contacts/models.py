@@ -21,10 +21,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, ORMExecuteState, Session, mapped_column, with_loader_criteria
 
 from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
@@ -270,6 +271,14 @@ def _contact_fk() -> Mapped[uuid.UUID]:
 
 class ContactAddress(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "contact_address"
+    __table_args__ = (
+        # AN05 (GAJ-610, migration 0452): a closed address ends on or after its start.
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="valid_range",
+        ),
+        Index("ix_contact_address_tenant_contact_from", "tenant_id", "contact_id", "valid_from"),
+    )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     label: Mapped[AddressLabel] = mapped_column(
@@ -286,6 +295,11 @@ class ContactAddress(IdMixin, TimestampMixin, TenantMixin, Base):
     # M21-02: date from which an address proposed in the portal applies (migration 0174);
     # empty for addresses recorded in the CRM.
     valid_from: Mapped[date | None] = mapped_column(Date)
+    # AN05 (GAJ-610): address history behind the tenant switch contacts.address_history. A
+    # replaced address is closed (valid_to, superseded_at) instead of deleted; closed rows are
+    # hidden from ordinary selects (see contacts.address_history).
+    valid_to: Mapped[date | None] = mapped_column(Date)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ContactPhone(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -659,3 +673,23 @@ class ContactAccessExportSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     include_internal_notes: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+
+
+# AN05 (GAJ-610): closed addresses of the history stay in contact_address but every ordinary
+# ORM select only sees the current rows, so letters, exports and matching never pick a former
+# address. The history reader opts out with the execution option below. Bulk DELETE and
+# UPDATE (erasure, merge) are not filtered and therefore cover the history as well.
+ADDRESS_HISTORY_OPTION = "contact_address_history"
+
+
+def _hide_closed_addresses(state: ORMExecuteState) -> None:
+    if not state.is_select or state.execution_options.get(ADDRESS_HISTORY_OPTION):
+        return
+    state.statement = state.statement.options(
+        with_loader_criteria(
+            ContactAddress, lambda cls: cls.superseded_at.is_(None), include_aliases=True
+        )
+    )
+
+
+event.listen(Session, "do_orm_execute", _hide_closed_addresses)

@@ -298,6 +298,12 @@ restore and replayed afterwards. Evidence under a deletion hold is never deleted
 
 Order (every step is recorded, the run is part of the restore protocol):
 
+0. **Journal im Backup (GAK-405):** `scripts/backup.sh` exportiert das Löschjournal bei jedem
+   Lauf zusammen mit dem Dump als `mhvp-deletions-<STAMP>.json.age` (verschlüsselt wie der Dump,
+   mit Prüfsumme, per `backup-offsite.sh` mit dem Lauf offsite gesichert). `backup-verify.sh`
+   prüft Vorhandensein, Prüfsumme und Lesbarkeit. Beim Totalverlust der Datenbank wird diese
+   Datei entschlüsselt (`age --decrypt`) und in Schritt 3 als `--journal` verwendet. Schritt 1
+   gilt zusätzlich, solange die Live-Datenbank noch erreichbar ist (aktuellerer Stand).
 1. **Journal sichern (before the restore, from the live database):**
    `python -m mhvp.documents.export_deletions --since <ISO-Datum des ältesten Backups> --out
    /var/backups/mhvp/deletions-<Datum>.json` (optional `--tenant <UUID>`). Keep the file

@@ -157,7 +157,12 @@ async def write_children(
             new_fingerprint = crypto.fingerprint(account.iban)
             if old_fingerprint is not None and old_fingerprint != new_fingerprint:
                 changed_mandate_references.append(account.mandate_reference)
+    from mhvp.contacts import address_history
+
+    keep_history = await address_history.is_enabled(session)
     for model in _CHILDREN:
+        if model is ContactAddress and keep_history:
+            continue  # AN05: closed below instead of deleted (contacts.address_history)
         if model is ContactBankAccount and data.bank_accounts is None:
             continue  # omitted: bank accounts stay as they are (ids referenced by mandates)
         if model is ContactBankAccount:
@@ -168,8 +173,16 @@ async def write_children(
     _single_primary(data.phones)
     _single_primary(data.emails)
     common = {"tenant_id": tenant_id, "contact_id": contact_id}
-    for address in data.addresses:
-        session.add(ContactAddress(**common, **address.model_dump()))
+    if keep_history:
+        await address_history.replace_with_history(session, tenant_id, contact_id, data.addresses)
+    else:
+        for address in data.addresses:
+            session.add(
+                ContactAddress(
+                    **common,
+                    **address.model_dump(exclude={"valid_from", "valid_to", "superseded_at"}),
+                )
+            )
     for phone in data.phones:
         session.add(ContactPhone(**common, **phone.model_dump()))
     for email in data.emails:

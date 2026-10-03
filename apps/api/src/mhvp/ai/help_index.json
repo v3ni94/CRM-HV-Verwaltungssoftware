@@ -2565,6 +2565,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Mieterhöhungssperre nach Anwendung (Welle 24)",
+  "source": "Handbuch: Handlungsanweisung: Mieterhöhung",
+  "href": "/vermietung/mieterhoehung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nach dem Schritt Anwenden zeigt der Fall den Abschnitt Mieterhöhungssperre. Ist unter Einstellungen, Fachliche Regeln, für die Begründung eine Sperrdauer in Monaten hinterlegt, erscheint das vorgeschlagene Datum. Mit Sperre übernehmen wird das Datum am Vertrag gespeichert und im ",
+  "file": "docs/handbuch/anleitung-mieterhoehung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Interessenten löschen (Welle 24)",
+  "source": "Handbuch: Handlungsanweisung: Mieterhöhung",
+  "href": "/vermietung/mieterhoehung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Wird ein Interessent gelöscht, von Hand oder durch den Löschlauf nach dem Löschdatum, bleibt der Kontakt zunächst erhalten. Hat der Kontakt keine andere Rolle, entsteht unter Datenschutz, Löschanträge, ein Löschvorschlag mit der Anzahl der verknüpften Dokumente. Kontakt und Dokum",
+  "file": "docs/handbuch/anleitung-mieterhoehung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Handlungsanweisung: Mieterwechsel und Wohnungsübergabe",
   "href": "/vertraege",
@@ -3965,6 +3985,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Massenbestätigung, Restbetrag, Skonto und Bankabstimmung (Welle 24)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Massenbestätigung: Die Vorschau zeigt Anzahl und Summen je Rechtsträger. Gebucht wird nur, was die Vorschau gezeigt hat; ändert sich ein Umsatz dazwischen oder ist die Vorschau älter als 15 Minuten, wird sie neu erzeugt. - Restbetrag einer Überzahlung bleibt Guthaben des Zahler",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4661,6 +4691,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Bei einem gebuchten Sollstellungslauf steht die Schaltfläche \"Lauf stornieren\" (Recht Buchungen freigeben). Sie verlangt eine Begründung, fragt vor der Ausführung nach und storniert die Sollstellungen durch Gegenbuchungen; die ursprünglichen Buchungen bleiben erhalten. Die Geschä",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklastschrift belegen und Forderungen zur Ausbuchung vorschlagen (Welle 24, AN15)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei einer Rücklastschrift erfassen Sie in der Bankrückmeldung des Lastschriftlaufs zusätzlich das Rückgabedatum der Bank, die tatsächlich berechnete Gebühr und den Gebührenbeleg. Der Verweis auf den ursprünglichen Einzug bleibt erhalten. Bereits erfasste Angaben lassen sich ergän",
   "file": "docs/handbuch/buchhaltung.md"
  },
  {
@@ -5935,6 +5975,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Abschnitt Stammdaten",
+  "source": "Handbuch: Abgleichbericht im Parallelbetrieb (Immoware24 gegen Plattform)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der geöffnete Bericht enthält, sofern Stammdatenexporte eingelesen sind und der Bericht nicht auf einzelne Objekte eingeschränkt ist, den Abschnitt \"Stammdaten\": je Reporttyp Zeilen, offene Zeilen und fehlende Objekte oder Einheiten sowie Zähler der Plattform. Ohne Stammdatenexpo",
+  "file": "docs/handbuch/import-abgleichbericht.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Was angelegt wird",
   "source": "Handbuch: Kontakte aus den Immoware24-Kontaktlisten anlegen",
   "href": "/importe",
@@ -6675,6 +6725,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Adresshistorie und Stichtag (GAJ-610, Welle 24)",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln, schaltet der Schalter \"Adresshistorie der Kontakte\" (Berechtigung Kontakte freigeben) die Adresshistorie ein. Standard ist aus: geänderte Anschriften werden wie bisher ersetzt. Bei an bleibt eine geänderte oder entfernte Anschrift als ersetz",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Einrichtung",
   "source": "Handbuch: Lexware Office",
   "href": "/einstellungen/schnittstellen/lexware-office",
@@ -7261,6 +7321,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Importassistenten stehen die Berichtsarten \"Altabrechnungen je Version (nur Ablage)\" und \"Beschlusssammlung (nur Ablage)\" bereit. Die Spalten des Exports werden wie bei den anderen Berichtsarten zugeordnet. Jede Version einer Abrechnung wird als eigene Zeile abgelegt; ein erne",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Altabrechnungen und Beschlüsse (nur lesend)",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Importe, Migration zeigt der Bereich \"Altabrechnungen und Beschlüsse (nur lesend)\" die übernommenen historischen Abrechnungen je Version, die Beschlusssammlung und den Prüfbericht mit Prüfhinweisen je Objekt. Objekt wählen (oder alle Objekte) und \"Laden\" drücken. Es",
   "file": "docs/handbuch/migration-immoware.md"
  },
  {
@@ -8141,6 +8211,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die Verwaltungsunterlagen ihrer Gemeinschaft (Umfang Abrechnung, Belege, Verträge, Beschlüsse oder eine Beschreibung) und sehen den Stand ihrer Anfragen. Die Anfrage geht in die Einsichtsanfragen des CRM;",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Fotopflicht beim Zählerstand einstellen (AN02)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Portalformulare legen Sie mit \"Foto beim Zählerstand\" fest, ob beim Melden eines Zählerstands ein Foto erwartet wird: kein Foto erwartet, Hinweis bei fehlendem Foto (Standard) oder Foto ist Pflicht. Bei Pflicht lehnt das Portal eine Meldung ohne Foto ab. In d",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -9051,6 +9131,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "In der Tabelle der Sollbeträge öffnet \"Korrigieren\" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst ",
+  "file": "docs/handbuch/vertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zahlungsplan korrigieren (GAJ-102, Welle 24)",
+  "source": "Handbuch: Verträge (Miete, WEG, SEV)",
+  "href": "/vertraege",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Vertragsdetail listet der Abschnitt Zahlungspläne alle Pläne des Vertrags. \"Korrigieren\" (Recht Verträge bearbeiten) öffnet ein Formular für Intervall, Fälligkeitsregel, Tag, Zahlweise, Betragsbasis und Gültigkeit. Ist der Plan bereits Grundlage gebuchter Sollstellungen, lehnt",
+  "file": "docs/handbuch/vertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Versionsverlauf (GAK-207, Welle 24)",
+  "source": "Handbuch: Verträge (Miete, WEG, SEV)",
+  "href": "/vertraege",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Vertragsdetail zeigt unten den Versionsverlauf: alle Versionen mit Gültigkeit, die aktuelle Version markiert und frühere Versionen als Link. Je Version erscheinen die Zahlungszeilen, die gegenüber der Vorversion neu sind oder entfallen. Frühere Versionen bleiben unverändert e",
   "file": "docs/handbuch/vertraege.md"
  },
  {

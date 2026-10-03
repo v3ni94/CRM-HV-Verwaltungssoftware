@@ -10,6 +10,7 @@ import pytest
 import sqlalchemy as sa
 
 from tests.integration.conftest import Database
+from tests.runtime_limits import scaled_limit
 
 pytestmark = pytest.mark.integration
 DOCS = 5_000
@@ -103,4 +104,4 @@ def test_receipt_search_with_5000_documents(database: Database) -> None:
     assert "Seq Scan" not in plan, plan
     assert "BitmapOr" in probe, probe
     assert "Seq Scan" not in probe, probe
-    assert max(timings) < 0.3
+    assert max(timings) < scaled_limit(0.3)  # load scaled

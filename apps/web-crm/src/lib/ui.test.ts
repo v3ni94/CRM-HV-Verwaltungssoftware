@@ -15,9 +15,20 @@ describe("ui class sets (M31)", () => {
     expect(ui[key]).toContain("sm:pointer-fine:min-h-10");
   });
 
-  it("buttonSm grows to 44 px on coarse pointers", () => {
-    expect(ui.buttonSm).toContain("pointer-coarse:min-h-11");
-    expect(ui.buttonSm).toContain("pointer-coarse:px-3");
+  it("buttonSm keeps 44 px and shrinks to 36 px only with a fine pointer (GAJ-403)", () => {
+    expect(ui.buttonSm).toContain("min-h-11");
+    expect(ui.buttonSm).not.toMatch(/(^|\s)min-h-9(\s|$)/);
+    expect(ui.buttonSm).toContain("pointer-fine:min-h-9");
+  });
+
+  it("every interactive token is 44 px on coarse pointers (GAJ-403)", () => {
+    const interactive = ["input", "button", "primary", "secondary", "danger", "buttonSm", "tab", "tabActive", "segment", "segmentActive"] as const;
+    for (const key of interactive) {
+      expect(ui[key], key).toMatch(/(^|\s)min-h-11(\s|$)/);
+      expect(ui[key], key).not.toMatch(/(^|\s)min-h-(?:[0-9]|10)(\s|$)/);
+    }
+    expect(ui.iconButton).toMatch(/(^|\s)h-11(\s|$)/);
+    expect(ui.iconButton).toMatch(/(^|\s)w-11(\s|$)/);
   });
 
   it("input uses 16 px text on phones against the iOS focus zoom", () => {

@@ -65,12 +65,26 @@ describe("Seiten ohne Daten", () => {
     ["assistent", AssistentPage, "Assistant", "PortalAssistant"],
     ["daten", DatenPage, "DataChange", "DataChangeForm"],
     ["umlaufbeschluesse", UmlaufbeschluessePage, "PortalCircular", "CircularVotePanel"],
-    ["zaehlerstand", ZaehlerstandPage, "Meter", "MeterReadingForm"],
   ])("%s: title and form, no API call", async (_n, Page, ns, stub) => {
     await show(Page);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(de(ns, "title"));
     expect(screen.getByTestId(stub)).toBeInTheDocument();
     expect(requestedPaths).toEqual([]);
+  });
+});
+
+describe("zaehlerstand", () => {
+  it("passes the meter photo mode of the tenant to the form (AN02)", async () => {
+    route("/api/v1/portal/me", 200, { features: { meter_photo_mode: "required" } });
+    await show(ZaehlerstandPage);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(de("Meter", "title"));
+    expect(stubProps(screen.getByTestId("MeterReadingForm"))).toMatchObject({ photoMode: "required" });
+  });
+
+  it("falls back to the hint mode without an answer", async () => {
+    route("/api/v1/portal/me", 500);
+    await show(ZaehlerstandPage);
+    expect(stubProps(screen.getByTestId("MeterReadingForm"))).toMatchObject({ photoMode: "hint" });
   });
 });
 

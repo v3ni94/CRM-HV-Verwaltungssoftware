@@ -29,6 +29,7 @@ from mhvp.accounting.models import (
     AdminFeeSetting,
     Invoice,
 )
+from mhvp.accounting.response_models import AccountingEInvoiceCheckOut
 from mhvp.accounting.write_responses import AccountingDocumentStoredOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
@@ -804,7 +805,9 @@ async def xrechnung_xml(
 
 
 @router.get(
-    "/invoices/{invoice_id}/xrechnung/check", summary="Strukturprüfung der XRechnung (Findings)"
+    "/invoices/{invoice_id}/xrechnung/check",
+    summary="Strukturprüfung der XRechnung (Findings)",
+    response_model=AccountingEInvoiceCheckOut,
 )
 async def xrechnung_check(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

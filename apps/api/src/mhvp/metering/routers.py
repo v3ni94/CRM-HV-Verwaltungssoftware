@@ -31,7 +31,7 @@ from mhvp.core.auth.permissions import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import content_disposition
-from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, ListParams, ListSpec, sparse, strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.uploads import read_limited
@@ -492,8 +492,8 @@ async def list_assignments(
     search: Annotated[str | None, Query(max_length=200)] = None,
     include_archived: bool = False,
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int | None, Query(ge=1, le=500)] = None,
-    limit: Annotated[int, Query(ge=1, le=500)] = 50,
+    page_size: Annotated[int | None, Query(ge=1, le=MAX_PAGE_SIZE)] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
 ) -> list[AssignmentOut]:
     async with tenant_tx(request, principal) as session:
         query = services.assignment_query(

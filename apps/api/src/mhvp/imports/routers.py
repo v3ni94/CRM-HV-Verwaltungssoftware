@@ -14,7 +14,7 @@ from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_unrestricted_guard
 from mhvp.core.events import emit
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -238,7 +238,7 @@ async def rows(
     source_id: uuid.UUID,
     request: Request,
     status: RowStatus | None = None,
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[RowOut]:

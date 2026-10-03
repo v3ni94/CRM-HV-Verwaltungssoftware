@@ -80,6 +80,15 @@ function fieldBody(field: string): (doc: unknown, value: RuleValue) => unknown {
   return (_doc, value) => ({ [field]: value });
 }
 
+/** AN18 (GAK-202): the rent increase settings are one document; a block duration per basis is
+ *  set or removed (null) and the whole document is sent back. */
+function blockMonthsBody(doc: unknown, basis: string, value: RuleValue): unknown {
+  const months = { ...(rec(rec(doc).block_months) as Record<string, unknown>) };
+  if (value === null || value === "") delete months[basis];
+  else months[basis] = Number(value);
+  return { proposals: rec(doc).proposals ?? "off", block_months: months };
+}
+
 /** AG03: thresholds of the onboarding person match are fractions (0,60) in the API, percent here. */
 function ratio(value: RuleValue): string {
   return (Number(value) / 100).toFixed(2);
@@ -116,6 +125,8 @@ const TAX_FIELDS = [
   "approval_limits_enabled",
   "subledger_exclude_written_off",
   "section_35a_basis",
+  "return_fee_pass_on_enabled",
+  "write_off_approval_enabled",
 ] as const;
 
 /** PUT /accounting/tax/settings replaces the whole document: send it back unchanged except for
@@ -334,6 +345,42 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "section_35a_basis",
   },
   {
+    id: "return-fee-pass-on",
+    group: "accounting",
+    pkg: "AN15",
+    kind: "boolean",
+    default: false,
+    questions: ["AN15-01"],
+    href: "/buchhaltung",
+    permission: SETTINGS,
+    read: { path: "accounting/tax/settings", pick: fieldPick("return_fee_pass_on_enabled") },
+    write: {
+      method: "PUT",
+      path: "accounting/tax/settings",
+      permission: "tenant_settings:update",
+      body: taxFieldBody("return_fee_pass_on_enabled"),
+    },
+    field: "return_fee_pass_on_enabled",
+  },
+  {
+    id: "write-off-approval",
+    group: "accounting",
+    pkg: "AN15",
+    kind: "boolean",
+    default: false,
+    questions: ["AN15-02"],
+    href: "/buchhaltung",
+    permission: SETTINGS,
+    read: { path: "accounting/tax/settings", pick: fieldPick("write_off_approval_enabled") },
+    write: {
+      method: "PUT",
+      path: "accounting/tax/settings",
+      permission: "tenant_settings:update",
+      body: taxFieldBody("write_off_approval_enabled"),
+    },
+    field: "write_off_approval_enabled",
+  },
+  {
     id: "deposit-limit-hint",
     group: "billing",
     pkg: "AI18",
@@ -350,6 +397,138 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: depositHintBody,
     },
     field: "deposit_limit_hint_enabled",
+  },
+  {
+    id: "rent-increase-proposals",
+    group: "platform",
+    pkg: "AN18",
+    kind: "enum",
+    options: ["off", "draft"],
+    default: "off",
+    questions: ["AN18-01"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/rent-increase-settings", pick: fieldPick("proposals") },
+    write: {
+      method: "PUT",
+      path: "letting/rent-increase-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => ({ ...rec(doc), proposals: value }),
+    },
+    field: "proposals",
+  },
+  {
+    id: "rent-increase-block-mietspiegel",
+    group: "platform",
+    pkg: "AN18",
+    kind: "integer",
+    range: [1, 120],
+    default: null,
+    questions: ["AN18-01"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/rent-increase-settings", pick: (doc) => scalar(rec(rec(doc).block_months)["mietspiegel"]) ?? null },
+    write: {
+      method: "PUT",
+      path: "letting/rent-increase-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => blockMonthsBody(doc, "mietspiegel", value),
+      apply: (doc, value) => blockMonthsBody(doc, "mietspiegel", value),
+    },
+  },
+  {
+    id: "rent-increase-block-comparison",
+    group: "platform",
+    pkg: "AN18",
+    kind: "integer",
+    range: [1, 120],
+    default: null,
+    questions: ["AN18-01"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/rent-increase-settings", pick: (doc) => scalar(rec(rec(doc).block_months)["comparison"]) ?? null },
+    write: {
+      method: "PUT",
+      path: "letting/rent-increase-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => blockMonthsBody(doc, "comparison", value),
+      apply: (doc, value) => blockMonthsBody(doc, "comparison", value),
+    },
+  },
+  {
+    id: "rent-increase-block-modernization",
+    group: "platform",
+    pkg: "AN18",
+    kind: "integer",
+    range: [1, 120],
+    default: null,
+    questions: ["AN18-01"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/rent-increase-settings", pick: (doc) => scalar(rec(rec(doc).block_months)["modernization"]) ?? null },
+    write: {
+      method: "PUT",
+      path: "letting/rent-increase-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => blockMonthsBody(doc, "modernization", value),
+      apply: (doc, value) => blockMonthsBody(doc, "modernization", value),
+    },
+  },
+  {
+    id: "rent-increase-block-index",
+    group: "platform",
+    pkg: "AN18",
+    kind: "integer",
+    range: [1, 120],
+    default: null,
+    questions: ["AN18-01"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/rent-increase-settings", pick: (doc) => scalar(rec(rec(doc).block_months)["index"]) ?? null },
+    write: {
+      method: "PUT",
+      path: "letting/rent-increase-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => blockMonthsBody(doc, "index", value),
+      apply: (doc, value) => blockMonthsBody(doc, "index", value),
+    },
+  },
+  {
+    id: "rent-increase-block-graduated",
+    group: "platform",
+    pkg: "AN18",
+    kind: "integer",
+    range: [1, 120],
+    default: null,
+    questions: ["AN18-01"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/rent-increase-settings", pick: (doc) => scalar(rec(rec(doc).block_months)["graduated"]) ?? null },
+    write: {
+      method: "PUT",
+      path: "letting/rent-increase-settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => blockMonthsBody(doc, "graduated", value),
+      apply: (doc, value) => blockMonthsBody(doc, "graduated", value),
+    },
+  },
+  {
+    id: "sale-marketing",
+    group: "platform",
+    pkg: "AN19",
+    kind: "boolean",
+    default: false,
+    questions: ["AN19-02"],
+    href: "/vermietung",
+    permission: SETTINGS,
+    read: { path: "letting/settings/sale-marketing", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "letting/settings/sale-marketing",
+      permission: "tenant_settings:update",
+      body: fieldBody("enabled"),
+    },
+    field: "enabled",
   },
   {
     id: "ai-realtime-mail-classification",
@@ -969,6 +1148,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     },
     field: "enabled",
   },
+  {
+    id: "majority-rule-four-eyes",
+    group: "hoa",
+    pkg: "AN06",
+    kind: "boolean",
+    default: false,
+    questions: ["AM02-01"],
+    href: "/weg",
+    permission: SETTINGS,
+    read: { path: "hoa/majority-rule-four-eyes", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "hoa/majority-rule-four-eyes",
+      permission: "tenant_settings:update",
+      body: fieldBody("enabled"),
+    },
+    field: "enabled",
+  },
   // --- Portal ---------------------------------------------------------------------------------
   {
     id: "owner-rental-income",
@@ -1083,6 +1280,25 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "owner_ticket_scope",
   },
   {
+    id: "meter-photo-mode",
+    group: "portal",
+    pkg: "AN02",
+    kind: "enum",
+    options: ["off", "hint", "required"],
+    default: "hint",
+    questions: ["AM06-01"],
+    href: "/einstellungen/portalformulare",
+    permission: ["tickets:read"],
+    read: { path: "portal-admin/features", pick: fieldPick("meter_photo_mode") },
+    write: {
+      method: "PATCH",
+      path: "portal-admin/features",
+      permission: "tenant_settings:update",
+      body: fieldBody("meter_photo_mode"),
+    },
+    field: "meter_photo_mode",
+  },
+  {
     id: "provider-rating-display",
     group: "portal",
     pkg: "AE30",
@@ -1158,6 +1374,26 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
   },
   // --- Sicherheit und Datenschutz -------------------------------------------------------------
   ...legalBasisRules,
+  {
+    // AN05 (GAJ-610): replaced contact addresses are closed instead of deleted; scope and
+    // retention of former addresses are open (AM14-01), so the default keeps replacing.
+    id: "contact-address-history",
+    group: "security",
+    pkg: "AN05",
+    kind: "boolean",
+    default: false,
+    questions: ["AM14-01"],
+    href: "/kontakte",
+    permission: ["contacts:read"],
+    read: { path: "contact-address-history", pick: fieldPick("enabled") },
+    write: {
+      method: "PUT",
+      path: "contact-address-history",
+      permission: "contacts:approve",
+      body: (_doc, value) => ({ enabled: value === true }),
+    },
+    field: "enabled",
+  },
   {
     id: "mfa-crm-mode",
     group: "security",

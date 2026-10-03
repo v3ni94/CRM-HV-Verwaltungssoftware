@@ -15,6 +15,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -99,6 +100,7 @@ class DirectDebitOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         Index("ix_direct_debit_order_run_id", "run_id"),
         Index("ix_direct_debit_order_contact_bank_account_id", "contact_bank_account_id"),
+        CheckConstraint("return_fee_amount IS NULL OR return_fee_amount >= 0", name="return_fee"),
     )
 
     run_id: Mapped[uuid.UUID] = mapped_column(
@@ -133,6 +135,13 @@ class DirectDebitOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     collected_amount: Mapped[Decimal | None] = mapped_column(MONEY)
     bank_transaction_id: Mapped[uuid.UUID | None] = _fk("bank_transaction.id", nullable=True)
     bank_status_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # AN15 (GAK-101, migration 0454): the return keeps the collection reference above
+    # unchanged; the return debit, the bank's return date and the actual fee with its voucher
+    # are recorded separately. Evidence only, the fee is never passed on automatically.
+    return_transaction_id: Mapped[uuid.UUID | None] = _fk("bank_transaction.id", nullable=True)
+    returned_on: Mapped[date | None] = mapped_column(Date)
+    return_fee_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    return_fee_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
 
 
 class DirectDebitApproval(IdMixin, TenantMixin, Base):

@@ -27,7 +27,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import diff, emit
 from mhvp.core.ids import uuid7
-from mhvp.core.listparams import strict_query
+from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents.blobs import BlobStore
@@ -72,6 +72,10 @@ class DirectDebitBankStatusIn(_In):
     reason_code: str | None = Field(default=None, min_length=1, max_length=8)
     collected_amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
     bank_transaction_id: uuid.UUID | None = None
+    # AN15 (GAK-101): only with status returned; evidence, nothing is posted or passed on.
+    returned_on: date | None = None
+    return_fee_amount: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    return_fee_document_id: uuid.UUID | None = None
 
 
 class DirectDebitOrderOut(BaseModel):
@@ -296,7 +300,7 @@ async def list_runs(
     status: str | None = Query(
         default=None, pattern="^(" + "|".join(s.value for s in DirectDebitRunStatus) + ")$"
     ),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[DirectDebitRunOut]:
     async with tenant_tx(request, principal) as session:
@@ -523,7 +527,14 @@ async def bank_status(
             orders = [o for o in orders if o.id in wanted]
             if len(orders) != len(wanted):
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Lastschrift nicht im Lauf.")
-        if (body.collected_amount or body.bank_transaction_id) and len(orders) != 1:
+        single = (
+            body.collected_amount
+            or body.bank_transaction_id
+            or body.returned_on
+            or body.return_fee_amount is not None
+            or body.return_fee_document_id
+        )
+        if single and len(orders) != 1:
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Betrag und Bankumsatz nur für eine Lastschrift."
             )
@@ -538,6 +549,9 @@ async def bank_status(
                 collected_amount=body.collected_amount,
                 bank_transaction_id=body.bank_transaction_id,
                 user_id=principal.user_id,
+                returned_on=body.returned_on,
+                return_fee_amount=body.return_fee_amount,
+                return_fee_document_id=body.return_fee_document_id,
             )
         return await feedback.reconciliation(session, run)
 

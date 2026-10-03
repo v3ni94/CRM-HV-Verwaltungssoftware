@@ -127,6 +127,9 @@ describe("BFF proxy", () => {
     ["GET", `imports/immoware24/files/${ID}`],
     ["GET", `imports/immoware24/files/${ID}/rows`],
     ["GET", `imports/immoware24/files/${ID}/reconciliation`],
+    ["GET", "imports/immoware24/history/statements"],
+    ["GET", "imports/immoware24/history/statements/check"],
+    ["GET", "imports/immoware24/history/resolutions"],
     ["POST", `imports/immoware24/files/${ID}/validate`],
     ["POST", `imports/immoware24/files/${ID}/test-run`],
     ["POST", `imports/immoware24/files/${ID}/apply`],
@@ -550,6 +553,8 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["PUT", `billing/heating-cost-imports/${ID}/rows`],
     ["GET", `letting/prospects/${ID}/self-disclosure-links`],
     ["POST", `communication/calls/${ID}/assign`],
+    ["GET", `contracts/${ID}/versions`], // GAK-207
+    ["PUT", "letting/rent-increase-settings"], // AN18
   ] as const)("forwards %s %s", async (method, path) => {
     const res = await call(method, path);
     expect(res.status).toBe(200);
@@ -569,6 +574,8 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["GET", "hoa/inspection-requests/ownership-transfers/scan"],
     ["POST", `letting/prospects/${ID}/self-disclosure-links`],
     ["GET", `communication/calls/${ID}/assign`],
+    ["DELETE", `contracts/${ID}/versions`], // GAK-207
+    ["DELETE", "letting/rent-increase-settings"], // AN18
     ["POST", `mail/messages/${ID}/attachments/not-a-uuid/invoice-extraction`],
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
@@ -603,6 +610,9 @@ describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
 
   it.each([
     ["GET", "privacy/deletion-proposals"],
+    ["GET", "contact-address-history"],
+    ["PUT", "contact-address-history"],
+    ["GET", `contacts/${ID}/addresses`],
     ["POST", "privacy/deletion-proposals/run"],
     ["POST", `privacy/erasure-requests/${ID}/accept`],
     ["GET", "privacy/consent-overview"],
@@ -620,6 +630,9 @@ describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
 
   it.each([
     ["DELETE", "privacy/deletion-proposals"],
+    ["DELETE", "contact-address-history"],
+    ["PUT", `contacts/${ID}/addresses`],
+    ["GET", "contacts/not-a-uuid/addresses"],
     ["GET", "privacy/deletion-proposals/run"],
     ["POST", "privacy/erasure-requests/not-a-uuid/accept"],
     ["POST", "privacy/request-deadlines"],

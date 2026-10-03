@@ -25,6 +25,8 @@ export type PortalFeatures = {
   owner_ticket_scope?: "none" | "released" | "property";
   /** AA14-02: Bewertungen der Dienstleister, off (Standard) oder staff (nur Verwaltung). */
   provider_rating_display?: "off" | "staff" | "all";
+  /** AN02 (GAJ-401, AM06-01): Foto beim Zählerstand, Standard hint. */
+  meter_photo_mode?: "off" | "hint" | "required";
 };
 export type PortalStatistics = {
   period_days: number;
@@ -58,6 +60,7 @@ const KEYS: BoolKey[] = [
 ];
 const SCOPES = ["none", "released", "property"] as const;
 const RATING_MODES = ["off", "staff", "all"] as const;
+const METER_PHOTO_MODES = ["off", "hint", "required"] as const;
 
 /** Portalfunktionen und Statistik je Mandant (M21-08, SA-01): Schalter sind standardmäßig aus;
  *  die KI-Vorqualifizierung braucht zusätzlich den freigegebenen KI-Anbieter mit AVV, die
@@ -145,6 +148,23 @@ export function PortalManagement({
             ))}
           </select>
           <span className={ui.help}>{t("ratingHelp")}</span>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span>{t("meterPhotoMode")}</span>
+          <select
+            className={ui.input}
+            value={features.meter_photo_mode ?? "hint"}
+            disabled={busy || !canManage}
+            onChange={(e) => toggle("meter_photo_mode", e.target.value)}
+            data-testid="meter-photo-mode"
+          >
+            {METER_PHOTO_MODES.map((m) => (
+              <option key={m} value={m}>
+                {t(`meterPhotoModes.${m}`)}
+              </option>
+            ))}
+          </select>
+          <span className={ui.help}>{t("meterPhotoHelp")}</span>
         </label>
       </div>
       {features.provider_rating_display === "staff" || features.provider_rating_display === "all" ? <ProviderRatingsPanel /> : null}

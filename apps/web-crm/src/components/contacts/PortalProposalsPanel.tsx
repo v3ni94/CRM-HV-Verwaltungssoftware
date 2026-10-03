@@ -11,7 +11,8 @@ export type ChangeRequestRow = {
   id: string;
   kind: string;
   status: "proposed" | "accepted" | "rejected" | string;
-  payload: Record<string, string>;
+  /** Zählerstand (AN02, GAJ-401): document_ids sind Fotos, photo_missing kennzeichnet fehlende Fotos. */
+  payload: Record<string, string> & { document_ids?: string[]; photo_missing?: boolean };
   contact_id: string;
   created_at: string;
   decision_note: string | null;
@@ -86,7 +87,11 @@ export function PortalProposalsPanel({ contactId, canDecide }: { contactId: stri
       const town = [p.postal_code, p.city].filter(Boolean).join(" ");
       return `${line}, ${town}${p.valid_from ? ` (${t("validFrom")} ${formatDate(p.valid_from)})` : ""}`;
     }
+    if (row.kind === "meter_reading") {
+      return `${t("meterValue")} ${p.value ?? ""}${p.read_at ? ` (${t("readAt")} ${formatDate(p.read_at)})` : ""}`;
+    }
     return Object.entries(p)
+      .filter(([, v]) => typeof v !== "object")
       .map(([k, v]) => `${k}: ${v}`)
       .join(", ");
   }
@@ -167,6 +172,16 @@ export function PortalProposalsPanel({ contactId, canDecide }: { contactId: stri
                       {t("evidence")}
                     </a>
                   ) : null}
+                  {r.kind === "meter_reading" && r.payload.photo_missing ? (
+                    <span className="text-xs text-warning-fg" data-testid="meter-photo-missing">
+                      {t("photoMissing")}
+                    </span>
+                  ) : null}
+                  {(r.payload.document_ids ?? []).map((docId, i) => (
+                    <a key={docId} href={`/dokumente/${docId}`} className="text-xs underline" data-testid="meter-photo-link">
+                      {t("meterPhoto", { n: i + 1 })}
+                    </a>
+                  ))}
                   {r.receipt_draft_id ? (
                     <a href={`/rechnungen/belegeingang?entwurf=${r.receipt_draft_id}`} className="text-xs underline" data-testid="receipt-draft-link">
                       {t("receiptDraft")}

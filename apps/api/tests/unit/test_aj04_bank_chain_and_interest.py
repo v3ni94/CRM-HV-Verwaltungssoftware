@@ -39,7 +39,9 @@ class _Ledger:
 def test_chain_findings(monkeypatch: Any) -> None:
     bank = uuid.uuid4()
 
-    async def fake_reconcile(_s: Any, bank_id: uuid.UUID) -> list[dict[str, Any]]:
+    async def fake_reconcile(
+        _s: Any, bank_id: uuid.UUID, *, strict: bool = True
+    ) -> list[dict[str, Any]]:
         assert bank_id == bank
         return [
             {

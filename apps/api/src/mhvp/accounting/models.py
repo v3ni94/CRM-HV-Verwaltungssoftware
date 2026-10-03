@@ -498,9 +498,50 @@ class OpenItem(IdMixin, TimestampMixin, TenantMixin, Base):
     contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
     component: Mapped[str | None] = mapped_column(String(63))  # payment type code
     written_off: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # AN15 (GAK-104, migration 0454): set only by an approved write off
+    # (``mhvp.accounting.write_offs``); ``written_off_on`` makes the flag date aware (B07).
+    written_off_on: Mapped[date | None] = mapped_column(Date)
+    written_off_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    written_off_reason: Mapped[str | None] = mapped_column(String(500))
+    written_off_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     # Date the debtor received the demand (Rechnung, Abrechnung, Zahlungsaufforderung) as
     # recorded by a person; needed for default mode ``after_notice_30_days`` (M16-03).
     notice_received_on: Mapped[date | None] = mapped_column(Date)
+
+
+class OpenItemWriteOff(IdMixin, TenantMixin, Base):
+    """AN15 (GAK-104): write off of an open item as its own procedure with reason, author,
+    effective date and voucher. Proposed first; approval by a second person only with the
+    tenant switch and gate G1 open. Approval sets the flag on the item; nothing is posted."""
+
+    __tablename__ = "open_item_write_off"
+    __table_args__ = (
+        CheckConstraint("status IN ('proposed', 'approved', 'rejected')", name="status"),
+        CheckConstraint("amount > 0", name="amount"),
+        Index("ix_open_item_write_off_item", "tenant_id", "open_item_id"),
+        Index(
+            "uq_open_item_write_off_active",
+            "open_item_id",
+            unique=True,
+            postgresql_where=text("status IN ('proposed', 'approved')"),
+        ),
+    )
+
+    open_item_id: Mapped[uuid.UUID] = _fk("open_item.id")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="proposed", server_default="proposed"
+    )
+    effective_on: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    proposed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    proposed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_note: Mapped[str | None] = mapped_column(String(500))
 
 
 class OpenItemSettlement(IdMixin, TenantMixin, Base):

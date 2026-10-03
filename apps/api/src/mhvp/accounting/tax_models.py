@@ -101,6 +101,16 @@ class AccountingTaxSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     section_35a_basis: Mapped[str] = mapped_column(
         String(16), nullable=False, default="invoice_date", server_default="invoice_date"
     )
+    # AN15 (migration 0454): GAK-101 passing the actual return debit fee on to the debtor is
+    # shown as a proposal only with this switch (question AN15-01, G1/G2), never posted here.
+    return_fee_pass_on_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # GAK-104: approval of a proposed write off by a second person (question AN15-02, G1).
+    # Off: write offs stay proposals without any effect.
+    write_off_approval_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class PropertyTaxProfile(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -282,6 +282,16 @@
     "ticketAnalytics": "Ticket analytics"
   },
   "Contacts": {
+    "addressHistory": {
+      "title": "Address history",
+      "off": "The address history is not enabled for this tenant (switch address history of contacts, question AM14-01). Changed addresses are replaced.",
+      "asOf": "Cut off date",
+      "empty": "No addresses on this date.",
+      "range": "valid {from} to {to}",
+      "open": "open",
+      "closed": "replaced",
+      "primary": "Primary address"
+    },
     "mergeLink": "Merge",
     "call": "Call",
     "mail": "E-mail",
@@ -505,6 +515,10 @@
       "confirmedAt": "Confirmed on",
       "validFrom": "valid from",
       "evidence": "Evidence",
+      "photoMissing": "No photo of the meter reading attached",
+      "meterPhoto": "View meter photo {n}",
+      "meterValue": "Reading",
+      "readAt": "read on",
       "receiptDraft": "Receipt draft in the intake",
       "note": "Note (optional)",
       "accept": "Accept",
@@ -1880,6 +1894,7 @@
         "expectedInflows": "Expected inflows",
         "expectedOutflows": "Expected outflows",
         "projectedFreeFunds": "Projected free funds",
+        "debtorCredits": "Debtor credit balances (bound)",
         "horizon": "Reference date {asOf}, forecast horizon until {horizon}",
         "xlsx": "Download as Excel",
         "numberConvention": "Reserve detected by account number 001201 only, no bank account linked",
@@ -3773,6 +3788,9 @@
       "choose": "Majority rule",
       "simple": "simple majority",
       "unanimousText": "all votes",
+      "draft": "Draft, approval by a second person pending",
+      "approve": "Approve",
+      "approveHint": "Four eyes approval: only a second person with approval right; until then the rule is not applied in votes.",
       "moreThan": "more than {p} %",
       "atLeast": "at least {p} %",
       "meaMin": "at least {p} % of all MEA"
@@ -4733,6 +4751,8 @@
     "log": "Log",
     "testMode": "Test mode (log only)",
     "testModeHelp": "In test mode the rule evaluates trigger and conditions and only writes a log entry with the result test run. No effect is produced.",
+    "needsAiApproval": "AI approval missing",
+    "needsAiApprovalHint": "This rule contains an AI task, but its last editor lacks the ai:approve permission. It only runs while the tenant switch for AI tasks from rules is on. Have a person with ai:approve save it again.",
     "testModeBadge": "Test mode",
     "filterStatus": "Filter result",
     "allStatuses": "All results",
@@ -9710,7 +9730,10 @@
     "title": "Automatic AI runs",
     "rentIncrease": "Let the AI check new or changed rent increase cases for consistency",
     "batchMail": "Let the AI classify mails without a suggestion overnight",
-    "hint": "Both switches are off by default and bypass neither the provider release nor the monthly budget. Results are proposals and hints, not an approval and not a legal review.",
+    "realtimeMail": "Let the AI classify each incoming mail and propose reply drafts",
+    "masterData": "Let the AI detect master data changes in mails as proposals",
+    "ruleAiTask": "Run AI tasks from automation rules (off: the action is skipped)",
+    "hint": "The first two switches are off by default. The other three are on by default but bypass neither the provider release nor the monthly budget. Results are proposals and hints, not an approval and not a legal review.",
     "noProvider": "No AI provider is usable at the moment: {reason}"
   },
   "InvoiceIntakeAuto": {
@@ -10034,6 +10057,13 @@
     "colPlatform": "Platform",
     "colDifference": "Difference",
     "colHint": "Hint",
+    "masterTitle": "Master data",
+    "masterOpen": "{count} open master data differences.",
+    "masterType": "Report type",
+    "masterRows": "Rows",
+    "masterOpenRows": "Open rows",
+    "masterMissing": "Missing properties or units",
+    "masterEmpty": "No master data comparison in this report (no master data exports staged or report scoped to properties).",
     "missing": "missing",
     "metric": {
       "kontosaldo": "Account balance",
@@ -11142,6 +11172,29 @@
     },
     "testDelivery": "A test delivery queues the event webhook_subscription.test for this subscription only; the result appears in the log. When a delivery finally fails, authorised users are notified."
   },
+  "ContractVersionHistory": {
+    "title": "Version history",
+    "notice": "All versions of this contract with validity and the payment lines changed against the previous version. Earlier versions stay unchanged.",
+    "loading": "Loading versions.",
+    "empty": "No entries.",
+    "version": "Version {n}",
+    "current": "Current",
+    "validity": "valid {from} to {to}",
+    "openEnd": "open",
+    "from": "from",
+    "added": "Added",
+    "removed": "Removed",
+    "noPaymentChange": "Payment lines unchanged."
+  },
+  "RentIncreaseBlock": {
+    "title": "Rent increase block",
+    "proposal": "Proposal from the tenant switch: block until {date}.",
+    "noProposal": "No proposal: no block duration is configured for this basis (rent increase settings).",
+    "set": "Set on the contract: block until {date}.",
+    "hint": "The platform fixes no block duration. The date is stored on the contract only after confirmation.",
+    "label": "Block until",
+    "confirm": "Apply block"
+  },
   "ContractForm": {
     "notesSection": {
       "title": "Remarks and dunning block",
@@ -11257,6 +11310,13 @@
       "fixed_deposit": "Fixed deposit",
       "letter_of_comfort": "Letter of comfort",
       "other": "Other"
+    },
+    "scheduleEdit": {
+      "title": "Correct payment plan",
+      "help": "The plan can only be changed while no posted receivable uses it. Correcting it posts nothing.",
+      "open": "Correct",
+      "save": "Save correction",
+      "cancel": "Cancel"
     },
     "schedule": {
       "interval": "Interval",
@@ -13217,6 +13277,36 @@
     "queued": "The run was queued.",
     "startedInline": "The run was executed."
   },
+  "HistoryStatements": {
+    "title": "Historical statements and resolutions (read only)",
+    "intro": "Imported historical statements and resolutions with check report. Nothing is posted, corrected or sent.",
+    "property": "Property",
+    "allProperties": "All properties",
+    "load": "Load",
+    "checkTotals": "{statements} statements, {resolutions} resolutions, {findings} findings.",
+    "noFindings": "No findings.",
+    "statementsTitle": "Historical statements",
+    "noStatements": "No historical statements imported.",
+    "resolutionsTitle": "Resolution collection",
+    "noResolutions": "No resolutions imported.",
+    "colProperty": "Property",
+    "colEntity": "Subject",
+    "colCode": "Code",
+    "colMessage": "Note",
+    "colKind": "Type",
+    "colPeriod": "Period",
+    "colVersion": "Version",
+    "colUnit": "Unit",
+    "colRecipient": "Recipient",
+    "colResult": "Result",
+    "colSent": "Sent",
+    "colDate": "Date",
+    "colItem": "Item",
+    "colTitle": "Title",
+    "colOutcome": "Outcome",
+    "colForm": "Form",
+    "kind": { "hoa_annual": "HOA annual statement", "hoa_budget": "Budget", "operating_costs": "Operating costs", "heating_costs": "Heating costs", "other": "Other" }
+  },
   "MigrationHistory": {
     "title": "Legacy data (read only)",
     "intro": "Imported open items and historical tickets. Nothing is posted or changed.",
@@ -13592,7 +13682,8 @@
       "state": "G1 cases passed {passed} of {total}, released expected values {released} of {all}",
       "link": "Open acceptance register"
     },
-    "evidence": {"document": "Document", "missing": "Evidence missing"},
+    "evidence": {"document": "Document", "missing": "Evidence missing", "required": "Evidence required"},
+    "evidenceKind": {"test_run": "Test run (CI)", "test_state": "Test state", "document": "Document", "reference": "Reference"},
     "title": "G1 opening",
     "description": "Checklist before productive bookkeeping (release gate G1). The state comes from the system, the operator records the results. The request goes through the existing release flow with a second person; this page never opens the gate itself.",
     "intro": "Order of the opening list: release the chart of accounts with the tax advisor, accept the annex D cases by the expert person, check the VAT treatment, then file the G1 request. A second person decides under Platform.",
@@ -13647,6 +13738,7 @@
     "documents": {
       "gateChecklist": "Gate checklist",
       "gaps": "Without responsible person: {responsible}, passed without evidence: {evidence}",
+      "noTestRun": "Passed annex D cases without a linked test run: {count}. A case counts as machine verified only with a reference ci-run:run@commit.",
       "title": "Documents",
       "help": "The documents live in the repository and are named as evidence in the request.",
       "kontenrahmen-pruefung": "Chart of accounts review",
@@ -13947,6 +14039,8 @@
     "forbidden": "Platform administrators only.",
     "tenant": "Tenant",
     "gatesCaption": "Release gate state",
+    "checklistUnverified": "Checklist without checkable evidence",
+    "checklistUnverifiedHint": "Confirmed, but without a checkable evidence reference in the note. Verify manually before deciding.",
     "gate": "Gate",
     "state": "State",
     "scopes": "Approved scope",
@@ -15524,6 +15618,9 @@
     },
     "ticketScope": "Tickets in the owner portal",
     "ticketScopes": { "none": "no tickets", "released": "only tickets released for owners", "property": "all tickets of the own properties (number, title, status)" },
+    "meterPhotoMode": "Photo with the meter reading",
+    "meterPhotoModes": { "off": "no photo expected", "hint": "hint if the photo is missing (default)", "required": "photo required, a reading without photo is rejected" },
+    "meterPhotoHelp": "Photos of meter readings are shown in the proposal review at the contact. The decision on a photo requirement rests with the operator (AM06-01).",
     "ratingDisplay": "Ratings of service providers",
     "ratingModes": { "off": "do not show (default, internal)", "staff": "show to the management only as an overview", "all": "additionally the contractor average for residents in the portal (never for contractors)" },
     "ratingHelp": "Ratings are internal assessments by the management of completed orders. The overview shows only the count, mean and distribution of the stars per provider, without free text. Providers and third parties do not see the ratings. A display for providers stays excluded until the operator decides and data protection has reviewed it.",
@@ -17152,6 +17249,14 @@
         "title": "Household services certificate, invoice selection",
         "description": "Invoice date in the year (previous behaviour) or only paid invoices with a payment date in the year. Each line shows its payment state, a second certificate of the same year gets a notice. The tax decision stays open."
       },
+      "return-fee-pass-on": {
+        "title": "Return debit fee as pass on proposal",
+        "description": "An actual bank fee recorded with a return debit appears in the reconciliation as a proposal to pass it on to the debtor. Nothing is posted; whether and on which basis it is passed on is open (G1, G2)."
+      },
+      "write-off-approval": {
+        "title": "Approval of receivable write offs",
+        "description": "A write off proposal can be approved by a second person when G1 is open. Off, every proposal stays without effect. Procedure and legal basis of write offs are open."
+      },
       "ai-realtime-mail-classification": {
         "title": "AI classification of each inbound ticket mail",
         "description": "Each inbound mail on a ticket is classified by the AI at once and receives a reply proposal. Default on as before; provider release and monthly budget still apply. Whether the default turns off is open."
@@ -17167,6 +17272,34 @@
       "deposit-limit-hint": {
         "title": "Review hint on deposit amount and instalments",
         "description": "For residential units a non blocking hint appears when the deposit exceeds the set multiple of the rent without operating costs (default 3) or the instalments exceed the comparison value (default 3). No legal assessment."
+      },
+      "rent-increase-proposals": {
+        "title": "Rent increase proposals from graduated and index rent",
+        "description": "Prepares due graduated steps and index adjustments as draft rent increase cases (draft). Never applied automatically. Default off; waiting period, index source and notice form are not decided."
+      },
+      "rent-increase-block-mietspiegel": {
+        "title": "Rent increase block after apply: mietspiegel",
+        "description": "Months from the effective date that the case proposes as blocking date after apply (basis mietspiegel). Without a value no proposal. The platform fixes no duration; the date is set on the contract only after confirmation."
+      },
+      "rent-increase-block-comparison": {
+        "title": "Rent increase block after apply: comparison",
+        "description": "Months from the effective date that the case proposes as blocking date after apply (basis comparison). Without a value no proposal. The platform fixes no duration; the date is set on the contract only after confirmation."
+      },
+      "rent-increase-block-modernization": {
+        "title": "Rent increase block after apply: modernization",
+        "description": "Months from the effective date that the case proposes as blocking date after apply (basis modernization). Without a value no proposal. The platform fixes no duration; the date is set on the contract only after confirmation."
+      },
+      "rent-increase-block-index": {
+        "title": "Rent increase block after apply: index",
+        "description": "Months from the effective date that the case proposes as blocking date after apply (basis index). Without a value no proposal. The platform fixes no duration; the date is set on the contract only after confirmation."
+      },
+      "rent-increase-block-graduated": {
+        "title": "Rent increase block after apply: graduated",
+        "description": "Months from the effective date that the case proposes as blocking date after apply (basis graduated). Without a value no proposal. The platform fixes no duration; the date is set on the contract only after confirmation."
+      },
+      "sale-marketing": {
+        "title": "Sale listings and broker publication",
+        "description": "Sale listings can be drafted. Activation and handover to a broker provider only with the switch on (default off). Rental listings and the vacancy list are unchanged. Scope of marketing not decided yet."
       },
       "period-lock-mode": {
         "title": "Period lock: scope",
@@ -17302,6 +17435,10 @@
         "title": "Cut-off date of the transition rule",
         "description": "Date you enter as the cut-off date of the transition rule. It is no legal text and has no locking effect, the deadline notices only mention it."
       },
+      "majority-rule-four-eyes": {
+        "title": "Four eyes approval of majority rules",
+        "description": "Whether newly created meeting majority rules apply only after approval by a second person with approval right. Existing rules stay unchanged. Which rule model is authoritative is open (AM02-01)."
+      },
       "portal-circular-resolution": {
         "title": "Circular resolution in the owner portal",
         "description": "Whether owners vote in running circular procedures in the portal. Voting additionally needs release gate G4; the software does not check admissibility."
@@ -17341,6 +17478,10 @@
       "owner-ticket-scope": {
         "title": "Tickets in the owner portal",
         "description": "Which tickets of the property an owner can read."
+      },
+      "meter-photo-mode": {
+        "title": "Photo with the meter reading in the portal",
+        "description": "Whether a photo is expected when a meter reading is reported in the portal. Hint (default): a reading without photo is accepted and flagged as without photo in the proposal review. Required: a reading without photo is rejected. The decision rests with the operator (AM06-01)."
       },
       "provider-rating-display": {
         "title": "Ratings of service providers",
@@ -17444,6 +17585,10 @@
         "title": "Document trash: period in days",
         "description": "Period until which a document can be restored from the trash. 30 days is a proposal, the decision is open. The period applies to documents deleted afterwards."
       },
+      "contact-address-history": {
+        "title": "Address history of contacts",
+        "description": "When on, changed or removed addresses of a contact are closed (valid to, superseded at) instead of deleted and can be queried by cut off date. Default off: addresses are replaced as before. Scope and retention of former addresses are open (AM14-01); switching off deletes nothing."
+      },
       "legal-basis-email-delivery": {
         "title": "Legal basis: email delivery",
         "description": "What the sending of statements, reminders and invitations by email is based on. Consent is the default. Another basis needs a justification of at least 10 characters."
@@ -17462,6 +17607,10 @@
       }
     },
     "options": {
+      "rent-increase-proposals": {
+        "off": "Off",
+        "draft": "Proposals as draft"
+      },
       "rent-invoice-numbering": {
         "draft_numbers": "Draft number ENTWURF-YYYY-NNNNNN",
         "regular_numbers": "Regular invoice number MR also for a draft",
@@ -17526,6 +17675,11 @@
         "none": "No tickets",
         "released": "Released tickets only",
         "property": "All tickets of the property"
+      },
+      "meter-photo-mode": {
+        "off": "No photo expected",
+        "hint": "Hint if the photo is missing (default)",
+        "required": "Photo is required"
       },
       "provider-rating-display": {
         "off": "Off, internal only",

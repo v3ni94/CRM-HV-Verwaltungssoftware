@@ -2,7 +2,7 @@
 
 import hashlib
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -295,8 +295,25 @@ async def pair_transfer(session: AsyncSession, tx: BankTransaction) -> bool:
     return True
 
 
-async def reconcile(session: AsyncSession, bank_account_id: uuid.UUID) -> list[dict[str, Any]]:
-    """Per statement: opening + movements = closing (B09); ledger balance compared if linked."""
+RECONCILIATION_BASES = ("booking_date", "bank_date")
+
+
+async def reconcile(
+    session: AsyncSession,
+    bank_account_id: uuid.UUID,
+    basis: str = "booking_date",
+    *,
+    strict: bool = True,
+) -> list[dict[str, Any]]:
+    """Per statement: opening + movements = closing (B09); ledger balance compared if linked.
+
+    GAK-108 (B07, B09): ``basis`` selects the cut-off of the ledger side, ``booking_date`` of
+    the journal entry (previous behaviour, default) or ``bank_date``, the booking date of the
+    bank transaction the entry was booked from (entries without a bank transaction keep their
+    own date). The other basis is computed too; the gap is shown as ``timing_difference``. The
+    ledger account must be unique, otherwise 409 instead of silently taking the first one;
+    with ``strict=False`` (checks, digest) the rows carry ``ledger_status="ambiguous"`` and no
+    ledger comparison."""
     from mhvp.accounting.models import EntryStatus, JournalEntry, JournalLine, LedgerAccount
 
     statements = (
@@ -310,9 +327,53 @@ async def reconcile(session: AsyncSession, bank_account_id: uuid.UUID) -> list[d
             )
         )
     ).all()
-    ledger_account = await session.scalar(
-        select(LedgerAccount).where(LedgerAccount.property_bank_account_id == bank_account_id)
+    if basis not in RECONCILIATION_BASES:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannte Abstimmungsbasis.")
+    linked = (
+        await session.scalars(
+            select(LedgerAccount).where(LedgerAccount.property_bank_account_id == bank_account_id)
+        )
+    ).all()
+    ambiguous = len(linked) > 1
+    if ambiguous and strict:
+        raise ProblemError(
+            ErrorCodes.BANK_RECON_ACCOUNT_AMBIGUOUS,
+            detail=(
+                "Mehrere Sachkonten verweisen auf dieses Bankkonto: "
+                + ", ".join(sorted(a.number for a in linked))
+                + ". Zuordnung bereinigen, bevor abgestimmt wird."
+            ),
+        )
+    ledger_account = linked[0] if len(linked) == 1 else None
+    bank_day = (
+        select(func.min(BankTransaction.booking_date))
+        .where(BankTransaction.journal_entry_id == JournalEntry.id)
+        .correlate(JournalEntry)
+        .scalar_subquery()
     )
+
+    async def _ledger_balance(account_id: uuid.UUID, cutoff: date, by_bank: bool) -> Decimal:
+        day = (
+            func.coalesce(bank_day, JournalEntry.booking_date)
+            if by_bank
+            else (JournalEntry.booking_date)
+        )
+        d, c = (
+            await session.execute(
+                select(
+                    func.coalesce(func.sum(JournalLine.debit), 0),
+                    func.coalesce(func.sum(JournalLine.credit), 0),
+                )
+                .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
+                .where(
+                    JournalLine.account_id == account_id,
+                    JournalEntry.status == EntryStatus.POSTED,
+                    day <= cutoff,
+                )
+            )
+        ).one()
+        return Decimal(d) - Decimal(c)
+
     out = []
     prev: BankStatement | None = None
     for st in statements:
@@ -329,24 +390,14 @@ async def reconcile(session: AsyncSession, bank_account_id: uuid.UUID) -> list[d
         difference = None
         if st.opening_balance is not None and st.closing_balance is not None:
             difference = st.closing_balance - (st.opening_balance + moved)
-        ledger_balance = ledger_difference = None
+        ledger_balance = ledger_difference = timing_difference = None
         if ledger_account is not None and st.closing_date and st.closing_balance is not None:
-            d, c = (
-                await session.execute(
-                    select(
-                        func.coalesce(func.sum(JournalLine.debit), 0),
-                        func.coalesce(func.sum(JournalLine.credit), 0),
-                    )
-                    .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
-                    .where(
-                        JournalLine.account_id == ledger_account.id,
-                        JournalEntry.status == EntryStatus.POSTED,
-                        JournalEntry.booking_date <= st.closing_date,
-                    )
-                )
-            ).one()
-            ledger_balance = Decimal(d) - Decimal(c)
+            by_booking = await _ledger_balance(ledger_account.id, st.closing_date, False)
+            by_bank = await _ledger_balance(ledger_account.id, st.closing_date, True)
+            ledger_balance = by_bank if basis == "bank_date" else by_booking
             ledger_difference = st.closing_balance - ledger_balance
+            # GAK-108: own kind of difference, entries dated apart from the bank day.
+            timing_difference = by_bank - by_booking
         out.append(
             {
                 "statement_id": st.id,
@@ -358,6 +409,12 @@ async def reconcile(session: AsyncSession, bank_account_id: uuid.UUID) -> list[d
                 "statement_difference": difference,
                 "ledger_balance": ledger_balance,
                 "ledger_difference": ledger_difference,
+                "date_basis": basis,
+                "ledger_status": (
+                    "ambiguous" if ambiguous else ("linked" if ledger_account else "unlinked")
+                ),
+                "ledger_account_number": ledger_account.number if ledger_account else None,
+                "timing_difference": timing_difference,
                 "from_date": st.from_date,
                 "to_date": st.to_date,
                 "status": _statement_status(difference, ledger_difference),

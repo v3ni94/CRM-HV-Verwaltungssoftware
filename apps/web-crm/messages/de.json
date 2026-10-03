@@ -282,6 +282,16 @@
     "ticketAnalytics": "Auswertung Tickets"
   },
   "Contacts": {
+    "addressHistory": {
+      "title": "Adresshistorie",
+      "off": "Die Adresshistorie ist für diesen Mandanten nicht aktiviert (Schalter Adresshistorie der Kontakte, Frage AM14-01). Geänderte Anschriften werden ersetzt.",
+      "asOf": "Stichtag",
+      "empty": "Keine Anschriften zum Stichtag.",
+      "range": "gültig {from} bis {to}",
+      "open": "offen",
+      "closed": "ersetzt",
+      "primary": "Hauptanschrift"
+    },
     "mergeLink": "Zusammenführen",
     "call": "Anrufen",
     "mail": "E-Mail",
@@ -505,6 +515,10 @@
       "confirmedAt": "Bestätigt am",
       "validFrom": "gültig ab",
       "evidence": "Nachweis",
+      "photoMissing": "Kein Foto des Zählerstands beigefügt",
+      "meterPhoto": "Zählerfoto {n} ansehen",
+      "meterValue": "Stand",
+      "readAt": "abgelesen am",
       "receiptDraft": "Belegentwurf im Belegeingang",
       "note": "Vermerk (optional)",
       "accept": "Übernehmen",
@@ -1880,6 +1894,7 @@
         "expectedInflows": "Erwartete Einzahlungen",
         "expectedOutflows": "Erwartete Auszahlungen",
         "projectedFreeFunds": "Projizierte freie Mittel",
+        "debtorCredits": "Guthaben von Debitoren (gebunden)",
         "horizon": "Stichtag {asOf}, Vorschauhorizont bis {horizon}",
         "xlsx": "Als Excel herunterladen",
         "numberConvention": "Rücklage nur nach Kontonummer 001201 erkannt, Bankkonto nicht verknüpft",
@@ -3773,6 +3788,9 @@
       "choose": "Mehrheitsregel",
       "simple": "einfache Mehrheit",
       "unanimousText": "alle Stimmen",
+      "draft": "Entwurf, Freigabe durch zweite Person offen",
+      "approve": "Freigeben",
+      "approveHint": "Vier-Augen-Freigabe: nur eine zweite Person mit Freigaberecht; bis dahin wird die Regel in Abstimmungen nicht angewendet.",
       "moreThan": "mehr als {p} %",
       "atLeast": "mindestens {p} %",
       "meaMin": "mindestens {p} % aller MEA"
@@ -4733,6 +4751,8 @@
     "log": "Protokoll",
     "testMode": "Testmodus (nur Protokoll)",
     "testModeHelp": "Im Testmodus wertet die Regel Auslöser und Bedingungen aus und schreibt nur einen Protokolleintrag mit dem Ergebnis Testlauf. Es entsteht keine Wirkung.",
+    "needsAiApproval": "KI-Freigabe fehlt",
+    "needsAiApprovalHint": "Diese Regel enthält eine KI-Aufgabe, ohne dass der letzte Bearbeiter das Recht ai:approve hat. Sie läuft nur, solange der Mandantenschalter für KI-Aufgaben aus Regeln an ist. Bitte von einer Person mit ai:approve neu speichern lassen.",
     "testModeBadge": "Testmodus",
     "filterStatus": "Ergebnis filtern",
     "allStatuses": "Alle Ergebnisse",
@@ -9710,7 +9730,10 @@
     "title": "Automatische KI-Läufe",
     "rentIncrease": "Neue oder geänderte Mieterhöhungsfälle automatisch von der KI auf Stimmigkeit prüfen lassen",
     "batchMail": "E-Mails ohne Vorschlag nachts von der KI einordnen lassen",
-    "hint": "Beide Schalter sind standardmäßig aus und umgehen weder die Anbieterfreigabe noch das Monatsbudget. Ergebnisse sind Vorschläge und Hinweise, keine Freigabe und keine Rechtsprüfung.",
+    "realtimeMail": "E-Mails beim Eingang einzeln von der KI einordnen und Antwortentwürfe vorschlagen lassen",
+    "masterData": "Stammdatenänderungen aus E-Mails von der KI als Vorschlag erkennen lassen",
+    "ruleAiTask": "KI-Aufgaben aus Automatisierungsregeln ausführen lassen (aus: Aktion wird übersprungen)",
+    "hint": "Die ersten beiden Schalter sind standardmäßig aus. Die drei weiteren sind standardmäßig an, umgehen aber weder Anbieterfreigabe noch Monatsbudget. Ergebnisse sind Vorschläge und Hinweise, keine Freigabe und keine Rechtsprüfung.",
     "noProvider": "Derzeit ist kein KI-Anbieter nutzbar: {reason}"
   },
   "InvoiceIntakeAuto": {
@@ -10034,6 +10057,13 @@
     "colPlatform": "Plattform",
     "colDifference": "Differenz",
     "colHint": "Hinweis",
+    "masterTitle": "Stammdaten",
+    "masterOpen": "{count} offene Abweichungen bei den Stammdaten.",
+    "masterType": "Reporttyp",
+    "masterRows": "Zeilen",
+    "masterOpenRows": "Offene Zeilen",
+    "masterMissing": "Fehlende Objekte oder Einheiten",
+    "masterEmpty": "Kein Stammdatenabgleich in diesem Bericht (keine Stammdatenexporte eingelesen oder Bericht auf Objekte eingeschränkt).",
     "missing": "nicht vorhanden",
     "metric": {
       "kontosaldo": "Kontosaldo",
@@ -11142,6 +11172,29 @@
     },
     "testDelivery": "Eine Testzustellung plant ein Ereignis webhook_subscription.test nur für dieses Abonnement ein; das Ergebnis steht im Protokoll. Schlägt eine Zustellung endgültig fehl, erhalten Berechtigte eine Benachrichtigung."
   },
+  "ContractVersionHistory": {
+    "title": "Versionsverlauf",
+    "notice": "Alle Versionen dieses Vertrags mit Gültigkeit und den gegenüber der Vorversion geänderten Zahlungszeilen. Frühere Versionen bleiben unverändert erhalten.",
+    "loading": "Versionen werden geladen.",
+    "empty": "Keine Einträge vorhanden.",
+    "version": "Version {n}",
+    "current": "Aktuell",
+    "validity": "gültig {from} bis {to}",
+    "openEnd": "offen",
+    "from": "ab",
+    "added": "Neu",
+    "removed": "Entfallen",
+    "noPaymentChange": "Zahlungszeilen unverändert."
+  },
+  "RentIncreaseBlock": {
+    "title": "Mieterhöhungssperre",
+    "proposal": "Vorschlag aus dem Mandantenschalter: Sperre bis {date}.",
+    "noProposal": "Kein Vorschlag: für diese Begründung ist keine Sperrdauer hinterlegt (Einstellung Mieterhöhung).",
+    "set": "Am Vertrag gesetzt: Sperre bis {date}.",
+    "hint": "Die Plattform legt keine Sperrdauer fest. Das Datum wird erst nach Bestätigung am Vertrag gespeichert.",
+    "label": "Sperre bis",
+    "confirm": "Sperre übernehmen"
+  },
   "ContractForm": {
     "notesSection": {
       "title": "Bemerkungen und Mahnsperre",
@@ -11257,6 +11310,13 @@
       "fixed_deposit": "Festgeld",
       "letter_of_comfort": "Patronatserklärung",
       "other": "Sonstiges"
+    },
+    "scheduleEdit": {
+      "title": "Zahlungsplan korrigieren",
+      "help": "Der Plan lässt sich nur ändern, solange keine gebuchte Sollstellung ihn verwendet. Die Korrektur bucht nichts.",
+      "open": "Korrigieren",
+      "save": "Korrektur speichern",
+      "cancel": "Abbrechen"
     },
     "schedule": {
       "interval": "Intervall",
@@ -13217,6 +13277,36 @@
     "queued": "Der Lauf wurde in die Warteschlange gestellt.",
     "startedInline": "Der Lauf wurde ausgeführt."
   },
+  "HistoryStatements": {
+    "title": "Altabrechnungen und Beschlüsse (nur lesend)",
+    "intro": "Übernommene historische Abrechnungen und Beschlüsse mit Prüfbericht. Es wird nichts gebucht, korrigiert oder versendet.",
+    "property": "Objekt",
+    "allProperties": "Alle Objekte",
+    "load": "Laden",
+    "checkTotals": "{statements} Abrechnungen, {resolutions} Beschlüsse, {findings} Prüfhinweise.",
+    "noFindings": "Keine Prüfhinweise.",
+    "statementsTitle": "Altabrechnungen",
+    "noStatements": "Keine Altabrechnungen übernommen.",
+    "resolutionsTitle": "Beschlusssammlung",
+    "noResolutions": "Keine Beschlüsse übernommen.",
+    "colProperty": "Objekt",
+    "colEntity": "Gegenstand",
+    "colCode": "Code",
+    "colMessage": "Hinweis",
+    "colKind": "Art",
+    "colPeriod": "Zeitraum",
+    "colVersion": "Version",
+    "colUnit": "Einheit",
+    "colRecipient": "Empfänger",
+    "colResult": "Ergebnis",
+    "colSent": "Versendet",
+    "colDate": "Datum",
+    "colItem": "TOP",
+    "colTitle": "Titel",
+    "colOutcome": "Ergebnis",
+    "colForm": "Form",
+    "kind": { "hoa_annual": "Jahresabrechnung WEG", "hoa_budget": "Wirtschaftsplan", "operating_costs": "Betriebskosten", "heating_costs": "Heizkosten", "other": "Sonstige" }
+  },
   "MigrationHistory": {
     "title": "Altdaten (nur lesend)",
     "intro": "Übernommene Einzelposten und historische Tickets. Es wird nichts gebucht oder verändert.",
@@ -13592,7 +13682,8 @@
       "state": "G1 Fälle bestanden {passed} von {total}, freigegebene Sollwerte {released} von {all}",
       "link": "Zum Abnahmeregister"
     },
-    "evidence": {"document": "Dokument", "missing": "Nachweis fehlt"},
+    "evidence": {"document": "Dokument", "missing": "Nachweis fehlt", "required": "Nachweis Pflicht"},
+    "evidenceKind": {"test_run": "Testlauf (CI)", "test_state": "Teststand", "document": "Dokument", "reference": "Verweis"},
     "title": "G1 Öffnung",
     "description": "Checkliste vor der produktiven Buchführung (Freigabestufe G1). Der Stand kommt aus dem System, die Ergebnisse trägt der Betreiber ein. Der Antrag läuft über den bestehenden Freigabepfad mit zweiter Person; diese Seite öffnet die Stufe nie selbst.",
     "intro": "Reihenfolge der Öffnungsliste: Kontenrahmen mit der Steuerberatung freigeben, Anhang D Fälle durch die fachkundige Person abnehmen, Umsatzsteuerbehandlung prüfen, danach den Antrag auf G1 stellen. Die Entscheidung trifft eine zweite Person unter Plattform.",
@@ -13647,6 +13738,7 @@
     "documents": {
       "gateChecklist": "Gate-Checkliste",
       "gaps": "Ohne verantwortliche Person: {responsible}, bestanden ohne Nachweis: {evidence}",
+      "noTestRun": "Bestandene Anhang D Fälle ohne verknüpften Testlauf: {count}. Ein Fall gilt maschinell erst mit Verweis ci-run:Lauf@Commit als nachgewiesen.",
       "title": "Unterlagen",
       "help": "Die Dokumente liegen im Repository und werden mit dem Antrag als Nachweis genannt.",
       "kontenrahmen-pruefung": "Kontenrahmen-Prüfung",
@@ -13947,6 +14039,8 @@
     "forbidden": "Nur für Plattformadministratoren.",
     "tenant": "Mandant",
     "gatesCaption": "Stand der Freigabestufen",
+    "checklistUnverified": "Checkliste ohne prüfbaren Nachweis",
+    "checklistUnverifiedHint": "Bestätigt, aber ohne prüfbaren Nachweisverweis in der Notiz. Vor der Entscheidung manuell prüfen.",
     "gate": "Stufe",
     "state": "Stand",
     "scopes": "Freigegebener Umfang",
@@ -15524,6 +15618,9 @@
     },
     "ticketScope": "Meldungen im Eigentümerportal",
     "ticketScopes": { "none": "keine Meldungen", "released": "nur für Eigentümer freigegebene Meldungen", "property": "alle Meldungen der eigenen Objekte (Nummer, Titel, Status)" },
+    "meterPhotoMode": "Foto beim Zählerstand",
+    "meterPhotoModes": { "off": "kein Foto erwartet", "hint": "Hinweis bei fehlendem Foto (Standard)", "required": "Foto ist Pflicht, Meldung ohne Foto wird abgelehnt" },
+    "meterPhotoHelp": "Fotos des Zählerstands sehen Sie in der Vorschlagsprüfung am Kontakt. Die Entscheidung über eine Fotopflicht liegt beim Betreiber (AM06-01).",
     "ratingDisplay": "Bewertungen von Dienstleistern",
     "ratingModes": { "off": "nicht anzeigen (Standard, intern)", "staff": "nur der Verwaltung als Übersicht anzeigen", "all": "zusätzlich Durchschnitt des Dienstleisters für Bewohner im Portal (nie für Dienstleister)" },
     "ratingHelp": "Bewertungen sind interne Einschätzungen der Verwaltung zu abgeschlossenen Aufträgen. Die Übersicht zeigt je Dienstleister nur Anzahl, Durchschnitt und Verteilung der Sterne, ohne Freitexte. Dienstleister und Dritte sehen die Bewertungen nicht. Eine Anzeige für Dienstleister bleibt bis zur Entscheidung des Betreibers und der Prüfung durch den Datenschutz ausgeschlossen.",
@@ -17152,6 +17249,14 @@
         "title": "Ausweis haushaltsnaher Leistungen, Auswahl der Rechnungen",
         "description": "Rechnungsdatum im Jahr (bisheriges Verhalten) oder nur bezahlte Rechnungen mit Zahlungsdatum im Jahr. Jede Zeile zeigt den Zahlungsstand, ein zweiter Ausweis desselben Jahres erhält einen Hinweis. Die steuerliche Festlegung bleibt offen."
       },
+      "return-fee-pass-on": {
+        "title": "Rücklastschriftgebühr als Weiterbelastungsvorschlag",
+        "description": "Eine bei der Rücklastschrift erfasste tatsächliche Bankgebühr erscheint in der Abstimmung als Vorschlag zur Weiterbelastung an den Schuldner. Es wird nichts gebucht; ob und auf welcher Grundlage weiterbelastet wird, ist offen (G1, G2)."
+      },
+      "write-off-approval": {
+        "title": "Freigabe von Forderungsausbuchungen",
+        "description": "Ein Ausbuchungsvorschlag kann von einer zweiten Person freigegeben werden, wenn G1 offen ist. Aus bleibt jeder Vorschlag ohne Wirkung. Verfahren und Rechtsgrund der Ausbuchung sind offen."
+      },
       "ai-realtime-mail-classification": {
         "title": "KI-Einordnung je eingehender Ticket-Mail",
         "description": "Jede eingehende Mail zu einem Ticket wird sofort von der KI eingeordnet und erhält einen Antwortvorschlag. Standard an wie bisher; Anbieterfreigabe und Monatsbudget gelten weiter. Ob der Standard auf aus gestellt wird, ist offen."
@@ -17167,6 +17272,34 @@
       "deposit-limit-hint": {
         "title": "Prüfhinweis zur Kautionshöhe und Ratenzahl",
         "description": "Bei Wohnraum erscheint ein nicht sperrender Hinweis, wenn die Kaution über dem eingestellten Vielfachen der Miete ohne Nebenkosten (Standard 3) oder die Ratenzahl über dem Vergleichswert (Standard 3) liegt. Keine rechtliche Bewertung."
+      },
+      "rent-increase-proposals": {
+        "title": "Mieterhöhungsvorschläge aus Staffel und Index",
+        "description": "Bereitet fällige Staffelstufen und Indexanpassungen als Entwurf eines Mieterhöhungsfalls vor (Entwurf). Nie automatische Anwendung. Standard aus; Wartefrist, Indexquelle und Mitteilungsform sind nicht entschieden."
+      },
+      "rent-increase-block-mietspiegel": {
+        "title": "Mieterhöhungssperre nach Anwendung: Mietspiegel",
+        "description": "Monate ab Wirksamkeit, die der Fall nach Anwendung als Sperrdatum vorschlägt (Begründung Mietspiegel). Ohne Wert kein Vorschlag. Die Plattform legt keine Dauer fest; gesetzt wird das Datum am Vertrag erst nach Bestätigung."
+      },
+      "rent-increase-block-comparison": {
+        "title": "Mieterhöhungssperre nach Anwendung: Vergleichswohnungen",
+        "description": "Monate ab Wirksamkeit, die der Fall nach Anwendung als Sperrdatum vorschlägt (Begründung Vergleichswohnungen). Ohne Wert kein Vorschlag. Die Plattform legt keine Dauer fest; gesetzt wird das Datum am Vertrag erst nach Bestätigung."
+      },
+      "rent-increase-block-modernization": {
+        "title": "Mieterhöhungssperre nach Anwendung: Modernisierung",
+        "description": "Monate ab Wirksamkeit, die der Fall nach Anwendung als Sperrdatum vorschlägt (Begründung Modernisierung). Ohne Wert kein Vorschlag. Die Plattform legt keine Dauer fest; gesetzt wird das Datum am Vertrag erst nach Bestätigung."
+      },
+      "rent-increase-block-index": {
+        "title": "Mieterhöhungssperre nach Anwendung: Indexmiete",
+        "description": "Monate ab Wirksamkeit, die der Fall nach Anwendung als Sperrdatum vorschlägt (Begründung Indexmiete). Ohne Wert kein Vorschlag. Die Plattform legt keine Dauer fest; gesetzt wird das Datum am Vertrag erst nach Bestätigung."
+      },
+      "rent-increase-block-graduated": {
+        "title": "Mieterhöhungssperre nach Anwendung: Staffelmiete",
+        "description": "Monate ab Wirksamkeit, die der Fall nach Anwendung als Sperrdatum vorschlägt (Begründung Staffelmiete). Ohne Wert kein Vorschlag. Die Plattform legt keine Dauer fest; gesetzt wird das Datum am Vertrag erst nach Bestätigung."
+      },
+      "sale-marketing": {
+        "title": "Verkaufsinserate und Maklerveröffentlichung",
+        "description": "Verkaufsinserate können als Entwurf angelegt werden. Aktivierung und Übergabe an einen Makleranbieter nur bei eingeschaltetem Schalter (Standard aus). Vermietungsanzeigen und Leerstandsliste bleiben unverändert. Umfang der Vermarktung noch nicht entschieden."
       },
       "period-lock-mode": {
         "title": "Periodensperre: Umfang",
@@ -17302,6 +17435,10 @@
         "title": "Stichtag der Übergangsregel",
         "description": "Datum, das Sie als Stichtag der Übergangsregel eintragen. Es ist kein Rechtstext und hat keine Sperrwirkung, die Fristhinweise nennen es nur."
       },
+      "majority-rule-four-eyes": {
+        "title": "Vier-Augen-Freigabe der Mehrheitsregeln",
+        "description": "Ob neu angelegte Mehrheitsregeln der Versammlung erst nach Freigabe durch eine zweite Person mit Freigaberecht angewendet werden. Bestehende Regeln bleiben unverändert. Welches Regelmodell maßgeblich ist, ist offen (AM02-01)."
+      },
       "portal-circular-resolution": {
         "title": "Umlaufbeschluss im Eigentümerportal",
         "description": "Ob Eigentümer in laufenden Umlaufverfahren im Portal abstimmen. Die Stimmabgabe braucht zusätzlich die Freigabestufe G4; die Zulässigkeit prüft die Software nicht."
@@ -17341,6 +17478,10 @@
       "owner-ticket-scope": {
         "title": "Tickets im Eigentümerportal",
         "description": "Welche Tickets zum Objekt ein Eigentümer lesend sieht."
+      },
+      "meter-photo-mode": {
+        "title": "Foto beim Zählerstand im Portal",
+        "description": "Ob beim Melden eines Zählerstands im Portal ein Foto erwartet wird. Hinweis (Standard): Meldung ohne Foto wird angenommen und in der Vorschlagsprüfung als ohne Foto markiert. Pflicht: Meldung ohne Foto wird abgelehnt. Die Entscheidung liegt beim Betreiber (AM06-01)."
       },
       "provider-rating-display": {
         "title": "Bewertungen von Dienstleistern",
@@ -17444,6 +17585,10 @@
         "title": "Dokument-Papierkorb: Frist in Tagen",
         "description": "Frist, bis zu der ein Dokument im Papierkorb wiederhergestellt werden kann. 30 Tage sind ein Vorschlag, die Entscheidung ist offen. Die Frist gilt für danach gelöschte Dokumente."
       },
+      "contact-address-history": {
+        "title": "Adresshistorie der Kontakte",
+        "description": "Bei an werden geänderte oder entfernte Anschriften eines Kontakts geschlossen (gültig bis, ersetzt am) statt gelöscht und sind zum Stichtag abrufbar. Standard aus: Anschriften werden wie bisher ersetzt. Umfang und Aufbewahrungsdauer früherer Anschriften sind offen (AM14-01); Ausschalten löscht nichts."
+      },
       "legal-basis-email-delivery": {
         "title": "Rechtsgrundlage: E-Mail-Zustellung",
         "description": "Worauf der Versand von Abrechnung, Mahnung und Einladung per E-Mail gestützt wird. Einwilligung ist der Standard. Eine andere Grundlage verlangt eine Begründung von mindestens 10 Zeichen."
@@ -17462,6 +17607,10 @@
       }
     },
     "options": {
+      "rent-increase-proposals": {
+        "off": "Aus",
+        "draft": "Vorschläge als Entwurf"
+      },
       "rent-invoice-numbering": {
         "draft_numbers": "Entwurfsnummer ENTWURF-JJJJ-NNNNNN",
         "regular_numbers": "Reguläre Rechnungsnummer MR auch im Entwurf",
@@ -17526,6 +17675,11 @@
         "none": "Keine Tickets",
         "released": "Nur freigegebene Tickets",
         "property": "Alle Tickets zum Objekt"
+      },
+      "meter-photo-mode": {
+        "off": "Kein Foto erwartet",
+        "hint": "Hinweis bei fehlendem Foto (Standard)",
+        "required": "Foto ist Pflicht"
       },
       "provider-rating-display": {
         "off": "Aus, nur intern",

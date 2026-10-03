@@ -674,6 +674,12 @@ async def _landlord(ctx: _Ctx, prop: Property, contact_id: uuid.UUID) -> None:
         )
     )
     if existing is None:
+        # AM03 (PROP-OWNER-PERIOD): no second open period of the party, no share over 100 %.
+        problems = await property_services.owner_period_problems(
+            ctx.session, prop.id, party.id, ctx.start, None, None
+        )
+        if problems:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=" ".join(problems))
         owner = PropertyOwner(
             tenant_id=ctx.tenant_id, property_id=prop.id, party_id=party.id, valid_from=ctx.start
         )

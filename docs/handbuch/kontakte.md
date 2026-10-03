@@ -246,3 +246,7 @@ Im Abschnitt "Portalzugang" eines Kontakts mit Portalkonto leitet die Schaltflä
 ## Anruf einem Kontakt zuordnen (GAI-420, Welle 21)
 
 In der Anrufliste bietet jeder nicht eindeutig zugeordnete Anruf (Schreibrecht Kommunikation) die Auswahl der Kandidaten oder die Eingabe einer Kontakt-ID mit "Zuordnen".
+
+## Adresshistorie und Stichtag (GAJ-610, Welle 24)
+
+Unter Einstellungen, Fachliche Regeln, schaltet der Schalter "Adresshistorie der Kontakte" (Berechtigung Kontakte freigeben) die Adresshistorie ein. Standard ist aus: geänderte Anschriften werden wie bisher ersetzt. Bei an bleibt eine geänderte oder entfernte Anschrift als ersetzt mit "gültig bis" erhalten. In der Kontaktakte, Reiter Stammdaten, zeigt der Abschnitt "Adresshistorie" alle Anschriften mit Gültigkeit; mit einem Stichtag sehen Sie die Anschriften, die an diesem Tag galten. Wie lange frühere Anschriften aufbewahrt werden, ist noch nicht entschieden (Frage AM14-01); Ausschalten löscht nichts.

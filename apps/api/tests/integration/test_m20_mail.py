@@ -248,7 +248,7 @@ def test_list_preview_count_and_literal_search(client: TestClient, world: World)
     assert detail["body_preview"] == row["body_preview"]
 
     count = _ok(client.get(f"{M}/messages/count", params={"direction": "in"}, headers=h))
-    listed = _ok(client.get(f"{M}/messages", params={"direction": "in", "limit": 500}, headers=h))
+    listed = _ok(client.get(f"{M}/messages", params={"direction": "in", "limit": 200}, headers=h))
     assert count["count"] == len(listed) >= 1
     assert _ok(client.get(f"{M}/messages/count", params={"status": "sent"}, headers=h)) == {
         "count": 0
