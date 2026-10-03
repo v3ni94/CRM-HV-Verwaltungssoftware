@@ -8,6 +8,7 @@ import { ui } from "@/lib/ui";
 import { useBusy } from "@/lib/use-busy";
 
 import { formatPercent } from "./AvailabilityAdmin";
+import { formatDateTime } from "@/lib/format";
 
 type SelfFigure = {
   probe: string;
@@ -44,7 +45,7 @@ type Live = { probes: LiveProbe[]; recent_failures: Failure[]; retention_days: n
 
 const PROBES = ["api", "crm", "portal"] as const;
 const ERROR_CLASSES = ["timeout", "connect_error", "http_status", "http_error", "error"];
-const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+const fmt = (iso: string) => formatDateTime(iso);
 
 /** Percent for the coverage column (one place), "-" without a figure. */
 export function formatCoverage(value: string | null): string {

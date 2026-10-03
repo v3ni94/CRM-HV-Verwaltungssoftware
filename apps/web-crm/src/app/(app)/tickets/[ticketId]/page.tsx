@@ -11,6 +11,7 @@ import { SchadenstoolPanel } from "@/components/tickets/SchadenstoolPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
 import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvoiceButton";
+import { TicketAssignees } from "@/components/tickets/TicketAssignees";
 import { TicketBoardPanel } from "@/components/tickets/TicketBoardPanel";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketComments, type TicketCommentRow } from "@/components/tickets/TicketComments";
@@ -152,6 +153,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           <SlaBadge ticketId={ticketId} canManage={canManageSla} />
           <TicketAppointmentButton ticketId={ticketId} ticketTitle={data.title ? String(data.title) : `#${String(data.number)}`} />
           <TicketAttachInvoiceButton ticketId={ticketId} hasProperty={Boolean(data.property_id)} />
+          <TicketAssignees ticketId={ticketId} canUpdate={me.data?.permissions.includes("tickets:update") ?? false} />
           <section id="bearbeiten" className={section}>
             <TicketEdit
               id={ticketId}

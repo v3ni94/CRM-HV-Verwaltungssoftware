@@ -43,6 +43,10 @@ DataType = Literal[
     "domain_event",
     "platform_user",
     "bank_raw",
+    "ai_run",
+    "call_log",
+    "webhook_delivery",
+    "postal_job",
 ]
 ThirdCountryStatus = Literal["open", "no", "yes"]
 ResponsibilityActor = Literal["gdwe", "verwalter", "betreiber"]
@@ -613,3 +617,82 @@ async def accept_proposal(
             session, await _load(session, request_id), principal.user_id
         )
         return PrivacyErasureOut.model_validate(row)
+
+
+# GAM-401 / GAM-405 (AP13): tenant switches of the erasure, default off (behaviour before AP13).
+class PrivacyErasureSettingsOut(BaseModel):
+    audit_redaction: bool
+    erasure_coupling: bool
+
+
+class PrivacyErasureSettingsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    audit_redaction: bool | None = None
+    erasure_coupling: bool | None = None
+
+
+@router.get(
+    "/privacy/erasure-settings",
+    summary="Schalter der Kontaktlöschung lesen (Prüfpfad, Sperrbezüge)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_erasure_settings(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> PrivacyErasureSettingsOut:
+    from mhvp.platform.models import TenantSettings
+    from mhvp.privacy import audit_redaction, erasure_coupling
+
+    async with tenant_tx(request, principal) as session:
+        sources = await session.scalar(select(TenantSettings.sources))
+        return PrivacyErasureSettingsOut(
+            audit_redaction=audit_redaction.enabled_from(sources),
+            erasure_coupling=erasure_coupling.enabled_from(sources),
+        )
+
+
+@router.put(
+    "/privacy/erasure-settings",
+    summary="Schalter der Kontaktlöschung setzen (OPEN_QUESTIONS AP13-01, AP13-02)",
+)
+async def put_erasure_settings(
+    body: PrivacyErasureSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> PrivacyErasureSettingsOut:
+    """Both questions are open (AP13-01 audit trail without values, AP13-02 references that do
+    not block); switching on is the operator's decision. Recorded as an event with the
+    previous values."""
+    from mhvp.platform.models import TenantSettings
+    from mhvp.privacy import audit_redaction, erasure_coupling
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _nf()
+        sources = dict(row.sources or {})
+        before = {
+            "audit_redaction": audit_redaction.enabled_from(sources),
+            "erasure_coupling": erasure_coupling.enabled_from(sources),
+        }
+        if body.audit_redaction is not None:
+            sources[audit_redaction.SWITCH_KEY] = body.audit_redaction
+        if body.erasure_coupling is not None:
+            sources[erasure_coupling.SWITCH_KEY] = body.erasure_coupling
+        row.sources = sources
+        row.version += 1
+        row.updated_by = principal.user_id
+        after = {
+            "audit_redaction": audit_redaction.enabled_from(sources),
+            "erasure_coupling": erasure_coupling.enabled_from(sources),
+        }
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="privacy.erasure_settings_updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"before": before, "after": after},
+        )
+        return PrivacyErasureSettingsOut(**after)

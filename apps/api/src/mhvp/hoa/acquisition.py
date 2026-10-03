@@ -20,9 +20,15 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import HoaAcquisitionRelease, HoaStatement
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaAcquisitionListAcquisitionsOut,
+    HoaAcquisitionReleaseOut,
+    HoaAcquisitionRequestReleaseOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -205,7 +211,12 @@ async def _statement(session: AsyncSession, statement_id: uuid.UUID) -> HoaState
     return st
 
 
-@router.get("/statements/{statement_id}/acquisitions", summary="Sondererwerbe der Abrechnung (W07)")
+@router.get(
+    "/statements/{statement_id}/acquisitions",
+    summary="Sondererwerbe der Abrechnung (W07)",
+    response_model=HoaAcquisitionListAcquisitionsOut,
+    dependencies=[Depends(strict_query)],
+)
 async def list_acquisitions(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -225,6 +236,7 @@ async def list_acquisitions(
     "/statements/{statement_id}/acquisitions/{contract_id}/request",
     status_code=201,
     summary="Freigabe eines Sondererwerbs beantragen (erste Person)",
+    response_model=HoaAcquisitionRequestReleaseOut,
 )
 async def request_release(
     statement_id: uuid.UUID,
@@ -266,6 +278,7 @@ async def request_release(
 @router.post(
     "/statements/{statement_id}/acquisitions/{contract_id}/release",
     summary="Sondererwerb freigeben (zweite Person)",
+    response_model=HoaAcquisitionReleaseOut,
 )
 async def release(
     statement_id: uuid.UUID,

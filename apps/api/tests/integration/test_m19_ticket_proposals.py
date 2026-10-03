@@ -419,6 +419,7 @@ def test_correct_applies_corrected_fields(
     assert corrected["proposed"]["reply_draft"]["body"].startswith(f"Hallo Frau Beispiel{RUN},")
 
 
+@pytest.mark.annex_d("D57")
 def test_d57_instruction_mail_yields_no_change_and_no_bank_update(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:

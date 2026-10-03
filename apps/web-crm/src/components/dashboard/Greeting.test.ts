@@ -65,3 +65,17 @@ describe("firstName", () => {
     expect(firstName(null, null)).toBe("");
   });
 });
+
+describe("formal address variant (AP24-01)", () => {
+  it("has a Sie text for every key of the Du set, in German and English", async () => {
+    const de = (await import("../../../messages/de.json")).default as unknown as Record<string, Record<string, unknown>>;
+    const en = (await import("../../../messages/en.json")).default as unknown as Record<string, Record<string, unknown>>;
+    for (const cat of [de, en]) {
+      expect(Object.keys(cat.GreetingFormal ?? {}).sort()).toEqual(Object.keys(cat.Greeting ?? {}).sort());
+      for (const w of ["morning", "midday", "evening", "late"]) {
+        expect(Object.keys(cat.GreetingFormal?.[w] as object)).toEqual(Object.keys(cat.Greeting?.[w] as object));
+      }
+    }
+    expect(JSON.stringify(de.GreetingFormal)).not.toMatch(/\b(du|dein|dir|dich)\b/i);
+  });
+});

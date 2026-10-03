@@ -204,3 +204,13 @@ exactly the positions the reader evaluates. Not written because not evidenced in
 after position 165, M allocation lines 4 to 6, the provider and recipient blocks (fields 42 to 66,
 provider account data) and record types B and K. Round trip and byte identity tests in
 `tests/unit/test_m40_metering_heiwako.py`.
+
+## Nachtrag 03.10.2026: Foto beim Zählerstand (GAM-821, GAJ-401)
+
+Die Fotopflicht beim Melden eines Zählerstands im Portal (`POST /portal/meter-readings`, Code in `mhvp.portal.routers`) steuert der Mandantenschalter `portal_feature_setting.meter_photo_mode` (Migration 0451, Werte `off`, `hint`, `required`, Standard `hint`). Der Schalter ist über die Portalverwaltung setzbar.
+
+- `off`: kein Foto erwartet, kein Kennzeichen.
+- `hint` (Standard): Meldung ohne Foto wird angenommen, der Vorschlag trägt `photo_missing: true` und einen Hinweistext.
+- `required`: Meldung ohne eigenes Foto wird mit 422 `MHVP-PORTAL-0003` abgewiesen, es wird nichts aufgezeichnet.
+
+Fotos sind eigene Uploads des Portalkontos und werden als Anhang an die Änderungsanfrage gebunden. Regel: `docs/rules/GAJ-401-zaehlerfoto.md`, Test `tests/integration/test_an02_meter_photo_mode.py`, Entscheidung AM06-01 offen (Betreiber).

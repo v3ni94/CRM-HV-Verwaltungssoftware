@@ -3,7 +3,7 @@ fields live in routers_catalogs.py)."""
 
 import uuid
 from collections.abc import Sequence
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
@@ -929,6 +929,7 @@ async def create_key(
     async with tenant_tx(request, principal) as session:
         await _get(session, Property, property_id)
         await svc.check_catalog(session, "meter_type", body.meter_type_code)
+        await _check_key_document(session, body.source_document_id)
         key = AllocationKey(
             tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
         )
@@ -966,9 +967,18 @@ async def update_key(
         changes = body.model_dump(exclude_unset=True)
         if "meter_type_code" in changes:
             await svc.check_catalog(session, "meter_type", changes["meter_type_code"])
+        if "source_document_id" in changes:
+            await _check_key_document(session, changes["source_document_id"])
         before = s.AllocationKeyOut.model_validate(key).model_dump(mode="json")
+        source_changed = any(
+            f in changes and changes[f] != getattr(key, f) for f in s.ALLOCATION_KEY_SOURCE_FIELDS
+        )
         for field, value in changes.items():
             setattr(key, field, value)
+        if source_changed:
+            # GAM-108: a changed source needs a new confirmation.
+            key.confirmed_at = None
+            key.confirmed_by = None
         await session.flush()
         await emit(
             session,
@@ -978,6 +988,65 @@ async def update_key(
             entity_id=key.id,
             actor_user_id=principal.user_id,
             changes=diff(before, s.AllocationKeyOut.model_validate(key).model_dump(mode="json")),
+        )
+        await session.refresh(key)
+        return s.AllocationKeyOut.model_validate(key)
+
+
+async def _check_key_document(session: AsyncSession, document_id: uuid.UUID | None) -> None:
+    if document_id is not None and await session.get(Document, document_id) is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Dokument der Quelle nicht gefunden.")
+
+
+@router.put(
+    "/properties/{property_id}/allocation-keys/{key_id}/confirmation",
+    summary="Quelle des Umlageschlüssels bestätigen oder Bestätigung aufheben (GAM-108)",
+)
+async def confirm_key(
+    property_id: uuid.UUID,
+    key_id: uuid.UUID,
+    body: s.AllocationKeyConfirmationIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.AllocationKeyOut:
+    """A person confirms the recorded source (kind, start of validity and a reference or a
+    document). The confirmation records who and when; it states that the source was checked,
+    not that the key is legally effective (M17-01 stays open)."""
+    async with tenant_tx(request, principal) as session:
+        key = await _get(session, AllocationKey, key_id)
+        if key.property_id != property_id:
+            raise _nf()
+        if body.confirmed:
+            if key.source_kind is None or key.source_valid_from is None:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Bestätigung braucht Art der Quelle und Geltungsbeginn.",
+                )
+            if not (key.source_reference or key.source_document_id):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Bestätigung braucht eine Fundstelle oder ein Dokument.",
+                )
+            key.confirmed_at = datetime.now(UTC)
+            key.confirmed_by = principal.user_id
+        else:
+            key.confirmed_at = None
+            key.confirmed_by = None
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="allocation_key.confirmed" if body.confirmed else "allocation_key.unconfirmed",
+            entity_type="allocation_key",
+            entity_id=key.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "code": key.code,
+                "source_kind": key.source_kind,
+                "source_valid_from": (
+                    key.source_valid_from.isoformat() if key.source_valid_from else None
+                ),
+            },
         )
         await session.refresh(key)
         return s.AllocationKeyOut.model_validate(key)

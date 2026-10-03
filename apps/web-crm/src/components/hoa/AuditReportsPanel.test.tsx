@@ -86,3 +86,10 @@ describe("AuditReportsPanel", () => {
     expect(screen.queryByTestId("report-confirm")).not.toBeInTheDocument();
   });
 });
+
+describe("AuditReportsPanel outdated notice (GAM-206)", () => {
+  it("warns when positions are outdated", () => {
+    renderIntl(<AuditReportsPanel auditId={AUDIT} reports={[report]} outdatedCount={2} />);
+    expect(screen.getByTestId("audit-outdated-notice")).toHaveTextContent("2 Positionen sind veraltet");
+  });
+});

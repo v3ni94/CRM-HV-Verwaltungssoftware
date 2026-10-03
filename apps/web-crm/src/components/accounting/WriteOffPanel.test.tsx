@@ -78,4 +78,52 @@ describe("WriteOffPanel", () => {
     expect(screen.queryByTestId("write-off-form")).toBeNull();
     expect(screen.queryByRole("button", { name: m.approve })).toBeNull();
   });
+
+  it("AP12: posts exactly the preview values with G1 and offers the reversal", async () => {
+    const approved = { ...proposal, status: "approved", approval_enabled: true };
+    let posted = false;
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method ?? "GET", body: init?.body });
+      if (url.endsWith("/release-gates")) return jsonResponse([{ gate: "G1", label: "G1", open: true, scopes: [] }]);
+      if (url.endsWith("/settings")) return jsonResponse({ posting_enabled: true, counter_account_number: "420000" });
+      if (url.endsWith("/posting-preview"))
+        return jsonResponse({
+          amount: "100.00",
+          posting_allowed: true,
+          blockers: [],
+          lines: [
+            { side: "debit", account_id: "acc-cost", account_number: "420000", amount: "100.00", note: null },
+            { side: "credit", account_id: "acc-deb", account_number: "140001", amount: "100.00", note: null },
+          ],
+        });
+      if (url.endsWith("/w1/posting")) {
+        posted = true;
+        return jsonResponse({ journal_entry_id: "e1234567-0000", reversal_id: null });
+      }
+      return jsonResponse([posted ? { ...approved, posting_entry_id: "e1234567-0000", posting_reversal_id: null } : approved]);
+    });
+    renderIntl(<WriteOffPanel items={[item]} today="2026-10-03" canPropose canApprove canSettings />);
+    expect(await screen.findByTestId("write-off-settings")).toBeInTheDocument();
+    await screen.findByTestId("write-off-w1");
+    await userEvent.click(screen.getByRole("button", { name: m.preview }));
+    const post = await screen.findByRole("button", { name: m.post });
+    await waitFor(() => expect(post).toBeEnabled());
+    await userEvent.click(post);
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/w1/posting"))).toBe(true));
+    const body = JSON.parse(String(calls.find((c) => c.url.endsWith("/w1/posting"))!.body));
+    expect(body).toEqual({ expected_amount: "100.00", counter_account_id: "acc-cost" });
+    expect(await screen.findByTestId("write-off-posting-w1")).toBeInTheDocument();
+    const reverse = await screen.findByRole("button", { name: m.reverse });
+    expect(reverse).toBeDisabled();
+  });
+
+  it("AP12: settings are hidden without settings permission", async () => {
+    mockApi(true);
+    renderIntl(<WriteOffPanel items={[item]} today="2026-10-03" canPropose canApprove />);
+    await screen.findByTestId("write-off-w1");
+    expect(screen.queryByTestId("write-off-settings")).toBeNull();
+  });
 });

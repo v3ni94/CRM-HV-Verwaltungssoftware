@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 /** Invoice copy requests of a ticket (INT-LEXO-01, `/integrations/lexoffice/tickets/{id}/
@@ -55,11 +55,10 @@ const OPEN = new Set(["pending", "found", "ambiguous", "draft_only", "creditnote
 
 type PickedContact = { id: string; display_name: string };
 
-function amount(value: string | null): string {
-  if (!value) return "";
-  const num = Number(value);
-  if (!Number.isFinite(num)) return value;
-  return `${num.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`;
+// GAM-710: decimal string to "1.234,56 EUR" without a binary float (lib/format).
+function amount(value: string | number | null): string {
+  if (value === null || value === undefined || value === "") return "";
+  return formatEur(value);
 }
 
 export function LexofficeInvoiceCopyCard({ ticketId, canUpdate, canLinkContacts }: { ticketId: string; canUpdate: boolean; canLinkContacts: boolean }) {

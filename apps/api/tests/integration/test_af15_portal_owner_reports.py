@@ -229,7 +229,11 @@ def _seed(
                 status="positive",
                 votes={},
             )
-            s.add_all([hs, res])
+            # AP05 / GAL-107: an issued WEG statement needs its resolution (CHECK in 0462).
+            s.add(res)
+            s.flush()
+            hs.resolution_id = res.id
+            s.add(hs)
             s.flush()
             plan_unit = {
                 "unit_id": meta["unit"],

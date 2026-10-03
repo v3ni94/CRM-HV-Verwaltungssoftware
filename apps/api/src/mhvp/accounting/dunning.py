@@ -205,6 +205,42 @@ async def last_level(session: AsyncSession, account_id: uuid.UUID) -> int:
     return int(level or 0)
 
 
+DUPLICATE_STAGE_REASON = (
+    "Für dieses Konto ist ein Mahnfall gleicher Stufe bereits freigegeben oder versendet"
+)
+
+
+async def lock_debtor_account(session: AsyncSession, account_id: uuid.UUID) -> None:
+    """AP25 (AP10-03): serializes approval and dispatch per debtor account."""
+    await session.execute(
+        select(LedgerAccount.id).where(LedgerAccount.id == account_id).with_for_update()
+    )
+
+
+async def duplicate_stage_case(
+    session: AsyncSession, case: DunningCase, *, sent_only: bool = False
+) -> uuid.UUID | None:
+    """Another case of the same account and level that is sent or, unless ``sent_only``,
+    proposed in an approved run (AP10-03: one reminder per level and account)."""
+    other = (
+        DunningCase.debtor_account_id == case.debtor_account_id,
+        DunningCase.level == case.level,
+        DunningCase.id != case.id,
+    )
+    sent = await session.scalar(
+        select(DunningCase.id).where(*other, DunningCase.status == "sent").limit(1)
+    )
+    if sent is not None or sent_only:
+        return sent
+    found: uuid.UUID | None = await session.scalar(
+        select(DunningCase.id)
+        .join(DunningRun, DunningRun.id == DunningCase.run_id)
+        .where(*other, DunningCase.status == "proposed", DunningRun.status == "approved")
+        .limit(1)
+    )
+    return found
+
+
 REMINDER_LEVEL = 1
 """Zahlungserinnerung: always without fee and interest (M16-14, V7, D40)."""
 
@@ -700,6 +736,18 @@ async def preview(
                 # for a reminder; the case is excluded, never silently postponed.
                 reason = acc.UNREVIEWED_AUTO_REASON
                 counts["auto_review_pending"] = counts.get("auto_review_pending", 0) + 1
+            if reason is None and await session.scalar(
+                select(DunningCase.id)
+                .join(DunningRun, DunningRun.id == DunningCase.run_id)
+                .where(
+                    DunningCase.debtor_account_id == account_id,
+                    DunningCase.level == level,
+                    DunningCase.status == "proposed",
+                    DunningRun.status == "approved",
+                )
+                .limit(1)
+            ):
+                reason = DUPLICATE_STAGE_REASON  # AP25 (AP10-03)
             if reason is None and not await leading.is_leading(
                 session, ledger, leading.LeadingKind.DUNNING, run_date
             ):
@@ -903,7 +951,25 @@ async def approve(
         ):
             raise ProblemError(ErrorCodes.CONFLICT, detail="Nur das führende System darf mahnen.")
         ledgers[case.ledger_id] = ledger
+    # AP25 (AP10-03): one case per account and level; a duplicate of an approved or sent
+    # case is excluded under the account lock instead of being released a second time.
+    for account_id in sorted({c.debtor_account_id for c in cases}, key=str):
+        await lock_debtor_account(session, account_id)
+    kept: list[DunningCase] = []
     for case in cases:
+        if await duplicate_stage_case(session, case) is not None:
+            case.status = "excluded"
+            case.reason = (
+                f"{case.reason}. {DUPLICATE_STAGE_REASON}"
+                if case.reason
+                else (DUPLICATE_STAGE_REASON)
+            )
+            case.fee_amount = Decimal("0.00")
+            case.interest_amount = Decimal("0.00")
+            case.updated_by = user_id
+            continue
+        kept.append(case)
+    for case in kept:
         if case.fee_amount > 0:
             await _post_fee(session, case, ledgers[case.ledger_id], user_id)
     run.status, run.approved_by = "approved", user_id
@@ -934,6 +1000,9 @@ async def mark_sent(
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Der Mahnlauf muss zuerst freigegeben werden."
         )
+    await lock_debtor_account(session, case.debtor_account_id)
+    if await duplicate_stage_case(session, case, sent_only=True) is not None:
+        raise ProblemError(ErrorCodes.CONFLICT, detail=DUPLICATE_STAGE_REASON + ".")
     case.status = "sent"
     case.delivery_channel = channel
     case.delivered_at = datetime.now(UTC)

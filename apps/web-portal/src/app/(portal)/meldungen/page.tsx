@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { NewTicket } from "@/components/portal/NewTicket";
 import type { Ticket } from "@/components/portal/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -20,7 +21,7 @@ export default async function TicketsPage() {
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       <NewTicket />
-      {rows.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
+      {rows.length === 0 ? <EmptyState title={t("empty")} hint={t("emptyHint")} /> : null}
       <ul className="flex flex-col gap-3">
         {rows.map((row) => (
           <li key={row.id}>

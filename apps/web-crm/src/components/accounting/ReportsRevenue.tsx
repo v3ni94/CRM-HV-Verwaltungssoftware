@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatEur } from "@/lib/format";
+import { centsToDecimal, sumCents } from "@/lib/money";
 
 export type RevenueRow = { number: string; name: string; amount: string };
 
@@ -11,7 +12,7 @@ export function RevenueReport({ rows }: { rows: RevenueRow[] }) {
   if (rows.length === 0) {
     return <EmptyState title={t("reports.revenue.empty")} />;
   }
-  const total = rows.reduce((s, r) => s + Math.round(Number(r.amount) * 100), 0) / 100;
+  const total = centsToDecimal(sumCents(rows.map((r) => r.amount)) ?? 0n);
   return (
     <div className="overflow-x-auto">
       <table className="mhvp-table">
@@ -35,7 +36,7 @@ export function RevenueReport({ rows }: { rows: RevenueRow[] }) {
           <tr className="font-medium">
             <td>{t("reports.revenue.total")}</td>
             <td className="num" data-testid="revenue-total">
-              {formatEur(total.toFixed(2))}
+              {formatEur(total)}
             </td>
           </tr>
         </tfoot>

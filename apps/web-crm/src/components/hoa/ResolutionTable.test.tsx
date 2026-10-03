@@ -4,6 +4,8 @@ import { renderIntl } from "@/test/intl";
 
 import { ResolutionTable } from "./ResolutionTable";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+
 describe("ResolutionTable", () => {
   it("lists resolutions with German date and status labels", () => {
     renderIntl(

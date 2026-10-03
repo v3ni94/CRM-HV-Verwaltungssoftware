@@ -175,3 +175,10 @@ Writing routes without money amounts declare response models from `billing/write
 
 Sum invariants of the owner statement `build_results` (block totals, fee net plus VAT, free
 liquidity, operating result, ROUND_HALF_UP per line): `tests/unit/test_al04_owner_statement_sums.py`.
+
+Key source (AP17, GAM-108, rule M17-11): `allocation_key` carries source kind, reference,
+document, start of validity and a confirmation (`PUT /properties/{id}/allocation-keys/{key}/confirmation`).
+`services._check_sev_key_source` blocks a template derived key of an SEV owner statement
+without a confirmed source valid at the period start; the tenant switch
+`allocation_key_confirmation_required` (default off, AP17-01) extends this to every key.
+Heating consumptions accept the kind `interim` with `reading_date` (GAM-111).

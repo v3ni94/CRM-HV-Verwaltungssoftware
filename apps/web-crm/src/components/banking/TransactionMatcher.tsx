@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
-import { settleAmount } from "@/lib/money";
+import { centsToDecimal, settleAmount, sumCents } from "@/lib/money";
 import { ui } from "@/lib/ui";
 
 type Split = { open_item_id: string; amount: string; contract_id?: string | null };
@@ -121,7 +121,7 @@ export function TransactionMatcher({
       {splits && splits.length > 0 ? (
         <span className="tabular-nums">
           {formatEur(
-            splits.reduce((sum, s) => sum + Number(s.amount), 0).toFixed(2),
+            centsToDecimal(sumCents(splits.map((s) => s.amount)) ?? 0n),
           )}
         </span>
       ) : null}

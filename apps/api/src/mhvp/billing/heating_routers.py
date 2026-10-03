@@ -5,16 +5,19 @@ tables (CO2 steps, degree days). Everything is a draft; issuing stays behind G3.
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, Self
 
 from fastapi import APIRouter, Depends, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 
 from mhvp.accounting.audit_events import record_change
 from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import heating_calc, heating_services
 from mhvp.billing.models import HeatingRuleTable, HeatingRuleTableKind, Statement
+from mhvp.billing.raw_responses import (
+    BillingHeatingListRuleTablesOutItem,
+)
 from mhvp.billing.write_responses import BillingHeatingRuleTableOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
@@ -91,12 +94,26 @@ class HeatingIn(_In):
     co2: Co2InputIn = Field(default_factory=Co2InputIn)
 
 
+_VALUE_KIND = "^(actual|interim|estimated|missing)$"
+
+
 class ConsumptionIn(_In):
+    """Consumption of one occupancy. Kinds (GAM-111): ``actual`` (abgelesen), ``interim``
+    (Zwischenablesung at a change of user, needs ``reading_date``), ``estimated`` (geschätzt,
+    flagged for the § 12 hint), ``missing``. ``interim`` is calculated like ``actual``."""
+
     heating: Decimal | None = Field(default=None, ge=0)
-    heating_kind: str = Field(default="actual", pattern="^(actual|estimated|missing)$")
+    heating_kind: str = Field(default="actual", pattern=_VALUE_KIND)
     hot_water: Decimal | None = Field(default=None, ge=0)
-    hot_water_kind: str = Field(default="actual", pattern="^(actual|estimated|missing)$")
+    hot_water_kind: str = Field(default="actual", pattern=_VALUE_KIND)
+    reading_date: date | None = None
     note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _interim_needs_date(self) -> Self:
+        if "interim" in (self.heating_kind, self.hot_water_kind) and self.reading_date is None:
+            raise ValueError("Zwischenablesung braucht ein Ablesedatum.")
+        return self
 
 
 class UnitTotalIn(_In):
@@ -180,6 +197,7 @@ async def get_heating(
                     "hot_water": None if o.hot_water is None else str(o.hot_water),
                     "heating_kind": o.heating_kind,
                     "hot_water_kind": o.hot_water_kind,
+                    "reading_date": (row.consumptions or {}).get(o.key, {}).get("reading_date"),
                     "source": o.source,
                     "vacancy": o.is_vacancy,
                 }
@@ -243,7 +261,7 @@ async def put_consumptions(
         merged = dict(row.consumptions)
         for key, c in body.consumptions.items():
             entry = {
-                k: (str(v) if isinstance(v, Decimal) else v)
+                k: (str(v) if isinstance(v, (Decimal, date)) else v)
                 for k, v in c.model_dump().items()
                 if v is not None
             }
@@ -348,6 +366,7 @@ async def consumption_info(
     "/billing/heating-rule-tables",
     summary="Regeltabellen Heizkosten (CO2, Gradtage)",
     dependencies=[Depends(strict_query)],
+    response_model=list[BillingHeatingListRuleTablesOutItem],
 )
 async def list_rule_tables(
     request: Request, principal: TenantPrincipal = Depends(READ)

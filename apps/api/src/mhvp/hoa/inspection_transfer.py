@@ -21,6 +21,7 @@ from sqlalchemy.pool import NullPool
 
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.events import DomainEvent, emit
+from mhvp.core.logging import get_logger
 
 EVENT_TYPE = "contract.ownership_transferred"
 OPEN_STATUSES = ("requested", "released", "provided", "retrieved")
@@ -117,6 +118,7 @@ async def note_ownership_transfers(
 
 
 async def run_once(settings: Settings) -> dict[str, int]:
+    from mhvp.automation.job_schedule import job_allowed
     from mhvp.core.db.engine import create_session_factory
     from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
     from mhvp.platform.models import Tenant, TenantStatus
@@ -132,15 +134,29 @@ async def run_once(settings: Settings) -> dict[str, int]:
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                totals["tenants"] += 1
-                for key, value in (
-                    await note_ownership_transfers(session, tenant_id, None)
-                ).items():
-                    totals[key] += value
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    # AP07: the tenant job switch is honoured like every other standard job.
+                    if not await job_allowed(session, tenant_id, "hoa-inspection-ownership-scan"):
+                        continue
+                    totals["tenants"] += 1
+                    for key, value in (
+                        await note_ownership_transfers(session, tenant_id, None)
+                    ).items():
+                        totals[key] += value
+            except Exception as exc:  # AP07: next tenant still runs
+                log.exception(
+                    "inspection ownership scan failed", extra={"tenant_id": str(tenant_id)}
+                )
+                from mhvp.core.job_failures import record_job_failure
+
+                await record_job_failure(factory, tenant_id, "hoa.inspection_ownership_scan", exc)
     finally:
         await engine.dispose()
     return totals
+
+
+log = get_logger(__name__)
 
 
 @shared_task(name="mhvp.hoa.inspection_ownership_scan")

@@ -39,7 +39,7 @@ export default async function LedgersPage() {
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.length === 0 ? (
-        <EmptyState title={t("empty")} />
+        <EmptyState title={t("empty")} hint={t("emptyHint")} />
       ) : (
         <div className="overflow-x-auto">
 <table className="mhvp-table">

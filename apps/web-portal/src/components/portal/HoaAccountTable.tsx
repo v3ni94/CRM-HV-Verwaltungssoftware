@@ -3,20 +3,19 @@
 import { useFormatter, useTranslations } from "next-intl";
 
 import type { HoaAccount, HoaAccountEntry } from "@/components/portal/types";
+import { formatEur, fromCents, toCents } from "@/lib/format-eur";
 import { ui } from "@/lib/ui";
 
-export function formatEur(value: string): string {
-  return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))} EUR`;
-}
+export { formatEur };
 
 /** Running balance after every booking (charges add, payments and credit notes subtract),
  *  computed in cents to avoid float rounding; the last value equals the contract balance. */
 export function runningBalances(entries: HoaAccountEntry[]): string[] {
-  let cents = 0;
+  let cents = 0n;
   return entries.map((entry) => {
-    const amount = Math.round(Number(entry.amount) * 100);
+    const amount = toCents(entry.amount);
     cents += entry.direction === "charge" ? amount : -amount;
-    return (cents / 100).toFixed(2);
+    return fromCents(cents);
   });
 }
 

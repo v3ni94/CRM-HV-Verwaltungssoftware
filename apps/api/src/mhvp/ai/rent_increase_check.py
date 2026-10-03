@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from sqlalchemy import select
@@ -43,6 +44,17 @@ def _s(value: Any) -> str | None:
     return None if value is None else str(value)
 
 
+def _area(value: Any) -> str | None:
+    """Area with two decimals: ``NUMERIC(20,8)`` renders eight fraction digits, which the
+    identifier mask would read as a phone number and so block the run."""
+    if value is None:
+        return None
+    try:
+        return str(Decimal(str(value)).quantize(Decimal("0.01")))
+    except InvalidOperation:
+        return str(value)
+
+
 def _clean(value: Any) -> Any:
     """Deterministic check without id or name fields (recursive)."""
     if isinstance(value, dict):
@@ -63,7 +75,7 @@ def build_payload(case: Any) -> dict[str, Any]:
         if isinstance(flat, dict):
             flats.append(
                 {
-                    k: _s(v)
+                    k: _area(v) if k == "living_area_sqm" else _s(v)
                     for k, v in flat.items()
                     if k in ("rent_per_sqm", "living_area_sqm", "rent", "year_built", "features")
                 }
@@ -76,7 +88,7 @@ def build_payload(case: Any) -> dict[str, Any]:
         "reference_rent": _s(case.reference_rent),
         "cap_limit_percent": _s(case.cap_limit_percent),
         "comparison_rent_per_sqm": _s(case.comparison_rent_per_sqm),
-        "living_area_sqm": _s(case.living_area_sqm),
+        "living_area_sqm": _area(case.living_area_sqm),
         "earliest_effective_date": _s(case.earliest_effective_date),
         "effective_date": _s(case.effective_date),
         "received_on": _s(case.received_on),

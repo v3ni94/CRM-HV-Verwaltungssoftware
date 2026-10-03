@@ -129,7 +129,7 @@ versendet).
 
 - Löschantrag erfassen (API `POST /privacy/erasure-requests`): Das System prüft sofort alle Sperren und zeigt sie am Antrag. Freigeben kann nur eine zweite Person, und nur ohne Sperre. Die Ausführung anonymisiert den Kontakt, Buchungen bleiben unberührt. Vorher muss das Löschprofil für Kontakte angelegt und von einer zweiten Person freigegeben sein.
 - Register der Auftragsverarbeiter und Verarbeitungstätigkeiten pflegen, daraus den Entwurf des Verarbeitungsverzeichnisses erzeugen (`GET /privacy/processing-records`). Der Entwurf ist vor Verwendung durch einen Rechtsanwalt zu prüfen.
-- Die Bedienung im CRM ist noch nicht vorhanden, bis dahin nur über die API.
+- Die Bedienung im CRM steht unter Einstellungen, Datenschutz zur Verfügung (Löschanträge mit Freigabe, Ablehnung und Ausführung, Verzeichnis der Verarbeitungstätigkeiten); siehe Kapitel Datenschutz (Stand 03.10.2026, GAL-316).
 
 ## Sammelaktion in der Dokumentliste
 
@@ -209,7 +209,7 @@ Ist ein Dokument mit einem Rechtsträger verknüpft, zeigt die Karte "Aufbewahru
 - Kontaktvorschau beim Import: je Zeile kann eine Rolle gewählt werden; beim Verknüpfen mit einem
   vorhandenen Kontakt können leere Felder ergänzt werden.
 
-Vorlagen und erzeugte Dokumente (Version 1.57.0, 01.10.2026): Eine Vorlage kann auf Kontexte (Kontakt, Vertrag, Einheit, Objekt, Versammlung, Abrechnung, Ticket) beschränkt werden und auf eine Briefbogenvorlage verweisen. Die verwendeten Platzhalter werden beim Speichern ermittelt und an der Vorlage angezeigt. Die Vorlagenliste lässt sich nach Kontext filtern. Zu jedem erzeugten Brief zeigt `GET /generated-documents` die Vorlage mit Version, den Kontext, den Empfänger und den Versandnachweis. Die Bedienung in der CRM-Oberfläche folgt, bis dahin ist die Funktion über die API nutzbar.
+Vorlagen und erzeugte Dokumente (Version 1.57.0, 01.10.2026): Eine Vorlage kann auf Kontexte (Kontakt, Vertrag, Einheit, Objekt, Versammlung, Abrechnung, Ticket) beschränkt werden und auf eine Briefbogenvorlage verweisen. Die verwendeten Platzhalter werden beim Speichern ermittelt und an der Vorlage angezeigt. Die Vorlagenliste lässt sich nach Kontext filtern. Zu jedem erzeugten Brief zeigt `GET /generated-documents` die Vorlage mit Version, den Kontext, den Empfänger und den Versandnachweis. Die Bedienung steht im CRM unter Dokumente, Erzeugte Dokumente zur Verfügung (siehe unten, AB05).
 
 Erzeugte Dokumente und Vorlagenkontext in der Oberfläche (AB05, 01.10.2026): Unter Dokumente, "Erzeugte Dokumente" listet die Seite die aus Vorlagen erzeugten Briefe mit Vorlage, Version, Kontext, Zustellung und Link zum Dokument. Filter: Vorlage und Zeitraum (von, bis). In "Briefe und Vorlagen" können die erlaubten Kontexte einer Vorlage angehakt und für die gewählte Version gespeichert werden, die verwendeten Platzhalter werden angezeigt. Am Auftrag (Seite des Auftrags) lässt sich der Verweis auf den Freigabe-Workflow pflegen. Es gibt noch keine Tabelle für Freigabeabläufe, der Verweis ist eine Kennung ohne Wirkung (AA05-01).
 

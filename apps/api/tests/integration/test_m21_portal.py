@@ -915,6 +915,7 @@ def test_d29_owner_sees_gdwe_documents_outside_own_statement(
     assert "X-Redaction-Note" not in response.headers
 
 
+@pytest.mark.annex_d("D30")
 @pytest.mark.parametrize("path", sorted(PATHS))
 @pytest.mark.parametrize("kind", ["fremde_gdwe", "sev_vertrag", "sev_akte", "o2_kaufvertrag"])
 def test_d30_foreign_gdwe_and_sev_files_denied_on_every_path(
@@ -928,6 +929,7 @@ def test_d30_foreign_gdwe_and_sev_files_denied_on_every_path(
     )
 
 
+@pytest.mark.annex_d("D30")
 def test_d30_bundle_of_own_documents_excludes_foreign_files(
     access_client: TestClient, access_world: AccessWorld
 ) -> None:

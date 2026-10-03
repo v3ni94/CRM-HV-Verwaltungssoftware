@@ -494,7 +494,7 @@ class Role(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
 
-class RolePermission(IdMixin, TenantMixin, Base):
+class RolePermission(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "role_permission"
     __table_args__ = (UniqueConstraint("tenant_id", "role_id", "resource", "action"),)
 
@@ -505,7 +505,7 @@ class RolePermission(IdMixin, TenantMixin, Base):
     action: Mapped[str] = mapped_column(String(16), nullable=False)
 
 
-class MembershipRole(IdMixin, TenantMixin, Base):
+class MembershipRole(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "membership_role"
     __table_args__ = (UniqueConstraint("tenant_id", "membership_id", "role_id"),)
 
@@ -808,6 +808,12 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # AO07 / GAK-106 (migration 0458): the creator of a direct debit run may not approve it,
     # default off (behaviour before AO07). The business question stays open (AN17-01).
     direct_debit_creator_may_not_approve: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # AP17 / GAM-108 (migration 0467): rental statements of rented condominium units
+    # (SEV owner) need a confirmed key source for every key, not only for keys taken from the
+    # template; default off (behaviour before AP17). The check schema stays open (AP17-01).
+    allocation_key_confirmation_required: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
     # Einladungsfrist in Wochen (M25-03, migration 0187): draft default 3, source status

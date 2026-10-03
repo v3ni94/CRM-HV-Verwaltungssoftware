@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 
 import { ResolutionMajorityCheck } from "@/components/aj17/ResolutionMajorityCheck";
 import { ResolutionFollowUps } from "@/components/ao05/ResolutionFollowUps";
+import { ResolutionStatusDialog } from "@/components/hoa/ResolutionStatusDialog";
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { formatDate } from "@/lib/format";
 
@@ -21,7 +22,7 @@ export type ResolutionRow = {
   entered_at?: string | null;
 };
 
-/** Beschluss-Sammlung (M24, M25): number, date, subject, status; read only. */
+/** Beschluss-Sammlung (M24, M25): number, date, subject, status; status changes via ResolutionStatusDialog (GAM-201). */
 export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
   const t = useTranslations("Hoa");
   if (rows.length === 0) return <p className="text-sm text-muted">{t("noResolutions")}</p>;
@@ -53,6 +54,7 @@ export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
               {r.majority_check ? <MajorityCheckLine check={r.majority_check} /> : null}
               <ResolutionMajorityCheck resolutionId={r.id} />
               <ResolutionFollowUps resolutionId={r.id} />
+              <ResolutionStatusDialog resolutionId={r.id} currentNotes={r.court_notes} />
               {r.location || r.entered_at ? (
                 <span className="block text-xs text-muted" data-testid="resolution-entry">
                   {r.location ? `${t("location")}: ${r.location}` : ""}

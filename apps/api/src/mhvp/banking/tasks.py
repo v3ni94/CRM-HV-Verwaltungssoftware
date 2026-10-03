@@ -1248,8 +1248,14 @@ async def compute_proposals_once(
                 )
             if result.get("enabled"):
                 counts["auto_posted"] = int(result.get("posted", 0))
-        except Exception:
+        except Exception as exc:
             log.exception("auto post runner failed", extra={"tenant_id": str(tenant_id)})
+            # GAM-504: the failure is kept next to the sync run (job_failure.ref_id) and counted
+            # as auto_post_runs_failed_24h; the import itself stays untouched.
+            from mhvp.core.job_failures import JOB_AUTO_POST, record_job_failure
+
+            await record_job_failure(factory, tenant_id, JOB_AUTO_POST, exc, ref_id=run_id)
+            counts["auto_post_failed"] = 1
         # Sync protocol (8.2): proposals and automatic postings of this run are kept on the
         # run itself, next to new/duplicates/transfers, so the run list shows them.
         try:
@@ -1259,6 +1265,7 @@ async def compute_proposals_once(
                     run_id,
                     proposals=int(counts.get("computed", 0)),
                     auto_posted=int(counts.get("auto_posted", 0)),
+                    auto_post_failed=bool(counts.get("auto_post_failed")),
                 )
         except Exception:
             log.exception("sync run metrics failed", extra={"run_id": str(run_id)})
@@ -1268,7 +1275,12 @@ async def compute_proposals_once(
 
 
 async def record_run_metrics(
-    session: AsyncSession, run_id: uuid.UUID, *, proposals: int, auto_posted: int
+    session: AsyncSession,
+    run_id: uuid.UUID,
+    *,
+    proposals: int,
+    auto_posted: int,
+    auto_post_failed: bool = False,
 ) -> None:
     """Writes the counters ``proposals`` and ``auto_posted`` into ``BankSyncRun.counts``
     (M11-06, 8.2). Idempotent: a recomputation overwrites both keys with the new values,
@@ -1279,6 +1291,10 @@ async def record_run_metrics(
     merged = dict(run.counts or {})
     merged["proposals"] = proposals
     merged["auto_posted"] = auto_posted
+    if auto_post_failed:  # GAM-504: the run shows that its automatic posting step failed
+        merged["auto_post_failed"] = 1
+    else:
+        merged.pop("auto_post_failed", None)
     run.counts = merged
     await session.flush()
 
@@ -1414,8 +1430,13 @@ async def process_events_once(settings: Settings, *, now: datetime | None = None
                     result = await process_tenant(session, tenant_id, now=now)
                 for key in ("events", "handled", "failed"):
                     totals[key] += result[key]
-            except Exception:
-                log.warning("banking process_events failed", extra={"tenant_id": str(tenant_id)})
+            except Exception as exc:
+                # GAM-505: stack trace and a persisted failure per tenant (metric
+                # event_consumer_failures_24h); the next tenant still runs.
+                log.exception("banking process_events failed", extra={"tenant_id": str(tenant_id)})
+                from mhvp.core.job_failures import JOB_BANKING_EVENTS, record_job_failure
+
+                await record_job_failure(factory, tenant_id, JOB_BANKING_EVENTS, exc)
     finally:
         await engine.dispose()
     return totals
@@ -1447,12 +1468,20 @@ async def weekly_digest_once(settings: Settings, *, today: date | None = None) -
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                if not await job_allowed(session, tenant_id, "banking-weekly-digest"):
-                    continue
-                rows = await digest.build_week(session, tenant_id=tenant_id, week_start=week_start)
-            totals["tenants"] += 1
-            totals["digests"] += len(rows)
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    if not await job_allowed(session, tenant_id, "banking-weekly-digest"):
+                        continue
+                    rows = await digest.build_week(
+                        session, tenant_id=tenant_id, week_start=week_start
+                    )
+                totals["tenants"] += 1
+                totals["digests"] += len(rows)
+            except Exception as exc:  # AP07: next tenant still runs
+                log.exception("weekly digest failed", extra={"tenant_id": str(tenant_id)})
+                from mhvp.core.job_failures import record_job_failure
+
+                await record_job_failure(factory, tenant_id, "banking.weekly_digest", exc)
     finally:
         await engine.dispose()
     return totals

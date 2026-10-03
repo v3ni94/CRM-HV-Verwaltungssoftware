@@ -434,3 +434,7 @@ Auf der Startseite listet der Arbeitsvorrat Rückfragen zur Zuordnung von Ticket
 Dieser Abschnitt beschreibt den Stammdatenvorschlag aus der letzten eingehenden E-Mail im Ticketdetail.
 
 Im Ticket steht im Bereich "Vorschläge aus der E-Mail" die Schaltfläche "Vorschlag aus letzter E-Mail berechnen". Sie prüft die letzte eingehende E-Mail des Tickets auf eine Stammdatenänderung (Name, Anschrift, Telefon, E-Mail) und legt höchstens einen Vorschlag je E-Mail an. Es wird nichts am Kontakt geändert: der Vorschlag erscheint mit Vergleich alt und neu und wird wie gewohnt akzeptiert, korrigiert oder abgelehnt. Wird keine Änderung erkannt, erscheint der Hinweis "Keine Stammdatenänderung erkannt." Bankverbindungen werden nie übernommen. Berechtigung: Tickets bearbeiten; die Übernahme verlangt zusätzlich das Recht, Kontakte zu bearbeiten.
+
+## Zuständige und Sammelstatus (Welle 26)
+
+In der Ticketansicht zeigt der Abschnitt Zuständige alle Bearbeiter des Tickets, die Hauptzuständigen sind gekennzeichnet. Mit Zuständigen hinzufügen wird ein weiterer Benutzer ergänzt, mit Entfernen wieder gelöst (Recht Tickets ändern). Der Sammelstatus läuft über die Sammelaktionen in der Ticketliste (Status, Bearbeiter, Team, Priorität); bei abschließendem Status ist die Erledigungsnotiz Pflicht, das Ergebnis nennt je Ticket Erfolg oder Grund der Ablehnung.

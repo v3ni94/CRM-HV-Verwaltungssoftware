@@ -10,6 +10,7 @@ Export needs release gate G1 (productive bookkeeping) open for the tenant in add
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -29,7 +30,13 @@ from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentSource
 from mhvp.documents.services import store_document
 from mhvp.integrations import schemas as s
-from mhvp.integrations.lexoffice import LexofficeClient, LexofficeCredentials
+from mhvp.integrations.lexoffice import (
+    LexofficeClient,
+    LexofficeCredentials,
+    strict_hosts,
+    validate_base_url,
+)
+from mhvp.integrations.live_mode import ensure_live_allowed, resolver_of
 from mhvp.integrations.models import (
     LexofficeContactLink,
     LexofficeExportKind,
@@ -68,10 +75,56 @@ async def _config(session: AsyncSession, tenant_id: uuid.UUID) -> LexofficeTenan
     return result
 
 
-def _client_for(config: LexofficeTenantConfig) -> LexofficeClient:
+def _base_url(request: Request, url: str) -> str:
+    """GAL-202: the API key only goes to an allowed Lexware host (strict in staging/prod)."""
+    return validate_base_url(url, strict=strict_hosts(request.app.state.settings))
+
+
+def _client_for(config: LexofficeTenantConfig, request: Request) -> LexofficeClient:
     if not config.enabled or not config.api_key:
         raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
-    return LexofficeClient(LexofficeCredentials(api_key=config.api_key, base_url=config.base_url))
+    return LexofficeClient(
+        LexofficeCredentials(api_key=config.api_key, base_url=_base_url(request, config.base_url))
+    )
+
+
+def _idempotency_key(tenant_id: uuid.UUID, kind: LexofficeExportKind, entity_id: uuid.UUID) -> str:
+    return hashlib.sha256(f"{tenant_id}:{kind.value}:{entity_id}".encode()).hexdigest()
+
+
+UNKNOWN = "unknown"
+EXPORTED = "exported"
+UNKNOWN_DETAIL = (
+    "Der frühere Export hat keine Antwort erhalten und wurde möglicherweise verarbeitet. "
+    "Bitte in Lexware Office prüfen und gegebenenfalls ausdrücklich erneut exportieren."
+)
+
+
+def _reconcile_voucher(
+    client: LexofficeClient, link: LexofficeExportLink, payload: Any
+) -> str | None:
+    """Look up a voucher whose create timed out by its voucher number (GAL-201). Returns the
+    Lexware id when exactly one voucher carries that number, else ``None``."""
+    number = link.voucher_number
+    if not number:
+        return None
+    voucher_type = payload.get("type") if isinstance(payload, dict) else None
+    try:
+        found = client.list_voucherlist(
+            voucher_type if isinstance(voucher_type, str) and voucher_type else "any",
+            "any",
+            voucher_number=number,
+        )
+    except ProblemError:
+        return None
+    hits = [
+        str(v.get("id") or v.get("voucherId"))
+        for v in (found.get("content") or [])
+        if isinstance(v, dict)
+        and v.get("voucherNumber") == number
+        and (v.get("id") or v.get("voucherId"))
+    ]
+    return hits[0] if len(hits) == 1 else None
 
 
 async def _run(
@@ -140,7 +193,7 @@ async def put_config(
             config = LexofficeTenantConfig(tenant_id=principal.tenant_id)
             session.add(config)
         if body.base_url:
-            config.base_url = body.base_url
+            config.base_url = _base_url(request, body.base_url)
         if body.api_key is not None:
             config.api_key = body.api_key.strip()
             config.api_key_last4 = config.api_key[-4:]
@@ -170,9 +223,12 @@ async def check_connection(
         config = await _config(session, principal.tenant_id)
         if config is None or not config.api_key:
             raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
+        await ensure_live_allowed(session, principal.tenant_id, "lexoffice", resolver_of(request))
         run = await _run(session, principal, LexofficeRunKind.TEST)
         client = LexofficeClient(
-            LexofficeCredentials(api_key=config.api_key, base_url=config.base_url)
+            LexofficeCredentials(
+                api_key=config.api_key, base_url=_base_url(request, config.base_url)
+            )
         )
         try:
             client.test_connection()
@@ -227,6 +283,114 @@ async def _already_exported(
     return result
 
 
+async def _export_one(
+    session: AsyncSession,
+    client: LexofficeClient,
+    principal: TenantPrincipal,
+    run: LexofficeSyncRun,
+    kind: LexofficeExportKind,
+    entity_id: uuid.UUID,
+    payload: dict[str, Any],
+    force: bool,
+) -> s.LexofficeExportResultItem:
+    """Export one entity idempotently (GAL-201).
+
+    - An ``exported`` link answers with the stored Lexware id (no second POST) unless ``force``.
+    - An ``unknown`` link (earlier POST timed out) never triggers a blind second POST: vouchers
+      are looked up by voucher number and adopted when exactly one matches; otherwise the item
+      stays ``outcome_unknown`` until the operator re-exports with ``force``.
+    - A POST that times out leaves an ``unknown`` link instead of no trace.
+    """
+    existing = await _already_exported(session, principal.tenant_id, kind, entity_id)
+    key = _idempotency_key(principal.tenant_id, kind, entity_id)
+    if existing is not None and not force:
+        if existing.status != UNKNOWN and existing.lexoffice_id:
+            return s.LexofficeExportResultItem(
+                entity_id=entity_id,
+                ok=True,
+                lexoffice_id=existing.lexoffice_id,
+                skipped_duplicate=True,
+                idempotency_key=key,
+            )
+        adopted = (
+            _reconcile_voucher(client, existing, payload)
+            if kind == LexofficeExportKind.INVOICE
+            else None
+        )
+        if adopted is None:
+            return s.LexofficeExportResultItem(
+                entity_id=entity_id,
+                ok=False,
+                error=UNKNOWN_DETAIL,
+                outcome_unknown=True,
+                error_code=ErrorCodes.LEXOFFICE_OUTCOME_UNKNOWN.code,
+                idempotency_key=key,
+            )
+        existing.lexoffice_id = adopted
+        existing.status = EXPORTED
+        existing.run_id = run.id
+        await session.flush()
+        return s.LexofficeExportResultItem(
+            entity_id=entity_id,
+            ok=True,
+            lexoffice_id=adopted,
+            skipped_duplicate=True,
+            reconciled=True,
+            idempotency_key=key,
+        )
+    number = payload.get("voucherNumber") if kind == LexofficeExportKind.INVOICE else None
+    voucher_number = number[:64] if isinstance(number, str) and number else None
+    try:
+        if kind == LexofficeExportKind.INVOICE:
+            created = client.create_voucher(payload)
+            lexoffice_id = str(created.get("id") or created.get("voucherId") or "")
+        else:
+            created = client.create_contact(payload)
+            lexoffice_id = str(created.get("id") or "")
+        if not lexoffice_id:
+            raise ProblemError(
+                ErrorCodes.LEXOFFICE_UNAVAILABLE, detail="lexoffice-Antwort enthielt keine ID."
+            )
+    except ProblemError as exc:
+        maybe = bool(exc.extensions.get("maybe_processed"))
+        if maybe:
+            if existing is None:
+                existing = LexofficeExportLink(
+                    tenant_id=principal.tenant_id,
+                    entity_kind=kind.value,
+                    entity_id=entity_id,
+                )
+                session.add(existing)
+            existing.status = UNKNOWN
+            existing.lexoffice_id = None
+            existing.run_id = run.id
+            existing.idempotency_key = key
+            existing.voucher_number = voucher_number
+            await session.flush()
+        return s.LexofficeExportResultItem(
+            entity_id=entity_id,
+            ok=False,
+            error=UNKNOWN_DETAIL if maybe else str(exc.detail),
+            outcome_unknown=maybe,
+            error_code=(ErrorCodes.LEXOFFICE_OUTCOME_UNKNOWN if maybe else exc.error).code,
+            idempotency_key=key,
+        )
+    if existing is None:
+        existing = LexofficeExportLink(
+            tenant_id=principal.tenant_id, entity_kind=kind.value, entity_id=entity_id
+        )
+        session.add(existing)
+    existing.lexoffice_id = lexoffice_id
+    existing.status = EXPORTED
+    existing.run_id = run.id
+    existing.idempotency_key = key
+    existing.voucher_number = voucher_number
+    await session.flush()
+    return s.LexofficeExportResultItem(
+        entity_id=entity_id, ok=True, lexoffice_id=lexoffice_id, idempotency_key=key
+    )
+
+
 @router.post(
     "/export/invoices",
     summary="Ausgangsrechnungen/Belege nach lexoffice exportieren",
@@ -239,12 +403,13 @@ async def export_invoices(
 ) -> s.LexofficeExportResult:
     async with tenant_tx(request, principal) as session:
         config = await _config(session, principal.tenant_id)
-        client = _client_for(config) if config else None
+        client = _client_for(config, request) if config else None
         if client is None:
             raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
+        await ensure_live_allowed(session, principal.tenant_id, "lexoffice", resolver_of(request))
         run = await _run(session, principal, LexofficeRunKind.EXPORT_INVOICES)
         results: list[s.LexofficeExportResultItem] = []
-        ok = failed = 0
+        ok = failed = unknown = 0
         errors: list[str] = []
         for item in body.items:
             invoice = await session.get(Invoice, item.invoice_id)
@@ -256,56 +421,24 @@ async def export_invoices(
                     )
                 )
                 continue
-            existing = await _already_exported(
-                session, principal.tenant_id, LexofficeExportKind.INVOICE, item.invoice_id
+            result = await _export_one(
+                session,
+                client,
+                principal,
+                run,
+                LexofficeExportKind.INVOICE,
+                item.invoice_id,
+                item.payload,
+                item.force,
             )
-            if existing is not None and not item.force:
-                results.append(
-                    s.LexofficeExportResultItem(
-                        entity_id=item.invoice_id,
-                        ok=True,
-                        lexoffice_id=existing.lexoffice_id,
-                        skipped_duplicate=True,
-                    )
-                )
-                continue
-            try:
-                created = client.create_voucher(item.payload)
-                lexoffice_id = str(created.get("id") or created.get("voucherId") or "")
-                if not lexoffice_id:
-                    raise ProblemError(
-                        ErrorCodes.LEXOFFICE_UNAVAILABLE,
-                        detail="lexoffice-Antwort enthielt keine ID.",
-                    )
-            except ProblemError as exc:
-                failed += 1
-                errors.append(f"invoice {item.invoice_id}: {exc.detail}")
-                results.append(
-                    s.LexofficeExportResultItem(
-                        entity_id=item.invoice_id, ok=False, error=str(exc.detail)
-                    )
-                )
-                continue
-            if existing is not None:
-                existing.lexoffice_id = lexoffice_id
-                existing.run_id = run.id
+            results.append(result)
+            if result.ok:
+                ok += 1
             else:
-                session.add(
-                    LexofficeExportLink(
-                        tenant_id=principal.tenant_id,
-                        entity_kind=LexofficeExportKind.INVOICE.value,
-                        entity_id=item.invoice_id,
-                        lexoffice_id=lexoffice_id,
-                        run_id=run.id,
-                    )
-                )
-            ok += 1
-            results.append(
-                s.LexofficeExportResultItem(
-                    entity_id=item.invoice_id, ok=True, lexoffice_id=lexoffice_id
-                )
-            )
-        await _finish_run(session, run, {"ok": ok, "failed": failed}, errors)
+                failed += 1
+                unknown += int(result.outcome_unknown)
+                errors.append(f"invoice {item.invoice_id}: {result.error}")
+        await _finish_run(session, run, {"ok": ok, "failed": failed, "unknown": unknown}, errors)
         return s.LexofficeExportResult(run_id=run.id, items=results)
 
 
@@ -321,12 +454,13 @@ async def export_contacts(
 ) -> s.LexofficeExportResult:
     async with tenant_tx(request, principal) as session:
         config = await _config(session, principal.tenant_id)
-        client = _client_for(config) if config else None
+        client = _client_for(config, request) if config else None
         if client is None or config is None:
             raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
+        await ensure_live_allowed(session, principal.tenant_id, "lexoffice", resolver_of(request))
         run = await _run(session, principal, LexofficeRunKind.EXPORT_CONTACTS)
         results: list[s.LexofficeExportResultItem] = []
-        ok = failed = 0
+        ok = failed = unknown = 0
         errors: list[str] = []
         for item in body.items:
             contact = await session.get(Contact, item.contact_id)
@@ -338,49 +472,26 @@ async def export_contacts(
                     )
                 )
                 continue
-            existing = await _already_exported(
-                session, principal.tenant_id, LexofficeExportKind.CONTACT, item.contact_id
+            result = await _export_one(
+                session,
+                client,
+                principal,
+                run,
+                LexofficeExportKind.CONTACT,
+                item.contact_id,
+                item.payload,
+                item.force,
             )
-            if existing is not None and not item.force:
-                results.append(
-                    s.LexofficeExportResultItem(
-                        entity_id=item.contact_id,
-                        ok=True,
-                        lexoffice_id=existing.lexoffice_id,
-                        skipped_duplicate=True,
-                    )
-                )
+            results.append(result)
+            if not result.ok or result.skipped_duplicate:
+                if result.ok:
+                    ok += 1
+                else:
+                    failed += 1
+                    unknown += int(result.outcome_unknown)
+                    errors.append(f"contact {item.contact_id}: {result.error}")
                 continue
-            try:
-                created = client.create_contact(item.payload)
-                lexoffice_id = str(created.get("id") or "")
-                if not lexoffice_id:
-                    raise ProblemError(
-                        ErrorCodes.LEXOFFICE_UNAVAILABLE,
-                        detail="lexoffice-Antwort enthielt keine ID.",
-                    )
-            except ProblemError as exc:
-                failed += 1
-                errors.append(f"contact {item.contact_id}: {exc.detail}")
-                results.append(
-                    s.LexofficeExportResultItem(
-                        entity_id=item.contact_id, ok=False, error=str(exc.detail)
-                    )
-                )
-                continue
-            if existing is not None:
-                existing.lexoffice_id = lexoffice_id
-                existing.run_id = run.id
-            else:
-                session.add(
-                    LexofficeExportLink(
-                        tenant_id=principal.tenant_id,
-                        entity_kind=LexofficeExportKind.CONTACT.value,
-                        entity_id=item.contact_id,
-                        lexoffice_id=lexoffice_id,
-                        run_id=run.id,
-                    )
-                )
+            lexoffice_id = str(result.lexoffice_id)
             # One truth for contacts going forward (ADR 0015): the contact link table.
             link = await session.scalar(
                 select(LexofficeContactLink).where(
@@ -400,12 +511,7 @@ async def export_contacts(
             link.lexoffice_contact_id = lexoffice_id
             link.sync_status = LexofficeLinkStatus.LINKED.value
             ok += 1
-            results.append(
-                s.LexofficeExportResultItem(
-                    entity_id=item.contact_id, ok=True, lexoffice_id=lexoffice_id
-                )
-            )
-        await _finish_run(session, run, {"ok": ok, "failed": failed}, errors)
+        await _finish_run(session, run, {"ok": ok, "failed": failed, "unknown": unknown}, errors)
         return s.LexofficeExportResult(run_id=run.id, items=results)
 
 
@@ -417,7 +523,7 @@ async def import_receipts(
 ) -> s.LexofficeImportResult:
     async with tenant_tx(request, principal) as session:
         config = await _config(session, principal.tenant_id)
-        client = _client_for(config) if config else None
+        client = _client_for(config, request) if config else None
         if client is None:
             raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
         blobs = BlobStore(request.app.state.settings)

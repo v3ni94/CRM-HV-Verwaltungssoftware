@@ -460,3 +460,35 @@ fachliche Festlegung ist offen (AN17-01).
 ## Ausbuchungsvorschläge und Rücklastschrift-Nachweis (Welle 25, AO01)
 
 Im Buchungskreis steht unter den offenen Posten der Bereich "Ausbuchungsvorschläge". Eine offene Forderung wird mit Stichtag und Grund (mindestens 10 Zeichen) vorgeschlagen; der Vorschlag wirkt nicht auf Salden. Die Freigabe ist nur möglich, wenn der Mandantenschalter eingeschaltet ist, G1 offen ist und eine andere Person freigibt; hat sich der Restbetrag seit dem Vorschlag geändert, wird die Freigabe abgelehnt und der Vorschlag ist neu anzulegen. Die Buchungsvorschau zeigt nur an, gebucht wird nichts (Gegenkonto offen, Frage AN15-02). In der Lastschriftabstimmung erscheinen bei Rückgaben Rückgabedatum, Gebühr, Gebührenbeleg und der Status der Weiterbelastung (gesperrt oder nur Vorschlag); bei einer einzelnen Rückgabe lassen sich Datum und Gebühr erfassen, erfasste Werte werden nie überschrieben.
+
+## Hinweis Steuerstatus im Kontenstamm (Welle 26, AP16)
+
+Gibt es Konten mit Steueroption, ist im Mandanten aber kein Umsatzsteuerstatus hinterlegt (oder Kleinunternehmer), zeigt der Kontenstamm den Hinweis "Steuerstatus fehlt, keine Vorsteuerbuchung". Es wird dann keine Vorsteuer gebucht. Der Status wird unter Einstellungen, Rechnungsstellung und Steuer gepflegt; die steuerliche Einordnung bestätigt der Steuerberater.
+
+## Zahler, Rechnungsempfänger und Zahlungsempfänger beim Verwalterhonorar (GAM-212, Welle 26)
+
+In der Rechnungsliste des Verwalterhonorars blendet "Zahler und Empfänger" je Rechnung drei getrennt beschriftete Angaben ein: den Zahler (Rechtsträger, der die Vergütung trägt), den Rechnungsempfänger (Vertragspartei) und den Zahlungsempfänger. Der Zahlungsempfänger ist fest die Verwaltungsgesellschaft. Fehlen Zahler oder Rechnungsempfänger, steht ein Prüfhinweis; vor der Freigabe ist zu prüfen, dass beide zum Objekt passen. Die Anzeige verändert nichts.
+
+## Ausbuchung beantragen, buchen und stornieren (Welle 26, AP12)
+
+In der Tabelle der offenen Posten eines Buchungskreises und im Mahnfall (Bereich Mahnsperren je Posten) steht bei offenen Forderungen die Aktion "Ausbuchung beantragen". Sie fragt Stichtag und Grund (mindestens 10 Zeichen) ab und legt nur einen Vorschlag ohne Wirkung an; Freigabe durch eine zweite Person, Freigabestufe G1 und die Freigabe durch die Geschäftsführung bleiben vorbehalten.
+
+Eine freigegebene Ausbuchung kann gebucht werden, wenn der Mandant unter "Buchung von Ausbuchungen" (unten im Bereich Ausbuchungsvorschläge, Recht Mandanteneinstellungen) den Schalter eingeschaltet und ein Gegenkonto (Kontonummer) eingetragen hat. Eine Vorgabe für das Gegenkonto gibt es nicht, die Frage AN15-02 ist offen. Zuerst die Buchungsvorschau öffnen: sie zeigt Soll Gegenkonto und Haben Forderungskonto mit Betrag oder die Gründe, warum nicht gebucht werden kann. "Ausbuchung buchen" bucht genau diese Werte einmal; ein zweiter Klick oder ein gleichzeitiger Aufruf erzeugt keine zweite Buchung. Eine gebuchte Ausbuchung wird nie geändert: zur Korrektur "Buchung stornieren" mit Grund wählen, der offene Posten ist danach wieder offen.
+
+## G1 Öffnung: Checkliste vor der produktiven Buchführung (GAL-312, Nachtrag 03.10.2026)
+
+Unter Einstellungen, Buchhaltung, G1 Öffnung (`/einstellungen/buchhaltung/g1-oeffnung`) steht die Checkliste für die Freigabestufe G1 (produktive Buchführung). Sie ist sichtbar mit dem Recht Buchhaltung lesen.
+
+**Zweck.** Die Seite zeigt, was vor einer Öffnung von G1 erledigt sein muss, und nimmt den Antrag auf G1 entgegen. Die empfohlene Reihenfolge: Kontenrahmen mit der Steuerberatung freigeben, die Fälle des Anhangs D durch die fachkundige Person abnehmen, die Umsatzsteuerbehandlung prüfen, danach den Antrag stellen.
+
+**Aufbau.**
+
+1. Stand aus dem System: Kontenrahmen (Status und Freigabedatum), abgenommene Fälle des Anhangs D, manuelle Prüfpunkte, Automatikstufen je Fallklasse, Stand des Lernenden Buchhalters und die aktuelle Freigabestufe G1 (geschlossen, beantragt oder geöffnet).
+2. Anhang D Fälle mit Freigabestufe G1: Ergebnis der fachlichen Abnahme je Fall. Ein Test im Code ersetzt die Abnahme nicht; eingetragen wird das Ergebnis der fachkundigen Person.
+3. Manuelle Prüfpunkte, die das System nicht selbst ableiten kann. Je Punkt werden Ergebnis (offen, bestanden, nicht bestanden), verantwortliche Person, Datum und Nachweis erfasst. Das Eintragen verlangt das Recht Buchhaltung freigeben.
+4. Unterlagen (Kontenrahmen-Prüfung, Abnahmeprotokoll Anhang D, Verfahrensdokumentation) und der Stand des Abnahmeregisters als reine Anzeige mit Link.
+5. Antrag auf G1 über den bestehenden Freigabepfad (Recht Freigabestufen anlegen).
+
+**Was die Seite nicht tut.** Sie öffnet G1 nie selbst. Die Entscheidung trifft eine zweite Person unter Plattform, Freigabestufen. Ohne diese Freigabe bleiben Buchungen Parallelbuchungen, Importe und Automatiken wenden den Stand nicht an. Rechtliche und steuerliche Fragen beantwortet die Seite nicht; sie bleiben bei Steuerberatung und Rechtsanwalt.
+
+Die Bankkennzahlen (Bank, Automatik-Kennzahlen, `/bank/kennzahlen`) sind im Kapitel Banking im Abschnitt Automatik-Kennzahlen beschrieben.

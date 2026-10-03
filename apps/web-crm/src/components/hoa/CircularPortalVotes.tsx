@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { formatDateTime } from "@/lib/format";
 
 export type CircularPortalVote = {
   id: string;
@@ -17,10 +18,7 @@ export type CircularPortalVote = {
 };
 
 function deDateTime(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(iso);
 }
 
 /** Portalstimmen laufender Umlaufverfahren (AG07 / GAF-32), nur lesend: Einheit, Antrag, Stimme,

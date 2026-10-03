@@ -22,6 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.accounting import numbering, receivables
 from mhvp.accounting.audit_events import record_change, snap
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, AdminFeeSetting
+from mhvp.accounting.raw_responses import (
+    AccountingAdminFeesPeriodPreviewOut,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import MAX_PAGE_SIZE, strict_query
@@ -416,7 +419,11 @@ async def delete_fee(
     return Response(status_code=204)
 
 
-@router.get("/admin-fees-periods", summary="Honorarlauf: fällige Zeiträume (Vorschau)")
+@router.get(
+    "/admin-fees-periods",
+    summary="Honorarlauf: fällige Zeiträume (Vorschau)",
+    response_model=AccountingAdminFeesPeriodPreviewOut,
+)
 async def period_preview(
     request: Request,
     period_date: date | None = None,

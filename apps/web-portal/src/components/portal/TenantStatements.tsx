@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 
+import { formatEur } from "@/lib/format-eur";
 import { ui } from "@/lib/ui";
 
 export type TenantStatementItem = {
@@ -29,7 +30,7 @@ export type TenantStatementDetailData = TenantStatementItem & {
 
 export function euro(value: string | null | undefined): string {
   if (value === null || value === undefined) return "";
-  return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))} EUR`;
+  return formatEur(value);
 }
 
 export function isoDate(iso: string): string {

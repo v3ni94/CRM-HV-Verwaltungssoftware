@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { loadCatalogOptions } from "./ContactPersonsPicker";
+import { NoticeReads } from "./NoticeReads";
 
 /** Schwarzes Brett je Objekt (M21-01, A54): notices of the management with validity period and
  *  audience, shown in the portal to tenants and owners of the property. "Beenden" removes a
@@ -319,6 +320,7 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
                 </span>
               </div>
               <p className="whitespace-pre-wrap text-sm">{n.body}</p>
+              <NoticeReads noticeId={n.id} />
               {n.ended_at ? null : (
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => startEdit(n)}>

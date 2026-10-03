@@ -198,7 +198,10 @@ def test_document_class_grant_and_all_access_paths(
     # An expired grant releases nothing.
     async def expire(s: Any) -> None:
         await s.execute(
-            text("UPDATE access_grant SET valid_to = :d WHERE scope_type = 'document_class'"),
+            text(
+                "UPDATE access_grant SET valid_from = :d, valid_to = :d "
+                "WHERE scope_type = 'document_class'"
+            ),
             {"d": date(2000, 1, 1)},
         )
 

@@ -6,3 +6,7 @@ AJ16 (GAI-411, Welle 21): `ContractMandates.tsx` bietet bei aktiven Mandaten mit
 `SchedulePanel` zeigt die Zahlungspläne aus `contract.schedules` (kein eigener GET nötig) und öffnet je Plan `ScheduleCorrectionForm` (`PATCH /contracts/{id}/schedules/{id}`, nur mit Recht Verträge bearbeiten). Konflikte (409, gebuchte Sollstellungen) werden mit der API-Meldung angezeigt.
 
 - `ContractVersionHistory` (GAK-207, AN18): Versionsverlauf im Vertragsdetail mit Gültigkeit, Link auf Vorversionen und Differenz der Zahlungszeilen.
+
+## Kautionsliste (AP19, GAM-211)
+
+`letting/DepositList.tsx` (Seite `/vermietung/kautionen`) liest `GET /deposits` seitenweise (`fetchAllListPages`) und zeigt je Kaution Soll, Erhalten, Guthaben und offenen Betrag mit Filtern. Das Detail (Konto, Rechtsträger, Zinsen, Sperrvermerk) lädt beim Aufklappen `contracts/{id}/deposits`, `properties/{id}/bank-accounts`, `properties/{id}/legal-entities` und `deposits/{id}/interest-drafts`. Reine Anzeige, keine Buchung.

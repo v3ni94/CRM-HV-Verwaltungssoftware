@@ -190,3 +190,7 @@ Nach dem Schritt Anwenden zeigt der Fall den Abschnitt Mieterhöhungssperre. Ist
 ## Interessenten löschen (Welle 24)
 
 Wird ein Interessent gelöscht, von Hand oder durch den Löschlauf nach dem Löschdatum, bleibt der Kontakt zunächst erhalten. Hat der Kontakt keine andere Rolle, entsteht unter Datenschutz, Löschanträge, ein Löschvorschlag mit der Anzahl der verknüpften Dokumente. Kontakt und Dokumente werden erst im Löschprozess mit Freigabe durch eine zweite Person bearbeitet.
+
+## Indexwerte pflegen und freigeben (Plattformadministrator, Welle 26)
+
+Unter Plattform, Indexwerte importieren und freigeben pflegt ein Plattformadministrator die Werte des Verbraucherpreisindex in zwei Schritten. Schritt 1: Reihe, Quelle und Stand der Daten angeben, CSV mit den Spalten Monat und Wert laden oder einfügen (Semikolon, Tab oder Komma, Monat als 2026-08 oder 08.2026, Kopfzeile erlaubt) und importieren. Die Werte bleiben ungeprüft und wirken nirgends; ein geänderter Wert eines Monats setzt dessen Freigabe zurück. Schritt 2: Werte gegen die Quelle prüfen, den Monat wählen, bis zu dem freigegeben wird, die Prüfung bestätigen und freigeben. Erst freigegebene Werte nutzen Indexklauseln und Erhöhungsvorschläge. Die Maske öffnet kein Gate und ersetzt keine rechtliche Prüfung der Indexklausel. Offene Frage zu Indexreihe und Freigabeprozess: AO03-01.

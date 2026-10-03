@@ -68,6 +68,7 @@ export default async function AuditPage({ params }: { params: Promise<{ property
     const name = await api.GET("/api/v1/contacts/{contact_id}/name", { params: { path: { contact_id: contactId } } });
     if (name.data?.display_name) names.set(contactId, String(name.data.display_name));
   }
+  const outdatedCount = audit.items.filter((item) => item.status === "outdated").length;
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
@@ -114,13 +115,14 @@ export default async function AuditPage({ params }: { params: Promise<{ property
         </div>
       </section>
       <AuditItemPicker auditId={auditId} accounts={accounts} periodFrom={audit.period_from} periodTo={audit.period_to} />
-      <AuditReportsPanel auditId={auditId} reports={reports} />
+      <AuditReportsPanel auditId={auditId} reports={reports} outdatedCount={outdatedCount} />
       {board ? (
         <BoardAuditPanel
           auditId={auditId}
           section={board}
           items={audit.items.map((item, index) => ({ id: item.id, label: t("audit.itemNumber", { n: index + 1 }) }))}
           contactNames={Object.fromEntries(names)}
+          outdatedCount={outdatedCount}
         />
       ) : null}
     </div>

@@ -652,3 +652,13 @@ Die Massenbestätigung bucht nur mit einer gültigen Vorschau. Die Vorschau lief
 ## Klärungskonto und Abstimmungsbasis (Welle 25)
 
 Unter Bank, Bankabstimmung legen Sie im Bereich "Klärungskonto und Abstimmungsbasis" zwei Mandantenstandards fest (Recht Mandanteneinstellungen ändern). Das Klärungskonto wählen Sie aus den Transit und technischen Konten Ihres Kontenrahmens; es nimmt einen Überzahlungsrest auf, der mehrere Debitoren betrifft, wenn beim Buchen kein Gegenkonto angegeben ist. Ohne Auswahl braucht ein solcher Rest wie bisher ein Gegenkonto. Ein Rest auf nur einem Debitor bleibt dessen Guthaben. Die Abstimmungsbasis legt fest, ob der Saldo des Sachkontos nach Buchungsdatum (Standard) oder nach Bankbuchungstag ermittelt wird. In der Abstimmung selbst können Sie die Basis für die Anzeige übersteuern; die Spalte "Zeitliche Differenz" zeigt den Unterschied zwischen beiden Stichtagen. Speichern bucht nichts. Die fachliche Festlegung ist offen (AO02-01).
+
+## Tilgungsbestimmung, Teilausführung, Freigabehistorie und Einzelaufträge (AP18)
+
+**Tilgungsbestimmung des Zahlers (Buchungsdialog).** Bei Zahlungseingängen zeigt der Buchungsdialog, welche offenen Posten der Verwendungszweck bestimmt (Rechnungs- oder Sollstellungsnummer, Periode, Einheit). Das ist ein Vorschlag, keine Buchung. Wählen Sie andere Posten als die bestimmten, erscheint ein Prüfhinweis; das Buchen ist erst mit einer Begründung der Abweichung möglich. Die Begründung wird dem Buchungstext vorangestellt. Wurde nichts erkannt, gilt die Standardreihenfolge.
+
+**Teilausführung je Auftrag (Zahlungsaufträge, Zahlungsdateien).** Unter jeder Zahlungsdatei lässt sich je Auftrag die Ausführung mit dem Bankumsatz als Nachweis oder die Ablehnung mit Grund erfassen. Der ausgeführte Betrag ergibt sich aus der Belastung des Bankumsatzes; nur dieser bestätigte Betrag gleicht die Verbindlichkeit aus, der Rest bleibt offen und wird angezeigt. Die Ausführung bucht und ist bis zur Freigabestufe G2 gesperrt. Die Ablehnung bucht nichts.
+
+**Freigabehistorie.** Der Freigabeverlauf eines Zahlungsauftrags zeigt gültige und entwertete Freigaben, den Freigebenden (Kurzkennung des Benutzers), den Zeitpunkt, die Prüfsumme des freigegebenen Stands und bei entwerteten Freigaben Zeitpunkt und Grund. Eine Änderung von Betrag oder IBAN entwertet Freigaben.
+
+**Einzelaufträge am Lastschriftlauf.** Am Lastschriftlauf klappt "Einzelaufträge" je Schuldner Mandat, Betrag, Bankstatus, Rückgabecode und eingezogenen Betrag auf. Rücklastschriften und Teileinzüge sind hervorgehoben. Die Ansicht bucht nichts; Korrekturen erfolgen nur per Storno.

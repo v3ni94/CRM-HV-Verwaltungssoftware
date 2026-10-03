@@ -186,6 +186,14 @@ class BankRule(IdMixin, TimestampMixin, TenantMixin, Base):
     """Controlled automation (6.9.4): only active rules may post; AI or learning only proposes."""
 
     __tablename__ = "bank_rule"
+    # AP05 / GAL-107 (6.9.4, E04): only an approved rule with limit and test evidence is active.
+    __table_args__ = (
+        CheckConstraint(
+            "approval_state <> 'active' OR (approved_by IS NOT NULL AND approved_at IS NOT NULL "
+            "AND max_amount > 0 AND test_evidence_document_id IS NOT NULL)",
+            name="active_needs_release",
+        ),
+    )
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
@@ -464,6 +472,14 @@ class PaymentBatch(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class PaymentOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "payment_order"
+    # GAL-101: platform is EUR only (ADR 0038); column documents the currency per record.
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        CheckConstraint("currency = 'EUR'", name="currency_eur"),
+        nullable=False,
+        default="EUR",
+        server_default="EUR",
+    )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
     property_bank_account_id: Mapped[uuid.UUID] = _fk("property_bank_account.id")

@@ -353,6 +353,7 @@ def test_d06_export_and_submission_leave_bank_and_payable_untouched(
     assert _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h))["ok"] is True
 
 
+@pytest.mark.annex_d("D11")
 def test_d11_mid_year_takeover_year_costs_complete_with_documents(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:

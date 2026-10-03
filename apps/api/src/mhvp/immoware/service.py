@@ -10,8 +10,10 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from mhvp.core.config import get_settings
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.webhooks import PinnedTarget, pin_target
 from mhvp.documents.models import Document
 from mhvp.immoware import caldav, carddav, webdav
 from mhvp.immoware.client import (
@@ -58,8 +60,14 @@ def dav_client(connection: ImmowareConnection) -> ReadOnlyDavClient:
             username=connection.username,
             password=connection.password,
             verify_tls=connection.verify_tls,
-        )
+        ),
+        pin=dav_pin,
     )
+
+
+def dav_pin(url: str) -> PinnedTarget:
+    """GAM-302: SSRF-Pruefung und Pinning je DAV-Anfrage (Plattformschalter wie Webhooks)."""
+    return pin_target(url, allow_private=get_settings().webhook_allow_private_targets)
 
 
 def carddav_url(connection: ImmowareConnection) -> str:

@@ -3,11 +3,12 @@
 import { useTranslations } from "next-intl";
 
 import type { ConsumptionComponent, ConsumptionInfoRow } from "@/components/portal/types";
+import { formatAmount } from "@/lib/format-eur";
 import { ui } from "@/lib/ui";
 
 export function formatQuantity(component: ConsumptionComponent | null | undefined, estimatedLabel: string, none: string): string {
   if (!component) return none;
-  const number = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(component.value));
+  const number = formatAmount(component.value);
   const unit = component.unit_of_measure ? ` ${component.unit_of_measure}` : "";
   return `${number}${unit}${component.kind === "estimated" ? ` (${estimatedLabel})` : ""}`;
 }

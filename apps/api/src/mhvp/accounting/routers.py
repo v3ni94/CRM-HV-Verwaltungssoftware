@@ -68,6 +68,44 @@ from mhvp.accounting.models import (
     RecurringInvoicePlan,
     ReviewStatus,
 )
+from mhvp.accounting.raw_responses import (
+    AccountingChecksOut,
+    AccountingCreateInvoiceOut,
+    AccountingDunningApproveOut,
+    AccountingDunningBlockListItemOut,
+    AccountingDunningInterestDraftOut,
+    AccountingDunningInterestRateCreateOut,
+    AccountingDunningInterestRatesOutItem,
+    AccountingDunningLetterCreateOut,
+    AccountingDunningLetterTextPreviewOut,
+    AccountingDunningListDeliveryProofsOutItem,
+    AccountingDunningMahnbescheidCreateOut,
+    AccountingDunningMarkSentOut,
+    AccountingDunningPrepareMahnbescheidOut,
+    AccountingDunningPreviewOut,
+    AccountingDunningRunOut,
+    AccountingDunningRunsItemOut,
+    AccountingFeeIssueOut,
+    AccountingGeneratePlanOut,
+    AccountingGetDunningSettingsOut,
+    AccountingGetInvoiceOut,
+    AccountingGetRunOut,
+    AccountingInvoiceDiscountOut,
+    AccountingLiquidityOut,
+    AccountingListDunningOverridesOutItem,
+    AccountingListInvoicesOutItem,
+    AccountingListRunsOutItem,
+    AccountingPaymentsByDebtorOutItem,
+    AccountingPostDunningSettingsPresetsOut,
+    AccountingPostInvoiceOut,
+    AccountingPostRunOut,
+    AccountingPreviewRunOut,
+    AccountingPutDunningSettingsOut,
+    AccountingReleaseInvoiceOut,
+    AccountingRevenueOutItem,
+    AccountingReviewInvoiceOut,
+    AccountingUpdateInvoiceOut,
+)
 from mhvp.accounting.response_models import (
     AccountingAccountSheetOut,
     AccountingOpenItemOut,
@@ -1684,6 +1722,7 @@ async def settlement_confirm(
     "/ledgers/{ledger_id}/checks",
     summary="Konsistenzprüfung B02, B07, B09",
     dependencies=[Depends(strict_query)],
+    response_model=AccountingChecksOut,
 )
 async def checks(
     ledger_id: uuid.UUID,
@@ -1937,7 +1976,12 @@ async def list_mappings(
         ]
 
 
-@router.post("/receivable-runs", status_code=201, summary="Sollstellungslauf: Vorschau")
+@router.post(
+    "/receivable-runs",
+    status_code=201,
+    summary="Sollstellungslauf: Vorschau",
+    response_model=AccountingPreviewRunOut,
+)
 async def preview_run(
     body: RunIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -1958,6 +2002,7 @@ async def preview_run(
     summary="Sollstellungsläufe",
     responses=PAGE_HEADERS,
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingListRunsOutItem],
 )
 async def list_runs(
     request: Request,
@@ -2001,7 +2046,12 @@ async def list_runs(
         ]
 
 
-@router.get("/receivable-runs/{run_id}", summary="Sollstellungslauf")
+@router.get(
+    "/receivable-runs/{run_id}",
+    summary="Sollstellungslauf",
+    response_model=AccountingGetRunOut,
+    dependencies=[Depends(strict_query)],
+)
 async def get_run(
     run_id: uuid.UUID,
     request: Request,
@@ -2025,7 +2075,11 @@ async def get_run(
         return _run_out(run, items)
 
 
-@router.post("/receivable-runs/{run_id}/post", summary="Sollstellungslauf buchen")
+@router.post(
+    "/receivable-runs/{run_id}/post",
+    summary="Sollstellungslauf buchen",
+    response_model=AccountingPostRunOut,
+)
 async def post_run(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -2149,6 +2203,7 @@ async def fee_preview(
 @router.post(
     "/admin-fees/{fee_id}/invoice-issue",
     summary="Honorarrechnung als XRechnung ausstellen (Rechnungsnummer, USt-Prüfung)",
+    response_model=AccountingFeeIssueOut,
 )
 async def fee_issue(
     fee_id: uuid.UUID,
@@ -2666,7 +2721,12 @@ async def put_invoice_check_settings(
         }
 
 
-@router.post("/invoices", status_code=201, summary="Eingangsrechnung erfassen")
+@router.post(
+    "/invoices",
+    status_code=201,
+    summary="Eingangsrechnung erfassen",
+    response_model=AccountingCreateInvoiceOut,
+)
 async def create_invoice(
     body: InvoiceIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -2692,7 +2752,11 @@ async def create_invoice(
         return await _invoice_full(session, inv)
 
 
-@router.put("/invoices/{invoice_id}", summary="Rechnung ändern (neue Version, Freigaben entfallen)")
+@router.put(
+    "/invoices/{invoice_id}",
+    summary="Rechnung ändern (neue Version, Freigaben entfallen)",
+    response_model=AccountingUpdateInvoiceOut,
+)
 async def update_invoice(
     invoice_id: uuid.UUID,
     body: InvoiceIn,
@@ -2746,7 +2810,11 @@ async def update_invoice(
         return await _invoice_full(session, inv)
 
 
-@router.get("/invoices/{invoice_id}", summary="Rechnung mit Prüfschritten")
+@router.get(
+    "/invoices/{invoice_id}",
+    summary="Rechnung mit Prüfschritten",
+    response_model=AccountingGetInvoiceOut,
+)
 async def get_invoice(
     invoice_id: uuid.UUID,
     request: Request,
@@ -2789,7 +2857,7 @@ _INVOICE_SORT = {
     "/invoices",
     summary="Rechnungseingang",
     responses=PAGE_HEADERS,
-    response_model=list[dict[str, Any]],
+    response_model=list[AccountingListInvoicesOutItem],
     description=LIST_PARAMS_DOC + " include: creditor (Kreditor, Kontakt des Rechnungsstellers).",
     dependencies=[Depends(strict_query)],
 )
@@ -2853,7 +2921,10 @@ async def list_invoices(
 
 
 @router.post(
-    "/invoices/{invoice_id}/reviews", status_code=201, summary="Prüfschritt erfassen (PÜ05)"
+    "/invoices/{invoice_id}/reviews",
+    status_code=201,
+    summary="Prüfschritt erfassen (PÜ05)",
+    response_model=AccountingReviewInvoiceOut,
 )
 async def review_invoice(
     invoice_id: uuid.UUID,
@@ -2942,7 +3013,9 @@ async def confirm_iban(
 
 
 @router.post(
-    "/invoices/{invoice_id}/release", summary="Rechnungsfreigabe (zweite Person, versionsgebunden)"
+    "/invoices/{invoice_id}/release",
+    summary="Rechnungsfreigabe (zweite Person, versionsgebunden)",
+    response_model=AccountingReleaseInvoiceOut,
 )
 async def release_invoice(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -2983,7 +3056,11 @@ async def release_invoice(
         return await _invoice_full(session, inv)
 
 
-@router.post("/invoices/{invoice_id}/post", summary="Rechnung buchen (Kreditor, offener Posten)")
+@router.post(
+    "/invoices/{invoice_id}/post",
+    summary="Rechnung buchen (Kreditor, offener Posten)",
+    response_model=AccountingPostInvoiceOut,
+)
 async def post_invoice(
     invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -3002,7 +3079,11 @@ async def post_invoice(
         return await _invoice_full(session, inv)
 
 
-@router.get("/invoices/{invoice_id}/discount", summary="Skonto zum Zahltag")
+@router.get(
+    "/invoices/{invoice_id}/discount",
+    summary="Skonto zum Zahltag",
+    response_model=AccountingInvoiceDiscountOut,
+)
 async def invoice_discount(
     invoice_id: uuid.UUID,
     pay_date: date,
@@ -3081,6 +3162,7 @@ async def create_plan(
     "/recurring-invoices/{plan_id}/generate",
     status_code=201,
     summary="Fällige Dauerrechnung als Entwurf erzeugen",
+    response_model=AccountingGeneratePlanOut,
 )
 async def generate_plan(
     plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -3352,7 +3434,9 @@ def _check_levels(levels: list[dict[str, Any]], *, override: bool) -> None:
 
 
 @router.get(
-    "/dunning-settings", summary="Mahnstufen, Gebühren und Zins lesen (Mandant oder Objekt)"
+    "/dunning-settings",
+    summary="Mahnstufen, Gebühren und Zins lesen (Mandant oder Objekt)",
+    response_model=AccountingGetDunningSettingsOut,
 )
 async def get_dunning_settings(
     request: Request,
@@ -3368,6 +3452,7 @@ async def get_dunning_settings(
     "/dunning-settings/overrides",
     summary="Objekte mit eigener Mahnstufen-Überschreibung",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingListDunningOverridesOutItem],
 )
 async def list_dunning_overrides(
     request: Request, principal: TenantPrincipal = Depends(READ)
@@ -3404,7 +3489,11 @@ _DUNNING_AUDIT_FIELDS = (
 )
 
 
-@router.put("/dunning-settings", summary="Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins")
+@router.put(
+    "/dunning-settings",
+    summary="Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins",
+    response_model=AccountingPutDunningSettingsOut,
+)
 async def put_dunning_settings(
     body: DunningSettingsIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -3503,6 +3592,7 @@ async def delete_dunning_override(
     "/dunning-settings/presets",
     status_code=201,
     summary="Vorschlagswerte laden (Betreiberentscheidung 25.09.2026, V7)",
+    response_model=AccountingPostDunningSettingsPresetsOut,
 )
 async def post_dunning_settings_presets(
     body: DunningSettingsPresetIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -3557,6 +3647,7 @@ async def post_dunning_settings_presets(
 @router.post(
     "/dunning-settings/letter-preview",
     summary="Textbaustein einer Mahnstufe mit Beispielposten (A33, nur Text, kein Versand)",
+    response_model=AccountingDunningLetterTextPreviewOut,
 )
 async def dunning_letter_text_preview(
     body: DunningLetterTextPreviewIn,
@@ -3577,7 +3668,12 @@ async def dunning_letter_text_preview(
     )
 
 
-@router.post("/dunning-runs", status_code=201, summary="Mahnlauf: Vorschau")
+@router.post(
+    "/dunning-runs",
+    status_code=201,
+    summary="Mahnlauf: Vorschau",
+    response_model=AccountingDunningPreviewOut,
+)
 async def dunning_preview(
     body: DunningRunIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -3600,7 +3696,11 @@ _DUNNING_RUN_LIST = ListSpec(
 )
 
 
-@router.get("/dunning-runs", summary="Mahnläufe (neueste zuerst)")
+@router.get(
+    "/dunning-runs",
+    summary="Mahnläufe (neueste zuerst)",
+    response_model=list[AccountingDunningRunsItemOut],
+)
 async def dunning_runs(
     request: Request,
     limit: int = Query(default=20, ge=1, le=200),
@@ -3623,7 +3723,7 @@ async def dunning_runs(
         ]
 
 
-@router.get("/dunning-runs/{run_id}", summary="Mahnlauf")
+@router.get("/dunning-runs/{run_id}", summary="Mahnlauf", response_model=AccountingDunningRunOut)
 async def dunning_run(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -3638,7 +3738,9 @@ async def dunning_run(
 
 
 @router.post(
-    "/dunning-runs/{run_id}/approve", summary="Mahnlauf freigeben (zweite Person, führendes System)"
+    "/dunning-runs/{run_id}/approve",
+    summary="Mahnlauf freigeben (zweite Person, führendes System)",
+    response_model=AccountingDunningApproveOut,
 )
 async def dunning_approve(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -3851,6 +3953,7 @@ async def dunning_add_delivery_proof(
     "/dunning-cases/{case_id}/delivery-proofs",
     summary="Zustellnachweise eines Mahnfalls",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingDunningListDeliveryProofsOutItem],
 )
 async def dunning_list_delivery_proofs(
     case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -3865,6 +3968,7 @@ async def dunning_list_delivery_proofs(
     "/dunning-cases/{case_id}/interest-draft",
     status_code=201,
     summary="Verzugszinsen als Sollstellungsentwurf anlegen (Freigabe über Vier-Augen-Buchung)",
+    response_model=AccountingDunningInterestDraftOut,
 )
 async def dunning_interest_draft(
     case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -3969,7 +4073,10 @@ async def dunning_block_create(
 
 
 @router.get(
-    "/dunning-blocks", summary="Mahnsperren je Posten", dependencies=[Depends(strict_query)]
+    "/dunning-blocks",
+    summary="Mahnsperren je Posten",
+    dependencies=[Depends(strict_query)],
+    response_model=list[AccountingDunningBlockListItemOut],
 )
 async def dunning_block_list(
     request: Request,
@@ -4043,6 +4150,7 @@ def _rate_out(rate: Any) -> dict[str, Any]:
     "/dunning-interest-rates",
     summary="Basiszinssätze mit Gültigkeitszeitraum",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingDunningInterestRatesOutItem],
 )
 async def dunning_interest_rates(
     request: Request, principal: TenantPrincipal = Depends(READ)
@@ -4066,6 +4174,7 @@ async def dunning_interest_rates(
     "/dunning-interest-rates",
     status_code=201,
     summary="Basiszinssatz ab Gültigkeitsbeginn mit Quelle erfassen",
+    response_model=AccountingDunningInterestRateCreateOut,
 )
 async def dunning_interest_rate_create(
     body: DunningInterestRateIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -4106,6 +4215,7 @@ async def dunning_interest_rate_create(
 @router.post(
     "/dunning-cases/{case_id}/mark-sent",
     summary="Mahnung als versendet markieren (M16-09: nur so kann die Stufe steigen)",
+    response_model=AccountingDunningMarkSentOut,
 )
 async def dunning_mark_sent(
     case_id: uuid.UUID,
@@ -4204,6 +4314,7 @@ async def dunning_letter_preview(
     "/dunning-cases/{case_id}/letter",
     status_code=201,
     summary="Mahnschreiben als PDF-Entwurf erzeugen und ablegen (kein Versand)",
+    response_model=AccountingDunningLetterCreateOut,
 )
 async def dunning_letter_create(
     case_id: uuid.UUID,
@@ -4279,6 +4390,7 @@ def _mahnbescheid_out(prep: Any) -> dict[str, Any]:
     "/dunning-cases/{case_id}/mahnbescheid-vorbereitung",
     status_code=201,
     summary="Mahnbescheid vorbereiten (nach letzter Stufe)",
+    response_model=AccountingDunningPrepareMahnbescheidOut,
 )
 async def dunning_prepare_mahnbescheid(
     case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -4387,6 +4499,7 @@ async def dunning_mahnbescheid_preview(
     "/dunning-cases/{case_id}/mahnbescheid",
     status_code=201,
     summary="Mahnbescheid-Vorbereitung als PDF erzeugen und ablegen (kein Antrag)",
+    response_model=AccountingDunningMahnbescheidCreateOut,
 )
 async def dunning_mahnbescheid_create(
     case_id: uuid.UUID,
@@ -4420,7 +4533,11 @@ async def dunning_mahnbescheid_create(
 EXPORT = require_permission("accounting:export")
 
 
-@router.get("/ledgers/{ledger_id}/liquidity", summary="Liquiditätsvorschau 90 Tage")
+@router.get(
+    "/ledgers/{ledger_id}/liquidity",
+    summary="Liquiditätsvorschau 90 Tage",
+    response_model=AccountingLiquidityOut,
+)
 async def liquidity(
     ledger_id: uuid.UUID,
     request: Request,
@@ -4438,6 +4555,7 @@ async def liquidity(
     "/ledgers/{ledger_id}/payments-by-debtor",
     summary="Zahlungen je Debitor",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingPaymentsByDebtorOutItem],
 )
 async def payments_by_debtor(
     ledger_id: uuid.UUID,
@@ -4456,6 +4574,7 @@ async def payments_by_debtor(
     "/ledgers/{ledger_id}/revenue",
     summary="Erträge je Erlöskonto",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingRevenueOutItem],
 )
 async def revenue(
     ledger_id: uuid.UUID,

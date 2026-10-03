@@ -94,7 +94,7 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
     <span ref={wrap} className="relative inline-flex">
       <button
         type="button"
-        className={`${base} cursor-help focus:outline-none focus:ring-2 focus:ring-focus`}
+        className={`${base} cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-focus`}
         aria-describedby={`${id}-hint`}
         aria-expanded={open}
         data-status={status ?? undefined}

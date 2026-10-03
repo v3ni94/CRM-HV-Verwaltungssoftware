@@ -1,5 +1,7 @@
 # Offene Punkte aus dem Master-Prompt, Stand 03.10.2026
 
+Stand 1.71.0 (03.10.2026): Welle 26 erledigt 89 Befunde, 28 teilweise; Prüfung GAN: 80 der 164 Punkte erledigt, 23 in Arbeit (Welle 27), 61 offen; Details docs/plans/IMPLEMENTATION_STATUS.md Welle 26
+
 Frage des Betreibers: "Welche Punkte aus dem Master-Prompt wurden noch nicht umgesetzt?" Stand: Version 1.69.0 (Datei `VERSION`) einschließlich der Ergebnisse der Welle 25 (Pakete AO01 bis AO14, Integration als 1.70.0). Erstellt von Paket AO16, nur lesend.
 
 Quellen: `docs/MASTER-PROMPT.md` (Abschnitte 1, 18, 18.0, Anhang D, Anhang E), `docs/plans/IMPLEMENTATION_STATUS.md`, `docs/plans/LUECKENLISTE-2026-09-30.md`, `-2026-10-01.md`, `-2026-10-03.md`, `-2026-10-03-GAK.md` (nur Stand teilweise oder offen), `$SP/w25/RESTE24.md`, `$SP/w25/GAL-1.md` bis `GAL-3.md`, `$SP/w26/GAM-1.md` bis `GAM-8.md`, `$SP/w25/AO*.json` (Felder partial und open_points), `docs/OPEN_QUESTIONS.md`, `docs/plans/GATE-CHECKLISTEN.md`. `$SP` ist das Arbeitsverzeichnis der Sitzung (Scratchpad); die GAL- und GAM-Befunde sind noch nicht in eine Lückenliste im Repo übernommen.

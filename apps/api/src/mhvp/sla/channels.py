@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 from email.message import EmailMessage
 from email.utils import make_msgid
@@ -18,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import transport
 from mhvp.communication.models import Mailbox
-from mhvp.core.config import Settings
+from mhvp.core.config import Settings, get_settings
+from mhvp.core.webhooks import PinnedTarget, UnsafeWebhookTargetError, pin_target
 from mhvp.sla.models import AlertChannel, SlaRule, SmsGateway
 from mhvp.tickets.models import Priority, Ticket
 
@@ -138,8 +140,13 @@ async def send_sms(
     text: str,
     *,
     http_transport: httpx.AsyncBaseTransport | None = None,
+    pin: Callable[[str], PinnedTarget] | None = None,
 ) -> str | None:
-    """Sendet eine SMS; liefert ``None`` bei Erfolg, sonst Fehlertext ohne Zugangsdaten."""
+    """Sendet eine SMS; liefert ``None`` bei Erfolg, sonst Fehlertext ohne Zugangsdaten.
+
+    GAM-301: vor jedem Versand wird das Ziel mit ``pin_target`` geprüft (nur https, keine
+    privaten, Loopback oder Link-Local Adressen) und auf die geprüfte Adresse festgelegt;
+    Weiterleitungen werden nicht verfolgt, Fehlertexte enthalten keinen Antwortinhalt."""
     if gateway is None or not gateway.enabled:
         return "SMS-Gateway nicht eingerichtet oder deaktiviert."
     if not gateway.url or not gateway.body_template:
@@ -150,20 +157,33 @@ async def send_sms(
         body = render_sms_body(gateway.body_template, to.strip(), text, gateway.sender)
     except ValueError:
         return "SMS-Vorlage ergibt kein gültiges JSON."
+    pinner = pin or (
+        lambda url: pin_target(url, allow_private=get_settings().webhook_allow_private_targets)
+    )
+    try:
+        target = pinner(gateway.url)
+    except UnsafeWebhookTargetError:
+        return "SMS-Gateway-Ziel nicht zulässig (nur öffentliche https-Adressen)."
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if gateway.auth_header_name and gateway.auth_header_value:
         headers[gateway.auth_header_name] = gateway.auth_header_value
     try:
         async with httpx.AsyncClient(
-            timeout=SMS_TIMEOUT_SECONDS, transport=http_transport
+            timeout=SMS_TIMEOUT_SECONDS, transport=http_transport, follow_redirects=False
         ) as client:
             response = await client.request(
-                gateway.method or "POST", gateway.url, content=body, headers=headers
+                gateway.method or "POST",
+                target.url,
+                content=body,
+                headers={**headers, **target.headers},
+                extensions=target.extensions,
             )
     except httpx.TimeoutException:
         return "SMS-Gateway antwortet nicht (Zeitüberschreitung 10 s)."
     except httpx.HTTPError as exc:
         return f"SMS-Gateway nicht erreichbar ({type(exc).__name__})."
+    if 300 <= response.status_code < 400:
+        return "SMS-Gateway leitet weiter; Weiterleitungen werden nicht verfolgt."
     if response.status_code >= 400:
         return f"SMS-Gateway meldet HTTP {response.status_code}."
     return None

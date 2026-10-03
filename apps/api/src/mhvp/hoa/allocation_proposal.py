@@ -24,6 +24,9 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa import calc
 from mhvp.hoa.models import HoaAllocationProposalSetting, HoaStatement, Resolution
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaAllocationProposalGetAllocationProposalSettingOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -86,6 +89,7 @@ async def plan_resolution_day(
     "/allocation-proposal-settings",
     summary="Zuordnungsvorschlag Eigentümerwechsel (Schalter)",
     dependencies=[Depends(strict_query)],
+    response_model=HoaAllocationProposalGetAllocationProposalSettingOut,
 )
 async def get_allocation_proposal_setting(
     request: Request,

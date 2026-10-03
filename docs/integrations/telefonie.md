@@ -21,8 +21,8 @@ Paperless-Webhook (`docs/plans/M14-belegeingang.md`):
 
 | Kopfzeile | Inhalt |
 | --- | --- |
-| `X-MHVP-Timestamp` | Unix-Sekunden; höchstens 300 Sekunden Abweichung zur Serverzeit |
-| `X-MHVP-Signature` | `sha256=<hex>` von HMAC-SHA256(Geheimnis, `"<timestamp>." + Rohdaten`) |
+| `X-MHVP-Timestamp` | Unix-Sekunden; höchstens 300 Sekunden Abweichung zur Serverzeit (beim Standardformat optional, muss dann `t` entsprechen) |
+| `X-MHVP-Signature` | Standard (GAL-204, wie ausgehende Webhooks): `t=<unix>,v1=<hex>` mit `v1` = HMAC-SHA256(Geheimnis, `"<t>." + Rohdaten`). Altformat, abgekündigt: `sha256=<hex>` über `"<timestamp>." + Rohdaten` mit `X-MHVP-Timestamp` |
 | `X-MHVP-Tenant` | Mandanten-Slug oder Id (entfällt bei Pfadvariante) |
 | `Content-Type` | `application/json` |
 

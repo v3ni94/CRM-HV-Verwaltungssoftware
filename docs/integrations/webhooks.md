@@ -32,6 +32,24 @@ Entfernung nur mit v2 nach mindestens sechs Monaten Vorlauf).
   Body und lehnen Zeitstempel ab, die älter als fünf Minuten sind.
 * Antwort 2xx gilt als zugestellt. Wiederholung nach 1 min, 5 min, 30 min, 2 h, 6 h, 24 h,
   danach Status `failed` (sichtbar im Protokoll und in `GET /api/v1/platform/ops/metrics`).
+* Ablauf je Zustellung (GAM-501, Welle 26): Der Job beansprucht jede fällige Zustellung in
+  einer eigenen kurzen Transaktion (Versuchszähler plus eins, nächster Versuchszeitpunkt als
+  Sperrfrist, Commit), ruft das Ziel ohne offene Datenbanktransaktion auf (höchstens
+  15 Sekunden je Aufruf, Zeitüberschreitung zählt als Fehlversuch) und schreibt das Ergebnis
+  in einer neuen Transaktion. Bricht der Worker zwischen Beanspruchung und Ergebnis ab, gilt
+  der Versuch als fehlgeschlagen; nach dem letzten Versuch wird die Zustellung `failed`
+  ("outcome unknown"). Ein Lauf endet nach seinem Zeitbudget (Soft-Limit der Klasse short
+  minus 40 Sekunden, Standard 200 Sekunden), die Zeit wird gleichmäßig auf die Mandanten
+  verteilt.
+* Fehlerisolation (GAM-502): Ein Fehler bei einem Mandanten wird protokolliert und gezählt,
+  die übrigen Mandanten werden weiter bedient.
+* Neue Ereignisse (GAM-503): Je Abonnement wird ein Wasserzeichen (`watermark_occurred_at`)
+  geführt; gelesen werden nur Ereignisse ab Wasserzeichen minus 15 Minuten (Überlappung für
+  spät bestätigte Transaktionen), höchstens 1.000 je Lauf.
+* Reihenfolge: Die Zustellreihenfolge ist nicht garantiert. Eine fehlgeschlagene ältere
+  Zustellung kann nach jüngeren eintreffen (zum Beispiel `*.updated` vor `*.created`).
+  Empfänger ordnen nach `occurred_at` im Body und entdoppeln über `Idempotency-Key`
+  (gleich der Zustell-ID, bei jeder Wiederholung identisch).
 * Body (Schlüssel sortiert, kompakt):
 
 ```json

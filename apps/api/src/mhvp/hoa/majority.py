@@ -28,6 +28,10 @@ from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import HoaMajorityRule, Resolution
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaMajorityCreateSubjectRuleOut,
+    HoaMajorityListSubjectRulesOutItem,
+)
 from mhvp.properties.models import LegalEntity, LegalEntityKind
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
@@ -324,6 +328,7 @@ async def _ensure_unique(
     "/majority-rules/subject-rules",
     summary="Mehrheitsregeln je Beschlussgegenstand",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaMajorityListSubjectRulesOutItem],
 )
 async def list_subject_rules(
     request: Request,
@@ -354,6 +359,7 @@ async def list_subject_rules(
     "/majority-rules/subject-rules",
     status_code=201,
     summary="Mehrheitsregel je Beschlussgegenstand anlegen",
+    response_model=HoaMajorityCreateSubjectRuleOut,
 )
 async def create_subject_rule(
     body: HoaSubjectRuleIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)

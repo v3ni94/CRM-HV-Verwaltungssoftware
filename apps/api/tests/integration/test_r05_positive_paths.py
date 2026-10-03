@@ -167,6 +167,27 @@ def _statement(
     }
 
     async def fn(session: Any) -> UUID:
+        resolution_id: UUID | None = None
+        if status in {"resolved", "issued", "due", "posted", "locked"}:
+            # ck_hoa_statement_resolved_needs_resolution (0462, AP05): a resolved statement
+            # always references its resolution.
+            from mhvp.accounting.models import Ledger
+            from mhvp.hoa.models import Resolution
+
+            ledger = await session.get(Ledger, ledger_id)
+            res = Resolution(
+                tenant_id=world.tenant_a,
+                legal_entity_id=ledger.legal_entity_id,
+                number=year,
+                decided_on=date(year + 1, 6, 1),
+                subject="Jahresabrechnung",
+                wording="Die Jahresabrechnung wird beschlossen.",
+                status="positive",
+                subject_type="hoa_statement",
+            )
+            session.add(res)
+            await session.flush()
+            resolution_id = res.id
         row = HoaStatement(
             tenant_id=world.tenant_a,
             ledger_id=ledger_id,
@@ -174,6 +195,7 @@ def _statement(
             status=StatementStatus(status),
             snapshot=snapshot,
             snapshot_hash="a" * 64,
+            resolution_id=resolution_id,
         )
         session.add(row)
         await session.flush()

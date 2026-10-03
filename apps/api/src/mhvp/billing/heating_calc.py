@@ -23,7 +23,7 @@ CONSUMPTION_SHARE_DEFAULT = 70
 HOT_WATER_METHODS = ("flat_percent", "measured", "formula")
 CO2_BUILDING_KINDS = ("residential", "non_residential", "mixed", "self_supply", "unknown")
 CO2_MODES = ("apply", "not_applicable")
-VALUE_KINDS = ("actual", "estimated", "missing")
+VALUE_KINDS = ("actual", "interim", "estimated", "missing")
 # Draft only: § 9 Abs. 2 HeizkostenV names a factor for the hot water energy formula; the
 # value here is configuration to be verified against the official text (M17-02).
 HOT_WATER_FORMULA_FACTOR_DEFAULT = Decimal("2.5")

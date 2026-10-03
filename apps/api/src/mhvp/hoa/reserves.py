@@ -29,6 +29,11 @@ from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import EconomicPlan, HoaReserve, HoaReserveMovement, HoaStatement, PlanItem
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaReservesGetReserveDevelopmentOut,
+    HoaReservesGetReserveOut,
+    HoaReservesPatchReserveOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -315,7 +320,11 @@ async def _reserve_with_ledger(session: AsyncSession, reserve_id: uuid.UUID) -> 
     return reserve, ledger
 
 
-@router.get("/reserves/{reserve_id}", summary="Zweckgebundene Rücklage mit Rechtsträger")
+@router.get(
+    "/reserves/{reserve_id}",
+    summary="Zweckgebundene Rücklage mit Rechtsträger",
+    response_model=HoaReservesGetReserveOut,
+)
 async def get_reserve(
     reserve_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -364,7 +373,11 @@ async def _ensure_opening_unlocked(
         )
 
 
-@router.patch("/reserves/{reserve_id}", summary="Zweckgebundene Rücklage ändern (M24-01)")
+@router.patch(
+    "/reserves/{reserve_id}",
+    summary="Zweckgebundene Rücklage ändern (M24-01)",
+    response_model=HoaReservesPatchReserveOut,
+)
 async def patch_reserve(
     reserve_id: uuid.UUID,
     body: HoaReservePatchIn,
@@ -414,6 +427,7 @@ async def patch_reserve(
 @router.get(
     "/reserves/{reserve_id}/development",
     summary="Entwicklung einer Rücklage je Jahr (Anfang, Zuführung, Entnahme, Zinsen, Ende)",
+    response_model=HoaReservesGetReserveDevelopmentOut,
 )
 async def get_reserve_development(
     reserve_id: uuid.UUID,

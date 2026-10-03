@@ -87,3 +87,42 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         for line in _FORBIDDEN_SKIPS[:20]:
             print(f"  {line}")  # noqa: T201
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+# --- AP11 (GAM-611): fixed business day for date dependent tests ------------------------------
+
+REFERENCE_DAY = "2026-03-16"  # a Monday outside holidays and month or year boundaries
+
+
+@pytest.fixture
+def freeze_business_day(monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
+    """Factory that fixes ``mhvp.core.clock.local_today()`` (additive, opt-in per test).
+
+    Only the clock module is patched (its ``datetime`` name), never ``datetime`` globally, so
+    timestamps, tokens and database time keep running. Every importer of ``local_today`` sees
+    the fixed day, also modules that imported the function by name. Returns the fixed date."""
+    from datetime import UTC, date, datetime
+    from zoneinfo import ZoneInfo
+
+    from mhvp.core import clock
+
+    def freeze(day: str = REFERENCE_DAY) -> date:
+        fixed = datetime.combine(date.fromisoformat(day), datetime.min.time()).replace(
+            hour=12, tzinfo=ZoneInfo("Europe/Berlin")
+        )
+
+        class _FrozenDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):  # type: ignore[no-untyped-def]
+                return fixed.astimezone(tz or UTC)
+
+        monkeypatch.setattr(clock, "datetime", _FrozenDatetime)
+        return fixed.date()
+
+    return freeze
+
+
+@pytest.fixture
+def fixed_reference_day(freeze_business_day):  # type: ignore[no-untyped-def]
+    """The business day is fixed to ``REFERENCE_DAY`` (use via ``usefixtures``)."""
+    return freeze_business_day()

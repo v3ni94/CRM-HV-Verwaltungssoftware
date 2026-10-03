@@ -246,3 +246,12 @@ check routes (nothing persisted), 9 routes whose write right is checked in the h
 personal calendar feed token (open question AJ21-01). Mail approval deputies and playbook
 use/feedback now need `communication:update`, SLA alert acknowledgement `sla:update`, AI
 knowledge feedback `ai:create`.
+
+## Tenant scoped foreign keys (GAL-103, ADR 0039, migration 0460)
+
+Plain foreign keys ignore RLS. `mhvp.core.db.tenant_fk` measures all foreign keys between
+tenant tables (`uv run python -m mhvp.core.db.tenant_fk`) and lists the tables guarded by the
+trigger `mhvp_tenant_fk_guard` (money and WEG domains: referenced row must have the same
+`tenant_id`, SQLSTATE 23503). The unguarded rest is the ratchet
+`tests/unit/data/ap03_tenant_fk_ratchet.json` (only shrinks); new tenant foreign keys are
+guarded in their migration with `tenant_fk.guard_statements` and added to `TENANT_FK_GUARDED`.

@@ -11,6 +11,10 @@ import {
   formatDateTime,
   formatEur,
 } from "@/lib/format";
+import { InstructionTextNotice } from "@/components/invoices/InstructionTextNotice";
+import { EMPTY_LINE, InvoiceLinesEditor } from "@/components/invoices/InvoiceLinesEditor";
+import { checkSplitSum, impliedVatPercent, type EntryLine } from "@/lib/invoice-lines";
+import { centsToDecimal } from "@/lib/money";
 import { ui } from "@/lib/ui";
 
 export type DraftField = {
@@ -305,6 +309,9 @@ export function ReceiptIntake({
   const [form, setForm] = useState<Form | null>(null);
   const [ledger, setLedger] = useState(ledgers[0]?.id ?? "");
   const [account, setAccount] = useState("");
+  // GAM-106: Aufteilung auf mehrere Zeilen (Konto, Netto, Steuersatz, Begründung je Zeile).
+  const [split, setSplit] = useState(false);
+  const [splitLines, setSplitLines] = useState<EntryLine[]>([{ ...EMPTY_LINE }, { ...EMPTY_LINE }]);
   const [provider, setProvider] = useState("");
   const [providerQuery, setProviderQuery] = useState("");
   const [providers, setProviders] = useState<Option[]>([]);
@@ -449,12 +456,18 @@ export function ReceiptIntake({
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => (p ? { ...p, [name]: e.target.value } : p));
 
+  const splitOk =
+    !split ||
+    (!!form &&
+      checkSplitSum(splitLines, form.gross).ok &&
+      splitLines.every((l) => l.account_id && l.text.trim().length >= 3));
   const canConfirm =
     !!selected &&
     selected.status === "proposed" &&
     !!form &&
     !!ledger &&
-    !!account &&
+    (split || !!account) &&
+    splitOk &&
     !!provider &&
     form.invoice_number.trim() !== "" &&
     form.invoice_date !== "" &&
@@ -487,14 +500,26 @@ export function ReceiptIntake({
         document_id: selected.document_id,
         order_reference: form.order_reference.trim() || null,
         currency: form.currency || "EUR",
-        lines: [
-          {
-            account_id: account,
-            net: form.net,
-            vat_percent: "19",
-            vat: form.vat,
-          },
-        ],
+        lines: split
+          ? splitLines.map((l) => {
+              const n = checkSplitSum([l], "0").totals;
+              return {
+                account_id: l.account_id,
+                net: centsToDecimal(n?.net ?? 0n),
+                vat_percent: l.vat_percent,
+                vat: centsToDecimal(n?.vat ?? 0n),
+                text: l.text.trim(),
+              };
+            })
+          : [
+              {
+                account_id: account,
+                net: form.net,
+                // GAM-106: Steuersatz aus Netto und Steuer des Belegs, nicht fest 19 %.
+                vat_percent: impliedVatPercent(form.net, form.vat) ?? "19",
+                vat: form.vat,
+              },
+            ],
       },
     };
     const res = await bff<ReceiptDraft>(`${R}/${selected.id}/confirm`, {
@@ -773,6 +798,7 @@ export function ReceiptIntake({
             </div>
           ) : null}
 
+          <InstructionTextNotice texts={[...selected.warnings, ...(selected.findings ?? [])]} />
           {selected.warnings.length > 0 ? (
             <div className="flex flex-col gap-1 rounded-md border border-warning-fg/20 bg-warning-bg p-2 text-sm text-warning-fg">
               <span className="font-medium">{t("review.warnings")}</span>
@@ -938,7 +964,22 @@ export function ReceiptIntake({
                     ))}
                   </select>
                 </label>
-                <div className="flex flex-col gap-1">
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <input type="checkbox" checked={split} onChange={(e) => setSplit(e.target.checked)} />
+                  {t("review.split")}
+                </label>
+                {split && form ? (
+                  <div className="sm:col-span-2">
+                    <InvoiceLinesEditor
+                      accounts={accounts[ledger] ?? []}
+                      lines={splitLines}
+                      documentGross={form.gross}
+                      onLines={setSplitLines}
+                      onDocumentGross={(v) => setForm((p) => (p ? { ...p, gross: v } : p))}
+                    />
+                  </div>
+                ) : null}
+                <div className={split ? "hidden" : "flex flex-col gap-1"}>
                   <label className="flex flex-col gap-1">
                     <span className={ui.label}>{t("review.account")}</span>
                     <select

@@ -81,3 +81,12 @@ Auszahlungsbetrag 864,73 EUR.
 - Zinseszins innerhalb eines Entwurfs über mehrere Jahre ohne erfasste Zinsbewegungen
   (derzeit bewusst nicht; Entscheidung Betreiber mit Rechtsberatung).
 - Übergang der Bewegungen in Buchungen (M10, G1) und PDF-Vorlage der Kautionsabrechnung.
+
+## Invariante: höchstens eine freigegebene Abrechnung je Kaution (AP25)
+
+- Art: Produktschutz (Geld Dritter, keine zweite Auszahlung); Quellenstatus: keine Rechtsgrundlage, technische Absicherung.
+- Freigabe sperrt die Abrechnung (Zeilensperre) und die Kaution; der Status wird innerhalb der Sperre geprüft, eine zweite parallele Freigabe erhält 409.
+- Solange eine freigegebene Abrechnung besteht, lehnt die API das Anlegen und Freigeben eines weiteren Entwurfs derselben Kaution mit 409 ab. Ein Storno freigegebener Abrechnungen gibt es derzeit nicht; es bliebe hinter G3.
+- Datenbank: partieller eindeutiger Index `uq_deposit_settlement_released` (Migration 0469); die Migration bricht bei vorhandenen Doppelungen mit Meldung ab.
+- Abnahmefall: tests/integration/test_m5_deposit_settlement_parallel.py.
+- Änderungsgrund: AP10-01 und AP10-02 (Welle 26, GAM-606).

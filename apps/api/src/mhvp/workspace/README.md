@@ -205,3 +205,10 @@ Der Mandantenschalter `notification_mail_content` (`voll` Standard, `hinweis`) l
 GAI-110 (Welle 21): `FILTER_RESOURCES` enthält zusätzlich `journal`, `open_items`, `dunning_cases`, `hoa_properties` und `work_orders`. Angebunden sind das Journal (Parameter `property`) und die Auftragsliste (`status`); Offene Posten, Mahnfälle und WEG Listen haben noch keine Abfrageparameter in der Oberfläche, die Ressourcen stehen für die Anbindung bereit.
 
 AL05 (Welle 23, GAI-110 Rest): `FILTER_RESOURCES` enthält zusätzlich `payment_runs` (gespeicherte Zahllauf-Vorschauen, Parameter `as_of`, `trigger`) und `mailbox` (Postfach, Parameter `tab`, `status`, `postfach`, `q`, `abgleich`). `GET /accounting/payment-runs/previews` nimmt zusätzlich `as_of` (Stichtag, exakt) und `trigger` (`manual`, `schedule`, `failed`) an; unbekannte Parameter bleiben 422. Tests: `tests/integration/test_al05_preview_filters.py`.
+
+## Fehlerprotokoll der Hintergrundjobs (Welle 26, AP07, GAM-504 bis GAM-509)
+
+* Tabelle `job_failure` (mandantenbezogen, RLS, Migration 0464): ein Eintrag je gescheitertem Mandantenschritt eines geplanten Jobs (Automatikbuchung `banking.auto_post` mit Verweis auf den Abruflauf, Ereignisverbraucher `banking.process_events` und `automation.process_events`, `accounting.open_item_balance_refresh`, `contracts.expire_mandates`). Gespeichert werden nur Jobschlüssel, Ausnahmeklasse und Zeitpunkt, kein Meldungstext.
+* Tabelle `task_failure` (Plattform, ohne Mandantenspalte): endgültig gescheiterte Celery-Aufgaben über das Signal `task_failure` (Wiederholungen zählen nicht).
+* `/platform/ops/metrics` zählt `job_failures_24h`, `auto_post_runs_failed_24h`, `event_consumer_failures_24h` und `tasks_failed_24h`; alle vier alarmieren bei einem Wert über null. `GET /platform/ops/failures?hours=&limit=` zeigt Plattformadministratoren die letzten Einträge.
+* Code: `mhvp/core/job_failures.py`; Wiederholungsrichtlinie für Zustellungen (GAL-206): `core/task_policy.retry_transient` (exponentiell, nur Netzwerk, Datenbankverbindung, HTTP 408, 425, 429 und 5xx, `Retry-After` wird beachtet).

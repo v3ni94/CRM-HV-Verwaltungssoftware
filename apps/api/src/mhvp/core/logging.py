@@ -13,7 +13,7 @@ from opentelemetry import trace
 from structlog.types import EventDict, Processor
 
 from mhvp.core.config import LogFormat, Settings
-from mhvp.core.redaction import redact_event
+from mhvp.core.redaction import pseudonymize_event, redact_event
 
 
 def add_trace_context(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
@@ -33,6 +33,7 @@ _SHARED_PROCESSORS: list[Processor] = [
     structlog.processors.TimeStamper(fmt="iso", utc=True),
     structlog.processors.StackInfoRenderer(),
     redact_event,  # S16-03: no secrets in logs
+    pseudonymize_event,  # GAM-409: personal keys pseudonymised
 ]
 
 

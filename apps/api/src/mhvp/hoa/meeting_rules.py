@@ -28,6 +28,12 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import Attendance, Meeting, Resolution
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaMeetingRulesAttendanceListOut,
+    HoaMeetingRulesGetMeetingSettingsOut,
+    HoaMeetingRulesPutDialInOut,
+    HoaMeetingRulesPutMeetingSettingsOut,
+)
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
 router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
@@ -364,7 +370,11 @@ SETTINGS_NOTE = (
 )
 
 
-@router.get("/meeting-settings", summary="Einladungsfrist und virtuelle Versammlung (Mandant)")
+@router.get(
+    "/meeting-settings",
+    summary="Einladungsfrist und virtuelle Versammlung (Mandant)",
+    response_model=HoaMeetingRulesGetMeetingSettingsOut,
+)
 async def get_meeting_settings(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> dict[str, Any]:
@@ -384,7 +394,11 @@ async def get_meeting_settings(
         }
 
 
-@router.put("/meeting-settings", summary="Einladungsfrist und virtuelle Versammlung setzen")
+@router.put(
+    "/meeting-settings",
+    summary="Einladungsfrist und virtuelle Versammlung setzen",
+    response_model=HoaMeetingRulesPutMeetingSettingsOut,
+)
 async def put_meeting_settings(
     body: MeetingSettingsIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS_UPDATE)
 ) -> dict[str, Any]:
@@ -416,7 +430,11 @@ async def put_meeting_settings(
         }
 
 
-@router.put("/meetings/{meeting_id}/dial-in", summary="Einwahldaten (nur Eigentümer im Portal)")
+@router.put(
+    "/meetings/{meeting_id}/dial-in",
+    summary="Einwahldaten (nur Eigentümer im Portal)",
+    response_model=HoaMeetingRulesPutDialInOut,
+)
 async def put_dial_in(
     meeting_id: uuid.UUID,
     body: DialInIn,
@@ -459,6 +477,7 @@ async def put_dial_in(
 @router.get(
     "/meetings/{meeting_id}/attendance-list",
     summary="Teilnahmenachweis mit Kanal (Präsenz, online, Vollmacht)",
+    response_model=HoaMeetingRulesAttendanceListOut,
 )
 async def attendance_list(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

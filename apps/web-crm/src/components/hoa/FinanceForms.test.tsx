@@ -89,11 +89,11 @@ describe("W10 finance forms", () => {
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ resolution_id: "r1" });
   });
 
-  it("offers the takeover code migration_opening as explained difference (A80)", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }));
-    renderIntl(<ReconciliationNotes statementId={ID} notes={[{ code: "migration_opening", amount: "800.00", note: "Vorperiode Altsystem" }]} />);
-    expect(screen.getByLabelText("Art")).toHaveValue("migration_opening");
-    expect(screen.getByText("Übernahme aus Altsystem (Vorperiode)")).toBeInTheDocument();
+  it("does not offer migration_opening, the API computes it (GAM-112)", async () => {
+    renderIntl(<ReconciliationNotes statementId={ID} notes={[{ code: "migration_opening", amount: "800.00", note: "Vorperiode Altsystem" }, { code: "other", amount: "1.00", note: "Sonst" }]} />);
+    expect(screen.getAllByLabelText("Art")).toHaveLength(1);
+    expect(screen.getByLabelText("Art")).toHaveValue("other");
+    expect(screen.queryByText("Übernahme aus Altsystem (Vorperiode)")).toBeNull();
   });
 
   it("saves the explained differences of the reconciliation with PUT", async () => {

@@ -91,7 +91,9 @@ Kopfzeile X-MHVP-Timestamp, Mandant (Kurzname oder ID) in X-MHVP-Tenant oder als
 Pfadsegment, Signatur `sha256=<hex>` in X-MHVP-Signature über die Zeichenkette
 `<Zeitstempel>.` gefolgt vom Rohinhalt der Meldung, Inhalt als JSON mit `document_id`
 (Paperless-Nummer) und optional `title`. Meldungen älter als fünf Minuten werden
-abgewiesen.
+abgewiesen. Seit Welle 26 (GAL-204) ist das Standardformat wie bei ausgehenden Webhooks
+`t=<Zeitstempel>,v1=<hex>` in X-MHVP-Signature (Zeitstempelkopfzeile dann optional); das
+Format `sha256=<hex>` gilt als abgekündigt und wird weiter angenommen.
 
 ## Automatischer Belegeingang aus E-Mails
 

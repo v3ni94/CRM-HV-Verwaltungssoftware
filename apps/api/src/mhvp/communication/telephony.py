@@ -6,7 +6,9 @@ operator, ``docs/integrations/telefonie.md``) calls it directly. Every delivery 
 the Paperless webhook (``mhvp.documents.paperless_webhook``):
 
 * ``X-MHVP-Timestamp``: Unix seconds, at most ``WINDOW_SECONDS`` away from the server clock;
-* ``X-MHVP-Signature``: ``sha256=<hex>`` of HMAC-SHA256(secret, ``"<timestamp>." + raw body``)
+* ``X-MHVP-Signature``: standard ``t=<unix>,v1=<hex>`` like outgoing webhooks (GAL-204;
+  the timestamp header is then optional) or legacy ``sha256=<hex>`` (deprecated) of
+  HMAC-SHA256(secret, ``"<timestamp>." + raw body``)
   with the secret stored per tenant in ``telephony_settings`` (write only, field encrypted);
 * ``X-MHVP-Tenant`` (or the path segment): tenant slug or id.
 
@@ -193,10 +195,9 @@ def sign(secret: str, timestamp: int | str, body: bytes) -> str:
 
 
 def verify(secret: str, timestamp: str | None, signature: str | None, body: bytes) -> bool:
-    if not signature or not signature.startswith("sha256="):
-        return False
+    """GAL-204: standard ``t=<unix>,v1=<hex>`` or legacy ``sha256=<hex>`` (deprecated)."""
     return (
-        hmac_signature.check(
+        hmac_signature.check_inbound(
             secret, body, timestamp, signature, now=time.time(), window=WINDOW_SECONDS
         )
         is None
@@ -383,7 +384,8 @@ async def _receive(request: Request, tenant_key: str | None) -> dict[str, Any]:
             raise _refuse()
 
     assert signature is not None  # noqa: S101 - verified above
-    marker = f"telephony-webhook:{tenant_id}:{hashlib.sha256(signature.encode()).hexdigest()}"
+    token = hmac_signature.replay_token(signature)
+    marker = f"telephony-webhook:{tenant_id}:{hashlib.sha256(token.encode()).hexdigest()}"
     fresh = await resources.redis.set(marker, "1", nx=True, ex=WINDOW_SECONDS * 2)
     if not fresh:
         raise ProblemError(ErrorCodes.WEBHOOK_REPLAY)

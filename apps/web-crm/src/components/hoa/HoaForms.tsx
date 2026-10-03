@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { GatedAction } from "@/components/gated/GatedAction";
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { AgendaResultForm, MEETING_KINDS } from "@/components/hoa/MeetingDetailsForm";
 import { PlanDifferences } from "@/components/hoa/PlanDifferences";
@@ -187,11 +188,14 @@ export function HoaItemForm({
   id,
   keys,
   accounts = [],
+  subCommunities = [],
 }: {
   target: "plan" | "statement";
   id: string;
   keys: Key[];
   accounts?: { id: string; number: string; name: string }[];
+  /** AP21 / GAM-109: sub communities of the property (Mehrhausanlage). */
+  subCommunities?: { id: string; code: string; name: string }[];
 }) {
   const t = useTranslations("HoaWork");
   const { busy, error, call } = useCall();
@@ -201,13 +205,14 @@ export function HoaItemForm({
   const [component, setComponent] = useState("hoa_fee");
   const [basis, setBasis] = useState("");
   const [account, setAccount] = useState("");
+  const [sub, setSub] = useState("");
   const ok = label.trim() && /^\d+([.,]\d{1,2})?$/.test(amount) && key && (target === "plan" || basis.trim().length >= 3);
   const add = async () => {
     const common = { label: label.trim(), amount: amount.replace(",", "."), allocation_key_id: key };
     const res =
       target === "plan"
         ? await call(`plans/${id}/items`, { ...common, component })
-        : await call(`statements/${id}/costs`, { ...common, basis: basis.trim(), account_id: account || null });
+        : await call(`statements/${id}/costs`, { ...common, basis: basis.trim(), account_id: account || null, ...(sub ? { sub_community_id: sub } : {}) });
     if (res !== null) {
       setLabel("");
       setAmount("");
@@ -260,12 +265,26 @@ export function HoaItemForm({
                 ))}
               </select>
             </label>
+            {subCommunities.length ? (
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{t("subCommunity.label")}</span>
+                <select className={ui.input} value={sub} onChange={(e) => setSub(e.target.value)}>
+                  <option value="">{t("subCommunity.none")}</option>
+                  {subCommunities.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </>
         )}
         <button type="button" className={ui.button} onClick={add} disabled={busy || !ok}>
           {t("addItem")}
         </button>
       </div>
+      {sub ? <p className="text-xs text-muted">{t("subCommunity.basisHint")}</p> : null}
       <ErrorLine error={error} />
     </div>
   );
@@ -375,31 +394,60 @@ export function PlanApplyPreview({ id, snapshotHash }: { id: string; snapshotHas
   );
 }
 
+export type ResolutionOption = {
+  id: string;
+  number?: number | null;
+  decided_on: string;
+  subject: string;
+  status: string;
+  subject_type?: string | null;
+  subject_id?: string | null;
+  snapshot_hash?: string | null;
+};
+
 /** Status steps for plan or statement. "Beschluss" records the resolution bound to the current
- *  snapshot hash (W06) and moves to resolved in one step. Issue, due and post need G4 (API). */
+ *  snapshot hash (W06) and moves to resolved in one step. Issue, due and post sit behind GatedAction G4 (GAM-101). */
 export function HoaSteps({
   target,
   id,
   status,
   legalEntityId,
   snapshotHash,
+  resolutions = [],
 }: {
   target: "plan" | "statement";
   id: string;
   status: string;
   legalEntityId: string;
   snapshotHash: string | null;
+  resolutions?: ResolutionOption[];
 }) {
   const t = useTranslations("HoaWork");
-  const { busy, error, call } = useCall();
+  const { busy, error, call, router } = useCall();
   const [decidedOn, setDecidedOn] = useState("");
+  const [wording, setWording] = useState("");
+  const [chosen, setChosen] = useState("");
+  const subjectType = target === "plan" ? "economic_plan" : "hoa_statement";
+  // GAM-102: only passed resolutions of this subject; where the list carries the binding fields
+  // they must match, the API stays the authority for the snapshot hash.
+  const candidates = resolutions.filter(
+    (r) =>
+      ["positive", "final", "legally_binding"].includes(r.status) &&
+      (r.subject_type == null || r.subject_type === subjectType) &&
+      (r.subject_id == null || r.subject_id === id) &&
+      (r.snapshot_hash == null || r.snapshot_hash === snapshotHash),
+  );
+  const useExisting = async () => {
+    if (!chosen) return;
+    await call(`${base}/transition`, { target: "resolved", resolution_id: chosen });
+  };
   const base = target === "plan" ? `plans/${id}` : `statements/${id}`;
   const resolve = async () => {
     const res = await call<{ id: string }>("resolutions", {
       legal_entity_id: legalEntityId,
       decided_on: decidedOn,
       subject: t(target === "plan" ? "resolutionSubject.plan" : "resolutionSubject.statement"),
-      wording: t(target === "plan" ? "resolutionWording.plan" : "resolutionWording.statement"),
+      wording: wording.trim() || t(target === "plan" ? "resolutionWording.plan" : "resolutionWording.statement"),
       status: "positive",
       kind: "external",
       subject_type: target === "plan" ? "economic_plan" : "hoa_statement",
@@ -422,31 +470,77 @@ export function HoaSteps({
           </button>
         ) : null}
         {status === "internally_approved" || status === "board_reviewed" ? (
-          <>
-            <label className="flex flex-col gap-1">
-              <span className={ui.label}>{t("decidedOn")}</span>
-              <input type="date" className={ui.input} value={decidedOn} onChange={(e) => setDecidedOn(e.target.value)} />
-            </label>
-            <button type="button" className={ui.primary} onClick={resolve} disabled={busy || !decidedOn || !snapshotHash}>
-              {t("recordResolution")}
-            </button>
-          </>
+          <div className="flex w-full flex-col gap-2" data-testid="resolution-step">
+            {candidates.length > 0 ? (
+              <div className="flex flex-wrap items-end gap-2" data-testid="resolution-existing">
+                <label className="flex flex-col gap-1">
+                  <span className={ui.label}>{t("existingResolution")}</span>
+                  <select className={ui.input} value={chosen} onChange={(e) => setChosen(e.target.value)}>
+                    <option value="">{t("noResolutionChosen")}</option>
+                    {candidates.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {`${r.number ?? ""} ${formatDate(r.decided_on)} ${r.subject}`.trim()}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button type="button" className={ui.primary} onClick={useExisting} disabled={busy || !chosen} data-testid="resolution-use-existing">
+                  {t("useExisting")}
+                </button>
+                <span className={ui.help}>{t("existingResolutionHint")}</span>
+              </div>
+            ) : null}
+            <details open={candidates.length === 0} data-testid="resolution-new">
+              <summary className="cursor-pointer text-sm">{t("newResolutionException")}</summary>
+              <div className="mt-2 flex flex-wrap items-end gap-2">
+                <label className="flex flex-col gap-1">
+                  <span className={ui.label}>{t("decidedOn")}</span>
+                  <input type="date" className={ui.input} value={decidedOn} onChange={(e) => setDecidedOn(e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className={ui.label}>{t("resolutionWordingLabel")}</span>
+                  <textarea className={ui.input} rows={2} value={wording} placeholder={t(target === "plan" ? "resolutionWording.plan" : "resolutionWording.statement")} onChange={(e) => setWording(e.target.value)} />
+                </label>
+                <button type="button" className={ui.primary} onClick={resolve} disabled={busy || !decidedOn || !snapshotHash}>
+                  {t("recordResolution")}
+                </button>
+              </div>
+            </details>
+          </div>
         ) : null}
         {target === "plan" && status === "resolved" ? <PlanApplyPreview id={id} snapshotHash={snapshotHash} /> : null}
         {target === "statement" && status === "resolved" ? (
-          <button type="button" className={ui.primary} onClick={() => call(`${base}/transition`, { target: "issued" })} disabled={busy}>
-            {t("issue")}
-          </button>
+          <GatedAction
+            gate="G4"
+            url={`/api/bff/hoa/${base}/transition`}
+            label={t("issue")}
+            lockedText={t("lockedG4")}
+            body={{ target: "issued" }}
+            onDone={() => router.refresh()}
+            testId="hoa-step-issue"
+          />
         ) : null}
         {target === "statement" && status === "issued" ? (
-          <button type="button" className={ui.primary} onClick={() => call(`${base}/transition`, { target: "due" })} disabled={busy}>
-            {t("due")}
-          </button>
+          <GatedAction
+            gate="G4"
+            url={`/api/bff/hoa/${base}/transition`}
+            label={t("due")}
+            lockedText={t("lockedG4")}
+            body={{ target: "due" }}
+            onDone={() => router.refresh()}
+            testId="hoa-step-due"
+          />
         ) : null}
         {target === "statement" && status === "due" ? (
-          <button type="button" className={ui.primary} onClick={() => call(`${base}/post`, undefined, t("confirmPost"))} disabled={busy}>
-            {t("post")}
-          </button>
+          <GatedAction
+            gate="G4"
+            url={`/api/bff/hoa/${base}/post`}
+            label={t("post")}
+            lockedText={t("lockedG4")}
+            confirmText={t("confirmPost")}
+            onDone={() => router.refresh()}
+            testId="hoa-step-post"
+          />
         ) : null}
         {target === "statement" && status !== "draft" ? (
           <StatementNewVersionDialog statementId={id} legalEntityId={legalEntityId} disabled={busy} />

@@ -6,7 +6,11 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { EMPTY_FACTUAL_LINKS, InvoiceFactualLinks, type FactualLinks } from "@/components/invoices/InvoiceFactualLinks";
+import { InvoiceKindDeductions, type InvoiceKindValue } from "@/components/invoices/InvoiceKindDeductions";
+import { EMPTY_LINE, InvoiceLinesEditor } from "@/components/invoices/InvoiceLinesEditor";
 import { formatEur } from "@/lib/format";
+import { centsToDecimal, parseCents } from "@/lib/money";
+import { checkSplitSum, type Deduction, type EntryLine } from "@/lib/invoice-lines";
 import { useRefreshAfterPost } from "@/lib/useRefreshAfterPost";
 import { ui } from "@/lib/ui";
 
@@ -14,8 +18,12 @@ type Option = { id: string; label: string };
 type LedgerOption = Option & { legalEntityId?: string | null };
 const MONEY = /^\d+([.,]\d{1,2})?$/;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-const cents = (v: string) => Math.round(Number(v.replace(",", ".")) * 100);
-const fmt = (c: number) => (c / 100).toFixed(2);
+// GAM-710: integer cents without a binary float; the API receives "1234.50".
+const cents = (v: string) => {
+  const c = parseCents(v);
+  return c === null ? NaN : Number(c);
+};
+const fmt = (c: number) => centsToDecimal(BigInt(Math.trunc(c)));
 
 /** Incoming invoice with one line (M14). Findings are hints; the review status stays open. */
 export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; accounts: Record<string, Option[]> }) {
@@ -36,6 +44,12 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
   const [attachments, setAttachments] = useState("");
   const attachmentIds = attachments.split(/[\s,;]+/).filter(Boolean);
   const attachmentsValid = attachmentIds.length <= 50 && attachmentIds.every((v) => UUID.test(v)) && new Set(attachmentIds).size === attachmentIds.length;
+  // GAM-105: Rechnungsart und Abzug gebuchter Abschläge; GAM-106: Aufteilung auf mehrere Zeilen.
+  const [kind, setKind] = useState<InvoiceKindValue>("invoice");
+  const [deductions, setDeductions] = useState<Deduction[]>([]);
+  const [split, setSplit] = useState(false);
+  const [splitLines, setSplitLines] = useState<EntryLine[]>([{ ...EMPTY_LINE }, { ...EMPTY_LINE }]);
+  const [splitGross, setSplitGross] = useState("");
   const xNum = (v: string) => (v.trim() === "" ? null : v.trim().replace(",", "."));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +60,13 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
   };
   const net = MONEY.test(f.net) ? cents(f.net) : NaN;
   const vat = Number.isFinite(net) ? Math.round((net * Number(f.vat_percent)) / 100) : NaN;
-  const valid = xValid && attachmentsValid && ledger && provider && f.number.trim() && f.invoice_date && Number.isFinite(net) && f.account;
+  const splitCheck = checkSplitSum(splitLines, splitGross);
+  const splitReady = splitCheck.ok && splitLines.every((l) => l.account_id && l.text.trim().length >= 3);
+  const headNet = split ? Number(splitCheck.totals?.net ?? 0n) : net;
+  const headVat = split ? Number(splitCheck.totals?.vat ?? 0n) : vat;
+  const finalGross = split ? splitGross : Number.isFinite(net) ? fmt(net + vat) : "";
+  const baseValid = xValid && attachmentsValid && ledger && provider && f.number.trim() && f.invoice_date;
+  const valid = baseValid && (split ? splitReady : Number.isFinite(net) && f.account);
   const submit = async () => {
     setBusy(true);
     setError(null);
@@ -56,9 +76,11 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
       number: f.number.trim(),
       invoice_date: f.invoice_date,
       service_from: f.service_from || null,
-      net: fmt(net),
-      vat: fmt(vat),
-      gross: fmt(net + vat),
+      kind,
+      deductions: kind === "final" ? deductions : [],
+      net: fmt(headNet),
+      vat: fmt(headVat),
+      gross: fmt(headNet + headVat),
       order_reference: f.order_reference.trim() || null,
       recipient_name: f.recipient_name.trim() || null,
       service_to: x.service_to || null,
@@ -77,7 +99,12 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
       reverse_charge: x.reverse_charge,
       construction_withholding: x.construction_withholding,
       input_tax_deductible: x.input_tax_deductible === "" ? null : x.input_tax_deductible === "yes",
-      lines: [{ account_id: f.account, net: fmt(net), vat_percent: f.vat_percent, vat: fmt(vat), text: f.number.trim() }],
+      lines: split
+        ? splitLines.map((l) => {
+            const n = checkSplitSum([l], "0").totals;
+            return { account_id: l.account_id, net: centsToDecimal(n?.net ?? 0n), vat_percent: l.vat_percent, vat: centsToDecimal(n?.vat ?? 0n), text: l.text.trim() };
+          })
+        : [{ account_id: f.account, net: fmt(net), vat_percent: f.vat_percent, vat: fmt(vat), text: f.number.trim() }],
     };
     const res = await bff<{ id: string }>("/api/bff/accounting/invoices", { method: "POST", body: JSON.stringify(body) });
     setBusy(false);
@@ -120,16 +147,16 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
         {field("number")}
         {field("invoice_date", "date")}
         {field("service_from", "date")}
-        {field("net")}
-        <label className="flex flex-col gap-1">
+        {split ? null : field("net")}
+        {split ? null : <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("fields.vat_percent")}</span>
           <select className={ui.input} value={f.vat_percent} onChange={set("vat_percent")}>
             {["19", "7", "0"].map((v) => (
               <option key={v} value={v}>{v} %</option>
             ))}
           </select>
-        </label>
-        <label className="flex flex-col gap-1">
+        </label>}
+        {split ? null : <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("fields.account")}</span>
           <select className={ui.input} value={f.account} onChange={set("account")}>
             <option value="">{t("choose")}</option>
@@ -137,10 +164,24 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
               <option key={a.id} value={a.id}>{a.label}</option>
             ))}
           </select>
-        </label>
+        </label>}
         {field("order_reference")}
         {field("recipient_name")}
       </div>
+      <InvoiceKindDeductions
+        ledgerId={ledger}
+        providerId={provider}
+        kind={kind}
+        finalGross={finalGross}
+        deductions={deductions}
+        onKind={setKind}
+        onDeductions={setDeductions}
+      />
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={split} onChange={(e) => setSplit(e.target.checked)} />
+        {t("split.toggle")}
+      </label>
+      {split ? <InvoiceLinesEditor accounts={accounts[ledger] ?? []} lines={splitLines} documentGross={splitGross} onLines={setSplitLines} onDocumentGross={setSplitGross} /> : null}
       <details data-testid="invoice-extra">
         <summary className="cursor-pointer text-sm font-medium">{t("extra.title")}</summary>
         <p className={ui.help}>{t("extra.hint")}</p>
@@ -186,7 +227,7 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: LedgerOption[]; 
         onChange={setLinks}
       />
       <p className="text-sm text-muted" data-testid="gross">
-        {Number.isFinite(net) ? t("gross", { gross: formatEur(fmt(net + vat)), vat: formatEur(fmt(vat)) }) : ""}
+        {split ? "" : Number.isFinite(net) ? t("gross", { gross: formatEur(fmt(net + vat)), vat: formatEur(fmt(vat)) }) : ""}
       </p>
       <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={submit} disabled={busy || !valid}>{t("create")}</button>
       {!valid ? <p className={ui.help}>{t("requiredHint")}</p> : null}

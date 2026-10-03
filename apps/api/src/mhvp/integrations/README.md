@@ -55,3 +55,19 @@ Client of the claims adjuster HV API v1 and receiver of its webhooks
 * `routers` (`/integrations/schadenstool/*`), `webhook` (public, HMAC, 5 minute window),
   `tasks` (Celery `process` every minute, `pull` every 15 minutes).
 * Status mapping in `status_map` (assumption A-072). No money, no bookings, no gate.
+
+## Export idempotency, base URL check, live mode (AP02, rule AP02-lexoffice-export-live-modus)
+
+- `lexoffice_export_link.status` is `exported` or `unknown`; a POST that timed out (or 504)
+  leaves `unknown` and is never repeated blindly. Vouchers are reconciled by voucher number
+  (exactly one hit adopts the Lexware id), otherwise the item reports `outcome_unknown`
+  (`MHVP-LEXO-0018`) until an explicit `force`. `idempotency_key` = sha256(tenant, kind, entity).
+- `validate_base_url`: https, no user info or query; strict host allowlist
+  (`api.lexware.io`, `api.lexoffice.io`) outside dev and test. Checked on save and before
+  every client is built (legacy and `lexoffice_ext`).
+- Vendor error bodies never reach `developer_message` (status and field names only);
+  `Retry-After` of a 429 is passed on.
+- `live_mode.py`: `GET/PUT /integrations/live-modes[/{integration}]`, switch key
+  `integrations.live_mode`, table `integration_live_mode` (migration 0459). No row keeps
+  today's behaviour; enforced for lexoffice test/export and LetterXpress live/submit
+  (`MHVP-LEXO-0019`). Gate binding is open question AP02-01.

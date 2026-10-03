@@ -364,6 +364,9 @@ class UnitOut(UnitIn):
     tenant: OccupantOut | None = None
 
 
+AllocationKeySourceKind = Literal["declaration_of_division", "agreement", "resolution"]
+
+
 class AllocationKeyIn(_In):
     code: str = Field(pattern=r"^[A-Z0-9_]{1,32}$")
     name: str = Field(min_length=2, max_length=200)
@@ -375,6 +378,25 @@ class AllocationKeyIn(_In):
     # Reference sum of the key in the property (C1); entered by the operator, no default. The
     # sum check of the unit values against it is a warning only, never a block.
     expected_total: Qty | None = Field(default=None, ge=0)
+    # GAM-108: source of the key; confirmation via PUT .../confirmation.
+    source_kind: AllocationKeySourceKind | None = None
+    source_reference: str | None = Field(default=None, max_length=500)
+    source_document_id: uuid.UUID | None = None
+    source_valid_from: date | None = None
+
+
+ALLOCATION_KEY_SOURCE_FIELDS = (
+    "source_kind",
+    "source_reference",
+    "source_document_id",
+    "source_valid_from",
+)
+
+
+class AllocationKeyConfirmationIn(_In):
+    """GAM-108: confirm (true) or withdraw (false) the recorded source of a key."""
+
+    confirmed: bool
 
 
 class AllocationKeyPatch(_In):
@@ -388,12 +410,18 @@ class AllocationKeyPatch(_In):
     meter_type_code: str | None = None
     sort_order: int | None = None
     expected_total: Qty | None = Field(default=None, ge=0)
+    source_kind: AllocationKeySourceKind | None = None
+    source_reference: str | None = Field(default=None, max_length=500)
+    source_document_id: uuid.UUID | None = None
+    source_valid_from: date | None = None
 
 
 class AllocationKeyOut(AllocationKeyIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     is_template_derived: bool
+    confirmed_at: datetime | None = None
+    confirmed_by: uuid.UUID | None = None
 
 
 class AllocationSummaryKeyOut(BaseModel):

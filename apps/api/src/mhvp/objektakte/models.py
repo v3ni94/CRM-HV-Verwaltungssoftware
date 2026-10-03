@@ -221,7 +221,7 @@ class ObjektakteAssignment(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     valid_from: Mapped[Any] = mapped_column(Date, nullable=True)
     valid_to: Mapped[Any] = mapped_column(Date, nullable=True)
-    share: Mapped[Any] = mapped_column(Numeric(9, 6), nullable=True)
+    share: Mapped[Any] = mapped_column(Numeric(20, 8), nullable=True)
     source_system: Mapped[str] = mapped_column(String(32), nullable=False, default="objektakte")
     source_id: Mapped[str] = mapped_column(String(64), nullable=False)
     source_unit_id: Mapped[str | None] = mapped_column(String(64))

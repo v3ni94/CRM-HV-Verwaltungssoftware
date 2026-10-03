@@ -16,6 +16,7 @@
 """
 
 import asyncio
+import socket
 import uuid
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime, timedelta
@@ -33,6 +34,7 @@ from sqlalchemy.pool import NullPool
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.webhooks import PinnedTarget, check_target
 from mhvp.immoware import service as immoware_service
 from mhvp.immoware import tasks as immoware_tasks
 from mhvp.immoware.client import ReadOnlyDavClient, WriteBlockedError
@@ -248,6 +250,22 @@ def client(
         )
 
     monkeypatch.setattr(immoware_service, "build_httpx_client", patched)
+    # GAM-302: the test host resolves to a public documentation address so the save check
+    # passes; the per-request pin is checked, but the fake keeps the host name in the URL.
+    real_getaddrinfo = socket.getaddrinfo
+
+    def fake_dns(host: str, port: Any, *args: Any, **kwargs: Any) -> Any:
+        if host == "dav.example.internal":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
+        return real_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_dns)
+
+    def checked_pin(url: str) -> PinnedTarget:
+        check_target(url, allow_private=False)
+        return PinnedTarget(url=url)
+
+    monkeypatch.setattr(immoware_service, "dav_pin", checked_pin)
     settings = _settings(database, redis_url)
     with mock_aws():
         boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
@@ -759,3 +777,40 @@ def test_router_409_and_task_skip_while_running_and_stale_run_is_closed(
     assert by_id[new_run["run_id"]]["status"] == "ok"
     assert by_id[str(stale_id)]["status"] == "failed"
     assert "abgebrochen" in (by_id[str(stale_id)]["error"] or "")
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["base_url", "carddav_url", "caldav_url"],
+)
+@pytest.mark.parametrize(
+    "url",
+    ["http://169.254.169.254/latest/", "https://127.0.0.1:5432/", "https://10.0.0.7/dav/"],
+)
+def test_gam302_internal_dav_targets_are_refused_on_save(
+    client: TestClient, world: World, fake: FakeDav, field: str, url: str
+) -> None:
+    """GAM-302: metadata service, loopback and private networks are refused for every URL."""
+    h = bearer(login(client, world, "m32admin"))
+    body = {"base_url": BASE_URL, "username": "hub", "enabled": False, field: url}
+    response = client.put(f"{IM}/connection", json=body, headers=h)
+    assert response.status_code == 422, response.text
+
+
+def test_gam303_tls_switch_off_needs_platform_admin(
+    client: TestClient, world: World, fake: FakeDav
+) -> None:
+    """GAM-303: a tenant administrator cannot switch TLS verification off."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    body = {
+        "base_url": BASE_URL,
+        "carddav_url": CARDDAV_URL,
+        "caldav_url": CALDAV_URL,
+        "username": "hub",
+        "enabled": True,
+        "verify_tls": False,
+    }
+    denied = client.put(f"{IM}/connection", json=body, headers=h)
+    assert denied.status_code == 403, denied.text
+    assert _ok(client.get(f"{IM}/connection", headers=h))["verify_tls"] is True

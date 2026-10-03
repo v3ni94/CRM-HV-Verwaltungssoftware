@@ -7,6 +7,7 @@ tenant A must receive 403. Afterwards the objects are unchanged for tenant A.
 """
 
 from collections.abc import Iterator
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -238,9 +239,11 @@ def test_objects_unchanged_for_owner_tenant(
     # Runs after the parametrised denials (file order): nothing was changed or deleted.
     h = headers(client, world, "aj06adm")
     rates = ok(client.get(f"/api/v1/deposits/{objects['deposit']}/interest-rates", headers=h), 200)
-    assert [(r["valid_from"], r["rate"]) for r in rates] == [("2025-01-01", "0.50000")]
+    assert [(r["valid_from"], Decimal(r["rate"])) for r in rates] == [
+        ("2025-01-01", Decimal("0.5"))
+    ]
     ref = ok(client.get("/api/v1/deposit-interest-rates", headers=h), 200)
-    assert [(r["year"], r["rate"]) for r in ref] == [(2024, "0.25000")]
+    assert [(r["year"], Decimal(r["rate"])) for r in ref] == [(2024, Decimal("0.25"))]
     block = ok(client.get(f"/api/v1/document-text-blocks/{objects['block']}", headers=h), 200)
     assert block["title"] == "Entwurf"
     contract = ok(client.get(f"/api/v1/contracts/{objects['contract']}", headers=h), 200)

@@ -248,7 +248,11 @@ def test_write_off_proposal_four_eyes_and_as_of(
     pv_url = f"{W}/{proposal['id']}/posting-preview"
     preview = _ok(client.get(pv_url, headers=reader))
     assert preview["posting_allowed"] is False
-    assert preview["blockers"] == ["not_approved", "counter_account_undecided"]
+    assert preview["blockers"] == [
+        "not_approved",
+        "posting_switch_off",
+        "counter_account_undecided",
+    ]
     assert [ln["side"] for ln in preview["lines"]] == ["debit", "credit"]
     assert preview["lines"][0]["account_id"] is None
     assert preview["lines"][1]["account_id"] == item["account_id"]
@@ -281,10 +285,14 @@ def test_write_off_proposal_four_eyes_and_as_of(
     assert done["decided_by"] is not None
     assert done["revocation_status"] == "locked"  # AO01: switch off, AN15-02 open
     preview = _ok(client.get(pv_url, headers=h))
-    assert preview["blockers"] == ["counter_account_undecided"]
+    assert preview["blockers"] == ["posting_switch_off", "counter_account_undecided"]
     assert preview["posting_allowed"] is False
     closed_preview = _ok(closed.get(pv_url, headers=ch))
-    assert closed_preview["blockers"] == ["gate_g1_closed", "counter_account_undecided"]
+    assert closed_preview["blockers"] == [
+        "gate_g1_closed",
+        "posting_switch_off",
+        "counter_account_undecided",
+    ]
     assert client.post(url, json={"decision": "reject"}, headers=approver).status_code == 409
 
     # B07: written off only from the effective date onwards.

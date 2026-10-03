@@ -333,6 +333,7 @@
     "tag": "Schlagwort",
     "filter": "Filtern",
     "reset": "Zurücksetzen",
+    "emptyHint": "Suche oder Filter anpassen oder einen neuen Kontakt anlegen.",
     "empty": "Keine Kontakte gefunden.",
     "colName": "Name",
     "colKind": "Art",
@@ -1017,6 +1018,7 @@
   "Imports": {
     "title": "Importe",
     "intro": "Importläufe aus bestätigten Vorschlägen. Ein Import lässt sich zurücknehmen, soweit spätere Daten nicht darauf aufbauen.",
+    "emptyHint": "Importläufe erscheinen hier, sobald ein bestätigter Vorschlag importiert wurde.",
     "empty": "Noch keine Importläufe.",
     "detailTitle": "Importlauf",
     "back": "Zurück zu den Importen",
@@ -1839,6 +1841,8 @@
       "decidedAt": "Entschieden am",
       "status": "Status",
       "hash": "Prüfsumme",
+      "by": "Freigegeben von Benutzer {user}",
+      "summary": "{valid} gültig, {voided} entwertet",
       "steps": {
         "approval": "Zahlungsfreigabe",
         "release": "Rechnungsfreigabe",
@@ -1870,6 +1874,7 @@
       "empty": "Keine Prüfpunkte fällig.",
       "rule": "Regel","version": "Version","dueOn": "Fällig seit","status": "Status","reason": "Anlass"
     },
+    "emptyHint": "Buchungskreise entstehen je Rechtsträger. Ohne Buchungskreis gibt es hier noch nichts zu bearbeiten.",
     "empty": "Noch kein Buchungskreis angelegt.",
     "ledger": "Buchungskreis",
     "leading": "Führendes System",
@@ -2375,6 +2380,7 @@
     "openItems": "Offene Posten zum {date}",
     "noticeReceivedOn": "Zugang des Schreibens",
     "noticeReceivedOnError": "Speichern fehlgeschlagen.",
+    "writeOff": "Ausbuchung",
     "settlement": {
       "title": "Ausgleich nach gesetzlicher Reihenfolge",
       "intro": "Ohne Tilgungsbestimmung des Zahlers schlägt die Plattform den Ausgleich in der gesetzlichen Reihenfolge nur vor: fällige vor nicht fälligen Posten, dann geringere Sicherheit, größere Last, ältere zuerst, Kosten vor Zinsen vor Hauptforderung. Eine Bestimmung des Zahlers im Verwendungszweck geht vor. Die Bestätigung erzeugt einen Buchungsentwurf, gebucht wird nur über das Journal.",
@@ -2609,6 +2615,7 @@
       "unconfirmed": "unbestätigt"
     },
     "dialog": {
+      "determinationPrefix": "Abweichung von der Tilgungsbestimmung:",
       "periodLocked": "Der Objektzeitraum ist gesperrt ({code}). Dieser Umsatz kann nicht gebucht werden, bis die Sperre aufgehoben ist.",
       "title": "Umsatz buchen",
       "close": "Schließen",
@@ -2945,6 +2952,9 @@
     "config": {"title": "Zahlungsformat je Bankkonto", "intro": "Vereinbarte Version von pain.001 (Überweisung) und pain.008 (Lastschrift) sowie Einreichungsweg je Konto. Angeboten werden nur Versionen, die die Plattform erzeugen und prüfen kann. Speichern erzeugt keine Zahlungsdatei und löst keine Zahlung aus; Erzeugen und Einreichen bleiben bis zur Freigabestufe G2 gesperrt.", "account": "Bankkonto", "choose": "Konto wählen", "pain001": "Version pain.001", "pain008": "Version pain.008", "channel": "Einreichungsweg", "channel_file": "Datei (manueller Upload)", "channel_fints": "FinTS", "channel_ebics": "EBICS", "confirmedOn": "Mit der Bank abgestimmt am", "notes": "Notiz", "save": "Speichern", "saved": "Zahlungsformat gespeichert.", "readOnly": "Ändern braucht das Freigaberecht Bank."},
     "batchStatus": {"open": "Bankrückmeldung erfassen", "status": "Rückmeldung der Bank", "status_submitted": "Eingereicht", "status_accepted_by_bank": "Von der Bank angenommen", "status_rejected": "Abgelehnt", "status_executed": "Ausgeführt (bucht)", "status_returned": "Zurückgegeben (storniert)", "reason": "Grund (bei Ablehnung und Rückgabe Pflicht)", "hint": "Eine Ablehnung lässt die Verbindlichkeit voll offen. Ausführung und Rückgabe können auch über den Import der Bankrückmeldung erfasst werden.", "bankTransaction": "Bankumsatz (ID, bei Ausführung Pflicht)", "bookingEffect": "Achtung, Buchungswirkung: Ausgeführt gleicht die Verbindlichkeit in Höhe der Belastung aus, Zurückgegeben storniert diesen Ausgleich und öffnet die Verbindlichkeit wieder. Gebuchte Werte werden nie überschrieben.", "fourEyes": "Vier Augen: Die Zahlungsaufträge wurden von zwei Personen freigegeben. Erfassen Sie Ausführung oder Rückgabe nur mit dem Bankbeleg und lassen Sie die Buchung von einer zweiten Person prüfen.", "bookingLocked": "Ausführung und Rückgabe sind gesperrt, bis die Freigabestufe G2 für diesen Mandanten offen ist.", "record": "Erfassen", "cancel": "Abbrechen", "recorded": "Rückmeldung erfasst, betroffene Aufträge: {count}."},
     "candidates": {"show": "Vorschläge", "hide": "Vorschläge ausblenden", "loading": "Vorschläge werden geladen.", "none": "Kein passender offener Posten gefunden.", "remaining": "Offen: {amount}", "score": "Treffergüte {score}", "unambiguous": "eindeutig", "note": "Vorschlag, keine Buchung. Die IBAN allein beweist keinen Schuldner."},
+    "determination": {"title": "Tilgungsbestimmung des Zahlers", "hint": "Aus dem Verwendungszweck serverseitig erkannt (Rechnungs- oder Sollstellungsnummer, Periode, Einheit). Vorschlag, keine Buchung; die Zuordnung bleibt Ihre Entscheidung.", "none": "Im Verwendungszweck wurde keine Tilgungsbestimmung erkannt. Es gilt die Standardreihenfolge.", "remaining": "Offen: {amount}", "selected": "ausgewählt", "locationMismatch": "Einheit oder Objekt im Verwendungszweck weicht vom Posten ab.", "conflict": "Prüfhinweis: Die gewählte Zuordnung weicht von der Tilgungsbestimmung des Zahlers ab. Bitte begründen Sie die Abweichung.", "reasonLabel": "Begründung der Abweichung (Pflicht)", "unavailable": "Die Tilgungsbestimmung konnte nicht geladen werden."},
+    "execution": {"hint": "Je Auftrag erfassen. Der ausgeführte Betrag stammt aus der Belastung des Bankumsatzes; nur dieser bestätigte Betrag gleicht die Verbindlichkeit aus, der Rest bleibt offen.", "bankTransaction": "Bankumsatz (ID, Pflicht für Ausführung)", "recordExecuted": "Ausführung erfassen", "executedHint": "Buchende Wirkung, nur mit Bankbeleg.", "locked": "Ausführung ist gesperrt, bis die Freigabestufe G2 für diesen Mandanten offen ist.", "reason": "Grund (bei Ablehnung Pflicht)", "recordRejected": "Ablehnung erfassen", "partial": "Teilweise ausgeführt: bestätigt {paid}, offen bleiben {rest}."},
+    "ddOrders": {"show": "Einzelaufträge", "hide": "Einzelaufträge ausblenden", "loading": "Einzelaufträge werden geladen.", "empty": "Keine Einzelaufträge im Lauf.", "debtor": "Schuldner", "mandate": "Mandat", "dueDate": "Fällig", "amount": "Betrag", "status": "Bankstatus", "collected": "Eingezogen", "returnCode": "Code {code}", "returnedNote": "Rücklastschrift: Korrektur nur per Storno, Verbindlichkeit prüfen.", "partialNote": "Teileinzug, Rest bleibt offen.", "status_open": "offen", "status_accepted": "angenommen", "status_rejected": "abgelehnt", "status_collected": "eingezogen", "status_returned": "zurückgegeben"},
     "clarification": {"open": "Als unbelegt melden", "reason": "Begründung", "submit": "Melden", "cancel": "Abbrechen", "opened": "Klärung eröffnet"},
     "digest": {"buildWeek": "Woche ab (Montag)", "build": "Digest erzeugen", "buildHint": "Erzeugt oder aktualisiert den Digest der Woche, bucht nichts.", "built": "Digest erzeugt oder aktualisiert: {count}."},
     "mandate": {"action": "Aktion", "revoke": "Widerrufen", "confirm": "Mandat {reference} widerrufen? Der Lastschrifteinzug der betroffenen Verträge wird beendet.", "revoked": "Mandat {reference} widerrufen."}
@@ -3226,6 +3236,7 @@
     "calculate": "Berechnen",
     "approveInternal": "Intern freigeben",
     "deliveredAt": "Zugang beim Mieter",
+    "deliveredAtProposed": "Vorschlag aus dem frühesten erfassten Zugang der Mieteranschreiben, bitte prüfen.",
     "issue": "Ausgeben",
     "newVersion": "Neue Version",
     "newVersionReason": "Korrekturgrund",
@@ -3342,6 +3353,15 @@
     },
     "noLedgers": "Kein Buchungskreis vorhanden. Ohne Buchungskreis kann keine Abrechnung angelegt werden.",
     "heating": {
+      "valueKind": "Art",
+      "heatingKind": "Art Heizung",
+      "hotWaterKind": "Art Warmwasser",
+      "readingDate": "Ablesedatum",
+      "valueKinds": {
+        "actual": "abgelesen",
+        "interim": "Zwischenablesung",
+        "estimated": "geschätzt"
+      },
       "compare": {
         "title": "Extern gegen eigen",
         "notice": "Vergleich der externen Beträge (Messdienst) mit der eigenen Berechnung je Nutzer. Nur Hinweis, es wird nichts gebucht oder geändert.",
@@ -3531,6 +3551,14 @@
     }
   },
   "HoaWork": {
+    "subCommunity": {
+      "label": "Untergemeinschaft",
+      "none": "Keine Untergemeinschaft",
+      "basisHint": "Für eine Untergemeinschaft bitte Beschluss oder Dokument als Grundlage hinterlegen; ohne Grundlage erscheint ein Prüfhinweis.",
+      "basisMissing": "ohne belegte Grundlage",
+      "hint": "Prüfhinweis: Kostenpositionen einer Untergemeinschaft ohne Beschluss oder Dokument als Grundlage",
+      "blocked": "Interne Freigabe gesperrt: Kostenpositionen einer Untergemeinschaft ohne Beschluss oder Dokument als Grundlage"
+    },
     "audits": "Beiratsprüfungen",
     "audit": {
       "title": "Beiratsprüfung",
@@ -3558,6 +3586,7 @@
         "outdated": "veraltet"
       },
       "wholeEngagement": "Gesamter Prüfauftrag",
+      "outdatedNotice": "{n, plural, one {# Position ist veraltet} other {# Positionen sind veraltet}}: Beleg oder Buchung wurde nach der Prüfung geändert. Der Gesamtstatus ist nicht gültig, bevor die Positionen neu geprüft sind.",
       "statusLabel": "Status",
       "saved": "Gespeichert.",
       "board": "Beiratszugang und Rückfragen",
@@ -3684,6 +3713,17 @@
     "approveInternal": "Intern freigeben (zweite Person)",
     "decidedOn": "Beschlussdatum",
     "recordResolution": "Beschluss zu diesem Stand erfassen",
+    "lockedG4": "Gesperrt, solange die Freigabestufe G4 (WEG-Abrechnungen) geschlossen ist. Die Freigabe erteilt die Geschäftsführung.",
+    "party": "Partei (Eigentümerzeitraum)",
+    "partyNone": "kein Eigentumsverhältnis",
+    "partyRange": "{from} bis {to}",
+    "partyChange": "Eigentumswechsel im Zeitraum: Rückstand beim Veräußerer, Spitze nach Stichtag des Eigentumsübergangs. Regel nicht entschieden (P01), nur Information.",
+    "existingResolution": "Bestehenden Beschluss verwenden",
+    "existingResolutionHint": "Zur Auswahl stehen beschlossene Einträge der Beschluss-Sammlung. Die Bindung an den aktuellen Stand prüft die Schnittstelle.",
+    "useExisting": "Beschluss übernehmen und auf beschlossen setzen",
+    "newResolutionException": "Neuen Beschluss erfassen (Ausnahme, wenn der Beschluss nicht in der Sammlung steht)",
+    "resolutionWordingLabel": "Wortlaut des Beschlusses",
+    "noResolutionChosen": "Keinen Beschluss ausgewählt",
     "resolutionSubject": {
       "plan": "Wirtschaftsplan",
       "statement": "Jahresabrechnung"
@@ -5461,6 +5501,7 @@
     "g5": "G5-Nachweise",
     "noData": "Keine Daten.",
     "rentLaw": "Mietrecht: Regelwerk pflegen",
+    "indexValuesLink": "Indexwerte importieren und freigeben",
     "pricingLink": "Preisstruktur und Angebot",
     "g5Link": "Freigabe G5: Nachweisliste",
     "onboardingLink": "Onboarding Drittmandanten und Export"
@@ -5567,6 +5608,44 @@
     "endedDone": "Rechnungsplan beendet."
   },
   "Invoices": {
+    "kind": {
+      "label": "Rechnungsart",
+      "invoice": "Rechnung",
+      "partial": "Abschlagsrechnung",
+      "final": "Schlussrechnung",
+      "deductionTitle": "Abzug gebuchter Abschlagsrechnungen dieses Ausstellers",
+      "chooseProvider": "Zuerst den Aussteller wählen.",
+      "noPartials": "Keine gebuchte Abschlagsrechnung dieses Ausstellers vorhanden.",
+      "partialRow": "{number} vom {date}, {gross}",
+      "summary": "Leistungssumme {service}, Abzug Abschläge {deducted}, Restverpflichtung {remaining}. Die Prüfung der Abzüge erfolgt zusätzlich durch die API.",
+      "deductionTooHigh": "Die Abschläge sind höher als die Schlussrechnung."
+    },
+    "split": {
+      "toggle": "Rechnung auf mehrere Zeilen aufteilen (Mischrechnung)",
+      "hint": "Je Zeile Konto, Netto, Steuersatz und Begründung der Aufteilung angeben, zum Beispiel umlagefähig, Verwaltung, Instandsetzung. Die Summe der Zeilen muss dem Brutto laut Beleg entsprechen.",
+      "account": "Konto Zeile {n}",
+      "net": "Netto Zeile {n}",
+      "vat": "Steuersatz Zeile {n}",
+      "reason": "Begründung Zeile {n}",
+      "remove": "Zeile entfernen",
+      "add": "Zeile hinzufügen",
+      "documentGross": "Brutto laut Beleg",
+      "sum": "Summe der Zeilen: Netto {net}, Steuer {vat}, Brutto {gross}.",
+      "mismatch": "Die Zeilen weichen um {difference} vom Brutto laut Beleg ab."
+    },
+    "discount": {
+      "title": "Skonto ziehen (Vorschau)",
+      "hint": "Skonto {percent} % bis {until}. Die Vorschau bucht und zahlt nichts, das Skonto wird im Zahllauf berücksichtigt.",
+      "payDate": "Zahltag",
+      "preview": "Zahlbetrag berechnen",
+      "expired": "Die Skontofrist ist an diesem Zahltag abgelaufen, es gilt der volle Betrag.",
+      "result": "Skonto {discount}, Zahlbetrag {payable}.",
+      "none": "Kein Skonto an diesem Zahltag, Zahlbetrag {payable}."
+    },
+    "instruction": {
+      "title": "Dokument enthält Handlungsanweisung, nicht ausgeführt",
+      "text": "Text im Beleg, der wie eine Anweisung klingt (zum Beispiel neue IBAN, Selbstfreigabe, Export), wird nicht befolgt. Änderungen von Bankverbindung oder Freigaben nur über den vorgesehenen Prüfweg."
+    },
     "reverseChargeGateTitle": "Freigabepunkt § 13b UStG",
     "reverseChargeGateText": "Der Beleg ist als Reverse Charge gekennzeichnet. Ob § 13b UStG einschlägig ist, wird nicht automatisch entschieden: Normzuordnung und Steuerschuldnerschaft bestätigt der Steuerberater, bis dahin gibt es keine automatische Buchung oder Steuerfolge.",
     "extra": {
@@ -5690,6 +5769,37 @@
     "requiredHint": "Pflichtangaben: Buchungskreis, Aussteller, Rechnungsnummer, Rechnungsdatum, Netto und Kostenkonto. Erst dann ist die Erfassung möglich."
   },
   "Levy": {
+    "paymentStatus": {
+      "title": "Zahlungsstand je Rate",
+      "instalment": "Rate",
+      "charged": "Soll gebucht",
+      "received": "Ist",
+      "open": "Rückstand",
+      "sum": "Summe",
+      "refundsProposed": "Erstattung vorgeschlagen {amount}",
+      "none": "Noch keine Raten berechnet.",
+      "usage": "Verwendung (Buchungen auf dem Verwendungskonto)",
+      "noUsage": "Keine Buchungen auf dem Verwendungskonto.",
+      "truncated": "Nur die ersten 200 Buchungen werden angezeigt."
+    },
+    "refunds": {
+      "title": "Erstattung (Vorschlag)",
+      "locked": "Erstattungen werden nur als Vorschlag mit Beschluss und Grund erfasst. Es wird nichts gebucht und nichts ausgezahlt; die Auszahlung über einen Zahllauf bleibt gesperrt (G2, G4).",
+      "disabled": "Erstattungsvorschläge sind für diesen Mandanten nicht freigeschaltet (Einstellung Erstattungsvorschläge zur Sonderumlage).",
+      "none": "Keine Erstattungsvorschläge.",
+      "allUnits": "Alle Einheiten",
+      "amount": "Betrag",
+      "resolution": "Beschluss",
+      "noResolution": "Kein positiver Beschluss vorhanden",
+      "reason": "Grund",
+      "propose": "Vorschlag erfassen",
+      "withdraw": "Zurückziehen",
+      "withdrawReason": "Grund für das Zurückziehen",
+      "status": {
+        "proposed": "vorgeschlagen",
+        "withdrawn": "zurückgezogen"
+      }
+    },
     "title": "Sonderumlage",
     "purpose": "Zweck",
     "total": "Gesamtsumme",
@@ -6536,6 +6646,7 @@
       "bulkMailHow": "Wie stelle ich einen Serienversand zusammen?",
       "mergeCheck": "Welche Kontakte sind mögliche Dubletten?",
       "rentIndexExplain": "Wie wirkt der Mietspiegel auf Mieterhöhungen?",
+      "depositsExplain": "Wie hoch sind die Kautionen und wo liegen sie?",
       "contractNewHelp": "Welche Angaben braucht ein neuer Vertrag?",
       "sepaExplain": "Welche SEPA-Mandate sind offen oder widerrufen?",
       "bankReviewExplain": "Was prüfe ich in der Nachkontrolle?",
@@ -6572,6 +6683,7 @@
       "releaseGatesExplain": "Welche Freigabestufen sind offen?",
       "licensesExplain": "Welche Lizenzen hat dieser Mandant?",
       "rentLawExplain": "Was zeigt die Mietrechtsprüfung?",
+      "indexValuesExplain": "Wie werden Indexwerte freigegeben?",
       "oidcClientsExplain": "Wofür dienen OIDC-Clients?",
       "onboardingExplain": "Welche Schritte hat das Onboarding?",
       "priceListExplain": "Wie ist die Preisliste aufgebaut?",
@@ -6722,6 +6834,7 @@
       "acceptance": "Abnahmeregister",
       "trash": "Papierkorb",
       "rentLaw": "Mietrecht",
+      "indexValues": "Indexwerte",
       "onboarding": "Onboarding",
       "priceList": "Preisliste",
       "overview": "Übersicht",
@@ -6734,6 +6847,7 @@
       "merge": "Zusammenführung",
       "reserves": "Rücklagen",
       "rentIndex": "Mietspiegel",
+      "deposits": "Kautionen",
       "letters": "Briefe",
       "version": "Version"
     }
@@ -7086,6 +7200,31 @@
           "rejected": "Abgelehnt"
       },
       "selectMember": "Mitglied wählen"
+  },
+  "ApproverList": {
+    "title": "Freigabeberechtigte und mögliche Doppelidentitäten",
+    "notice": "Die Vier-Augen-Prüfung vergleicht Konten (Benutzer-ID), nicht Personen. Diese Liste zeigt Konten mit Zahlungsfreigabe und kennzeichnet Konten, die zur selben Person gehören könnten. Die Kennzeichnung ist ein Hinweis, kein Nachweis, und sperrt nichts. Was als unabhängige Freigeber gilt, ist noch nicht festgelegt.",
+    "none": "Kein aktives Konto mit Zahlungsfreigabe.",
+    "member": "Konto",
+    "email": "E-Mail",
+    "roles": "Rollen",
+    "rights": "Freigabe für",
+    "hint": "Hinweis",
+    "noHint": "keiner",
+    "payments": "Zahlungsaufträge",
+    "directDebits": "Lastschriftläufe",
+    "criteriaTitle": "Kriterien der Kennzeichnung (nur Anzeige, wird nicht gespeichert)",
+    "criteria": {
+      "contact": "gleiche Kontaktverknüpfung",
+      "name": "gleicher Name (Reihenfolge der Wörter egal)",
+      "emailVariant": "gleiche E-Mail-Domäne und gleicher Namensteil der Adresse (ohne Ziffern und Zusatz nach Plus)"
+    },
+    "possibleSame": "Mögliche Doppelidentität mit {names}: {reasons}",
+    "reasonContact": "Kontaktverknüpfung",
+    "reasonName": "Name",
+    "reasonEmail": "E-Mail",
+    "summary": "{count, plural, =0 {Keine Konten mit möglicher Doppelidentität.} one {# Konto mit möglicher Doppelidentität.} other {# Konten mit möglicher Doppelidentität.}}",
+    "stateOnlyActive": "Gezeigt werden nur aktive Konten."
   },
   "Members": {
     "propertiesAll": "Objekte: alle",
@@ -9022,6 +9161,7 @@
     "passwordStored": "Passwort hinterlegt",
     "passwordMissing": "Kein Passwort hinterlegt",
     "verifyTls": "TLS prüfen",
+    "verifyTlsWarning": "Ohne TLS-Prüfung gehen Zugangsdaten über eine ungeprüfte Verbindung. Abschalten nur durch Plattformadministratoren, jede Änderung wird protokolliert.",
     "pollMinutes": "Abrufintervall (Minuten)",
     "save": "Speichern",
     "check": "Verbindung prüfen",
@@ -9568,6 +9708,7 @@
       "rejected": "verworfen"
     },
     "review": {
+      "split": "Beleg auf mehrere Zeilen aufteilen (Mischrechnung)",
       "title": "Feldprüfung",
       "hint": "Vorschlagswerte mit Sicherheit je Feld. Werte mit niedriger Sicherheit bitte am Original prüfen. Alle Felder können geändert werden.",
       "columns": {
@@ -10148,6 +10289,10 @@
     }
   },
   "Dispatch": {
+    "historyShow": "Verlauf anzeigen",
+    "historyHide": "Verlauf ausblenden",
+    "historyLoading": "Verlauf wird geladen.",
+    "historyNone": "Kein Verlauf vom Postdienst vorhanden.",
     "noRight": "Zustellungen vorbereiten nur mit Recht communication:create.",
     "noDocuments": "Zum Kontakt ist kein Dokument abgelegt. Erst ein Schreiben ablegen.",
     "document": "Dokument",
@@ -10819,6 +10964,13 @@
   },
   "Notices": {
     "title": "Schwarzes Brett",
+    "readsShow": "Lesestatus anzeigen",
+    "readsHide": "Lesestatus ausblenden",
+    "readsSummary": "{read} von {total} Portalkonten haben den Aushang bestätigt.",
+    "readsNone": "Noch keine Bestätigung.",
+    "readsContact": "Kontakt",
+    "readsUnknown": "unbekannt",
+    "readsNote": "Indiz für die Kenntnisnahme im Portal. Keine Zustellung und kein rechtlich bewerteter Zugang.",
     "intro": "Aushänge der Verwaltung mit Gültigkeit, Hinweisstufe und Zielgruppen, sichtbar im Portal für Mieter, Eigentümer und Dienstleister des Objekts.",
     "create": "Aushang anlegen",
     "edit": "Bearbeiten",
@@ -11680,6 +11832,32 @@
     }
   },
   "AllocationKeys": {
+    "sources": {
+      "title": "Quelle und Bestätigung je Schlüssel",
+      "intro": "Bei vermietetem Wohnungseigentum gilt ein aus dem Muster übernommener Schlüssel erst, wenn Quelle und Geltungsbeginn erfasst und bestätigt sind. Die Bestätigung belegt die Prüfung der Quelle, nicht ihre Wirksamkeit.",
+      "key": "Schlüssel",
+      "kind": "Quelle",
+      "reference": "Fundstelle",
+      "validFrom": "Geltungsbeginn",
+      "status": "Bestätigung",
+      "templateDerived": "aus Muster übernommen",
+      "kindFor": "Quelle {code}",
+      "referenceFor": "Fundstelle {code}",
+      "validFromFor": "Geltungsbeginn {code}",
+      "none": "nicht erfasst",
+      "kinds": {
+        "declaration_of_division": "Teilungserklärung",
+        "agreement": "Vereinbarung",
+        "resolution": "Beschluss"
+      },
+      "confirmedAt": "bestätigt am {at}",
+      "unconfirmed": "nicht bestätigt",
+      "since": "gilt ab {date}",
+      "save": "Quelle speichern",
+      "confirm": "{code} bestätigen",
+      "unconfirm": "Bestätigung aufheben",
+      "hint": "Bestätigen braucht Quelle, Geltungsbeginn und Fundstelle. Eine geänderte Quelle hebt die Bestätigung auf."
+    },
     "title": "Umlageschlüssel und Schlüsselwerte",
     "intro": "Schlüssel je Objekt mit Sollsumme und der Summe der Einheitenwerte zum Stichtag. Werte werden mit Gültigkeitszeitraum geführt; die Abrechnung liest sie erst nach den Freigaben G3 und G4.",
     "asOf": "Stichtag",
@@ -11758,6 +11936,63 @@
     "limit": "Höchstens {max} eigene Arten.",
     "saved": "Gespeichert.",
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+  },
+  "DepositList": {
+    "title": "Kautionsliste je Mietverhältnis",
+    "notice": "Übersicht der Kautionen mit Konto, Rechtsträger, Zinsen und Sperrvermerk. Die Liste zeigt Datensätze und bucht nichts.",
+    "filterProperty": "Objekt",
+    "allProperties": "Alle Objekte",
+    "filterStatus": "Status",
+    "allStatuses": "Alle Status",
+    "outstandingOnly": "Nur mit offenem Sollbetrag",
+    "contract": "Mietverhältnis",
+    "unit": "Einheit",
+    "party": "Mieter",
+    "kind": "Art",
+    "status": "Status",
+    "amountDue": "Soll",
+    "received": "Erhalten",
+    "balance": "Guthaben",
+    "outstanding": "Offen",
+    "details": "Konto und Zinsen",
+    "hide": "Ausblenden",
+    "statuses": { "open": "offen", "active": "aktiv", "settled": "abgerechnet" },
+    "kinds": {
+      "cash": "Barkaution",
+      "savings_book": "Sparbuch",
+      "insurance": "Kautionsversicherung",
+      "guarantee": "Bürgschaft",
+      "fixed_deposit": "Festgeld",
+      "letter_of_comfort": "Patronatserklärung",
+      "other": "Sonstiges"
+    },
+    "detail": {
+      "title": "Kautionskonto und Zinsen",
+      "loading": "Wird geladen",
+      "loadError": "Die Angaben konnten nicht vollständig geladen werden.",
+      "account": "Anlagekonto",
+      "noAccount": "Kein Kautionskonto zugeordnet",
+      "accountValue": "{bank} {iban}, Inhaber {holder}",
+      "accountKind": "Kontoart",
+      "entity": "Rechtsträger",
+      "entityUnknown": "nicht ermittelt",
+      "interestRule": "Zinsregel",
+      "interestNone": "keine hinterlegt",
+      "interestConfirmed": "Bestätigte Zinsgutschriften",
+      "interestDraft": "Entwürfe (noch nicht bestätigt)",
+      "block": "Sperrvermerk",
+      "blockSegregated": "Kaution, nicht Objektgeld: getrennt vom Vermögen der Verwaltung und nicht für laufende Objektkosten bestimmt.",
+      "blockNotSegregated": "Kaution, nicht Objektgeld. Prüfhinweis: Das Konto ist nicht als getrennt angelegt gekennzeichnet.",
+      "blockNoAccount": "Kaution, nicht Objektgeld. Prüfhinweis: Ohne Kautionskonto lässt sich die getrennte Anlage nicht nachweisen.",
+      "accountKinds": {
+        "rent": "Mietkonto",
+        "hoa": "WEG-Konto",
+        "reserve": "Rücklagenkonto",
+        "deposit": "Kautionskonto",
+        "hoa_fee": "Hausgeldkonto",
+        "other": "Sonstiges Konto"
+      }
+    }
   },
   "Deposits": {
     "title": "Kautionen",
@@ -12876,6 +13111,28 @@
       "1": "Guten Abend {name}, spät dran, hier trotzdem alles Wichtige."
     }
   },
+  "GreetingFormal": {
+    "fallback": "Guten Tag {name}, hier ist Ihr Überblick.",
+    "morning": {
+      "0": "Guten Morgen {name}, hier ist alles für Sie im Überblick.",
+      "1": "Guten Morgen {name}, hier Ihr Überblick.",
+      "2": "Guten Morgen {name}, ein neuer Tag, hier der aktuelle Stand."
+    },
+    "midday": {
+      "0": "Guten Tag {name}, hier ist Ihr Überblick für heute.",
+      "1": "Guten Tag {name}, hier der aktuelle Stand für heute.",
+      "2": "Guten Tag {name}, alles Wichtige für Sie im Blick."
+    },
+    "evening": {
+      "0": "Guten Abend {name}, hier der aktuelle Stand.",
+      "1": "Guten Abend {name}, hier Ihr Überblick für den Feierabend.",
+      "2": "Guten Abend {name}, noch kurz alles im Blick."
+    },
+    "late": {
+      "0": "Guten Abend {name}, hier Ihr Überblick.",
+      "1": "Guten Abend {name}, hier trotzdem alles Wichtige."
+    }
+  },
   "PropertyTermination": {
     "title": "Verwaltung beenden",
     "intro": "Beendet das Verwaltungsverhältnis und deaktiviert das Objekt. Alle Daten bleiben erhalten; das Objekt erscheint nicht mehr in der Objektliste.",
@@ -13956,6 +14213,59 @@
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
     "save": "Speichern",
     "saved": "Gespeichert."
+  },
+  "PlatformCpi": {
+    "title": "Verbraucherpreisindex: Indexwerte",
+    "notice": "Zweistufig: Import per CSV legt Werte als ungeprüfte Entwürfe an, erst die ausdrückliche Freigabe macht sie für Indexklauseln und Erhöhungsvorschläge nutzbar. Quelle und Stand sind Pflicht. Ein geänderter Wert eines Monats setzt dessen Freigabe zurück. Keine Rechtsberatung.",
+    "forbidden": "Nur für Plattformadministratoren.",
+    "importTitle": "Werte importieren",
+    "series": "Reihe (zum Beispiel Verbraucherpreisindex)",
+    "source": "Quelle",
+    "dataAsOf": "Stand der Daten",
+    "file": "CSV-Datei laden (optional)",
+    "csv": "CSV-Inhalt",
+    "csvHint": "Zwei Spalten Monat und Wert, getrennt mit Semikolon, Tab oder Komma. Monat als 2026-08 oder 08.2026. Eine Kopfzeile ist erlaubt.",
+    "import": "Importieren",
+    "show": "Werte anzeigen",
+    "imported": "Import abgeschlossen: {created} neu, {updated} geändert, {unchanged} unverändert. Die Werte sind noch nicht freigegeben.",
+    "valuesTitle": "Werte der Reihe",
+    "noSelection": "Reihe eingeben und Werte anzeigen.",
+    "empty": "Keine Werte vorhanden.",
+    "month": "Monat",
+    "value": "Wert",
+    "status": "Status",
+    "releasedBadge": "freigegeben",
+    "draftBadge": "ungeprüft",
+    "releaseTitle": "Freigabe",
+    "releaseHint": "Gibt alle ungeprüften Werte der Reihe bis einschließlich des gewählten Monats frei. Vorher Werte gegen die Quelle prüfen.",
+    "upTo": "Freigeben bis Monat",
+    "confirm": "Ich habe die Werte der Reihe {series} bis {upTo} gegen die Quelle geprüft und gebe {count} ungeprüfte Werte frei.",
+    "release": "Freigeben",
+    "released": "{count} Werte freigegeben."
+  },
+  "PropertyStatus": {
+    "title": "Objektstatus",
+    "hint": "Setzt nur den Status des Objekts. Die Beendigung der Verwaltung und der Verwalterwechsel laufen über die Beendigung und die Checkliste weiter unten. Aktivieren braucht mindestens eine Einheit, Beenden das Ende der Verwaltung.",
+    "newStatus": "Neuer Status",
+    "choose": "Status wählen",
+    "apply": "Status ändern",
+    "statuses": { "onboarding": "In Übernahme", "active": "Aktiv", "terminated": "Beendet" },
+    "confirm": {
+      "onboarding": "Ich bestätige den Wechsel in die Übernahme.",
+      "active": "Ich bestätige die Aktivierung des Objekts.",
+      "terminated": "Ich bestätige die Beendigung. Das Objekt wird danach nicht mehr bearbeitbar."
+    }
+  },
+  "TicketAssignees": {
+    "title": "Zuständige",
+    "loading": "Zuständige werden geladen.",
+    "empty": "Keine Zuständigen hinterlegt.",
+    "primary": "Hauptzuständig",
+    "remove": "Entfernen",
+    "add": "Zuständigen hinzufügen",
+    "choose": "Benutzer wählen",
+    "addButton": "Hinzufügen",
+    "unknownUser": "Unbekannter Benutzer"
   },
   "PlatformLicensing": {
     "title": "Lizenzen und Preisliste",
@@ -15427,6 +15737,8 @@
       "done": "Festgeschrieben bis {date}. Entwürfe im festgeschriebenen Zeitraum: {drafts}. Ungeklärte Bankumsätze: {unclarified}."
     },
     "accounts": {
+      "taxStatusMissing": "Steuerstatus fehlt, keine Vorsteuerbuchung: Für Konten mit Steueroption ist im Mandanten kein Umsatzsteuerstatus hinterlegt. Vorsteuer wird erst nach Pflege unter Einstellungen, Rechnungsstellung und Steuer gebucht.",
+      "taxStatusSmall": "Mandant ist als Kleinunternehmer hinterlegt, keine Vorsteuerbuchung: Steueroptionen an Konten bleiben ohne Wirkung auf Vorsteuer.",
       "statementKind": "Art der Abrechnung",
       "statementKinds": {
         "hoa_fee": "Hausgeld",
@@ -15521,6 +15833,22 @@
     }
   },
   "AdminFees": {
+    "parties": {
+      "toggle": "Zahler und Empfänger",
+      "hide": "Ausblenden",
+      "title": "Zahler, Rechnungsempfänger und Zahlungsempfänger",
+      "payer": "Zahler (Rechtsträger, der die Vergütung trägt)",
+      "recipient": "Rechnungsempfänger (Vertragspartei)",
+      "payee": "Zahlungsempfänger",
+      "payeeFixed": "Verwaltungsgesellschaft",
+      "payeeManager": "Verwaltungsgesellschaft, Ansprechpartner: {name}",
+      "unknown": "nicht ermittelt",
+      "loading": "Wird geladen",
+      "loadError": "Die Beteiligten konnten nicht vollständig geladen werden.",
+      "checkHint": "Prüfhinweis: Das Honorar wird an die Verwaltungsgesellschaft gezahlt, nie an den Zahler oder den Rechnungsempfänger. Vor der Freigabe prüfen, dass Zahler und Rechnungsempfänger zum Objekt passen.",
+      "missingPayer": "Prüfhinweis: Es ist kein zahlender Rechtsträger hinterlegt, eine Buchung des Honorars ist so nicht möglich.",
+      "missingRecipient": "Prüfhinweis: Es ist keine Vertragspartei als Rechnungsempfänger hinterlegt."
+    },
     "pdf": "PDF erzeugen",
     "pdfDownload": "PDF herunterladen",
     "run": {
@@ -15937,7 +16265,7 @@
     "seeded": "{count} Prüfpunkte im Fristenregister angelegt.",
     "nextChange": "Nächste Änderungstermine: {dates}"
   },
-  "WriteOffs": {"title": "Ausbuchungsvorschläge", "hint": "Ein Vorschlag hat keine Wirkung auf Salden und Auswertungen. Die Freigabe setzt nur das Ausbuchungskennzeichen ab dem Stichtag, gebucht wird nichts. Rechtsgrund und Buchungsweg sind offen (Frage AN15-02).", "item": "Offene Forderung", "choose": "Bitte wählen", "effectiveOn": "Stichtag", "reason": "Grund (mindestens 10 Zeichen)", "propose": "Ausbuchung vorschlagen", "empty": "Keine Ausbuchungsvorschläge für diesen Buchungskreis.", "asOf": "Stichtag {date}", "preview": "Buchungsvorschau", "approve": "Freigeben", "reject": "Ablehnen", "lockedG1": "Freigabe erst nach Freigabestufe G1 (produktive Buchhaltung).", "fourEyes": "Nur eine andere Person als die vorschlagende.", "switchOff": "Freigabe für diesen Mandanten ausgeschaltet (Fachliche Regeln, AN15-02).", "notPostable": "Nicht buchbar", "noAccount": "Konto offen", "status": {"proposed": "Vorgeschlagen", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "revocation": {"locked": "Rücknahme gesperrt.", "awaiting_decision": "Rücknahme vorbereitet, Verfahren offen (AN15-02)."}, "side": {"debit": "Soll", "credit": "Haben"}, "blocker": {"not_approved": "nicht freigegeben", "gate_g1_closed": "G1 geschlossen", "counter_account_undecided": "Gegenkonto nicht festgelegt (AN15-02)"}},
+  "WriteOffs": {"request": "Ausbuchung beantragen", "requestHint": "Legt nur einen Vorschlag ohne Wirkung an. Freigabe durch eine zweite Person, Gate G1 und Freigabe durch die Geschäftsführung bleiben vorbehalten.", "requestSubmit": "Antrag stellen", "requested": "Ausbuchung beantragt", "cancel": "Abbrechen", "post": "Ausbuchung buchen", "postConfirm": "Ausbuchung mit den Werten der Buchungsvorschau buchen? Korrektur danach nur per Storno.", "lockedPost": "Buchen erst nach Freigabestufe G1 (produktive Buchhaltung).", "postHint": "Bucht genau die angezeigte Vorschau einmal; Wiederholung ohne zweite Wirkung.", "posted": "Gebucht (Buchungssatz {id})", "reversed": "Storniert (Storno {id})", "reverse": "Buchung stornieren", "reverseReason": "Stornogrund (mindestens 10 Zeichen)", "settingsTitle": "Buchung von Ausbuchungen", "settingsHint": "Mandanteneinstellung ohne Vorgabe: das Gegenkonto legt der Mandant fest, die Frage AN15-02 bleibt offen. Standard aus.", "postingEnabled": "Buchung nach Freigabe erlauben", "counterAccount": "Gegenkonto (Kontonummer)", "save": "Speichern", "saved": "Gespeichert.", "postable": "Buchbar", "title": "Ausbuchungsvorschläge", "hint": "Ein Vorschlag hat keine Wirkung auf Salden und Auswertungen. Die Freigabe setzt nur das Ausbuchungskennzeichen ab dem Stichtag. Gebucht wird erst auf ausdrückliche Anweisung nach der Buchungsvorschau, nur mit G1, eingeschaltetem Schalter und einem vom Mandanten eingestellten Gegenkonto. Rechtsgrund und Buchungsweg sind offen (Frage AN15-02); Ausbuchungen bedürfen der Freigabe durch die Geschäftsführung.", "item": "Offene Forderung", "choose": "Bitte wählen", "effectiveOn": "Stichtag", "reason": "Grund (mindestens 10 Zeichen)", "propose": "Ausbuchung vorschlagen", "empty": "Keine Ausbuchungsvorschläge für diesen Buchungskreis.", "asOf": "Stichtag {date}", "preview": "Buchungsvorschau", "approve": "Freigeben", "reject": "Ablehnen", "lockedG1": "Freigabe erst nach Freigabestufe G1 (produktive Buchhaltung).", "fourEyes": "Nur eine andere Person als die vorschlagende.", "switchOff": "Freigabe für diesen Mandanten ausgeschaltet (Fachliche Regeln, AN15-02).", "notPostable": "Nicht buchbar", "noAccount": "Konto offen", "status": {"proposed": "Vorgeschlagen", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "revocation": {"locked": "Rücknahme gesperrt.", "awaiting_decision": "Rücknahme vorbereitet, Verfahren offen (AN15-02)."}, "side": {"debit": "Soll", "credit": "Haben"}, "blocker": {"not_approved": "nicht freigegeben", "gate_g1_closed": "G1 geschlossen", "counter_account_undecided": "Gegenkonto nicht festgelegt (AN15-02)", "posting_switch_off": "Schalter Buchung aus", "counter_account_invalid": "Gegenkonto ungültig", "already_posted": "bereits gebucht", "amount_changed": "Restbetrag geändert"}},
   "DirectDebitFeedback": {
     "returnedOn": "Rückgabedatum",
     "returnFee": "Rücklastschriftgebühr",
@@ -16355,7 +16683,11 @@
       "other": "Sonstige Daten",
       "domain_event": "Ereignisprotokoll",
       "platform_user": "Plattformbenutzer",
-      "bank_raw": "Bankrohdaten"
+      "bank_raw": "Bankrohdaten",
+      "ai_run": "KI-Läufe",
+      "call_log": "Anrufnotizen",
+      "webhook_delivery": "Webhook-Ausgang",
+      "postal_job": "Postaufträge"
     },
     "erasureStatus": {
       "proposed": "Vorschlag",
@@ -16582,6 +16914,21 @@
     "resolve": "Als beschlossen kennzeichnen",
     "create": "Plan als Entwurf anlegen"
   },
+  "ResolutionStatus": {
+    "open": "Status ändern",
+    "title": "Wirksamkeitsstatus des Beschlusses",
+    "status": "Neuer Status",
+    "statuses": {"contested": "angefochten", "annulled": "für ungültig erklärt", "legally_binding": "bestandskräftig", "void": "nichtig"},
+    "court": "Gericht",
+    "fileNumber": "Aktenzeichen",
+    "courtDate": "Datum",
+    "reason": "Begründung (Pflicht)",
+    "hint": "Der Statuswechsel storniert nichts automatisch. Abhängige Pläne, Umlagen und Abrechnungen bleiben unverändert und werden nur gemeldet.",
+    "save": "Status speichern",
+    "cancel": "Abbrechen",
+    "missing": "Bitte Begründung (mindestens 3 Zeichen) angeben.",
+    "saved": "Status gespeichert."
+  },
   "HoaReserves": {
     "title": "Rücklagen",
     "hint": "Zweckgebundene Rücklagen der Gemeinschaft. Zahlungen werden einer Rücklage zugeordnet, wenn der Sollbetrag der Eigentümer an diese Rücklage gebunden ist; sonst bleibt der gezahlte Betrag ein Gesamtwert.",
@@ -16603,6 +16950,8 @@
     "closing": "Endbestand",
     "bankBalance": "Bankbestand der Rücklagenkonten",
     "bankDifference": "Differenz Bank zu Endbestand",
+    "openContributions": "Offene Beiträge (nicht verfügbare Liquidität)",
+    "bankDifferenceNote": "Die Differenz zwischen Bankbestand und Endbestand ist in der Überleitungsrechnung der Abrechnung zu erläutern. Offene Beiträge sind Forderungen und keine Liquidität.",
     "unassigned": "Davon keiner Rücklage zuordenbar: {amount}.",
     "reserve": "Rücklage",
     "planned": "Soll laut Plan",
@@ -17050,6 +17399,43 @@
     "next": "Weiter",
     "range": "{from} bis {to} von {total}"
   },
+  "RestoreReport": {
+    "title": "Restore-Protokoll der Löschungen",
+    "intro": "Zeigt den Bericht des Wiederanwendungslaufs der Löschungen nach einer Wiederherstellung (replay_deletions mit --report). Die Datei wird nur im Browser gelesen, nichts wird gespeichert oder gesendet. Die Anzeige ersetzt keine Freigabe: Das Restore-Verfahren und die Prüfung des Berichts sind noch nicht festgelegt.",
+    "file": "Berichtsdatei (JSON)",
+    "invalid": "Die Datei ist kein gültiger Bericht des Wiederanwendungslaufs.",
+    "tooLarge": "Die Datei ist zu groß (höchstens 5 MB).",
+    "modeApply": "Angewendet: Die Löschungen wurden nachgezogen.",
+    "modeDry": "Nur Prüfung: Es wurde nichts verändert.",
+    "total": "Einträge im Bericht: {count}",
+    "groups": {
+      "replayed": "Nachgezogene Löschungen",
+      "kept": "Bewusst erhalten (Sperre, Aufbewahrung, anderer Inhalt)",
+      "review": "Manuell prüfen",
+      "skipped": "Nicht angewendet (Ablehnung, Sperrvermerk)"
+    },
+    "outcomes": {
+      "deleted": "gelöscht",
+      "would_delete": "würde gelöscht",
+      "trashed": "in den Papierkorb gelegt",
+      "would_trash": "würde in den Papierkorb gelegt",
+      "restored": "aus dem Papierkorb geholt",
+      "would_restore": "würde aus dem Papierkorb geholt",
+      "kept_hold": "erhalten wegen Löschungssperre",
+      "kept_blocked": "erhalten wegen Profil oder Aufbewahrung",
+      "kept_hash_mismatch": "erhalten, Inhalt weicht ab",
+      "absent": "Dokument nicht in der wiederhergestellten Datenbank",
+      "invalid": "Eintrag fehlerhaft",
+      "skipped": "übersprungen"
+    },
+    "unknownOutcome": "Unbekannter Ergebnistyp: {outcome}",
+    "document": "Dokument",
+    "outcome": "Ergebnis",
+    "reason": "Grund",
+    "empty": "Keine Einträge in dieser Gruppe.",
+    "reviewNeeded": "Einträge unter Manuell prüfen oder Bewusst erhalten brauchen eine Entscheidung durch Datenschutz.",
+    "clear": "Anzeige leeren"
+  },
   "AD10": {
     "link": "Wartung und Verfügbarkeit",
     "title": "Wartung und Verfügbarkeit",
@@ -17301,6 +17687,10 @@
         "title": "Rücklastschriftgebühr als Weiterbelastungsvorschlag",
         "description": "Eine bei der Rücklastschrift erfasste tatsächliche Bankgebühr erscheint in der Abstimmung als Vorschlag zur Weiterbelastung an den Schuldner. Es wird nichts gebucht; ob und auf welcher Grundlage weiterbelastet wird, ist offen (G1, G2)."
       },
+      "write-off-posting": {
+        "title": "Buchung von Forderungsausbuchungen",
+        "description": "Eine freigegebene Ausbuchung kann nach der Buchungsvorschau gebucht werden, nur mit G1 und einem vom Mandanten eingestellten Gegenkonto (Maske Ausbuchungsvorschläge). Aus wird nichts gebucht. Korrektur nur per Storno; Rechtsgrund und Buchungsweg sind offen (AN15-02)."
+      },
       "write-off-approval": {
         "title": "Freigabe von Forderungsausbuchungen",
         "description": "Ein Ausbuchungsvorschlag kann von einer zweiten Person freigegeben werden, wenn G1 offen ist. Aus bleibt jeder Vorschlag ohne Wirkung. Verfahren und Rechtsgrund der Ausbuchung sind offen."
@@ -17392,6 +17782,10 @@
         "title": "Prüfbericht der Umlagegrundlagen blockiert die Ausgabe",
         "description": "Fehlt für eine Kostenposition die Umlagevereinbarung, sperrt der Prüfbericht den Statuswechsel und das Informationsblatt."
       },
+      "allocation-key-confirmation-required": {
+        "title": "Bestätigte Quelle für jeden Umlageschlüssel",
+        "description": "Bei vermietetem Wohnungseigentum braucht im Standard nur ein aus dem Muster übernommener Schlüssel eine bestätigte Quelle. Eingeschaltet sperrt die Mietabrechnung jeden Schlüssel ohne bestätigte Quelle mit Geltungsbeginn. Die Wirkung betrifft nur Entwürfe hinter G3."
+      },
       "heating-negative-costs": {
         "title": "Negative Heizkostenanteile verteilen",
         "description": "Ergibt ein Kostenanteil der Heizkostenabrechnung eine negative Summe, wird er im Standard nicht verteilt und ein Warnhinweis gezeigt. Die Wirkung betrifft nur Rechenentwürfe hinter G3."
@@ -17441,6 +17835,14 @@
       "correction-report": {
         "title": "Korrekturbericht je Eigentümer",
         "description": "Ob der Korrekturbericht zwischen zwei Abrechnungsversionen angezeigt wird. Der Bericht ist nur eine Anzeige, es wird nichts gebucht und nichts versendet; die Rechtsfolge einer Korrektur bleibt offen."
+      },
+      "sub-community-basis-lock": {
+        "title": "Untergemeinschaft nur mit belegter Grundlage freigeben",
+        "description": "Ob Kostenpositionen einer Untergemeinschaft ohne Beschluss oder Dokument als Grundlage die interne Freigabe der Hausgeldabrechnung sperren. Standard aus: nur Prüfhinweis. Zulässige Grundlagen sind offen (AP21-01)."
+      },
+      "levy-refund-proposals": {
+        "title": "Erstattungsvorschläge zur Sonderumlage",
+        "description": "Ob Erstattungen einer Sonderumlage als Vorschlag mit Beschluss und Grund erfasst werden dürfen. Es wird nichts gebucht und nichts ausgezahlt; das Erstattungsverfahren ist offen (AP21-02, G2 und G4)."
       },
       "reserve-payment-mode": {
         "title": "Zahlungen je Zweckrücklage",
@@ -17498,6 +17900,10 @@
       "online-meeting": {
         "title": "Online-Versammlung im Portal",
         "description": "Ob Eigentümer im Portal an hybriden oder virtuellen Versammlungen online teilnehmen und abstimmen. Die Zulässigkeit prüft die Software nicht."
+      },
+      "greeting-address": {
+        "title": "Ansprache in der Begrüßung",
+        "description": "Ob die Begrüßung auf dem Startbildschirm mit Du oder mit Sie anspricht. Standard Du, das heutige Verhalten bleibt. Der Wert ist noch nicht serverseitig gespeichert; die Festlegung ist offen (AP24-01)."
       },
       "proxy-conflict-mode": {
         "title": "Vollmacht gegen eigene Stimme",
@@ -17601,6 +18007,10 @@
       "mfa-admin-reset": {
         "title": "Zweiten Faktor zurücksetzen (Vier-Augen)",
         "description": "Ob Administratoren den verlorenen zweiten Faktor eines Benutzers per Antrag und Freigabe durch eine zweite Person zurücksetzen dürfen. Aus bedeutet: nicht möglich."
+      },
+      "access-log-scope": {
+        "title": "Zugriffsprotokoll personenbezogener Daten",
+        "description": "Ob Lesezugriffe auf Kontakte und Auskunftsexporte (erweitert: auch Bankverbindungen und Portaldaten) mit Benutzer und Zeitpunkt protokolliert werden, ohne Inhalte. Aus bedeutet: keine Protokollierung. Umfang und Aufbewahrung sind offen (AP14-01)."
       },
       "access-export-third-party": {
         "title": "Auskunftsexport: andere Personen",
@@ -17726,6 +18136,10 @@
         "by_due_date": "Zuordnung nach Fälligkeit",
         "by_resolution_date": "Zuordnung nach Abrechnungsbeschluss"
       },
+      "greeting-address": {
+        "du": "Du (heutiges Verhalten)",
+        "sie": "Sie"
+      },
       "proxy-conflict-mode": {
         "flag": "Konflikt als Prüfhinweis markieren",
         "first_vote": "Zuerst abgegebene Stimme zählt",
@@ -17768,6 +18182,11 @@
         "all_staff": "Pflicht für alle CRM-Rollen",
         "roles": "Pflicht für gewählte Rollen",
         "voluntary": "Freiwillig"
+      },
+      "access-log-scope": {
+        "off": "Aus",
+        "contact": "Kontakt und Auskunftsexport",
+        "extended": "Erweitert"
       },
       "access-export-third-party": {
         "none": "Nur die Rolle",

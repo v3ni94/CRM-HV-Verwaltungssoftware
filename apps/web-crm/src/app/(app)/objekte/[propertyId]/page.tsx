@@ -19,6 +19,7 @@ import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel"
 import { LegalEntityLine } from "@/components/properties/LegalEntityLine";
 import { OccupancyList } from "@/components/properties/OccupancyList";
 import { OwnersDetails } from "@/components/properties/OwnersDetails";
+import { PropertyStatusPanel } from "@/components/properties/PropertyStatusPanel";
 import { ManagerChangeChecklist } from "@/components/properties/ManagerChangeChecklist";
 import { TakeoverChecklist } from "@/components/properties/TakeoverChecklist";
 import { ObjektakteExportPanel } from "@/components/properties/ObjektakteExportPanel";
@@ -211,6 +212,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         </div>
       </div>
 
+      <PropertyStatusPanel propertyId={propertyId} status={data.status as "onboarding" | "active" | "terminated"} canEdit={canEdit} />
       <PropertyTermination propertyId={propertyId} status={data.status} termination={termination} canEdit={canEdit} isSuperadmin={isSuperadmin} />
       {termination || data.status === "terminated" ? <ObjektakteExportPanel propertyId={propertyId} canExport={canExport} /> : null}
 

@@ -29,6 +29,10 @@ from mhvp.accounting.models import (
     LedgerAccount,
     RecurringInvoicePlan,
 )
+from mhvp.accounting.raw_responses import (
+    AccountingCreditorOpenItemsOutItem,
+    AccountingCreditorStatementOut,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
 from mhvp.core.events import emit
@@ -241,6 +245,7 @@ async def list_creditors(
     "/ledgers/{ledger_id}/creditors/{account_id}/open-items",
     summary="Offene Posten eines Kreditors",
     dependencies=[Depends(strict_query)],
+    response_model=list[AccountingCreditorOpenItemsOutItem],
 )
 async def creditor_open_items(
     ledger_id: uuid.UUID,
@@ -258,6 +263,7 @@ async def creditor_open_items(
 @router.get(
     "/ledgers/{ledger_id}/creditors/{account_id}/statement",
     summary="Kreditorenkonto-Auszug (Kontenblatt)",
+    response_model=AccountingCreditorStatementOut,
 )
 async def creditor_statement(
     ledger_id: uuid.UUID,

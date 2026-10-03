@@ -41,6 +41,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document, DocumentLink
+from mhvp.privacy import audit_redaction, erasure_coupling
 from mhvp.privacy.models import PrivacyDeletionProfile, PrivacyErasureRequest
 
 ANONYMIZED_PREFIX = "Anonymisiert"
@@ -107,6 +108,7 @@ async def blockers(
             )
         ).all()
     }
+    coupling = await erasure_coupling.is_enabled(session)
     for table, column in _referencing_columns():
         if table not in present:
             continue  # model ahead of its migration: no rows can exist
@@ -115,11 +117,30 @@ async def blockers(
             {"cid": contact.id},
         )
         if count:
+            ref_class = erasure_coupling.reference_class(table)
+            if coupling and ref_class == "communication":
+                # GAM-405 (AP13-02): information only, recorded as ``coupled`` on execution.
+                out.append(
+                    {
+                        "code": "coupled_communication",
+                        "detail": (
+                            f"Kommunikationsbezug in {table}.{column} ({count} Einträge), "
+                            "getrennt nach eigenem Löschprofil zu behandeln."
+                        ),
+                        "table": table,
+                        "column": column,
+                        "count": int(count),
+                        "class": ref_class,
+                        "blocking": False,
+                    }
+                )
+                continue
             out.append(
                 {
                     "code": "referenced",
                     "detail": f"Verknüpfung in {table}.{column} ({count} Einträge).",
                     "table": table,
+                    "class": ref_class,
                 }
             )
     docs = (
@@ -174,7 +195,10 @@ async def create_request(
         entity_type="contact",
         entity_id=contact_id,
         actor_user_id=user_id,
-        payload={"request_id": str(request.id), "blocked": bool(request.blockers)},
+        payload={
+            "request_id": str(request.id),
+            "blocked": bool(erasure_coupling.blocking(request.blockers)),
+        },
     )
     return request
 
@@ -197,7 +221,7 @@ async def approve(
     if contact is None:  # FK RESTRICT, cannot happen
         raise ProblemError(ErrorCodes.NOT_FOUND)
     request.blockers = await blockers(session, contact)
-    if request.blockers:
+    if erasure_coupling.blocking(request.blockers):
         raise ProblemError(
             ErrorCodes.PRIVACY_ERASURE_BLOCKED, extensions={"blockers": request.blockers}
         )
@@ -266,6 +290,11 @@ async def anonymize_contact(
         res = await session.execute(delete(model).where(model.contact_id == contact.id))
         removed[model.__tablename__] = int(res.rowcount or 0)  # type: ignore[attr-defined]
     await delete_examples_for_contact(session, contact.id)
+    if await audit_redaction.is_enabled(session):
+        # GAM-401 (AP13-01): field names stay, values go; also on journal replay.
+        removed["audit_log_redacted"] = await audit_redaction.redact_contact_audit(
+            session, contact.id
+        )
     label = f"{ANONYMIZED_PREFIX} {str(contact.id)[:8]}"
     await session.execute(
         update(Contact)
@@ -304,16 +333,24 @@ async def execute(
     if contact is None:
         raise ProblemError(ErrorCodes.NOT_FOUND)
     found = await blockers(session, contact)
-    if found:
+    if erasure_coupling.blocking(found):
         request.blockers = found
         raise ProblemError(ErrorCodes.PRIVACY_ERASURE_BLOCKED, extensions={"blockers": found})
+    coupled = [b for b in found if b.get("code") == "coupled_communication"]
     removed = await anonymize_contact(session, contact, user_id)
     request.status, request.executed_by, request.executed_at = (
         "executed",
         user_id,
         datetime.now(UTC),
     )
-    request.result = {"removed": removed, "kept": ["consent", "domain_events"]}
+    kept = ["consent", "domain_events"]
+    if "audit_log_redacted" not in removed:
+        kept.append("audit_log")
+    request.result = {"removed": removed, "kept": kept}
+    if coupled:
+        request.result["coupled"] = [
+            {"table": b["table"], "column": b["column"], "count": b["count"]} for b in coupled
+        ]
     request.blockers = []
     await emit(
         session,
@@ -345,6 +382,9 @@ async def accept_proposal(
         entity_type="contact",
         entity_id=request.contact_id,
         actor_user_id=user_id,
-        payload={"request_id": str(request.id), "blocked": bool(request.blockers)},
+        payload={
+            "request_id": str(request.id),
+            "blocked": bool(erasure_coupling.blocking(request.blockers)),
+        },
     )
     return request

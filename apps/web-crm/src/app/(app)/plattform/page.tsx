@@ -52,6 +52,9 @@ export default async function PlatformPage() {
         <Link className="underline" href="/plattform/mietrecht">
           {t("rentLaw")}
         </Link>
+        <Link className="underline" href="/plattform/indexwerte">
+          {t("indexValuesLink")}
+        </Link>
         <Link className="underline" href="/plattform/preisliste">
           {t("pricingLink")}
         </Link>

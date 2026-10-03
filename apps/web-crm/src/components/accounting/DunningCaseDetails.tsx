@@ -8,6 +8,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { WriteOffRequestButton } from "./WriteOffRequestButton";
+
 export type DunningProof = {
   id: string;
   kind: string;
@@ -191,6 +193,7 @@ export function DunningItemBlocks({ items }: { items: { open_item_id: string; du
             <button type="button" className={ui.buttonSm} onClick={() => void set(i.open_item_id)}>
               {t("blockSet")}
             </button>
+            <WriteOffRequestButton openItemId={i.open_item_id} />
           </div>
         );
       })}

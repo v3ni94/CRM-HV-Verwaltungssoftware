@@ -8,6 +8,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { OutdatedNotice } from "./OutdatedNotice";
+
 export type AuditReportContent = {
   overall_status?: string;
   scope_note?: string;
@@ -35,7 +37,15 @@ export type AuditReport = {
 /** Prüfberichte (PÜ09, A72): create a report version from the current positions and record
  *  the statement of the board on a report as text. The statement has no release effect; the
  *  report figures stay as computed. */
-export function AuditReportsPanel({ auditId, reports }: { auditId: string; reports: AuditReport[] }) {
+export function AuditReportsPanel({
+  auditId,
+  reports,
+  outdatedCount = 0,
+}: {
+  auditId: string;
+  reports: AuditReport[];
+  outdatedCount?: number;
+}) {
   const t = useTranslations("HoaWork");
   const router = useRouter();
   const [findings, setFindings] = useState("");
@@ -97,6 +107,7 @@ export function AuditReportsPanel({ auditId, reports }: { auditId: string; repor
           {error}
         </p>
       ) : null}
+      <OutdatedNotice count={outdatedCount} />
       {reports.length === 0 ? <p className="text-sm text-muted">{t("audit.reports.none")}</p> : null}
       <ul className="flex flex-col gap-2">
         {reports.map((r) => (

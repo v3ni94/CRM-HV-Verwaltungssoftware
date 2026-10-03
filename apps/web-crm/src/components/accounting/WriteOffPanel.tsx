@@ -9,6 +9,7 @@ import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import type { OpenItem } from "./OpenItemsTable";
+import { WRITE_OFF_REQUESTED } from "./WriteOffRequestButton";
 
 export type WriteOff = {
   id: string;
@@ -20,27 +21,35 @@ export type WriteOff = {
   decision_note: string | null;
   approval_enabled: boolean;
   revocation_status: "locked" | "awaiting_decision";
+  posting_entry_id?: string | null;
+  posting_reversal_id?: string | null;
 };
 type Preview = {
   amount: string;
   posting_allowed: boolean;
   blockers: string[];
-  lines: { side: "debit" | "credit"; account_number: string | null; amount: string; note: string | null }[];
+  lines: { side: "debit" | "credit"; account_id?: string | null; account_number: string | null; amount: string; note: string | null }[];
 };
+type PostingSettings = { posting_enabled: boolean; counter_account_number: string | null };
+type Posting = { journal_entry_id: string; reversal_id: string | null };
 
 /** AO01 (GAK-104): Ausbuchungsvorschläge offener Forderungen dieses Buchungskreises. Vorschlag
  *  ohne Wirkung; Freigabe nur mit Mandantenschalter, zweiter Person und G1 (GatedAction).
- *  Die Buchungsvorschau zeigt nur an, gebucht wird nichts (Gegenkonto offen, AN15-02). */
+ *  Die Buchungsvorschau zeigt die Buchung; gebucht wird nur auf Anweisung (AP12) mit G1,
+ *  Mandantenschalter accounting.write_off_posting und vom Mandanten gesetztem Gegenkonto
+ *  (AN15-02 offen). Korrektur nur per Storno. */
 export function WriteOffPanel({
   items,
   today,
   canPropose,
   canApprove,
+  canSettings = false,
 }: {
   items: OpenItem[];
   today: string;
   canPropose: boolean;
   canApprove: boolean;
+  canSettings?: boolean;
 }) {
   const t = useTranslations("WriteOffs");
   const receivables = items.filter((i) => i.kind === "receivable" && Number(i.remaining) > 0);
@@ -50,6 +59,9 @@ export function WriteOffPanel({
   const [preview, setPreview] = useState<Record<string, Preview>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<PostingSettings | null>(null);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+  const [reverseReason, setReverseReason] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const res = await bff<WriteOff[]>("/api/bff/accounting/open-item-write-offs");
@@ -58,7 +70,33 @@ export function WriteOffPanel({
   }, []);
   useEffect(() => {
     void load();
+    const onRequested = () => void load();
+    window.addEventListener(WRITE_OFF_REQUESTED, onRequested);
+    return () => window.removeEventListener(WRITE_OFF_REQUESTED, onRequested);
   }, [load]);
+  useEffect(() => {
+    if (!canSettings) return;
+    void bff<PostingSettings>("/api/bff/accounting/open-item-write-offs/settings").then((res) => {
+      if (res.ok) setSettings(res.data);
+    });
+  }, [canSettings]);
+  const saveSettings = async () => {
+    if (!settings || busy) return;
+    setBusy(true);
+    setError(null);
+    setSettingsSaved(false);
+    const res = await bff<PostingSettings>("/api/bff/accounting/open-item-write-offs/settings", {
+      method: "PUT",
+      body: JSON.stringify({
+        posting_enabled: settings.posting_enabled,
+        counter_account_number: settings.counter_account_number?.trim() || null,
+      }),
+    });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setSettings(res.data);
+    setSettingsSaved(true);
+  };
 
   const propose = async () => {
     if (busy) return;
@@ -171,15 +209,102 @@ export function WriteOffPanel({
                       </li>
                     ))}
                   </ul>
-                  <p className="text-xs text-warning-fg">
-                    {t("notPostable")}: {(preview[r.id]?.blockers ?? []).map((b) => t(`blocker.${b}`)).join(", ")}
-                  </p>
+                  {preview[r.id]?.posting_allowed ? (
+                    <p className="text-xs">{t("postable")}</p>
+                  ) : (
+                    <p className="text-xs text-warning-fg">
+                      {t("notPostable")}: {(preview[r.id]?.blockers ?? []).map((b) => t(`blocker.${b}`)).join(", ")}
+                    </p>
+                  )}
+                  {preview[r.id]?.posting_allowed && canApprove ? (
+                    <GatedAction<Posting>
+                      gate="G1"
+                      url={`/api/bff/accounting/open-item-write-offs/${r.id}/posting`}
+                      body={{
+                        expected_amount: preview[r.id]?.amount,
+                        counter_account_id: preview[r.id]?.lines.find((l) => l.side === "debit")?.account_id,
+                      }}
+                      label={t("post")}
+                      lockedText={t("lockedPost")}
+                      hint={t("postHint")}
+                      confirmText={t("postConfirm")}
+                      onDone={() => {
+                        setPreview((p) => {
+                          const next = { ...p };
+                          delete next[r.id];
+                          return next;
+                        });
+                        void load();
+                      }}
+                      testId={`write-off-post-${r.id}`}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+              {r.posting_entry_id ? (
+                <div className="mt-1 flex flex-col gap-1 text-xs" data-testid={`write-off-posting-${r.id}`}>
+                  <p>{t("posted", { id: r.posting_entry_id.slice(0, 8) })}</p>
+                  {r.posting_reversal_id ? (
+                    <p>{t("reversed", { id: r.posting_reversal_id.slice(0, 8) })}</p>
+                  ) : canApprove ? (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="flex flex-col gap-1">
+                        <span className={ui.label}>{t("reverseReason")}</span>
+                        <input
+                          className={ui.input}
+                          minLength={10}
+                          maxLength={500}
+                          value={reverseReason[r.id] ?? ""}
+                          onChange={(e) => setReverseReason((v) => ({ ...v, [r.id]: e.target.value }))}
+                        />
+                      </label>
+                      <GatedAction<Posting>
+                        gate="G1"
+                        url={`/api/bff/accounting/open-item-write-offs/${r.id}/posting/reversal`}
+                        body={{ reason: (reverseReason[r.id] ?? "").trim() }}
+                        label={t("reverse")}
+                        lockedText={t("lockedPost")}
+                        blocked={(reverseReason[r.id] ?? "").trim().length < 10}
+                        onDone={() => void load()}
+                        testId={`write-off-reverse-${r.id}`}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </li>
           ))}
         </ul>
       )}
+      {canSettings && settings ? (
+        <div className="flex flex-wrap items-end gap-2 rounded border border-border p-2" data-testid="write-off-settings">
+          <p className={`${ui.help} w-full`}>
+            <strong>{t("settingsTitle")}</strong> {t("settingsHint")}
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={settings.posting_enabled}
+              onChange={(e) => setSettings((v) => (v ? { ...v, posting_enabled: e.target.checked } : v))}
+            />
+            {t("postingEnabled")}
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("counterAccount")}</span>
+            <input
+              className={ui.input}
+              inputMode="numeric"
+              pattern="[0-9]{4,6}"
+              value={settings.counter_account_number ?? ""}
+              onChange={(e) => setSettings((v) => (v ? { ...v, counter_account_number: e.target.value } : v))}
+            />
+          </label>
+          <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void saveSettings()}>
+            {t("save")}
+          </button>
+          {settingsSaved ? <span className="text-xs text-muted">{t("saved")}</span> : null}
+        </div>
+      ) : null}
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
     </section>
   );

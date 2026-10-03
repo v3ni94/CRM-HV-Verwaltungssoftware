@@ -11,6 +11,7 @@ import {
   serverApi,
   serverFetch,
 } from "@/lib/api-server";
+import { ApproverList } from "@/components/settings/ApproverList";
 import { MfaResetAdmin, type MfaResetRequest } from "@/components/settings/MfaResetAdmin";
 import { getMe } from "@/lib/me";
 import { fetchAllProperties } from "@/lib/properties-all";
@@ -93,6 +94,7 @@ export default async function MembersPage({
           roleCodes: first(query.role) ? [first(query.role)] : [],
         }}
       />
+      <ApproverList members={members.data ?? []} roles={roles.data ?? []} />
       {can("members:update") ? (
         <MfaResetAdmin
           members={(members.data ?? []).map((m) => ({ membership_id: m.membership_id, display_name: m.display_name }))}

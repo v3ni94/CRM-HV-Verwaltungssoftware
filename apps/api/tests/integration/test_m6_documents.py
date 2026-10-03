@@ -610,6 +610,7 @@ def test_mirror_to_paperless_and_drive(
     assert client.delete(f"/api/v1/documents/{doc['id']}", headers=h).status_code == 409
 
 
+@pytest.mark.annex_d("D43", "D46")
 def test_d43_original_locked_while_only_ocr_text_exists(client: TestClient, world: World) -> None:
     """D43: an invoice whose text is indexed (text layer, OCR) keeps its original; text or JSON
     replaces nothing. The refused deletion is logged (6.9.5, 11.3, D46)."""
@@ -999,3 +1000,23 @@ def test_upload_with_unreachable_scanner_by_mode(
         assert len(skipped) == 1
         assert skipped[0]["payload"]["reason"] == "unreachable"
         assert skipped[0]["payload"]["sha256"] == doc["sha256"]
+
+
+def test_gam411_booking_vouchers_without_period_and_release_locked(
+    client: TestClient, world: World
+) -> None:
+    """GAM-411: booking vouchers are a class of their own; no period is prefilled and the
+    placeholder cannot be released until the matrix V17 is entered."""
+    from mhvp.documents.defaults import PENDING_MATRIX_NOTE
+
+    h = bearer(login(client, world, "m6admin"))
+    second = bearer(login(client, world, "m6second"))
+    row = _profiles(client, h)["booking_vouchers"]
+    assert row["status"] == "entwurf"
+    assert (row["retention_years"], row["retention_months"]) == (0, 0)
+    assert row["review_note"] == PENDING_MATRIX_NOTE
+    assert "V17" in row["legal_basis"]
+    refused = client.post(f"/api/v1/retention-profiles/{row['id']}/release", headers=second)
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "MHVP-DOC-0001"
+    assert _profiles(client, h)["booking_vouchers"]["released_at"] is None

@@ -101,6 +101,14 @@ class Resolution(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class EconomicPlan(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "economic_plan"
+    # AP05 / GAL-107 (6.9.3, E03): from resolved on the resolution is mandatory (0462).
+    __table_args__ = (
+        CheckConstraint(
+            "status NOT IN ('resolved', 'issued', 'due', 'posted', 'locked') "
+            "OR resolution_id IS NOT NULL",
+            name="resolved_needs_resolution",
+        ),
+    )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -153,7 +161,7 @@ class HoaReserve(IdMixin, TimestampMixin, TenantMixin, Base):
     opening_year: Mapped[int | None] = mapped_column(Integer)
 
 
-class HoaReserveMovement(IdMixin, TenantMixin, Base):
+class HoaReserveMovement(IdMixin, TimestampMixin, TenantMixin, Base):
     """Use of funds, taxes, fees and interest per reserve and statement year (W08, M24-01).
     Information for the reserve statement; entered by the manager with receipt or entry."""
 
@@ -170,7 +178,7 @@ class HoaReserveMovement(IdMixin, TenantMixin, Base):
     resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
 
 
-class PlanItem(IdMixin, TenantMixin, Base):
+class PlanItem(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "economic_plan_item"
 
     plan_id: Mapped[uuid.UUID] = _fk("economic_plan.id", nullable=False, ondelete="CASCADE")
@@ -190,6 +198,22 @@ class HoaStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     advances; arrears separately; reserve development; asset report."""
 
     __tablename__ = "hoa_statement"
+    # AP05 / GAL-107 (6.9.3, E03): from resolved on the resolution is mandatory (0462).
+    __table_args__ = (
+        CheckConstraint(
+            "status NOT IN ('resolved', 'issued', 'due', 'posted', 'locked') "
+            "OR resolution_id IS NOT NULL",
+            name="resolved_needs_resolution",
+        ),
+    )
+    # GAL-101: platform is EUR only (ADR 0038); column documents the currency per record.
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        CheckConstraint("currency = 'EUR'", name="currency_eur"),
+        nullable=False,
+        default="EUR",
+        server_default="EUR",
+    )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -223,7 +247,7 @@ class HoaStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     correction_resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
 
 
-class HoaCostItem(IdMixin, TenantMixin, Base):
+class HoaCostItem(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "hoa_cost_item"
 
     statement_id: Mapped[uuid.UUID] = _fk("hoa_statement.id", nullable=False, ondelete="CASCADE")
@@ -240,6 +264,8 @@ class HoaCostItem(IdMixin, TenantMixin, Base):
     # M24-06 (W03): structured source of the scope (resolution or document).
     basis_resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
     basis_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    # AP21 / GAM-109 (migration 0468): cost position of a sub community (Mehrhausanlage).
+    sub_community_id: Mapped[uuid.UUID | None] = _fk("sub_community.id", ondelete="SET NULL")
 
 
 class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -1087,3 +1113,47 @@ class HoaReservePaymentSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     mode: Mapped[str] = mapped_column(
         String(32), nullable=False, default="bound_only", server_default="bound_only"
     )
+
+
+class HoaLevyCostSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AP21 (migration 0468): tenant switches for GAM-109 and GAM-110. No row means defaults:
+    ``sub_community_basis_lock`` off (hint only, AP21-01) and ``levy_refund_proposals`` off
+    (no refund proposals, AP21-02)."""
+
+    __tablename__ = "hoa_levy_cost_setting"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    sub_community_basis_lock: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    levy_refund_proposals: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+
+class HoaSpecialLevyRefund(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AP21 / GAM-110 (migration 0468): refund of a special levy as a proposal with resolution
+    and reason. Never paid or posted here; the payout through a payment run stays locked
+    (G2, G4, open question AP21-02)."""
+
+    __tablename__ = "hoa_special_levy_refund"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="amount_positive"),
+        CheckConstraint("status IN ('proposed', 'withdrawn')", name="status"),
+        Index("ix_hoa_special_levy_refund_tenant_id_levy_id", "tenant_id", "levy_id"),
+    )
+
+    levy_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("special_levy.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    unit_id: Mapped[uuid.UUID | None] = _fk("unit.id", ondelete="RESTRICT")
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    resolution_id: Mapped[uuid.UUID] = _fk("resolution.id", nullable=False, ondelete="RESTRICT")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="proposed", server_default="proposed"
+    )
+    withdrawn_reason: Mapped[str | None] = mapped_column(Text)

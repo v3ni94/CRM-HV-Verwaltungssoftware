@@ -8,6 +8,8 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { OutdatedNotice } from "./OutdatedNotice";
+
 export type BoardAccess = {
   id: string;
   account_id: string;
@@ -43,11 +45,13 @@ export function BoardAuditPanel({
   section,
   items,
   contactNames,
+  outdatedCount = 0,
 }: {
   auditId: string;
   section: BoardSection;
   items: { id: string; label: string }[];
   contactNames: Record<string, string>;
+  outdatedCount?: number;
 }) {
   const t = useTranslations("HoaWork");
   const router = useRouter();
@@ -112,6 +116,7 @@ export function BoardAuditPanel({
     <section className="flex flex-col gap-3">
       <h2 className={ui.h2}>{t("audit.board")}</h2>
       <p className={ui.help}>{t("audit.boardHint")}</p>
+      <OutdatedNotice count={outdatedCount} />
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

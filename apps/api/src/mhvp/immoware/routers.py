@@ -10,9 +10,11 @@ from sqlalchemy import func, select
 
 from mhvp.contacts.models import Contact, ContactEmail, ContactKind, ContactPhone
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
+from mhvp.core.config import get_settings
 from mhvp.core.events import emit
 from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.webhooks import UnsafeWebhookTargetError, check_target
 from mhvp.immoware import schemas as s
 from mhvp.immoware import service as svc
 from mhvp.immoware.client import sanitize_error
@@ -99,11 +101,30 @@ async def get_connection(
 async def put_connection(
     body: s.ImmowareConnectionIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> s.ImmowareConnectionOut:
+    allow_private = get_settings().webhook_allow_private_targets
+    for field_name in ("base_url", "carddav_url", "caldav_url"):
+        url = getattr(body, field_name)
+        if url:
+            # GAM-302: keine internen Ziele (Metadaten, Loopback, private Netze), nur https.
+            try:
+                check_target(url, allow_private=allow_private)
+            except UnsafeWebhookTargetError as exc:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"{field_name} nicht zulaessig: nur oeffentliche https-Adressen.",
+                ) from exc
     async with tenant_tx(request, principal) as session:
         row = await svc.get_connection(session)
         if row is None:
             row = ImmowareConnection(tenant_id=principal.tenant_id)
             session.add(row)
+        tls_before = row.verify_tls if row.verify_tls is not None else True
+        if not body.verify_tls and tls_before and not principal.is_platform_admin:
+            # GAM-303: TLS-Pruefung abschalten darf nur ein Plattformadministrator.
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN,
+                detail="TLS-Pruefung abschalten ist nur Plattformadministratoren erlaubt.",
+            )
         row.base_url = body.base_url
         if body.carddav_url != row.carddav_url:
             row.carddav_url_discovered = False
@@ -120,6 +141,16 @@ async def put_connection(
         row.auto_take_over_contacts = body.auto_take_over_contacts
         await session.flush()
         await _event(session, principal, "immoware.connection_updated", row.id, enabled=row.enabled)
+        if row.verify_tls != tls_before:
+            # GAM-303: Pruefpfad fuer jede Aenderung der TLS-Pruefung.
+            await _event(
+                session,
+                principal,
+                "immoware.tls_verification_changed",
+                row.id,
+                verify_tls=row.verify_tls,
+                platform_admin=bool(principal.is_platform_admin),
+            )
         return _connection_out(row)
 
 

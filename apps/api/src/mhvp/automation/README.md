@@ -193,3 +193,10 @@ logged as event `automation.webhook_data_withheld`. Rule: docs/rules/AC06-einwil
 ## Ereigniskatalog (GAH-307)
 
 `event_catalog.EVENT_CATALOG` listet alle per `emit(..., type="x.y")` ausgelösten Ereignistypen; `GET /automation/event-types` liefert ihn (Recht `tenant_settings:read` oder `tickets:read`). `tests/unit/test_automation_event_catalog.py` vergleicht den Katalog mit dem Quelltext, neue Ereignisse müssen eingetragen werden. Die Regelmaske warnt bei unbekannten Typen. Ereignistypen aus f-Strings (`type=f"..."`) stehen mit ihren möglichen Werten in `DYNAMIC_VARIANTS` (GAI-609); der Test prüft, dass jede Vorlage im Quelltext erfasst ist und jede Variante zur Vorlage passt. Der Endpunkt liefert `ALL_EVENT_TYPES`, die Vereinigung aus festen Typen und Varianten.
+
+## Nachtrag 03.10.2026: KI-Regelaktionen (GAM-820, GAJ-607, AM04-03)
+
+- Die Regelaktion `ai_task` (nur Vorschlag, keine automatische Buchung) hängt am Mandantenschalter `ai_automation.automation_ai_task` (Standard an, Verwaltung in `mhvp.ai.automation`). Ist er aus, wird die Aktion bei der Ausführung übersprungen.
+- Regeln mit einer `ai_task`-Aktion anlegen oder ändern darf nur, wer das Recht `ai:approve` hat (Vier-Augen-Pflicht für KI-Kostenpfade, `_assert_ai_task_permission` in `routers.py`, auch bei Änderungen, die nicht die Aktionen betreffen, AN14-13). Sonst 403.
+- Bestandsregeln, deren letzter Bearbeiter `ai:approve` nicht (mehr) hält, liefert `GET /automation/rules` und `GET /automation/rules/{id}` mit dem Kennzeichen `needs_ai_approval: true` (nur lesend, `mark_needs_ai_approval`). Die Ausführung bleibt unverändert am Schalter gebunden.
+- Offene Entscheidung: OPEN_QUESTIONS AM04-03 (Betreiber).

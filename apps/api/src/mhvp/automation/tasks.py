@@ -52,8 +52,15 @@ async def process_events_once(settings: Settings, *, now: datetime | None = None
                     result = await process_tenant(session, tenant_id, now=now, settings=settings)
                 for key in ("events", "runs", "failed", "webhooks", "webhooks_failed"):
                     totals[key] += result[key]
-            except Exception:
-                log.warning("automation process_events failed", extra={"tenant_id": str(tenant_id)})
+            except Exception as exc:
+                # GAM-505: stack trace and a persisted failure per tenant (metric
+                # event_consumer_failures_24h); the next tenant still runs.
+                log.exception(
+                    "automation process_events failed", extra={"tenant_id": str(tenant_id)}
+                )
+                from mhvp.core.job_failures import JOB_AUTOMATION_EVENTS, record_job_failure
+
+                await record_job_failure(factory, tenant_id, JOB_AUTOMATION_EVENTS, exc)
     finally:
         await engine.dispose()
     return totals

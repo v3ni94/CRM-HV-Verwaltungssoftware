@@ -118,8 +118,8 @@ async def _well_known(
 ) -> str | None:
     url = base_url.rstrip("/") + path
     status, _ = await _propfind(client, url, _PRINCIPAL_BODY, depth="0")
-    # .well-known redirects are handled by the underlying client's follow_redirects=True; we
-    # only record whether the endpoint answered.
+    # .well-known redirects on the same host are followed by ReadOnlyDavClient (pinned per hop,
+    # GAM-302); a redirect to another host is refused. We only record whether it answered.
     ok = status in (200, 207, 301, 302, 308)
     steps.append(
         DiscoveryStep(

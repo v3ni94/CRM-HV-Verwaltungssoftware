@@ -41,6 +41,13 @@ from mhvp.hoa.models import (
     Vote,
 )
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaOnlineMeetingCloseVotingOut,
+    HoaOnlineMeetingGetOnlineSettingOut,
+    HoaOnlineMeetingOnlineOverviewOut,
+    HoaOnlineMeetingOpenVotingOut,
+    HoaOnlineMeetingResolveVoteConflictOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -196,7 +203,11 @@ async def _item(session: AsyncSession, meeting: Meeting, item_id: uuid.UUID) -> 
 # Settings ----------------------------------------------------------------------------------
 
 
-@router.get("/online-meeting-settings", summary="Online-Versammlung im Portal (Schalter)")
+@router.get(
+    "/online-meeting-settings",
+    summary="Online-Versammlung im Portal (Schalter)",
+    response_model=HoaOnlineMeetingGetOnlineSettingOut,
+)
 async def get_online_setting(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> dict[str, Any]:
@@ -307,6 +318,7 @@ async def _set_voting(
 @router.post(
     "/meetings/{meeting_id}/agenda/{item_id}/voting/open",
     summary="Online-Abstimmung des TOP öffnen",
+    response_model=HoaOnlineMeetingOpenVotingOut,
 )
 async def open_voting(
     meeting_id: uuid.UUID,
@@ -320,6 +332,7 @@ async def open_voting(
 @router.post(
     "/meetings/{meeting_id}/agenda/{item_id}/voting/close",
     summary="Online-Abstimmung des TOP schließen",
+    response_model=HoaOnlineMeetingCloseVotingOut,
 )
 async def close_voting(
     meeting_id: uuid.UUID,
@@ -505,6 +518,7 @@ async def handle_second_vote(
 @router.post(
     "/meetings/{meeting_id}/vote-conflicts/{conflict_id}/resolve",
     summary="Stimmkonflikt Vollmacht gegen eigene Stimme entscheiden (Versammlungsleitung)",
+    response_model=HoaOnlineMeetingResolveVoteConflictOut,
 )
 async def resolve_vote_conflict(
     meeting_id: uuid.UUID,
@@ -604,6 +618,7 @@ async def admissibility(session: AsyncSession, meeting: Meeting) -> dict[str, An
     "/meetings/{meeting_id}/online",
     summary="Online-Teilnahme: Zusagen, Vollmachten, Wortmeldungen, Online-Stimmen",
     dependencies=[Depends(strict_query)],
+    response_model=HoaOnlineMeetingOnlineOverviewOut,
 )
 async def online_overview(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

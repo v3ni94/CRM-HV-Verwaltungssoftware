@@ -6,6 +6,8 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { DispatchHistory } from "./DispatchHistory";
+
 /** Zustellung am Kontakt (M23, 11.3): ein abgelegtes Dokument je Zustellweg vorbereiten und
  *  Versand oder Zugang mit Nachweis erfassen. Die Plattform versendet nichts selbst: E-Mail
  *  wird ein Entwurf, Post eine vorbereitete Zustellung (auf Wunsch mit Postauftrag). */
@@ -160,6 +162,7 @@ export function DispatchPanel({
                 <span className={ui.badge}>{t(`channels.${row.channel as (typeof CHANNELS)[number]}`)}</span>
                 <span className="text-xs text-muted">{t(`status.${row.status as "prepared"}`)}</span>
               </div>
+              {row.channel === "post" ? <DispatchHistory dispatchId={row.id} /> : null}
               {canRecord && row.status !== "delivered" ? (
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <label className="flex flex-col gap-1">

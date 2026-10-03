@@ -77,6 +77,14 @@ VALID_BODIES: dict[str, dict[str, Any]] = {
         "execution_date": "2026-09-30",
         "reason": "owner_payout",
     },
+    # AP12 (GAK-104): posting and reversal of an approved write off.
+    "/api/v1/accounting/open-item-write-offs/{write_off_id}/posting": {
+        "expected_amount": "10.00",
+        "counter_account_id": _U,
+    },
+    "/api/v1/accounting/open-item-write-offs/{write_off_id}/posting/reversal": {
+        "reason": "Storno wegen Erfassungsfehler",
+    },
 }
 
 # Routes whose gate check is reached only after a record or configuration exists (lookup

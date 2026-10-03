@@ -82,7 +82,7 @@ class AdvanceRuleSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
     surcharge_percent: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, default=ZERO, server_default="0"
+        Numeric(20, 8), nullable=False, default=ZERO, server_default="0"
     )
     open_advance_mode: Mapped[str] = mapped_column(
         String(32),
@@ -113,7 +113,7 @@ class AdvanceProposal(IdMixin, TimestampMixin, TenantMixin, Base):
         Integer, nullable=False, default=MONTHS, server_default=str(MONTHS)
     )
     surcharge_percent: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, default=ZERO, server_default="0"
+        Numeric(20, 8), nullable=False, default=ZERO, server_default="0"
     )
     proposed_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     status: Mapped[str] = mapped_column(

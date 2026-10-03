@@ -6,7 +6,9 @@ Sources (read only):
   permission (the same entries the settings search shows),
 - ``MAIN_PAGES`` below: the main navigation of the CRM (``src/app/(app)/layout.tsx``),
 - ``docs/handbuch/*.md``: one entry per ``## `` section with a short excerpt; the CRM page of
-  the chapter comes from ``HANDBOOK_PAGES`` (the handbook itself is not rendered in the CRM).
+  the chapter comes from ``HANDBOOK_PAGES``; a chapter without a mapped page falls back to its
+  own handbook page ``/hilfe/<slug>`` (the CRM renders the handbook at ``/hilfe/[slug]``), so
+  every entry carries an ``href`` (GAL-311).
 
 Output: ``apps/api/src/mhvp/ai/help_index.json`` (committed; the API image has no ``docs/``).
 ``--check`` fails when the committed file is out of date (used by a pytest and ``make lint``).
@@ -64,8 +66,9 @@ MAIN_PAGES: list[tuple[str, str, list[str], list[str] | None]] = [
     ("Einstellungen", "/einstellungen", ["einstellungen", "konfiguration"], None),
 ]
 
-# Handbook chapter -> CRM page it describes (None: no single page, excerpt only).
-HANDBOOK_PAGES: dict[str, str | None] = {
+# Handbook chapter -> CRM page it describes. Chapters not listed (no single page) link to their
+# own handbook page ``/hilfe/<slug>`` (GAL-311).
+HANDBOOK_PAGES: dict[str, str] = {
     "abrechnung-miete.md": "/abrechnung",
     "anleitung-bankverbindung.md": "/kontakte",
     "assistent-chat.md": "/assistent",
@@ -106,6 +109,10 @@ HANDBOOK_PAGES: dict[str, str | None] = {
     "tickets.md": "/tickets",
     "vertraege.md": "/vertraege",
     "weg.md": "/weg",
+    "abrechnung.md": "/abrechnung",
+    "auftraege.md": "/auftraege",
+    "objektakte.md": "/objektakte",
+    "version.md": "/version",
 }
 
 ENTRY = re.compile(r"\{\s*id:\s*\"(?P<id>[^\"]+)\",(?P<body>.*?)\n  \},", re.S)
@@ -158,7 +165,7 @@ def handbook_entries() -> list[dict[str, object]]:
             continue
         lines = path.read_text(encoding="utf-8").splitlines()
         chapter = next((_plain(line[2:]) for line in lines if line.startswith("# ")), path.stem)
-        href = HANDBOOK_PAGES.get(path.name)
+        href = HANDBOOK_PAGES.get(path.name) or f"/hilfe/{path.stem}"
         section: str | None = None
         body: list[str] = []
 

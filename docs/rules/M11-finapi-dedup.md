@@ -6,7 +6,7 @@
 | Title | Idempotente Übernahme von finAPI Umsätzen: Bankreferenz vorrangig, Inhalt nur als Hinweis (D05) |
 | Scope | Domäne `banking`, Tabellen `bank_transaction`, `finapi_account_link`; gilt nur für Konten mit `connector = aggregator_finapi` |
 | Source status | Keine Rechtsnorm im Quellenregister einschlägig; Produktschutz (GoBD-nahe Nachvollziehbarkeit, keine Doppel- oder verlorenen Buchungen) |
-| Acceptance case | D05 (annex D), Abnahmefälle 9 bis 13 des Banking-Zusatz-Master-Prompts (Abschnitt 14); Tests `apps/api/tests/banking/test_finapi.py` |
+| Acceptance case | D05 (annex D), Abnahmefälle 9 bis 13 des Banking-Zusatz-Master-Prompts (Abschnitt 14); Tests `apps/api/tests/integration/test_m11_finapi.py` (Dublettenerkennung, idempotenter Abruf) und `apps/api/tests/unit/test_finapi_client.py`; Pfad korrigiert 03.10.2026 (GAM-805) |
 | Implementation | `mhvp.banking.services.import_finapi_transactions` (wiederverwendet `content_hash`/`pair_transfer` aus dem Dateiimport), `mhvp.banking.tasks.finapi_fetch` |
 | Change reason | Banking-Zusatz-Master-Prompt Abschnitt 9, Auftrag 25.09.2026 |
 

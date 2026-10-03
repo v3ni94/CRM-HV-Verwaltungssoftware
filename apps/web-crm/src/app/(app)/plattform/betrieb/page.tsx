@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AvailabilityAdmin } from "@/components/platform/AvailabilityAdmin";
 import { AvailabilitySelfMeasurement } from "@/components/platform/AvailabilitySelfMeasurement";
 import { MaintenanceAdmin } from "@/components/platform/MaintenanceAdmin";
+import { RestoreReportView } from "@/components/platform/RestoreReportView";
 import { ScaleMonitor } from "@/components/platform/ScaleMonitor";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -24,6 +25,7 @@ export default async function Page() {
       <AvailabilitySelfMeasurement />
       <AvailabilityAdmin />
       <ScaleMonitor />
+      <RestoreReportView />
     </div>
   );
 }

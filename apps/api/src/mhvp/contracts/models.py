@@ -464,6 +464,14 @@ class DepositHintSetting(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class DepositMovement(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "deposit_movement"
+    # GAL-101: platform is EUR only (ADR 0038); column documents the currency per record.
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        CheckConstraint("currency = 'EUR'", name="currency_eur"),
+        nullable=False,
+        default="EUR",
+        server_default="EUR",
+    )
 
     deposit_id: Mapped[uuid.UUID] = _fk("deposit.id", ondelete="CASCADE")
     date: Mapped[date] = mapped_column(Date, nullable=False)

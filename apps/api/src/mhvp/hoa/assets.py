@@ -27,6 +27,15 @@ from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
 from mhvp.hoa.models import HoaAssetReport, HoaLoan
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaAssetsAssetReportProvisionsOut,
+    HoaAssetsCalculateAssetReportOut,
+    HoaAssetsCreateAssetReportOut,
+    HoaAssetsListAssetReportsOutItem,
+    HoaAssetsLoanAnnualOut,
+    HoaAssetsPatchAssetReportOut,
+    HoaAssetsTransitionAssetReportOut,
+)
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
@@ -439,7 +448,10 @@ def _manual(items: list[ManualItemIn]) -> list[dict[str, Any]]:
 
 
 @router.post(
-    "/asset-reports", status_code=201, summary="Vermögensbericht zum Stichtag (W11, Entwurf)"
+    "/asset-reports",
+    status_code=201,
+    summary="Vermögensbericht zum Stichtag (W11, Entwurf)",
+    response_model=HoaAssetsCreateAssetReportOut,
 )
 async def create_asset_report(
     body: AssetReportIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -468,7 +480,10 @@ async def create_asset_report(
 
 
 @router.get(
-    "/asset-reports", summary="Vermögensberichte einer GdWE", dependencies=[Depends(strict_query)]
+    "/asset-reports",
+    summary="Vermögensberichte einer GdWE",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HoaAssetsListAssetReportsOutItem],
 )
 async def list_asset_reports(
     request: Request,
@@ -500,7 +515,11 @@ async def get_asset_report(
         return _out(await _get(session, report_id))
 
 
-@router.patch("/asset-reports/{report_id}", summary="Stichtag, Rücklagenwerte, manuelle Positionen")
+@router.patch(
+    "/asset-reports/{report_id}",
+    summary="Stichtag, Rücklagenwerte, manuelle Positionen",
+    response_model=HoaAssetsPatchAssetReportOut,
+)
 async def patch_asset_report(
     report_id: uuid.UUID,
     body: AssetReportPatch,
@@ -527,7 +546,9 @@ async def patch_asset_report(
 
 
 @router.post(
-    "/asset-reports/{report_id}/calculate", summary="Berechnen und gegen Buchhaltung abstimmen"
+    "/asset-reports/{report_id}/calculate",
+    summary="Berechnen und gegen Buchhaltung abstimmen",
+    response_model=HoaAssetsCalculateAssetReportOut,
 )
 async def calculate_asset_report(
     report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -549,7 +570,11 @@ async def calculate_asset_report(
         return _out(row)
 
 
-@router.post("/asset-reports/{report_id}/transition", summary="Ausgabe freigeben (G4)")
+@router.post(
+    "/asset-reports/{report_id}/transition",
+    summary="Ausgabe freigeben (G4)",
+    response_model=HoaAssetsTransitionAssetReportOut,
+)
 async def transition_asset_report(
     report_id: uuid.UUID,
     body: AssetReportTransitionIn,
@@ -576,7 +601,11 @@ async def transition_asset_report(
         return _out(row)
 
 
-@router.get("/loans/{loan_id}/annual", summary="Zins, Tilgung und Restschuld eines Jahres (M24-03)")
+@router.get(
+    "/loans/{loan_id}/annual",
+    summary="Zins, Tilgung und Restschuld eines Jahres (M24-03)",
+    response_model=HoaAssetsLoanAnnualOut,
+)
 async def loan_annual(
     loan_id: uuid.UUID,
     year: int,
@@ -755,7 +784,11 @@ async def render_report_pdf(session: AsyncSession, settings: Any, row: HoaAssetR
     return letters.render_pdf(head, letter)
 
 
-@router.get("/asset-reports/{report_id}/pdf", summary="Vermögensbericht als PDF (Entwurf bis G4)")
+@router.get(
+    "/asset-reports/{report_id}/pdf",
+    summary="Vermögensbericht als PDF (Entwurf bis G4)",
+    response_class=Response,
+)
 async def asset_report_pdf(
     report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> Response:
@@ -775,6 +808,8 @@ async def asset_report_pdf(
 @router.get(
     "/asset-reports/{report_id}/provisions",
     summary="Bereitstellungsprotokoll je Eigentümer (GA07-02)",
+    response_model=HoaAssetsAssetReportProvisionsOut,
+    dependencies=[Depends(strict_query)],
 )
 async def asset_report_provisions(
     report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

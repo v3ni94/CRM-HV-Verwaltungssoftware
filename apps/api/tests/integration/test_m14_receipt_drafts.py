@@ -421,6 +421,7 @@ def _xrechnung(number: str, supplier: str) -> bytes:
     return UBL.replace("RE-2026-042", number).replace("Belegki Handwerk GmbH", supplier).encode()
 
 
+@pytest.mark.annex_d("D41")
 def test_d41_xrechnung_xml_is_read_without_provider_call_and_objection_blocks_release(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:
@@ -550,6 +551,7 @@ def test_d41_xrechnung_xml_is_read_without_provider_call_and_objection_blocks_re
     assert invoice["posting_status"] == "unposted"
 
 
+@pytest.mark.annex_d("D42")
 def test_d42_hybrid_zugferd_conflict_is_visible_and_never_chosen_silently(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:
@@ -632,6 +634,7 @@ def test_d42_hybrid_zugferd_conflict_is_visible_and_never_chosen_silently(
     assert any("gross" in h and "ai: 833.00" in h for h in hints)
 
 
+@pytest.mark.annex_d("D44")
 def test_d44_ai_estimated_section_35a_share_is_never_shown_as_evidence(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:

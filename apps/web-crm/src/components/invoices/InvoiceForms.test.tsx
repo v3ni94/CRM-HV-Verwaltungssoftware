@@ -34,6 +34,56 @@ describe("InvoiceCreate", () => {
   });
 });
 
+describe("InvoiceCreate, AP16 kind and split", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends a final invoice with the deduction of a booked progress invoice (D12)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("filter[kind]=partial")) return jsonResponse([{ id: "x1", number: "A-1", invoice_date: "2026-01-10", gross: "2380.00" }]);
+      if (url.includes("/contacts")) return jsonResponse({ items: [{ id: "p1", display_name: "Dachdecker GmbH" }], total: 1, page: 1, page_size: 50 });
+      return jsonResponse({ id: ID }, 201);
+    });
+    renderIntl(<InvoiceCreate ledgers={[{ id: "l1", label: "WEG" }]} accounts={{ l1: [{ id: "a1", label: "043000 Allgemeinstrom" }] }} />);
+    await userEvent.type(screen.getByLabelText("Aussteller suchen"), "Dach");
+    await userEvent.click(screen.getByText("Suchen"));
+    await userEvent.selectOptions(await screen.findByLabelText("Aussteller"), "p1");
+    await userEvent.selectOptions(screen.getByLabelText("Rechnungsart"), "final");
+    await userEvent.type(screen.getByLabelText("Rechnungsnummer"), "S-1");
+    await userEvent.type(screen.getByLabelText("Rechnungsdatum"), "2026-03-01");
+    await userEvent.type(screen.getByLabelText("Netto"), "5000,00");
+    await userEvent.selectOptions(screen.getByLabelText("Kostenkonto"), "a1");
+    await userEvent.click(await screen.findByRole("checkbox", { name: /A-1/ }));
+    expect(screen.getByTestId("final-summary")).toHaveTextContent("Restverpflichtung 3.570,00 EUR");
+    await userEvent.click(screen.getByText("Rechnung erfassen"));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse((post?.[1] as RequestInit).body as string)).toMatchObject({ kind: "final", gross: "5950.00", deductions: [{ invoice_id: "x1", gross: "2380.00" }] });
+  });
+
+  it("blocks saving a split invoice until the lines add up to the document gross (D22)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ items: [{ id: "p1", display_name: "Dachdecker GmbH" }], total: 1, page: 1, page_size: 50 }));
+    renderIntl(<InvoiceCreate ledgers={[{ id: "l1", label: "WEG" }]} accounts={{ l1: [{ id: "a1", label: "043000 Allgemeinstrom" }] }} />);
+    await userEvent.type(screen.getByLabelText("Aussteller suchen"), "Dach");
+    await userEvent.click(screen.getByText("Suchen"));
+    await userEvent.selectOptions(await screen.findByLabelText("Aussteller"), "p1");
+    await userEvent.type(screen.getByLabelText("Rechnungsnummer"), "M-1");
+    await userEvent.type(screen.getByLabelText("Rechnungsdatum"), "2026-03-01");
+    await userEvent.click(screen.getByLabelText("Rechnung auf mehrere Zeilen aufteilen (Mischrechnung)"));
+    for (const n of [1, 2]) {
+      await userEvent.selectOptions(screen.getByLabelText(`Konto Zeile ${n}`), "a1");
+      await userEvent.type(screen.getByLabelText(`Netto Zeile ${n}`), "300,00");
+      await userEvent.type(screen.getByLabelText(`Begründung Zeile ${n}`), n === 1 ? "umlagefähig" : "Verwaltung");
+    }
+    await userEvent.type(screen.getByLabelText("Brutto laut Beleg"), "713,99");
+    expect(screen.getByTestId("split-mismatch")).toBeInTheDocument();
+    expect(screen.getByText("Rechnung erfassen")).toBeDisabled();
+    await userEvent.clear(screen.getByLabelText("Brutto laut Beleg"));
+    await userEvent.type(screen.getByLabelText("Brutto laut Beleg"), "714,00");
+    expect(screen.getByText("Rechnung erfassen")).toBeEnabled();
+  });
+});
+
 describe("InvoiceActions", () => {
   afterEach(() => vi.restoreAllMocks());
 

@@ -207,3 +207,22 @@ Bei aktivem Schalter `contacts.address_history` schließen der angenommene Porta
 (`portal.routers._apply_address`) und die Kontaktzusammenführung (`merge._close_demoted_addresses`)
 die alte Anschrift (`address_history.close_row`) statt sie nur abzustufen. Fehlt `valid_from`, wird
 das Erstellungsdatum gesetzt und die Zeilen-Id im Ereignis vermerkt. Schalter aus: unverändert.
+
+## Access export completeness, recipients and access log (AP14, GAM-402, 403, 410)
+
+- `access_export_sources.py` classifies every foreign key on `contact.id`: `FURTHER_SOURCES`
+  (allowlisted fields, mapped to the existing `include_*` switches, counted while off),
+  `COVERED` (base export) or `EXCLUDED` (with reason). The unit test
+  `tests/unit/test_ap14_access_export_sources.py` fails on an unclassified new foreign key.
+  Messages from an address of the contact without `contact_id` are counted or listed under
+  `include_communication`.
+- Processing log over the person's entities (tickets, messages, consents, bank accounts,
+  portal account, further source rows) and events whose payload names the contact; the
+  export's own workflow events are left out (hash stability). `change_log` lists `audit_log`
+  field names only. `recipients` lists events with `payload.recipient` and the contact
+  (claims adjuster handover and attachments, automation webhooks).
+- `access_log.py`: table `access_log` (migration 0466), tenant switch
+  `tenant_settings.sources["access_log"]` with `scope` (`off` default, `contact`, `extended`)
+  and `retention_days` (empty, no automatic deletion); decision AP14-01. Logged: contact read,
+  access export preview and download. `occurred_at` uses the application clock so rows of the
+  export request lie after `generated_at`.

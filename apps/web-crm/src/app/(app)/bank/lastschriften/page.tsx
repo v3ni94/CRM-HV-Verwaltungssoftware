@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { DirectDebitPreview } from "@/components/banking/DirectDebitPreview";
+import { DirectDebitOrdersTable } from "@/components/banking/DirectDebitOrdersTable";
 import { DirectDebitReconciliation } from "@/components/banking/DirectDebitReconciliation";
 import { DirectDebitRunActions } from "@/components/banking/DirectDebitRunActions";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -83,6 +84,7 @@ export default async function DirectDebitRunsPage() {
                   </td>
                   <td>
                     <DirectDebitRunActions id={r.id} status={r.status} approvals={r.approvals} />
+                    <DirectDebitOrdersTable runId={r.id} />
                     {r.status === "exported" || r.status === "file_generated" ? <DirectDebitReconciliation runId={r.id} /> : null}
                   </td>
                 </tr>

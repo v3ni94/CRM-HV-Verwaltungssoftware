@@ -259,6 +259,25 @@ def _row_out(row: ds.DepositSettlement) -> DepositSettlementOut:
     )
 
 
+async def _lock_released_guard(session: Any, deposit_id: uuid.UUID) -> None:
+    """AP25 (AP10-01/02): serialize settlement writes per deposit and refuse a second
+    settlement while one is released (no second payout). Locks the deposit row."""
+    await session.execute(select(Deposit.id).where(Deposit.id == deposit_id).with_for_update())
+    released = await session.scalar(
+        select(ds.DepositSettlement.id)
+        .where(
+            ds.DepositSettlement.deposit_id == deposit_id,
+            ds.DepositSettlement.status == ds.DepositSettlementStatus.RELEASED,
+        )
+        .limit(1)
+    )
+    if released is not None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Für diese Kaution ist bereits eine Abrechnung freigegeben.",
+        )
+
+
 async def _deposit(session: Any, deposit_id: uuid.UUID) -> Deposit:
     deposit: Deposit | None = await session.get(Deposit, deposit_id)
     if deposit is None:
@@ -396,6 +415,7 @@ async def create_settlement(
 ) -> DepositSettlementOut:
     async with tenant_tx(request, principal) as session:
         deposit = await _deposit(session, deposit_id)
+        await _lock_released_guard(session, deposit.id)
         contract = await session.get(Contract, deposit.contract_id)
         if contract is not None and contract.end_date and body.settlement_date < contract.end_date:
             raise _invalid("Das Abrechnungsdatum liegt vor dem Vertragsende.")
@@ -472,12 +492,14 @@ async def release_settlement(
         ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
     )
     async with tenant_tx(request, principal) as session:
-        row = await session.get(ds.DepositSettlement, settlement_id)
+        # AP25 (AP10-01): row lock, status is checked inside the lock.
+        row = await session.get(ds.DepositSettlement, settlement_id, with_for_update=True)
         if row is None:
             raise _nf()
         await _deposit(session, row.deposit_id)  # M2-02/S16-02
         if row.status is not ds.DepositSettlementStatus.DRAFT:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Der Entwurf ist bereits freigegeben.")
+        await _lock_released_guard(session, row.deposit_id)  # AP10-02
         if row.created_by is not None and row.created_by == principal.user_id:
             # AK14 (GAI-410): product protection, same rule as payment release (four eyes).
             raise ProblemError(

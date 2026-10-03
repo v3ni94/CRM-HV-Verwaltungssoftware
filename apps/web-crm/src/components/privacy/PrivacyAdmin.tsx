@@ -8,6 +8,7 @@ import { ui } from "@/lib/ui";
 
 import { PrivacyConfigSources } from "./PrivacyConfigSources";
 import { PrivacyRegisterEditor, type RegisterEntryFull } from "./PrivacyRegisterEditor";
+import { formatDate } from "@/lib/format";
 
 export type DeletionProfile = {
   id: string;
@@ -45,7 +46,7 @@ export type RegisterEntry = {
 type RecordsDraft = { title: string; status: string; review_notice: string; markdown: string };
 type ContactHit = { id: string; display_name: string };
 
-const DATA_TYPES = ["contact", "portal_account", "communication", "ticket", "other", "domain_event", "platform_user", "bank_raw"] as const;
+const DATA_TYPES = ["contact", "portal_account", "communication", "ticket", "other", "domain_event", "platform_user", "bank_raw", "ai_run", "call_log", "webhook_delivery", "postal_job"] as const;
 const KINDS = ["processor", "sub_processor", "processing_activity", "responsibility"] as const;
 const AVV = ["none", "requested", "confirmed", "not_required"] as const;
 
@@ -301,7 +302,7 @@ export function PrivacyAdmin({ canManage, canApprove }: { canManage: boolean; ca
               <tbody>
                 {requests.map((r) => (
                   <tr key={r.id} data-testid="privacy-erasure-row">
-                    <td>{new Date(`${r.received_on}T00:00:00`).toLocaleDateString("de-DE")}</td>
+                    <td>{formatDate(r.received_on)}</td>
                     <td>
                       <a className="underline" href={`/kontakte/${r.contact_id}`}>
                         {t("erasure.openContact")}

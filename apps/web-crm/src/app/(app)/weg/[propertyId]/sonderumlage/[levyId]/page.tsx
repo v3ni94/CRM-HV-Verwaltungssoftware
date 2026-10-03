@@ -1,8 +1,10 @@
 import { getTranslations } from "next-intl/server";
 
 import { LevyAmend, LevySteps } from "@/components/hoa/LevyForms";
+import { LevyPaymentStatus, type LevyPaymentStatusData } from "@/components/hoa/LevyPaymentStatus";
+import { LevyRefunds, type LevyRefund, type LevyRefundResolution } from "@/components/hoa/LevyRefunds";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -25,6 +27,20 @@ export default async function LevyPage({ params }: { params: Promise<{ propertyI
   const d = data as Record<string, unknown>;
   const units = ((d.snapshot as { units?: Unit[] } | null)?.units ?? []) as Unit[];
   const r = report.data as Report | undefined;
+  // AP21 / GAM-110: Ist und Rückstand je Rate, Verwendung, Erstattungsvorschläge (keine Auszahlung).
+  const enc = encodeURIComponent(levyId);
+  const [statusResponse, refundsResponse, settingsResponse, resolutionsResponse] = await Promise.all([
+    serverFetch(`/api/v1/hoa/special-levies/${enc}/payment-status`),
+    serverFetch(`/api/v1/hoa/special-levies/${enc}/refunds`),
+    serverFetch("/api/v1/hoa/levy-cost-settings"),
+    serverFetch(`/api/v1/hoa/resolutions?legal_entity_id=${encodeURIComponent(String(d.legal_entity_id))}`),
+  ]);
+  const paymentStatus = statusResponse.ok ? ((await statusResponse.json()) as LevyPaymentStatusData) : null;
+  const refunds = refundsResponse.ok ? ((await refundsResponse.json()) as LevyRefund[]) : [];
+  const refundsEnabled = settingsResponse.ok ? Boolean(((await settingsResponse.json()) as { levy_refund_proposals?: boolean }).levy_refund_proposals) : null;
+  const refundResolutions = resolutionsResponse.ok
+    ? ((await resolutionsResponse.json()) as (LevyRefundResolution & { status: string })[]).filter((x) => ["positive", "final", "legally_binding"].includes(x.status))
+    : [];
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -86,6 +102,16 @@ export default async function LevyPage({ params }: { params: Promise<{ propertyI
           </dl>
           <p className="mt-2 text-xs text-muted">{r.note}</p>
         </section>
+      ) : null}
+      {paymentStatus ? <LevyPaymentStatus data={paymentStatus} /> : null}
+      {d.status === "applied" ? (
+        <LevyRefunds
+          levyId={levyId}
+          refunds={refunds}
+          units={(paymentStatus?.units ?? []).map((u) => ({ unit_id: u.unit_id, unit_number: u.unit_number }))}
+          resolutions={refundResolutions}
+          enabled={refundsEnabled}
+        />
       ) : null}
     </div>
   );

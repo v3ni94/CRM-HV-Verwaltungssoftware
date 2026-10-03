@@ -15,8 +15,11 @@ from mhvp.automation.job_schedule import job_allowed, lock_job
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.logging import get_logger
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today
+
+log = get_logger(__name__)
 
 
 async def dunning_previews(settings: Settings) -> dict[str, int]:
@@ -108,6 +111,8 @@ async def receivable_previews(settings: Settings, today: date | None = None) -> 
                 if not await job_allowed(session, tenant_id, "accounting-receivable-run"):
                     continue
                 totals["tenants"] += 1
+                # GAM-507: serialise with a manual start before the existence check (GA12-06).
+                await lock_job(session, tenant_id, "accounting-receivable-run")
                 existing = await session.scalar(
                     select(ReceivableRun.id).where(
                         ReceivableRun.period_month == month, ReceivableRun.scope == "all"
@@ -206,8 +211,15 @@ async def open_item_balance_refresh_all(
                             session, ledger, day, source="job"
                         )
                         totals["ledgers"] += 1
-            except Exception:  # next tenant; the copy is no source of truth
+            except Exception as exc:  # next tenant; the copy is no source of truth
                 totals["failed"] += 1
+                # GAM-506: logged with tenant and persisted (metric job_failures_24h).
+                log.exception(
+                    "open item balance refresh failed", extra={"tenant_id": str(tenant_id)}
+                )
+                from mhvp.core.job_failures import JOB_OPEN_ITEM_REFRESH, record_job_failure
+
+                await record_job_failure(factory, tenant_id, JOB_OPEN_ITEM_REFRESH, exc)
     finally:
         await engine.dispose()
     return totals

@@ -73,6 +73,10 @@ Probelauf und Replay, dass bereits gelöschte Dokumente wieder auftauchen (backu
 | GAI-503 | Frist und Pfad für Audit und Domain-Ereignisse | offen, V17 |
 | GAI-504 | Pfad für Plattformbenutzer | offen, V17, M20-08-Q7 |
 | GAI-505 | Dieses Dokument | Entwurf angelegt |
+| GAM-401 | Audit-Protokoll behält nach Kontaktlöschung alte und neue Werte | technisch vorbereitet (AP13): Schalter privacy.audit_redaction, Standard aus; eingeschaltet bleiben nur Feldnamen, Frage AP13-01 |
+| GAM-404 | Keine Löschprofile für KI-Läufe, Anrufnotizen, Webhook-Ausgang, Postaufträge | technisch vorbereitet (AP13): Datenarten ai_run, call_log, webhook_delivery, postal_job, nur Zählung, Frist offen (V17, AP13-03) |
+| GAM-405 | Jeder Kommunikationsbezug sperrt die Kontaktlöschung dauerhaft | teilweise (AP13): Schalter privacy.erasure_coupling, Standard aus; gekoppelter Löschvorschlag der Kommunikationszeilen fehlt, Frage AP13-02 |
+| GAM-406 | Kein Widerspruch gegen KI-Verarbeitung und SMS | technisch vorbereitet (AP13): Einwilligungsarten sms und ai_processing, Widerspruch sperrt KI-Läufe, Rechtsgrundlage offen (AP13-04) |
 
 ## 6. Freigabe
 

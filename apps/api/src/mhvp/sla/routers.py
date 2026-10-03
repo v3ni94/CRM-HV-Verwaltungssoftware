@@ -14,6 +14,7 @@ from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
 from mhvp.core.listparams import MAX_PAGE_SIZE, ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.webhooks import UnsafeWebhookTargetError, check_target
 from mhvp.sla.channels import (
     SMS_TEST_TEXT,
     get_gateway,
@@ -724,8 +725,18 @@ async def get_sms_gateway(
 
 @router.put("/sms-gateway", summary="SMS-Gateway einrichten oder ändern")
 async def put_sms_gateway(
-    body: SmsGatewayIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+    body: SmsGatewayIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
+    # GAM-301: Gateway-Ziel ist eine Mandanteneinstellung (tenant_settings:update) und wird
+    # beim Speichern gegen SSRF geprüft; vor jedem Versand prüft send_sms erneut mit Pinning.
+    if body.url:
+        try:
+            check_target(body.url, allow_private=get_settings().webhook_allow_private_targets)
+        except UnsafeWebhookTargetError as exc:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Gateway-URL nicht zulässig: nur öffentliche https-Adressen.",
+            ) from exc
     if body.body_template:
         try:
             render_sms_body(body.body_template, "+490000000000", "Test", body.sender)

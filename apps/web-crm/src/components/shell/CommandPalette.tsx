@@ -218,7 +218,7 @@ export function CommandPalette({
           hint from lg (M31). */}
       <button
         type="button"
-        className="inline-flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border bg-surface text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus sm:h-auto sm:w-auto sm:min-w-0 sm:shrink sm:justify-between sm:px-3.5 sm:py-2 sm:pointer-fine:min-h-0 md:min-w-56"
+        className="inline-flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border bg-surface text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:h-auto sm:w-auto sm:min-w-0 sm:shrink sm:justify-between sm:px-3.5 sm:py-2 sm:pointer-fine:min-h-0 md:min-w-56"
         onClick={(e) => show(e.currentTarget)}
         aria-keyshortcuts="Control+K Meta+K"
         aria-label={t("palette.open")}
@@ -257,7 +257,7 @@ export function CommandPalette({
                 aria-activedescendant={activeId}
                 aria-label={t("searchPlaceholder")}
                 placeholder={t("searchPlaceholder")}
-                className="min-h-11 w-full min-w-0 flex-1 bg-transparent px-4 py-3 text-base focus:outline-none"
+                className="min-h-11 w-full min-w-0 flex-1 bg-transparent px-4 py-3 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />

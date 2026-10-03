@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 import { useBusy } from "@/lib/use-busy";
+import { formatDateTime } from "@/lib/format";
 
 type Win = {
   id: string;
@@ -18,7 +19,7 @@ type Win = {
   phase: string;
 };
 
-const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+const fmt = (iso: string) => formatDateTime(iso);
 
 /** GB16-01: announce, list and cancel maintenance windows (platform administrators). */
 export function MaintenanceAdmin() {

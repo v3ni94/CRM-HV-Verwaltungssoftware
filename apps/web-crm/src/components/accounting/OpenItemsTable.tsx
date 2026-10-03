@@ -5,7 +5,10 @@ import { useTranslations } from "next-intl";
 
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
+import { centsToDecimal, sumCents } from "@/lib/money";
 import { ui } from "@/lib/ui";
+
+import { WriteOffRequestButton } from "./WriteOffRequestButton";
 
 export type OpenItem = {
   id: string;
@@ -23,7 +26,18 @@ export type OpenItem = {
 /** Open items at a cut-off date (B02): remaining amount is computed from settlements. The
  *  date of notice receipt (`PATCH /accounting/open-items/{id}/notice-received`) is entered
  *  here per item; it is a fact recorded by a person, not derived automatically. */
-export function OpenItemsTable({ rows: initialRows, canEdit = false }: { rows: OpenItem[]; canEdit?: boolean }) {
+export function OpenItemsTable({
+  rows: initialRows,
+  canEdit = false,
+  canRequestWriteOff = false,
+  today,
+}: {
+  rows: OpenItem[];
+  canEdit?: boolean;
+  /** AP12 (GAL-302): action "Ausbuchung beantragen" on open receivables. */
+  canRequestWriteOff?: boolean;
+  today?: string;
+}) {
   const t = useTranslations("Receivables");
   const [rows, setRows] = useState(initialRows);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -46,7 +60,7 @@ export function OpenItemsTable({ rows: initialRows, canEdit = false }: { rows: O
   }
 
   if (rows.length === 0) return <p className="text-sm text-muted">{t("noOpenItems")}</p>;
-  const total = rows.reduce((s, r) => s + Math.round(Number(r.remaining) * 100), 0) / 100;
+  const total = centsToDecimal(sumCents(rows.map((r) => r.remaining)) ?? 0n);
   return (
     <div className="overflow-x-auto">
 <table className="mhvp-table">
@@ -57,6 +71,7 @@ export function OpenItemsTable({ rows: initialRows, canEdit = false }: { rows: O
           <th className="num">{t("amount")}</th>
           <th className="num">{t("remaining")}</th>
           <th>{t("noticeReceivedOn")}</th>
+          {canRequestWriteOff ? <th>{t("writeOff")}</th> : null}
         </tr>
       </thead>
       <tbody>
@@ -90,6 +105,11 @@ export function OpenItemsTable({ rows: initialRows, canEdit = false }: { rows: O
                 </p>
               ) : null}
             </td>
+            {canRequestWriteOff ? (
+              <td>
+                {r.kind === "receivable" && Number(r.remaining) > 0 ? <WriteOffRequestButton openItemId={r.id} today={today} /> : null}
+              </td>
+            ) : null}
           </tr>
         ))}
       </tbody>
@@ -99,9 +119,10 @@ export function OpenItemsTable({ rows: initialRows, canEdit = false }: { rows: O
             {t("total")}
           </td>
           <td className="num" data-testid="open-total">
-            {formatEur(total.toFixed(2))}
+            {formatEur(total)}
           </td>
           <td />
+          {canRequestWriteOff ? <td /> : null}
         </tr>
       </tfoot>
     </table>

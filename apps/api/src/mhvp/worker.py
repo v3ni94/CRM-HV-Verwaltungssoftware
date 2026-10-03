@@ -537,6 +537,15 @@ def _install_job_gate_resolver(**_: Any) -> None:
     )
 
 
+@signals.task_failure.connect
+def _record_task_failure(**kwargs: Any) -> None:
+    """Final task failures go to the ``task_failure`` table and the operator metric
+    ``tasks_failed_24h`` (GAM-509); retries are no failures."""
+    from mhvp.core.job_failures import on_task_failure
+
+    on_task_failure(**kwargs)
+
+
 @signals.worker_process_init.connect
 def _configure_worker_tracing(**_: Any) -> None:
     # After the fork, so the batch exporter thread lives in the child process; no-op unless

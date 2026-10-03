@@ -42,7 +42,17 @@ TERMS_SOURCE_PREFIX = "portal_terms_version="
 EmailDeliveryMode = Literal["consent_only", "consent_or_contract"]
 DataSharingMode = Literal["consent_only", "consent_or_contract"]
 
-PURPOSES: tuple[str, ...] = ("email_delivery", "data_sharing", "marketing", "portal_terms")
+PURPOSES: tuple[str, ...] = (
+    "email_delivery",
+    "data_sharing",
+    "marketing",
+    "portal_terms",
+    "sms",
+    "ai_processing",
+)
+# GAM-406 (AP13): purposes without a register entry keep the behaviour before AP13 (no check
+# except a recorded objection); the basis is the operator's choice (OPEN_QUESTIONS AP13-04).
+UNREGISTERED_OPEN: frozenset[str] = frozenset({"sms", "ai_processing"})
 BASES: tuple[str, ...] = ("consent", "contract", "legitimate_interest")
 # Technically offered variants per purpose; whether one is tenable is the operator's decision
 # (OPEN_QUESTIONS AC06-01 to AC06-03, AE34-01). Advertising is never covered by "contract".
@@ -51,13 +61,23 @@ ALLOWED_BASES: dict[str, tuple[str, ...]] = {
     "data_sharing": ("consent", "contract", "legitimate_interest"),
     "marketing": ("consent", "legitimate_interest"),
     "portal_terms": ("consent", "contract"),
+    "sms": ("consent", "contract", "legitimate_interest"),
+    "ai_processing": ("consent", "contract", "legitimate_interest"),
 }
-OBJECTION_KINDS = (ConsentKind.EMAIL_DELIVERY, ConsentKind.DATA_SHARING, ConsentKind.MARKETING)
+OBJECTION_KINDS = (
+    ConsentKind.EMAIL_DELIVERY,
+    ConsentKind.DATA_SHARING,
+    ConsentKind.MARKETING,
+    ConsentKind.SMS,
+    ConsentKind.AI_PROCESSING,
+)
 _PURPOSE_KIND = {
     "email_delivery": ConsentKind.EMAIL_DELIVERY,
     "data_sharing": ConsentKind.DATA_SHARING,
     "marketing": ConsentKind.MARKETING,
     "portal_terms": ConsentKind.PORTAL_TERMS,
+    "sms": ConsentKind.SMS,
+    "ai_processing": ConsentKind.AI_PROCESSING,
 }
 MIN_NOTE_LENGTH = 10
 
@@ -342,3 +362,43 @@ async def portal_terms_decision(
     ):
         return Decision(True, "portal_terms_accepted")
     return Decision(False, "portal_terms_missing")
+
+
+async def _open_purpose_decision(
+    session: AsyncSession,
+    contact_id: uuid.UUID,
+    purpose: str,
+    policy: ConsentPolicy | None,
+) -> Decision:
+    """GAM-406: SMS and AI processing. A valid consent always allows; a recorded objection
+    (or a revoked consent) always blocks unless a valid consent exists. Without a register
+    entry nothing else is checked (behaviour before AP13); with an entry the basis applies
+    like for e-mail delivery."""
+    policy = policy or await load_policy(session)
+    kind = _PURPOSE_KIND[purpose]
+    if await has_consent(session, contact_id, kind):
+        return Decision(True, f"{purpose}_consent")
+    if await objected_contacts(session, [contact_id], kind):
+        return Decision(False, f"{purpose}_objection_recorded")
+    if purpose not in policy.legal_basis:
+        return Decision(True, "basis_not_registered")
+    basis = policy.basis_for(purpose)
+    if basis == "contract":
+        return Decision(True, "tenant_policy_contract")
+    if basis == "legitimate_interest":
+        return Decision(True, "legitimate_interest")
+    return Decision(False, f"{purpose}_consent_missing")
+
+
+async def sms_decision(
+    session: AsyncSession, contact_id: uuid.UUID, policy: ConsentPolicy | None = None
+) -> Decision:
+    """Check before an SMS reaches a contact (GAM-406). Staff escalations are not covered."""
+    return await _open_purpose_decision(session, contact_id, "sms", policy)
+
+
+async def ai_processing_decision(
+    session: AsyncSession, contact_id: uuid.UUID, policy: ConsentPolicy | None = None
+) -> Decision:
+    """Check before an AI run processes data of this contact (GAM-406)."""
+    return await _open_purpose_decision(session, contact_id, "ai_processing", policy)

@@ -174,7 +174,12 @@ def test_register_defaults_validation_and_permissions(
         first = _by_purpose(_ok(client.get("/api/v1/consent-legal-basis", headers=h)))
         assert set(first) == set(consent_rules.PURPOSES)
         assert all(v["basis"] == "consent" and v["origin"] == "default" for v in first.values())
-        assert all(v["consent_required"] for v in first.values())
+        # GAM-406 (AP13, OPEN_QUESTIONS AP13-04): sms and ai_processing without register entry
+        # check nothing but a recorded objection, every other purpose requires consent.
+        assert all(
+            v["consent_required"] is (p not in consent_rules.UNREGISTERED_OPEN)
+            for p, v in first.items()
+        )
         assert first["marketing"]["allowed_bases"] == ["consent", "legitimate_interest"]
         # Read right is enough to read, writing needs contacts:approve.
         assert client.get("/api/v1/consent-legal-basis", headers=reader).status_code == 200

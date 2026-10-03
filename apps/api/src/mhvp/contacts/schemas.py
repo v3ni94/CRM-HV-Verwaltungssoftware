@@ -563,7 +563,9 @@ class ConsentLegalBasisIn(_Strict):
 
 
 class ConsentLegalBasisOut(BaseModel):
-    purpose: Literal["email_delivery", "data_sharing", "marketing", "portal_terms"]
+    purpose: Literal[
+        "email_delivery", "data_sharing", "marketing", "portal_terms", "sms", "ai_processing"
+    ]
     basis: Literal["consent", "contract", "legitimate_interest"]
     origin: Literal["register", "policy", "default"]
     allowed_bases: list[str]
@@ -699,3 +701,22 @@ class ContactAccessExportSettingsIn(_Strict):
     include_portal_account: bool | None = None
     include_payments: bool | None = None
     include_contracts: bool | None = None
+
+
+# GAM-410: access log of personal data (tenant switch, decision AP14-01).
+class ContactAccessLogSettingsOut(BaseModel):
+    scope: Literal["off", "contact", "extended"] = "off"
+    retention_days: int | None = None
+
+
+class ContactAccessLogSettingsIn(_Strict):
+    scope: Literal["off", "contact", "extended"] = "off"
+    retention_days: int | None = Field(default=None, ge=1, le=3650)
+
+
+class ContactAccessLogEntryOut(BaseModel):
+    user_id: uuid.UUID | None
+    entity_type: str
+    entity_id: uuid.UUID | None
+    action: str
+    occurred_at: datetime

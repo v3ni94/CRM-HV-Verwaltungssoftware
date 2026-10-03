@@ -5,6 +5,7 @@ Uhren lassen sich pausieren/fortsetzen, Bereitschaft und Kalender sind über die
 """
 
 import asyncio
+import socket
 from collections.abc import Iterator
 from typing import Any
 
@@ -195,12 +196,25 @@ def test_presets_create_rules_once_and_keep_existing(client: TestClient, world: 
     assert calendar["closes_at"].startswith("17:00")
 
 
+def _public_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """gateway.example resolves to a public documentation address in these tests."""
+    real = socket.getaddrinfo
+
+    def fake(host: str, port: Any, *args: Any, **kwargs: Any) -> Any:
+        if host == "gateway.example":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
+        return real(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+
+
 def test_sms_gateway_config_hides_secret_and_test_reports_errors(
-    client: TestClient, world: World
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """M35: GET/PUT /sla/sms-gateway ohne Secret in der Antwort, Test ohne aktives Gateway
     liefert einen Fehlertext, Lesende dürfen nicht ändern."""
     h = bearer(login(client, world, "slaadmin"))
+    _public_dns(monkeypatch)
     empty = _ok(client.get("/api/v1/sla/sms-gateway", headers=h))
     assert empty["enabled"] is False
     assert empty["auth_header_set"] is False
@@ -304,3 +318,79 @@ def test_whatsapp_config_hides_secret_and_test_reports_errors(
     reader = bearer(login(client, world, "slaread"))
     denied = client.put("/api/v1/sla/whatsapp-config", json={"enabled": False}, headers=reader)
     assert denied.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://169.254.169.254/latest/meta-data/",
+        "https://127.0.0.1:6379/",
+        "https://10.0.0.5/admin",
+        "http://gateway.example/api/sms",
+    ],
+)
+def test_gam301_sms_gateway_rejects_internal_targets_on_save(
+    client: TestClient, world: World, url: str
+) -> None:
+    """GAM-301: metadata service, loopback, private networks and plain http are refused when
+    saving; nothing is stored."""
+    h = bearer(login(client, world, "slaadmin"))
+    response = client.put(
+        "/api/v1/sla/sms-gateway",
+        json={"enabled": False, "url": url, "body_template": '{"to": "{to}"}'},
+        headers=h,
+    )
+    assert response.status_code == 422, response.text
+    assert url not in (client.get("/api/v1/sla/sms-gateway", headers=h).json().get("url") or "")
+
+
+def test_gam301_sms_gateway_is_tenant_separated(
+    client: TestClient,
+    database: Database,
+    redis_url: str,
+    world: World,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GAM-301: tenant B neither sees nor uses the gateway of tenant A."""
+    _public_dns(monkeypatch)
+    h = bearer(login(client, world, "slaadmin"))
+    _ok(
+        client.put(
+            "/api/v1/sla/sms-gateway",
+            json={
+                "enabled": True,
+                "url": "https://gateway.example/a",
+                "body_template": '{"to": "{to}", "text": "{text}"}',
+            },
+            headers=h,
+        )
+    )
+    other = asyncio.run(_tenant_b(_settings(database, redis_url), world))
+    hb = bearer(login(client, other, "slaadmin_b"))
+    seen = _ok(client.get("/api/v1/sla/sms-gateway", headers=hb))
+    assert seen["enabled"] is False
+    assert seen.get("url") in (None, "")
+    result = _ok(client.post("/api/v1/sla/sms-gateway/test", json={"to": "+49 170 1"}, headers=hb))
+    assert result["ok"] is False
+    assert "nicht eingerichtet" in result["error"]
+    _ok(client.put("/api/v1/sla/sms-gateway", json={"enabled": False}, headers=h))
+
+
+async def _tenant_b(settings: Any, world: World) -> World:
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        b, _ = await services.provision_tenant(factory, slug=f"slab-{RUN}", name=f"SLA B {RUN}")
+        other = World(tenant_a=b, tenant_b=b, app_url=world.app_url)
+        uid = await services.create_user(
+            factory, email=other.email("slaadmin_b"), display_name="b", password=PASSWORD
+        )
+        other.users["slaadmin_b"] = uid
+        await services.add_member(
+            factory, tenant_id=b, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+        )
+        return other
+    finally:
+        await engine.dispose()

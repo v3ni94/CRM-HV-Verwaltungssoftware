@@ -415,17 +415,6 @@ async def build(
             {r.related_contact_id for r in relations}
             | {cid for members in co_members.values() for cid, _ in members},
         )
-    events = (
-        await session.scalars(
-            select(DomainEvent)
-            .where(
-                DomainEvent.entity_id == contact_id,
-                DomainEvent.entity_type == "contact",
-                DomainEvent.occurred_at <= generated_at,
-            )
-            .order_by(DomainEvent.occurred_at, DomainEvent.id)
-        )
-    ).all()
     own_name = (contact.display_name or "").strip().casefold()
     bank_accounts = []
     for account in accounts:
@@ -477,9 +466,6 @@ async def build(
             }
             for party_id, role in parties
         ],
-        "processing_log": [
-            {"type": e.type, "occurred_at": e.occurred_at.isoformat()} for e in events
-        ],
         "withheld": {"categories": withheld_for(options)},
     }
     if options.include_internal_notes:
@@ -491,6 +477,35 @@ async def build(
         content["withheld"]["internal_notes_count"] = len(notes) + (1 if contact.notes else 0)
     await _add_sources(session, contact_id, options, content)
     await _add_account_and_contracts(session, contact_id, generated_at, options, content)
+    # GAM-402: further sources with a foreign key on contact.id and unlinked messages.
+    from mhvp.contacts import access_export_sources as more
+
+    found = await more.add_further_sources(session, contact_id, generated_at, options, content)
+    unlinked = await more.add_unlinked_messages(
+        session, contact_id, generated_at, options, content, MESSAGE_FIELDS
+    )
+    # GAM-403: processing log over all entities of the person, field changes, recipients.
+    entity_ids = await more.related_entity_ids(session, contact_id)
+    entity_ids |= {rid for _, rid in found} | set(unlinked)
+    log, audit, recipients = await more.processing_log(
+        session, contact_id, generated_at, entity_ids
+    )
+    content["processing_log"] = log
+    content["change_log"] = audit
+    content["recipients"] = recipients
+    # GAM-410: reads of the person's data (only while the tenant switch logs them), action
+    # and time only; the export's own preview and downloads are left out (hash stability).
+    from mhvp.contacts import access_log
+
+    content["access_log"] = [
+        {"action": r.action, "entity_type": r.entity_type, "occurred_at": r.occurred_at.isoformat()}
+        for r in await access_log.for_contact(
+            session,
+            contact_id,
+            until=generated_at,
+            exclude_actions=access_log.EXPORT_SELF_ACTIONS,
+        )
+    ]
     result: dict[str, Any] = strip_secrets(content)
     return result
 

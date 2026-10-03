@@ -175,6 +175,8 @@ class HoaCostIn(HoaBaseIn):
     labour_cost_35a: Decimal | None = Field(default=None, gt=0, decimal_places=2)
     basis_resolution_id: uuid.UUID | None = None
     basis_document_id: uuid.UUID | None = None
+    # AP21 / GAM-109: sub community of the same property (Mehrhausanlage).
+    sub_community_id: uuid.UUID | None = None
 
 
 class ReconciliationNoteIn(HoaBaseIn):
@@ -248,6 +250,11 @@ def _cost_out(i: HoaCostItem) -> dict[str, Any]:
         "labour_cost_35a": i.labour_cost_35a,
         "basis_resolution_id": i.basis_resolution_id,
         "basis_document_id": i.basis_document_id,
+        # AP21 / GAM-109: sub community and the check hint "no documented basis".
+        "sub_community_id": i.sub_community_id,
+        "sub_community_basis_missing": i.sub_community_id is not None
+        and i.basis_resolution_id is None
+        and i.basis_document_id is None,
     }
 
 
@@ -1007,6 +1014,10 @@ async def add_cost(
                 ErrorCodes.VALIDATION, detail="Lohnanteil § 35a größer als der Betrag."
             )
         entry = await _same_ledger_entry(session, st.ledger_id, body.journal_entry_id)
+        if body.sub_community_id is not None:
+            from mhvp.hoa.levy_cost import check_sub_community
+
+            await check_sub_community(session, st.ledger_id, body.sub_community_id)
         data = body.model_dump()
         if entry is not None and data["document_id"] is None:
             data["document_id"] = entry.document_id
@@ -1266,6 +1277,11 @@ async def transition_statement(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if body.target is StatementStatus.POSTED:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Buchung über den Buchungsendpunkt.")
+        if body.target is StatementStatus.INTERNALLY_APPROVED:
+            # AP21 / GAM-109: sub community positions without basis, lock only with the switch.
+            from mhvp.hoa.levy_cost import ensure_sub_community_basis
+
+            await ensure_sub_community_basis(session, st.id)
         await _move(session, st, body, principal)
         if body.target in (StatementStatus.ISSUED, StatementStatus.DUE) and st.snapshot:
             # GAB-06: at provision every individual statement is filed once (G4 checked above).
@@ -1501,6 +1517,7 @@ async def new_version(
                     labour_cost_35a=item.labour_cost_35a,
                     basis_resolution_id=item.basis_resolution_id,
                     basis_document_id=item.basis_document_id,
+                    sub_community_id=item.sub_community_id,
                 )
             )
         await session.flush()
@@ -1858,7 +1875,11 @@ async def add_reserve_movement(
             raise ProblemError(ErrorCodes.VALIDATION, detail="Rücklage aus anderem Buchungskreis.")
         await _same_ledger_entry(session, st.ledger_id, body.journal_entry_id)
         row = HoaReserveMovement(
-            tenant_id=principal.tenant_id, statement_id=st.id, **body.model_dump()
+            tenant_id=principal.tenant_id,
+            statement_id=st.id,
+            created_by=principal.user_id,
+            updated_by=principal.user_id,
+            **body.model_dump(),
         )
         session.add(row)
         await session.flush()

@@ -62,3 +62,56 @@ def check(
     if not equal(prefix + mac_hex(secret, ts, body), signature_value.strip()):
         return "bad"
     return None
+
+
+def parse_unified(value: str) -> tuple[int, str] | None:
+    """``(timestamp, hex)`` from the unified header ``t=<unix>,v1=<hex>``, else ``None``."""
+    parts = dict(item.strip().split("=", 1) for item in value.split(",") if "=" in item)
+    ts = parse_timestamp(parts.get("t"))
+    mac = parts.get("v1")
+    if ts is None or not mac:
+        return None
+    return ts, mac.strip()
+
+
+def check_inbound(
+    secret: str,
+    body: bytes,
+    timestamp_value: str | None,
+    signature_value: str | None,
+    *,
+    now: float,
+    window: int = DEFAULT_WINDOW_SECONDS,
+) -> str | None:
+    """GAL-204: inbound ``X-MHVP-Signature`` in the platform standard or the legacy format.
+
+    Standard (same as outgoing webhooks): ``t=<unix>,v1=<hex>`` in one header; a separate
+    ``X-MHVP-Timestamp`` is optional and, when sent, must equal ``t``. Legacy (deprecated):
+    ``sha256=<hex>`` with the timestamp in ``X-MHVP-Timestamp``. Returns like ``check``.
+    """
+    if not signature_value:
+        return "missing"
+    value = signature_value.strip()
+    if value.startswith("sha256="):
+        return check(secret, body, timestamp_value, value, now=now, window=window)
+    parsed = parse_unified(value)
+    if parsed is None:
+        return "bad"
+    ts, received = parsed
+    if timestamp_value is not None and parse_timestamp(timestamp_value) != ts:
+        return "bad"
+    if not within_window(ts, now=now, window=window):
+        return "stale"
+    if not equal(mac_hex(secret, ts, body), received):
+        return "bad"
+    return None
+
+
+def replay_token(signature_value: str) -> str:
+    """The MAC part of a verified signature: the replay marker must not change with spacing
+    or extra fields of the header (``t=1,v1=x`` and ``t=1, v1=x,z=0`` are one delivery)."""
+    value = signature_value.strip()
+    if value.startswith("sha256="):
+        return value[len("sha256=") :]
+    parsed = parse_unified(value)
+    return parsed[1] if parsed is not None else value

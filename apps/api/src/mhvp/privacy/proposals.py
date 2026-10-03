@@ -48,7 +48,17 @@ log = get_logger("mhvp.privacy.proposals")
 
 OPEN_STATUSES = ("proposed", "requested", "approved")
 MAX_PROPOSALS_PER_RUN = 200
-COUNTED_TYPES = ("communication", "ticket", "portal_account", "domain_event")
+COUNTED_TYPES = (
+    "communication",
+    "ticket",
+    "portal_account",
+    "domain_event",
+    # GAM-404 (AP13, migration 0465): counted only, the period is the operator's (V17, AP13-03).
+    "ai_run",
+    "call_log",
+    "webhook_delivery",
+    "postal_job",
+)
 NOT_PROPOSED = {
     "platform_user": "Plattformbenutzer sind mandantenübergreifend, kein automatischer Vorschlag.",
     "bank_raw": "Aufbewahrungsklasse der Bankrohdaten ist offen (V17), nur dokumentiert.",
@@ -88,6 +98,28 @@ async def _contact_candidates(session: AsyncSession, today: date) -> list[uuid.U
     return list(rows)
 
 
+_CREATED_AT_TYPES = ("ai_run", "call_log", "webhook_delivery", "postal_job")
+
+
+def _created_at_model(data_type: str) -> Any:
+    """GAM-404: rows counted by creation time (no deletion path, V17)."""
+    if data_type == "ai_run":
+        from mhvp.ai.models import AiTaskRun
+
+        return AiTaskRun
+    if data_type == "call_log":
+        from mhvp.communication.telephony import CallLog
+
+        return CallLog
+    if data_type == "webhook_delivery":
+        from mhvp.core.webhooks import WebhookDelivery
+
+        return WebhookDelivery
+    from mhvp.communication.models import PostalJob
+
+    return PostalJob
+
+
 async def _count(session: AsyncSession, data_type: str, cutoff: datetime) -> int:
     if data_type == "communication":
         stmt = select(func.count()).select_from(Message).where(Message.created_at < cutoff)
@@ -109,6 +141,9 @@ async def _count(session: AsyncSession, data_type: str, cutoff: datetime) -> int
                 PortalAccount.status.in_(["expired", "revoked", "locked"]),
             )
         )
+    elif data_type in _CREATED_AT_TYPES:
+        model = _created_at_model(data_type)
+        stmt = select(func.count()).select_from(model).where(model.created_at < cutoff)
     else:  # domain_event
         stmt = select(func.count()).select_from(DomainEvent).where(DomainEvent.occurred_at < cutoff)
     return int(await session.scalar(stmt) or 0)

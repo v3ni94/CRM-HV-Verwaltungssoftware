@@ -52,6 +52,28 @@ from mhvp.banking.property_scope import (
     session_account_filter,
     transaction_account_filter,
 )
+from mhvp.banking.raw_responses import (
+    BankingAcceptProposalOut,
+    BankingAutomationComparisonOut,
+    BankingAutomationMetricsOut,
+    BankingBookOut,
+    BankingBulkConfirmOut,
+    BankingCorrectTransactionOut,
+    BankingDecideClarificationOut,
+    BankingDecideReviewOut,
+    BankingGetAiPostingOut,
+    BankingListClarificationsOutItem,
+    BankingListReviewsOutItem,
+    BankingListRuleProposalsOutItem,
+    BankingLowerLevelOut,
+    BankingOpenClarificationOut,
+    BankingPostingProposalsOut,
+    BankingReconciliationOutItem,
+    BankingRejectRuleProposalOut,
+    BankingStartAiPostingOut,
+    BankingTransactionsItemOut,
+    BankingTxCandidatesOut,
+)
 from mhvp.banking.response_models import (
     BankingAutoMetricsOut,
     BankingAutoPostRunOut,
@@ -405,7 +427,7 @@ _TX_LIST = ListSpec(
 )
 
 
-@router.get("/transactions", summary="Bankumsätze")
+@router.get("/transactions", summary="Bankumsätze", response_model=list[BankingTransactionsItemOut])
 async def transactions(
     request: Request,
     bank_account_id: uuid.UUID | None = None,
@@ -473,6 +495,7 @@ async def review(
     "/accounts/{bank_account_id}/reconciliation",
     summary="Bankabstimmung (B09)",
     dependencies=[Depends(strict_query)],
+    response_model=list[BankingReconciliationOutItem],
 )
 async def reconciliation(
     bank_account_id: uuid.UUID,
@@ -739,7 +762,11 @@ async def _tx(session: Any, tx_id: uuid.UUID) -> BankTransaction:
     return row  # type: ignore[no-any-return]
 
 
-@router.get("/transactions/{tx_id}/candidates", summary="Zuordnungsvorschläge mit Begründung")
+@router.get(
+    "/transactions/{tx_id}/candidates",
+    summary="Zuordnungsvorschläge mit Begründung",
+    response_model=BankingTxCandidatesOut,
+)
 async def tx_candidates(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -781,6 +808,7 @@ def _posting_out(proposal: Any, run: Any = None) -> dict[str, Any]:
     "/transactions/{tx_id}/ai-posting",
     status_code=202,
     summary="KI-Kontierungsvorschlag anstoßen (nur Vorschlag, deaktiviert bis Freigabe)",
+    response_model=BankingStartAiPostingOut,
 )
 async def start_ai_posting(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -836,7 +864,11 @@ async def start_ai_posting(
     return await get_ai_posting(tx_id, request, principal)
 
 
-@router.get("/transactions/{tx_id}/ai-posting", summary="KI-Kontierungsvorschläge lesen")
+@router.get(
+    "/transactions/{tx_id}/ai-posting",
+    summary="KI-Kontierungsvorschläge lesen",
+    response_model=BankingGetAiPostingOut,
+)
 async def get_ai_posting(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -872,6 +904,7 @@ async def get_ai_posting(
 @router.get(
     "/transactions/{tx_id}/posting-proposals",
     summary="Kontierungsvorschläge in zwei Stufen (Regel, Abgleich, KI) mit Konfidenz",
+    response_model=BankingPostingProposalsOut,
 )
 async def posting_proposals(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1015,7 +1048,12 @@ async def _book(
     return entry
 
 
-@router.post("/transactions/{tx_id}/book", status_code=201, summary="Umsatz buchen (bestätigt)")
+@router.post(
+    "/transactions/{tx_id}/book",
+    status_code=201,
+    summary="Umsatz buchen (bestätigt)",
+    response_model=BankingBookOut,
+)
 async def book(
     tx_id: uuid.UUID, body: BookIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -1235,7 +1273,9 @@ def _check_bulk_preview(
 
 
 @router.post(
-    "/bulk-confirm", summary="Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht)"
+    "/bulk-confirm",
+    summary="Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht)",
+    response_model=BankingBulkConfirmOut,
 )
 async def bulk_confirm(
     body: BankBulkIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -1682,6 +1722,7 @@ def _need_settings_update(principal: TenantPrincipal) -> None:
     "/automation/comparison",
     summary="Vergleich Automatik gegen manuelle Buchung (Bericht, keine Buchung)",
     dependencies=[Depends(strict_query)],
+    response_model=BankingAutomationComparisonOut,
 )
 async def automation_comparison(
     request: Request,
@@ -1947,7 +1988,11 @@ async def get_levels(
         }
 
 
-@router.get("/automation/metrics", summary="Kennzahlen je Fallklasse und Rechtsträger")
+@router.get(
+    "/automation/metrics",
+    summary="Kennzahlen je Fallklasse und Rechtsträger",
+    response_model=BankingAutomationMetricsOut,
+)
 async def automation_metrics(
     request: Request,
     period_from: Annotated[date | None, Query(alias="from")] = None,
@@ -2047,7 +2092,11 @@ async def reject_level_request(
         return levels_svc.request_out(row)
 
 
-@router.put("/automation/levels", summary="Stufe absenken (sofort, eine Person)")
+@router.put(
+    "/automation/levels",
+    summary="Stufe absenken (sofort, eine Person)",
+    response_model=BankingLowerLevelOut,
+)
 async def lower_level(
     body: LevelLowerIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, str]:
@@ -2110,7 +2159,10 @@ async def set_outgoing(
 
 
 @router.post(
-    "/transactions/{tx_id}/accept", status_code=201, summary="Ein-Klick-Übernahme (Stufe L1)"
+    "/transactions/{tx_id}/accept",
+    status_code=201,
+    summary="Ein-Klick-Übernahme (Stufe L1)",
+    response_model=BankingAcceptProposalOut,
 )
 async def accept_proposal(
     tx_id: uuid.UUID, body: AcceptIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -2179,6 +2231,7 @@ async def accept_proposal(
     "/transactions/{tx_id}/correct",
     status_code=201,
     summary="Korrigieren: Storno mit Grundcode und Neubuchung (B03)",
+    response_model=BankingCorrectTransactionOut,
 )
 async def correct_transaction(
     tx_id: uuid.UUID,
@@ -2216,7 +2269,10 @@ async def correct_transaction(
 
 
 @router.get(
-    "/rule-proposals", summary="Gelernte Regelvorschläge", dependencies=[Depends(strict_query)]
+    "/rule-proposals",
+    summary="Gelernte Regelvorschläge",
+    dependencies=[Depends(strict_query)],
+    response_model=list[BankingListRuleProposalsOutItem],
 )
 async def list_rule_proposals(
     request: Request,
@@ -2272,7 +2328,11 @@ async def accept_rule_proposal(
         return RuleOut.model_validate(rule)
 
 
-@router.post("/rule-proposals/{proposal_id}/reject", summary="Regelvorschlag ablehnen (Grund)")
+@router.post(
+    "/rule-proposals/{proposal_id}/reject",
+    summary="Regelvorschlag ablehnen (Grund)",
+    response_model=BankingRejectRuleProposalOut,
+)
 async def reject_rule_proposal(
     proposal_id: uuid.UUID,
     body: ReopenIn,
@@ -2303,6 +2363,7 @@ async def reject_rule_proposal(
     "/auto-posting/reviews",
     summary="Nachkontrolle automatischer Buchungen",
     dependencies=[Depends(strict_query)],
+    response_model=list[BankingListReviewsOutItem],
 )
 async def list_reviews(
     request: Request, principal: TenantPrincipal = Depends(READ)
@@ -2313,7 +2374,9 @@ async def list_reviews(
 
 
 @router.post(
-    "/auto-posting/reviews/{item_id}", summary="Nachkontrolle abschließen (accounting:review)"
+    "/auto-posting/reviews/{item_id}",
+    summary="Nachkontrolle abschließen (accounting:review)",
+    response_model=BankingDecideReviewOut,
 )
 async def decide_review(
     item_id: uuid.UUID,
@@ -2355,6 +2418,7 @@ class ClarificationOpenIn(_In):
     "/transactions/{tx_id}/clarification",
     status_code=201,
     summary="Bankbewegung als unbelegt melden (Klärung B05)",
+    response_model=BankingOpenClarificationOut,
 )
 async def open_clarification(
     tx_id: uuid.UUID,
@@ -2384,6 +2448,7 @@ async def open_clarification(
     "/clarifications",
     summary="Buchungen ohne Beleg (Klärungsstatus B05)",
     dependencies=[Depends(strict_query)],
+    response_model=list[BankingListClarificationsOutItem],
 )
 async def list_clarifications(
     request: Request,
@@ -2422,7 +2487,11 @@ async def list_clarifications(
         return [await clarification_svc.row_out(session, r) for r in rows]
 
 
-@router.post("/clarifications/{row_id}", summary="Klärungsstatus setzen (accounting:update)")
+@router.post(
+    "/clarifications/{row_id}",
+    summary="Klärungsstatus setzen (accounting:update)",
+    response_model=BankingDecideClarificationOut,
+)
 async def decide_clarification(
     row_id: uuid.UUID,
     body: ClarificationDecisionIn,

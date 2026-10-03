@@ -21,3 +21,16 @@ describe("portal ui class sets (GAJ-403)", () => {
     expect(ui.input).toContain("sm:text-sm");
   });
 });
+
+/** GAM-715: twin of apps/web-crm/src/lib/ui.ts (ADR 0013). Surfaces differ on purpose; the
+ *  interactive tokens must keep the same focus and target size rules. */
+describe("portal ui twin rules (GAM-715)", () => {
+  it.each(["input", "button", "primary", "secondary", "danger", "buttonSm", "tab", "tabActive"] as const)("%s shows a visible keyboard focus ring", (key) => {
+    expect(ui[key]).toContain("focus-visible:ring-2");
+    expect(ui[key]).toContain("focus-visible:ring-focus");
+  });
+  it("input uses the same focus border colour as the CRM", () => {
+    expect(ui.input).toContain("focus:border-accent-strong");
+    expect(ui.input).toContain("sm:pointer-fine:min-h-10");
+  });
+});

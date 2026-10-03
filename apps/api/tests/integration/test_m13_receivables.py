@@ -577,6 +577,7 @@ def test_d58_sev_admin_fee_debtor_and_payee(client: TestClient, world: World) ->
     )
 
 
+@pytest.mark.annex_d("D45")
 def test_d45_receivable_run_vat_option_without_tax_status_stays_manual(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:

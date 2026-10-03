@@ -1,19 +1,18 @@
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import type { AccountStatement } from "@/components/portal/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { formatDate } from "@/lib/format-date";
+import { formatAmount } from "@/lib/format-eur";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-function formatAmount(value: string): string {
-  return new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value));
-}
-
 /** Kontoauszug (M21): offene Posten der eigenen Verträge, Beträge in 1.234,56 EUR, Daten in
  *  TT.MM.JJJJ. */
 export default async function AccountPage() {
-  const [t, format] = await Promise.all([getTranslations("Account"), getFormatter()]);
+  const t = await getTranslations("Account");
   const { data, error, response } = await serverApi().GET("/api/v1/portal/account");
   redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
@@ -23,7 +22,7 @@ export default async function AccountPage() {
       <h1 className={ui.title}>{t("title")}</h1>
       {statement.note ? <p className={ui.notice}>{statement.note}</p> : null}
       {statement.items.length === 0 ? (
-        <p className={ui.notice}>{t("empty")}</p>
+        <EmptyState title={t("empty")} hint={t("emptyHint")} />
       ) : (
         <div className={ui.tableScroll}>
           <table className={ui.table}>
@@ -44,7 +43,7 @@ export default async function AccountPage() {
                 <tr key={i}>
                   <td>{item.contract_number}</td>
                   <td className="whitespace-nowrap">
-                    {format.dateTime(new Date(item.due_date), { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {formatDate(item.due_date)}
                   </td>
                   <td className="num whitespace-nowrap">{formatAmount(item.amount)} EUR</td>
                   <td className="num whitespace-nowrap">{formatAmount(item.remaining)} EUR</td>

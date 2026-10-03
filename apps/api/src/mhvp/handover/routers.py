@@ -280,6 +280,7 @@ async def _fresh(session: Any, obj: Any) -> Any:
 
 def _protocol_out(p: HandoverProtocol) -> dict[str, Any]:
     out = _row(p)
+    out.pop("deposit_iban_fingerprint", None)  # internal hash, never shown
     out["locked"] = svc.is_locked(p)
     out["finalized"] = svc.is_finalized(p)
     out["address"] = svc.address_line(p)

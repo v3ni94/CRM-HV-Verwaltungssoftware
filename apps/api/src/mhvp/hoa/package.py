@@ -24,6 +24,9 @@ from mhvp.hoa.models import (
     Resolution,
 )
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaPackageStatementPackageOut,
+)
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
 router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
@@ -285,7 +288,11 @@ async def reconciliation(
     )
 
 
-@router.get("/statements/{statement_id}/package", summary="Abrechnungspaket (W12)")
+@router.get(
+    "/statements/{statement_id}/package",
+    summary="Abrechnungspaket (W12)",
+    response_model=HoaPackageStatementPackageOut,
+)
 async def statement_package(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:

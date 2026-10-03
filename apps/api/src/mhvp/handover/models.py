@@ -17,6 +17,7 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 
@@ -125,7 +126,11 @@ class HandoverProtocol(IdMixin, TimestampMixin, TenantMixin, Base):
     # Deposit and refund account (entered only, no receivable, no payment: G1/G2 untouched).
     deposit_amount: Mapped[Decimal | None] = mapped_column(MONEY)
     deposit_account_holder: Mapped[str | None] = mapped_column(String(200))
-    deposit_iban: Mapped[str | None] = mapped_column(String(34))
+    # GAL-108: encrypted like every other IBAN field (5.3); fingerprint (keyed hash of the
+    # normalised IBAN) and suffix are kept in step by the attribute event below.
+    deposit_iban: Mapped[str | None] = mapped_column(EncryptedText())
+    deposit_iban_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    deposit_iban_suffix: Mapped[str | None] = mapped_column(String(4))
     deposit_bic: Mapped[str | None] = mapped_column(String(11))
     deposit_bank_name: Mapped[str | None] = mapped_column(String(200))
     deposit_note: Mapped[str | None] = mapped_column(Text)
@@ -181,7 +186,7 @@ class HandoverMeter(IdMixin, TimestampMixin, TenantMixin, Base):
     meter_type: Mapped[str | None] = mapped_column(String(63))  # electricity, gas, ...
     custom_type: Mapped[str | None] = mapped_column(String(100))
     number: Mapped[str | None] = mapped_column(String(100))
-    value: Mapped[Decimal | None] = mapped_column(Numeric(14, 3))
+    value: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
     unit: Mapped[str | None] = mapped_column(String(20))
     location: Mapped[str | None] = mapped_column(String(200))
     read_on: Mapped[date | None] = mapped_column(Date)
@@ -369,3 +374,22 @@ class HandoverClientWrite(IdMixin, TimestampMixin, TenantMixin, Base):
     captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     response: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+def deposit_iban_index(value: str | None) -> tuple[str | None, str | None]:
+    """Fingerprint and suffix of a refund IBAN (GAL-108); normalised when it is a valid IBAN."""
+    if not value:
+        return None, None
+    from mhvp.contacts.validation import InvalidValueError, normalise_iban
+    from mhvp.core import crypto
+
+    try:
+        key = normalise_iban(value)
+    except InvalidValueError:
+        key = "".join(value.split()).upper()
+    return crypto.fingerprint(key), key[-4:]
+
+
+@sa.event.listens_for(HandoverProtocol.deposit_iban, "set")
+def _deposit_iban_set(target: HandoverProtocol, value: Any, _old: Any, _init: Any) -> None:
+    target.deposit_iban_fingerprint, target.deposit_iban_suffix = deposit_iban_index(value)

@@ -233,6 +233,10 @@ class WebhookAction(_In):
     secret_enc: str | None = Field(default=None, max_length=2000)
     # Optional extra literal fields sent in the body ("source": "mhvp").
     extra: dict[str, str] = Field(default_factory=dict)
+    # GAM-407: field selection. ``full`` (today's behaviour) sends the entity, the event
+    # payload and rendered extra fields; ``minimal`` sends event type, ids and literal extras
+    # only (no personal data). Which one is the default is question AP14-02.
+    payload_scope: Literal["full", "minimal"] = "full"
 
     @model_validator(mode="after")
     def _url(self) -> "WebhookAction":
@@ -361,6 +365,8 @@ def dump_actions(actions: list[Action]) -> list[dict[str, Any]]:
         data = action.model_dump(mode="json")
         if isinstance(action, WebhookAction):
             data = {k: v for k, v in data.items() if k not in ("secret", "secret_enc") or v}
+            if data.get("payload_scope") == "full":
+                data.pop("payload_scope")  # GAM-407: default stays implicit in stored rules
         out.append(data)
     return out
 

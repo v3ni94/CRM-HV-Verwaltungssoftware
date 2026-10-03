@@ -27,6 +27,15 @@ from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import AuditEngagement, AuditItem, AuditReport
 from mhvp.hoa.property_scope import HOA_BOARD_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaBoardAnswerBoardNoteOut,
+    HoaBoardAuditCandidatesOut,
+    HoaBoardCreateBoardAccessOut,
+    HoaBoardListAuditsOutItem,
+    HoaBoardListReportsOutItem,
+    HoaBoardRevokeBoardAccessOut,
+    HoaBoardSectionOut,
+)
 from mhvp.portal.board import (
     BOARD_LEGAL_BASIS,
     BOARD_ROLE,
@@ -104,7 +113,12 @@ def _access_out(a: BoardAccess, account: PortalAccount | None) -> dict[str, Any]
     }
 
 
-@router.get("/audits", summary="Prüfaufträge einer GdWE", dependencies=[Depends(strict_query)])
+@router.get(
+    "/audits",
+    summary="Prüfaufträge einer GdWE",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HoaBoardListAuditsOutItem],
+)
 async def list_audits(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -132,7 +146,11 @@ async def list_audits(
         ]
 
 
-@router.get("/audit-engagements/{engagement_id}/board", summary="Beiratszugänge und Rückfragen")
+@router.get(
+    "/audit-engagements/{engagement_id}/board",
+    summary="Beiratszugänge und Rückfragen",
+    response_model=HoaBoardSectionOut,
+)
 async def board_section(
     engagement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -161,6 +179,7 @@ async def board_section(
     "/audit-engagements/{engagement_id}/board-access",
     status_code=201,
     summary="Beiratszugang zum Prüfauftrag anlegen (Einladung wie bei Eigentümern)",
+    response_model=HoaBoardCreateBoardAccessOut,
 )
 async def create_board_access(
     engagement_id: uuid.UUID,
@@ -271,6 +290,7 @@ async def _is_staff(session: AsyncSession, account_id: uuid.UUID) -> bool:
 @router.post(
     "/audit-engagements/{engagement_id}/board-access/{access_id}/revoke",
     summary="Beiratszugang beenden",
+    response_model=HoaBoardRevokeBoardAccessOut,
 )
 async def revoke_board_access(
     engagement_id: uuid.UUID,
@@ -303,6 +323,7 @@ async def revoke_board_access(
 @router.post(
     "/audit-engagements/{engagement_id}/notes/{note_id}/answer",
     summary="Rückfrage des Beirats beantworten (PÜ08)",
+    response_model=HoaBoardAnswerBoardNoteOut,
 )
 async def answer_board_note(
     engagement_id: uuid.UUID,
@@ -334,6 +355,8 @@ async def answer_board_note(
 @router.get(
     "/audits/{audit_id}/candidates",
     summary="Gebuchte Positionen zur Auswahl als Prüfposition (Filter Konto, Lieferant, Datum)",
+    response_model=HoaBoardAuditCandidatesOut,
+    dependencies=[Depends(strict_query)],
 )
 async def audit_candidates(
     audit_id: uuid.UUID,
@@ -507,6 +530,7 @@ def _report_out(r: AuditReport) -> dict[str, Any]:
     "/audits/{audit_id}/reports",
     summary="Prüfberichte eines Prüfauftrags (PÜ09)",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaBoardListReportsOutItem],
 )
 async def list_reports(
     audit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

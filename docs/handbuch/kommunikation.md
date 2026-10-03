@@ -231,3 +231,7 @@ ausgewichen werden.
   oder anderen Zustellweg wählen.
 - **Status bleibt auf gesendet**: Webhook bei Meta nicht eingerichtet oder Signatur
   (App-Geheimnis) passt nicht.
+
+## Verlauf eines Postversands (Welle 26)
+
+Bei einer Zustellung auf dem Weg Post zeigt Verlauf anzeigen die Statushistorie des Postdienstes (Status, Quelle, Zeitpunkt). Die Anzeige hat keine Rechtswirkung; maßgeblich bleibt der erfasste Zustellnachweis.

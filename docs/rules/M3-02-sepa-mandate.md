@@ -6,7 +6,7 @@
 | Title | SEPA-Mandat auf der Bankverbindung des Kontakts: Erfassung, Nachweis, Widerruf |
 | Scope | Tabelle `contact_bank_account` (Domäne `contacts`), Mandanten mit den Rechten `contacts:read`, `contacts:update`; keine Zahlungsfunktion (Freigabetor G2 unberührt) |
 | Source status | Keine Rechtsnorm im Quellenregister (annex C) für diese Regel selbst eingehalten; Fachliche Umsetzung. Die inhaltlichen Anforderungen an Mandatstexte, Vorabankündigungsfristen (Pre-Notification) und die tatsächliche Einreichung von SEPA-Lastschriften sind offene, rechtlich zu klärende Punkte, siehe M15 (Zahlungsmodul, gesperrt bis G2) und `docs/OPEN_QUESTIONS.md` |
-| Acceptance case | keine in annex D; Tests `apps/api/tests/integration/test_m3_contacts_sepa_mandate.py` |
+| Acceptance case | keine in annex D; Pfad korrigiert 03.10.2026 (GAM-805): die genannte Testdatei `test_m3_contacts_sepa_mandate.py` existiert nicht. Vorhandene Abdeckung: `apps/api/tests/integration/test_contact_bank_accounts_crm.py` (Erfassung, Freigabe, Mandatsende), `apps/api/tests/integration/test_m15_direct_debits.py` (widerrufene Mandate werden nicht eingezogen), `apps/api/tests/unit/test_am03_consumers.py` (Ereignis `contact.mandate_iban_changed`). Offen: kein eigener Test für den Widerrufsweg `mandate/revoke` über die API |
 | Implementation | `mhvp.contacts.models.ContactBankAccount` (Felder `sepa_enabled`, `mandate_reference`, `mandate_signed_on`, `mandate_granted_via`, `mandate_note`, `mandate_document_id`, `mandate_scheme`, `mandate_status`, `mandate_revoked_on`), `mhvp.contacts.schemas.BankAccountIn/Out`, `mhvp.contacts.schemas.SepaMandateOut`, `mhvp.contacts.routers` (`GET /contacts/{id}/sepa-mandates`, `POST /contacts/{id}/bank-accounts/{account_id}/mandate/revoke`), Migration 0047 |
 | Change reason | Operator-Anforderung: Mandatsnachweis pro Bankverbindung führen, bevor das Zahlungsmodul (M15) SEPA-Lastschriften tatsächlich einreicht, 25.09.2026 |
 
@@ -142,3 +142,9 @@ Einreichung bleiben offene Entscheidung (`docs/OPEN_QUESTIONS.md` M3-03). Tests
 ## Änderung Welle 17 (AF07, GAA-05, 02.10.2026)
 
 Mandate mit Verfahren B2B (Firmenlastschrift) werden bei der Erfassung einer Bankverbindung mit 422 `MHVP-CONT-0033` abgewiesen; das CRM kennzeichnet B2B als nicht unterstützt. Der Lastschriftlauf schließt jedes Nicht-CORE-Mandat mit sichtbarem Sperrgrund aus. Ein B2B-Lauf (eigene Vorlauffrist, kein Erstattungsanspruch, Bankvereinbarung) ist nicht umgesetzt; die Entscheidung ist offen (AF07-01, Gate G2). Quellenstatus: Produktschutz. Abnahmefall: `tests/unit/test_af07_budget_b2b.py`, `apps/web-crm/src/lib/contact-schema-b2b.test.ts`. Änderungsgrund: Lückenbefund GAA-05.
+
+## Nachtrag 03.10.2026 (GAM-805)
+
+Die Abnahmefall-Zeile nannte eine nicht vorhandene Testdatei und ist korrigiert. Die Lücke eines
+eigenen API-Tests für `POST /contacts/{id}/bank-accounts/{account_id}/mandate/revoke` bleibt
+als offener Punkt bestehen, bis ein Test ergänzt wird.

@@ -361,6 +361,7 @@ async def _set_vat_option(settings: Any, tenant_id: Any, ledger_id: str) -> None
         await engine.dispose()
 
 
+@pytest.mark.annex_d("D45")
 def test_d45_invoice_with_vat_on_option_ledger_is_not_posted(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:

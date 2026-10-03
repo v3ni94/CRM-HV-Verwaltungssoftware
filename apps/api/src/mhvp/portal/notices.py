@@ -39,6 +39,11 @@ class PropertyNotice(IdMixin, TimestampMixin, TenantMixin, Base):
             "::varchar[]",
             name="audiences",
         ),
+        # AP05 / GAL-106: period order (0462).
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="period_order",
+        ),
     )
 
     property_id: Mapped[uuid.UUID] = mapped_column(

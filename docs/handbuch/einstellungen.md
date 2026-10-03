@@ -394,6 +394,19 @@ Organisationen je Gesellschaft mit API Schlüssel, AVV, Postfach und Schaltern, 
 Rechnungsarten, Kontaktabgleich, Warteschlange und vorbereitete Dauerrechnungen unter
 Schnittstellen, Lexware Office; siehe [Lexware Office](lexware-office.md).
 
+## Live-Betrieb je Schnittstelle
+
+Unter Schnittstellen zeigt die Übersicht `GET /api/v1/integrations/live-modes` für lexoffice,
+LetterXpress und finAPI, ob die Schnittstelle eingerichtet ist und im Test oder live arbeitet.
+Der Schalter `integrations.live_mode` sperrt den Live-Betrieb je Schnittstelle oder bindet ihn
+an eine Freigabestufe (`PUT /api/v1/integrations/live-modes/{schnittstelle}`, Recht
+Mandanteneinstellungen ändern). Ohne Eintrag gilt das bisherige Verhalten. Bei gesperrtem
+Live-Betrieb lehnen der lexoffice Verbindungstest, der lexoffice Export, die Umstellung von
+LetterXpress auf live und die Einreichung beim Postdienst mit `MHVP-LEXO-0019` ab. Welche
+Freigabestufe gelten soll, ist offen (AP02-01). Ein lexoffice Export ohne Antwort des
+Anbieters wird als ungeklärt geführt und nicht doppelt angelegt; die Basisadresse von
+lexoffice muss in Produktion `https://api.lexware.io` sein.
+
 ## Benachrichtigungen (eigene Einstellungen)
 
 Unter Einstellungen, Benachrichtigungen legt jeder Benutzer für sich fest, welche Meldungen in der App
@@ -792,7 +805,7 @@ Schlüssel in den Mandantenquellen:
 
 <!-- switch-index:start (generiert mit build_switch_index.py, nicht von Hand ändern) -->
 
-Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen.
+Stand der Registry: 106 Schalter der Seite Fachliche Regeln und 6 Schlüssel in den Mandantenquellen.
 
 | Schalter | Bereich | Paket | Standard | Offene Frage |
 | --- | --- | --- | --- | --- |
@@ -810,6 +823,7 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 | `subledger-exclude-written-off` | accounting | AE06 | true | AC01-02 |
 | `tax-35a-basis` | accounting | AI18 | invoice_date | AI17-01 |
 | `write-off-approval` | accounting | AN15 | false | AN15-02 |
+| `write-off-posting` | accounting | AP12 | false | AN15-02 |
 | `automation-switch` | banking | AE03 | false | BK2-03, M12-09 |
 | `bank-clearing-account` | banking | AO02 | null | AO02-01 |
 | `bank-reconciliation-basis` | banking | AO02 | booking_date | AO02-01 |
@@ -820,6 +834,7 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 | `g1-checklist` | banking | AE03 | null | M12-09 |
 | `advance-open-mode` | billing | AE15 | info_only | AC10-01, M17-03, P06-01 |
 | `allocation-basis-block` | billing | AE17 | true | M17-01 |
+| `allocation-key-confirmation-required` | billing | AP17 | false | AP17-01 |
 | `check-amounts-tolerance` | billing | AK01 | 1 | AJ02-01 |
 | `deadline-policy` | billing | AE18 | block_claims | M17-04 |
 | `deadline-warn-first` | billing | AE18 | 60 | M17-04 |
@@ -838,6 +853,7 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 | `allocation-proposal` | hoa | AG20 | false | AA07-01, P01 |
 | `correction-report` | hoa | AF08 | false | P02 |
 | `hoa-remainder-mode` | hoa | AK01 | report_only | AJ01-02 |
+| `levy-refund-proposals` | hoa | AP21 | false | AP21-02 |
 | `majority-rule-four-eyes` | hoa | AN06 | false | AM02-01 |
 | `online-meeting` | hoa | AE12 | false | AD06-01 |
 | `opening-lock-mode` | hoa | AE07 | locked | V01-01 |
@@ -846,6 +862,7 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 | `proxy-conflict-mode` | hoa | AE31 | flag | AD06-02 |
 | `reserve-payment-mode` | hoa | AE08 | bound_only | P07-02, P07-04 |
 | `reserve-plan-tax` | hoa | AE07 | null | AE07-01 |
+| `sub-community-basis-lock` | hoa | AP21 | false | AP21-01 |
 | `virtual-basis-term-lock` | hoa | AE12 | false | AA06-02 |
 | `virtual-basis-transition-date` | hoa | AE12 | null | AA06-02 |
 | `virtual-meetings` | hoa | AE12 | false | V13, AA06-02 |
@@ -854,6 +871,7 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 | `ai-master-data-proposals` | platform | AM04 | true | AM04-02 |
 | `ai-realtime-mail-classification` | platform | AM04 | true | AM04-01 |
 | `crm-branding-apply` | platform | AJ31 | false | AJ31-01 |
+| `greeting-address` | platform | AP24 | du | AP24-01 |
 | `invoice-intake-auto` | platform | AF10 | false | AF10-01 |
 | `onboarding-link-threshold` | platform | AG03 | 90 | GAF-11 |
 | `onboarding-suggest-threshold` | platform | AG03 | 60 | GAF-11 |
@@ -884,6 +902,7 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 | `access-export-portal-account` | security | AK06 | false | AC07-01 |
 | `access-export-third-party` | security | AE33 | none | AC07-01, AE33-02 |
 | `access-export-tickets` | security | AJ13 | false | AC07-01 |
+| `access-log-scope` | security | AP14 | off | AP14-01 |
 | `contact-address-history` | security | AN05 | false | AM14-01 |
 | `document-trash-days` | security | AE33 | 30 | AC07-03, AE33-01 |
 | `document-trash-enabled` | security | AE33 | false | AC07-03, AE33-01 |
@@ -899,7 +918,15 @@ Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in 
 
 Schlüssel in den Mandantenquellen:
 
+- `accounting.write_off_posting` (apps/api/src/mhvp/accounting/write_offs.py)
 - `contacts.address_history` (apps/api/src/mhvp/contacts/address_history.py)
+- `integrations.live_mode` (apps/api/src/mhvp/integrations/live_mode.py)
 - `letting.sale_marketing` (apps/api/src/mhvp/letting/sale_scope.py)
+- `privacy.audit_redaction` (apps/api/src/mhvp/privacy/audit_redaction.py)
+- `privacy.erasure_coupling` (apps/api/src/mhvp/privacy/erasure_coupling.py)
 
 <!-- switch-index:end -->
+
+## Freigabeberechtigte und mögliche Doppelidentitäten (GAM-205, Welle 26)
+
+Unter Einstellungen, Benutzer listet der Abschnitt "Freigabeberechtigte" alle aktiven Konten mit Zahlungsfreigabe (Zahlungsaufträge: Recht Bank freigeben, Lastschriftläufe: Recht Buchhaltung freigeben, jeweils einschließlich geerbter Rechte der Elternrolle). Konten, die zur selben Person gehören könnten, sind gekennzeichnet. Die Kriterien (gleiche Kontaktverknüpfung, gleicher Name ohne Beachtung der Wortreihenfolge, gleiche E-Mail-Domäne mit gleichem Namensteil der Adresse) lassen sich für die Ansicht ein- und ausschalten, die Auswahl wird nicht gespeichert. Die Kennzeichnung ist ein Hinweis, kein Nachweis, und sperrt nichts: Die Vier-Augen-Prüfung vergleicht weiterhin Benutzerkonten. Was als unabhängiger Freigeber gilt, ist noch nicht entschieden (offene Frage AP19-01).

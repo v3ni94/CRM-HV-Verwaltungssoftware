@@ -38,6 +38,19 @@ from mhvp.hoa.models import (
     SpecialLevy,
 )
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaFinanceAddClaimItemOut,
+    HoaFinanceAddLoanItemOut,
+    HoaFinanceCreateClaimOut,
+    HoaFinanceCreateLoanOut,
+    HoaFinanceCreateMeasureOut,
+    HoaFinanceGetClaimOut,
+    HoaFinanceGetLoanOut,
+    HoaFinanceGetMeasureOut,
+    HoaFinanceListClaimsOutItem,
+    HoaFinanceListLoansOutItem,
+    HoaFinanceListMeasuresOutItem,
+)
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
@@ -321,7 +334,12 @@ def _ev(
     }
 
 
-@router.post("/measures", status_code=201, summary="Größere Maßnahme anlegen (W10)")
+@router.post(
+    "/measures",
+    status_code=201,
+    summary="Größere Maßnahme anlegen (W10)",
+    response_model=HoaFinanceCreateMeasureOut,
+)
 async def create_measure(
     body: MeasureIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -354,7 +372,12 @@ async def create_measure(
         return out
 
 
-@router.get("/measures", summary="Maßnahmen einer GdWE", dependencies=[Depends(strict_query)])
+@router.get(
+    "/measures",
+    summary="Maßnahmen einer GdWE",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HoaFinanceListMeasuresOutItem],
+)
 async def list_measures(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -369,7 +392,11 @@ async def list_measures(
         return [_measure_out(r) for r in rows.all()]
 
 
-@router.get("/measures/{measure_id}", summary="Maßnahme mit Finanzierung und Belegen")
+@router.get(
+    "/measures/{measure_id}",
+    summary="Maßnahme mit Finanzierung und Belegen",
+    response_model=HoaFinanceGetMeasureOut,
+)
 async def get_measure(
     measure_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -511,7 +538,12 @@ def _loan_out(loan: HoaLoan) -> dict[str, Any]:
     }
 
 
-@router.post("/loans", status_code=201, summary="Darlehen anlegen (W10)")
+@router.post(
+    "/loans",
+    status_code=201,
+    summary="Darlehen anlegen (W10)",
+    response_model=HoaFinanceCreateLoanOut,
+)
 async def create_loan(
     body: LoanIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -541,7 +573,12 @@ async def create_loan(
         return out
 
 
-@router.get("/loans", summary="Darlehen einer GdWE", dependencies=[Depends(strict_query)])
+@router.get(
+    "/loans",
+    summary="Darlehen einer GdWE",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HoaFinanceListLoansOutItem],
+)
 async def list_loans(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -556,7 +593,12 @@ async def list_loans(
         return [_loan_out(r) for r in rows.all()]
 
 
-@router.get("/loans/{loan_id}", summary="Darlehen mit Positionen und Stand")
+@router.get(
+    "/loans/{loan_id}",
+    summary="Darlehen mit Positionen und Stand",
+    response_model=HoaFinanceGetLoanOut,
+    dependencies=[Depends(strict_query)],
+)
 async def get_loan(
     loan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -634,7 +676,12 @@ async def get_loan_schedule(
         }
 
 
-@router.post("/loans/{loan_id}/items", status_code=201, summary="Darlehensposition erfassen")
+@router.post(
+    "/loans/{loan_id}/items",
+    status_code=201,
+    summary="Darlehensposition erfassen",
+    response_model=HoaFinanceAddLoanItemOut,
+)
 async def add_loan_item(
     loan_id: uuid.UUID,
     body: LoanItemIn,
@@ -708,7 +755,12 @@ def _claim_out(c: HoaInsuranceClaim) -> dict[str, Any]:
     }
 
 
-@router.post("/insurance-claims", status_code=201, summary="Versicherungsfall anlegen (W10)")
+@router.post(
+    "/insurance-claims",
+    status_code=201,
+    summary="Versicherungsfall anlegen (W10)",
+    response_model=HoaFinanceCreateClaimOut,
+)
 async def create_claim(
     body: ClaimIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -739,6 +791,7 @@ async def create_claim(
     "/insurance-claims",
     summary="Versicherungsfälle einer GdWE",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaFinanceListClaimsOutItem],
 )
 async def list_claims(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -754,7 +807,12 @@ async def list_claims(
         return [_claim_out(r) for r in rows.all()]
 
 
-@router.get("/insurance-claims/{claim_id}", summary="Versicherungsfall mit Positionen")
+@router.get(
+    "/insurance-claims/{claim_id}",
+    summary="Versicherungsfall mit Positionen",
+    response_model=HoaFinanceGetClaimOut,
+    dependencies=[Depends(strict_query)],
+)
 async def get_claim(
     claim_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -813,7 +871,10 @@ async def patch_claim(
 
 
 @router.post(
-    "/insurance-claims/{claim_id}/items", status_code=201, summary="Position zum Versicherungsfall"
+    "/insurance-claims/{claim_id}/items",
+    status_code=201,
+    summary="Position zum Versicherungsfall",
+    response_model=HoaFinanceAddClaimItemOut,
 )
 async def add_claim_item(
     claim_id: uuid.UUID,

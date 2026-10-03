@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { OwnerStatementExplanations, type OwnerExplanation } from "@/components/portal/OwnerReports";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -52,7 +53,7 @@ export default async function StatementsPage() {
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       <p className="text-xs text-subtle">{note}</p>
-      {items.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
+      {items.length === 0 ? <EmptyState title={t("empty")} hint={t("emptyHint")} /> : null}
       <ul className="flex flex-col gap-3">
         {items.map((item) => (
           <li key={`${item.statement_id}-${item.unit_id}`} className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>

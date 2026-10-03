@@ -115,6 +115,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Kautionen und Kautionsabrechnung (M5-02): Liste, Entwurf berechnen und speichern,
   // Referenzzinssatz je Jahr (Einstellungen). Freigabe bleibt hinter G3 und ist hier nicht erreichbar.
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/deposits$`) },
+  // AP19 (GAM-211): deposit list per tenancy.
+  { method: "GET", pattern: /^deposits$/ },
   { method: "GET", pattern: new RegExp(`^deposits/${ID}/settlements$`) },
   { method: "POST", pattern: new RegExp(`^deposits/${ID}/settlements(/preview)?$`) },
   // Kautionsabrechnung als PDF-Entwurf ablegen (offener Restpunkt M5-02, PDF-Ausgabe).
@@ -223,6 +225,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^documents/trash/${ID}/(restore|purge)$`) },
   { method: "GET", pattern: /^contact-access-export-settings$/ },
   { method: "PUT", pattern: /^contact-access-export-settings$/ },
+  // AP14 (GAM-410): access log per contact and its tenant switch.
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/access-log$`) },
+  { method: "GET", pattern: /^contact-access-log-settings$/ },
+  { method: "PUT", pattern: /^contact-access-log-settings$/ },
   { method: "GET", pattern: new RegExp(`^contacts/${ID}/relations$`) },
   { method: "POST", pattern: /^contacts\/roles\/recompute$/ },
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
@@ -332,6 +338,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^privacy\/deletion-profiles$/ },
   { method: "POST", pattern: new RegExp(`^privacy/deletion-profiles/${ID}/release$`) },
   { method: "POST", pattern: new RegExp(`^privacy/erasure-requests/${ID}/(approve|reject|execute|accept)$`) },
+  { method: "GET", pattern: /^privacy\/erasure-settings$/ },
+  { method: "PUT", pattern: /^privacy\/erasure-settings$/ },
   { method: "POST", pattern: /^privacy\/deletion-proposals\/run$/ },
   // AE32 (S711-10): Dienstleister laut Konfiguration, Übernahme ins Register, PDF-Entwurf.
   { method: "GET", pattern: /^privacy\/(register\/config-sources|processing-records\/pdf)$/ },
@@ -666,6 +674,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Download hinter G2, Protokoll und Einreichungsbestätigung (M15-01 Folgepunkt).
   { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/file$`) },
   { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/downloads$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/orders$`) },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/submit$`) },
   { method: "GET", pattern: /^banking\/payment-orders$/ },
   // AF03 (GAF-02): payment files read only (list, one batch with download log, format per
@@ -697,6 +706,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/open-item-write-offs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/open-item-write-offs/${ID}/decision$`) },
   { method: "GET", pattern: new RegExp(`^accounting/open-item-write-offs/${ID}/posting-preview$`) },
+  // AP12 (GAK-104): posting settings, posting and reversal of an approved write off.
+  { method: "GET", pattern: /^accounting\/open-item-write-offs\/settings$/ },
+  { method: "PUT", pattern: /^accounting\/open-item-write-offs\/settings$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/open-item-write-offs/${ID}/posting$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/open-item-write-offs/${ID}/posting/reversal$`) },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/bank-status$`) },
   { method: "PUT", pattern: /^accounting\/payment-runs\/settings$/ },
   { method: "GET", pattern: /^accounting\/tax\/section35a\/certificate(\.pdf)?$/ },
@@ -865,6 +879,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^billing\/calculation-settings$/ },
   { method: "PUT", pattern: /^billing\/calculation-settings$/ },
   { method: "PUT", pattern: /^billing\/allocation-basis-setting$/ },
+  { method: "GET", pattern: /^billing\/allocation-key-confirmation-setting$/ },
+  { method: "PUT", pattern: /^billing\/allocation-key-confirmation-setting$/ },
   { method: "GET", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals/${ID}/(confirm|reject)$`) },
@@ -917,6 +933,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Darlehen, Versicherungsfälle, Maßnahmen (W10, A59) und erklärte Differenzen der
   // Überleitungsrechnung (W04, A60): Erfassung und Nachweis, keine Buchung.
   { method: "POST", pattern: /^hoa\/(loans|measures|insurance-claims)$/ },
+  { method: "PATCH", pattern: new RegExp(`^hoa/resolutions/${ID}$`) }, // GAM-201: status dialog (APPROVE right checked by the API)
   { method: "POST", pattern: new RegExp(`^hoa/(loans|insurance-claims)/${ID}/items$`) },
   { method: "POST", pattern: new RegExp(`^hoa/measures/${ID}/financing$`) },
   { method: "PATCH", pattern: new RegExp(`^hoa/(measures|insurance-claims)/${ID}$`) },
@@ -959,6 +976,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^hoa/ledgers/${ID}/reserve-payments$`) },
   { method: "GET", pattern: /^hoa\/reserve-payment-settings$/ },
   { method: "PUT", pattern: /^hoa\/reserve-payment-settings$/ },
+  // AP21 (GAM-109, GAM-110): switches, refund proposals of a special levy (no payout).
+  { method: "GET", pattern: /^hoa\/levy-cost-settings$/ },
+  { method: "PUT", pattern: /^hoa\/levy-cost-settings$/ },
+  { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/refunds$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/refunds/${ID}/withdraw$`) },
   { method: "GET", pattern: /^hoa\/correction-report-settings$/ },
   { method: "PUT", pattern: /^hoa\/correction-report-settings$/ },
   { method: "GET", pattern: /^hoa\/allocation-proposal-settings$/ },
@@ -1102,6 +1124,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^platform\/rent-law\/rules\/[a-z_]{2,40}$/ },
   { method: "POST", pattern: /^platform\/rent-law\/cap-areas$/ },
   { method: "PUT", pattern: new RegExp(`^platform/rent-law/cap-areas/${ID}$`) },
+  // Property status change (GAL-306); ticket assignees use the existing patterns.
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/status$`) },
+  // Consumer price index (AO03, GAL-301 mask): list for tenants, import and release for platform administrators.
+  { method: "GET", pattern: /^letting\/consumer-price-index$/ },
+  { method: "POST", pattern: /^platform\/consumer-price-index\/(import|release)$/ },
   // Properties (M4): creation only; reads go through the server components.
   { method: "POST", pattern: /^properties$/ },
   // Stammdaten in der Oberfläche (C1): Gebäude, Einheiten, Umlageschlüssel und Schlüsselwerte.
@@ -1110,6 +1137,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^properties/${ID}/allocation-(keys|summary)$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/allocation-keys$`) },
   { method: "PATCH", pattern: new RegExp(`^properties/${ID}/allocation-keys/${ID}$`) },
+  // GAM-108 (AP17): Quelle des Umlageschlüssels bestätigen oder Bestätigung aufheben.
+  { method: "PUT", pattern: new RegExp(`^properties/${ID}/allocation-keys/${ID}/confirmation$`) },
   { method: "POST", pattern: new RegExp(`^units/${ID}/allocation-values$`) },
   // Tickets (M19).
   { method: "POST", pattern: /^tickets$/ },
@@ -1318,6 +1347,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
   // M14-02 (Welle 5 T05): sachliche Prüfung als Befunde und Toleranzen je Mandant.
   { method: "GET", pattern: new RegExp(`^accounting/invoices/${ID}/factual-check$`) },
+  // GAL-304: Skonto Vorschau (nur Lesen, bucht und zahlt nichts).
+  { method: "GET", pattern: new RegExp(`^accounting/invoices/${ID}/discount$`) },
   { method: "GET", pattern: /^accounting\/invoice-check-settings$/ },
   { method: "PUT", pattern: /^accounting\/invoice-check-settings$/ },
   // M14-01, M14-08 (Welle 2 P03): Kreditoren mit Saldo, offenen Posten und Kontoauszug;

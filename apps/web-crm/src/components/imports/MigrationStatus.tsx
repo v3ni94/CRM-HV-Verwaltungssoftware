@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ui } from "@/lib/ui";
 
 const API = "/api/bff/imports/migration";
@@ -250,9 +251,9 @@ export function MigrationStatus({ canCreate, canUpdate, canApprove }: Permission
       {rows === null ? (
         <p className="text-sm text-muted">{t("loading")}</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted" data-testid="migration-empty">
-          {t("empty")}
-        </p>
+        <div data-testid="migration-empty">
+          <EmptyState title={t("empty")} />
+        </div>
       ) : (
         <div className={ui.tableScroll}>
           <table className={ui.table} data-testid="migration-list">

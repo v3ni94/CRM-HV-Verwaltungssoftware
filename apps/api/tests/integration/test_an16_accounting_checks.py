@@ -355,10 +355,16 @@ def test_an16_accounting_checks(client: TestClient, world: World, database: Data
             conn.execute(
                 text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
             )
+            # AP05 / GAL-104: the booking date is frozen by bank_transaction_guard (0462); the
+            # test shifts it only to simulate a later bank date.
+            conn.execute(
+                text("ALTER TABLE bank_transaction DISABLE TRIGGER bank_transaction_guard")
+            )
             conn.execute(
                 text("UPDATE bank_transaction SET booking_date = '2026-02-02' WHERE id = :id"),
                 {"id": t3},
             )
+            conn.execute(text("ALTER TABLE bank_transaction ENABLE TRIGGER bank_transaction_guard"))
     finally:
         engine.dispose()
     by_bank = _ok(client.get(recon, params={"basis": "bank_date"}, headers=h))[0]

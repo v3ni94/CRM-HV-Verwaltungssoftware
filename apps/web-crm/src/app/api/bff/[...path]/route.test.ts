@@ -168,12 +168,17 @@ describe("BFF proxy", () => {
     ["POST", `accounting/direct-debits/${ID}/file`],
     ["GET", `accounting/direct-debits/${ID}/file`],
     ["GET", `accounting/direct-debits/${ID}/downloads`],
+    ["GET", `accounting/direct-debits/${ID}/orders`], // AP18 GAL-303
     ["POST", `accounting/direct-debits/${ID}/submit`],
     // AO01 (GAK-104): Ausbuchungsvorschläge.
     ["GET", "accounting/open-item-write-offs"],
     ["POST", "accounting/open-item-write-offs"],
     ["POST", `accounting/open-item-write-offs/${ID}/decision`],
     ["GET", `accounting/open-item-write-offs/${ID}/posting-preview`],
+    ["GET", "accounting/open-item-write-offs/settings"], // AP12
+    ["PUT", "accounting/open-item-write-offs/settings"], // AP12
+    ["POST", `accounting/open-item-write-offs/${ID}/posting`], // AP12
+    ["POST", `accounting/open-item-write-offs/${ID}/posting/reversal`], // AP12
     ["POST", "statements"],
     ["POST", `statements/${ID}/calculate`],
     ["POST", `hoa/statements/${ID}/post`],
@@ -187,6 +192,13 @@ describe("BFF proxy", () => {
     ["POST", `hoa/special-levies/${ID}/amend`],
     ["POST", "hoa/majority-rules"],
     ["PUT", "accounting/direct-debit-settings"],
+    ["PUT", `properties/${ID}/allocation-keys/${ID}/confirmation`], // AP17 GAM-108
+    ["GET", "billing/allocation-key-confirmation-setting"], // AP17
+    ["PUT", "billing/allocation-key-confirmation-setting"], // AP17
+    ["GET", "hoa/levy-cost-settings"], // AP21
+    ["PUT", "hoa/levy-cost-settings"], // AP21
+    ["POST", `hoa/special-levies/${ID}/refunds`], // AP21 GAM-110
+    ["POST", `hoa/special-levies/${ID}/refunds/${ID}/withdraw`], // AP21 GAM-110
     ["POST", "platform/constraint-checks/validate"],
     ["POST", "platform/rent-law/cap-areas"],
     ["PUT", `platform/rent-law/cap-areas/${ID}`],
@@ -292,6 +304,7 @@ describe("BFF proxy", () => {
     ["POST", `integrations/lexoffice/invoice-copies/${ID}/reject`],
     ["POST", `integrations/lexoffice/invoice-copies/${ID}/link-recipient`],
     ["PUT", "banking/automation"], // AF01: switch off only, the API refuses switching on
+    ["PATCH", `hoa/resolutions/${ID}`], // GAM-201: status dialog of the Beschluss-Sammlung
   ])("forwards the operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
@@ -331,13 +344,14 @@ describe("BFF proxy", () => {
     ["DELETE", `banking/payment-bank-config/${ID}`], // AJ16: config is never deleted
     ["POST", `banking/payment-bank-config/${ID}`],
     ["GET", `banking/payment-batches/${ID}/bank-status`],
+    ["POST", `accounting/direct-debits/${ID}/orders`], // AP18: Einzelaufträge nur lesend
     ["DELETE", `sepa-mandates/${ID}/revoke`],
     ["POST", `sepa-mandates/${ID}/reactivate`],
     ["POST", `banking/payment-batches/${ID}/submit`],
     ["POST", "banking/csv-mappings/import"],
     ["DELETE", `platform/licenses/${ID}`], // M27-03: licences are ended, never deleted
     ["POST", `hoa/statements/${ID}/units/${ID}/pdf`],
-    ["PATCH", `hoa/resolutions/${ID}`],
+    ["DELETE", `hoa/resolutions/${ID}`], // GAM-201: status is patched, a resolution is never deleted
     ["DELETE", `platform/rent-law/cap-areas/${ID}`],
     ["PUT", `platform/tenants/${ID}/g5-evidence/Not-A-Code`],
     ["DELETE", `platform/tenants/${ID}/export-requests/${ID}`],
@@ -520,6 +534,9 @@ describe("BFF proxy, Uprotokoll and Objektakte import paths (GAH-409)", () => {
     ["POST", "objektakte/imports/not-a-uuid/ocr-cache"],
     ["DELETE", `accounting/open-item-write-offs/${ID}`], // AO01
     ["POST", "accounting/open-item-write-offs/not-a-uuid/decision"], // AO01
+    ["DELETE", `accounting/open-item-write-offs/${ID}/posting`], // AP12
+    ["POST", "accounting/open-item-write-offs/not-a-uuid/posting"], // AP12
+    ["DELETE", "accounting/open-item-write-offs/settings"], // AP12
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
@@ -573,6 +590,7 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["PUT", "letting/rent-increase-settings"], // AN18
     ["PUT", `letting/contracts/${ID}/index-terms`], // AO03
     ["GET", "letting/rent-increase-proposals"], // AO03
+    ["GET", "deposits"], // AP19 (GAM-211)
   ] as const)("forwards %s %s", async (method, path) => {
     const res = await call(method, path);
     expect(res.status).toBe(200);
@@ -588,6 +606,7 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["PUT", `work-orders/${ID}/steps`],
     ["POST", "work-orders/not-a-uuid/steps"],
     ["DELETE", `contracts/${ID}/custom-fields`],
+    ["POST", "deposits"], // AP19: the list is read only
     ["POST", `hoa/resolutions/${ID}/majority-check`],
     ["POST", `hoa/resolutions/${ID}/dependents`], // AO05 (AN19-CRM)
     ["GET", `hoa/resolutions/${ID}/review-deadline`],
@@ -600,7 +619,10 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["DELETE", "letting/rent-increase-settings"], // AN18
     ["DELETE", `letting/contracts/${ID}/index-terms`], // AO03
     ["POST", "letting/rent-increase-proposals/run"], // AO03 (API only)
-    ["POST", "platform/consumer-price-index/import"], // AO03 (platform API only)
+    ["DELETE", "platform/consumer-price-index/import"], // AO03
+    ["POST", "platform/consumer-price-index/other"], // AO03
+    ["POST", "properties/not-a-uuid/status"], // GAL-306
+    ["GET", `properties/${ID}/status`], // GAL-306
     ["POST", `mail/messages/${ID}/attachments/not-a-uuid/invoice-extraction`],
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
@@ -644,6 +666,8 @@ describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
     ["GET", "privacy/request-deadlines/monitor"],
     ["PUT", "privacy/request-deadlines"],
     ["GET", "privacy/register/readiness"],
+    ["GET", "privacy/erasure-settings"],
+    ["PUT", "privacy/erasure-settings"],
     ["GET", "privacy/access-requests"],
     ["POST", "privacy/access-requests"],
     ["GET", `privacy/access-requests/${ID}`],
@@ -662,6 +686,8 @@ describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
     ["POST", "privacy/erasure-requests/not-a-uuid/accept"],
     ["POST", "privacy/request-deadlines"],
     ["PUT", "privacy/register/readiness"],
+    ["DELETE", "privacy/erasure-settings"],
+    ["POST", "privacy/erasure-settings"],
     ["DELETE", `privacy/access-requests/${ID}`],
     ["POST", "privacy/access-requests/not-a-uuid/status"],
   ] as const)("rejects %s %s with 404", async (method, path) => {
@@ -708,8 +734,75 @@ describe("BFF proxy, AJ28 gated mask paths", () => {
     ["GET", `deposit-settlements/${ID}/release`],
     ["DELETE", "billing/calculation-settings"],
     ["POST", "billing/calculation-settings"],
+    ["POST", `properties/${ID}/allocation-keys/${ID}/confirmation`], // AP17
+    ["DELETE", "billing/allocation-key-confirmation-setting"], // AP17
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("BFF proxy, AP16 invoice discount preview (GAL-304)", () => {
+  beforeEach(() => serverFetch.mockReset());
+
+  it("allows the read only discount preview and no write on it", async () => {
+    serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+    const ok = await GET(new Request(`http://crm.localhost/api/bff/accounting/invoices/${ID}/discount?pay_date=2026-03-10`), ctx(`accounting/invoices/${ID}/discount`));
+    expect(ok.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/accounting/invoices/${ID}/discount?pay_date=2026-03-10`);
+    serverFetch.mockClear();
+    const write = await POST(
+      new Request(`http://crm.localhost/api/bff/accounting/invoices/${ID}/discount`, { method: "POST", headers: { host: "crm.localhost", origin: "http://crm.localhost" }, body: "{}" }),
+      ctx(`accounting/invoices/${ID}/discount`),
+    );
+    expect(write.status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("BFF proxy, AP20 (GAL-306, AO03 mask)", () => {
+  beforeEach(() => serverFetch.mockReset());
+  it.each([
+    ["POST", `properties/${ID}/status`],
+    ["POST", "platform/consumer-price-index/import"],
+    ["POST", "platform/consumer-price-index/release"],
+    ["GET", "letting/consumer-price-index"],
+  ] as const)("forwards %s %s", async (method, path) => {
+    serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+    const init = { method, headers: { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" }, ...(method === "POST" ? { body: "{}" } : {}) };
+    const handler = method === "POST" ? POST : GET;
+    const res = await handler(new Request(`http://crm.localhost/api/bff/${path}`, init), ctx(path));
+    expect(res.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+});
+
+describe("BFF proxy, access log (AP14, GAM-410)", () => {
+  beforeEach(() => serverFetch.mockReset());
+
+  it("forwards the access log of a contact and its settings, rejects other methods", async () => {
+    serverFetch.mockImplementation(
+      async () => new Response("[]", { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    const path = `contacts/${ID}/access-log`;
+    const ok = await GET(new Request(`http://crm.localhost/api/bff/${path}`), ctx(path));
+    expect(ok.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+    const settings = await GET(
+      new Request("http://crm.localhost/api/bff/contact-access-log-settings"),
+      ctx("contact-access-log-settings"),
+    );
+    expect(settings.status).toBe(200);
+    serverFetch.mockClear();
+    const bad = await POST(
+      new Request(`http://crm.localhost/api/bff/${path}`, {
+        method: "POST",
+        headers: { host: "crm.localhost", origin: "http://crm.localhost" },
+        body: "{}",
+      }),
+      ctx(path),
+    );
+    expect(bad.status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
   });
 });

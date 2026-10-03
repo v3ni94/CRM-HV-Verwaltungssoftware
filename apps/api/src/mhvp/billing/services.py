@@ -6,7 +6,7 @@ import json
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing import betrkv, calc
 from mhvp.billing.models import Statement, StatementCostItem, StatementSnapshot
 from mhvp.core.problems import ErrorCodes, ProblemError
+
+if TYPE_CHECKING:
+    from mhvp.properties.models import AllocationKey
 
 ADVANCE_CODES = ("operating_cost_advance", "heating_cost_advance")
 
@@ -351,20 +354,17 @@ async def check_item(
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail=f"{item.label}: Schlüssel gehört nicht zum Objekt."
             )
-        if entity_kind is LegalEntityKind.SEV_OWNER and key.is_template_derived:
-            raise ProblemError(
-                ErrorCodes.VALIDATION,
-                detail=(
-                    f"{item.label}: bei vermietetem Wohnungseigentum gilt ohne abweichende "
-                    "Vereinbarung nicht automatisch der allgemeine Schlüssel "
-                    f"{key.code} aus dem Muster; Verteilungsmaßstab mit Quelle und "
-                    "Geltungsbeginn für das Objekt erfassen (§ 556a Abs. 3 BGB, A03, M17-01)."
-                ),
-            )
+        if entity_kind is LegalEntityKind.SEV_OWNER:
+            await _check_sev_key_source(session, item.label, key, statement.period_from)
         facts["allocation_key"] = {
             "code": key.code,
             "name": key.name,
             "template_derived": key.is_template_derived,
+            "source_kind": key.source_kind,
+            "source_valid_from": (
+                key.source_valid_from.isoformat() if key.source_valid_from else None
+            ),
+            "confirmed": key.confirmed_at is not None,
         }
     return facts
 
@@ -565,3 +565,40 @@ def check_issue(
                 f"{period_deadline.isoformat()}, Einheiten {', '.join(late)})."
             ),
         )
+
+
+def key_source_confirmed(key: "AllocationKey", period_from: date) -> bool:
+    """GAM-108: a person confirmed the recorded source and it applies from the period start."""
+    return (
+        key.confirmed_at is not None
+        and key.source_valid_from is not None
+        and key.source_valid_from <= period_from
+    )
+
+
+async def _check_sev_key_source(
+    session: AsyncSession, label: str, key: "AllocationKey", period_from: date
+) -> None:
+    """Rented condominium unit (SEV owner): a key taken from the template needs a confirmed
+    source (behaviour before AP17 without the confirmation path). With the tenant switch
+    ``allocation_key_confirmation_required`` every key needs it. The check covers presence,
+    confirmation and start of validity only; legal effectiveness stays open (M17-01, AP17-01)."""
+    from mhvp.platform.models import TenantSettings
+
+    if key_source_confirmed(key, period_from):
+        return
+    required = bool(
+        await session.scalar(select(TenantSettings.allocation_key_confirmation_required))
+    )
+    if not (key.is_template_derived or required):
+        return
+    origin = "aus dem Muster übernommenen " if key.is_template_derived else ""
+    raise ProblemError(
+        ErrorCodes.VALIDATION,
+        detail=(
+            f"{label}: bei vermietetem Wohnungseigentum gilt ohne abweichende "
+            f"Vereinbarung nicht automatisch der {origin}Schlüssel {key.code}; "
+            "Verteilungsmaßstab mit Quelle und Geltungsbeginn für das Objekt erfassen und "
+            "bestätigen (§ 556a Abs. 3 BGB, A03, M17-01)."
+        ),
+    )

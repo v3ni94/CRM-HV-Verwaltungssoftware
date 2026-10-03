@@ -67,13 +67,35 @@ describe("HeatingPanel", () => {
     });
     const cons = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/consumptions"));
     expect(JSON.parse(cons?.[1]?.body as string)).toEqual({
-      consumptions: { "contract:a": { heating: "1000" }, "contract:b": { heating: "600" } },
+      consumptions: {
+        "contract:a": { heating: "1000", heating_kind: "actual", hot_water_kind: "actual" },
+        "contract:b": { heating: "600", heating_kind: "actual", hot_water_kind: "actual" },
+      },
     });
     await userEvent.click(await screen.findByText("Vorschau berechnen"));
     await screen.findByText("Rechenweg abcdef0123456789");
     expect(screen.getByText("740,96 EUR")).toBeInTheDocument();
     expect(screen.getByText(/CO2-Status: zu prüfen/)).toBeInTheDocument();
     expect(screen.getByText("In Abrechnung übernehmen")).toBeDisabled();
+  });
+
+  it("sends the kind per value and the reading date of an interim reading (GAM-111)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(BASE));
+    renderIntl(<HeatingPanel id={ID} status="draft" />);
+    await screen.findByText("Verbräuche je Nutzer");
+    expect(screen.queryByLabelText("Ablesedatum 02 01.01.2025")).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Art Heizung 02 01.01.2025"), "interim");
+    await userEvent.type(screen.getByLabelText("Ablesedatum 02 01.01.2025"), "2025-03-31");
+    await userEvent.selectOptions(screen.getByLabelText("Art Warmwasser 02 01.01.2025"), "estimated");
+    await userEvent.click(screen.getByText("Eingaben speichern"));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/consumptions"))).toBe(true));
+    const cons = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/consumptions"));
+    expect(JSON.parse(cons?.[1]?.body as string).consumptions["contract:b"]).toEqual({
+      heating: "600",
+      heating_kind: "interim",
+      hot_water_kind: "estimated",
+      reading_date: "2025-03-31",
+    });
   });
 
   it("is read only after the statement was calculated", async () => {

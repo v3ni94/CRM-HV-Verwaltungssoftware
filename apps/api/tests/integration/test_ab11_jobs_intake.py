@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from moto import mock_aws
 from pydantic import SecretStr
 from reportlab.pdfgen.canvas import Canvas
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from mhvp.billing.models import ConsumptionInfo
 from mhvp.core import crypto
@@ -226,7 +226,19 @@ def test_document_intake_parallel_and_repeated_runs_have_one_effect(
         seen = await session.scalar(
             select(func.count()).select_from(DomainEvent).where(DomainEvent.type == key)
         )
-        await asyncio.sleep(0.3)  # widen the window between check and write
+        # GAM-612: keep the window between check and write open until the other run waits for
+        # the advisory lock (event instead of a fixed sleep); without a waiter the old 0.3 s
+        # bound still applies, so the expectation is unchanged.
+        waiting = text(
+            "SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid"
+            " WHERE NOT l.granted AND l.locktype = 'advisory'"
+            " AND a.datname = current_database() AND a.pid <> pg_backend_pid())"
+        )
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + 0.3  # same upper bound as the former fixed sleep
+        while loop.time() < deadline and not await session.scalar(waiting):  # noqa: ASYNC110
+            await asyncio.sleep(0.01)
         if not seen:
             await emit(
                 session,

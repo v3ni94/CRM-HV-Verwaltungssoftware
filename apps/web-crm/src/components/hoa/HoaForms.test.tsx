@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { HoaCreate, HoaSteps, MajorityRules, MeetingPanel, PlanApplyPreview } from "./HoaForms";
+import { HoaCreate, HoaItemForm, HoaSteps, MajorityRules, MeetingPanel, PlanApplyPreview } from "./HoaForms";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
@@ -29,14 +29,61 @@ describe("HoaSteps", () => {
     expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({ target: "resolved", resolution_id: RES });
   });
 
-  it("shows the G4 refusal on posting", async () => {
+  it("locks issue, due and post behind G4 while the gate is closed (GAM-101)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse([{ gate: "G4", label: "G4", open: false, scopes: [] }]));
+    renderIntl(<HoaSteps target="statement" id={ST} status="due" legalEntityId={LE} snapshotHash={null} />);
+    expect(await screen.findByText(/Gesperrt, solange die Freigabestufe G4/)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Ergebnis buchen" });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("posts after confirmation when G4 is open and shows an API refusal", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ title: "Freigabestufe", status: 403, detail: "Freigabestufe G4 ist nicht erteilt." }, 403),
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/tenant/release-gates")
+        ? jsonResponse([{ gate: "G4", label: "G4", open: true, scopes: [] }])
+        : jsonResponse({ title: "Vier-Augen", status: 403, detail: "Zweite Person erforderlich." }, 403),
     );
     renderIntl(<HoaSteps target="statement" id={ST} status="due" legalEntityId={LE} snapshotHash={null} />);
-    await userEvent.click(screen.getByText("Ergebnis buchen"));
-    expect(await screen.findByRole("alert")).toHaveTextContent("G4");
+    const button = screen.getByRole("button", { name: "Ergebnis buchen" });
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Zweite Person");
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(`/statements/${ST}/post`);
+  });
+
+  it("issues with the target body when G4 is open", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/tenant/release-gates") ? jsonResponse([{ gate: "G4", label: "G4", open: true, scopes: [] }]) : jsonResponse({ status: "issued" }),
+    );
+    renderIntl(<HoaSteps target="statement" id={ST} status="resolved" legalEntityId={LE} snapshotHash={null} />);
+    const button = screen.getByRole("button", { name: "Ausgeben" });
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({ target: "issued" });
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("offers existing resolutions of the subject and transitions with the chosen id (GAM-102)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ status: "resolved" }));
+    const hash = "a".repeat(64);
+    const resolutions = [
+      { id: RES, number: 7, decided_on: "2026-05-10", subject: "Jahresabrechnung 2025", status: "positive", subject_type: "hoa_statement", subject_id: ST, snapshot_hash: hash },
+      { id: "r-other", number: 8, decided_on: "2026-05-10", subject: "Fremder Stand", status: "positive", subject_type: "hoa_statement", subject_id: ST, snapshot_hash: "c".repeat(64) },
+      { id: "r-neg", number: 9, decided_on: "2026-05-10", subject: "Abgelehnt", status: "negative" },
+    ];
+    renderIntl(<HoaSteps target="statement" id={ST} status="internally_approved" legalEntityId={LE} snapshotHash={hash} resolutions={resolutions} />);
+    const select = screen.getByLabelText("Bestehenden Beschluss verwenden");
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(screen.queryByText(/Fremder Stand/)).toBeNull();
+    await userEvent.selectOptions(select, RES);
+    await userEvent.click(screen.getByTestId("resolution-use-existing"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(`/statements/${ST}/transition`);
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ target: "resolved", resolution_id: RES });
   });
 });
 
@@ -205,5 +252,28 @@ describe("HoaCreate meeting", () => {
     await userEvent.click(screen.getByRole("button", { name: /Versammlung/ }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({ kind: "repeat", origin_meeting_id: ST, legal_entity_id: LE });
+  });
+});
+
+describe("HoaItemForm sub community (AP21, GAM-109)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const KEYS = [{ id: "k1", code: "MEA", name: "Miteigentumsanteil" }];
+
+  it("sends the chosen sub community with the cost position and shows the basis hint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "c1" }, 201));
+    renderIntl(<HoaItemForm target="statement" id={ST} keys={KEYS} subCommunities={[{ id: "s1", code: "H1", name: "Haus 1" }]} />);
+    await userEvent.type(screen.getByLabelText("Bezeichnung"), "Aufzug");
+    await userEvent.type(screen.getByLabelText("Betrag"), "1000");
+    await userEvent.type(screen.getByLabelText("Grundlage"), "Beschluss 4");
+    await userEvent.selectOptions(screen.getByLabelText("Untergemeinschaft"), "s1");
+    expect(screen.getByText(/Beschluss oder Dokument als Grundlage hinterlegen/)).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Position hinzufügen"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({ sub_community_id: "s1", basis: "Beschluss 4" });
+  });
+
+  it("offers no sub community field without sub communities", () => {
+    renderIntl(<HoaItemForm target="statement" id={ST} keys={KEYS} />);
+    expect(screen.queryByLabelText("Untergemeinschaft")).toBeNull();
   });
 });

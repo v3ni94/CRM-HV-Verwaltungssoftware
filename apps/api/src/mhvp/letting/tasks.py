@@ -13,10 +13,13 @@ from sqlalchemy.pool import NullPool
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.logging import get_logger
 from mhvp.letting.models import Prospect, SelfDisclosureLink
 from mhvp.letting.prospect_erasure import propose_for
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today
+
+log = get_logger(__name__)
 
 
 async def purge_prospects_once(settings: Settings, today: date | None = None) -> dict[str, int]:
@@ -67,22 +70,34 @@ async def hash_self_disclosure_tokens_once(settings: Settings) -> dict[str, int]
         async with platform_transaction(factory) as session:
             ids: list[uuid.UUID] = list(await session.scalars(select(Tenant.id)))
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                rows = (
-                    await session.execute(
-                        select(SelfDisclosureLink.id, SelfDisclosureLink.token).where(
-                            ~SelfDisclosureLink.token.like("sha256:%")
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    rows = (
+                        await session.execute(
+                            select(SelfDisclosureLink.id, SelfDisclosureLink.token).where(
+                                ~SelfDisclosureLink.token.like("sha256:%")
+                            )
                         )
-                    )
-                ).all()
-                for row_id, token in rows:
-                    digest = "sha256:" + hashlib.sha256(token.encode()).hexdigest()
-                    await session.execute(
-                        update(SelfDisclosureLink)
-                        .where(SelfDisclosureLink.id == row_id, SelfDisclosureLink.token == token)
-                        .values(token=digest)
-                    )
-                    converted += 1
+                    ).all()
+                    for row_id, token in rows:
+                        digest = "sha256:" + hashlib.sha256(token.encode()).hexdigest()
+                        await session.execute(
+                            update(SelfDisclosureLink)
+                            .where(
+                                SelfDisclosureLink.id == row_id, SelfDisclosureLink.token == token
+                            )
+                            .values(token=digest)
+                        )
+                        converted += 1
+            except Exception as exc:  # AP07: next tenant still runs
+                log.exception(
+                    "self disclosure token hashing failed", extra={"tenant_id": str(tenant_id)}
+                )
+                from mhvp.core.job_failures import record_job_failure
+
+                await record_job_failure(
+                    factory, tenant_id, "letting.hash_self_disclosure_tokens", exc
+                )
     finally:
         await engine.dispose()
     return {"converted": converted}
@@ -113,15 +128,21 @@ async def propose_rent_increases_once(
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                if (await increase_settings.load(session)).proposals != "draft":
-                    continue
-                totals["tenants"] += 1
-                counts = await increase_proposals.propose_for_tenant(
-                    session, tenant_id, today or local_today()
-                )
-                for key, value in counts.items():
-                    totals[key] += value
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    if (await increase_settings.load(session)).proposals != "draft":
+                        continue
+                    totals["tenants"] += 1
+                    counts = await increase_proposals.propose_for_tenant(
+                        session, tenant_id, today or local_today()
+                    )
+                    for key, value in counts.items():
+                        totals[key] += value
+            except Exception as exc:  # AP07: next tenant still runs
+                log.exception("rent increase proposals failed", extra={"tenant_id": str(tenant_id)})
+                from mhvp.core.job_failures import record_job_failure
+
+                await record_job_failure(factory, tenant_id, "letting.propose_rent_increases", exc)
     finally:
         await engine.dispose()
     return totals

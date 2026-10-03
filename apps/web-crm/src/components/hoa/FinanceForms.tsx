@@ -446,13 +446,13 @@ export function ResolutionSelect({ claimId, resolutionId, resolutions }: { claim
 }
 
 type Note = { code: string; amount: string; note: string };
-const NOTE_CODES = ["heating_accrual", "creditor_timing", "prior_year", "migration_opening", "other"] as const;
+const NOTE_CODES = ["heating_accrual", "creditor_timing", "prior_year", "other"] as const; // GAM-112: migration_opening is computed by the API, never entered
 
 /** Explained differences of the cash flow reconciliation (W04); only before the internal approval. */
 export function ReconciliationNotes({ statementId, notes }: { statementId: string; notes: Note[] }) {
   const t = useTranslations("HoaFinance");
   const { busy, error, saved, call } = useCall();
-  const [rows, setRows] = useState<Note[]>(notes);
+  const [rows, setRows] = useState<Note[]>(notes.filter((n) => n.code !== "migration_opening"));
   const update = (i: number, k: keyof Note, v: string) => setRows((r) => r.map((n, j) => (j === i ? { ...n, [k]: v } : n)));
   const valid = rows.every((n) => MONEY.test(n.amount) && n.note.trim().length >= 3);
   const hint = valid ? null : rows.some((n) => n.amount && !MONEY.test(n.amount)) ? t("invalidNumber") : t("missingFields", { fields: `${t("noteAmount")}, ${t("noteText")}` });

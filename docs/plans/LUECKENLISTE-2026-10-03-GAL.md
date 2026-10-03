@@ -37,3 +37,43 @@ Fünfte Prüfung des Master-Prompts gegen den Code nach Abschluss der Welle 24 (
 | GAL-316 | Handbuch dokumente-dms.md | Seite `/einstellungen/datenschutz`; D46 | Zeile 132: "Die Bedienung im CRM ist noch nicht vorhanden, bis dahin nur über die API" (Löschantrag, Verarbeitungsverzeichnis). Inzwischen vorhanden in `components/privacy/PrivacyAdmin.tsx` (Löschanträge mit Freigabe, Ablehnung, Ausführung; `processing-records`). Zeile 212 ("Bedienung in der CRM-Oberfläche folgt") ist durch Zeile 214 (Seite Erzeugte Dokumente) überholt, beide Aussagen stehen widersprüchlich nebeneinander. | Veraltete Sätze streichen oder mit Verweis "seit Version x.y unter Einstellungen, Datenschutz" ersetzen; Abschnitt nach datenschutz.md verschieben. | S | mittel | nein | offen (Welle 26 geplant) |
 | GAL-317 | Handbuch portal.md, weg.md | Einstellungen Portal-Dienstleister; WEG-Objektseite | portal.md Zeile 356: Verfügbarkeitszeitfenster "erfasst die Verwaltung über `POST /api/v1/portal-admin/provider-availability`"; Oberfläche vorhanden (`settings/PortalProviderAdmin.tsx`). weg.md Zeile 455: Online-Teilnahme "wird über `PUT /hoa/online-meeting-settings` gesetzt"; Schalter vorhanden (`hoa/OnlineMeetingSwitch.tsx` auf `weg/[propertyId]`). Bediener finden die Funktion so nicht. | Bedienweg nennen (Einstellungen, Dienstleister-Portal; WEG, Objekt, Schalter Online-Teilnahme), API nur ergänzend. | S | niedrig | nein | offen (Welle 26 geplant) |
 | GAL-318 | Handbuch dokumente-dms.md | Seite `/einstellungen/dokumentkategorien` | Zeile 244: Schaltfläche "Fehlende Standardkategorien ergänzen"; die Oberfläche heißt "Standardkategorien ergänzen" (`messages/de.json:13026`). | Beschriftung angleichen. | S | niedrig | nein | offen (Welle 26 geplant) |
+
+## Stand 03.10.2026 nach Welle 26 (1.71.0)
+
+Fortschreibung der Spalte Stand; die Tabelle oben bleibt unverändert. Quelle: Ergebnisdateien der Pakete AP01 bis AP26.
+
+| Nr. | Stand 03.10.2026 |
+| --- | --- |
+| GAL-101 | erledigt in Welle 26 (AP04) |
+| GAL-102 | erledigt in Welle 26 (AP04) |
+| GAL-103 | teilweise in Welle 26 (AP03), Rest siehe Abschnitt Welle 26 in docs/plans/IMPLEMENTATION_STATUS.md |
+| GAL-104 | erledigt in Welle 26 (AP05) |
+| GAL-105 | teilweise in Welle 26 (AP05), Rest siehe Abschnitt Welle 26 in docs/plans/IMPLEMENTATION_STATUS.md |
+| GAL-106 | teilweise in Welle 26 (AP05), Rest siehe Abschnitt Welle 26 in docs/plans/IMPLEMENTATION_STATUS.md |
+| GAL-107 | erledigt in Welle 26 (AP05) |
+| GAL-108 | erledigt in Welle 26 (AP04) |
+| GAL-201 | erledigt in Welle 26 (AP02) |
+| GAL-202 | erledigt in Welle 26 (AP02) |
+| GAL-203 | erledigt in Welle 26 (AP02) |
+| GAL-204 | erledigt in Welle 26 (AP06) |
+| GAL-205 | teilweise in Welle 26 (AP06), Rest siehe Abschnitt Welle 26 in docs/plans/IMPLEMENTATION_STATUS.md |
+| GAL-206 | erledigt in Welle 26 (AP07) |
+| GAL-207 | teilweise in Welle 26 (AP02), Rest siehe Abschnitt Welle 26 in docs/plans/IMPLEMENTATION_STATUS.md |
+| GAL-301 | erledigt in Welle 26 (AP20) |
+| GAL-302 | erledigt in Welle 26 (AP12) |
+| GAL-303 | erledigt in Welle 26 (AP18) |
+| GAL-304 | teilweise in Welle 26 (AP16), Rest siehe Abschnitt Welle 26 in docs/plans/IMPLEMENTATION_STATUS.md |
+| GAL-305 | erledigt in Welle 26 (AP20) |
+| GAL-306 | erledigt in Welle 26 (AP20) |
+| GAL-307 | erledigt in Welle 26 (AP20) |
+| GAL-308 | offen, in Welle 26 nicht bearbeitet |
+| GAL-309 | offen, in Welle 26 nicht bearbeitet |
+| GAL-310 | offen, in Welle 26 nicht bearbeitet |
+| GAL-311 | erledigt in Welle 26 (AP23) |
+| GAL-312 | erledigt in Welle 26 (AP23) |
+| GAL-313 | erledigt in Welle 26 (AP23) |
+| GAL-314 | erledigt in Welle 26 (AP23) |
+| GAL-315 | offen, in Welle 26 nicht bearbeitet |
+| GAL-316 | erledigt in Welle 26 (AP23) |
+| GAL-317 | offen, in Welle 26 nicht bearbeitet |
+| GAL-318 | offen, in Welle 26 nicht bearbeitet |

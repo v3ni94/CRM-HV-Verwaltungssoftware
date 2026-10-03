@@ -757,13 +757,17 @@ async def archive_retry_all_once(settings: Settings) -> dict[str, int]:
 
 
 def _run_archive[T](coro_factory: Callable[[], Coroutine[Any, Any, T]], task: Any) -> T:
-    """Runs an archive coroutine; unexpected errors (database, broker) are retried three
-    times a minute apart, Gmail errors are already recorded on the messages."""
+    """Runs an archive coroutine; transient errors (network, database connection, HTTP 429/5xx)
+    are retried three times with exponential backoff (GAL-206); Gmail errors are already
+    recorded on the messages."""
     try:
         return asyncio.run(coro_factory())
     except Exception as exc:
         log.exception("archive task failed")
-        raise task.retry(exc=exc, countdown=60, max_retries=3) from exc
+        # GAL-206: backoff only for transient errors, Retry-After honoured.
+        from mhvp.core.task_policy import retry_transient
+
+        raise retry_transient(task, exc) from exc
 
 
 @shared_task(name="mhvp.communication.archive_messages", bind=True)

@@ -6,7 +6,7 @@
 | Title | Neues Recht `banking:approve`; unzugeordnete finAPI-Konten nur für Banking-Administratoren |
 | Scope | Domäne `banking`, Endpunkte `/banking/finapi/...`; alle Mandanten |
 | Source status | Keine Rechtsnorm im Quellenregister einschlägig; Produktschutz (Abschnitt 4 des Banking-Zusatz-Master-Prompts: Softwarerolle ersetzt keine Bankvollmacht) |
-| Acceptance case | Abnahmefall 15 des Banking-Zusatz-Master-Prompts; Tests `apps/api/tests/banking/test_finapi.py` |
+| Acceptance case | Abnahmefall 15 des Banking-Zusatz-Master-Prompts; Tests `apps/api/tests/integration/test_m11_finapi.py` (Zuordnung, Mandantentrennung, Reautorisierung, Einwilligungserinnerung) und `apps/api/tests/unit/test_finapi_client.py` (Token, Fehlerabbildung); Pfad korrigiert 03.10.2026 (GAM-805), das Verzeichnis `tests/banking` existiert nicht |
 | Implementation | `mhvp.core.auth.permissions` (Ressource `banking`, Rolle `accountant_banking` erhält `banking:approve`), `mhvp.banking.routers._can_see_unassigned` |
 | Change reason | Banking-Zusatz-Master-Prompt Abschnitt 4 und 12, Auftrag 25.09.2026 |
 

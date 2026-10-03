@@ -1747,6 +1747,45 @@ async def _update_progress(
             run.input_ref = {**run.input_ref, "progress": progress}
 
 
+def run_contact_ids(input_ref: dict[str, Any]) -> list[uuid.UUID]:
+    """Contacts a run is about (``input_ref["contact_id"]`` / ``["contact_ids"]``)."""
+    raw: list[Any] = []
+    if input_ref.get("contact_id"):
+        raw.append(input_ref["contact_id"])
+    ids = input_ref.get("contact_ids")
+    if isinstance(ids, list):
+        raw.extend(ids)
+    out: list[uuid.UUID] = []
+    for value in raw:
+        try:
+            out.append(uuid.UUID(str(value)))
+        except ValueError:
+            continue
+    return out
+
+
+async def ai_processing_block_reason(
+    session: AsyncSession, input_ref: dict[str, Any]
+) -> str | None:
+    """GAM-406 (AP13): a contact related run is blocked when a contact objected to AI
+    processing, or when the register requires a consent that is missing. Without register
+    entry and without objection nothing changes (OPEN_QUESTIONS AP13-04)."""
+    from mhvp.contacts import consent_rules
+
+    ids = run_contact_ids(input_ref)
+    if not ids:
+        return None
+    policy = await consent_rules.load_policy(session)
+    for contact_id in ids:
+        decision = await consent_rules.ai_processing_decision(session, contact_id, policy)
+        if not decision.allowed:
+            return (
+                "KI-Verarbeitung für diesen Kontakt nicht zulässig "
+                f"({decision.reason}); Widerspruch oder fehlende Einwilligung."
+            )
+    return None
+
+
 async def execute(
     factory: async_sessionmaker[AsyncSession],
     tenant_id: uuid.UUID,
@@ -1767,6 +1806,9 @@ async def execute(
                 blocked = await posting_block_reason(session)
                 if blocked is not None:
                     raise GatewayBlockedError(blocked)
+            objection = await ai_processing_block_reason(session, run.input_ref)
+            if objection is not None:
+                raise GatewayBlockedError(objection)
             budget_tokens = (
                 await input_budget_tokens(session, task) if task is AiTask.ANSWER_QUESTION else None
             )

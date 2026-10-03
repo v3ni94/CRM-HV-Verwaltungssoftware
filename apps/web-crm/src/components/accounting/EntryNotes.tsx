@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { formatDateTime as formatBerlinDateTime } from "@/lib/format";
 
 export type EntryNote = {
   id: string;
@@ -18,9 +19,7 @@ export type EntryNote = {
 };
 
 function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatBerlinDateTime(iso);
 }
 
 /** Versioned notes on a posted entry (GA05-02, B03): kept apart from the financial content,

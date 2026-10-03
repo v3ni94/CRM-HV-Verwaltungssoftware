@@ -18,11 +18,13 @@ from mhvp.communication import calendar_feed as communication_calendar_feed
 from mhvp.communication import models as communication_models
 from mhvp.communication import sync_retry as communication_sync_retry
 from mhvp.communication import telephony as communication_telephony
+from mhvp.contacts import access_log as contact_access_log
 from mhvp.contacts import models as contact_models
 from mhvp.contracts import deposit_settlement as deposit_settlement_models
 from mhvp.contracts import models as contract_models
 from mhvp.contracts import service_contracts as service_contract_models
 from mhvp.core import events, numbering, webhooks
+from mhvp.core import job_failures as core_job_failures
 from mhvp.core.auth import mfa_policy as auth_mfa_policy
 from mhvp.core.auth import mfa_reset as auth_mfa_reset
 from mhvp.core.db.base import Base
@@ -79,8 +81,10 @@ __all__ = [
     "communication_models",
     "communication_sync_retry",
     "communication_telephony",
+    "contact_access_log",
     "contact_models",
     "contract_models",
+    "core_job_failures",
     "deposit_settlement_models",
     "direct_debit_models",
     "document_models",

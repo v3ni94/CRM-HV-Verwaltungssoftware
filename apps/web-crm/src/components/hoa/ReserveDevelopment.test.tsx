@@ -61,4 +61,17 @@ describe("ReserveDevelopment", () => {
     render(await ReserveDevelopment({ block: { ...block, positions: undefined } }));
     expect(screen.queryByTestId("reserve-positions")).toBeNull();
   });
+
+  it("shows open contributions as own row and explains a bank difference (GAM-104)", async () => {
+    render(await ReserveDevelopment({ block: { ...block, bank_difference: "-100.00" } }));
+    const row = screen.getByText("Offene Beiträge (nicht verfügbare Liquidität)").closest("tr")!;
+    expect(row.textContent).toMatch(/100,00/);
+    expect(screen.getByTestId("reserve-bank-difference-note")).toBeInTheDocument();
+  });
+
+  it("shows no note without a bank difference and a negative open amount exactly", async () => {
+    render(await ReserveDevelopment({ block: { ...block, contributions_resolved: "400.00", contributions_paid: "400.10" } }));
+    expect(screen.queryByTestId("reserve-bank-difference-note")).toBeNull();
+    expect(screen.getByText("Offene Beiträge (nicht verfügbare Liquidität)").closest("tr")!.textContent).toMatch(/-0,10/);
+  });
 });

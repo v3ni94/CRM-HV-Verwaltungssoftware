@@ -386,6 +386,7 @@ def _events(c: TestClient, h: dict[str, str], type_: str | None = None) -> list[
     return _ok(c.get("/api/v1/tenant/events", params=params, headers=h))  # type: ignore[no-any-return]
 
 
+@pytest.mark.annex_d("D43", "D46")
 def test_d43_d46_original_locked_after_json_extraction_and_import_undo(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:
@@ -467,6 +468,7 @@ def test_d43_d46_original_locked_after_json_extraction_and_import_undo(
     assert undo_events[0]["payload"] == {"status": "undone", "kept": "0", "kept_reasons": None}
 
 
+@pytest.mark.annex_d("D57")
 def test_d57_instruction_in_model_output_is_not_executed(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:

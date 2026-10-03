@@ -359,14 +359,33 @@ def test_gae03_hoa_statement_close_sets_lock_via_endpoint(
             text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
         )
         for key, year in (("off", 2022), ("on", 2023)):
+            # ck_hoa_statement_resolved_needs_resolution (0462, AP05): a posted statement
+            # always references its resolution.
+            res_id = uuid.uuid4()
+            conn.execute(
+                text(
+                    "INSERT INTO resolution (id, tenant_id, legal_entity_id, number, decided_on, "
+                    "subject, wording, status, kind, votes, subject_type) "
+                    "SELECT :id, :t, legal_entity_id, :y, make_date(:y + 1, 6, 1), "
+                    "'Jahresabrechnung', 'Die Jahresabrechnung wird beschlossen.', 'positive', "
+                    "'meeting', '{}'::jsonb, 'hoa_statement' FROM ledger WHERE id = :l"
+                ),
+                {"id": str(res_id), "t": str(world.tenant_a), "l": w["ledger"], "y": year},
+            )
             conn.execute(
                 text(
                     "INSERT INTO hoa_statement (id, tenant_id, ledger_id, year, status, version, "
                     "reserve_opening, reserve_withdrawals, reserve_interest, "
-                    "addressing_rule_version, posted_entry_ids) VALUES (:id, :t, :l, :y, "
-                    "'posted', 1, 0, 0, 0, 'owner-at-resolution-v1', '[]'::jsonb)"
+                    "addressing_rule_version, posted_entry_ids, resolution_id) VALUES (:id, :t, "
+                    ":l, :y, 'posted', 1, 0, 0, 0, 'owner-at-resolution-v1', '[]'::jsonb, :r)"
                 ),
-                {"id": str(ids[key]), "t": str(world.tenant_a), "l": w["ledger"], "y": year},
+                {
+                    "id": str(ids[key]),
+                    "t": str(world.tenant_a),
+                    "l": w["ledger"],
+                    "y": year,
+                    "r": str(res_id),
+                },
             )
     engine.dispose()
     url = "/api/v1/hoa/statements/{}/transition"

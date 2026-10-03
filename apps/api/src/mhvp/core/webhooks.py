@@ -3,10 +3,23 @@
 Signature header ``X-MHVP-Signature: t=<unix>,v1=<hex>`` with
 ``v1 = HMAC-SHA256(secret, "<t>.<raw body>")``. Receivers should reject timestamps older
 than five minutes. Retry schedule: 1 min, 5 min, 30 min, 2 h, 6 h, 24 h, then failed.
+
+Dispatch (GAM-501 to GAM-503): the minute job never holds a database transaction open during
+an HTTP call. Each delivery is claimed in its own short transaction (``claim_delivery``:
+row lock, ``attempts + 1``, ``next_attempt_at`` moved to the retry moment of this attempt as
+a lease, commit), sent without a session (``send_claimed``) and its outcome written in a new
+short transaction (``apply_outcome``). A worker lost between claim and outcome counts as a
+failed attempt, so a delivery always reaches ``failed`` after the schedule and is never stuck.
+New events are found through a watermark per subscription (``watermark_occurred_at``,
+migration 0463) with an overlap window, no longer by scanning all events since creation.
+Delivery order is not guaranteed (docs/integrations/webhooks.md); receivers order by
+``occurred_at`` of the payload and deduplicate by ``Idempotency-Key``.
 """
 
+import asyncio
 import ipaddress
 import json
+import logging
 import socket
 import time
 import uuid
@@ -30,6 +43,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,8 +52,16 @@ from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import DomainEvent
+from mhvp.core.ids import uuid7
+
+log = logging.getLogger(__name__)
 
 RETRY_SCHEDULE_SECONDS: tuple[int, ...] = (60, 300, 1800, 7200, 21600, 86400)
+# GAM-503: events are looked up from the subscription watermark minus this overlap, so an
+# event whose transaction committed late (``occurred_at`` is the transaction start) is still
+# found; the unique constraint (subscription, event) keeps the lookup idempotent.
+ENQUEUE_OVERLAP = timedelta(minutes=15)
+ENQUEUE_BATCH_LIMIT = 1000
 
 # Event types offered to subscribers (section 12, ``<entity>.<action>``; A69). The catalogue
 # documents the contract of the payloads (docs/integrations/webhooks.md): identifiers, field
@@ -97,6 +119,10 @@ EVENT_TYPES: dict[str, str] = {
 }
 SIGNATURE_HEADER = "X-MHVP-Signature"
 DELIVERY_TIMEOUT_SECONDS = 10.0
+# Hard ceiling of one HTTP call (httpx timeouts apply per network operation, a target that
+# trickles bytes could otherwise hold the call much longer).
+DELIVERY_DEADLINE_SECONDS = 15.0
+CLAIM_MARKER = "sending"
 
 
 class DeliveryStatus(StrEnum):
@@ -121,6 +147,9 @@ class WebhookSubscription(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     last_failure_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     disabled_reason: Mapped[str | None] = mapped_column(String(32))
+    # GAM-503 (migration 0463): newest ``domain_event.occurred_at`` already turned into
+    # deliveries; ``None`` until the first run (lookup then starts at ``created_at``).
+    watermark_occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class WebhookDelivery(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -274,7 +303,13 @@ def event_body(event: DomainEvent) -> bytes:
 
 
 async def enqueue_deliveries(session: AsyncSession, tenant_id: uuid.UUID) -> int:
-    """Create pending deliveries for events without one (idempotent per subscription/event)."""
+    """Create pending deliveries for new events (idempotent per subscription/event).
+
+    GAM-503: per subscription only events since its watermark minus ``ENQUEUE_OVERLAP`` are
+    read (index ``tenant_id, occurred_at``), at most ``ENQUEUE_BATCH_LIMIT`` per run in
+    ``occurred_at, id`` order; the watermark then moves to the newest event read. Existing
+    pairs are skipped by ``ON CONFLICT DO NOTHING`` (also against a parallel run).
+    """
     subscriptions = (
         await session.scalars(
             select(WebhookSubscription).where(
@@ -285,31 +320,229 @@ async def enqueue_deliveries(session: AsyncSession, tenant_id: uuid.UUID) -> int
     created = 0
     now = datetime.now(UTC)
     for subscription in subscriptions:
-        delivered = select(WebhookDelivery.event_id).where(
-            WebhookDelivery.subscription_id == subscription.id
+        since = subscription.created_at
+        if subscription.watermark_occurred_at is not None:
+            since = max(since, subscription.watermark_occurred_at - ENQUEUE_OVERLAP)
+        known = select(WebhookDelivery.event_id).where(
+            WebhookDelivery.subscription_id == subscription.id,
+            WebhookDelivery.created_at >= since - ENQUEUE_OVERLAP,
         )
         events = (
             await session.scalars(
-                select(DomainEvent).where(
+                select(DomainEvent)
+                .where(
                     DomainEvent.tenant_id == tenant_id,
-                    DomainEvent.occurred_at >= subscription.created_at,
-                    DomainEvent.id.not_in(delivered),
+                    DomainEvent.occurred_at >= since,
+                    DomainEvent.id.not_in(known),
                 )
+                .order_by(DomainEvent.occurred_at, DomainEvent.id)
+                .limit(ENQUEUE_BATCH_LIMIT)
             )
         ).all()
         for event in events:
-            if matches(subscription, event.type):
-                session.add(
-                    WebhookDelivery(
-                        tenant_id=tenant_id,
-                        subscription_id=subscription.id,
-                        event_id=event.id,
-                        next_attempt_at=now,
-                    )
+            if not matches(subscription, event.type):
+                continue
+            inserted = await session.scalar(
+                pg_insert(WebhookDelivery)
+                .values(
+                    id=uuid7(),
+                    tenant_id=tenant_id,
+                    subscription_id=subscription.id,
+                    event_id=event.id,
+                    status=DeliveryStatus.PENDING,
+                    attempts=0,
+                    next_attempt_at=now,
                 )
+                .on_conflict_do_nothing(index_elements=["subscription_id", "event_id"])
+                .returning(WebhookDelivery.id)
+            )
+            if inserted is not None:
                 created += 1
+        if events:
+            newest = events[-1].occurred_at
+            current = subscription.watermark_occurred_at
+            if current is None or newest > current:
+                subscription.watermark_occurred_at = newest
     await session.flush()
     return created
+
+
+@dataclass(frozen=True)
+class ClaimedDelivery:
+    """Everything needed to send one claimed delivery without a database session."""
+
+    delivery_id: uuid.UUID
+    tenant_id: uuid.UUID
+    attempt: int
+    url: str
+    body: bytes
+    secret: str
+    headers: dict[str, str]
+
+
+@dataclass(frozen=True)
+class DeliveryOutcome:
+    ok: bool
+    status_code: int | None
+    error: str | None
+
+
+def _retry_delay(attempt: int) -> int:
+    return RETRY_SCHEDULE_SECONDS[min(attempt, len(RETRY_SCHEDULE_SECONDS)) - 1]
+
+
+async def _fail_final(
+    session: AsyncSession,
+    delivery: WebhookDelivery,
+    subscription: WebhookSubscription | None,
+    *,
+    now: datetime,
+) -> None:
+    delivery.status = DeliveryStatus.FAILED
+    delivery.next_attempt_at = None
+    if subscription is not None:
+        await record_final_failure(session, subscription, now=now)
+    log.warning(
+        "webhook delivery failed finally",
+        extra={"tenant_id": str(delivery.tenant_id), "delivery_id": str(delivery.id)},
+    )
+
+
+async def _claim_row(
+    session: AsyncSession, delivery: WebhookDelivery, *, now: datetime
+) -> ClaimedDelivery | None:
+    subscription = await session.get(WebhookSubscription, delivery.subscription_id)
+    event = await session.get(DomainEvent, delivery.event_id)
+    if subscription is None or event is None or not subscription.active:
+        delivery.status = DeliveryStatus.FAILED
+        delivery.last_error = "subscription inactive"
+        delivery.next_attempt_at = None
+        return None
+    if delivery.last_error == CLAIM_MARKER and delivery.attempts > len(RETRY_SCHEDULE_SECONDS):
+        # The last claim ended without an outcome (worker lost) and the schedule is used up.
+        # A manual redelivery of a failed row (``redeliver``) keeps its error text and still
+        # gets one attempt.
+        delivery.last_error = "outcome unknown"
+        await _fail_final(session, delivery, subscription, now=now)
+        return None
+    delivery.attempts += 1
+    # Lease: until the outcome is written the row is not due again; a lost worker therefore
+    # behaves like a failed attempt and the regular retry moment applies.
+    delivery.next_attempt_at = now + timedelta(seconds=_retry_delay(delivery.attempts))
+    delivery.last_error = CLAIM_MARKER
+    return ClaimedDelivery(
+        delivery_id=delivery.id,
+        tenant_id=delivery.tenant_id,
+        attempt=delivery.attempts,
+        url=subscription.url,
+        body=event_body(event),
+        secret=subscription.secret,
+        headers={
+            "Content-Type": "application/json",
+            "X-MHVP-Event": event.type,
+            "X-MHVP-Delivery": str(delivery.id),
+            "X-MHVP-Event-Id": str(event.id),
+            # Stable per delivery: identical on every retry, so receivers can deduplicate.
+            "Idempotency-Key": str(delivery.id),
+        },
+    )
+
+
+async def claim_delivery(
+    session: AsyncSession, tenant_id: uuid.UUID, *, now: datetime | None = None
+) -> tuple[bool, ClaimedDelivery | None]:
+    """Claim the oldest due delivery of the tenant (GAM-501). Returns ``(found, claim)``:
+    ``found`` is False when nothing is due; ``claim`` is None when the row was closed
+    instead (inactive subscription, schedule used up). The caller commits right away."""
+    now = now or datetime.now(UTC)
+    delivery = await session.scalar(
+        select(WebhookDelivery)
+        .where(
+            WebhookDelivery.tenant_id == tenant_id,
+            WebhookDelivery.status == DeliveryStatus.PENDING,
+            WebhookDelivery.next_attempt_at <= now,
+        )
+        .order_by(WebhookDelivery.next_attempt_at, WebhookDelivery.id)
+        .limit(1)
+        .with_for_update(skip_locked=True)
+    )
+    if delivery is None:
+        return False, None
+    claim = await _claim_row(session, delivery, now=now)
+    await session.flush()
+    return True, claim
+
+
+async def send_claimed(
+    claim: ClaimedDelivery, *, client: httpx.AsyncClient, allow_private: bool
+) -> DeliveryOutcome:
+    """The HTTP call of one claimed delivery; runs without any database session."""
+    headers = claim.headers | {
+        SIGNATURE_HEADER: sign(claim.secret, claim.body, int(time.time())),
+    }
+    try:
+        target = pin_target(claim.url, allow_private=allow_private)
+        async with asyncio.timeout(DELIVERY_DEADLINE_SECONDS):
+            response = await client.post(
+                target.url,
+                content=claim.body,
+                headers=headers | target.headers,
+                extensions=target.extensions,
+                follow_redirects=False,
+            )
+    except UnsafeWebhookTargetError as exc:
+        return DeliveryOutcome(False, None, str(exc)[:200])
+    except TimeoutError:
+        return DeliveryOutcome(False, None, "Timeout")
+    except httpx.HTTPError as exc:
+        return DeliveryOutcome(False, None, type(exc).__name__)
+    ok = 200 <= response.status_code < 300
+    return DeliveryOutcome(ok, response.status_code, None if ok else f"HTTP {response.status_code}")
+
+
+async def _apply(
+    session: AsyncSession,
+    delivery: WebhookDelivery,
+    outcome: DeliveryOutcome,
+    *,
+    now: datetime,
+) -> None:
+    subscription = await session.get(WebhookSubscription, delivery.subscription_id)
+    delivery.last_status_code = outcome.status_code
+    delivery.last_error = outcome.error
+    if outcome.ok:
+        delivery.status = DeliveryStatus.SUCCEEDED
+        delivery.delivered_at = now
+        delivery.next_attempt_at = None
+        if subscription is not None:
+            subscription.consecutive_failures = 0
+    elif delivery.attempts > len(RETRY_SCHEDULE_SECONDS):
+        await _fail_final(session, delivery, subscription, now=now)
+    else:
+        delivery.next_attempt_at = now + timedelta(seconds=_retry_delay(delivery.attempts))
+
+
+async def apply_outcome(
+    session: AsyncSession,
+    claim: ClaimedDelivery,
+    outcome: DeliveryOutcome,
+    *,
+    now: datetime | None = None,
+) -> bool:
+    """Write the outcome of a claimed attempt in a new short transaction. Skipped (False) when
+    the row changed meanwhile (manual redelivery or a newer claim)."""
+    delivery = await session.scalar(
+        select(WebhookDelivery).where(WebhookDelivery.id == claim.delivery_id).with_for_update()
+    )
+    if (
+        delivery is None
+        or delivery.status != DeliveryStatus.PENDING
+        or delivery.attempts != claim.attempt
+    ):
+        return False
+    await _apply(session, delivery, outcome, now=now or datetime.now(UTC))
+    await session.flush()
+    return True
 
 
 async def attempt_delivery(
@@ -320,83 +553,14 @@ async def attempt_delivery(
     allow_private: bool,
     now: datetime | None = None,
 ) -> None:
+    """One attempt inside the caller's session (tests and single manual use). The minute job
+    does not use it: there claim, call and outcome run in separate transactions (GAM-501)."""
     now = now or datetime.now(UTC)
-    subscription = await session.get(WebhookSubscription, delivery.subscription_id)
-    event = await session.get(DomainEvent, delivery.event_id)
-    if subscription is None or event is None or not subscription.active:
-        delivery.status = DeliveryStatus.FAILED
-        delivery.last_error = "subscription inactive"
-        delivery.next_attempt_at = None
+    claim = await _claim_row(session, delivery, now=now)
+    if claim is None:
         return
-    body = event_body(event)
-    headers = {
-        "Content-Type": "application/json",
-        "X-MHVP-Event": event.type,
-        "X-MHVP-Delivery": str(delivery.id),
-        "X-MHVP-Event-Id": str(event.id),
-        # Stable per delivery: identical on every retry, so receivers can deduplicate (S12-08).
-        "Idempotency-Key": str(delivery.id),
-        SIGNATURE_HEADER: sign(subscription.secret, body, int(time.time())),
-    }
-    delivery.attempts += 1
-    try:
-        target = pin_target(subscription.url, allow_private=allow_private)
-        response = await client.post(
-            target.url,
-            content=body,
-            headers=headers | target.headers,
-            extensions=target.extensions,
-            follow_redirects=False,
-        )
-        delivery.last_status_code = response.status_code
-        ok = 200 <= response.status_code < 300
-        delivery.last_error = None if ok else f"HTTP {response.status_code}"
-    except UnsafeWebhookTargetError as exc:
-        ok, delivery.last_error = False, str(exc)[:200]
-    except httpx.HTTPError as exc:
-        ok, delivery.last_error = False, type(exc).__name__
-    if ok:
-        delivery.status = DeliveryStatus.SUCCEEDED
-        delivery.delivered_at = now
-        delivery.next_attempt_at = None
-        subscription.consecutive_failures = 0
-    elif delivery.attempts > len(RETRY_SCHEDULE_SECONDS):
-        delivery.status = DeliveryStatus.FAILED
-        delivery.next_attempt_at = None
-        await record_final_failure(session, subscription, now=now)
-    else:
-        delay = RETRY_SCHEDULE_SECONDS[delivery.attempts - 1]
-        delivery.next_attempt_at = now + timedelta(seconds=delay)
-
-
-async def deliver_due(
-    session: AsyncSession,
-    tenant_id: uuid.UUID,
-    *,
-    client: httpx.AsyncClient,
-    allow_private: bool,
-    now: datetime | None = None,
-    limit: int = 100,
-) -> int:
-    now = now or datetime.now(UTC)
-    due = (
-        await session.scalars(
-            select(WebhookDelivery)
-            .where(
-                WebhookDelivery.tenant_id == tenant_id,
-                WebhookDelivery.status == DeliveryStatus.PENDING,
-                WebhookDelivery.next_attempt_at <= now,
-            )
-            .order_by(WebhookDelivery.next_attempt_at)
-            .limit(limit)
-            .with_for_update(skip_locked=True)
-        )
-    ).all()
-    for delivery in due:
-        await attempt_delivery(
-            session, delivery, client=client, allow_private=allow_private, now=now
-        )
-    return len(due)
+    outcome = await send_claimed(claim, client=client, allow_private=allow_private)
+    await _apply(session, delivery, outcome, now=now)
 
 
 FAILURE_NOTIFICATION_KIND = "webhook.delivery_failed"

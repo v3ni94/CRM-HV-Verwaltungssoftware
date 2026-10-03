@@ -11,7 +11,7 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0002](0002-tenant-isolation.md) | Tenant isolation with PostgreSQL RLS | Accepted |
 | [0003](0003-release-gates.md) | Release gates G1 to G5 | Accepted |
 | [0004](0004-error-format.md) | Error format (RFC 9457 problem details) | Accepted |
-| [0005](0005-object-storage.md) | Object storage after the MinIO community archive | Proposed, operator decision required |
+| [0005](0005-object-storage.md) | Object storage after the MinIO community archive | Accepted (addendum 27.09.2026: permanently local SeaweedFS, IONOS optional; see addendum 03.10.2026) |
 | [0006](0006-identity-and-tenant-administration.md) | Identity, sessions, field encryption, tenant administration | Accepted |
 | [0007](0007-journal-numbering.md) | Journal numbering (gapless counter per number range, B04) | Accepted |
 | [0008](0008-idempotency-and-rate-limiting.md) | Idempotency-Key middleware and rate limiting (A48, A49) | Accepted |
@@ -24,7 +24,8 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0015](0015-lexoffice-master-data-and-drafts-outside-g1.md) | Lexware Office master data sync, invoice copies and drafts outside release gate G1 (rule INT-LEXO-01) | Proposed, operator decision LEXO-06 pending |
 | [0016](0016-handover-offline.md) | Offline capture of handover protocols on phone and tablet (encrypted device queue, deletion on sign out, device timestamps as reported values; plan M31 WP2, operator question M30-07) | Proposed, operator decision M30-07 pending |
 | [0017](0017-crm-pwa-shell.md) | CRM as an installable shell without a data cache (manifest, service worker for offline page and icons only, middleware exception, plan M31 WP5, decision M30-08) | Accepted, product protection |
-
+| [0018](0018-jahrespartitionierung.md) | Preparation of yearly partitioning for journal_line and bank_transaction | Proposed, supplemented by ADR 0021 |
+| [0019](0019-tracing-opentelemetry.md) | Tracing with OpenTelemetry | Accepted as built (addendum 03.10.2026), export target decision open (M9-02-01) |
 | [0020](0020-formatversionen.md) | Pinned format versions (pain.001, pain.008, camt, XRechnung, ZUGFeRD, HeiWaKo) and compatibility tests | Accepted |
 | [0021](0021-skalierung-phase-4-jahrespartitionierung.md) | Scaling phase 4: yearly partitioning of journal_entry and bank_transaction (analysis, measurements at 100,000 rows, triggers, measurement plan; supplements ADR 0018, GA12-08) | Proposed, operator decision AC09-01 pending |
 | [0022](0022-api-verschachtelung.md) | Nesting of API paths (deviation from section 12) | Proposed, operator decision AD10-01 pending |
@@ -43,5 +44,7 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0035](0035-snapshot-trigger.md) | Immutable `statement_snapshot` by database trigger (B03, migration 0439) | Accepted |
 | [0036](0036-abhaengigkeitsaudit-ci.md) | Dependency audit in CI with allowlist (GAH-310) | Accepted |
 | [0037](0037-json-format-decimal.md) | JSON format of Decimal amounts in API responses, as built (GAI-304) | Accepted |
+| [0038](0038-currency-eur-only.md) | Currency column EUR only on money header tables (GAL-101) | Proposed, operator decision open (AP04-01) |
+| [0039](0039-tenant-scoped-foreign-keys.md) | Tenant scoped foreign keys by trigger guard | Accepted |
 
 Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0017 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration; the CRM shell ADR was written as 0016 in parallel to the handover offline ADR and renumbered to 0017.

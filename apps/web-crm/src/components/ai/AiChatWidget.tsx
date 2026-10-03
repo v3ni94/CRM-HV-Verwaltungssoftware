@@ -575,7 +575,7 @@ export function AiChatWidget() {
           aria-label={open ? t("close") : t("open")}
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-focus"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <span aria-hidden className="text-xl">
             {open ? "×" : "✦"}
@@ -647,7 +647,7 @@ export function AiChatWidget() {
                         <button
                           key={c.id}
                           type="button"
-                          className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus"
+                          className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                           onClick={() => onChip(c)}
                         >
                           {c.label}

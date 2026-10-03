@@ -18,6 +18,9 @@ from mhvp.accounting.audit_events import record_change
 from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import advance_rule as rule
 from mhvp.billing.models import Statement, StatementSnapshot
+from mhvp.billing.raw_responses import (
+    BillingAdvanceGetRuleOut,
+)
 from mhvp.billing.write_responses import BillingAdvanceRuleOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
@@ -72,7 +75,11 @@ def _rule_out(row: rule.AdvanceRuleSetting) -> dict[str, Any]:
     }
 
 
-@router.get("", summary="Vorschussregel des Mandanten (Sicherheitsaufschlag, Standard 0)")
+@router.get(
+    "",
+    summary="Vorschussregel des Mandanten (Sicherheitsaufschlag, Standard 0)",
+    response_model=BillingAdvanceGetRuleOut,
+)
 async def get_rule(request: Request, principal: TenantPrincipal = Depends(READ)) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         return _rule_out(await rule.setting(session, principal.tenant_id))

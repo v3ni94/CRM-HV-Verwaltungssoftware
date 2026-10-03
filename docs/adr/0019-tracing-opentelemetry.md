@@ -39,3 +39,14 @@ Daten und berühren Datenschutz und Betrieb.
 
 - `docs/MASTER-PROMPT.md` Abschnitt 16 (Beobachtbarkeit)
 - `apps/api/src/mhvp/core/logging.py`, `apps/api/src/mhvp/core/middleware.py`
+
+## Nachtrag 03.10.2026: Stand der Umsetzung (GAM-801)
+
+Der Kontextabsatz oben (keine OpenTelemetry-Abhängigkeit) ist überholt und bleibt als
+Ursprungsstand unverändert. Tatsächlicher Stand: `apps/api/pyproject.toml` führt
+`opentelemetry-sdk`, den OTLP-Exporter und Instrumentierungen für FastAPI, SQLAlchemy, HTTPX
+und Celery; `apps/api/src/mhvp/core/telemetry.py` ist vorhanden, der Export ist per
+`MHVP_OTEL_ENDPOINT` schaltbar (Standard aus). ADR 0024 baut auf diesem ADR auf.
+
+- Status (Nachtrag): Accepted as built. Offen bleibt die Betreiberentscheidung zu Exportziel
+  und Datenschutz (OPEN_QUESTIONS M9-02-01); bis dahin bleibt der Export abgeschaltet.

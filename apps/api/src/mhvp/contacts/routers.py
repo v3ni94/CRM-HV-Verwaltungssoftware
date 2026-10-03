@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import case, func, literal, or_, select
 
 from mhvp.ai.examples import delete_examples_for_contact
-from mhvp.contacts import access_export, schemas, services
+from mhvp.contacts import access_export, access_log, schemas, services
 from mhvp.contacts.models import (
     Consent,
     Contact,
@@ -34,6 +34,7 @@ from mhvp.core.clock import local_today
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
+    MAX_PAGE_SIZE,
     ListParams,
     apply_filters,
     apply_sort,
@@ -347,6 +348,15 @@ async def get_contact(
         out = await services.load(session, contact_id)
         if out is None:
             raise _not_found()
+        await access_log.record(  # GAM-410, tenant switch (default off)
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            subject_contact_id=contact_id,
+            entity_type="contact",
+            entity_id=contact_id,
+            action="contact_read",
+        )
         response.headers["ETag"] = f'"{out.version}"'
         return out
 
@@ -764,11 +774,17 @@ async def preview_access_export(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         item = await _access(session, contact_id, export_id)
-        return {
-            "status": item.status,
-            "for_review_only": True,
-            **await access_export.preview(session, item),
-        }
+        content = await access_export.preview(session, item)
+        await access_log.record(  # GAM-410
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            subject_contact_id=contact_id,
+            entity_type="contact_access_export",
+            entity_id=export_id,
+            action="access_export_preview",
+        )
+        return {"status": item.status, "for_review_only": True, **content}
 
 
 @router.post(
@@ -846,9 +862,94 @@ async def download_access_export(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         item = await _access(session, contact_id, export_id)
-        return await access_export.download(
+        result = await access_export.download(
             session, item, tenant_id=principal.tenant_id, actor=principal.user_id
         )
+        await access_log.record(  # GAM-410
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            subject_contact_id=contact_id,
+            entity_type="contact_access_export",
+            entity_id=export_id,
+            action="access_export_download",
+        )
+        return result
+
+
+@router.get(
+    "/contacts/{contact_id}/access-log",
+    summary="Zugriffsprotokoll eines Kontakts (wer hat wann gelesen, ohne Inhalte)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_contact_access_log(
+    contact_id: uuid.UUID,
+    request: Request,
+    limit: int = Query(default=200, ge=1, le=MAX_PAGE_SIZE),
+    principal: TenantPrincipal = Depends(EXPORT),
+) -> list[schemas.ContactAccessLogEntryOut]:
+    """GAM-410: rows exist only while the tenant switch ``access_log.scope`` is on."""
+    async with tenant_tx(request, principal) as session:
+        if await services.load(session, contact_id) is None:
+            raise _not_found()
+        rows = await access_log.for_contact(session, contact_id, limit=limit)
+        return [
+            schemas.ContactAccessLogEntryOut(
+                user_id=r.user_id,
+                entity_type=r.entity_type,
+                entity_id=r.entity_id,
+                action=r.action,
+                occurred_at=r.occurred_at,
+            )
+            for r in rows
+        ]
+
+
+@router.get(
+    "/contact-access-log-settings",
+    summary="Zugriffsprotokoll: Umfang und Aufbewahrung (Mandantenschalter, AP14-01)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_access_log_settings(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> schemas.ContactAccessLogSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        return schemas.ContactAccessLogSettingsOut(**await access_log.load_settings(session))
+
+
+@router.put(
+    "/contact-access-log-settings",
+    summary="Zugriffsprotokoll: Umfang und Aufbewahrung setzen",
+)
+async def put_access_log_settings(
+    body: schemas.ContactAccessLogSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS_UPDATE),
+) -> schemas.ContactAccessLogSettingsOut:
+    """Default ``off`` (nothing is logged) and no automatic deletion; scope and retention are
+    decision AP14-01 (operator, data protection, G1)."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        before = await access_log.load_settings(session)
+        ts = await session.scalar(select(TenantSettings).with_for_update())
+        if ts is None:
+            raise _not_found()
+        after = {"scope": body.scope, "retention_days": body.retention_days}
+        ts.sources = {**(ts.sources or {}), access_log.SOURCES_KEY: after}
+        ts.version += 1
+        ts.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact_access_log_setting.updated",
+            entity_type="tenant_settings",
+            entity_id=ts.id,
+            actor_user_id=principal.user_id,
+            payload={"before": before, "after": after},
+        )
+        return schemas.ContactAccessLogSettingsOut(**after)
 
 
 @router.get(
@@ -1710,7 +1811,10 @@ def _legal_basis_out(policy: Any) -> schemas.ConsentLegalBasisListOut:
                 note=entry.note if entry else None,
                 set_at=entry.set_at if entry else None,
                 set_by=entry.set_by if entry else None,
-                consent_required=basis == "consent",
+                # GAM-406: sms and ai_processing without register entry check nothing but a
+                # recorded objection (behaviour before AP13, OPEN_QUESTIONS AP13-04).
+                consent_required=basis == "consent"
+                and not (purpose in consent_rules.UNREGISTERED_OPEN and entry is None),
             )
         )
     return schemas.ConsentLegalBasisListOut(items=items)
@@ -1734,7 +1838,9 @@ async def get_consent_legal_basis(
 
 @router.put("/consent-legal-basis/{purpose}", summary="Rechtsgrundlage einer Verarbeitung setzen")
 async def put_consent_legal_basis(
-    purpose: Literal["email_delivery", "data_sharing", "marketing", "portal_terms"],
+    purpose: Literal[
+        "email_delivery", "data_sharing", "marketing", "portal_terms", "sms", "ai_processing"
+    ],
     body: schemas.ConsentLegalBasisIn,
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
@@ -1784,7 +1890,9 @@ async def put_consent_legal_basis(
     "/consent-legal-basis/{purpose}", summary="Rechtsgrundlage einer Verarbeitung zurücksetzen"
 )
 async def reset_consent_legal_basis(
-    purpose: Literal["email_delivery", "data_sharing", "marketing", "portal_terms"],
+    purpose: Literal[
+        "email_delivery", "data_sharing", "marketing", "portal_terms", "sms", "ai_processing"
+    ],
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> schemas.ConsentLegalBasisListOut:

@@ -36,6 +36,13 @@ from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
 from mhvp.hoa.models import EconomicPlan, HoaPlanChangeSetting, HoaPlanDifference
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaPlanChangeApprovePlanDifferenceOut,
+    HoaPlanChangeDraftPlanDifferencesOut,
+    HoaPlanChangeGetPlanChangeSettingOut,
+    HoaPlanChangePlanDifferencesOut,
+    HoaPlanChangeRejectPlanDifferenceOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -187,7 +194,11 @@ async def _plan(session: AsyncSession, plan_id: uuid.UUID) -> EconomicPlan:
     return plan
 
 
-@router.get("/plan-change-settings", summary="Variante der unterjährigen Planänderung")
+@router.get(
+    "/plan-change-settings",
+    summary="Variante der unterjährigen Planänderung",
+    response_model=HoaPlanChangeGetPlanChangeSettingOut,
+)
 async def get_plan_change_setting(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> dict[str, Any]:
@@ -239,6 +250,7 @@ async def put_plan_change_setting(
     "/plans/{plan_id}/differences",
     summary="Differenz bereits gebuchter Monate (W02)",
     dependencies=[Depends(strict_query)],
+    response_model=HoaPlanChangePlanDifferencesOut,
 )
 async def plan_differences(
     plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -266,6 +278,7 @@ async def plan_differences(
     "/plans/{plan_id}/differences/draft",
     summary="Differenzen als Entwurf je Einheit anlegen",
     status_code=201,
+    response_model=HoaPlanChangeDraftPlanDifferencesOut,
 )
 async def draft_plan_differences(
     plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -365,7 +378,9 @@ async def _decide(
 
 
 @router.post(
-    "/plan-differences/{diff_id}/approve", summary="Differenzentwurf freigeben (G4, Vier Augen)"
+    "/plan-differences/{diff_id}/approve",
+    summary="Differenzentwurf freigeben (G4, Vier Augen)",
+    response_model=HoaPlanChangeApprovePlanDifferenceOut,
 )
 async def approve_plan_difference(
     diff_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -374,7 +389,11 @@ async def approve_plan_difference(
     return await _decide(request, principal, diff_id, "approved")
 
 
-@router.post("/plan-differences/{diff_id}/reject", summary="Differenzentwurf verwerfen")
+@router.post(
+    "/plan-differences/{diff_id}/reject",
+    summary="Differenzentwurf verwerfen",
+    response_model=HoaPlanChangeRejectPlanDifferenceOut,
+)
 async def reject_plan_difference(
     diff_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:

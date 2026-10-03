@@ -80,6 +80,15 @@ function fieldBody(field: string): (doc: unknown, value: RuleValue) => unknown {
   return (_doc, value) => ({ [field]: value });
 }
 
+/** AP21 (GAM-109, GAM-110): both switches of hoa/levy-cost-settings are sent together. */
+function levyCostBody(field: string): (doc: unknown, value: RuleValue) => unknown {
+  return (doc, value) => ({
+    sub_community_basis_lock: rec(doc).sub_community_basis_lock === true,
+    levy_refund_proposals: rec(doc).levy_refund_proposals === true,
+    [field]: value,
+  });
+}
+
 /** AN18 (GAK-202): the rent increase settings are one document; a block duration per basis is
  *  set or removed (null) and the whole document is sent back. */
 function blockMonthsBody(doc: unknown, basis: string, value: RuleValue): unknown {
@@ -379,6 +388,28 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: taxFieldBody("write_off_approval_enabled"),
     },
     field: "write_off_approval_enabled",
+  },
+  {
+    // AP12 (GAK-104): posting of an approved write off; counter account set in the mask.
+    id: "write-off-posting",
+    group: "accounting",
+    pkg: "AP12",
+    kind: "boolean",
+    default: false,
+    questions: ["AN15-02"],
+    href: "/buchhaltung",
+    permission: SETTINGS,
+    read: { path: "accounting/open-item-write-offs/settings", pick: fieldPick("posting_enabled") },
+    write: {
+      method: "PUT",
+      path: "accounting/open-item-write-offs/settings",
+      permission: "tenant_settings:update",
+      body: (doc, value) => ({
+        posting_enabled: value,
+        counter_account_number: scalar(rec(doc).counter_account_number) ?? null,
+      }),
+    },
+    field: "posting_enabled",
   },
   {
     id: "deposit-limit-hint",
@@ -768,6 +799,24 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "block_output",
   },
   {
+    id: "allocation-key-confirmation-required",
+    group: "billing",
+    pkg: "AP17",
+    kind: "boolean",
+    default: false,
+    questions: ["AP17-01"],
+    href: "/abrechnung",
+    permission: SETTINGS,
+    read: { path: "billing/allocation-key-confirmation-setting", pick: fieldPick("required") },
+    write: {
+      method: "PUT",
+      path: "billing/allocation-key-confirmation-setting",
+      permission: "tenant_settings:update",
+      body: fieldBody("required"),
+    },
+    field: "required",
+  },
+  {
     id: "deadline-policy",
     group: "billing",
     pkg: "AE18",
@@ -984,6 +1033,42 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     field: "mode",
   },
   {
+    id: "sub-community-basis-lock",
+    group: "hoa",
+    pkg: "AP21",
+    kind: "boolean",
+    default: false,
+    questions: ["AP21-01"],
+    href: "/weg",
+    permission: SETTINGS,
+    read: { path: "hoa/levy-cost-settings", pick: fieldPick("sub_community_basis_lock") },
+    write: {
+      method: "PUT",
+      path: "hoa/levy-cost-settings",
+      permission: "tenant_settings:update",
+      body: levyCostBody("sub_community_basis_lock"),
+    },
+    field: "sub_community_basis_lock",
+  },
+  {
+    id: "levy-refund-proposals",
+    group: "hoa",
+    pkg: "AP21",
+    kind: "boolean",
+    default: false,
+    questions: ["AP21-02"],
+    href: "/weg",
+    permission: SETTINGS,
+    read: { path: "hoa/levy-cost-settings", pick: fieldPick("levy_refund_proposals") },
+    write: {
+      method: "PUT",
+      path: "hoa/levy-cost-settings",
+      permission: "tenant_settings:update",
+      body: levyCostBody("levy_refund_proposals"),
+    },
+    field: "levy_refund_proposals",
+  },
+  {
     id: "plan-change-mode",
     group: "hoa",
     pkg: "AE09",
@@ -1186,6 +1271,19 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
       body: fieldBody("direct_debit_creator_may_not_approve"),
     },
     field: "direct_debit_creator_may_not_approve",
+  },
+  // AP24 (GAM-702): the form of address of the start page greeting. Prepared technically only:
+  // no server document stores the value yet (a tenant_settings entry would be needed), so the
+  // rule shows variants and default; Greeting reads the `address` prop (default "du").
+  {
+    id: "greeting-address",
+    group: "platform",
+    pkg: "AP24",
+    kind: "enum",
+    options: ["du", "sie"],
+    default: "du",
+    questions: ["AP24-01"],
+    permission: SETTINGS,
   },
   // --- Portal ---------------------------------------------------------------------------------
   {
@@ -1454,6 +1552,25 @@ export const BUSINESS_RULES: readonly BusinessRule[] = [
     read: { path: "auth/mfa-reset/settings", pick: fieldPick("enabled") },
     write: { method: "PUT", path: "auth/mfa-reset/settings", permission: "tenant_settings:update", body: fieldBody("enabled") },
     field: "enabled",
+  },
+  {
+    id: "access-log-scope",
+    group: "security",
+    pkg: "AP14",
+    kind: "enum",
+    options: ["off", "contact", "extended"],
+    default: "off",
+    questions: ["AP14-01"],
+    href: "/einstellungen/datenschutz",
+    permission: SETTINGS,
+    read: { path: "contact-access-log-settings", pick: fieldPick("scope") },
+    write: {
+      method: "PUT",
+      path: "contact-access-log-settings",
+      permission: "tenant_settings:update",
+      body: mergeBody(["scope", "retention_days"], "scope"),
+    },
+    field: "scope",
   },
   {
     id: "access-export-third-party",

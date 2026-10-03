@@ -661,3 +661,49 @@ def test_rate_limit_and_invalid_token_in_queue(
     _configure(client, h, fake)
     assert _ok(client.get(f"{C}/config", headers=h))["token_invalid"] is False
     assert process(settings, world.tenant_a)["sent"] >= 1
+
+
+def test_handover_requires_data_sharing_basis(
+    client: TestClient, world: World, fake: FakeSchadenstool, settings: Settings
+) -> None:
+    """GAM-408: a ticket with a resident contact without data_sharing consent is not handed
+    over (409 MHVP-SDT-0007); nothing is queued."""
+    h = _admin(client, world)
+    _configure(client, h, fake)
+    prop_row, _ = _property_and_ticket(client, h, "731")
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "person", "first_name": "Rita", "last_name": f"Melder{RUN}"},
+            headers=h,
+        ),
+        201,
+    )
+    ticket = _ok(
+        client.post(
+            "/api/v1/tickets",
+            json={
+                "title": "Rohrbruch",
+                "public_description": "Wasser im Bad",
+                "property_id": prop_row["id"],
+                "contact_id": contact["id"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    refused = client.post(f"{C}/tickets/{ticket['id']}/handover", json={}, headers=h)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "MHVP-SDT-0007"
+
+    async def _links(session: AsyncSession) -> int:
+        return int(
+            await session.scalar(
+                select(func.count())
+                .select_from(SchadenstoolTicketLink)
+                .where(SchadenstoolTicketLink.ticket_id == uuid.UUID(ticket["id"]))
+            )
+            or 0
+        )
+
+    assert run_tenant(settings, world.tenant_a, _links) == 0

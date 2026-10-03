@@ -57,6 +57,18 @@ annotation. 60 routes of `accounting`, `billing` and `banking` use it (list in
   AN11 routes stay `RawJsonOut`), `test_ak11_untyped_routes_ratchet.py` (allowlist shrank by
   60 lines).
 
+## Addendum AO08 and AP22 (TolerantRawJsonOut, file routes)
+
+- `TolerantRawJsonOut` (AO08): a `RawJsonOut` whose fields were derived from observed handler
+  results. A handler value that does not match the declared fields is delivered unchanged and
+  only logged, so documentation never turns a working response into an error 500.
+- AP22: the generated models live per domain in `accounting/raw_responses.py`,
+  `banking/raw_responses.py`, `billing/raw_responses.py` and `hoa/raw_responses.py`; 155 JSON
+  routes of these domains now carry them. Routes without observed results in the integration
+  tests stay in the AK11 allowlist until a test covers them.
+- File routes (PDF, XML, CSV, XLSX, ZIP) declare `response_class=Response` instead of a JSON
+  model; the ratchet treats them as typed.
+
 ## Alternatives considered
 
 - Plain Pydantic models without `RawJsonOut`: identical only as long as every declared type

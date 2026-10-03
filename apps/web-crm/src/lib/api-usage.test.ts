@@ -4,8 +4,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { API_USAGE_ALLOWLIST, API_USAGE_CATEGORIES } from "./api-usage-allowlist";
-import { openApiPaths, uncalledPaths } from "./api-usage-scan";
+import { calledPaths, openApiPaths, uncalledPaths } from "./api-usage-scan";
 
+const REVERSE_CHECK_EXEMPT = new Set<string>([]);
 const root = path.resolve(import.meta.dirname, "../../../..");
 const openApi = path.join(root, "apps/api/openapi.json");
 const roots = [path.join(root, "apps/web-crm/src"), path.join(root, "apps/web-portal/src")];
@@ -29,5 +30,11 @@ describe("api usage (GAI-110, uncalled API paths)", () => {
   it("uses known categories and no duplicates", () => {
     for (const e of API_USAGE_ALLOWLIST) expect(API_USAGE_CATEGORIES).toContain(e.category);
     expect(allowed.size).toBe(API_USAGE_ALLOWLIST.length);
+  });
+
+  it("category offen contains no path that the source calls after all (GAL-301)", () => {
+    const offen = API_USAGE_ALLOWLIST.filter((e) => e.category === "offen").map((e) => e.path);
+    const falsely = calledPaths(offen, roots).filter((p) => !REVERSE_CHECK_EXEMPT.has(p));
+    expect(falsely, `Als offen gefuehrt, aber im Quelltext aufgerufen. In src/lib/api-usage-allowlist.ts auf dynamisch umstellen:\n${falsely.join("\n")}`).toEqual([]);
   });
 });

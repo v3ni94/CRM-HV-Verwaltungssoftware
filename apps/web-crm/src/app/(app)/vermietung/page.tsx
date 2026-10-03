@@ -17,11 +17,12 @@ import { today as businessToday } from "@/lib/today";
 export const dynamic = "force-dynamic";
 
 export default async function LettingPage() {
-  const [t, tr, tc, tw] = await Promise.all([
+  const [t, tr, tc, tw, td] = await Promise.all([
     getTranslations("Letting"),
     getTranslations("RentIncrease"),
     getTranslations("ContractForm"),
     getTranslations("LettingW3"),
+    getTranslations("DepositList"),
   ]);
   const api = serverApi();
   const today = businessToday();
@@ -46,6 +47,9 @@ export default async function LettingPage() {
           <div className="flex gap-2">
             <Link href="/vermietung/mietspiegel" className={ui.button}>
               {tw("rentIndex.title")}
+            </Link>
+            <Link href="/vermietung/kautionen" className={ui.button}>
+              {td("title")}
             </Link>
             <Link href="/vertraege" className={ui.button}>
               {tc("page.list")}

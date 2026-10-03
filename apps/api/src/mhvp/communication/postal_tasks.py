@@ -57,7 +57,10 @@ def postal_status_poll(self: Any, tenant_id: str) -> dict[str, int]:
         return asyncio.run(poll_once(get_settings(), uuid.UUID(tenant_id)))
     except Exception as exc:
         log.exception("postal status poll task failed")
-        raise self.retry(exc=exc, countdown=60, max_retries=3) from exc
+        # GAL-206: backoff only for transient errors, Retry-After honoured.
+        from mhvp.core.task_policy import retry_transient
+
+        raise retry_transient(self, exc) from exc
 
 
 @shared_task(name="mhvp.communication.postal_status_poll_all")

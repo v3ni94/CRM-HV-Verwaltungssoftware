@@ -552,3 +552,25 @@ Die Sonderumlage verlangt ein Ertragskonto und einen Stichtag; die Berechnung nu
 ## Beschlussfolgen und Prüfdatum in der Beschlussliste (Welle 25, AN19)
 
 In der Beschlussliste zeigt der Knopf "Folgen prüfen" die abhängigen Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses. Ist der Beschluss angefochten, für ungültig erklärt oder nichtig, tragen die abhängigen Unterlagen das Kennzeichen "angefochten". Es wird nichts storniert und nichts geändert. Mit "Prüfdatum als Frist anlegen" tragen Sie ein Prüfdatum für eine mögliche Anfechtung als Frist ein (Datum leer lassen, wenn es aus der Fristart berechnet werden soll). Die Dauer der Anfechtungsfrist ist nicht festgelegt; das Datum ist zu verifizieren und durch einen Rechtsanwalt zu prüfen. Die Benachrichtigung "Beschluss angefochten, Folgen prüfen" lässt sich unter Einstellungen, Benachrichtigungen je Kanal schalten und führt zur WEG-Übersicht.
+
+## Abrechnung: Freigabeschritte, Beschlussauswahl, Schuldner und Statusdialog (Welle 26, AP15)
+
+Die Schritte "Ausgeben", "Fällig stellen" und "Ergebnis buchen" der WEG-Jahresabrechnung sind mit der Freigabestufe G4 verknüpft. Solange G4 für den Mandanten geschlossen ist, bleiben die Knöpfe gesperrt und ein Sperrtext nennt den Grund; die Freigabe erteilt die Geschäftsführung. Das Buchen verlangt zusätzlich eine Bestätigung und kann nur per Storno korrigiert werden. Die Übernahme eines Wirtschaftsplans in die Sollbeträge ist keine G4-Aktion, sie verlangt eine zweite Person (Vier-Augen).
+
+Im Schritt "Beschluss" wählen Sie zuerst einen bestehenden Beschluss der Beschluss-Sammlung aus. Angeboten werden beschlossene Einträge, bei vorhandener Bindung nur solche zum aktuellen Stand der Abrechnung. Einen neuen Beschluss erfassen Sie nur ausnahmsweise (Aufklappbereich), mit Beschlussdatum und Wortlaut. Ob der Beschluss zum Stand der Abrechnung passt, prüft die Schnittstelle.
+
+In der Einheitentabelle zeigt die Spalte "Partei (Eigentümerzeitraum)" die Eigentumszeiträume je Einheit. Bei einem Eigentumswechsel erscheint ein Hinweis. Die Zuordnung von Rückstand und Abrechnungsspitze auf Veräußerer und Erwerber ist nicht entschieden (P01) und hier nur Information.
+
+Die Rücklagenentwicklung weist die offenen Beiträge (Soll minus Ist) als eigene Zeile aus; sie sind Forderungen und keine verfügbare Liquidität. Bei einer Differenz zwischen Bankbestand und Endbestand erinnert ein Hinweis an die Erklärung in der Überleitungsrechnung. Der Code "Übernahme aus Altsystem" ist in der Überleitung keine Auswahl mehr, der Wert wird berechnet und nur angezeigt.
+
+In der Beschlussliste öffnet "Status ändern" einen Dialog für Anfechtung, Ungültigkeit, Bestandskraft oder Nichtigkeit mit Gericht, Aktenzeichen, Datum und Pflicht-Begründung. Der Statuswechsel storniert nichts automatisch; abhängige Unterlagen werden nur gekennzeichnet. Rechtsfolgen sind durch einen Rechtsanwalt zu prüfen.
+
+## Veraltete Prüfpositionen im Prüfbericht und im Beiratsabschnitt (GAM-206, Welle 26)
+
+Sind Prüfpositionen eines Prüfauftrags veraltet (Beleg oder Buchung wurde nach der Prüfung geändert), zeigen der Abschnitt Prüfberichte und der Abschnitt Beiratszugang eine Warnung "n Positionen sind veraltet". Der Gesamtstatus gilt erst nach erneuter Prüfung dieser Positionen.
+
+## Untergemeinschaft je Kostenposition und Zahlungsstand der Sonderumlage (Welle 26, AP21)
+
+Kostenposition einer Untergemeinschaft: In der Hausgeldabrechnung (Entwurf) lässt sich bei einer Mehrhausanlage zu jeder Kostenposition die Untergemeinschaft wählen. Fehlt ein Beschluss oder Dokument als Grundlage, zeigt die Abrechnung einen Prüfhinweis mit den betroffenen Positionen. Die interne Freigabe wird nur gesperrt, wenn in den Einstellungen "Untergemeinschaft nur mit belegter Grundlage freigeben" eingeschaltet ist (Standard aus, offene Frage AP21-01).
+
+Sonderumlage: Die Seite zeigt je Einheit und Rate Soll, Ist und Rückstand sowie die Buchungen auf dem Verwendungskonto. Nach der Übernahme kann eine Erstattung als Vorschlag mit Beschluss und Grund erfasst und wieder zurückgezogen werden, sofern die Einstellung "Erstattungsvorschläge zur Sonderumlage" eingeschaltet ist (Standard aus). Es wird nichts gebucht und nichts ausgezahlt; die Auszahlung über einen Zahllauf bleibt gesperrt, bis das Erstattungsverfahren entschieden ist (AP21-02, G2 und G4).

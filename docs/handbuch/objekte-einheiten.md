@@ -228,3 +228,7 @@ Mit "Aufgaben für fehlende Punkte anlegen" entsteht für jeden offenen oder ang
 * **Belegungsliste** (Objektseite, Recht Verträge lesen): Je Einheit der Mieter und der Eigentümer zum gewählten Stichtag, leere Eingabe heißt heute. Der Filter "Nur Leerstand" blendet belegte Einheiten aus.
 * **Historie der Umsatzsteueroptionen** (Einheitenseite): Zeiträume mit Option und Belegung (Leerstand oder Vertrag). Neue Zeiträume dürfen sich nicht überschneiden. Die Erfassung ist reine Stammdatenpflege, die steuerliche Behandlung folgt einer freigegebenen Regel.
 * **Wartungen als erledigt erfassen (Sammelaktion)** (Objektseite, Wartung): Offene Wartungen markieren, Erledigungsdatum wählen, "Ausgewählte erledigen". Wartungen mit Intervall bleiben offen und die Fälligkeit rückt um das Intervall vor, Wartungen ohne Intervall werden geschlossen, wie bei der Einzelaktion.
+
+## Objektstatus ändern (Welle 26)
+
+Im Objekt steht unter Objektstatus die Auswahl der zulässigen Wechsel (Übernahme zu Aktiv oder Beendet, Aktiv zu Beendet). Der Wechsel braucht eine ausdrückliche Bestätigung. Aktivieren setzt mindestens eine Einheit voraus, Beenden das Ende der Verwaltung; die API prüft beides. Der Schritt setzt nur den Status. Die fachliche Beendigung und den Verwalterwechsel führen Sie über die Beendigung und die Checkliste am Objekt (Anleitung Verwalterwechsel). Ein beendetes Objekt ist nicht mehr bearbeitbar.

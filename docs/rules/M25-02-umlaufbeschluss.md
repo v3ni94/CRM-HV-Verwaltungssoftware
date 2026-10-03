@@ -58,3 +58,13 @@ nach Fristende: nicht gezählt, verspätet 1. Ohne Schalter 403, ohne zulassende
 
 Betreiberauftrag 27.09.2026 (Masterprompt WEG-Versammlung, M25-02): Bedarf für
 Umlaufbeschlüsse mit einfacher Mehrheit nach Absenkungsbeschluss.
+
+## Nachtrag 03.10.2026 (GAM-809): Pflichtfelder des Regelformats
+
+| Feld | Inhalt |
+| --- | --- |
+| ID | M25-02 |
+| Geltungsbereich | Umlaufbeschlüsse der Gemeinschaft des Wohnungseigentums je Mandant, nur mit Schalter `tenant_settings.hoa_circular_lower_majority_enabled` (Standard aus) und zulassendem Beschluss; betrifft G4 |
+| Quellenstatus | siehe Abschnitt Quellenstatus (Anhang C) oben: zu prüfen durch Rechtsanwalt, keine Rechtslage festgestellt |
+| Abnahmefall | siehe Abschnitt Abnahmefall oben, `apps/api/tests/integration/test_m25_02_circular.py` |
+| Änderungsgrund | siehe Abschnitt Änderungsgrund oben |

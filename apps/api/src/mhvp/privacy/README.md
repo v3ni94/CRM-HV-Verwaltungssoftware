@@ -65,3 +65,11 @@ AJ13-01); with a period the open request is mirrored into `compliance_deadline` 
 account with login events and sessions, payment data and contract data behind the tenant
 switches `include_portal_account`, `include_payments`, `include_contracts` (default off, counts
 only). Rule: docs/rules/AK06-auskunftsantraege.md.
+
+## Audit trail, coupled references, new data types, AI and SMS objection (AP13, GAM-401, GAM-404 to GAM-406, migration 0465)
+
+- `audit_redaction.py`: switch `privacy.audit_redaction` (default off). When on, `anonymize_contact` (execution and journal replay) reduces the contact's `audit_log` rows to field names via the database function `audit_redact_changes`; the row trigger `audit_log_redact_only` allows only this update, deletes stay forbidden. Open question AP13-01.
+- `erasure_coupling.py`: switch `privacy.erasure_coupling` (default off). When on, references from `message`, `call_log`, `dispatch`, `postal_job` are non blocking (`blocking: false`, code `coupled_communication`) and listed as `coupled` in the request result; the rows are not deleted (coupled deletion proposal still open). Open question AP13-02.
+- Settings route `GET/PUT /privacy/erasure-settings` (read: privacy:read, write: privacy:approve, event `privacy.erasure_settings_updated`).
+- Deletion profile data types `ai_run`, `call_log`, `webhook_delivery`, `postal_job`: counted only (AP13-03, V17).
+- `contacts.consent_rules`: kinds and purposes `sms`, `ai_processing`; `ai.gateway.ai_processing_block_reason` blocks contact related runs on a recorded objection. `sms_decision` is not yet called by `sla/channels.send_sms` (AP13-04).

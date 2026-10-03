@@ -35,6 +35,9 @@ from mhvp.accounting.models import (
     Ledger,
     LedgerAccount,
 )
+from mhvp.accounting.raw_responses import (
+    AccountingYearCarryoverPreviewOut,
+)
 from mhvp.accounting.schemas import EntryOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
@@ -129,7 +132,11 @@ def _key(fiscal_year: int, part: str) -> str:
     return f"year-carryover-{fiscal_year}-{part}"
 
 
-@router.get("/ledgers/{ledger_id}/year-carryover", summary="Schlussbestände des Geschäftsjahres")
+@router.get(
+    "/ledgers/{ledger_id}/year-carryover",
+    summary="Schlussbestände des Geschäftsjahres",
+    response_model=AccountingYearCarryoverPreviewOut,
+)
 async def preview(
     ledger_id: uuid.UUID,
     request: Request,

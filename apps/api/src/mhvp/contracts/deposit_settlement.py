@@ -45,11 +45,13 @@ from sqlalchemy import (
     Date,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -58,7 +60,7 @@ from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 
 MONEY = Numeric(14, 2)
-RATE = Numeric(8, 5)  # percent per year, e.g. 0.50000
+RATE = Numeric(20, 8)  # percent per year (6.9.8, GAL-102)
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
 
@@ -134,6 +136,16 @@ class DepositSettlement(IdMixin, TimestampMixin, TenantMixin, Base):
     """Settlement draft of one deposit at contract end (record, no posting, no payment)."""
 
     __tablename__ = "deposit_settlement"
+    # AP25 (AP10-02, migration 0469): at most one released settlement per deposit.
+    __table_args__ = (
+        Index(
+            "uq_deposit_settlement_released",
+            "tenant_id",
+            "deposit_id",
+            unique=True,
+            postgresql_where=text("status = 'released'"),
+        ),
+    )
 
     deposit_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("deposit.id", ondelete="CASCADE"), nullable=False, index=True

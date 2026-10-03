@@ -62,7 +62,7 @@ export function TenantSwitcher({
       </label>
       <select
         id={variant === "drawer" ? "tenant-switcher-drawer" : "tenant-switcher"}
-        className={`mhvp-select border border-border bg-surface font-medium text-fg shadow-xs transition hover:border-accent focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-focus ${SELECT[variant]}`}
+        className={`mhvp-select border border-border bg-surface font-medium text-fg shadow-xs transition hover:border-accent focus:border-accent-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${SELECT[variant]}`}
         value={current ?? ""}
         disabled={busy}
         onChange={(e) => void onChange(e)}

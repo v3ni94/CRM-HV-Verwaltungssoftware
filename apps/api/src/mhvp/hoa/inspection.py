@@ -797,7 +797,11 @@ async def revoke_package(
         return await _out(session, row)
 
 
-@router.get("/inspection-requests/{request_id}/package", summary="Bereitstellungspaket abrufen")
+@router.get(
+    "/inspection-requests/{request_id}/package",
+    summary="Bereitstellungspaket abrufen",
+    response_class=Response,
+)
 async def download_package(
     request_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> Response:

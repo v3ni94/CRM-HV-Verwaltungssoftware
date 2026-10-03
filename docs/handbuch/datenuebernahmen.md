@@ -50,7 +50,7 @@ lesenden Spiegel per WebDAV (Dokumente), CardDAV (Kontakte) und CalDAV (Termine)
 Schreibpfad zurück nach Immoware24 existiert nicht. Unter Einstellungen, Immoware24-
 Anbindung wird die Verbindung eingerichtet und geprüft (siehe Kapitel Einstellungen).
 
-Die Lernphase (Menü Immoware24, Lernphase) untersucht lesend die bereits gespiegelten
+Die Lernphase (Einstellungen, Immoware24, Schaltfläche Lernphase) untersucht lesend die bereits gespiegelten
 Daten: Ordnerstruktur und Feldnutzung je Art (WebDAV, CardDAV, CalDAV). Jeder Lauf
 vergleicht sich mit dem letzten erfolgreichen Lauf gleicher Art und zeigt lesbare
 Änderungen (neue Ordner, neu oder nicht mehr genutzte Felder, geänderte Anzahl

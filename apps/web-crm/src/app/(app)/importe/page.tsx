@@ -54,7 +54,7 @@ export default async function ImportsPage() {
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.length === 0 ? (
-        <EmptyState title={t("empty")} />
+        <EmptyState title={t("empty")} hint={t("emptyHint")} />
       ) : (
         <>
           <ul className="flex flex-col gap-2 sm:hidden" data-testid="imports-cards">

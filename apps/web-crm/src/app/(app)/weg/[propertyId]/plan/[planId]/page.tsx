@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { HoaItemForm, HoaSteps, type ResolutionOption } from "@/components/hoa/HoaForms";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { formatEur } from "@/lib/format";
@@ -27,6 +27,8 @@ export default async function PlanPage({ params }: { params: Promise<{ propertyI
   if (!data || !ctx.entity) {
     return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   }
+  const resolutionList = await ctx.api.GET("/api/v1/hoa/resolutions", { params: { query: { legal_entity_id: ctx.entity.id } } });
+  const resolutionOptions = ((resolutionList.data ?? []) as unknown as ResolutionOption[]);
   const items = (data.items ?? []) as { id: string; label: string; component: string; amount: string }[];
   const units = ((data.snapshot as { units?: Unit[] } | null)?.units ?? []) as Unit[];
   // M24-04: comparison with the previous plan or statement (information, part of the snapshot).
@@ -60,7 +62,7 @@ export default async function PlanPage({ params }: { params: Promise<{ propertyI
         </p>
       ) : null}
       {data.status === "draft" ? <HoaItemForm target="plan" id={planId} keys={ctx.keys} /> : null}
-      <HoaSteps target="plan" id={planId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
+      <HoaSteps target="plan" id={planId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} resolutions={resolutionOptions} />
       {units.length ? (
         <div className="overflow-x-auto">
 <table className="mhvp-table">

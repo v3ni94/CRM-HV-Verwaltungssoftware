@@ -24,6 +24,7 @@ export function GatedAction<T>({
   body,
   onDone,
   testId,
+  confirmText,
 }: {
   gate: GateId;
   url: string;
@@ -34,6 +35,8 @@ export function GatedAction<T>({
   body?: unknown;
   onDone?: (data: T) => void;
   testId: string;
+  /** Optional confirmation before the request (window.confirm). */
+  confirmText?: string;
 }) {
   const t = useTranslations("gatedMasks");
   const state = useReleaseGate(gate);
@@ -44,6 +47,7 @@ export function GatedAction<T>({
 
   const run = async () => {
     if (!open || busy || blocked) return;
+    if (confirmText && !window.confirm(confirmText)) return;
     setBusy(true);
     setError(null);
     const res = await bff<T>(url, { method: "POST", body: JSON.stringify(body ?? {}) });

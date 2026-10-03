@@ -39,6 +39,33 @@ from mhvp.hoa.models import (
     Vote,
 )
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaMeetingsAddAgendaOut,
+    HoaMeetingsAddAuditItemOut,
+    HoaMeetingsAnnounceOut,
+    HoaMeetingsAttendanceOut,
+    HoaMeetingsAuditItemHistoryOutItem,
+    HoaMeetingsCastVoteOut,
+    HoaMeetingsCircularOut,
+    HoaMeetingsConfirmCloseOut,
+    HoaMeetingsConfirmReportOut,
+    HoaMeetingsCreateAuditOut,
+    HoaMeetingsCreateMeetingOut,
+    HoaMeetingsCreateReportOut,
+    HoaMeetingsCreateRuleOut,
+    HoaMeetingsDisruptionOut,
+    HoaMeetingsGetAuditOut,
+    HoaMeetingsGetMeetingOut,
+    HoaMeetingsInviteOut,
+    HoaMeetingsListMeetingsOutItem,
+    HoaMeetingsListRulesOutItem,
+    HoaMeetingsMeetingMembersOutItem,
+    HoaMeetingsPatchAuditItemOut,
+    HoaMeetingsProtocolDraftOut,
+    HoaMeetingsRequestCloseOut,
+    HoaMeetingsTallyOut,
+    HoaMeetingsWithdrawCloseOut,
+)
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
 router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
@@ -471,7 +498,12 @@ def _meeting_out(m: Meeting, *, weeks: int | None = None) -> dict[str, Any]:
     }
 
 
-@router.post("/meetings", status_code=201, summary="Eigentümerversammlung anlegen")
+@router.post(
+    "/meetings",
+    status_code=201,
+    summary="Eigentümerversammlung anlegen",
+    response_model=HoaMeetingsCreateMeetingOut,
+)
 async def create_meeting(
     body: MeetingIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -558,7 +590,12 @@ async def patch_meeting(
         return _meeting_out(row)
 
 
-@router.post("/meetings/{meeting_id}/agenda", status_code=201, summary="Tagesordnungspunkt")
+@router.post(
+    "/meetings/{meeting_id}/agenda",
+    status_code=201,
+    summary="Tagesordnungspunkt",
+    response_model=HoaMeetingsAddAgendaOut,
+)
 async def add_agenda(
     meeting_id: uuid.UUID,
     body: AgendaIn,
@@ -628,7 +665,11 @@ async def patch_agenda(
         return {"id": item.id, "result": item.result, "minutes_text": item.minutes_text}
 
 
-@router.post("/meetings/{meeting_id}/invite", summary="Einladung erfassen (Fristprüfung)")
+@router.post(
+    "/meetings/{meeting_id}/invite",
+    summary="Einladung erfassen (Fristprüfung)",
+    response_model=HoaMeetingsInviteOut,
+)
 async def invite(
     meeting_id: uuid.UUID,
     body: InviteIn,
@@ -679,7 +720,12 @@ async def invite(
         }
 
 
-@router.post("/meetings/{meeting_id}/attendance", status_code=201, summary="Anwesenheit/Vollmacht")
+@router.post(
+    "/meetings/{meeting_id}/attendance",
+    status_code=201,
+    summary="Anwesenheit/Vollmacht",
+    response_model=HoaMeetingsAttendanceOut,
+)
 async def attendance(
     meeting_id: uuid.UUID,
     body: AttendanceIn,
@@ -722,7 +768,10 @@ async def attendance(
 
 
 @router.post(
-    "/meetings/{meeting_id}/disruptions", status_code=201, summary="Technische Störung (D53)"
+    "/meetings/{meeting_id}/disruptions",
+    status_code=201,
+    summary="Technische Störung (D53)",
+    response_model=HoaMeetingsDisruptionOut,
 )
 async def disruption(
     meeting_id: uuid.UUID,
@@ -802,7 +851,12 @@ def _ensure_not_disrupted(meeting: Meeting) -> None:
         )
 
 
-@router.post("/agenda/{item_id}/votes", status_code=201, summary="Stimme erfassen")
+@router.post(
+    "/agenda/{item_id}/votes",
+    status_code=201,
+    summary="Stimme erfassen",
+    response_model=HoaMeetingsCastVoteOut,
+)
 async def cast_vote(
     item_id: uuid.UUID, body: VoteIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -981,7 +1035,11 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
     }
 
 
-@router.get("/agenda/{item_id}/tally", summary="Auszählung (Vorschlag, keine Verkündung)")
+@router.get(
+    "/agenda/{item_id}/tally",
+    summary="Auszählung (Vorschlag, keine Verkündung)",
+    response_model=HoaMeetingsTallyOut,
+)
 async def tally(
     item_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -990,7 +1048,12 @@ async def tally(
         return await _tally(session, item, await _get(session, Meeting, item.meeting_id))
 
 
-@router.post("/agenda/{item_id}/announce", status_code=201, summary="Ergebnis verkünden")
+@router.post(
+    "/agenda/{item_id}/announce",
+    status_code=201,
+    summary="Ergebnis verkünden",
+    response_model=HoaMeetingsAnnounceOut,
+)
 async def announce(
     item_id: uuid.UUID,
     body: AnnounceIn,
@@ -1152,7 +1215,12 @@ async def _circular_tally(
     }
 
 
-@router.post("/circular-resolutions", status_code=201, summary="Umlaufbeschluss (Textform)")
+@router.post(
+    "/circular-resolutions",
+    status_code=201,
+    summary="Umlaufbeschluss (Textform)",
+    response_model=HoaMeetingsCircularOut,
+)
 async def circular(
     body: CircularIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -1335,7 +1403,12 @@ async def put_circular_switch(
 # Board audit -----------------------------------------------------------------------------
 
 
-@router.post("/audits", status_code=201, summary="Prüfauftrag (PÜ06)")
+@router.post(
+    "/audits",
+    status_code=201,
+    summary="Prüfauftrag (PÜ06)",
+    response_model=HoaMeetingsCreateAuditOut,
+)
 async def create_audit(
     body: EngagementIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -1409,7 +1482,12 @@ def _item_out(i: AuditItem) -> dict[str, Any]:
     }
 
 
-@router.post("/audits/{audit_id}/items", status_code=201, summary="Prüfposition (PÜ07)")
+@router.post(
+    "/audits/{audit_id}/items",
+    status_code=201,
+    summary="Prüfposition (PÜ07)",
+    response_model=HoaMeetingsAddAuditItemOut,
+)
 async def add_audit_item(
     audit_id: uuid.UUID,
     body: AuditItemIn,
@@ -1576,7 +1654,11 @@ async def _audit_document_amount(
     )
 
 
-@router.patch("/audit-items/{item_id}", summary="Vermerk, Rückfrage, Antwort (PÜ08)")
+@router.patch(
+    "/audit-items/{item_id}",
+    summary="Vermerk, Rückfrage, Antwort (PÜ08)",
+    response_model=HoaMeetingsPatchAuditItemOut,
+)
 async def patch_audit_item(
     item_id: uuid.UUID,
     body: AuditItemPatch,
@@ -1614,6 +1696,7 @@ async def patch_audit_item(
     "/audit-items/{item_id}/history",
     summary="Änderungshistorie der Prüfposition (PÜ08)",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaMeetingsAuditItemHistoryOutItem],
 )
 async def audit_item_history(
     item_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -1640,7 +1723,9 @@ async def audit_item_history(
 
 
 @router.post(
-    "/audits/{audit_id}/reports/{version}/confirm", summary="Prüfbericht bestätigen (PÜ09)"
+    "/audits/{audit_id}/reports/{version}/confirm",
+    summary="Prüfbericht bestätigen (PÜ09)",
+    response_model=HoaMeetingsConfirmReportOut,
 )
 async def confirm_report(
     audit_id: uuid.UUID,
@@ -1674,7 +1759,12 @@ async def confirm_report(
         }
 
 
-@router.post("/audits/{audit_id}/reports", status_code=201, summary="Prüfbericht (PÜ09)")
+@router.post(
+    "/audits/{audit_id}/reports",
+    status_code=201,
+    summary="Prüfbericht (PÜ09)",
+    response_model=HoaMeetingsCreateReportOut,
+)
 async def create_report(
     audit_id: uuid.UUID,
     body: AuditReportIn,
@@ -1795,7 +1885,12 @@ async def refresh_audit_items(session: AsyncSession, eng: AuditEngagement) -> di
     return reasons
 
 
-@router.get("/audits/{audit_id}", summary="Beiratsprüfung mit Positionen (PÜ07, D33)")
+@router.get(
+    "/audits/{audit_id}",
+    summary="Beiratsprüfung mit Positionen (PÜ07, D33)",
+    response_model=HoaMeetingsGetAuditOut,
+    dependencies=[Depends(strict_query)],
+)
 async def get_audit(
     audit_id: uuid.UUID,
     request: Request,
@@ -1859,7 +1954,12 @@ async def outdate_audit_items(session: AsyncSession, statement_id: uuid.UUID) ->
     )
 
 
-@router.get("/meetings", summary="Versammlungen einer GdWE", dependencies=[Depends(strict_query)])
+@router.get(
+    "/meetings",
+    summary="Versammlungen einer GdWE",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HoaMeetingsListMeetingsOutItem],
+)
 async def list_meetings(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
@@ -1873,7 +1973,11 @@ async def list_meetings(
         return [_meeting_out(m, weeks=weeks) for m in rows.all()]
 
 
-@router.get("/meetings/{meeting_id}", summary="Versammlung mit Tagesordnung und Anwesenheit")
+@router.get(
+    "/meetings/{meeting_id}",
+    summary="Versammlung mit Tagesordnung und Anwesenheit",
+    response_model=HoaMeetingsGetMeetingOut,
+)
 async def get_meeting(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
@@ -1954,6 +2058,7 @@ async def get_meeting(
     "/meetings/{meeting_id}/members",
     summary="Stimmberechtigte mit Anwesenheit und Stimmen",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaMeetingsMeetingMembersOutItem],
 )
 async def meeting_members(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -2074,6 +2179,7 @@ async def invitation_recipients(
     "/meetings/{meeting_id}/protocol-draft",
     status_code=201,
     summary="Protokollentwurf als PDF (A62, Entwurf ohne Rechtsfolge)",
+    response_model=HoaMeetingsProtocolDraftOut,
 )
 async def protocol_draft(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -2132,7 +2238,12 @@ async def protocol_draft(
         }
 
 
-@router.post("/majority-rules", status_code=201, summary="Mehrheitsregel mit Fundstelle (M25-01)")
+@router.post(
+    "/majority-rules",
+    status_code=201,
+    summary="Mehrheitsregel mit Fundstelle (M25-01)",
+    response_model=HoaMeetingsCreateRuleOut,
+)
 async def create_rule(
     body: MajorityRuleIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -2297,7 +2408,10 @@ async def put_majority_four_eyes(
 
 
 @router.get(
-    "/majority-rules", summary="Mehrheitsregeln einer GdWE", dependencies=[Depends(strict_query)]
+    "/majority-rules",
+    summary="Mehrheitsregeln einer GdWE",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HoaMeetingsListRulesOutItem],
 )
 async def list_rules(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -2388,7 +2502,11 @@ async def _minutes_document(
         )
 
 
-@router.post("/meetings/{meeting_id}/close", summary="Protokollabschluss beantragen (R07-01)")
+@router.post(
+    "/meetings/{meeting_id}/close",
+    summary="Protokollabschluss beantragen (R07-01)",
+    response_model=HoaMeetingsRequestCloseOut,
+)
 async def request_close(
     meeting_id: uuid.UUID,
     body: MeetingCloseIn,
@@ -2427,7 +2545,9 @@ async def request_close(
 
 
 @router.post(
-    "/meetings/{meeting_id}/close/confirm", summary="Protokollabschluss bestätigen (R07-01)"
+    "/meetings/{meeting_id}/close/confirm",
+    summary="Protokollabschluss bestätigen (R07-01)",
+    response_model=HoaMeetingsConfirmCloseOut,
 )
 async def confirm_close(
     meeting_id: uuid.UUID,
@@ -2469,7 +2589,9 @@ async def confirm_close(
 
 
 @router.post(
-    "/meetings/{meeting_id}/close/withdraw", summary="Abschlussantrag zurückziehen (R07-01)"
+    "/meetings/{meeting_id}/close/withdraw",
+    summary="Abschlussantrag zurückziehen (R07-01)",
+    response_model=HoaMeetingsWithdrawCloseOut,
 )
 async def withdraw_close(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)

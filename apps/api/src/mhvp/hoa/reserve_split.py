@@ -33,6 +33,10 @@ from mhvp.hoa.models import (
     PlanItem,
 )
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaReserveSplitPutSplitSettingOut,
+    HoaReserveSplitReservePaymentsOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -99,7 +103,11 @@ async def get_split_setting(
         return {"mode": await split_mode(session), "modes": list(MODES), "note": NOTE}
 
 
-@router.put("/reserve-payment-settings", summary="Zahlungen je Zweckrücklage (Variante setzen)")
+@router.put(
+    "/reserve-payment-settings",
+    summary="Zahlungen je Zweckrücklage (Variante setzen)",
+    response_model=HoaReserveSplitPutSplitSettingOut,
+)
 async def put_split_setting(
     body: HoaReservePaymentSettingIn,
     request: Request,
@@ -131,6 +139,7 @@ async def put_split_setting(
     "/ledgers/{ledger_id}/reserve-payments",
     summary="Soll und Ist je Zweckrücklage eines Jahres (P07-02)",
     dependencies=[Depends(strict_query)],
+    response_model=HoaReserveSplitReservePaymentsOut,
 )
 async def reserve_payments(
     ledger_id: uuid.UUID,

@@ -7,6 +7,7 @@ Expected values are hand computed (rule 0.1.8), see tests/unit/test_m5_deposit_s
 
 import asyncio
 from collections.abc import Iterator
+from decimal import Decimal
 from typing import Any
 
 import boto3
@@ -176,10 +177,10 @@ def test_reference_rates_per_tenant(client: TestClient, world: World) -> None:
     row = _ok(
         client.put(f"{RATES}/2025", json={"rate": "1.0", "note": "zu prüfen"}, headers=h), 200
     )
-    assert row["rate"] == "1.00000"
+    assert Decimal(row["rate"]) == Decimal("1.00000")
     again = _ok(client.put(f"{RATES}/2025", json={"rate": "1.25"}, headers=h), 200)
     assert again["id"] == row["id"]
-    assert again["rate"] == "1.25000"
+    assert Decimal(again["rate"]) == Decimal("1.25000")
     assert [r["year"] for r in _ok(client.get(RATES, headers=h), 200)] == [2025]
     # Tenant separation: the other tenant sees no rates and cannot delete this one.
     assert _ok(client.get(RATES, headers=other), 200) == []
@@ -230,9 +231,11 @@ def test_settlement_modes_and_g3_lock(client: TestClient, world: World) -> None:
             headers=h,
         )
     )
-    assert [(y["year"], y["rate"], y["days"], y["amount"]) for y in ref["interest_years"]] == [
-        (2025, "1.00000", 365, "12.00"),
-        (2026, "0.50000", 181, "2.73"),
+    assert [
+        (y["year"], Decimal(y["rate"]), y["days"], y["amount"]) for y in ref["interest_years"]
+    ] == [
+        (2025, Decimal("1.00000"), 365, "12.00"),
+        (2026, Decimal("0.50000"), 181, "2.73"),
     ]
     assert ref["interest_total"] == "14.73"
     assert ref["payout_amount"] == "864.73"

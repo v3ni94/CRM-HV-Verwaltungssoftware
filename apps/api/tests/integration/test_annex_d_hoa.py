@@ -258,6 +258,7 @@ def _open_by_contract(
     return out
 
 
+@pytest.mark.annex_d("D02")
 def test_d02_credit_result_is_neither_paid_out_nor_offset_against_arrears(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:
@@ -321,6 +322,7 @@ def test_d02_credit_result_is_neither_paid_out_nor_offset_against_arrears(
     assert again["posted_entry_ids"] == posted["posted_entry_ids"]
 
 
+@pytest.mark.annex_d("D09")
 def test_d09_fuel_payment_and_consumption_differ_and_the_bridge_explains_it(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:
@@ -427,6 +429,7 @@ def test_d09_fuel_payment_and_consumption_differ_and_the_bridge_explains_it(
     assert [f["code"] for f in package["blocking"]] == ["reconciliation_unexplained"]
 
 
+@pytest.mark.annex_d("D13")
 def test_d13_no_resolution_means_no_result_claim_and_no_direct_debit(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:
@@ -497,6 +500,7 @@ def test_d13_no_resolution_means_no_result_claim_and_no_direct_debit(
     assert {c["open_item_id"] for c in preview["items"]} == {i["id"] for i in items}
 
 
+@pytest.mark.annex_d("D14")
 def test_d14_new_result_version_after_resolution_keeps_the_resolution_on_the_old_one(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:

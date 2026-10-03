@@ -151,7 +151,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.items.length === 0 ? (
-        <EmptyState title={t("empty")} />
+        <EmptyState
+          title={t("empty")}
+          hint={t("emptyHint")}
+          action={
+            <Link href="/kontakte/neu" className={ui.primary}>
+              {t("new")}
+            </Link>
+          }
+        />
       ) : (
         <>
           <ul className="flex flex-col gap-2 sm:hidden" data-testid="contacts-cards">

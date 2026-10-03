@@ -13,6 +13,8 @@ export type Problem = {
   status?: number;
   detail?: string | null;
   code?: string;
+  /** Correlation id of the API request (ADR 0004); shown as reference for support. */
+  correlation_id?: string | null;
   errors?: FieldError[] | null;
 };
 
@@ -30,6 +32,10 @@ const FALLBACK: Record<number, string> = {
   429: "Zu viele Anfragen. Bitte kurz warten und erneut versuchen.",
 };
 
+/** 5xx without a usable problem text: the request did not fail because of the input. */
+export const SERVER_ERROR_MESSAGE =
+  "Der Server ist derzeit nicht erreichbar oder konnte die Anfrage nicht verarbeiten. Bitte in einigen Minuten erneut versuchen. Bleibt der Fehler bestehen, bitte die Referenz angeben.";
+
 export function isProblem(value: unknown): value is Problem {
   return typeof value === "object" && value !== null && ("title" in value || "detail" in value);
 }
@@ -40,6 +46,7 @@ export function problemMessage(problem: Problem | null | undefined, status?: num
   if (code === 412) return VERSION_CONFLICT_MESSAGE;
   const text = problem?.detail || problem?.title;
   if (text) return text;
+  if (code >= 500 && code <= 599) return SERVER_ERROR_MESSAGE;
   return FALLBACK[code] ?? "Die Schnittstelle ist derzeit nicht erreichbar. Bitte später erneut versuchen.";
 }
 
@@ -72,5 +79,6 @@ export function problemDetailLine(result: { status: number; problem: Problem | n
   const parts: string[] = [];
   if (result.problem?.code) parts.push(`Code ${result.problem.code}`);
   if (result.status > 0) parts.push(`HTTP ${result.status}`);
+  if (result.problem?.correlation_id) parts.push(`Referenz ${result.problem.correlation_id}`);
   return parts.length ? `${result.message} (${parts.join(", ")})` : result.message;
 }

@@ -18,9 +18,13 @@ type Occupant = {
   hot_water: string | null;
   heating_kind: string;
   hot_water_kind: string;
+  reading_date?: string | null;
   source: string;
   vacancy: boolean;
 };
+type ConsRow = { heating: string; hot_water: string; heating_kind: string; hot_water_kind: string; reading_date: string };
+/** Art je Verbrauchswert (GAM-111): abgelesen, Zwischenablesung (mit Ablesedatum), geschätzt. */
+export const VALUE_KINDS = ["actual", "interim", "estimated"] as const;
 type Co2 = { status: string; tenant_percent?: number; landlord?: string; notes?: string[]; missing?: string[] };
 type Result = {
   allocable_costs: string;
@@ -65,8 +69,13 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
   const [co2Emissions, setCo2Emissions] = useState("");
   const [co2Area, setCo2Area] = useState("");
   const [co2Reason, setCo2Reason] = useState("");
-  const [cons, setCons] = useState<Record<string, { heating: string; hot_water: string }>>({});
+  const [cons, setCons] = useState<Record<string, ConsRow>>({});
   const editable = status === "draft";
+  const upd = (key: string, patch: Partial<ConsRow>) =>
+    setCons((prev) => ({
+      ...prev,
+      [key]: { heating: "", hot_water: "", heating_kind: "actual", hot_water_kind: "actual", reading_date: "", ...prev[key], ...patch },
+    }));
 
   const load = async () => {
     const res = await bff<Heating>(`/api/bff/statements/${id}/heating`);
@@ -86,8 +95,16 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
     setCo2Emissions(d.co2.emissions_kg ?? "");
     setCo2Area(d.co2.reference_area_m2 ?? "");
     setCo2Reason(d.co2.reason ?? "");
-    const next: Record<string, { heating: string; hot_water: string }> = {};
-    for (const o of d.occupants) next[o.key] = { heating: o.heating ?? "", hot_water: o.hot_water ?? "" };
+    const next: Record<string, ConsRow> = {};
+    const kind = (k: string) => (VALUE_KINDS.includes(k as (typeof VALUE_KINDS)[number]) ? k : "actual");
+    for (const o of d.occupants)
+      next[o.key] = {
+        heating: o.heating ?? "",
+        hot_water: o.hot_water ?? "",
+        heating_kind: kind(o.heating_kind),
+        hot_water_kind: kind(o.hot_water_kind),
+        reading_date: o.reading_date ?? "",
+      };
     setCons(next);
   };
   useEffect(() => {
@@ -130,7 +147,11 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
       const w = num(v.hot_water);
       if (h !== undefined) entry.heating = h;
       if (w !== undefined) entry.hot_water = w;
-      if (Object.keys(entry).length) consumptions[key] = entry;
+      if (!Object.keys(entry).length) continue;
+      entry.heating_kind = v.heating_kind;
+      entry.hot_water_kind = v.hot_water_kind;
+      if (v.reading_date) entry.reading_date = v.reading_date;
+      consumptions[key] = entry;
     }
     await call("/consumptions", "PUT", { consumptions });
   };
@@ -225,6 +246,7 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
                   <th>{t("area")}</th>
                   <th>{t("heatingValue")}</th>
                   <th>{t("hotWaterValue")}</th>
+                  <th>{t("valueKind")}</th>
                   <th>{t("source")}</th>
                   {result ? <th className="num">{t("shareResult")}</th> : null}
                 </tr>
@@ -253,7 +275,7 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
                         className={ui.input}
                         value={cons[o.key]?.heating ?? ""}
                         disabled={!editable}
-                        onChange={(e) => setCons({ ...cons, [o.key]: { heating: e.target.value, hot_water: cons[o.key]?.hot_water ?? "" } })}
+                        onChange={(e) => upd(o.key, { heating: e.target.value })}
                       />
                     </td>
                     <td>
@@ -262,8 +284,39 @@ export function HeatingPanel({ id, status }: { id: string; status: string }) {
                         className={ui.input}
                         value={cons[o.key]?.hot_water ?? ""}
                         disabled={!editable}
-                        onChange={(e) => setCons({ ...cons, [o.key]: { heating: cons[o.key]?.heating ?? "", hot_water: e.target.value } })}
+                        onChange={(e) => upd(o.key, { hot_water: e.target.value })}
                       />
+                    </td>
+                    <td>
+                      <div className="flex flex-col gap-1">
+                        {(["heating_kind", "hot_water_kind"] as const).map((field) => (
+                          <select
+                            key={field}
+                            aria-label={`${t(field === "heating_kind" ? "heatingKind" : "hotWaterKind")} ${o.unit_number} ${formatDate(o.from)}`}
+                            className={ui.input}
+                            value={cons[o.key]?.[field] ?? "actual"}
+                            disabled={!editable}
+                            onChange={(e) => upd(o.key, { [field]: e.target.value })}
+                          >
+                            {VALUE_KINDS.map((k) => (
+                              <option key={k} value={k}>
+                                {t(`valueKinds.${k}`)}
+                              </option>
+                            ))}
+                          </select>
+                        ))}
+                        {cons[o.key]?.heating_kind === "interim" || cons[o.key]?.hot_water_kind === "interim" ? (
+                          <input
+                            type="date"
+                            aria-label={`${t("readingDate")} ${o.unit_number} ${formatDate(o.from)}`}
+                            className={ui.input}
+                            value={cons[o.key]?.reading_date ?? ""}
+                            disabled={!editable}
+                            required
+                            onChange={(e) => upd(o.key, { reading_date: e.target.value })}
+                          />
+                        ) : null}
+                      </div>
                     </td>
                     <td className="text-muted">
                       {o.source}

@@ -1279,6 +1279,13 @@ async def release_profile(
         row = await _get(session, RetentionProfile, profile_id)
         if row.released_at is not None:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Das Profil ist bereits freigegeben.")
+        from mhvp.documents.defaults import is_pending_matrix_placeholder  # GAM-411
+
+        if is_pending_matrix_placeholder(row):
+            raise ProblemError(
+                ErrorCodes.RETENTION_LOCKED,
+                detail="Die Frist für Buchungsbelege ist offen (Matrix V17); erst eintragen.",
+            )
         if principal.user_id is None or row.created_by == principal.user_id:
             raise ProblemError(ErrorCodes.GATE_FOUR_EYES)
         row.released_at, row.released_by = datetime.now(UTC), principal.user_id

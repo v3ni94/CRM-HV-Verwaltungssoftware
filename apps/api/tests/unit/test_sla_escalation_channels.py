@@ -44,6 +44,17 @@ def _gateway(**kw: Any) -> SmsGateway:
     return SmsGateway(**values)
 
 
+@pytest.fixture(autouse=True)
+def _pass_through_pin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Existing tests use a non-resolving example host; the SSRF guard has its own tests."""
+    from mhvp.core.webhooks import PinnedTarget
+
+    monkeypatch.setattr(channels, "pin_target", lambda url, allow_private: PinnedTarget(url=url))
+    monkeypatch.setattr(
+        channels, "get_settings", lambda: SimpleNamespace(webhook_allow_private_targets=False)
+    )
+
+
 def _settings() -> Settings:
     # Only ``web_crm_url`` is read here; a stand-in avoids the required secret settings.
     return cast(Settings, SimpleNamespace(web_crm_url="https://crm.example/"))

@@ -147,6 +147,7 @@
   },
   "Documents": {
     "title": "Documents",
+    "emptyHint": "Documents appear here once the property manager has released them.",
     "empty": "No released documents.",
     "download": "Download",
     "created": "Provided on",
@@ -203,6 +204,7 @@
   },
   "Tickets": {
     "title": "Reports",
+    "emptyHint": "You can create a new report above. The processing status appears here.",
     "empty": "No reports available.",
     "new": "New damage report",
     "titleField": "Title",
@@ -271,6 +273,7 @@
   },
   "Account": {
     "title": "Account statement",
+    "emptyHint": "Open items appear here as soon as a receivable is posted.",
     "empty": "No open items.",
     "contract": "Contract",
     "dueDate": "Due on",
@@ -396,6 +399,7 @@
   },
   "Orders": {
     "title": "Orders",
+    "emptyHint": "Work orders appear here as soon as the property manager creates one for you.",
     "empty": "No orders available.",
     "back": "Back to overview",
     "quoteAmount": "Quote amount (EUR)",
@@ -1276,6 +1280,7 @@
   "OwnerStatements": {
     "title": "Annual statement",
     "ownersOnly": "This page is for owners only.",
+    "emptyHint": "The statement appears here once the property manager has released it.",
     "empty": "No released individual statement yet.",
     "row": "Individual statement {year}, unit {unit}",
     "version": "Version {version}",

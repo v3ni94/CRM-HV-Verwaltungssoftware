@@ -27,6 +27,11 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa.models import AgendaItem, HoaOnlineMeetingSetting, Meeting, Resolution, Vote
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaPortalCircularGetSettingOut,
+    HoaPortalCircularPortalVotesByEntityOutItem,
+    HoaPortalCircularPortalVotesOutItem,
+)
 from mhvp.portal.routers import Portal, portal_user
 from mhvp.workspace.services import local_today
 
@@ -96,7 +101,9 @@ def _vote_out(v: Vote) -> dict[str, Any]:
 
 
 @crm_router.get(
-    "/portal-circular-settings", summary="Umlaufbeschluss im Eigentümerportal (Schalter)"
+    "/portal-circular-settings",
+    summary="Umlaufbeschluss im Eigentümerportal (Schalter)",
+    response_model=HoaPortalCircularGetSettingOut,
 )
 async def get_setting(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
@@ -148,6 +155,7 @@ async def put_setting(
     "/meetings/{meeting_id}/portal-circular-votes",
     summary="Portalstimmen eines Umlaufverfahrens (lesend)",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaPortalCircularPortalVotesOutItem],
 )
 async def portal_votes(
     meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -169,6 +177,7 @@ async def portal_votes(
     "/portal-circular-votes",
     summary="Portalstimmen laufender Umlaufverfahren einer Gemeinschaft (lesend)",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaPortalCircularPortalVotesByEntityOutItem],
 )
 async def portal_votes_by_entity(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

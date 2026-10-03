@@ -70,6 +70,12 @@ class LexofficeExportResultItem(BaseModel):
     lexoffice_id: str | None = None
     error: str | None = None
     skipped_duplicate: bool = False
+    # GAL-201: the create timed out and may have been processed; nothing is sent again.
+    outcome_unknown: bool = False
+    # GAL-201: an earlier unknown outcome was matched by voucher number (no second create).
+    reconciled: bool = False
+    error_code: str | None = None
+    idempotency_key: str | None = None
 
 
 class LexofficeExportResult(BaseModel):

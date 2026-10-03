@@ -61,6 +61,36 @@ class PortalAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     locale: Mapped[str | None] = mapped_column(String(8))
 
 
+# AP05 / GAL-106: value lists of access_grant, mirrored in migration 0462 (keep in sync).
+GRANT_SCOPE_TYPES = (
+    "unit",
+    "contract",
+    "property",
+    "legal_entity",
+    "document_class",
+    "tenant",
+    "audit_engagement",
+    "handover",
+)
+GRANT_RIGHTS = ("read", "download", "comment", "edit")
+GRANT_ROLES = ("tenant", "owner", "board", "provider", "staff", "participant", "helper")
+GRANT_LEGAL_BASES = (
+    "contract",
+    "hoa_member_right",
+    "representation",
+    "staff_access",
+    "rental_owner_right",
+    "board_audit",
+    "document_class_grant",
+    "handover_helper",
+    "handover_participant",
+)
+
+
+def _in(values: tuple[str, ...]) -> str:
+    return ", ".join(f"'{v}'" for v in values)
+
+
 class AccessGrant(IdMixin, TimestampMixin, TenantMixin, Base):
     """6.9.6: one matrix for UI, API, downloads, search and exports."""
 
@@ -72,6 +102,12 @@ class AccessGrant(IdMixin, TimestampMixin, TenantMixin, Base):
             "scope_type <> 'document_class' OR document_class IS NOT NULL",
             name="document_class_scope",
         ),
+        # AP05 / GAL-106 (6.9.6): period order and fixed value lists (0462).
+        CheckConstraint("valid_to IS NULL OR valid_to >= valid_from", name="period_order"),
+        CheckConstraint(f"scope_type IN ({_in(GRANT_SCOPE_TYPES)})", name="scope_type_values"),
+        CheckConstraint(f'"right" IN ({_in(GRANT_RIGHTS)})', name="right_values"),
+        CheckConstraint(f"role IN ({_in(GRANT_ROLES)})", name="role_values"),
+        CheckConstraint(f"legal_basis IN ({_in(GRANT_LEGAL_BASES)})", name="legal_basis_values"),
     )
 
     account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")

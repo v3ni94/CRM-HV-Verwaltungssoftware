@@ -13,8 +13,12 @@ from mhvp.contracts.mandates import expire_due_mandates
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.job_failures import JOB_EXPIRE_MANDATES, record_job_failure
+from mhvp.core.logging import get_logger
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today
+
+log = get_logger(__name__)
 
 
 async def expire_mandates_once(settings: Settings, today: date | None = None) -> dict[str, int]:
@@ -23,17 +27,27 @@ async def expire_mandates_once(settings: Settings, today: date | None = None) ->
     )
     factory = create_session_factory(engine)
     expired = 0
+    failed = 0
     try:
         async with platform_transaction(factory) as session:
             ids: list[uuid.UUID] = list(
                 await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
             )
         for tenant_id in ids:
-            async with tenant_transaction(factory, tenant_id) as session:
-                expired += await expire_due_mandates(session, today or local_today())
+            # GAM-508: one tenant's error must not keep the mandates of the others active.
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    expired += await expire_due_mandates(session, today or local_today())
+            except Exception as exc:
+                failed += 1
+                log.exception("expire mandates failed", extra={"tenant_id": str(tenant_id)})
+                await record_job_failure(factory, tenant_id, JOB_EXPIRE_MANDATES, exc)
     finally:
         await engine.dispose()
-    return {"expired": expired}
+    result = {"expired": expired}
+    if failed:  # key only on failure, the success result stays {"expired": n}
+        result["failed"] = failed
+    return result
 
 
 @shared_task(name="mhvp.contracts.expire_mandates")

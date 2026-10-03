@@ -8,6 +8,7 @@ import type { BoardEngagementDetail as Detail, BoardReport } from "@/components/
 import { PositionContext } from "@/components/portal/PositionContext";
 import { filterQuery } from "@/lib/audit-filter";
 import { bff } from "@/lib/bff";
+import { formatEur } from "@/lib/format-eur";
 import { ui } from "@/lib/ui";
 
 const STATUS = new Set(["open", "checked", "query", "objection", "outdated"]);
@@ -16,7 +17,7 @@ const KINDS = new Set(["note", "question", "answered"]);
 
 function amount(value: string | null): string {
   if (value === null) return "";
-  return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))} EUR`;
+  return formatEur(value);
 }
 
 /** Prüfungsraum eines Prüfauftrags (7.9.2 PÜ07, PÜ08, A52): Positionen mit Prüfstatus (A77:

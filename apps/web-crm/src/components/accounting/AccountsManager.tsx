@@ -9,6 +9,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import { PaymentTypeAccounts } from "./PaymentTypeAccounts";
+import { TaxStatusNotice } from "./TaxStatusNotice";
 
 export type ManagedAccount = {
   id: string;
@@ -348,6 +349,7 @@ export function AccountsManager({
 
   return (
     <div className="flex flex-col gap-4">
+      <TaxStatusNotice hasVatAccounts={accounts.some((a) => a.vat_option !== "none" && a.active)} />
       {canCreate ? (
         <form onSubmit={create} className={`${ui.card} flex flex-col gap-3`} aria-label={t("accounts.add")}>
           <h3 className="text-sm font-semibold">{t("accounts.add")}</h3>

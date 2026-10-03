@@ -8,8 +8,9 @@ from typing import Any
 
 import httpx
 from fastapi import Request
-from sqlalchemy import select, update
+from sqlalchemy import event, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from mhvp.billing.models import Statement
 from mhvp.contacts.models import Contact, ContactAddress
@@ -98,6 +99,37 @@ VISIBILITY = frozenset({"tenant", "owner", "provider", "board"})
 
 
 _log = get_logger("mhvp.documents")
+
+
+_PENDING_BLOBS = "mhvp_pending_blobs"
+
+
+def _drop_pending_blobs(sync_session: Session) -> None:
+    """after_commit: blobs are now referenced by committed rows and must stay."""
+    sync_session.info.pop(_PENDING_BLOBS, None)
+
+
+def _compensate_pending_blobs(sync_session: Session) -> None:
+    """after_rollback (AQ09-01, rule DOC-BLOB-COMP): delete blobs written in the aborted
+    transaction. They were never referenced by a committed row, so no retention hold can
+    apply. A failed delete is logged as ``document.orphan_blob`` for manual clean up."""
+    pending: list[tuple[BlobStore, str]] = sync_session.info.pop(_PENDING_BLOBS, None) or []
+    for store, key in pending:
+        try:
+            store.delete(key)
+            _log.info("document.blob_compensated", key=key)
+        except Exception as exc:  # compensation must never raise
+            _log.error("document.orphan_blob", key=key, error=str(exc))
+
+
+def register_pending_blob(session: AsyncSession, blobs: BlobStore, key: str) -> None:
+    """Track a blob written inside the current transaction for rollback compensation."""
+    sync_session = session.sync_session
+    pending = sync_session.info.setdefault(_PENDING_BLOBS, [])
+    pending.append((blobs, key))
+    if not event.contains(sync_session, "after_rollback", _compensate_pending_blobs):
+        event.listen(sync_session, "after_rollback", _compensate_pending_blobs)
+        event.listen(sync_session, "after_commit", _drop_pending_blobs)
 
 
 def invalid(detail: str) -> ProblemError:
@@ -190,6 +222,7 @@ async def store_document(
     document_id = uuid7()
     key = BlobStore.key(tenant_id, document_id)
     blobs.put(key, data, mime_type, sha256)
+    register_pending_blob(session, blobs, key)
     document = Document(
         id=document_id,
         tenant_id=tenant_id,

@@ -119,3 +119,11 @@ SeaweedFS container `objectstore` of the compose stack (bucket `mhvp`, endpoint
   and `backup-offsite.sh` copies the archive with the dump. `BACKUP_SOURCE_S3_*` stays empty.
 - Runbook: `docs/runbooks/objektspeicher-ionos-s3.md` section 0 (variables, backup, restore,
   volume location, note on `--profile local-objectstore` in `mhvp.sh`).
+
+## Nachtrag 03.10.2026: Endstand der Statusangaben (GAM-802)
+
+Diese Datei trägt historisch zwei Statuszeilen (Kopf: Proposed, Nachtrag 26.09.2026: Accepted).
+Maßgeblich ist der Endstand: Accepted, Objektspeicher dauerhaft lokal als SeaweedFS-Container
+`objectstore` (Nachtrag 27.09.2026). Der IONOS-Pfad vom 26.09.2026 ist ein optionaler externer
+Weg, der Folgepunkt zum Auftragsverarbeitungsvertrag mit IONOS ist ohne Einrichtung
+gegenstandslos. Der ADR-Index und OPEN_QUESTIONS M1-01 sind entsprechend nachgeführt.

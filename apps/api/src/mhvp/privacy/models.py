@@ -130,7 +130,8 @@ class PrivacyDeletionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
         UniqueConstraint("tenant_id", "data_type", name="uq_privacy_deletion_profile_type"),
         CheckConstraint(
             "data_type IN ('contact', 'portal_account', 'communication', 'ticket', 'other', "
-            "'domain_event', 'platform_user', 'bank_raw')",
+            "'domain_event', 'platform_user', 'bank_raw', 'ai_run', 'call_log', "
+            "'webhook_delivery', 'postal_job')",
             name="ck_privacy_deletion_profile_type",
         ),
         CheckConstraint("retention_months >= 0", name="ck_privacy_deletion_profile_months"),

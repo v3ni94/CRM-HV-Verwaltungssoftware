@@ -144,3 +144,16 @@ describe("AdminFeePanel", () => {
     expect(await screen.findByText("ZUGFeRD abgelegt")).toBeInTheDocument();
   });
 });
+
+describe("AdminFeePanel parties (GAM-212)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("opens the separate payer, recipient and payee view for an invoice", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    mockLoad(fetchMock, [], [{ ...invoice, property_id: "p1", fee_setting_id: FEE, debtor_legal_entity_id: null, invoice_debtor_party_id: null }]);
+    renderIntl(<AdminFeePanel properties={[]} today="2026-02-15" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Zahler und Empfänger" }));
+    expect(await screen.findByTestId("fee-invoice-parties")).toBeInTheDocument();
+    expect(screen.getByTestId("fee-party-payee")).toHaveTextContent("Verwaltungsgesellschaft");
+  });
+});

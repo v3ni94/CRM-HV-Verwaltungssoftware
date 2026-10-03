@@ -1228,6 +1228,29 @@
     {
      "t": "p",
      "text": "Bei einer Korrekturversion einer Betriebskostenabrechnung zeigt der Abschnitt \"Differenz zur Vorversion\" nach Klick auf \"Differenz zur Vorversion anzeigen\" je Einheit Kosten und Ergebnis alt und neu sowie geänderte Kostenpositionen. Die Anzeige liest nur gespeicherte Stände und dient der Prüfung vor der Freigabe."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zugangsdatum beim Erteilen, Quelle je Schlüssel und Art der Verbrauchswerte (Welle 26, AP17)",
+     "id": "zugangsdatum-beim-erteilen-quelle-je-schluessel-und-art-der-verbrauchswerte-welle-26-ap17"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Erteilen: nach der internen Freigabe (auch nach der Beiratsprüfung) ist das Feld \"Zugang beim Mieter\" Pflicht. Ist in \"Anschreiben und Zugang je Mieter\" schon ein Zugang erfasst, schlägt die Maske den frühesten Zugang vor; bitte prüfen. Das Erteilen bleibt hinter der Freigabestufe G3."
+      },
+      {
+       "depth": 0,
+       "text": "Quelle je Umlageschlüssel: in der Objektakte unter \"Umlageschlüssel\" zeigt der Abschnitt \"Quelle und Bestätigung je Schlüssel\", ob ein Schlüssel aus dem Muster übernommen wurde. Quelle (Teilungserklärung, Vereinbarung oder Beschluss), Fundstelle und Geltungsbeginn erfassen, speichern und danach bestätigen. Eine geänderte Quelle hebt die Bestätigung auf. Bei vermietetem Wohnungseigentum sperrt ein aus dem Muster übernommener Schlüssel ohne bestätigte Quelle die Berechnung; der Geltungsbeginn muss spätestens am Beginn des Abrechnungszeitraums liegen. Mit dem Schalter \"Bestätigte Quelle für jeden Umlageschlüssel\" (Standard aus) gilt das für jeden Schlüssel. Die Bestätigung belegt die Prüfung der Quelle, nicht ihre Wirksamkeit (offene Frage AP17-01)."
+      },
+      {
+       "depth": 0,
+       "text": "Heizkosten, Verbräuche je Nutzer: je Wert die Art wählen (abgelesen, Zwischenablesung, geschätzt). Bei Zwischenablesung ist das Ablesedatum Pflicht. Geschätzte Werte bleiben in der Vorschau gekennzeichnet (Hinweis auf die Kürzung nach § 12 HeizkostenV, zu prüfen)."
+      }
+     ]
     }
    ]
   },
@@ -2514,6 +2537,16 @@
     {
      "t": "p",
      "text": "Wird ein Interessent gelöscht, von Hand oder durch den Löschlauf nach dem Löschdatum, bleibt der Kontakt zunächst erhalten. Hat der Kontakt keine andere Rolle, entsteht unter Datenschutz, Löschanträge, ein Löschvorschlag mit der Anzahl der verknüpften Dokumente. Kontakt und Dokumente werden erst im Löschprozess mit Freigabe durch eine zweite Person bearbeitet."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Indexwerte pflegen und freigeben (Plattformadministrator, Welle 26)",
+     "id": "indexwerte-pflegen-und-freigeben-plattformadministrator-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Unter Plattform, Indexwerte importieren und freigeben pflegt ein Plattformadministrator die Werte des Verbraucherpreisindex in zwei Schritten. Schritt 1: Reihe, Quelle und Stand der Daten angeben, CSV mit den Spalten Monat und Wert laden oder einfügen (Semikolon, Tab oder Komma, Monat als 2026-08 oder 08.2026, Kopfzeile erlaubt) und importieren. Die Werte bleiben ungeprüft und wirken nirgends; ein geänderter Wert eines Monats setzt dessen Freigabe zurück. Schritt 2: Werte gegen die Quelle prüfen, den Monat wählen, bis zu dem freigegeben wird, die Prüfung bestätigen und freigeben. Erst freigegebene Werte nutzen Indexklauseln und Erhöhungsvorschläge. Die Maske öffnet kein Gate und ersetzt keine rechtliche Prüfung der Indexklausel. Offene Frage zu Indexreihe und Freigabeprozess: AO03-01."
     }
    ]
   },
@@ -6790,6 +6823,28 @@
     {
      "t": "p",
      "text": "Unter Bank, Bankabstimmung legen Sie im Bereich \"Klärungskonto und Abstimmungsbasis\" zwei Mandantenstandards fest (Recht Mandanteneinstellungen ändern). Das Klärungskonto wählen Sie aus den Transit und technischen Konten Ihres Kontenrahmens; es nimmt einen Überzahlungsrest auf, der mehrere Debitoren betrifft, wenn beim Buchen kein Gegenkonto angegeben ist. Ohne Auswahl braucht ein solcher Rest wie bisher ein Gegenkonto. Ein Rest auf nur einem Debitor bleibt dessen Guthaben. Die Abstimmungsbasis legt fest, ob der Saldo des Sachkontos nach Buchungsdatum (Standard) oder nach Bankbuchungstag ermittelt wird. In der Abstimmung selbst können Sie die Basis für die Anzeige übersteuern; die Spalte \"Zeitliche Differenz\" zeigt den Unterschied zwischen beiden Stichtagen. Speichern bucht nichts. Die fachliche Festlegung ist offen (AO02-01)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Tilgungsbestimmung, Teilausführung, Freigabehistorie und Einzelaufträge (AP18)",
+     "id": "tilgungsbestimmung-teilausfuehrung-freigabehistorie-und-einzelauftraege-ap18"
+    },
+    {
+     "t": "p",
+     "text": "**Tilgungsbestimmung des Zahlers (Buchungsdialog).** Bei Zahlungseingängen zeigt der Buchungsdialog, welche offenen Posten der Verwendungszweck bestimmt (Rechnungs- oder Sollstellungsnummer, Periode, Einheit). Das ist ein Vorschlag, keine Buchung. Wählen Sie andere Posten als die bestimmten, erscheint ein Prüfhinweis; das Buchen ist erst mit einer Begründung der Abweichung möglich. Die Begründung wird dem Buchungstext vorangestellt. Wurde nichts erkannt, gilt die Standardreihenfolge."
+    },
+    {
+     "t": "p",
+     "text": "**Teilausführung je Auftrag (Zahlungsaufträge, Zahlungsdateien).** Unter jeder Zahlungsdatei lässt sich je Auftrag die Ausführung mit dem Bankumsatz als Nachweis oder die Ablehnung mit Grund erfassen. Der ausgeführte Betrag ergibt sich aus der Belastung des Bankumsatzes; nur dieser bestätigte Betrag gleicht die Verbindlichkeit aus, der Rest bleibt offen und wird angezeigt. Die Ausführung bucht und ist bis zur Freigabestufe G2 gesperrt. Die Ablehnung bucht nichts."
+    },
+    {
+     "t": "p",
+     "text": "**Freigabehistorie.** Der Freigabeverlauf eines Zahlungsauftrags zeigt gültige und entwertete Freigaben, den Freigebenden (Kurzkennung des Benutzers), den Zeitpunkt, die Prüfsumme des freigegebenen Stands und bei entwerteten Freigaben Zeitpunkt und Grund. Eine Änderung von Betrag oder IBAN entwertet Freigaben."
+    },
+    {
+     "t": "p",
+     "text": "**Einzelaufträge am Lastschriftlauf.** Am Lastschriftlauf klappt \"Einzelaufträge\" je Schuldner Mandat, Betrag, Bankstatus, Rückgabecode und eingezogenen Betrag auf. Rücklastschriften und Teileinzüge sind hervorgehoben. Die Ansicht bucht nichts; Korrekturen erfolgen nur per Storno."
     }
    ]
   },
@@ -7383,7 +7438,7 @@
     },
     {
      "t": "p",
-     "text": "Einrichtung in Paperless (Post-Consume-Skript): Zeitstempel (Unix-Sekunden) in der Kopfzeile X-MHVP-Timestamp, Mandant (Kurzname oder ID) in X-MHVP-Tenant oder als Pfadsegment, Signatur `sha256=<hex>` in X-MHVP-Signature über die Zeichenkette `<Zeitstempel>.` gefolgt vom Rohinhalt der Meldung, Inhalt als JSON mit `document_id` (Paperless-Nummer) und optional `title`. Meldungen älter als fünf Minuten werden abgewiesen."
+     "text": "Einrichtung in Paperless (Post-Consume-Skript): Zeitstempel (Unix-Sekunden) in der Kopfzeile X-MHVP-Timestamp, Mandant (Kurzname oder ID) in X-MHVP-Tenant oder als Pfadsegment, Signatur `sha256=<hex>` in X-MHVP-Signature über die Zeichenkette `<Zeitstempel>.` gefolgt vom Rohinhalt der Meldung, Inhalt als JSON mit `document_id` (Paperless-Nummer) und optional `title`. Meldungen älter als fünf Minuten werden abgewiesen. Seit Welle 26 (GAL-204) ist das Standardformat wie bei ausgehenden Webhooks `t=<Zeitstempel>,v1=<hex>` in X-MHVP-Signature (Zeitstempelkopfzeile dann optional); das Format `sha256=<hex>` gilt als abgekündigt und wird weiter angenommen."
     },
     {
      "t": "h",
@@ -8382,6 +8437,91 @@
     {
      "t": "p",
      "text": "Im Buchungskreis steht unter den offenen Posten der Bereich \"Ausbuchungsvorschläge\". Eine offene Forderung wird mit Stichtag und Grund (mindestens 10 Zeichen) vorgeschlagen; der Vorschlag wirkt nicht auf Salden. Die Freigabe ist nur möglich, wenn der Mandantenschalter eingeschaltet ist, G1 offen ist und eine andere Person freigibt; hat sich der Restbetrag seit dem Vorschlag geändert, wird die Freigabe abgelehnt und der Vorschlag ist neu anzulegen. Die Buchungsvorschau zeigt nur an, gebucht wird nichts (Gegenkonto offen, Frage AN15-02). In der Lastschriftabstimmung erscheinen bei Rückgaben Rückgabedatum, Gebühr, Gebührenbeleg und der Status der Weiterbelastung (gesperrt oder nur Vorschlag); bei einer einzelnen Rückgabe lassen sich Datum und Gebühr erfassen, erfasste Werte werden nie überschrieben."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Hinweis Steuerstatus im Kontenstamm (Welle 26, AP16)",
+     "id": "hinweis-steuerstatus-im-kontenstamm-welle-26-ap16"
+    },
+    {
+     "t": "p",
+     "text": "Gibt es Konten mit Steueroption, ist im Mandanten aber kein Umsatzsteuerstatus hinterlegt (oder Kleinunternehmer), zeigt der Kontenstamm den Hinweis \"Steuerstatus fehlt, keine Vorsteuerbuchung\". Es wird dann keine Vorsteuer gebucht. Der Status wird unter Einstellungen, Rechnungsstellung und Steuer gepflegt; die steuerliche Einordnung bestätigt der Steuerberater."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zahler, Rechnungsempfänger und Zahlungsempfänger beim Verwalterhonorar (GAM-212, Welle 26)",
+     "id": "zahler-rechnungsempfaenger-und-zahlungsempfaenger-beim-verwalterhonorar-gam-212-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "In der Rechnungsliste des Verwalterhonorars blendet \"Zahler und Empfänger\" je Rechnung drei getrennt beschriftete Angaben ein: den Zahler (Rechtsträger, der die Vergütung trägt), den Rechnungsempfänger (Vertragspartei) und den Zahlungsempfänger. Der Zahlungsempfänger ist fest die Verwaltungsgesellschaft. Fehlen Zahler oder Rechnungsempfänger, steht ein Prüfhinweis; vor der Freigabe ist zu prüfen, dass beide zum Objekt passen. Die Anzeige verändert nichts."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ausbuchung beantragen, buchen und stornieren (Welle 26, AP12)",
+     "id": "ausbuchung-beantragen-buchen-und-stornieren-welle-26-ap12"
+    },
+    {
+     "t": "p",
+     "text": "In der Tabelle der offenen Posten eines Buchungskreises und im Mahnfall (Bereich Mahnsperren je Posten) steht bei offenen Forderungen die Aktion \"Ausbuchung beantragen\". Sie fragt Stichtag und Grund (mindestens 10 Zeichen) ab und legt nur einen Vorschlag ohne Wirkung an; Freigabe durch eine zweite Person, Freigabestufe G1 und die Freigabe durch die Geschäftsführung bleiben vorbehalten."
+    },
+    {
+     "t": "p",
+     "text": "Eine freigegebene Ausbuchung kann gebucht werden, wenn der Mandant unter \"Buchung von Ausbuchungen\" (unten im Bereich Ausbuchungsvorschläge, Recht Mandanteneinstellungen) den Schalter eingeschaltet und ein Gegenkonto (Kontonummer) eingetragen hat. Eine Vorgabe für das Gegenkonto gibt es nicht, die Frage AN15-02 ist offen. Zuerst die Buchungsvorschau öffnen: sie zeigt Soll Gegenkonto und Haben Forderungskonto mit Betrag oder die Gründe, warum nicht gebucht werden kann. \"Ausbuchung buchen\" bucht genau diese Werte einmal; ein zweiter Klick oder ein gleichzeitiger Aufruf erzeugt keine zweite Buchung. Eine gebuchte Ausbuchung wird nie geändert: zur Korrektur \"Buchung stornieren\" mit Grund wählen, der offene Posten ist danach wieder offen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "G1 Öffnung: Checkliste vor der produktiven Buchführung (GAL-312, Nachtrag 03.10.2026)",
+     "id": "g1-oeffnung-checkliste-vor-der-produktiven-buchfuehrung-gal-312-nachtrag-03-10-2026"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Buchhaltung, G1 Öffnung (`/einstellungen/buchhaltung/g1-oeffnung`) steht die Checkliste für die Freigabestufe G1 (produktive Buchführung). Sie ist sichtbar mit dem Recht Buchhaltung lesen."
+    },
+    {
+     "t": "p",
+     "text": "**Zweck.** Die Seite zeigt, was vor einer Öffnung von G1 erledigt sein muss, und nimmt den Antrag auf G1 entgegen. Die empfohlene Reihenfolge: Kontenrahmen mit der Steuerberatung freigeben, die Fälle des Anhangs D durch die fachkundige Person abnehmen, die Umsatzsteuerbehandlung prüfen, danach den Antrag stellen."
+    },
+    {
+     "t": "p",
+     "text": "**Aufbau.**"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Stand aus dem System: Kontenrahmen (Status und Freigabedatum), abgenommene Fälle des Anhangs D, manuelle Prüfpunkte, Automatikstufen je Fallklasse, Stand des Lernenden Buchhalters und die aktuelle Freigabestufe G1 (geschlossen, beantragt oder geöffnet)."
+      },
+      {
+       "depth": 0,
+       "text": "Anhang D Fälle mit Freigabestufe G1: Ergebnis der fachlichen Abnahme je Fall. Ein Test im Code ersetzt die Abnahme nicht; eingetragen wird das Ergebnis der fachkundigen Person."
+      },
+      {
+       "depth": 0,
+       "text": "Manuelle Prüfpunkte, die das System nicht selbst ableiten kann. Je Punkt werden Ergebnis (offen, bestanden, nicht bestanden), verantwortliche Person, Datum und Nachweis erfasst. Das Eintragen verlangt das Recht Buchhaltung freigeben."
+      },
+      {
+       "depth": 0,
+       "text": "Unterlagen (Kontenrahmen-Prüfung, Abnahmeprotokoll Anhang D, Verfahrensdokumentation) und der Stand des Abnahmeregisters als reine Anzeige mit Link."
+      },
+      {
+       "depth": 0,
+       "text": "Antrag auf G1 über den bestehenden Freigabepfad (Recht Freigabestufen anlegen)."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "**Was die Seite nicht tut.** Sie öffnet G1 nie selbst. Die Entscheidung trifft eine zweite Person unter Plattform, Freigabestufen. Ohne diese Freigabe bleiben Buchungen Parallelbuchungen, Importe und Automatiken wenden den Stand nicht an. Rechtliche und steuerliche Fragen beantwortet die Seite nicht; sie bleiben bei Steuerberatung und Rechtsanwalt."
+    },
+    {
+     "t": "p",
+     "text": "Die Bankkennzahlen (Bank, Automatik-Kennzahlen, `/bank/kennzahlen`) sind im Kapitel Banking im Abschnitt Automatik-Kennzahlen beschrieben."
     }
    ]
   },
@@ -8532,6 +8672,30 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, Datenschutz, Auskunftsanträge erfassen Sie den Eingang eines Auskunftsantrags: Kontakt suchen, Eingangsdatum und Eingangsweg wählen, Antrag erfassen. Über die Schaltflächen der Zeile setzen Sie den Status (In Bearbeitung, Beantwortet, Abgelehnt, Zurückgenommen). Eine Frist wird nur angezeigt, wenn unter Fristen für Datenschutzanträge eine Auskunftsfrist hinterlegt ist; dann erscheint der Antrag auch in der Fristenliste. Die Daten sind eine Orientierung und zu prüfen. Die Auskunft selbst bereiten Sie am Kontakt über den Auskunftsexport vor. Unter Umfang der DSGVO-Auskunft können Portalkonto mit Anmeldungen, Zahlungsdaten und Vertragsdaten zugeschaltet werden (Standard aus, Rechtsfrage AC07-01)."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Prüfpfad und Kommunikationsbezüge bei der Kontaktlöschung (Welle 26)",
+     "id": "pruefpfad-und-kommunikationsbezuege-bei-der-kontaktloeschung-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Unter Datenschutz lassen sich über die Schnittstelle /privacy/erasure-settings zwei Schalter setzen, beide stehen auf aus. \"Prüfpfad ohne Werte\" entfernt bei der Anonymisierung eines Kontakts die alten und neuen Werte aus dem Änderungsprotokoll dieses Kontakts, die Feldnamen bleiben. \"Kommunikationsbezüge koppeln\" lässt Nachrichten, Anrufe, Zustellungen und Postaufträge die Löschung nicht mehr sperren; sie erscheinen als Hinweis und sind getrennt zu behandeln. Ob beides zulässig ist, entscheidet der Betreiber mit Datenschutzberatung (offene Fragen AP13-01, AP13-02). Löschprofile gibt es zusätzlich für KI-Läufe, Anrufnotizen, Webhook-Ausgang und Postaufträge; die Übersicht zählt nur, die Fristen sind offen. Im Register der Rechtsgrundlagen stehen SMS und KI-Verarbeitung; ein eingetragener Widerspruch einer Person gegen KI-Verarbeitung sperrt KI-Läufe zu diesem Kontakt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Vollständigkeit der Auskunft, Empfänger und Zugriffsprotokoll",
+     "id": "vollstaendigkeit-der-auskunft-empfaenger-und-zugriffsprotokoll"
+    },
+    {
+     "t": "p",
+     "text": "Die DSGVO-Auskunft berücksichtigt jede Tabelle, die auf den Kontakt verweist, etwa Anrufprotokoll, Versand, Briefversand, Interessentenrolle, Übergabeteilnahme, Vollmachten in Versammlungen, Objektrollen, Lastschriften, SEPA-Mandatsvorschläge und die Änderungshistorie der Bankverbindung. Jede Quelle gehört zu einem der bestehenden Schalter (Vorgänge, Kommunikation, Dokumente, Portalkonto, Verträge, Zahlungsdaten); solange der Schalter aus ist, nennt die Auskunft nur die Anzahl. Nachrichten von einer Adresse des Kontakts ohne Zuordnung werden ebenfalls gezählt beziehungsweise ausgegeben. Das Verarbeitungsprotokoll nennt Art und Zeitpunkt der Ereignisse zum Kontakt und zu seinen Vorgängen, Nachrichten, Einwilligungen, Bankverbindungen und Portalkonto, dazu die geänderten Felder ohne Werte. Die Rubrik „Empfänger“ listet Übermittlungen an Dritte (Schadenbearbeiter, Webhooks) mit Rechtsgrundlage, soweit protokolliert."
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Regeln legt der Schalter „Zugriffsprotokoll personenbezogener Daten“ fest, ob Lesezugriffe protokolliert werden: Aus (Standard), Kontakt und Auskunftsexport, oder erweitert. Protokolliert werden Benutzer, betroffene Person, Aktion und Zeitpunkt, nie Inhalte. Das Protokoll je Kontakt liefert die Schnittstelle GET /contacts/{id}/access-log für Personen mit Exportrecht; in der Auskunft erscheinen die Lesezugriffe mit Aktion und Zeit. Umfang und Aufbewahrung sind offen (AP14-01)."
     }
    ]
   },
@@ -8595,7 +8759,7 @@
     },
     {
      "t": "p",
-     "text": "Die Lernphase (Menü Immoware24, Lernphase) untersucht lesend die bereits gespiegelten Daten: Ordnerstruktur und Feldnutzung je Art (WebDAV, CardDAV, CalDAV). Jeder Lauf vergleicht sich mit dem letzten erfolgreichen Lauf gleicher Art und zeigt lesbare Änderungen (neue Ordner, neu oder nicht mehr genutzte Felder, geänderte Anzahl gespiegelter Datensätze). Die Lernphase verändert nichts in Immoware24 und dient allein der Kontrolle des Spiegels."
+     "text": "Die Lernphase (Einstellungen, Immoware24, Schaltfläche Lernphase) untersucht lesend die bereits gespiegelten Daten: Ordnerstruktur und Feldnutzung je Art (WebDAV, CardDAV, CalDAV). Jeder Lauf vergleicht sich mit dem letzten erfolgreichen Lauf gleicher Art und zeigt lesbare Änderungen (neue Ordner, neu oder nicht mehr genutzte Felder, geänderte Anzahl gespiegelter Datensätze). Die Lernphase verändert nichts in Immoware24 und dient allein der Kontrolle des Spiegels."
     },
     {
      "t": "h",
@@ -9156,7 +9320,7 @@
       },
       {
        "depth": 0,
-       "text": "Die Bedienung im CRM ist noch nicht vorhanden, bis dahin nur über die API."
+       "text": "Die Bedienung im CRM steht unter Einstellungen, Datenschutz zur Verfügung (Löschanträge mit Freigabe, Ablehnung und Ausführung, Verzeichnis der Verarbeitungstätigkeiten); siehe Kapitel Datenschutz (Stand 03.10.2026, GAL-316)."
       }
      ]
     },
@@ -9355,7 +9519,7 @@
     },
     {
      "t": "p",
-     "text": "Vorlagen und erzeugte Dokumente (Version 1.57.0, 01.10.2026): Eine Vorlage kann auf Kontexte (Kontakt, Vertrag, Einheit, Objekt, Versammlung, Abrechnung, Ticket) beschränkt werden und auf eine Briefbogenvorlage verweisen. Die verwendeten Platzhalter werden beim Speichern ermittelt und an der Vorlage angezeigt. Die Vorlagenliste lässt sich nach Kontext filtern. Zu jedem erzeugten Brief zeigt `GET /generated-documents` die Vorlage mit Version, den Kontext, den Empfänger und den Versandnachweis. Die Bedienung in der CRM-Oberfläche folgt, bis dahin ist die Funktion über die API nutzbar."
+     "text": "Vorlagen und erzeugte Dokumente (Version 1.57.0, 01.10.2026): Eine Vorlage kann auf Kontexte (Kontakt, Vertrag, Einheit, Objekt, Versammlung, Abrechnung, Ticket) beschränkt werden und auf eine Briefbogenvorlage verweisen. Die verwendeten Platzhalter werden beim Speichern ermittelt und an der Vorlage angezeigt. Die Vorlagenliste lässt sich nach Kontext filtern. Zu jedem erzeugten Brief zeigt `GET /generated-documents` die Vorlage mit Version, den Kontext, den Empfänger und den Versandnachweis. Die Bedienung steht im CRM unter Dokumente, Erzeugte Dokumente zur Verfügung (siehe unten, AB05)."
     },
     {
      "t": "p",
@@ -9850,6 +10014,16 @@
     {
      "t": "p",
      "text": "Organisationen je Gesellschaft mit API Schlüssel, AVV, Postfach und Schaltern, Zuordnung der Rechnungsarten, Kontaktabgleich, Warteschlange und vorbereitete Dauerrechnungen unter Schnittstellen, Lexware Office; siehe [Lexware Office](lexware-office.md)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Live-Betrieb je Schnittstelle",
+     "id": "live-betrieb-je-schnittstelle"
+    },
+    {
+     "t": "p",
+     "text": "Unter Schnittstellen zeigt die Übersicht `GET /api/v1/integrations/live-modes` für lexoffice, LetterXpress und finAPI, ob die Schnittstelle eingerichtet ist und im Test oder live arbeitet. Der Schalter `integrations.live_mode` sperrt den Live-Betrieb je Schnittstelle oder bindet ihn an eine Freigabestufe (`PUT /api/v1/integrations/live-modes/{schnittstelle}`, Recht Mandanteneinstellungen ändern). Ohne Eintrag gilt das bisherige Verhalten. Bei gesperrtem Live-Betrieb lehnen der lexoffice Verbindungstest, der lexoffice Export, die Umstellung von LetterXpress auf live und die Einreichung beim Postdienst mit `MHVP-LEXO-0019` ab. Welche Freigabestufe gelten soll, ist offen (AP02-01). Ein lexoffice Export ohne Antwort des Anbieters wird als ungeklärt geführt und nicht doppelt angelegt; die Basisadresse von lexoffice muss in Produktion `https://api.lexware.io` sein."
     },
     {
      "t": "h",
@@ -11480,7 +11654,7 @@
     },
     {
      "t": "p",
-     "text": "Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen."
+     "text": "Stand der Registry: 106 Schalter der Seite Fachliche Regeln und 6 Schlüssel in den Mandantenquellen."
     },
     {
      "t": "table",
@@ -11591,6 +11765,13 @@
        "AN15-02"
       ],
       [
+       "`write-off-posting`",
+       "accounting",
+       "AP12",
+       "false",
+       "AN15-02"
+      ],
+      [
        "`automation-switch`",
        "banking",
        "AE03",
@@ -11659,6 +11840,13 @@
        "AE17",
        "true",
        "M17-01"
+      ],
+      [
+       "`allocation-key-confirmation-required`",
+       "billing",
+       "AP17",
+       "false",
+       "AP17-01"
       ],
       [
        "`check-amounts-tolerance`",
@@ -11787,6 +11975,13 @@
        "AJ01-02"
       ],
       [
+       "`levy-refund-proposals`",
+       "hoa",
+       "AP21",
+       "false",
+       "AP21-02"
+      ],
+      [
        "`majority-rule-four-eyes`",
        "hoa",
        "AN06",
@@ -11843,6 +12038,13 @@
        "AE07-01"
       ],
       [
+       "`sub-community-basis-lock`",
+       "hoa",
+       "AP21",
+       "false",
+       "AP21-01"
+      ],
+      [
        "`virtual-basis-term-lock`",
        "hoa",
        "AE12",
@@ -11897,6 +12099,13 @@
        "AJ31",
        "false",
        "AJ31-01"
+      ],
+      [
+       "`greeting-address`",
+       "platform",
+       "AP24",
+       "du",
+       "AP24-01"
       ],
       [
        "`invoice-intake-auto`",
@@ -12109,6 +12318,13 @@
        "AC07-01"
       ],
       [
+       "`access-log-scope`",
+       "security",
+       "AP14",
+       "off",
+       "AP14-01"
+      ],
+      [
        "`contact-address-history`",
        "security",
        "AN05",
@@ -12203,17 +12419,43 @@
      "items": [
       {
        "depth": 0,
+       "text": "`accounting.write_off_posting` (apps/api/src/mhvp/accounting/write_offs.py)"
+      },
+      {
+       "depth": 0,
        "text": "`contacts.address_history` (apps/api/src/mhvp/contacts/address_history.py)"
       },
       {
        "depth": 0,
+       "text": "`integrations.live_mode` (apps/api/src/mhvp/integrations/live_mode.py)"
+      },
+      {
+       "depth": 0,
        "text": "`letting.sale_marketing` (apps/api/src/mhvp/letting/sale_scope.py)"
+      },
+      {
+       "depth": 0,
+       "text": "`privacy.audit_redaction` (apps/api/src/mhvp/privacy/audit_redaction.py)"
+      },
+      {
+       "depth": 0,
+       "text": "`privacy.erasure_coupling` (apps/api/src/mhvp/privacy/erasure_coupling.py)"
       }
      ]
     },
     {
      "t": "p",
      "text": "<!-- switch-index:end -->"
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Freigabeberechtigte und mögliche Doppelidentitäten (GAM-205, Welle 26)",
+     "id": "freigabeberechtigte-und-moegliche-doppelidentitaeten-gam-205-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Benutzer listet der Abschnitt \"Freigabeberechtigte\" alle aktiven Konten mit Zahlungsfreigabe (Zahlungsaufträge: Recht Bank freigeben, Lastschriftläufe: Recht Buchhaltung freigeben, jeweils einschließlich geerbter Rechte der Elternrolle). Konten, die zur selben Person gehören könnten, sind gekennzeichnet. Die Kriterien (gleiche Kontaktverknüpfung, gleicher Name ohne Beachtung der Wortreihenfolge, gleiche E-Mail-Domäne mit gleichem Namensteil der Adresse) lassen sich für die Ansicht ein- und ausschalten, die Auswahl wird nicht gespeichert. Die Kennzeichnung ist ein Hinweis, kein Nachweis, und sperrt nichts: Die Vier-Augen-Prüfung vergleicht weiterhin Benutzerkonten. Was als unabhängiger Freigeber gilt, ist noch nicht entschieden (offene Frage AP19-01)."
     }
    ]
   },
@@ -14899,6 +15141,16 @@
        "text": "**Status bleibt auf gesendet**: Webhook bei Meta nicht eingerichtet oder Signatur (App-Geheimnis) passt nicht."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Verlauf eines Postversands (Welle 26)",
+     "id": "verlauf-eines-postversands-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Bei einer Zustellung auf dem Weg Post zeigt Verlauf anzeigen die Statushistorie des Postdienstes (Status, Quelle, Zeitpunkt). Die Anzeige hat keine Rechtswirkung; maßgeblich bleibt der erfasste Zustellnachweis."
     }
    ]
   },
@@ -17058,6 +17310,16 @@
        "text": "**Wartungen als erledigt erfassen (Sammelaktion)** (Objektseite, Wartung): Offene Wartungen markieren, Erledigungsdatum wählen, \"Ausgewählte erledigen\". Wartungen mit Intervall bleiben offen und die Fälligkeit rückt um das Intervall vor, Wartungen ohne Intervall werden geschlossen, wie bei der Einzelaktion."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Objektstatus ändern (Welle 26)",
+     "id": "objektstatus-aendern-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Im Objekt steht unter Objektstatus die Auswahl der zulässigen Wechsel (Übernahme zu Aktiv oder Beendet, Aktiv zu Beendet). Der Wechsel braucht eine ausdrückliche Bestätigung. Aktivieren setzt mindestens eine Einheit voraus, Beenden das Ende der Verwaltung; die API prüft beides. Der Schritt setzt nur den Status. Die fachliche Beendigung und den Verwalterwechsel führen Sie über die Beendigung und die Checkliste am Objekt (Anleitung Verwalterwechsel). Ein beendetes Objekt ist nicht mehr bearbeitbar."
     }
    ]
   },
@@ -17397,6 +17659,16 @@
     {
      "t": "p",
      "text": "Die Konsistenzprüfung der Buchhaltung weist Prüfregeln aus, die nur für neue Zeilen gelten, weil Bestandsdaten sie verletzen (Zahl der Verstöße je Regel). Nach Korrektur der Daten validiert ein Administrator mit dem Recht Mandanteneinstellungen ändern die Regeln über `POST /platform/constraint-checks/validate`. Bei weiteren Verstößen erscheint eine Liste, es wird nichts verändert."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Restore-Protokoll der Löschungen (GAM-209, Welle 26)",
+     "id": "restore-protokoll-der-loeschungen-gam-209-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Plattform, Betrieb zeigt der Abschnitt \"Restore-Protokoll der Löschungen\" den Bericht des Wiederanwendungslaufs (`python -m mhvp.documents.replay_deletions --report <Datei>`) nach einer Wiederherstellung. Die JSON-Datei wird nur im Browser gelesen, nichts wird gespeichert oder gesendet. Die Anzeige gruppiert die Einträge in nachgezogene Löschungen (auch als Prüflauf \"würde gelöscht\"), bewusst erhaltene Dokumente (Löschungssperre, Aufbewahrung, abweichender Inhalt), manuell zu prüfende Einträge und nicht angewendete Einträge. Die Anzeige ist keine Freigabe: Das Restore-Verfahren und die Prüfung des Berichts sind offen (Frage AP19-02, Datenschutz)."
     }
    ]
   },
@@ -17475,7 +17747,8 @@
       "Mieter",
       "Eigentümer",
       "Beirat",
-      "Dienstleister"
+      "Dienstleister",
+      "Bedingung"
      ],
      "rows": [
       [
@@ -17483,111 +17756,246 @@
        "ja",
        "ja",
        "ja",
-       "ja"
+       "ja",
+       ""
       ],
       [
        "Dokumente",
        "ja",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Meldungen",
        "ja",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Kontoauszug",
        "ja",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Zählerstand",
        "ja",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Verbrauch",
        "ja, nach Freigabe",
        "ja, nach Freigabe",
        "nein",
-       "nein"
+       "nein",
+       "nach Freigabe"
       ],
       [
        "Datenänderung",
        "ja",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Aushänge",
        "ja",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Formulare",
        "je Zielgruppe",
        "je Zielgruppe",
        "nein",
-       "nein"
+       "nein",
+       "je Zielgruppe"
       ],
       [
        "Beschlüsse",
        "nein",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Ansprechpartner",
        "nein",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Hausgeldkonto",
        "nein",
        "ja",
        "nein",
-       "nein"
+       "nein",
+       ""
       ],
       [
        "Prüfungsraum",
        "nein",
        "nein",
        "ja",
-       "nein"
+       "nein",
+       "Beiratsrolle"
       ],
       [
        "Aufträge",
        "nein",
        "nein",
        "nein",
-       "ja"
+       "ja",
+       ""
       ],
       [
        "Übergabeprotokolle",
        "wenn freigegeben",
        "wenn freigegeben",
        "nein",
-       "nein"
+       "nein",
+       "wenn freigegeben"
+      ],
+      [
+       "Versammlungen",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle; Online-Teilnahme nur bei freigegebener Online-Versammlung (AD06)"
+      ],
+      [
+       "Umlaufbeschlüsse",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle"
+      ],
+      [
+       "Wirtschaftsplan",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle"
+      ],
+      [
+       "Hausgeldabrechnung",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle, ausgegebene Abrechnung"
+      ],
+      [
+       "Eigentümerabrechnung",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle, Portalfunktion eingeschaltet (Standard aus) und Freigabestufe G3"
+      ],
+      [
+       "Belegeinsicht",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle"
+      ],
+      [
+       "Eigentum",
+       "nein",
+       "ja",
+       "nein",
+       "nein",
+       "Eigentümerrolle"
+      ],
+      [
+       "Reporting",
+       "nein",
+       "ja, Sondereigentumsverwaltung",
+       "nein",
+       "nein",
+       "Mandantenschalter Mieterträge im Portal"
+      ],
+      [
+       "Nebenkostenabrechnung",
+       "ja",
+       "nein",
+       "nein",
+       "nein",
+       "Mandantenschalter unter Fachliche Regeln, ausgegebene Abrechnung des eigenen Vertrags; Aufruf über die Startkachel"
+      ],
+      [
+       "Lastschrift",
+       "ja",
+       "ja",
+       "nein",
+       "nein",
+       "Vertrag vorhanden"
+      ],
+      [
+       "Rahmenverträge",
+       "nein",
+       "nein",
+       "nein",
+       "ja",
+       "Dienstleisterrolle"
+      ],
+      [
+       "Vorlagen (Beiratsvorlagen)",
+       "nein",
+       "ja",
+       "ja",
+       "nein",
+       "Eigentümer oder Beirat"
+      ],
+      [
+       "Vertretung",
+       "ja",
+       "ja",
+       "nein",
+       "nein",
+       "nur mit Rolle Vertreter"
+      ],
+      [
+       "Assistent",
+       "ja",
+       "ja",
+       "nein",
+       "nein",
+       "Mandantenschalter Chat-Bot"
+      ],
+      [
+       "Sicherheit",
+       "ja",
+       "ja",
+       "ja",
+       "ja",
+       "immer"
       ]
      ]
     },
     {
      "t": "p",
-     "text": "Ein Kontakt kann mehrere Rollen tragen (zum Beispiel Eigentümer und Beirat); die Seiten addieren sich."
+     "text": "Ein Kontakt kann mehrere Rollen tragen (zum Beispiel Eigentümer und Beirat); die Seiten addieren sich. Stand der Tabelle 03.10.2026 (GAL-313), abgeleitet aus der Portalnavigation; maßgeblich ist, was die Navigation je Zugang anzeigt."
     },
     {
      "t": "h",
@@ -18448,6 +18856,16 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, Portalformulare legen Sie mit \"Foto beim Zählerstand\" fest, ob beim Melden eines Zählerstands ein Foto erwartet wird: kein Foto erwartet, Hinweis bei fehlendem Foto (Standard) oder Foto ist Pflicht. Bei Pflicht lehnt das Portal eine Meldung ohne Foto ab. In der Vorschlagsprüfung am Kontakt sehen Sie zu jeder Zählerstandsmeldung die beigefügten Fotos als Link zur Dokumentansicht und den Vermerk, wenn kein Foto beigefügt wurde. Die Entscheidung über eine Fotopflicht liegt beim Betreiber (AM06-01)."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Lesestatus am Aushang (Welle 26)",
+     "id": "lesestatus-am-aushang-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Am Aushang zeigt Lesestatus anzeigen, wie viele der angesprochenen Portalkonten bestätigt haben und wann. Das ist ein Hinweis auf die Kenntnisnahme, kein Zugangsnachweis und keine Fristauslösung."
     }
    ]
   },
@@ -19011,6 +19429,40 @@
     {
      "t": "p",
      "text": "Solange die Freigabestufe G1 geschlossen ist, sind Mietrechnungen und Gutschriften Entwürfe mit Wasserzeichen. Standardmäßig tragen sie eine Entwurfsnummer (ENTWURF-JJJJ-NNNNNN) und verbrauchen die fortlaufende Rechnungsnummer MR nicht. Die reguläre Nummer wird erst bei Ausgabe mit offenem G1 vergeben, ein Entwurf wird nicht umnummeriert. Im Vertrag unter Mietrechnungen kann der Nummernmodus gewählt werden: Entwurfsnummer (Standard), reguläre Nummer auch im Entwurf oder Ablehnung der Ausgabe bei geschlossenem G1. Die Einstufung ist mit Steuerberatung zu klären (OPEN_QUESTIONS AC03-01)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Rechnungsart, Abschlagsabzug und Aufteilung (Welle 26, AP16)",
+     "id": "rechnungsart-abschlagsabzug-und-aufteilung-welle-26-ap16"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Erfassungsmaske der Eingangsrechnung wählen Sie die Rechnungsart (Rechnung, Abschlagsrechnung, Schlussrechnung). Bei der Schlussrechnung listet die Maske die bereits gebuchten Abschlagsrechnungen desselben Ausstellers im selben Buchungskreis. Die angehakten Abschläge werden abgezogen, die Maske zeigt Leistungssumme, Abzug und Restverpflichtung (Beispiel D12: 5.950,00 EUR abzüglich 2.380,00 EUR ergibt 3.570,00 EUR). Die API prüft die Abzüge beim Buchen erneut."
+    },
+    {
+     "t": "p",
+     "text": "Für Mischrechnungen schalten Sie \"Rechnung auf mehrere Zeilen aufteilen\" ein. Je Zeile erfassen Sie Konto, Netto, Steuersatz und die Begründung der Aufteilung (zum Beispiel umlagefähig, Verwaltung, Instandsetzung). Die Summe der Zeilen muss dem Brutto laut Beleg entsprechen, sonst bleibt die Schaltfläche gesperrt und die Abweichung wird angezeigt (Beispiel D22). Im Belegeingang gilt dasselbe; der Steuersatz der einzeiligen Erfassung wird aus Netto und Steuer des Belegs abgeleitet, nicht fest mit 19 % gesetzt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Skonto ziehen (Vorschau)",
+     "id": "skonto-ziehen-vorschau"
+    },
+    {
+     "t": "p",
+     "text": "An einer noch nicht gebuchten Rechnung mit Skontoangaben berechnet die Maske zum gewählten Zahltag Skonto und Zahlbetrag. Die Vorschau bucht und zahlt nichts, das Skonto wird im Zahllauf berücksichtigt. Nach Ablauf der Skontofrist gilt der volle Betrag."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Hinweis auf Handlungsanweisungen im Beleg",
+     "id": "hinweis-auf-handlungsanweisungen-im-beleg"
+    },
+    {
+     "t": "p",
+     "text": "Enthalten Warnungen oder Befunde einer Belegauswertung Text, der wie eine Anweisung klingt (neue IBAN, Selbstfreigabe, Export), erscheint der Hinweis \"Dokument enthält Handlungsanweisung, nicht ausgeführt\". Solche Texte werden nie befolgt; Änderungen von Bankverbindung oder Freigaben laufen nur über den vorgesehenen Prüfweg."
     }
    ]
   },
@@ -19772,6 +20224,16 @@
     {
      "t": "p",
      "text": "Im Ticket steht im Bereich \"Vorschläge aus der E-Mail\" die Schaltfläche \"Vorschlag aus letzter E-Mail berechnen\". Sie prüft die letzte eingehende E-Mail des Tickets auf eine Stammdatenänderung (Name, Anschrift, Telefon, E-Mail) und legt höchstens einen Vorschlag je E-Mail an. Es wird nichts am Kontakt geändert: der Vorschlag erscheint mit Vergleich alt und neu und wird wie gewohnt akzeptiert, korrigiert oder abgelehnt. Wird keine Änderung erkannt, erscheint der Hinweis \"Keine Stammdatenänderung erkannt.\" Bankverbindungen werden nie übernommen. Berechtigung: Tickets bearbeiten; die Übernahme verlangt zusätzlich das Recht, Kontakte zu bearbeiten."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zuständige und Sammelstatus (Welle 26)",
+     "id": "zustaendige-und-sammelstatus-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "In der Ticketansicht zeigt der Abschnitt Zuständige alle Bearbeiter des Tickets, die Hauptzuständigen sind gekennzeichnet. Mit Zuständigen hinzufügen wird ein weiterer Benutzer ergänzt, mit Entfernen wieder gelöst (Recht Tickets ändern). Der Sammelstatus läuft über die Sammelaktionen in der Ticketliste (Status, Bearbeiter, Team, Priorität); bei abschließendem Status ist die Erledigungsnotiz Pflicht, das Ergebnis nennt je Ticket Erfolg oder Grund der Ablehnung."
     }
    ]
   },
@@ -21136,6 +21598,16 @@
     {
      "t": "p",
      "text": "Im Vertragsdetail eines Mietvertrags erfasst der Abschnitt \"Indexklausel und Staffelmiete\" entweder die Indexvereinbarung (Indexreihe, Basisindex zum Stand der letzten Anpassung, Basismonat, Quelle) oder die Staffelstufen (Gültig ab, Nettomiete). Die Eingaben ändern die Miete nicht. Ist in den Fachlichen Regeln der Schalter Mieterhöhungsvorschläge auf Entwurf gestellt, legt der Tagesjob fällige Staffelstufen (60 Tage im Voraus) und Indexanpassungen aus freigegebenen Indexwerten als Entwurf eines Mieterhöhungsfalls an; der Abschnitt listet diese offenen Vorschläge mit Link zum Fall. Wartefrist, Wirksamkeit und Form sind dort zu prüfen. Die Indexwerte pflegt die Plattformverwaltung per CSV-Import mit Quelle und Datenstand und gibt sie frei."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Kautionsliste je Mietverhältnis (GAM-211, Welle 26)",
+     "id": "kautionsliste-je-mietverhaeltnis-gam-211-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Unter Vermietung, Kautionen (Seite `/vermietung/kautionen`, Schaltfläche auf der Seite Vermietung) steht je Mietverhältnis eine Zeile mit Mietvertrag, Objekt und Einheit, Mieter, Art, Status, Soll, Erhalten, Guthaben und offenem Betrag. Filter: Objekt, Status und \"Nur mit offenem Sollbetrag\". \"Konto und Zinsen\" blendet je Kaution das zugeordnete Anlagekonto (Bank, maskierte IBAN, Inhaber, Kontoart), den Rechtsträger des Kontos, die Zinsregel, die Summe der bestätigten Zinsgutschriften und der Entwürfe sowie den Sperrvermerk \"Kaution, nicht Objektgeld\" ein. Fehlt das Konto oder ist es nicht als getrennt angelegt gekennzeichnet, steht dort ein Prüfhinweis. Die Liste zeigt nur Datensätze, sie bucht nichts."
     }
    ]
   },
@@ -22015,6 +22487,56 @@
     {
      "t": "p",
      "text": "In der Beschlussliste zeigt der Knopf \"Folgen prüfen\" die abhängigen Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses. Ist der Beschluss angefochten, für ungültig erklärt oder nichtig, tragen die abhängigen Unterlagen das Kennzeichen \"angefochten\". Es wird nichts storniert und nichts geändert. Mit \"Prüfdatum als Frist anlegen\" tragen Sie ein Prüfdatum für eine mögliche Anfechtung als Frist ein (Datum leer lassen, wenn es aus der Fristart berechnet werden soll). Die Dauer der Anfechtungsfrist ist nicht festgelegt; das Datum ist zu verifizieren und durch einen Rechtsanwalt zu prüfen. Die Benachrichtigung \"Beschluss angefochten, Folgen prüfen\" lässt sich unter Einstellungen, Benachrichtigungen je Kanal schalten und führt zur WEG-Übersicht."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Abrechnung: Freigabeschritte, Beschlussauswahl, Schuldner und Statusdialog (Welle 26, AP15)",
+     "id": "abrechnung-freigabeschritte-beschlussauswahl-schuldner-und-statusdialog-welle-26-ap15"
+    },
+    {
+     "t": "p",
+     "text": "Die Schritte \"Ausgeben\", \"Fällig stellen\" und \"Ergebnis buchen\" der WEG-Jahresabrechnung sind mit der Freigabestufe G4 verknüpft. Solange G4 für den Mandanten geschlossen ist, bleiben die Knöpfe gesperrt und ein Sperrtext nennt den Grund; die Freigabe erteilt die Geschäftsführung. Das Buchen verlangt zusätzlich eine Bestätigung und kann nur per Storno korrigiert werden. Die Übernahme eines Wirtschaftsplans in die Sollbeträge ist keine G4-Aktion, sie verlangt eine zweite Person (Vier-Augen)."
+    },
+    {
+     "t": "p",
+     "text": "Im Schritt \"Beschluss\" wählen Sie zuerst einen bestehenden Beschluss der Beschluss-Sammlung aus. Angeboten werden beschlossene Einträge, bei vorhandener Bindung nur solche zum aktuellen Stand der Abrechnung. Einen neuen Beschluss erfassen Sie nur ausnahmsweise (Aufklappbereich), mit Beschlussdatum und Wortlaut. Ob der Beschluss zum Stand der Abrechnung passt, prüft die Schnittstelle."
+    },
+    {
+     "t": "p",
+     "text": "In der Einheitentabelle zeigt die Spalte \"Partei (Eigentümerzeitraum)\" die Eigentumszeiträume je Einheit. Bei einem Eigentumswechsel erscheint ein Hinweis. Die Zuordnung von Rückstand und Abrechnungsspitze auf Veräußerer und Erwerber ist nicht entschieden (P01) und hier nur Information."
+    },
+    {
+     "t": "p",
+     "text": "Die Rücklagenentwicklung weist die offenen Beiträge (Soll minus Ist) als eigene Zeile aus; sie sind Forderungen und keine verfügbare Liquidität. Bei einer Differenz zwischen Bankbestand und Endbestand erinnert ein Hinweis an die Erklärung in der Überleitungsrechnung. Der Code \"Übernahme aus Altsystem\" ist in der Überleitung keine Auswahl mehr, der Wert wird berechnet und nur angezeigt."
+    },
+    {
+     "t": "p",
+     "text": "In der Beschlussliste öffnet \"Status ändern\" einen Dialog für Anfechtung, Ungültigkeit, Bestandskraft oder Nichtigkeit mit Gericht, Aktenzeichen, Datum und Pflicht-Begründung. Der Statuswechsel storniert nichts automatisch; abhängige Unterlagen werden nur gekennzeichnet. Rechtsfolgen sind durch einen Rechtsanwalt zu prüfen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Veraltete Prüfpositionen im Prüfbericht und im Beiratsabschnitt (GAM-206, Welle 26)",
+     "id": "veraltete-pruefpositionen-im-pruefbericht-und-im-beiratsabschnitt-gam-206-welle-26"
+    },
+    {
+     "t": "p",
+     "text": "Sind Prüfpositionen eines Prüfauftrags veraltet (Beleg oder Buchung wurde nach der Prüfung geändert), zeigen der Abschnitt Prüfberichte und der Abschnitt Beiratszugang eine Warnung \"n Positionen sind veraltet\". Der Gesamtstatus gilt erst nach erneuter Prüfung dieser Positionen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Untergemeinschaft je Kostenposition und Zahlungsstand der Sonderumlage (Welle 26, AP21)",
+     "id": "untergemeinschaft-je-kostenposition-und-zahlungsstand-der-sonderumlage-welle-26-ap21"
+    },
+    {
+     "t": "p",
+     "text": "Kostenposition einer Untergemeinschaft: In der Hausgeldabrechnung (Entwurf) lässt sich bei einer Mehrhausanlage zu jeder Kostenposition die Untergemeinschaft wählen. Fehlt ein Beschluss oder Dokument als Grundlage, zeigt die Abrechnung einen Prüfhinweis mit den betroffenen Positionen. Die interne Freigabe wird nur gesperrt, wenn in den Einstellungen \"Untergemeinschaft nur mit belegter Grundlage freigeben\" eingeschaltet ist (Standard aus, offene Frage AP21-01)."
+    },
+    {
+     "t": "p",
+     "text": "Sonderumlage: Die Seite zeigt je Einheit und Rate Soll, Ist und Rückstand sowie die Buchungen auf dem Verwendungskonto. Nach der Übernahme kann eine Erstattung als Vorschlag mit Beschluss und Grund erfasst und wieder zurückgezogen werden, sofern die Einstellung \"Erstattungsvorschläge zur Sonderumlage\" eingeschaltet ist (Standard aus). Es wird nichts gebucht und nichts ausgezahlt; die Auszahlung über einen Zahllauf bleibt gesperrt, bis das Erstattungsverfahren entschieden ist (AP21-02, G2 und G4)."
     }
    ]
   }

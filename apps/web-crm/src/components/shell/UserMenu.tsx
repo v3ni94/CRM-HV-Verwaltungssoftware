@@ -58,7 +58,7 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-soft text-sm font-semibold text-fg shadow-xs transition duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 sm:pointer-fine:h-9 sm:pointer-fine:w-9"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-soft text-sm font-semibold text-fg shadow-xs transition duration-150 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 sm:pointer-fine:h-9 sm:pointer-fine:w-9"
       >
         {initials(name)}
       </button>

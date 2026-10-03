@@ -199,7 +199,7 @@ def test_contract_link_and_meter_transfer(client: TestClient, world: World) -> N
     result = _ok(client.post(transfer, json={"confirm": True}, headers=h))
     assert [x["item_id"] for x in result["created"]] == [matched["id"]]
     assert result["created"][0]["meter_id"] == unit_meter["id"]
-    assert result["created"][0]["value"] == "12345.678"
+    assert Decimal(result["created"][0]["value"]) == Decimal("12345.678")
     assert result["created"][0]["read_at"] == local_today().isoformat()
     assert sorted(x["reason"] for x in result["skipped"]) == ["no_meter", "no_value"]
     assert result["already_transferred"] == []

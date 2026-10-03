@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ApprovalHistory } from "@/components/accounting/ApprovalHistory";
 import { OrderActions } from "@/components/banking/OrderActions";
 import { PaymentBankConfigCard } from "@/components/banking/PaymentBankConfigCard";
+import { PaymentOrderExecution } from "@/components/banking/PaymentOrderExecution";
 import { PaymentBatchBankStatus } from "@/components/banking/PaymentBatchBankStatus";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -135,6 +136,10 @@ export default async function PaymentOrdersPage() {
                     {canApprove ? (
                       <td>
                         <PaymentBatchBankStatus batchId={String(b.id)} canApprove={canApprove} />
+                        <PaymentOrderExecution
+                          canApprove={canApprove}
+                          orders={(data ?? []).filter((o) => o.batch_id === b.id)}
+                        />
                       </td>
                     ) : null}
                   </tr>

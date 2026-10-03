@@ -231,8 +231,33 @@ class LexofficeExportLink(IdMixin, TimestampMixin, TenantMixin, Base):
 
     entity_kind: Mapped[str] = mapped_column(String(16), nullable=False)
     entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    lexoffice_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # NULL while ``status`` is ``unknown`` (GAL-201, migration 0459).
+    lexoffice_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     run_id: Mapped[uuid.UUID | None] = _fk("lexoffice_sync_run.id", nullable=True)
+    # ``exported`` (answer received) or ``unknown`` (POST timed out, maybe processed); an
+    # ``unknown`` row blocks a second create until it is reconciled (GAL-201).
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="exported", server_default="exported"
+    )
+    # Stable key per tenant, kind and entity (sha256 hex), recorded with every attempt so a
+    # repetition is recognisable in the run protocol and in Lexware support requests.
+    idempotency_key: Mapped[str | None] = mapped_column(String(64))
+    voucher_number: Mapped[str | None] = mapped_column(String(64))
+
+
+class IntegrationLiveModeSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Tenant switch per integration for productive ("live") operation (GAL-207, migration
+    0459). No row means today's behaviour: live allowed, no gate bound. Which gate a live
+    integration must be bound to is open question AP02-01 (Betreiber, G1/G2)."""
+
+    __tablename__ = "integration_live_mode"
+    __table_args__ = (Index("uq_integration_live_mode", "tenant_id", "integration", unique=True),)
+
+    integration: Mapped[str] = mapped_column(String(32), nullable=False)
+    live_allowed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    required_gate: Mapped[str | None] = mapped_column(String(4))
 
 
 class LexofficeInvoiceKindMapping(IdMixin, TimestampMixin, TenantMixin, Base):

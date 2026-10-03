@@ -19,6 +19,11 @@ from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.accounting.models import AccountCategory, ChartTemplate, LedgerAccount
 from mhvp.billing import betrkv
 from mhvp.billing.models import Statement, StatementCostItem
+from mhvp.billing.raw_responses import (
+    BillingAllocabilityListAccountsOutItem,
+    BillingAllocabilityListCatalogueOut,
+    BillingAllocabilityMapAccountOut,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.listparams import strict_query
@@ -68,7 +73,12 @@ async def _suggestions(session: AsyncSession) -> dict[str, str | None]:
     return out
 
 
-@router.get("", summary="Systemkatalog der Betriebskostenarten nach BetrKV (Entwurf)")
+@router.get(
+    "",
+    summary="Systemkatalog der Betriebskostenarten nach BetrKV (Entwurf)",
+    response_model=BillingAllocabilityListCatalogueOut,
+    dependencies=[Depends(strict_query)],
+)
 async def list_catalogue(principal: TenantPrincipal = Depends(READ)) -> dict[str, Any]:
     return {"source": betrkv.SOURCE, "items": betrkv.catalogue()}
 
@@ -77,6 +87,7 @@ async def list_catalogue(principal: TenantPrincipal = Depends(READ)) -> dict[str
     "/accounts",
     summary="Kostenkonten eines Buchungskreises mit Katalogzuordnung",
     dependencies=[Depends(strict_query)],
+    response_model=list[BillingAllocabilityListAccountsOutItem],
 )
 async def list_accounts(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -96,7 +107,11 @@ async def list_accounts(
         return [_account_out(a, suggestions.get(a.number)) for a in accounts]
 
 
-@router.put("/accounts/{account_id}", summary="Kostenkonto einer Katalogposition zuordnen")
+@router.put(
+    "/accounts/{account_id}",
+    summary="Kostenkonto einer Katalogposition zuordnen",
+    response_model=BillingAllocabilityMapAccountOut,
+)
 async def map_account(
     account_id: uuid.UUID,
     body: CostAccountMappingIn,

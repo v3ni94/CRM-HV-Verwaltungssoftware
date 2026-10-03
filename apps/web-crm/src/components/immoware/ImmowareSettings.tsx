@@ -251,6 +251,11 @@ export function ImmowareSettings({
             <input type="checkbox" checked={verifyTls} onChange={(e) => setVerifyTls(e.target.checked)} disabled={!canManage} />
             {t("verifyTls")}
           </label>
+          {!verifyTls ? (
+            <p role="alert" className="text-sm text-red-700 sm:col-span-2">
+              {t("verifyTlsWarning")}
+            </p>
+          ) : null}
           <div>
             <label htmlFor="imw-poll-minutes" className={ui.label}>
               {t("pollMinutes")}

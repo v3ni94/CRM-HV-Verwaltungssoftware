@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatEur } from "@/lib/format";
+import { centsToDecimal, sumCents } from "@/lib/money";
 
 export type PaymentsByDebtorRow = { number: string; name: string; settled: string };
 
@@ -12,7 +13,7 @@ export function PaymentsByDebtor({ rows }: { rows: PaymentsByDebtorRow[] }) {
   if (rows.length === 0) {
     return <EmptyState title={t("reports.paymentsByDebtor.empty")} />;
   }
-  const total = rows.reduce((s, r) => s + Math.round(Number(r.settled) * 100), 0) / 100;
+  const total = centsToDecimal(sumCents(rows.map((r) => r.settled)) ?? 0n);
   return (
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col gap-2 sm:hidden" data-testid="payments-by-debtor-cards">
@@ -47,7 +48,7 @@ export function PaymentsByDebtor({ rows }: { rows: PaymentsByDebtorRow[] }) {
             <tr className="font-medium">
               <td>{t("reports.paymentsByDebtor.total")}</td>
               <td className="num" data-testid="payments-by-debtor-total">
-                {formatEur(total.toFixed(2))}
+                {formatEur(total)}
               </td>
             </tr>
           </tfoot>

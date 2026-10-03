@@ -20,6 +20,16 @@ Each implemented rule gets its own file `docs/rules/<ID>.md` with:
 | Implementation | modules, migrations, rule version |
 | Change reason | why the rule was added or changed, with date and approver |
 
+## Formate und Nicht-Regeln (Nachtrag 03.10.2026, GAM-809)
+
+Zwei Formate bestehen nebeneinander: Tabelle "Field | Content" beziehungsweise "Feld | Inhalt"
+und Abschnitte mit Überschriften (Geltungsbereich, Quellenstatus, Abnahmefall, Änderungsgrund).
+Beide gelten, sofern die fünf Pflichtfelder (ID, Geltungsbereich, Quellenstatus, Abnahmefall,
+Änderungsgrund) auffindbar sind; englische und deutsche Feldnamen sind gleichwertig.
+Registerdateien ohne Regelformat sind keine Regeln: `GLOSSAR-ZUORDNUNG.md`,
+`V-STATUSABGLEICH-19-1.md`, `anhang-e-register.md`. Geprüft wird das durch
+`apps/api/tests/unit/test_gam809_rules_register.py`.
+
 ## Index
 
 Status values: `specified, not implemented`, `implemented, not accepted`, `accepted`
@@ -123,53 +133,53 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [B07](B07.md) | Stichtagswahrheit | 7.1 | implemented, not accepted |
 | [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung (Transferpaar D04 seit 28.09.2026) | 7.1 | implemented, not accepted |
 | [B09](B09.md) | Abstimmung | 7.1 | implemented, not accepted |
-| A01 | Ergebnisstand | 7.6 | implemented, not accepted (M17, rule version by period start in `statement_snapshot.rule_version`, D28 tested; document version and difference report open) |
-| A02 | Betriebskosten Miete | 7.6 | implemented, not accepted (M17, `test_m17_operating_costs.py`; D22: account allocation category and posted split are checked, cost type schema stays M17-01) |
-| A03 | Schlüssel | 7.6 | implemented, not accepted (M17, time weighted keys; D21: SEV refuses template keys, key source in position basis, key facts in the snapshot) |
-| A04 | Vorauszahlungen und Fristen | 7.6 | implemented, not accepted (M17, advances and deadline orientation; D23: access day checked at issue, never the calculation day) |
-| A05 | Nutzerwechsel, Leerstand, Heizkosten | 7.6 | implemented, not accepted (M17, vacancy share to owner, heating external only) |
+| [A01](M14-04.md) | Ergebnisstand | 7.6 |  implemented, not accepted (M17, rule version by period start in `statement_snapshot.rule_version`, D28 tested; document version and difference report open) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M14-04](M14-04.md), [M17-03-vorschussregel](M17-03-vorschussregel.md), [M17-10-ergebnis-zugang-einsicht](M17-10-ergebnis-zugang-einsicht.md)) |
+| [A02](M17-01-betrkv-katalog.md) | Betriebskosten Miete | 7.6 |  implemented, not accepted (M17, `test_m17_operating_costs.py`; D22: account allocation category and posted split are checked, cost type schema stays M17-01) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M17-01-betrkv-katalog](M17-01-betrkv-katalog.md)) |
+| [A03](M17-01-betrkv-katalog.md) | Schlüssel | 7.6 |  implemented, not accepted (M17, time weighted keys; D21: SEV refuses template keys, key source in position basis, key facts in the snapshot) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M17-01-betrkv-katalog](M17-01-betrkv-katalog.md)) |
+| [A04](M17-03-vorschussregel.md) | Vorauszahlungen und Fristen | 7.6 |  implemented, not accepted (M17, advances and deadline orientation; D23: access day checked at issue, never the calculation day) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M17-03-vorschussregel](M17-03-vorschussregel.md), [M17-10-ergebnis-zugang-einsicht](M17-10-ergebnis-zugang-einsicht.md)) |
+| [A05](M17-10-ergebnis-zugang-einsicht.md) | Nutzerwechsel, Leerstand, Heizkosten | 7.6 |  implemented, not accepted (M17, vacancy share to owner, heating external only) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M17-10-ergebnis-zugang-einsicht](M17-10-ergebnis-zugang-einsicht.md)) |
 | [A06](A06-owner-statement.md) | Eigentümerabrechnung Miete/SEV | 7.6 | implemented, not accepted (M17 task A25, `mhvp.billing.owner_statement`, `test_m17_owner_statement.py`; PDF behind G3) |
 | [S69-01](S69-01-statement-status-model.md) | Einheitliches Statusmodell der Abrechnungsobjekte (Eigentümer- und Rücklagenabrechnung) | 6.9.3, E03 | implemented, not accepted (Welle 5 Paket T11, Migration 0295; issued, due, posted hinter G3 bzw. G4) |
-| A07 | Bedienung | 7.6 | specified, not implemented |
-| W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
+| [A07](A07-tenant-letters.md) | Bedienung | 7.6 | implemented, not accepted (Nachtrag 03.10.2026, GAM-806: Status wie in Zeile A07-tenant-letters, vorher widersprüchlich) |
+| [W01](M24-02-vermoegensbericht.md) | Eigene Gemeinschaft | 7.8 |  implemented (M24), ledger check (Nachtrag 03.10.2026, GAM-808: beschrieben in [M24-02-vermoegensbericht](M24-02-vermoegensbericht.md)) |
 | [W02](W02-wirtschaftsplan.md) | Wirtschaftsplan | 7.8 | implemented (M24; takeover into the payment plans with preview and second person 29.09.2026, `mhvp.hoa.routers.apply_plan`); statements behind G4, receivable posting behind G1 |
 | [W03](W03-cost-allocation.md) | Kostenverteilung | 7.8 | implemented, not accepted (M24, `mhvp.hoa.calc.unit_weights`; D18 partial scope check in `mhvp.hoa.package`) |
 | [W04](W04-cash-flow-reconciliation.md) | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | implemented, not accepted (A60: Gesamtgeldfluss and bridge in `mhvp.hoa.calc.cash_flow_reconciliation`, unexplained difference blocks the package; migration year open) |
-| W05 | Abrechnungsspitze und Rückstände | 7.8 | implemented (M24), [W05](W05-hoa-result.md) |
-| W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md); D54 contested resolution locks the posting, reverses nothing |
+| [W05](W05-hoa-result.md) | Abrechnungsspitze und Rückstände | 7.8 |  implemented (M24), [W05](W05-hoa-result.md) (Nachtrag 03.10.2026, GAM-808: beschrieben in [W05-hoa-result](W05-hoa-result.md)) |
+| [W06](W06-resolution.md) | Beschluss und Buchung | 7.8 |  implemented (M24), [W06](W06-resolution.md); D54 contested resolution locks the posting, reverses nothing (Nachtrag 03.10.2026, GAM-808: beschrieben in [W06-resolution](W06-resolution.md)) |
 | W07 | Eigentümerwechsel | 7.8 | open, M24-01 |
-| W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 and D19 tested (bank balance shown apart, no settlement entry) |
-| W09 | Sonderumlagen und Maßnahmen | 7.8 | implemented, not accepted (special levy and amendments per W09-01, D20 partial refund, `test_w09_special_levy.py`) |
+| [W08](AE07-01-ruecklagenplan.md) | Erhaltungsrücklagen | 7.8 |  implemented (M24), D03 and D19 tested (bank balance shown apart, no settlement entry) (Nachtrag 03.10.2026, GAM-808: beschrieben in [AE07-01-ruecklagenplan](AE07-01-ruecklagenplan.md), [M24-W3-ruecklage-rhythmus](M24-W3-ruecklage-rhythmus.md)) |
+| [W09](AP21-untergemeinschaft-sonderumlage.md) | Sonderumlagen und Maßnahmen | 7.8 |  implemented, not accepted (special levy and amendments per W09-01, D20 partial refund, `test_w09_special_levy.py`) (Nachtrag 03.10.2026, GAM-808: beschrieben in [AP21-untergemeinschaft-sonderumlage](AP21-untergemeinschaft-sonderumlage.md)) |
 | [W10](W10-loans-insurance-measures.md) | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | implemented, not accepted (A59: `mhvp.hoa.finance`, items only with journal entry reference; treatment in the statement open, M24-03) |
-| W11 | Vermögensbericht | 7.8 | implemented, not accepted ([M24-02](M24-02-vermoegensbericht.md): `mhvp.hoa.assets`, report per date with reconciliation and PDF draft behind G4); structure open, M24-02 |
-| W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
-| W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules per subject kind since 26.09.2026, see [M25-01](M25-01-mehrheitsregeln.md); minutes draft A62 |
-| PÜ01 | Vollständigkeit | 7.9.1 | implemented, not accepted (M14 findings; recipient and reference hints, `test_pue_invoice_checks.py`) |
-| PÜ02 | Sachliche Prüfung | 7.9.1 | implemented, not accepted (factual review step M14; order, contract, resolution, budget, recurring and quantity findings, [PU02-SACHLICH](PU02-sachliche-pruefung.md)) |
-| PÜ03 | Rechnerische/steuerliche Prüfung | 7.9.1 | implemented, not accepted (M14 arithmetic findings and review step) |
-| PÜ04 | Dubletten/Betrugsrisiko | 7.9.1 | implemented, not accepted (number, amount and day, same document, IBAN confirmation) |
-| PÜ05 | Prüfentscheidungen | 7.9.1 | implemented, not accepted (M14 review steps per version, four eyes release) |
-| PÜ06 | Prüfauftrag | 7.9.2 | implemented, not accepted (M25, audit engagement) |
-| PÜ07 | Nachvollziehbare Navigation | 7.9.2 | partly implemented (M25, items link entries and documents) |
-| PÜ08 | Prüfen und nachfordern | 7.9.2 | implemented, not accepted (M25, note, question, answer, outdated on new version) |
-| PÜ09 | Aussagekräftiger Abschlussbericht | 7.9.2 | implemented, not accepted (M25, versioned report) |
-| PÜ10 | Eigentümer | 7.9.3 | implemented, not accepted (M21 access matrix) |
-| PÜ11 | Mieter | 7.9.3 | implemented, not accepted (M21 access matrix) |
-| PÜ12 | Praktischer Zugang | 7.9.3 | specified, not implemented |
-| PÜ13 | Protokoll ohne Rechtsfiktion | 7.9.3 | partly implemented (M21, M23 logs); request log open, M25-04 |
-| H01 | Messdienst oder Eigenberechnung | 7.10 | implemented, not accepted (M17, external heating statement required) |
-| H02 | HeizkostenV | 7.10 | specified, not implemented |
+| [W11](M24-02-vermoegensbericht.md) | Vermögensbericht | 7.8 |  implemented, not accepted ([M24-02](M24-02-vermoegensbericht.md): `mhvp.hoa.assets`, report per date with reconciliation and PDF draft behind G4); structure open, M24-02 (Nachtrag 03.10.2026, GAM-808: beschrieben in [M24-02-vermoegensbericht](M24-02-vermoegensbericht.md), [AA07-vermoegensbericht-sondererwerb](AA07-vermoegensbericht-sondererwerb.md)) |
+| [W12](W04-cash-flow-reconciliation.md) | Abrechnungspaket | 7.8 |  implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) (Nachtrag 03.10.2026, GAM-808: beschrieben in [W04-cash-flow-reconciliation](W04-cash-flow-reconciliation.md), [M24-W3-ruecklage-rhythmus](M24-W3-ruecklage-rhythmus.md)) |
+| [W13](M25-01-mehrheitsregeln.md) | Beirat und Versammlung | 7.8 |  implemented, not accepted (M25); majority rules per subject kind since 26.09.2026, see [M25-01](M25-01-mehrheitsregeln.md); minutes draft A62 (Nachtrag 03.10.2026, GAM-808: beschrieben in [M25-01-mehrheitsregeln](M25-01-mehrheitsregeln.md), [AA06-versammlung-beschluss-sammlung](AA06-versammlung-beschluss-sammlung.md)) |
+| [PÜ01](M14-PU-W2-rechnungspruefung.md) | Vollständigkeit | 7.9.1 |  implemented, not accepted (M14 findings; recipient and reference hints, `test_pue_invoice_checks.py`) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md)) |
+| [PÜ02](PU02-sachliche-pruefung.md) | Sachliche Prüfung | 7.9.1 |  implemented, not accepted (factual review step M14; order, contract, resolution, budget, recurring and quantity findings, [PU02-SACHLICH](PU02-sachliche-pruefung.md)) (Nachtrag 03.10.2026, GAM-808: beschrieben in [PU02-sachliche-pruefung](PU02-sachliche-pruefung.md), [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md)) |
+| [PÜ03](M14-02.md) | Rechnerische/steuerliche Prüfung | 7.9.1 |  implemented, not accepted (M14 arithmetic findings and review step) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M14-02](M14-02.md), [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md)) |
+| [PÜ04](M14-PU-W2-rechnungspruefung.md) | Dubletten/Betrugsrisiko | 7.9.1 |  implemented, not accepted (number, amount and day, same document, IBAN confirmation) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md)) |
+| [PÜ05](M14-PU-W2-rechnungspruefung.md) | Prüfentscheidungen | 7.9.1 |  implemented, not accepted (M14 review steps per version, four eyes release) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md)) |
+| [PÜ06](M21-07.md) | Prüfauftrag | 7.9.2 |  implemented, not accepted (M25, audit engagement) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M21-07](M21-07.md), [P08-pruefung-einsicht](P08-pruefung-einsicht.md)) |
+| [PÜ07](M21-07.md) | Nachvollziehbare Navigation | 7.9.2 |  partly implemented (M25, items link entries and documents) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M21-07](M21-07.md)) |
+| [PÜ08](M21-07.md) | Prüfen und nachfordern | 7.9.2 |  implemented, not accepted (M25, note, question, answer, outdated on new version) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M21-07](M21-07.md), [M25-W3-einsicht-pruefrolle](M25-W3-einsicht-pruefrolle.md)) |
+| [PÜ09](M21-07.md) | Aussagekräftiger Abschlussbericht | 7.9.2 |  implemented, not accepted (M25, versioned report) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M21-07](M21-07.md)) |
+| [PÜ10](M21-03.md) | Eigentümer | 7.9.3 |  implemented, not accepted (M21 access matrix) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M21-03](M21-03.md), [M21-06](M21-06.md)) |
+| [PÜ11](M21-06.md) | Mieter | 7.9.3 |  implemented, not accepted (M21 access matrix) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M21-06](M21-06.md), [M17-10-ergebnis-zugang-einsicht](M17-10-ergebnis-zugang-einsicht.md)) |
+| [PÜ12](A61-einsicht.md) | Praktischer Zugang | 7.9.3 |  implemented, not accepted (Nachtrag 03.10.2026, GAM-808: Protokoll der Einsichtsanfragen außerhalb des Portals, [A61-einsicht](A61-einsicht.md); Status wie dort) |
+| [PÜ13](A61-einsicht.md) | Protokoll ohne Rechtsfiktion | 7.9.3 |  partly implemented (M21, M23 logs); request log open, M25-04 (Nachtrag 03.10.2026, GAM-808: beschrieben in [A61-einsicht](A61-einsicht.md), [M21-07](M21-07.md)) |
+| [H01](M17-02-heizkosten.md) | Messdienst oder Eigenberechnung | 7.10 |  implemented, not accepted (M17, external heating statement required) (Nachtrag 03.10.2026, GAM-808: beschrieben in [M17-02-heizkosten](M17-02-heizkosten.md)) |
+| [H02](M17-02-heizkosten.md) | HeizkostenV | 7.10 |  implemented, not accepted (Nachtrag 03.10.2026, GAM-808: Status wie in Zeile M17-02, beschrieben in [M17-02-heizkosten](M17-02-heizkosten.md)) |
 | [H03](H03-verbrauchsinformation.md) | Laufende Pflichten (Verbrauchsinformation § 6a) | 7.10 | implemented, not accepted (29.09.2026; Inhalte des § 6a Abs. 3 zu verifizieren, Mieter sehen nichts bis zur Vorlagenbestätigung) |
 | [H04](H04-co2.md) | CO₂-Regeln mit Geltungsstand | 7.10 | implemented, not accepted (M17, CO₂ split) |
 | [M17-02](M17-02-heizkosten.md) | Heizkostenabrechnung als Entwurf (H02, H04, D25 bis D27) | 7.10 | implemented, not accepted (M17-02, 27.09.2026; Werte als Konfiguration zu prüfen, Ausgabe hinter G3) |
 | H05 | Bereits veröffentlichte spätere Regeln | 7.10 | partial (01.10.2026: Prüfpunkte 2028/2029 als Entwurf im Regelregister, Berechnung unverändert, siehe AA12-03) |
 | [H06](AI18-01.md) | § 35a | 7.10 | implemented behind switch (Schalter Rechnungs- oder Zahlungsdatum, Standard konservativ), decision open (AI17-01), siehe AI18-01 |
-| S01 | Steuerlicher Kontext | 7.11 | specified, not implemented |
-| S02 | E-Rechnung | 7.11 | specified, not implemented |
-| S03 | Original und Verarbeitung | 7.11 | specified, not implemented |
-| S04 | Differenzierte Fristen | 7.11 | specified, not implemented |
-| S05 | WEG-Dauerunterlagen, Sperren und Löschung | 7.11 | specified, not implemented |
-| S06 | Datenschutz und Auskunft | 7.11 | specified, not implemented |
+| [S01](AA12-regelregister.md) | Steuerlicher Kontext | 7.11 |  specified, not implemented (Nachtrag 03.10.2026, GAM-808: verwandte Umsetzung in [AA12-regelregister](AA12-regelregister.md); Status gegen den Code zu prüfen, Zeile bleibt unverändert) |
+| [S02](M14-PU-W2-rechnungspruefung.md) | E-Rechnung | 7.11 |  specified, not implemented (Nachtrag 03.10.2026, GAM-808: verwandte Umsetzung in [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md); Status gegen den Code zu prüfen, Zeile bleibt unverändert) |
+| [S03](M14-PU-W2-rechnungspruefung.md) | Original und Verarbeitung | 7.11 |  specified, not implemented (Nachtrag 03.10.2026, GAM-808: verwandte Umsetzung in [M14-PU-W2-rechnungspruefung](M14-PU-W2-rechnungspruefung.md); Status gegen den Code zu prüfen, Zeile bleibt unverändert) |
+| [S04](U11-retention-sperren.md) | Differenzierte Fristen | 7.11 |  specified, not implemented (Nachtrag 03.10.2026, GAM-808: verwandte Umsetzung in [U11-retention-sperren](U11-retention-sperren.md), [AP14-auskunft-protokolle](AP14-auskunft-protokolle.md); Status gegen den Code zu prüfen, Zeile bleibt unverändert) |
+| [S05](U11-retention-sperren.md) | WEG-Dauerunterlagen, Sperren und Löschung | 7.11 |  specified, not implemented (Nachtrag 03.10.2026, GAM-808: verwandte Umsetzung in [U11-retention-sperren](U11-retention-sperren.md), [AC07-auskunft-loeschung](AC07-auskunft-loeschung.md), [AE33-papierkorb-auskunft](AE33-papierkorb-auskunft.md); Status gegen den Code zu prüfen, Zeile bleibt unverändert) |
+| [S06](AC07-auskunft-loeschung.md) | Datenschutz und Auskunft | 7.11 |  specified, not implemented (Nachtrag 03.10.2026, GAM-808: verwandte Umsetzung in [AC07-auskunft-loeschung](AC07-auskunft-loeschung.md), [AC06-einwilligungen](AC06-einwilligungen.md), [AP14-auskunft-protokolle](AP14-auskunft-protokolle.md); Status gegen den Code zu prüfen, Zeile bleibt unverändert) |
 | [A07-tenant-letters](A07-tenant-letters.md) | Bedienung: Anschreiben Guthaben/Nachzahlung und Vorauszahlungsvorschlag je Mieter | 7.6 A07 | implemented, not accepted |
 | [M9-06](M9-06-tagesjobs.md) | Tagesjobs Tagesübersicht und Fristenliste: Orientierung, Vorfrist aus Einstellungen, keine Rechtsfristen | M9, 15.1 | implemented, not accepted |
 | [A61](A61-einsicht.md) | Einsichtsanfragen außerhalb des Portals protokollieren | 14, M25 (PÜ12, PÜ13) | implemented, not accepted |
@@ -221,6 +231,8 @@ Index checked against the files in this folder on 27.09.2026: every rule file ha
 | [P10-TAX](P10-steuerentwurf.md) | USt-/Vorsteuerübersicht als Entwurf, EÜR- und USt-Kennzeichen je Konto, Prüfpunkte S711-03 und S711-05 | Offene Entscheidung (V8, P03) | keiner | Lückenliste 30.09.2026, Entscheidung 11 a | [P10-steuerentwurf.md](P10-steuerentwurf.md) |
 | [S711-11](S711-11-regelversion.md) | Regelversionsregister mit Wirksamkeitsdatum | Fachliche Umsetzung (7.12) | keiner | Lückenliste 30.09.2026, Entscheidung 11 a | [S711-11-regelversion.md](S711-11-regelversion.md) |
 | [M17-10](M17-10-ergebnis-zugang-einsicht.md) | Ergebnis je Vertrag mit Kostenaufstellung, Zugang je Mieter, Differenzbericht, Belegeinsicht, Ergebnisbuchung als Entwurf hinter G3, Ersatzprozess Verbrauchsinformation | Fachliche Umsetzung (6.5, 7.6, PÜ11) | D23, D26 | Lückenliste 30.09.2026 | [M17-10-ergebnis-zugang-einsicht.md](M17-10-ergebnis-zugang-einsicht.md) |
+| [M17-11](M17-11-schluesselquelle.md) | Quelle und Bestätigung je Verteilungsschlüssel (Sperre bei vermietetem Wohnungseigentum, Schalter allocation_key_confirmation_required), Art je Verbrauchswert mit Ablesedatum, Zugangsdatum beim Erteilen | Fachliche Umsetzung (6.2, 7.6, 7.10) | D21, D23, D25 | Lückenanalyse GAM 03.10.2026, AP17-01 | [M17-11-schluesselquelle.md](M17-11-schluesselquelle.md) |
+| [AP21](AP21-untergemeinschaft-sonderumlage.md) | Untergemeinschaft je WEG-Kostenposition mit Prüfhinweis (Sperre der internen Freigabe nur mit Schalter sub_community_basis_lock), Ist und Rückstand je Rate der Sonderumlage, Erstattung als Vorschlag (Schalter levy_refund_proposals) | Fachliche Umsetzung (6.5, W03, W09) | D18, D20 | Lückenanalyse GAM 03.10.2026, AP21-01, AP21-02 | [AP21-untergemeinschaft-sonderumlage.md](AP21-untergemeinschaft-sonderumlage.md) |
 | [M2-05](M2-05-passwortregeln.md) | Passwort 12 bis 128 Zeichen, Offline-Prüfung gegen kompromittierte Passwörter | Produktschutz (3.4), Entscheidung 9 a | implemented, not accepted |
 | [M2-02](M2-02-objektzuordnung.md) | Objektzuordnung je Mitgliedschaft (Speicherung, Pflege, Prüffunktionen; Domänenfilter offen) | Produktschutz (3.4) | partial |
 | [M2-03](M2-03-webauthn.md) | Passkeys (WebAuthn) optional, vorbereitet, nicht freigeschaltet | Produktschutz (3.4) | superseded by S16-01 |
@@ -394,4 +406,10 @@ Status der bisher nicht verlinkten Dateien ist dem jeweiligen Dateikopf zu entne
 | [Anhang-E-Register](anhang-e-register.md) | Belegregister der entschiedenen Konflikte E01 bis E16 mit Umsetzungsstelle, Test und Status (GAK-404) | Anhang E | implemented, not accepted |
 | [AN18-mieterhoehung-sperre-vorschlaege-interessenten](AN18-mieterhoehung-sperre-vorschlaege-interessenten.md) | Sperrvorschlag nach Mieterhöhung mit Bestätigung, Zahlungsgrund je Begründung, Rechenkern Staffel und Index, Löschvorschlag Interessentenkontakt, Versionsverlauf Vertrag (GAK-201, 202, 203, 207) | 6.3, 18 M26 | implemented, not accepted |
 | [AO03-indexklausel-staffel-vpi-vorschlaege](AO03-indexklausel-staffel-vpi-vorschlaege.md) | Indexklausel und Staffel am Mietvertrag, Plattformtabelle Verbraucherpreisindex (Import, Freigabe), Tagesjob legt nur Entwurfsvorschläge an (GAK-203) | 6.3, 18 M26 | implemented, not accepted |
+| [AO04-sonderumlage-spalten](AO04-sonderumlage-spalten.md) | Spalten Erlöskonto und Stichtag der Sonderumlage (GAK-205, Migration 0457) | 7.8 W09 | implemented, not accepted (Stichtag bei Eigentümerwechsel offen, AN19-03) |
+| [AO07-lastschrift-vier-augen](AO07-lastschrift-vier-augen.md) | Ersteller eines Lastschriftlaufs darf nicht selbst freigeben, Mandantenschalter Standard aus (GAK-106, Migration 0458) | 7.5 M15, G2 | implemented behind switch, decision open (AN17-01) |
 | [AN15-ruecklastschrift-ausbuchung](AN15-ruecklastschrift-ausbuchung.md) | Rücklastschrift mit Rückgabedatum, Gebühr und Beleg ohne Überschreiben des Einzugs; Forderungsausbuchung als Vorschlag mit Vier-Augen-Freigabe hinter Schalter und G1, stichtagsbezogen (GAK-101, GAK-104) | 7.1, 7.3 | implemented, not accepted |
+| [AP05-nachweis-schutztrigger-checks](AP05-nachweis-schutztrigger-checks.md) | Insert-only-Trigger für Freigaben, Migrationsbuchungszeilen, Abrechnungsereignisse, Rücklagenbewegungen und Bankfelder; Urheberspalten; CHECKs für Portalfreigaben, Beschlusspflicht und aktive Bankregeln (GAL-104 bis GAL-107) | 6, 6.9.3, 6.9.4, 6.9.6, 7.1 | implemented, not accepted |
+| [AP13-loeschung-pruefpfad-widerspruch](AP13-loeschung-pruefpfad-widerspruch.md) | Prüfpfad ohne Werte nach Kontaktlöschung und nicht sperrende Kommunikationsbezüge als Schalter (Standard aus), neue Datenarten der Löschprofile nur gezählt, Widerspruch gegen KI und SMS (GAM-401, GAM-404 bis GAM-406) | 7.11 S06, 16 | implemented, not accepted |
+| [AP14-auskunft-protokolle](AP14-auskunft-protokolle.md) | Auskunftsexport je Quelle mit Schaltern, Verarbeitungsprotokoll und Empfänger, Schadenstool Weitergabeprüfung, Webhook Übermittlungsprotokoll und Feldauswahl, Pseudonymisierung in Logs, Zugriffsprotokoll hinter Schalter, Klasse Buchungsbelege ohne Frist (GAM-402, 403, 407 bis 411) | 7.11 S04, S06, 16 | implemented, not accepted |
+| [AP02-lexoffice-export-live-modus](AP02-lexoffice-export-live-modus.md) | lexoffice Export ohne Doppelbeleg nach Zeitüberschreitung, Basisadresse nur Lexware, Fehler ohne Fremddaten, Live-Betrieb je Schnittstelle als Schalter (GAL-201 bis GAL-203, GAL-207, GAM-710) | 12, 0.1.1 | implemented, not accepted |

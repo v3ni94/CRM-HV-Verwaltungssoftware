@@ -14,6 +14,10 @@ them machine readable for integrators and generators:
   401 and 403 for authenticated routes, 404 for routes with path parameters, 409 for
   writing routes, 422 for writing routes without a generated 422, 429 everywhere (global
   rate limit). Existing responses of an operation are never overwritten.
+* GAL-205: the 429 problem carries ``Retry-After`` and ``X-RateLimit-*`` headers
+  (``mhvp.core.ratelimit``); authenticated writing operations document the optional
+  ``Idempotency-Key`` header and the ``Idempotent-Replayed`` answer header
+  (``mhvp.core.idempotency``), so generated clients see the contract.
 """
 
 from __future__ import annotations
@@ -49,6 +53,40 @@ _STANDARD: dict[str, tuple[str, str]] = {
     "429": ("TooManyRequests", "Anfragelimit überschritten."),
 }
 _WRITE = {"POST", "PUT", "PATCH", "DELETE"}
+
+HEADERS_COMPONENT: dict[str, Any] = {
+    "X-RateLimit-Limit": {
+        "description": "Anfragen je Zeitfenster für diese Identität.",
+        "schema": {"type": "integer"},
+    },
+    "X-RateLimit-Remaining": {
+        "description": "Verbleibende Anfragen im aktuellen Zeitfenster.",
+        "schema": {"type": "integer"},
+    },
+    "X-RateLimit-Reset": {
+        "description": "Sekunden bis zum Ende des Zeitfensters.",
+        "schema": {"type": "integer"},
+    },
+    "Retry-After": {
+        "description": "Sekunden bis zur nächsten zulässigen Anfrage.",
+        "schema": {"type": "integer"},
+    },
+    "Idempotent-Replayed": {
+        "description": "true, wenn die gespeicherte Antwort zu einem Idempotency-Key "
+        "wiederholt wurde.",
+        "schema": {"type": "string", "enum": ["true"]},
+    },
+}
+IDEMPOTENCY_PARAMETER: dict[str, Any] = {
+    "name": "Idempotency-Key",
+    "in": "header",
+    "required": False,
+    "description": "Optionaler Schlüssel je Mandant und Identität (24 Stunden): eine "
+    "Wiederholung liefert die gespeicherte Antwort, ein abweichender Inhalt 422, ein "
+    "gleichzeitiger Aufruf 409.",
+    "schema": {"type": "string", "maxLength": 255},
+}
+_RATE_HEADERS = ("Retry-After", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset")
 _AUTH_ROOT = "get_principal"
 # Entry points imported locally inside functions (not visible as globals).
 _AUTH_NAMES = frozenset({_AUTH_ROOT, "portal_user", "require_permission"})
@@ -56,10 +94,25 @@ _AUTH_NAMES = frozenset({_AUTH_ROOT, "portal_user", "require_permission"})
 
 def _responses_component() -> dict[str, Any]:
     ref = {"$ref": "#/components/schemas/Problem"}
-    return {
+    responses: dict[str, Any] = {
         name: {"description": text, "content": {PROBLEM_CONTENT_TYPE: {"schema": ref}}}
         for name, text in _STANDARD.values()
     }
+    responses[_STANDARD["429"][0]]["headers"] = {
+        h: {"$ref": f"#/components/headers/{h}"} for h in _RATE_HEADERS
+    }
+    return responses
+
+
+def _document_idempotency(op: dict[str, Any]) -> None:
+    params = op.setdefault("parameters", [])
+    if not any(p.get("name") == "Idempotency-Key" and p.get("in") == "header" for p in params):
+        params.append({"$ref": "#/components/parameters/IdempotencyKey"})
+    for status, response in op.get("responses", {}).items():
+        if str(status).startswith("2") and "$ref" not in response:
+            response.setdefault("headers", {}).setdefault(
+                "Idempotent-Replayed", {"$ref": "#/components/headers/Idempotent-Replayed"}
+            )
 
 
 def _reaches_auth(fn: Any, seen: set[int], depth: int = 0) -> bool:
@@ -125,6 +178,8 @@ def install_openapi_docs(app: Any) -> None:
             schemas.setdefault(name, sub)
         components.setdefault("securitySchemes", {}).update(SECURITY_SCHEMES)
         components.setdefault("responses", {}).update(_responses_component())
+        components.setdefault("headers", {}).update(HEADERS_COMPONENT)
+        components.setdefault("parameters", {})["IdempotencyKey"] = IDEMPOTENCY_PARAMETER
         cache: dict[int, bool] = {}
         paths = schema.get("paths", {})
         for path, route in _walk_routes(app.routes):
@@ -150,6 +205,8 @@ def install_openapi_docs(app: Any) -> None:
                         responses[status] = {
                             "$ref": f"#/components/responses/{_STANDARD[status][0]}"
                         }
+                if auth and method in _WRITE:
+                    _document_idempotency(op)
         return schema
 
     app.openapi = custom_openapi

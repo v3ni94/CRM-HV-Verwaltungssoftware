@@ -30,7 +30,7 @@ from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 from tests.integration.test_m5_contracts import _party
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("fixed_reference_day")]
 A = "/api/v1/accounting"
 C = "/api/v1/accounting/credit-payables"
 OWN = "DE02120300000000202051"

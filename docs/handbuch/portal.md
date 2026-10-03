@@ -63,26 +63,41 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
 
 ## Seiten je Rolle
 
-| Seite | Mieter | Eigentümer | Beirat | Dienstleister |
-| --- | --- | --- | --- | --- |
-| Übersicht | ja | ja | ja | ja |
-| Dokumente | ja | ja | nein | nein |
-| Meldungen | ja | ja | nein | nein |
-| Kontoauszug | ja | ja | nein | nein |
-| Zählerstand | ja | ja | nein | nein |
-| Verbrauch | ja, nach Freigabe | ja, nach Freigabe | nein | nein |
-| Datenänderung | ja | ja | nein | nein |
-| Aushänge | ja | ja | nein | nein |
-| Formulare | je Zielgruppe | je Zielgruppe | nein | nein |
-| Beschlüsse | nein | ja | nein | nein |
-| Ansprechpartner | nein | ja | nein | nein |
-| Hausgeldkonto | nein | ja | nein | nein |
-| Prüfungsraum | nein | nein | ja | nein |
-| Aufträge | nein | nein | nein | ja |
-| Übergabeprotokolle | wenn freigegeben | wenn freigegeben | nein | nein |
+| Seite | Mieter | Eigentümer | Beirat | Dienstleister | Bedingung |
+| --- | --- | --- | --- | --- | --- |
+| Übersicht | ja | ja | ja | ja |  |
+| Dokumente | ja | ja | nein | nein |  |
+| Meldungen | ja | ja | nein | nein |  |
+| Kontoauszug | ja | ja | nein | nein |  |
+| Zählerstand | ja | ja | nein | nein |  |
+| Verbrauch | ja, nach Freigabe | ja, nach Freigabe | nein | nein | nach Freigabe |
+| Datenänderung | ja | ja | nein | nein |  |
+| Aushänge | ja | ja | nein | nein |  |
+| Formulare | je Zielgruppe | je Zielgruppe | nein | nein | je Zielgruppe |
+| Beschlüsse | nein | ja | nein | nein |  |
+| Ansprechpartner | nein | ja | nein | nein |  |
+| Hausgeldkonto | nein | ja | nein | nein |  |
+| Prüfungsraum | nein | nein | ja | nein | Beiratsrolle |
+| Aufträge | nein | nein | nein | ja |  |
+| Übergabeprotokolle | wenn freigegeben | wenn freigegeben | nein | nein | wenn freigegeben |
+| Versammlungen | nein | ja | nein | nein | Eigentümerrolle; Online-Teilnahme nur bei freigegebener Online-Versammlung (AD06) |
+| Umlaufbeschlüsse | nein | ja | nein | nein | Eigentümerrolle |
+| Wirtschaftsplan | nein | ja | nein | nein | Eigentümerrolle |
+| Hausgeldabrechnung | nein | ja | nein | nein | Eigentümerrolle, ausgegebene Abrechnung |
+| Eigentümerabrechnung | nein | ja | nein | nein | Eigentümerrolle, Portalfunktion eingeschaltet (Standard aus) und Freigabestufe G3 |
+| Belegeinsicht | nein | ja | nein | nein | Eigentümerrolle |
+| Eigentum | nein | ja | nein | nein | Eigentümerrolle |
+| Reporting | nein | ja, Sondereigentumsverwaltung | nein | nein | Mandantenschalter Mieterträge im Portal |
+| Nebenkostenabrechnung | ja | nein | nein | nein | Mandantenschalter unter Fachliche Regeln, ausgegebene Abrechnung des eigenen Vertrags; Aufruf über die Startkachel |
+| Lastschrift | ja | ja | nein | nein | Vertrag vorhanden |
+| Rahmenverträge | nein | nein | nein | ja | Dienstleisterrolle |
+| Vorlagen (Beiratsvorlagen) | nein | ja | ja | nein | Eigentümer oder Beirat |
+| Vertretung | ja | ja | nein | nein | nur mit Rolle Vertreter |
+| Assistent | ja | ja | nein | nein | Mandantenschalter Chat-Bot |
+| Sicherheit | ja | ja | ja | ja | immer |
 
 Ein Kontakt kann mehrere Rollen tragen (zum Beispiel Eigentümer und Beirat); die Seiten
-addieren sich.
+addieren sich. Stand der Tabelle 03.10.2026 (GAL-313), abgeleitet aus der Portalnavigation; maßgeblich ist, was die Navigation je Zugang anzeigt.
 
 ## Benachrichtigungen
 
@@ -516,3 +531,7 @@ Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die
 ## Fotopflicht beim Zählerstand einstellen (AN02)
 
 Unter Einstellungen, Portalformulare legen Sie mit "Foto beim Zählerstand" fest, ob beim Melden eines Zählerstands ein Foto erwartet wird: kein Foto erwartet, Hinweis bei fehlendem Foto (Standard) oder Foto ist Pflicht. Bei Pflicht lehnt das Portal eine Meldung ohne Foto ab. In der Vorschlagsprüfung am Kontakt sehen Sie zu jeder Zählerstandsmeldung die beigefügten Fotos als Link zur Dokumentansicht und den Vermerk, wenn kein Foto beigefügt wurde. Die Entscheidung über eine Fotopflicht liegt beim Betreiber (AM06-01).
+
+### Lesestatus am Aushang (Welle 26)
+
+Am Aushang zeigt Lesestatus anzeigen, wie viele der angesprochenen Portalkonten bestätigt haben und wann. Das ist ein Hinweis auf die Kenntnisnahme, kein Zugangsnachweis und keine Fristauslösung.

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 import { useBusy } from "@/lib/use-busy";
+import { formatDateTime } from "@/lib/format";
 
 export type DomTenant = { id: string; slug: string; name: string; status: string };
 type Domain = {
@@ -127,7 +128,7 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
                     </span>
                     {d.verification_checked_at ? (
                       <div className={ui.help}>
-                        {new Date(d.verification_checked_at).toLocaleString("de-DE")}
+                        {formatDateTime(d.verification_checked_at)}
                         {d.verification_finding ? `: ${d.verification_finding}` : ""}
                       </div>
                     ) : null}

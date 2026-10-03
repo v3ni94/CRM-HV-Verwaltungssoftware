@@ -61,8 +61,17 @@ export function firstName(displayName: string | null | undefined, email: string 
  *  and lightly by day so it feels alive without jumping on reload. Client component so the
  *  viewer's own clock decides the window; the server render always uses the safe, static
  *  fallback text below so hydration never mismatches. */
-export function Greeting({ displayName, email }: { displayName: string | null | undefined; email: string | null | undefined }) {
-  const t = useTranslations("Greeting");
+export function Greeting({
+  displayName,
+  email,
+  address = "du",
+}: {
+  displayName: string | null | undefined;
+  email: string | null | undefined;
+  /** Form of address (rule "greeting-address", AP24-01); default "du" keeps today's texts. */
+  address?: "du" | "sie";
+}) {
+  const t = useTranslations(address === "sie" ? "GreetingFormal" : "Greeting");
   const locale = useLocale();
   const name = firstName(displayName, email);
   const [now, setNow] = useState<Date | null>(null);

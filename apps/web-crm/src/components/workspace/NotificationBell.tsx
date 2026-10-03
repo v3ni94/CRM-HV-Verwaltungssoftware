@@ -78,7 +78,7 @@ export function NotificationBell() {
           (M31). */}
       <button
         type="button"
-        className="relative inline-flex h-11 w-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto sm:px-3 sm:pointer-fine:h-9"
+        className="relative inline-flex h-11 w-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto sm:px-3 sm:pointer-fine:h-9"
         aria-label={t("notifications")}
         aria-expanded={open}
         aria-controls="notifications"
@@ -111,7 +111,7 @@ export function NotificationBell() {
                 {items.map((n) => (
                   <li key={n.id}>
                     {n.href ? (
-                      <Link href={n.href} className={`${entryClass} focus:outline-none focus:ring-2 focus:ring-focus`} onClick={() => readOne(n.id)} data-testid="notification-link">
+                      <Link href={n.href} className={`${entryClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-focus`} onClick={() => readOne(n.id)} data-testid="notification-link">
                         {content(n)}
                       </Link>
                     ) : (

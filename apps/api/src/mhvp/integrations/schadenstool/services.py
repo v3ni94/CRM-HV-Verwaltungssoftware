@@ -242,6 +242,30 @@ async def build_ticket_payload(
     return payload
 
 
+async def _data_sharing_basis(session: AsyncSession, ticket: Ticket) -> str:
+    """GAM-408: handing a ticket (reporter, description, attachments) to the damage tool is a
+    transfer to a third party. The same decision as for work orders (``order_sharing``) applies:
+    the resident's ``data_sharing`` consent or the tenant policy. Refusal is a 409 with reason;
+    the basis is written to the transfer audit event."""
+    from mhvp.contacts import consent_rules  # local: import cycle
+
+    contact_id = ticket.contact_id or ticket.initiator_contact_id
+    if contact_id is None:
+        return "no_resident_contact"
+    decision = await consent_rules.data_sharing_decision(
+        session, contact_id, contractual_necessity=True
+    )
+    if not decision.allowed:
+        raise ProblemError(
+            ErrorCodes.SCHADENSTOOL_SHARING_REFUSED,
+            detail=(
+                "Die Weitergabe an den Schadenbearbeiter ist für die betroffene Person nicht "
+                f"zulässig (Grund: {decision.reason})."
+            ),
+        )
+    return str(decision.reason)
+
+
 async def queue_handover(
     session: AsyncSession, ticket: Ticket, form: dict[str, Any], actor: uuid.UUID | None
 ) -> SchadenstoolTicketLink:
@@ -252,6 +276,7 @@ async def queue_handover(
             ErrorCodes.CONFLICT,
             detail="Das Ticket ist bereits an den Schadenbearbeiter übergeben.",
         )
+    sharing_basis = await _data_sharing_basis(session, ticket)
     payload = await build_ticket_payload(session, ticket, form)
     link = SchadenstoolTicketLink(
         tenant_id=ticket.tenant_id,
@@ -271,7 +296,12 @@ async def queue_handover(
         "handover_queued",
         entity_id=link.id,
         actor=actor,
-        payload={"ticket_id": str(ticket.id)},
+        payload={
+            "ticket_id": str(ticket.id),
+            "contact_id": str(ticket.contact_id or ticket.initiator_contact_id or "") or None,
+            "recipient": "schadenstool",
+            "sharing_basis": sharing_basis,
+        },
     )
     await session.flush()
     return link
@@ -385,6 +415,7 @@ async def queue_attachment(
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Das Dokument gehört nicht zu diesem Ticket."
         )
+    sharing_basis = await _data_sharing_basis(session, ticket)
     from mhvp.documents import payment_files  # local: import cycle
 
     # AN14-04: a payment file is never handed over to the damage tool (G2 closed or not,
@@ -423,7 +454,13 @@ async def queue_attachment(
         "attachment_queued",
         entity_id=link.id,
         actor=actor,
-        payload={"document_id": str(document_id)},
+        payload={
+            "document_id": str(document_id),
+            "ticket_id": str(ticket.id),
+            "contact_id": str(ticket.contact_id or ticket.initiator_contact_id or "") or None,
+            "recipient": "schadenstool",
+            "sharing_basis": sharing_basis,
+        },
     )
     await session.flush()
     return item

@@ -223,6 +223,64 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 26 (Stand 1.71.0, 03.10.2026)
+
+Umsetzung der Lückenanalysen GAL (33 Befunde) und GAM (rund 100 Befunde aus acht lesenden Prüfungen) in 26 Paketen AP01 bis AP26. Zählung laut `docs/plans/OFFENE-PUNKTE-2026-10-03.md` und der Restliste der Pakete: 117 Befunde, 89 erledigt, 28 teilweise, keiner offen. Die Freigabestufen G1 bis G5 bleiben geschlossen. Quellen: Ergebnisdateien der Pakete, Versionsverlauf 1.71.0 in `CHANGELOG.md`.
+
+- Migrationen 0459 (AP02), 0460 (AP03), 0461 (AP04), 0462 (AP05), 0463 (AP06), 0464 (AP07), 0465 (AP13), 0466 (AP14), 0467 (AP17), 0468 (AP21), 0469 (AP25); die Kette ist vor dem Deploy auf genau einen Kopf zu prüfen (während der Welle wurde teilweise mit Hilfsketten getestet).
+- Behobene Produktivfehler (AP25, gefunden durch die Tests AP10): doppelte Freigabe einer Kautionsabrechnung bei parallelem Aufruf, zweite Kautionsabrechnung zu einer bereits freigegebenen Kaution (zweite Auszahlung möglich), doppelte Mahnstufe je Schuldnerkonto bei zwei Läufen am selben Tag. Absicherung in der API (409) und per eindeutigem Teilindex (0469).
+- Kompensationslöschung (AP26, AQ09-01): Dateien im Objektspeicher werden bei Abbruch der Transaktion gelöscht, keine verwaisten Zahlungsdateien.
+- Neue Mandantenschalter (Standard jeweils heutiges Verhalten): integrations.live_mode (wie bisher), accounting.write_off_posting (aus), privacy.audit_redaction (aus), privacy.erasure_coupling (aus), Zugriffsprotokoll mit Umfang und Aufbewahrung (aus), allocation_key_confirmation_required (aus), sub_community_basis_lock (aus), levy_refund_proposals (aus), greeting-address (Du); je Webhook payload_scope (vollständig).
+- Neue offene Fragen: AP01-01, AP02-01, AP04-01, AP05-01, AP13-01 bis AP13-04, AP14-01, AP14-02, AP17-01, AP19-01, AP19-02, AP21-01, AP21-02, AP24-01 (in `docs/OPEN_QUESTIONS.md`), AP25-01 und AP25-02 (bisher nur im Ergebnis des Pakets AP25, nachzutragen).
+
+| Paket | Thema | Befunde | Stand | Migration |
+| --- | --- | --- | --- | --- |
+| AP01 | Sicherheit SMS-Gateway und Immoware | GAM-301, GAM-302, GAM-303 | done, done, done | none |
+| AP02 | Lexoffice, Live-Modus | GAL-201, GAL-202, GAL-203, GAL-207, GAM-710 | done, done, done, partial, done | 0459 integration_live_mode, lexoffice_export_link |
+| AP03 | Mandantentrennung Fremdschlüssel | GAL-103 | partial | 0460 mandantenscharfe Fremdschlüssel |
+| AP04 | Schema Geld | GAL-101, GAL-102, GAL-108 | done, done, done | 0461 Währung, NUMERIC(20,8), verschlüsselte deposit_iban |
+| AP05 | Schema Nachweis | GAL-104, GAL-105, GAL-106, GAL-107 | done, partial, partial, done | 0462 Nachweis-Trigger und Prüfregeln |
+| AP06 | Webhooks und Jobs | GAM-501, GAM-502, GAM-503, GAL-204, GAL-205 | done, done, done, done, partial | 0463 webhook_subscription.watermark_occurred_at |
+| AP07 | Jobs Fehlerbehandlung | GAM-504, GAM-505, GAM-506, GAM-507, GAM-508, GAM-509, GAL-206, AP08-Rueckmeldung | done, partial, done, done, done, done, done, done | 0464 job_failure, task_failure |
+| AP08 | Tests Jobs | GAM-510 | done | none |
+| AP09 | Tests Zahlungsverkehr | GAM-601, GAM-602, GAM-603, GAM-604 | done, done, done, done | none |
+| AP10 | Tests Kaution, Mahnung, Abrechnung | GAM-606, GAM-607, GAM-608, GAM-609, GAM-610 | done, done, done, done, done | none |
+| AP11 | Testtechnik | GAM-611, GAM-612, GAM-613 | partial, done, partial | none |
+| AP12 | Ausbuchung | GAK-104, GAL-302, GAM-605 | done, done, done | none |
+| AP13 | Datenschutz Löschung | GAM-401, GAM-404, GAM-405, GAM-406 | done, done, partial, partial | 0465 Prüfpfad ohne Werte, Löschprofile, Einwilligungsarten |
+| AP14 | Datenschutz Auskunft und Protokolle | GAM-402, GAM-403, GAM-407, GAM-408, GAM-409, GAM-410, GAM-411 | done, done, partial, done, done, partial, done | 0466 access_log (RLS) |
+| AP15 | CRM WEG-Jahresabrechnung | GAM-101, GAM-102, GAM-103, GAM-104, GAM-112, GAM-201 | done, partial, partial, done, done, done | none |
+| AP16 | CRM Rechnungserfassung | GAM-105, GAM-106, GAL-304, GAM-207, GAM-210 | done, done, partial, partial, partial | none |
+| AP17 | Mietabrechnung | GAM-107, GAM-108, GAM-111 | partial, done, done | 0467 Quelle der Umlageschlüssel |
+| AP18 | CRM Banking | GAM-202, GAM-203, GAM-204, GAL-303 | done, partial, partial, done | none |
+| AP19 | CRM Kautionen, Benutzer, Betrieb | GAM-206, GAM-212, GAM-211, GAM-205, GAM-209 | done, done, done, partial, partial | none |
+| AP20 | CRM Tickets, Objektkopf, Aushänge | GAL-301, GAL-305, GAL-306, GAL-307, AO03-Maske | done, done, done, done, done | none |
+| AP21 | Untergemeinschaft, Sonderumlage | GAM-109, GAM-110 | done, done | 0468 Untergemeinschaft, Sonderumlage-Erstattung |
+| AP22 | Router-Antwortmodelle | GAI-304 | partial | none |
+| AP23 | Dokumentation | GAM-801, GAM-802, GAM-805, GAM-806, GAM-808, GAM-809, GAM-810, GAM-811, GAM-812, GAM-817, GAM-820, GAM-821, GAL-311, GAL-312, GAL-313, GAL-314, GAL-316 | done, done, done, done, done, done, done, done, partial, done, done, done, done, done, done, done, done | none |
+| AP24 | Qualität CRM und Portal | GAM-702, GAM-705, GAM-706, GAM-707, GAM-708, GAM-709, GAM-712, GAM-715, GAM-716 | done, partial, partial, done, done, done, done, partial, partial | none |
+| AP25 | Folgefehler Kaution und Mahnung | AP10-01, AP10-02, AP10-03 | done, done, done | 0469 eindeutige Teilindizes Kautionsabrechnung und Mahnfall |
+| AP26 | Verwaiste Blobs | AQ09-01 | done | none |
+
+Hinweis zur Zählung: Die Tabelle führt auch Rückmeldungen und Folgefehler (AP08-Rueckmeldung, AO03-Maske, AP10-01 bis AP10-03, AQ09-01) als Befunde, sie sind in den 117 enthalten. Mit dokumentiertem Restumfang trotz Status erledigt: GAM-302, GAM-303 (AP01), GAM-109, GAM-110 (AP21), AP10-01 bis AP10-03 (AP25).
+
+Teilweise (28), je Paket: AP02 1 (GAL-207), AP03 1 (GAL-103), AP05 2 (GAL-105, GAL-106), AP06 1 (GAL-205), AP07 1 (GAM-505), AP11 2 (GAM-611, GAM-613), AP13 2 (GAM-405, GAM-406), AP14 2 (GAM-407, GAM-410), AP15 2 (GAM-102, GAM-103), AP16 3 (GAL-304, GAM-207, GAM-210), AP17 1 (GAM-107), AP18 2 (GAM-203, GAM-204), AP19 2 (GAM-205, GAM-209), AP22 1 (GAI-304), AP23 1 (GAM-812), AP24 4 (GAM-705, GAM-706, GAM-715, GAM-716).
+
+Reste (Planung Welle 27, Größe S bis L laut Restliste, Details in der Restliste der Pakete):
+- Sicherheit und Schema: Router-Abbildung von Fremdschlüsselfehlern auf 404 oder 422 und Rechtsträgerprüfung (GAL-103, L); Urheberspalten mit Wächtertest (GAL-105, M); Hostliste und Integrationstest Plattformadministrator (GAM-302, GAM-303, je S).
+- Schnittstellen: finAPI-Durchsetzung des Live-Schalters, CRM-Maske und BFF-Pfad, Schalterprüfung in den Postal-Folgeaufrufen (GAL-207, M, Frage AP02-01).
+- Jobs: Dead-Letter und Zähler am Wasserzeichen (GAM-505, M); Altpfad attempt_delivery entfernen; xfail-Marker aus AP08 prüfen.
+- Datenschutz: gekoppelter Löschvorschlag (GAM-405), SMS-Einwilligungsprüfung und input_ref in KI-Pfaden (GAM-406), Hostfeld und Bestätigung bei Webhook-Zielen (GAM-407), Zugriffsprotokoll für Portalkonto und Bankverbindungen mit Beat und CRM-Ansicht (GAM-410), je M.
+- Fachliche Oberflächen: Beschlussfelder und Schuldner in der WEG-Abrechnung (GAM-102, GAM-103), Skonto ziehen per API (GAL-304), serverseitige Erkennung von Anweisungstexten (GAM-207), Hinweis Steuerstatus im Buchungsdialog (GAM-210), Auswahllisten statt UUID-Eingabe (GAM-107), Teilbetrag und Änderungsgrund bei Zahlungsfreigaben (GAM-203, GAM-204), Grundlagenauswahl in der Kostenmaske (GAM-109), Freigabeberechtigte als Mandantenschalter und Restore-Verfahren (GAM-205, GAM-209, Fragen AP19-01, AP19-02).
+- Qualität und Dokumentation: Leerzustände (rund 130 CRM-Komponenten und Portalstellen, GAM-705, GAM-706), Fehlerhinweis je Fehlercode (GAM-716), Spaltenmodell der Tabellen (GAM-812), 86 Routen in der Allowlist (GAI-304), Zeit-Fixture und Marker in weiteren Testdateien (GAM-611, GAM-613).
+- Technische Folgepunkte: Tabelle verwaister Objektspeicherschlüssel mit Abgleichjob und weitere direkte Aufrufer ohne Kompensation (AP26), Sammelpaket Kleinpunkte (Lifespan ohne Broker, Aufbewahrung job_failure und task_failure, Webhook-Reihenfolge).
+
+Hinweise Deploy:
+- Migration 0461 braucht MHVP_MASTER_KEY im Migrationsprozess, sobald Rückzahlungs-IBANs vorhanden sind; Staging und Produktion vorab prüfen. Die API gibt Sätze und Flächen mit 8 Nachkommastellen aus, deposit_iban erscheint im CRM-Editor weiter im Klartext.
+- Migration 0469 prüft den Bestand und bricht bei bereits doppelten freigegebenen Kautionsabrechnungen oder versendeten Mahnfällen gleicher Stufe ab; vorher Dubletten klären.
+- Vor dem Release `make openapi` ausführen (openapi.json und api-client für Welle 26 neu erzeugen), `alembic heads` auf genau einen Kopf prüfen, Round-Trip der Migrationen 0458 bis 0469 laufen lassen, Schalterverzeichnis mit `scripts/build_switch_index.py` neu erzeugen.
+- Nicht ausgeführt in diesem Release-Schritt: Testsuiten, make-Ziele und Deploy; die Testergebnisse der Pakete stehen in deren Ergebnisdateien (AP25: Regressionstests zu Kaution und Mahnung nicht ausgeführt).
+
 ## Welle 25 (Stand 1.70.0, 03.10.2026)
 
 Reste der Welle 24 (AO01 bis AO14, darunter die Gegenprüfung AO12 in docs/reviews/REVIEW-W24-2026-10-03.md mit 17 Befunden, zwei sofort behoben: Logzeilen im Löschjournal-Export und Mehrheitsregel-Freigabe per API-Schlüssel) und drei lesende Lückenanalysen GAL-1 bis GAL-3 (Datenmodell, API und Integrationen, Oberfläche gegen Handbuch; 33 Befunde GAL-101 bis GAL-318, Grundlage der Welle 26). Zusätzlich acht lesende Prüfungen GAM-1 bis GAM-8 (Anhang D in der Oberfläche, Sicherheit, Datenschutz, Hintergrundjobs, Testqualität, Sprache, Dokumentation; rund 90 Befunde) und die Gesamtliste docs/plans/OFFENE-PUNKTE-2026-10-03.md. Die Freigabestufen G1 bis G5 bleiben geschlossen.
@@ -727,3 +785,7 @@ Produktionsbefund nach dem ersten erfolgreichen Bankdialog mit der Volksbank: Ko
 - GAF-37 Portal Bestandsfunktionen: Negativbefund. Die Terminbestätigung durch Bewohner ist bereits eingebunden (`AppointmentProposals` in `apps/web-portal/src/app/(portal)/meldungen/[id]/page.tsx`), keine Änderung nötig.
 - AF08-R: Job-Schlüssel `hoa-inspection-ownership-scan` ist in `JOB_CATALOG` registriert (Mandanten-Zeitfenster möglich). Offen: GAE-11 (Ende zu Ende Test Jahresabrechnung mit gebundener Zahlung) und GAE-12 (Anbindung Planübernahme an `calc.allocation_owner`).
 - AF24-R: `scripts/staging-smoke.sh` prüft `MHVP_AVAILABILITY_*_URL` optional (nur lesend).
+
+## Nachtrag 03.10.2026 (AP23, GAM-817): Prüfung Welle 25 in den Versionsdateien
+
+Welle 25 ist in `VERSION` (1.70.0), `CHANGELOG.md`, `apps/web-crm/src/lib/changelog.ts` und in diesem Statusdokument (Abschnitt Welle 25) geführt; `python3 scripts/bump_version.py --check` (Make-Ziel `version-check`) meldet keine Abweichung. Die Dateien werden bei Welle 26 vom Koordinator beim Release 1.71.0 nachgeführt, nicht in diesem Paket.

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { ResultTable, StatementWorkbench } from "./StatementWorkbench";
+import { earliestDelivery, ResultTable, StatementWorkbench } from "./StatementWorkbench";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -32,8 +32,10 @@ describe("StatementWorkbench", () => {
   });
 
   it("issues only with a delivery date and shows the G3 refusal", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ title: "Freigabestufe", status: 403, detail: "Freigabestufe G3 ist nicht erteilt." }, 403),
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/results")
+        ? jsonResponse([])
+        : jsonResponse({ title: "Freigabestufe", status: 403, detail: "Freigabestufe G3 ist nicht erteilt." }, 403),
     );
     renderIntl(<StatementWorkbench id={ID} status="internally_approved" keys={KEYS} />);
     expect(screen.getByText("Ausgeben")).toBeDisabled();
@@ -41,6 +43,30 @@ describe("StatementWorkbench", () => {
     await userEvent.type(screen.getByLabelText("Zugang beim Mieter"), "2026-09-30");
     await userEvent.click(screen.getByText("Ausgeben"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+});
+
+describe("StatementWorkbench access date (GAM-107)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("picks the earliest recorded access", () => {
+    expect(earliestDelivery([{ delivered_at: "2026-09-30" }, { delivered_at: null }, { delivered_at: "2026-09-12" }])).toBe("2026-09-12");
+    expect(earliestDelivery([{ delivered_at: null }])).toBe("");
+  });
+
+  it("proposes the earliest letter access after the board review and sends it on issue", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/results")
+        ? jsonResponse([{ delivered_at: "2026-09-20" }, { delivered_at: "2026-09-15" }])
+        : jsonResponse({ status: "issued" }),
+    );
+    renderIntl(<StatementWorkbench id={ID} status="board_reviewed" keys={KEYS} />);
+    await waitFor(() => expect(screen.getByLabelText("Zugang beim Mieter")).toHaveValue("2026-09-15"));
+    expect(screen.getByText(/frühesten erfassten Zugang/)).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Ausgeben"));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/transition"))).toBe(true));
+    const post = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/transition"));
+    expect(JSON.parse(post?.[1]?.body as string)).toEqual({ target: "issued", delivered_at: "2026-09-15" });
   });
 });
 

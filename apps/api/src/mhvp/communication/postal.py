@@ -413,6 +413,13 @@ async def submit(
     row = await settings_row(session, principal.tenant_id)
     provider = provider_for(row)
     ensure_external_allowed(row, provider)
+    if provider.external and provider.name == "letterxpress":
+        # GAL-207: a paid live submission respects the tenant's live mode switch.
+        from mhvp.integrations.live_mode import ensure_live_allowed, resolver_of
+
+        await ensure_live_allowed(
+            session, principal.tenant_id, "letterxpress", resolver_of(request)
+        )
     if provider.name != "manual" and not principal.has("communication:approve"):
         raise ProblemError(
             ErrorCodes.FORBIDDEN,
@@ -614,6 +621,13 @@ async def put_settings(
             value = getattr(body, name)
             if value is not None:
                 setattr(row, name, value)
+        if body.mode == "live" and before["mode"] != "live":
+            # GAL-207: tenant switch per integration (no row: today's behaviour).
+            from mhvp.integrations.live_mode import ensure_live_allowed, resolver_of
+
+            await ensure_live_allowed(
+                session, principal.tenant_id, "letterxpress", resolver_of(request)
+            )
         if body.default_registered is not None or (body.model_fields_set & {"default_registered"}):
             row.default_registered = body.default_registered
         if body.clear_api_key:

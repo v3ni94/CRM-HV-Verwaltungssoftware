@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 import { formatQty } from "@/lib/units";
 
+import { AllocationKeySources } from "./AllocationKeySources";
 import { decimalForApi } from "./UnitsCreate";
 
 export type AllocationSummary = components["schemas"]["AllocationSummaryOut"];
@@ -258,6 +259,8 @@ export function AllocationKeysPanel({ propertyId, canEdit, canCreate }: { proper
           <p className="mt-1 text-xs text-muted">{t("expectedHint")}</p>
         </div>
       )}
+
+      {keys.length > 0 ? <AllocationKeySources propertyId={propertyId} canEdit={canEdit} /> : null}
 
       {units.length > 0 && keys.length > 0 ? (
         <div className="mt-4">

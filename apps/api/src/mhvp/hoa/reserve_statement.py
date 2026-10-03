@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import DateTime, Index, Integer, String, select, text
+from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -47,6 +47,12 @@ class ReserveStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         Index("ix_reserve_statement_ledger", "tenant_id", "ledger_id", "year"),
         Index("ix_reserve_statement_hoa_statement_id", "hoa_statement_id"),
+        # AP05 / GAL-107 (6.9.3, E03): from resolved on the resolution is mandatory (0462).
+        CheckConstraint(
+            "status NOT IN ('resolved', 'issued', 'due', 'posted', 'locked') "
+            "OR resolution_id IS NOT NULL",
+            name="resolved_needs_resolution",
+        ),
     )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)

@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { ApprovalHistory } from "@/components/accounting/ApprovalHistory";
 import { InvoiceFactualPanel } from "@/components/invoices/InvoiceFactualPanel";
+import { InstructionTextNotice } from "@/components/invoices/InstructionTextNotice";
+import { InvoiceDiscountPreview } from "@/components/invoices/InvoiceDiscountPreview";
 import { InvoiceActions } from "@/components/invoices/InvoiceForms";
 import { ReverseChargeGate } from "@/components/invoices/ReverseChargeGate";
 import { InvoiceSecondApproval } from "@/components/invoices/InvoiceSecondApproval";
@@ -11,6 +13,7 @@ import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
+import { today as todayDate } from "@/lib/today";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +54,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
           </ul>
         </section>
       ) : null}
+      <InstructionTextNotice texts={findings} />
       <ReverseChargeGate reverseCharge={Boolean(d.reverse_charge)} />
       <div className="overflow-x-auto">
         <table className="mhvp-table">
@@ -72,6 +76,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
           </tbody>
         </table>
       </div>
+      {String(d.posting_status) === "unposted" ? (
+        <InvoiceDiscountPreview
+          invoiceId={invoiceId}
+          discountPercent={d.discount_percent ? String(d.discount_percent) : null}
+          discountUntil={d.discount_until ? String(d.discount_until) : null}
+          today={todayDate()}
+        />
+      ) : null}
       <InvoiceFactualPanel invoiceId={invoiceId} />
       <ApprovalHistory subjectType="invoice" subjectId={invoiceId} />
       <section className="flex flex-col gap-1">

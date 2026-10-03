@@ -189,3 +189,7 @@ Bestandsdaten sie verletzen (Zahl der Verstöße je Regel). Nach Korrektur der D
 Administrator mit dem Recht Mandanteneinstellungen ändern die Regeln über
 `POST /platform/constraint-checks/validate`. Bei weiteren Verstößen erscheint eine Liste, es wird
 nichts verändert.
+
+## Restore-Protokoll der Löschungen (GAM-209, Welle 26)
+
+Auf der Seite Plattform, Betrieb zeigt der Abschnitt "Restore-Protokoll der Löschungen" den Bericht des Wiederanwendungslaufs (`python -m mhvp.documents.replay_deletions --report <Datei>`) nach einer Wiederherstellung. Die JSON-Datei wird nur im Browser gelesen, nichts wird gespeichert oder gesendet. Die Anzeige gruppiert die Einträge in nachgezogene Löschungen (auch als Prüflauf "würde gelöscht"), bewusst erhaltene Dokumente (Löschungssperre, Aufbewahrung, abweichender Inhalt), manuell zu prüfende Einträge und nicht angewendete Einträge. Die Anzeige ist keine Freigabe: Das Restore-Verfahren und die Prüfung des Berichts sind offen (Frage AP19-02, Datenschutz).

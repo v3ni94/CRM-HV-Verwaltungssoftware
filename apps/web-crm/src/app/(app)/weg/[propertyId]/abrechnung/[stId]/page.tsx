@@ -5,7 +5,8 @@ import { AcquisitionRules } from "@/components/hoa/AcquisitionRules";
 import { AcquisitionReleases, type AcquisitionItem } from "@/components/hoa/AcquisitionReleases";
 import { LoanAllocationForm, type LoanAllocationRow } from "@/components/hoa/AssetReportForms";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
-import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { HoaItemForm, HoaSteps, type ResolutionOption } from "@/components/hoa/HoaForms";
+import { UnitParties, type OwnershipPeriod } from "@/components/hoa/UnitParties";
 import { ReservePayments } from "@/components/hoa/ReservePayments";
 import { ReserveYearsTable, type ReserveYearRow } from "@/components/hoa/ReserveYears";
 import { StatementCorrectionReport, type CorrectionReport } from "@/components/hoa/StatementCorrectionReport";
@@ -14,6 +15,7 @@ import { AllocationProposalPanel } from "@/components/hoa/AllocationProposalPane
 import { UnitStatementPdfLink } from "@/components/gated/UnitStatementPdfLink";
 import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
+import { SubCommunityCheck, type SubCommunityCheckData } from "@/components/hoa/SubCommunityCheck";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
@@ -23,7 +25,7 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-type Unit = { unit_number: string; cost_share: string; advances_resolved: string; advances_paid: string; result: string; arrears: string; information_total: string; loan_interest_share?: string; loan_repayment_share?: string };
+type Unit = { unit_number: string; cost_share: string; advances_resolved: string; advances_paid: string; result: string; arrears: string; information_total: string; ownership_periods?: OwnershipPeriod[]; loan_interest_share?: string; loan_repayment_share?: string };
 type LoanBlockRow = { loan_id: string; lender: string; reference: string | null; basis: string; residual_booked: string; components: Record<string, { amount: string; source: string }> };
 type LoanBlock = { loans: LoanBlockRow[]; note_text: string };
 type Reserve = { opening: string; contributions_paid: string; contributions_open: string; withdrawals: string; interest: string; closing: string };
@@ -54,6 +56,11 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const acquisitions = acquisitionResponse.ok
     ? ((await acquisitionResponse.json()) as { items: AcquisitionItem[]; note: string })
     : { items: [] as AcquisitionItem[], note: "" };
+  // GAM-102: resolutions of the community offered for the resolution step.
+  const resolutionList = ctx.entity
+    ? await ctx.api.GET("/api/v1/hoa/resolutions", { params: { query: { legal_entity_id: ctx.entity.id } } })
+    : null;
+  const resolutionOptions = ((resolutionList?.data ?? []) as unknown as ResolutionOption[]);
   const blocking = ((pkg.data?.blocking ?? []) as { code: string; detail: string }[]);
   const recon = (pkg.data?.reconciliation ?? null) as Recon | null;
   const notes = ((data?.reconciliation_notes ?? []) as { code: string; amount: string; note: string }[]);
@@ -61,7 +68,15 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   if (!data || !ctx.entity) {
     return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   }
-  const items = (data.cost_items ?? []) as { id: string; label: string; amount: string; basis: string }[];
+  const items = (data.cost_items ?? []) as { id: string; label: string; amount: string; basis: string; sub_community_id?: string | null; sub_community_basis_missing?: boolean }[];
+  // AP21 / GAM-109: sub communities of the property and the check of positions without basis.
+  const [subResponse, subCheckResponse] = await Promise.all([
+    serverFetch(`/api/v1/properties/${encodeURIComponent(propertyId)}/sub-communities`),
+    serverFetch(`/api/v1/hoa/statements/${encodeURIComponent(stId)}/sub-community-check`),
+  ]);
+  const subCommunities = subResponse.ok ? ((await subResponse.json()) as { id: string; code: string; name: string }[]) : [];
+  const subNames = Object.fromEntries(subCommunities.map((c) => [c.id, `${c.code} ${c.name}`]));
+  const subCheck = subCheckResponse.ok ? ((await subCheckResponse.json()) as SubCommunityCheckData) : null;
   // Versionsvergleich (D14): only when this version supersedes another and both are calculated.
   const supersedes = (data.supersedes_id as string | null) ?? null;
   const diff = supersedes
@@ -108,6 +123,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
           </ul>
         </div>
       ) : null}
+      {subCheck ? <SubCommunityCheck data={subCheck} names={subNames} /> : null}
       <AcquisitionReleases statementId={stId} items={acquisitions.items} note={acquisitions.note} />
       {acquisitions.items.length > 0 ? <AcquisitionRules /> : null}
       <div className="overflow-x-auto">
@@ -118,14 +134,18 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
               <td>{i.label}</td>
               <td className="num">{formatEur(i.amount)}</td>
               <td className="text-muted">{i.basis}</td>
+              <td className="text-muted">
+                {i.sub_community_id ? (subNames[i.sub_community_id] ?? t("subCommunity.label")) : ""}
+                {i.sub_community_basis_missing ? ` · ${t("subCommunity.basisMissing")}` : ""}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
 </div>
-      {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} accounts={costAccounts} /> : null}
+      {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} accounts={costAccounts} subCommunities={subCommunities} /> : null}
       {data.status === "draft" ? <StatementCostsFromLedger statementId={stId} accounts={costAccounts} keys={ctx.keys.map((k) => ({ id: k.id, name: k.name }))} /> : null}
-      <HoaSteps target="statement" id={stId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
+      <HoaSteps target="statement" id={stId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} resolutions={resolutionOptions} />
       <AiPlausibilityCard kind="hoa/statements" id={stId} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       {snap?.units ? (
         <div className="overflow-x-auto">
@@ -133,6 +153,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
           <thead>
             <tr>
               <th>{t("unit")}</th>
+              <th>{t("party")}</th>
               <th className="num">{t("costShare")}</th>
               <th className="num">{t("advancesResolved")}</th>
               <th className="num">{t("result")}</th>
@@ -146,6 +167,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
             {snap.units.map((u) => (
               <tr key={u.unit_number}>
                 <td>{u.unit_number}</td>
+                <td><UnitParties periods={u.ownership_periods} /></td>
                 <td className="num">{formatEur(u.cost_share)}</td>
                 <td className="num">{formatEur(u.advances_resolved)}</td>
                 <td className="num">{formatEur(u.result)}</td>

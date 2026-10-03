@@ -68,6 +68,14 @@ export function ApprovalHistory({
           ) : null}
           {rows && rows.length === 0 ? <p className={ui.help}>{t("empty")}</p> : null}
           {rows && rows.length > 0 ? (
+            <p className="text-xs text-muted" data-testid="approval-summary">
+              {t("summary", {
+                valid: rows.filter((r) => r.status === "valid").length,
+                voided: rows.filter((r) => r.status === "invalidated").length,
+              })}
+            </p>
+          ) : null}
+          {rows && rows.length > 0 ? (
             <ul className="flex flex-col gap-2 text-sm">
               {rows.map((r) => (
                 <li key={r.id} className="rounded-md border border-border p-2">
@@ -78,6 +86,7 @@ export function ApprovalHistory({
                     {" · "}
                     {t.has(`statuses.${r.status}`) ? t(`statuses.${r.status}`) : r.status}
                   </div>
+                  <div className="text-xs text-muted">{t("by", { user: r.user_id.slice(0, 8) })}</div>
                   <div className="text-xs text-muted">
                     {t("hash")}: <code>{r.subject_snapshot_hash.slice(0, 12)}</code>
                   </div>

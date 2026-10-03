@@ -32,6 +32,19 @@ export type ReserveBlock = {
   positions?: ReservePosition[];
 };
 
+/** Exact difference of two decimal strings (cents), no float arithmetic. */
+function minus(a: string, b: string): string {
+  const cents = (v: string) => {
+    const neg = v.trim().startsWith("-");
+    const [i, f = ""] = v.trim().replace("-", "").split(".");
+    const n = BigInt(i || "0") * 100n + BigInt((f + "00").slice(0, 2));
+    return neg ? -n : n;
+  };
+  const d = cents(a) - cents(b);
+  const abs = d < 0n ? -d : d;
+  return `${d < 0n ? "-" : ""}${abs / 100n}.${String(abs % 100n).padStart(2, "0")}`;
+}
+
 /** Development of the reserves of one statement as an own block (W08, M24-01): the total block
  *  and one row per earmarked reserve with planned and paid contributions and the uses. */
 export async function ReserveDevelopment({ block }: { block: ReserveBlock }) {
@@ -40,6 +53,7 @@ export async function ReserveDevelopment({ block }: { block: ReserveBlock }) {
     [t("opening"), block.opening],
     [t("resolved"), block.contributions_resolved],
     [t("paid"), block.contributions_paid],
+    [t("openContributions"), minus(block.contributions_resolved, block.contributions_paid)], // GAM-104
     [t("withdrawals"), block.withdrawals],
     [t("interest"), block.interest],
     [t("closing"), block.closing],
@@ -62,6 +76,11 @@ export async function ReserveDevelopment({ block }: { block: ReserveBlock }) {
           </tbody>
         </table>
       </div>
+      {Number(block.bank_difference) !== 0 ? (
+        <p className={ui.notice} data-testid="reserve-bank-difference-note">
+          {t("bankDifferenceNote")}
+        </p>
+      ) : null}
       {block.contributions_paid_unassigned && Number(block.contributions_paid_unassigned) !== 0 ? (
         <p className={ui.notice}>{t("unassigned", { amount: formatEur(block.contributions_paid_unassigned) })}</p>
       ) : null}

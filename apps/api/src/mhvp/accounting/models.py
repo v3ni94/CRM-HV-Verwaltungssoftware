@@ -330,6 +330,14 @@ class JournalNumberCounter(TenantMixin, Base):
 
 class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "journal_entry"
+    # GAL-101: platform is EUR only (ADR 0038); column documents the currency per record.
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        CheckConstraint("currency = 'EUR'", name="currency_eur"),
+        nullable=False,
+        default="EUR",
+        server_default="EUR",
+    )
     __table_args__ = (
         UniqueConstraint("tenant_id", "ledger_id", "fiscal_year", "number"),
         UniqueConstraint("ledger_id", "id", name="uq_journal_entry_ledger_id"),
@@ -481,6 +489,14 @@ class OpenItem(IdMixin, TimestampMixin, TenantMixin, Base):
     """Remaining amount is computed from settlements as of a date (6.9.13, B07)."""
 
     __tablename__ = "open_item"
+    # GAL-101: platform is EUR only (ADR 0038); column documents the currency per record.
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        CheckConstraint("currency = 'EUR'", name="currency_eur"),
+        nullable=False,
+        default="EUR",
+        server_default="EUR",
+    )
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
         UniqueConstraint("journal_entry_id", "account_id"),
@@ -711,6 +727,14 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
     """Incoming invoice (6.4, 7.9.1). Review, posting and payment release are separate (6.9.9)."""
 
     __tablename__ = "invoice"
+    # GAL-101: platform is EUR only (ADR 0038); column documents the currency per record.
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        CheckConstraint("currency = 'EUR'", name="currency_eur"),
+        nullable=False,
+        default="EUR",
+        server_default="EUR",
+    )
     __table_args__ = (
         Index("ix_invoice_creditor_number", "tenant_id", "provider_contact_id", "number"),
         Index("ix_invoice_tenant_ledger_id", "tenant_id", "ledger_id"),
@@ -784,7 +808,7 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
     plan_item_id: Mapped[uuid.UUID | None] = _fk("economic_plan_item.id", nullable=True)
 
 
-class InvoiceLine(IdMixin, TenantMixin, Base):
+class InvoiceLine(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "invoice_line"
     __table_args__ = (Index("ix_invoice_line_invoice_id", "invoice_id"),)
 
@@ -924,6 +948,17 @@ class DunningRun(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class DunningCase(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "dunning_case"
+    # AP25 (AP10-03, migration 0469): one sent case per debtor account and level.
+    __table_args__ = (
+        Index(
+            "uq_dunning_case_sent_level",
+            "tenant_id",
+            "debtor_account_id",
+            "level",
+            unique=True,
+            postgresql_where=text("status = 'sent'"),
+        ),
+    )
 
     run_id: Mapped[uuid.UUID] = _fk("dunning_run.id", ondelete="CASCADE")
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")

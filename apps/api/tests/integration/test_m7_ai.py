@@ -1030,6 +1030,7 @@ def _events(c: TestClient, h: dict[str, str], type_: str | None = None) -> list[
     return _ok(c.get("/api/v1/tenant/events", params=params, headers=h), 200)  # type: ignore[no-any-return]
 
 
+@pytest.mark.annex_d("D46")
 def test_d46_import_undo_never_removes_a_recorded_original(
     client: TestClient, world: World, fake: FakeProvider, database: Database
 ) -> None:
@@ -1127,6 +1128,7 @@ def test_d46_import_undo_never_removes_a_recorded_original(
     assert client.get(f"/api/v1/documents/{doc}/content", headers=admin).status_code == 200
 
 
+@pytest.mark.annex_d("D57")
 def test_d57_instruction_in_contacts_and_property_output_has_no_effect(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:

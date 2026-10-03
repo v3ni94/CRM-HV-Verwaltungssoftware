@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { formatDate } from "@/lib/format-date";
 import { ui } from "@/lib/ui";
 
 const CHOICES = ["yes", "no", "abstain"] as const;
@@ -14,8 +15,7 @@ type Circular = { id: string; deadline: string; description: string | null; own_
 export type CircularListing = { enabled: boolean; note: string; circulars: Circular[] };
 
 function deDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return formatDate(iso);
 }
 
 /** Umlaufbeschluss im Eigentümerportal (AG07 / GAF-32): laufende Umlaufverfahren der eigenen

@@ -235,3 +235,22 @@ Jede Änderung wird als Ereignis protokolliert. Die Entscheidung über die Varia
 ## Differenz zur Vorversion (GAJ-104, Welle 23)
 
 Bei einer Korrekturversion einer Betriebskostenabrechnung zeigt der Abschnitt "Differenz zur Vorversion" nach Klick auf "Differenz zur Vorversion anzeigen" je Einheit Kosten und Ergebnis alt und neu sowie geänderte Kostenpositionen. Die Anzeige liest nur gespeicherte Stände und dient der Prüfung vor der Freigabe.
+
+## Zugangsdatum beim Erteilen, Quelle je Schlüssel und Art der Verbrauchswerte (Welle 26, AP17)
+
+- Erteilen: nach der internen Freigabe (auch nach der Beiratsprüfung) ist das Feld "Zugang beim
+  Mieter" Pflicht. Ist in "Anschreiben und Zugang je Mieter" schon ein Zugang erfasst, schlägt
+  die Maske den frühesten Zugang vor; bitte prüfen. Das Erteilen bleibt hinter der
+  Freigabestufe G3.
+- Quelle je Umlageschlüssel: in der Objektakte unter "Umlageschlüssel" zeigt der Abschnitt
+  "Quelle und Bestätigung je Schlüssel", ob ein Schlüssel aus dem Muster übernommen wurde.
+  Quelle (Teilungserklärung, Vereinbarung oder Beschluss), Fundstelle und Geltungsbeginn
+  erfassen, speichern und danach bestätigen. Eine geänderte Quelle hebt die Bestätigung auf.
+  Bei vermietetem Wohnungseigentum sperrt ein aus dem Muster übernommener Schlüssel ohne
+  bestätigte Quelle die Berechnung; der Geltungsbeginn muss spätestens am Beginn des
+  Abrechnungszeitraums liegen. Mit dem Schalter "Bestätigte Quelle für jeden Umlageschlüssel"
+  (Standard aus) gilt das für jeden Schlüssel. Die Bestätigung belegt die Prüfung der Quelle,
+  nicht ihre Wirksamkeit (offene Frage AP17-01).
+- Heizkosten, Verbräuche je Nutzer: je Wert die Art wählen (abgelesen, Zwischenablesung,
+  geschätzt). Bei Zwischenablesung ist das Ablesedatum Pflicht. Geschätzte Werte bleiben in der
+  Vorschau gekennzeichnet (Hinweis auf die Kürzung nach § 12 HeizkostenV, zu prüfen).

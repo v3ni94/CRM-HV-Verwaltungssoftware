@@ -38,6 +38,16 @@ from mhvp.hoa.models import (
     PlanItem,
     Resolution,
 )
+from mhvp.hoa.raw_responses import (
+    HoaReservePlanApproveOpeningChangeOut,
+    HoaReservePlanCreateReservePlanOut,
+    HoaReservePlanDeriveReservePlansOutItem,
+    HoaReservePlanGetReservePolicyOut,
+    HoaReservePlanListOpeningChangesOutItem,
+    HoaReservePlanListReservePlansOutItem,
+    HoaReservePlanPutReservePolicyOut,
+    HoaReservePlanResolveReservePlanOut,
+)
 from mhvp.hoa.reserves import CREATE, READ, ZERO, _reserve_with_ledger, router
 
 APPROVE = require_permission("accounting:approve")
@@ -261,6 +271,7 @@ async def _plan_with_scope(session: AsyncSession, plan_id: uuid.UUID) -> tuple[A
     "/reserves/{reserve_id}/plans",
     summary="Rücklagenplan je Jahr (Soll-Zuführung, Beschluss, Status) (AE07)",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaReservePlanListReservePlansOutItem],
 )
 async def list_reserve_plans(
     reserve_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -281,6 +292,7 @@ async def list_reserve_plans(
     "/reserves/{reserve_id}/plans",
     status_code=201,
     summary="Rücklagenplan als Entwurf anlegen (AE07)",
+    response_model=HoaReservePlanCreateReservePlanOut,
 )
 async def create_reserve_plan(
     reserve_id: uuid.UUID,
@@ -344,6 +356,7 @@ async def patch_reserve_plan(
 @router.post(
     "/reserve-plans/{plan_id}/resolve",
     summary="Rücklagenplan als beschlossen kennzeichnen (Beschluss erforderlich) (AE07)",
+    response_model=HoaReservePlanResolveReservePlanOut,
 )
 async def resolve_reserve_plan(
     plan_id: uuid.UUID,
@@ -399,6 +412,7 @@ async def resolve_reserve_plan(
 @router.post(
     "/plans/{plan_id}/reserve-plans/derive",
     summary="Rücklagenpläne als Entwurf aus dem Wirtschaftsplan ableiten (AE07)",
+    response_model=list[HoaReservePlanDeriveReservePlansOutItem],
 )
 async def derive_reserve_plans(
     plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -460,7 +474,11 @@ async def derive_reserve_plans(
 # Opening switch (V01-01) -------------------------------------------------------------------
 
 
-@router.get("/reserve-policy", summary="Umgang mit Anfangsbeständen nach Abrechnung (Schalter)")
+@router.get(
+    "/reserve-policy",
+    summary="Umgang mit Anfangsbeständen nach Abrechnung (Schalter)",
+    response_model=HoaReservePlanGetReservePolicyOut,
+)
 async def get_reserve_policy(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> dict[str, Any]:
@@ -468,7 +486,11 @@ async def get_reserve_policy(
         return {"opening_lock_mode": await lock_mode(session), "note": POLICY_NOTE}
 
 
-@router.put("/reserve-policy", summary="Umgang mit Anfangsbeständen setzen (V01-01)")
+@router.put(
+    "/reserve-policy",
+    summary="Umgang mit Anfangsbeständen setzen (V01-01)",
+    response_model=HoaReservePlanPutReservePolicyOut,
+)
 async def put_reserve_policy(
     body: HoaReservePolicyIn,
     request: Request,
@@ -498,6 +520,7 @@ async def put_reserve_policy(
     "/reserves/{reserve_id}/opening-changes",
     summary="Protokoll der Änderungen des Anfangsbestands (V01-01)",
     dependencies=[Depends(strict_query)],
+    response_model=list[HoaReservePlanListOpeningChangesOutItem],
 )
 async def list_opening_changes(
     reserve_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -568,6 +591,7 @@ async def _decide(
 @router.post(
     "/reserve-opening-changes/{change_id}/approve",
     summary="Änderung des Anfangsbestands freigeben (zweite Person) (V01-01)",
+    response_model=HoaReservePlanApproveOpeningChangeOut,
 )
 async def approve_opening_change(
     change_id: uuid.UUID,

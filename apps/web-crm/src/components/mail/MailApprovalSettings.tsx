@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { formatDateTime } from "@/lib/format";
 
 /** M20-04 Vier-Augen-Prinzip beim Mailversand (docs/rules): Mandantenmodus
  *  `all` | `external_only` | `off` über `PATCH /tenant/settings`, Feld `mail_approval_mode`.
@@ -100,8 +101,8 @@ function DeputiesSection({
               {t("row", {
                 absent: nameOf(row.absent_user_id),
                 deputy: nameOf(row.deputy_user_id),
-                from: new Date(row.starts_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" }),
-                to: new Date(row.ends_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" }),
+                from: formatDateTime(row.starts_at),
+                to: formatDateTime(row.ends_at),
               })}
               {row.note ? ` (${row.note})` : ""}
             </span>

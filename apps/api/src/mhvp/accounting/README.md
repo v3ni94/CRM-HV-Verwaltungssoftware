@@ -547,3 +547,5 @@ und `tenant_settings:update`), Schalter `direct_debit_creator_may_not_approve` (
 Standard aus). An: `direct_debit.approve` lehnt den Ersteller des Laufs mit 403 `MHVP-GATE-0002`
 ab (Frage AN17-01 offen). Die Konsistenzprüfung `/ledgers/{id}/checks` nennt zusätzlich
 `constraint_findings` (siehe Plattform).
+
+AP12 (GAK-104 Rest, GAM-605): `write_offs.py` bucht eine freigegebene Ausbuchung über `POST /accounting/open-item-write-offs/{id}/posting` (Schalter `accounting.write_off_posting` in `tenant_settings.sources`, Standard aus; Gegenkonto `accounting.write_off_counter_account` ohne Vorgabe; G1; Betrag und Gegenkonto aus der Vorschau, sonst 409 `MHVP-ACC-0044`). Idempotenzschlüssel `write_off:<id>` plus Zeilensperre: genau ein Buchungssatz. Storno über `POST .../posting/reversal`. Einstellungen `GET/PUT /accounting/open-item-write-offs/settings`. Regel: `docs/rules/AN15-ruecklastschrift-ausbuchung.md` Punkte 13 bis 17.

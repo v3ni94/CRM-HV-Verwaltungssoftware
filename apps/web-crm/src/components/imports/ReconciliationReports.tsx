@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ui } from "@/lib/ui";
 
 const API = "/api/bff/imports/reconciliation-reports";
@@ -119,9 +120,9 @@ export function ReconciliationReports({ canCreate }: { canCreate: boolean }) {
       {reports === null ? (
         <p className="text-sm text-muted">{t("loading")}</p>
       ) : reports.length === 0 ? (
-        <p className="text-sm text-muted" data-testid="reconciliation-empty">
-          {t("empty")}
-        </p>
+        <div data-testid="reconciliation-empty">
+          <EmptyState title={t("empty")} />
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className={ui.table} data-testid="reconciliation-list">

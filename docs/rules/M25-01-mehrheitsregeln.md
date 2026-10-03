@@ -53,3 +53,13 @@ automatisch geändert, die Verkündung bleibt bei der Versammlungsleitung.
 
 Die ältere Tabelle `majority_rule` (Migration 0027, Regel je GdWE mit Bezug auf den
 Tagesordnungspunkt und Vorschlag der Auszählung) bleibt unverändert bestehen.
+
+## Nachtrag 03.10.2026 (GAM-809): Pflichtfelder des Regelformats
+
+| Feld | Inhalt |
+| --- | --- |
+| ID | M25-01 |
+| Geltungsbereich | Beschlüsse der Gemeinschaft des Wohnungseigentums je Mandant, Mehrheitsregel je Beschlussgegenstand (Tabelle `hoa_majority_rule`), nur Anzeige und Protokollvermerk, keine Statusänderung |
+| Quellenstatus | Fachliche Umsetzung nach Betreiberentscheidung vom 24.09.2026 (OPEN_QUESTIONS M25-01); keine Rechtsnorm aus Anhang C hinterlegt, die Regeln sind fachlich freizugeben (Rechtsanwalt) |
+| Abnahmefall | `apps/api/tests/unit/test_m25_majority_rules.py` und die Mehrheitsprüfung der Versammlung (siehe Abschnitt Auswertung) |
+| Änderungsgrund | Betreiberentscheidung vom 24.09.2026, umgesetzt am 26.09.2026 (Migration 0125) |

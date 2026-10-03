@@ -89,7 +89,7 @@ def test_rate_history_drafts_and_settlement(client: TestClient, world: World) ->
     assert (draft["year"], draft["amount"], draft["rate"], draft["days"]) == (
         2025,
         "12.00",
-        "1.00000",
+        "1.00000000",  # NUMERIC(20,8) since 0461 (GAL-102)
         365,
     )
     assert draft["status"] == "draft"

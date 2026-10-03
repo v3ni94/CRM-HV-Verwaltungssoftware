@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
@@ -9,6 +9,7 @@ import { ui } from "@/lib/ui";
 
 import { ContactPicker } from "../hoa/ContactPicker";
 import { AdminFeeRun } from "./AdminFeeRun";
+import { FeeInvoiceParties } from "./FeeInvoiceParties";
 
 export type PropertyOption = { id: string; label: string };
 type Fee = {
@@ -38,6 +39,10 @@ type PeriodRow = {
 };
 type Invoice = {
   id: string;
+  fee_setting_id?: string;
+  property_id?: string;
+  debtor_legal_entity_id?: string | null;
+  invoice_debtor_party_id?: string | null;
   number: string;
   kind: string;
   invoice_date: string;
@@ -76,6 +81,8 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   const [busy, setBusy] = useState(false);
   // Q15: abgelegte PDF-Rechnungen je Rechnung (Dokument-ID), Download über den Dateipfad der Sitzung.
   const [pdfs, setPdfs] = useState<Record<string, string>>({});
+  // GAM-212: Zahler, Rechnungsempfänger und Zahlungsempfänger je Rechnung (eingeblendet auf Wunsch).
+  const [openParties, setOpenParties] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({
     property_id: properties[0]?.id ?? "",
     start_date: today,
@@ -497,7 +504,8 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
               </tr>
             ) : null}
             {invoices.map((inv) => (
-              <tr key={inv.id}>
+              <Fragment key={inv.id}>
+              <tr>
                 <td>
                   {inv.number}
                   {inv.kind === "credit_note" ? ` (${t("creditNote")})` : ""}
@@ -554,6 +562,16 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                       </button>
                     </>
                   ) : null}
+                  {inv.property_id ? (
+                    <button
+                      type="button"
+                      className={ui.buttonSm}
+                      aria-expanded={!!openParties[inv.id]}
+                      onClick={() => setOpenParties((o) => ({ ...o, [inv.id]: !o[inv.id] }))}
+                    >
+                      {openParties[inv.id] ? t("parties.hide") : t("parties.toggle")}
+                    </button>
+                  ) : null}
                   {inv.kind === "invoice" && !inv.cancelled_at ? (
                     <>
                       {inv.status === "issued" ? (
@@ -577,6 +595,19 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                   ) : null}
                 </td>
               </tr>
+              {inv.property_id && openParties[inv.id] ? (
+                <tr>
+                  <td colSpan={99}>
+                    <FeeInvoiceParties
+                      propertyId={inv.property_id}
+                      debtorLegalEntityId={inv.debtor_legal_entity_id}
+                      invoiceDebtorPartyId={inv.invoice_debtor_party_id}
+                      managerContactId={fees.find((f) => f.id === inv.fee_setting_id)?.manager_contact_id}
+                    />
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>

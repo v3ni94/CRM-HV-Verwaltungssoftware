@@ -333,6 +333,7 @@
     "tag": "Tag",
     "filter": "Filter",
     "reset": "Reset",
+    "emptyHint": "Adjust the search or filter, or create a new contact.",
     "empty": "No contacts found.",
     "colName": "Name",
     "colKind": "Type",
@@ -1017,6 +1018,7 @@
   "Imports": {
     "title": "Imports",
     "intro": "Import runs from confirmed proposals. An import can be undone as long as later data does not build on it.",
+    "emptyHint": "Import runs appear here once a confirmed proposal has been imported.",
     "empty": "No import runs yet.",
     "detailTitle": "Import run",
     "back": "Back to imports",
@@ -1839,6 +1841,8 @@
       "decidedAt": "Decided at",
       "status": "Status",
       "hash": "Checksum",
+      "by": "Approved by user {user}",
+      "summary": "{valid} valid, {voided} voided",
       "steps": {
         "approval": "Payment approval",
         "release": "Invoice release",
@@ -1870,6 +1874,7 @@
       "empty": "No check points due.",
       "rule": "Rule","version": "Version","dueOn": "Due since","status": "Status","reason": "Reason"
     },
+    "emptyHint": "Ledgers are created per legal entity. Without a ledger there is nothing to work on here yet.",
     "empty": "No ledger created yet.",
     "ledger": "Ledger",
     "leading": "Leading system",
@@ -2375,6 +2380,7 @@
     "openItems": "Open items at {date}",
     "noticeReceivedOn": "Notice received",
     "noticeReceivedOnError": "Saving failed.",
+    "writeOff": "Write off",
     "settlement": {
       "title": "Settlement in the statutory order",
       "intro": "Without a determination by the payer the platform only proposes the settlement in the statutory order: due before not yet due items, then less security, more burdensome, older first, costs before interest before principal. A determination of the payer in the purpose wins. Confirmation creates a draft entry; posting happens only in the journal.",
@@ -2609,6 +2615,7 @@
       "unconfirmed": "unconfirmed"
     },
     "dialog": {
+      "determinationPrefix": "Deviation from payer's determination:",
       "periodLocked": "The object period is locked ({code}). This transaction cannot be booked until the lock is lifted.",
       "title": "Book transaction",
       "close": "Close",
@@ -2945,6 +2952,9 @@
     "config": {"title": "Payment format per bank account", "intro": "Agreed version of pain.001 (credit transfer) and pain.008 (direct debit) and submission channel per account. Only versions the platform can generate and validate are offered. Saving creates no payment file and triggers no payment; creating and submitting stay locked until release stage G2.", "account": "Bank account", "choose": "Choose account", "pain001": "Version pain.001", "pain008": "Version pain.008", "channel": "Submission channel", "channel_file": "File (manual upload)", "channel_fints": "FinTS", "channel_ebics": "EBICS", "confirmedOn": "Agreed with the bank on", "notes": "Note", "save": "Save", "saved": "Payment format saved.", "readOnly": "Changing needs the bank approval right."},
     "batchStatus": {"open": "Record bank feedback", "status": "Bank feedback", "status_submitted": "Submitted", "status_accepted_by_bank": "Accepted by the bank", "status_rejected": "Rejected", "status_executed": "Executed (posts)", "status_returned": "Returned (reverses)", "reason": "Reason (required on rejection and return)", "hint": "A rejection leaves the payable fully open. Execution and returns can also be recorded via the bank feedback import.", "bankTransaction": "Bank transaction (ID, required for execution)", "bookingEffect": "Caution, posting effect: Executed settles the payable in the amount debited, Returned reverses that settlement and reopens the payable. Posted values are never overwritten.", "fourEyes": "Four eyes: the payment orders were approved by two people. Record execution or return only with the bank document and have a second person check the posting.", "bookingLocked": "Execution and return are locked until release gate G2 is open for this tenant.", "record": "Record", "cancel": "Cancel", "recorded": "Feedback recorded, orders affected: {count}."},
     "candidates": {"show": "Suggestions", "hide": "Hide suggestions", "loading": "Loading suggestions.", "none": "No matching open item found.", "remaining": "Open: {amount}", "score": "Match score {score}", "unambiguous": "unambiguous", "note": "Suggestion, not a posting. The IBAN alone does not prove a debtor."},
+    "determination": {"title": "Payer's determination", "hint": "Detected server side from the payment purpose (invoice or charge number, period, unit). Suggestion, not a posting; the allocation remains your decision.", "none": "No determination was detected in the payment purpose. The standard order applies.", "remaining": "Open: {amount}", "selected": "selected", "locationMismatch": "Unit or property in the payment purpose differs from the item.", "conflict": "Review note: the chosen allocation deviates from the payer's determination. Please state a reason.", "reasonLabel": "Reason for deviation (required)", "unavailable": "The determination could not be loaded."},
+    "execution": {"hint": "Record per order. The executed amount comes from the debit of the bank transaction; only this confirmed amount settles the payable, the rest stays open.", "bankTransaction": "Bank transaction (ID, required for execution)", "recordExecuted": "Record execution", "executedHint": "Posting effect, only with a bank record.", "locked": "Execution is locked until release stage G2 is open for this tenant.", "reason": "Reason (required for rejection)", "recordRejected": "Record rejection", "partial": "Partially executed: confirmed {paid}, remaining open {rest}."},
+    "ddOrders": {"show": "Individual orders", "hide": "Hide individual orders", "loading": "Loading individual orders.", "empty": "No individual orders in the run.", "debtor": "Debtor", "mandate": "Mandate", "dueDate": "Due", "amount": "Amount", "status": "Bank status", "collected": "Collected", "returnCode": "Code {code}", "returnedNote": "Returned debit: correction only by reversal, check the payable.", "partialNote": "Partial collection, remainder stays open.", "status_open": "open", "status_accepted": "accepted", "status_rejected": "rejected", "status_collected": "collected", "status_returned": "returned"},
     "clarification": {"open": "Report as unsupported", "reason": "Reason", "submit": "Report", "cancel": "Cancel", "opened": "Clarification opened"},
     "digest": {"buildWeek": "Week starting (Monday)", "build": "Build digest", "buildHint": "Builds or updates the digest of the week, books nothing.", "built": "Digests built or updated: {count}."},
     "mandate": {"action": "Action", "revoke": "Revoke", "confirm": "Revoke mandate {reference}? Direct debit collection of the affected contracts will stop.", "revoked": "Mandate {reference} revoked."}
@@ -3226,6 +3236,7 @@
     "calculate": "Calculate",
     "approveInternal": "Approve internally",
     "deliveredAt": "Delivered to tenant",
+    "deliveredAtProposed": "Proposed from the earliest recorded access of the tenant letters, please check.",
     "issue": "Issue",
     "newVersion": "New version",
     "newVersionReason": "Correction reason",
@@ -3342,6 +3353,15 @@
     },
     "noLedgers": "No ledger available. Without a ledger no statement can be created.",
     "heating": {
+      "valueKind": "Kind",
+      "heatingKind": "Kind heating",
+      "hotWaterKind": "Kind hot water",
+      "readingDate": "Reading date",
+      "valueKinds": {
+        "actual": "read",
+        "interim": "interim reading",
+        "estimated": "estimated"
+      },
       "compare": {
         "title": "External versus own",
         "notice": "Comparison of external amounts (metering service) with the own calculation per user. A hint only, nothing is booked or changed.",
@@ -3531,6 +3551,14 @@
     }
   },
   "HoaWork": {
+    "subCommunity": {
+      "label": "Sub community",
+      "none": "No sub community",
+      "basisHint": "For a sub community please record a resolution or document as basis; without a basis a check hint is shown.",
+      "basisMissing": "without documented basis",
+      "hint": "Check hint: cost positions of a sub community without resolution or document as basis",
+      "blocked": "Internal approval locked: cost positions of a sub community without resolution or document as basis"
+    },
     "audits": "Board audits",
     "audit": {
       "title": "Board audit",
@@ -3558,6 +3586,7 @@
         "outdated": "outdated"
       },
       "wholeEngagement": "Whole engagement",
+      "outdatedNotice": "{n, plural, one {# item is outdated} other {# items are outdated}}: the receipt or posting changed after the check. The overall status is not valid until the items are checked again.",
       "statusLabel": "Status",
       "saved": "Saved.",
       "board": "Board access and questions",
@@ -3684,6 +3713,17 @@
     "approveInternal": "Approve internally (second person)",
     "decidedOn": "Resolution date",
     "recordResolution": "Record resolution for this version",
+    "lockedG4": "Locked while release gate G4 (HOA statements) is closed. Management grants the release.",
+    "party": "Party (ownership period)",
+    "partyNone": "no ownership",
+    "partyRange": "{from} to {to}",
+    "partyChange": "Change of ownership in the period: arrears with the seller, result by the transfer date. Rule not decided (P01), information only.",
+    "existingResolution": "Use an existing resolution",
+    "existingResolutionHint": "Passed entries of the resolution collection are offered. The API checks the binding to the current version.",
+    "useExisting": "Take over resolution and set to resolved",
+    "newResolutionException": "Record a new resolution (exception if it is not in the collection)",
+    "resolutionWordingLabel": "Wording of the resolution",
+    "noResolutionChosen": "No resolution chosen",
     "resolutionSubject": {
       "plan": "Economic plan",
       "statement": "Annual statement"
@@ -5461,6 +5501,7 @@
     "g5": "G5 evidence",
     "noData": "No data.",
     "rentLaw": "Rent law: maintain rules",
+    "indexValuesLink": "Import and release index values",
     "pricingLink": "Pricing structure and offer",
     "g5Link": "G5 release: evidence list",
     "onboardingLink": "Third party onboarding and export"
@@ -5567,6 +5608,44 @@
     "endedDone": "Plan ended."
   },
   "Invoices": {
+    "kind": {
+      "label": "Invoice type",
+      "invoice": "Invoice",
+      "partial": "Progress invoice",
+      "final": "Final invoice",
+      "deductionTitle": "Deduct booked progress invoices of this issuer",
+      "chooseProvider": "Choose the issuer first.",
+      "noPartials": "No booked progress invoice of this issuer.",
+      "partialRow": "{number} dated {date}, {gross}",
+      "summary": "Total service {service}, progress deducted {deducted}, remaining obligation {remaining}. The API checks the deductions as well.",
+      "deductionTooHigh": "The deductions exceed the final invoice."
+    },
+    "split": {
+      "toggle": "Split the invoice into several lines (mixed invoice)",
+      "hint": "Enter account, net, VAT rate and the reason of the split per line, for example allocable, administration, repair. The lines must add up to the gross amount of the document.",
+      "account": "Account line {n}",
+      "net": "Net line {n}",
+      "vat": "VAT rate line {n}",
+      "reason": "Reason line {n}",
+      "remove": "Remove line",
+      "add": "Add line",
+      "documentGross": "Gross per document",
+      "sum": "Sum of lines: net {net}, VAT {vat}, gross {gross}.",
+      "mismatch": "The lines differ from the gross amount of the document by {difference}."
+    },
+    "discount": {
+      "title": "Take cash discount (preview)",
+      "hint": "Discount {percent} % until {until}. The preview neither posts nor pays; the payment run applies the discount.",
+      "payDate": "Payment date",
+      "preview": "Calculate payable amount",
+      "expired": "The discount period has ended on this date, the full amount applies.",
+      "result": "Discount {discount}, payable {payable}.",
+      "none": "No discount on this date, payable {payable}."
+    },
+    "instruction": {
+      "title": "Document contains an instruction, not carried out",
+      "text": "Text in the document that reads like an instruction (for example new IBAN, self release, export) is not followed. Bank detail changes and releases only through the defined review path."
+    },
     "reverseChargeGateTitle": "Release point section 13b UStG",
     "reverseChargeGateText": "The document is flagged as reverse charge. Whether section 13b UStG applies is not decided automatically: the tax advisor confirms the norm and the liable party; until then no automatic posting or tax effect applies.",
     "extra": {
@@ -5690,6 +5769,37 @@
     "requiredHint": "Required: ledger, issuer, invoice number, invoice date, net amount and cost account. Only then can the invoice be created."
   },
   "Levy": {
+    "paymentStatus": {
+      "title": "Payment status per instalment",
+      "instalment": "Instalment",
+      "charged": "Charged",
+      "received": "Received",
+      "open": "Arrears",
+      "sum": "Total",
+      "refundsProposed": "Refund proposed {amount}",
+      "none": "No instalments calculated yet.",
+      "usage": "Use of funds (postings on the use account)",
+      "noUsage": "No postings on the use account.",
+      "truncated": "Only the first 200 postings are shown."
+    },
+    "refunds": {
+      "title": "Refund (proposal)",
+      "locked": "Refunds are recorded only as a proposal with resolution and reason. Nothing is posted or paid out; the payout through a payment run stays locked (G2, G4).",
+      "disabled": "Refund proposals are not enabled for this tenant (setting refund proposals for special levies).",
+      "none": "No refund proposals.",
+      "allUnits": "All units",
+      "amount": "Amount",
+      "resolution": "Resolution",
+      "noResolution": "No positive resolution available",
+      "reason": "Reason",
+      "propose": "Record proposal",
+      "withdraw": "Withdraw",
+      "withdrawReason": "Reason for withdrawing",
+      "status": {
+        "proposed": "proposed",
+        "withdrawn": "withdrawn"
+      }
+    },
     "title": "Special levy",
     "purpose": "Purpose",
     "total": "Total",
@@ -6536,6 +6646,7 @@
       "bulkMailHow": "How do I put together a bulk mailing?",
       "mergeCheck": "Which contacts are possible duplicates?",
       "rentIndexExplain": "How does the rent index affect rent increases?",
+      "depositsExplain": "How high are the deposits and where are they held?",
       "contractNewHelp": "What does a new contract need?",
       "sepaExplain": "Which SEPA mandates are open or revoked?",
       "bankReviewExplain": "What do I check in the follow-up review?",
@@ -6572,6 +6683,7 @@
       "releaseGatesExplain": "Which release gates are open?",
       "licensesExplain": "Which licences does this tenant have?",
       "rentLawExplain": "What does the rent law review show?",
+      "indexValuesExplain": "How are index values released?",
       "oidcClientsExplain": "What are OIDC clients used for?",
       "onboardingExplain": "Which steps does onboarding have?",
       "priceListExplain": "How is the price list structured?",
@@ -6722,6 +6834,7 @@
       "acceptance": "Acceptance register",
       "trash": "Trash",
       "rentLaw": "Rent law",
+      "indexValues": "Index values",
       "onboarding": "Onboarding",
       "priceList": "Price list",
       "overview": "Overview",
@@ -6734,6 +6847,7 @@
       "merge": "Merge",
       "reserves": "Reserves",
       "rentIndex": "Rent index",
+      "deposits": "Deposits",
       "letters": "Letters",
       "version": "Version"
     }
@@ -7086,6 +7200,31 @@
           "rejected": "Rejected"
       },
       "selectMember": "Select member"
+  },
+  "ApproverList": {
+    "title": "Approvers and possible duplicate identities",
+    "notice": "The four eyes check compares accounts (user id), not persons. This list shows accounts with payment approval and marks accounts that might belong to the same person. The mark is a hint, not proof, and blocks nothing. What counts as independent approvers has not been decided yet.",
+    "none": "No active account with payment approval.",
+    "member": "Account",
+    "email": "Email",
+    "roles": "Roles",
+    "rights": "Approval for",
+    "hint": "Hint",
+    "noHint": "none",
+    "payments": "Payment orders",
+    "directDebits": "Direct debit runs",
+    "criteriaTitle": "Criteria of the mark (display only, not saved)",
+    "criteria": {
+      "contact": "same contact link",
+      "name": "same name (word order ignored)",
+      "emailVariant": "same email domain and same name part of the address (without digits and plus suffix)"
+    },
+    "possibleSame": "Possible duplicate identity with {names}: {reasons}",
+    "reasonContact": "contact link",
+    "reasonName": "name",
+    "reasonEmail": "email",
+    "summary": "{count, plural, =0 {No accounts with possible duplicate identity.} one {# account with possible duplicate identity.} other {# accounts with possible duplicate identity.}}",
+    "stateOnlyActive": "Only active accounts are shown."
   },
   "Members": {
     "propertiesAll": "Properties: all",
@@ -9022,6 +9161,7 @@
     "passwordStored": "Password stored",
     "passwordMissing": "No password stored",
     "verifyTls": "Verify TLS",
+    "verifyTlsWarning": "Without TLS verification credentials travel over an unverified connection. Only platform administrators may switch it off; every change is logged.",
     "pollMinutes": "Poll interval (minutes)",
     "save": "Save",
     "check": "Check connection",
@@ -9568,6 +9708,7 @@
       "rejected": "discarded"
     },
     "review": {
+      "split": "Split the document into several lines (mixed invoice)",
       "title": "Field review",
       "hint": "Proposed values with confidence per field. Please check values with low confidence against the original. All fields can be changed.",
       "columns": {
@@ -10148,6 +10289,10 @@
     }
   },
   "Dispatch": {
+    "historyShow": "Show history",
+    "historyHide": "Hide history",
+    "historyLoading": "Loading history.",
+    "historyNone": "No history from the postal service.",
     "noRight": "Preparing dispatches needs the right communication:create.",
     "noDocuments": "No document is filed for this contact. File a letter first.",
     "document": "Document",
@@ -10819,6 +10964,13 @@
   },
   "Notices": {
     "title": "Notice board",
+    "readsShow": "Show read status",
+    "readsHide": "Hide read status",
+    "readsSummary": "{read} of {total} portal accounts confirmed the notice.",
+    "readsNone": "No confirmation yet.",
+    "readsContact": "Contact",
+    "readsUnknown": "unknown",
+    "readsNote": "Indication of acknowledgement in the portal. Not a delivery and not a legally assessed receipt.",
     "intro": "Notices of the management with validity, level and audiences, shown in the portal to tenants, owners and service providers of the property.",
     "create": "Create notice",
     "edit": "Edit",
@@ -11680,6 +11832,32 @@
     }
   },
   "AllocationKeys": {
+    "sources": {
+      "title": "Source and confirmation per key",
+      "intro": "For rented condominium units a key taken from the template applies only once its source and start of validity are recorded and confirmed. The confirmation documents the check of the source, not its legal effect.",
+      "key": "Key",
+      "kind": "Source",
+      "reference": "Reference",
+      "validFrom": "Valid from",
+      "status": "Confirmation",
+      "templateDerived": "taken from template",
+      "kindFor": "Source {code}",
+      "referenceFor": "Reference {code}",
+      "validFromFor": "Valid from {code}",
+      "none": "not recorded",
+      "kinds": {
+        "declaration_of_division": "Declaration of division",
+        "agreement": "Agreement",
+        "resolution": "Resolution"
+      },
+      "confirmedAt": "confirmed on {at}",
+      "unconfirmed": "not confirmed",
+      "since": "valid from {date}",
+      "save": "Save source",
+      "confirm": "Confirm {code}",
+      "unconfirm": "Withdraw confirmation",
+      "hint": "Confirming needs source, start of validity and reference. A changed source withdraws the confirmation."
+    },
     "title": "Allocation keys and key values",
     "intro": "Keys per property with expected total and the sum of the unit values at the reference date. Values carry a validity period; statements read them only after the releases G3 and G4.",
     "asOf": "Reference date",
@@ -11758,6 +11936,63 @@
     "limit": "At most {max} own kinds.",
     "saved": "Saved.",
     "readOnly": "Changing this requires the permission to change tenant settings."
+  },
+  "DepositList": {
+    "title": "Deposits per tenancy",
+    "notice": "Overview of deposits with account, legal entity, interest and block note. The list shows records and posts nothing.",
+    "filterProperty": "Property",
+    "allProperties": "All properties",
+    "filterStatus": "Status",
+    "allStatuses": "All statuses",
+    "outstandingOnly": "Only with open due amount",
+    "contract": "Tenancy",
+    "unit": "Unit",
+    "party": "Tenant",
+    "kind": "Type",
+    "status": "Status",
+    "amountDue": "Due",
+    "received": "Received",
+    "balance": "Balance",
+    "outstanding": "Outstanding",
+    "details": "Account and interest",
+    "hide": "Hide",
+    "statuses": { "open": "open", "active": "active", "settled": "settled" },
+    "kinds": {
+      "cash": "Cash deposit",
+      "savings_book": "Savings book",
+      "insurance": "Deposit insurance",
+      "guarantee": "Guarantee",
+      "fixed_deposit": "Fixed deposit",
+      "letter_of_comfort": "Letter of comfort",
+      "other": "Other"
+    },
+    "detail": {
+      "title": "Deposit account and interest",
+      "loading": "Loading",
+      "loadError": "The details could not be loaded completely.",
+      "account": "Investment account",
+      "noAccount": "No deposit account assigned",
+      "accountValue": "{bank} {iban}, holder {holder}",
+      "accountKind": "Account type",
+      "entity": "Legal entity",
+      "entityUnknown": "not determined",
+      "interestRule": "Interest rule",
+      "interestNone": "none stored",
+      "interestConfirmed": "Confirmed interest credits",
+      "interestDraft": "Drafts (not yet confirmed)",
+      "block": "Block note",
+      "blockSegregated": "Deposit, not property funds: held apart from the assets of the management and not intended for running property costs.",
+      "blockNotSegregated": "Deposit, not property funds. Check: the account is not marked as held separately.",
+      "blockNoAccount": "Deposit, not property funds. Check: without a deposit account the separate investment cannot be shown.",
+      "accountKinds": {
+        "rent": "Rent account",
+        "hoa": "HOA account",
+        "reserve": "Reserve account",
+        "deposit": "Deposit account",
+        "hoa_fee": "HOA fee account",
+        "other": "Other account"
+      }
+    }
   },
   "Deposits": {
     "title": "Deposits",
@@ -12876,6 +13111,28 @@
       "1": "Good evening {name}, working late, here is what matters anyway."
     }
   },
+  "GreetingFormal": {
+    "fallback": "Good day {name}, here is your overview.",
+    "morning": {
+      "0": "Good morning {name}, here is everything for you at a glance.",
+      "1": "Good morning {name}, here is your overview.",
+      "2": "Good morning {name}, a new day, here is the current status."
+    },
+    "midday": {
+      "0": "Good afternoon {name}, here is your overview for today.",
+      "1": "Good afternoon {name}, here is today's current status.",
+      "2": "Good afternoon {name}, everything important at a glance."
+    },
+    "evening": {
+      "0": "Good evening {name}, here is the current status.",
+      "1": "Good evening {name}, here is your overview for the evening.",
+      "2": "Good evening {name}, a quick look at everything."
+    },
+    "late": {
+      "0": "Good evening {name}, here is your overview.",
+      "1": "Good evening {name}, here is what matters anyway."
+    }
+  },
   "PropertyTermination": {
     "title": "End management",
     "intro": "Ends the management relationship and deactivates the property. All data is kept; the property no longer appears in the property list.",
@@ -13956,6 +14213,59 @@
     "readOnly": "Changing this requires the tenant settings update permission.",
     "save": "Save",
     "saved": "Saved."
+  },
+  "PlatformCpi": {
+    "title": "Consumer price index: values",
+    "notice": "Two steps: the CSV import creates unchecked drafts, only the explicit release makes values usable for index clauses and increase proposals. Source and as-of date are mandatory. A changed value of a month resets its release. Not legal advice.",
+    "forbidden": "Platform administrators only.",
+    "importTitle": "Import values",
+    "series": "Series (for example consumer price index)",
+    "source": "Source",
+    "dataAsOf": "Data as of",
+    "file": "Load CSV file (optional)",
+    "csv": "CSV content",
+    "csvHint": "Two columns month and value, separated by semicolon, tab or comma. Month as 2026-08 or 08.2026. A header line is allowed.",
+    "import": "Import",
+    "show": "Show values",
+    "imported": "Import finished: {created} new, {updated} changed, {unchanged} unchanged. The values are not released yet.",
+    "valuesTitle": "Values of the series",
+    "noSelection": "Enter a series and show its values.",
+    "empty": "No values.",
+    "month": "Month",
+    "value": "Value",
+    "status": "Status",
+    "releasedBadge": "released",
+    "draftBadge": "unchecked",
+    "releaseTitle": "Release",
+    "releaseHint": "Releases all unchecked values of the series up to and including the chosen month. Check the values against the source first.",
+    "upTo": "Release up to month",
+    "confirm": "I checked the values of series {series} up to {upTo} against the source and release {count} unchecked values.",
+    "release": "Release",
+    "released": "{count} values released."
+  },
+  "PropertyStatus": {
+    "title": "Property status",
+    "hint": "Only sets the status of the property. Ending the management and the manager change continue through the termination and the checklist below. Activating needs at least one unit, ending needs the end of management.",
+    "newStatus": "New status",
+    "choose": "Choose status",
+    "apply": "Change status",
+    "statuses": { "onboarding": "Onboarding", "active": "Active", "terminated": "Terminated" },
+    "confirm": {
+      "onboarding": "I confirm the change to onboarding.",
+      "active": "I confirm activating the property.",
+      "terminated": "I confirm the termination. The property can no longer be edited afterwards."
+    }
+  },
+  "TicketAssignees": {
+    "title": "Assignees",
+    "loading": "Loading assignees.",
+    "empty": "No assignees.",
+    "primary": "Primary",
+    "remove": "Remove",
+    "add": "Add assignee",
+    "choose": "Choose user",
+    "addButton": "Add",
+    "unknownUser": "Unknown user"
   },
   "PlatformLicensing": {
     "title": "Licences and price list",
@@ -15427,6 +15737,8 @@
       "done": "Locked until {date}. Drafts in the locked period: {drafts}. Unclarified bank movements: {unclarified}."
     },
     "accounts": {
+      "taxStatusMissing": "Tax status missing, no input tax posting: accounts with a VAT option exist but the tenant has no VAT status. Input tax is posted only after it is set under Settings, Invoicing and tax.",
+      "taxStatusSmall": "The tenant is set as small business, no input tax posting: VAT options on accounts have no effect on input tax.",
       "statementKind": "Statement type",
       "statementKinds": {
         "hoa_fee": "HOA fee",
@@ -15521,6 +15833,22 @@
     }
   },
   "AdminFees": {
+    "parties": {
+      "toggle": "Payer and recipients",
+      "hide": "Hide",
+      "title": "Payer, invoice recipient and payee",
+      "payer": "Payer (legal entity bearing the fee)",
+      "recipient": "Invoice recipient (contracting party)",
+      "payee": "Payee",
+      "payeeFixed": "Management company",
+      "payeeManager": "Management company, contact: {name}",
+      "unknown": "not determined",
+      "loading": "Loading",
+      "loadError": "The parties could not be loaded completely.",
+      "checkHint": "Check: the fee is paid to the management company, never to the payer or the invoice recipient. Before release, check that payer and invoice recipient match the property.",
+      "missingPayer": "Check: no paying legal entity is stored, so the fee cannot be posted.",
+      "missingRecipient": "Check: no contracting party is stored as invoice recipient."
+    },
     "pdf": "Create PDF",
     "pdfDownload": "Download PDF",
     "run": {
@@ -15937,7 +16265,7 @@
     "seeded": "{count} check points created in the deadline register.",
     "nextChange": "Next change dates: {dates}"
   },
-  "WriteOffs": {"title": "Write off proposals", "hint": "A proposal has no effect on balances or reports. Approval only sets the write off flag from the effective date; nothing is posted. Legal basis and booking path are open (question AN15-02).", "item": "Open receivable", "choose": "Please choose", "effectiveOn": "Effective date", "reason": "Reason (at least 10 characters)", "propose": "Propose write off", "empty": "No write off proposals for this ledger.", "asOf": "as of {date}", "preview": "Posting preview", "approve": "Approve", "reject": "Reject", "lockedG1": "Approval only after release gate G1 (productive bookkeeping).", "fourEyes": "Only a person other than the proposer.", "switchOff": "Approval is switched off for this tenant (business rules, AN15-02).", "notPostable": "Not postable", "noAccount": "account open", "status": {"proposed": "Proposed", "approved": "Approved", "rejected": "Rejected"}, "revocation": {"locked": "Revocation locked.", "awaiting_decision": "Revocation prepared, procedure open (AN15-02)."}, "side": {"debit": "Debit", "credit": "Credit"}, "blocker": {"not_approved": "not approved", "gate_g1_closed": "G1 closed", "counter_account_undecided": "counter account not decided (AN15-02)"}},
+  "WriteOffs": {"request": "Request write off", "requestHint": "Creates only a proposal without effect. Approval by a second person, gate G1 and approval by the management remain reserved.", "requestSubmit": "Submit request", "requested": "Write off requested", "cancel": "Cancel", "post": "Post write off", "postConfirm": "Post the write off with the values of the posting preview? Afterwards correction only by reversal.", "lockedPost": "Posting only after release gate G1 (productive bookkeeping).", "postHint": "Posts exactly the shown preview once; repeating has no second effect.", "posted": "Posted (entry {id})", "reversed": "Reversed (reversal {id})", "reverse": "Reverse posting", "reverseReason": "Reversal reason (at least 10 characters)", "settingsTitle": "Posting of write offs", "settingsHint": "Tenant setting without default: the tenant sets the counter account, question AN15-02 stays open. Default off.", "postingEnabled": "Allow posting after approval", "counterAccount": "Counter account (number)", "save": "Save", "saved": "Saved.", "postable": "Postable", "title": "Write off proposals", "hint": "A proposal has no effect on balances or reports. Approval only sets the write off flag from the effective date. Posting happens only on explicit instruction after the posting preview, with G1, the switch on and a counter account set by the tenant. Legal basis and booking path are open (question AN15-02); write offs need approval by the management.", "item": "Open receivable", "choose": "Please choose", "effectiveOn": "Effective date", "reason": "Reason (at least 10 characters)", "propose": "Propose write off", "empty": "No write off proposals for this ledger.", "asOf": "as of {date}", "preview": "Posting preview", "approve": "Approve", "reject": "Reject", "lockedG1": "Approval only after release gate G1 (productive bookkeeping).", "fourEyes": "Only a person other than the proposer.", "switchOff": "Approval is switched off for this tenant (business rules, AN15-02).", "notPostable": "Not postable", "noAccount": "account open", "status": {"proposed": "Proposed", "approved": "Approved", "rejected": "Rejected"}, "revocation": {"locked": "Revocation locked.", "awaiting_decision": "Revocation prepared, procedure open (AN15-02)."}, "side": {"debit": "Debit", "credit": "Credit"}, "blocker": {"not_approved": "not approved", "gate_g1_closed": "G1 closed", "counter_account_undecided": "counter account not decided (AN15-02)", "posting_switch_off": "posting switch off", "counter_account_invalid": "counter account invalid", "already_posted": "already posted", "amount_changed": "remaining amount changed"}},
   "DirectDebitFeedback": {
     "returnedOn": "Return date",
     "returnFee": "Return fee",
@@ -16355,7 +16683,11 @@
       "other": "Other data",
       "domain_event": "Event log",
       "platform_user": "Platform users",
-      "bank_raw": "Bank raw data"
+      "bank_raw": "Bank raw data",
+      "ai_run": "AI runs",
+      "call_log": "Call notes",
+      "webhook_delivery": "Webhook deliveries",
+      "postal_job": "Postal jobs"
     },
     "erasureStatus": {
       "proposed": "Proposal",
@@ -16582,6 +16914,21 @@
     "resolve": "Mark as resolved",
     "create": "Create draft plan"
   },
+  "ResolutionStatus": {
+    "open": "Change status",
+    "title": "Effectiveness status of the resolution",
+    "status": "New status",
+    "statuses": {"contested": "contested", "annulled": "declared invalid", "legally_binding": "final and binding", "void": "void"},
+    "court": "Court",
+    "fileNumber": "File number",
+    "courtDate": "Date",
+    "reason": "Reason (required)",
+    "hint": "The status change cancels nothing automatically. Dependent plans, levies and statements stay unchanged and are only reported.",
+    "save": "Save status",
+    "cancel": "Cancel",
+    "missing": "Please give a reason (at least 3 characters).",
+    "saved": "Status saved."
+  },
   "HoaReserves": {
     "title": "Reserves",
     "hint": "Earmarked reserves of the community. Payments are assigned to a reserve when the owners' advance is bound to it; otherwise the paid amount stays a total.",
@@ -16603,6 +16950,8 @@
     "closing": "Closing balance",
     "bankBalance": "Bank balance of the reserve accounts",
     "bankDifference": "Difference bank to closing balance",
+    "openContributions": "Open contributions (liquidity not available)",
+    "bankDifferenceNote": "The difference between bank balance and closing balance has to be explained in the reconciliation of the statement. Open contributions are receivables, not liquidity.",
     "unassigned": "Of which not assignable to a reserve: {amount}.",
     "reserve": "Reserve",
     "planned": "Planned",
@@ -17050,6 +17399,43 @@
     "next": "Next",
     "range": "{from} to {to} of {total}"
   },
+  "RestoreReport": {
+    "title": "Restore log of deletions",
+    "intro": "Shows the report of the deletion replay run after a restore (replay_deletions with --report). The file is only read in the browser, nothing is stored or sent. The view does not replace an approval: the restore procedure and the review of the report are not yet defined.",
+    "file": "Report file (JSON)",
+    "invalid": "The file is not a valid report of the replay run.",
+    "tooLarge": "The file is too large (5 MB at most).",
+    "modeApply": "Applied: the deletions were replayed.",
+    "modeDry": "Check only: nothing was changed.",
+    "total": "Entries in the report: {count}",
+    "groups": {
+      "replayed": "Deletions replayed",
+      "kept": "Deliberately kept (hold, retention, different content)",
+      "review": "Check manually",
+      "skipped": "Not applied (refusal, hold note)"
+    },
+    "outcomes": {
+      "deleted": "deleted",
+      "would_delete": "would be deleted",
+      "trashed": "moved to the trash",
+      "would_trash": "would be moved to the trash",
+      "restored": "taken out of the trash",
+      "would_restore": "would be taken out of the trash",
+      "kept_hold": "kept because of deletion hold",
+      "kept_blocked": "kept because of profile or retention",
+      "kept_hash_mismatch": "kept, content differs",
+      "absent": "document not in the restored database",
+      "invalid": "entry malformed",
+      "skipped": "skipped"
+    },
+    "unknownOutcome": "Unknown outcome type: {outcome}",
+    "document": "Document",
+    "outcome": "Outcome",
+    "reason": "Reason",
+    "empty": "No entries in this group.",
+    "reviewNeeded": "Entries under Check manually or Deliberately kept need a decision by data protection.",
+    "clear": "Clear view"
+  },
   "AD10": {
     "link": "Maintenance and availability",
     "title": "Maintenance and availability",
@@ -17301,6 +17687,10 @@
         "title": "Return debit fee as pass on proposal",
         "description": "An actual bank fee recorded with a return debit appears in the reconciliation as a proposal to pass it on to the debtor. Nothing is posted; whether and on which basis it is passed on is open (G1, G2)."
       },
+      "write-off-posting": {
+        "title": "Posting of receivable write offs",
+        "description": "An approved write off can be posted after the posting preview, only with G1 and a counter account set by the tenant (write off mask). Off, nothing is posted. Correction only by reversal; legal basis and booking path are open (AN15-02)."
+      },
       "write-off-approval": {
         "title": "Approval of receivable write offs",
         "description": "A write off proposal can be approved by a second person when G1 is open. Off, every proposal stays without effect. Procedure and legal basis of write offs are open."
@@ -17392,6 +17782,10 @@
         "title": "Allocation basis report blocks the output",
         "description": "If the allocation agreement of a cost item is missing, the report blocks the status change and the information sheet."
       },
+      "allocation-key-confirmation-required": {
+        "title": "Confirmed source for every allocation key",
+        "description": "For rented condominium units by default only a key taken from the template needs a confirmed source. Switched on, the rental statement refuses every key without a confirmed source and start of validity. Affects drafts behind G3 only."
+      },
       "heating-negative-costs": {
         "title": "Distribute negative heating cost parts",
         "description": "If a part of the heating cost statement has a negative total, by default it is not distributed and a warning is shown. Only calculation drafts behind G3 are affected."
@@ -17441,6 +17835,14 @@
       "correction-report": {
         "title": "Correction report per owner",
         "description": "Whether the correction report between two statement versions is shown. The report is a display only, nothing is posted or sent; the legal effect of a correction stays open."
+      },
+      "sub-community-basis-lock": {
+        "title": "Approve sub community positions only with documented basis",
+        "description": "Whether cost positions of a sub community without resolution or document as basis lock the internal approval of the WEG statement. Default off: check hint only. Admissible bases are open (AP21-01)."
+      },
+      "levy-refund-proposals": {
+        "title": "Refund proposals for special levies",
+        "description": "Whether refunds of a special levy may be recorded as a proposal with resolution and reason. Nothing is posted or paid out; the refund procedure is open (AP21-02, G2 and G4)."
       },
       "reserve-payment-mode": {
         "title": "Payments per earmarked reserve",
@@ -17498,6 +17900,10 @@
       "online-meeting": {
         "title": "Online meeting in the portal",
         "description": "Whether owners take part and vote online in hybrid or virtual meetings in the portal. The software does not check admissibility."
+      },
+      "greeting-address": {
+        "title": "Form of address in the greeting",
+        "description": "Whether the start page greeting uses the informal Du or the formal Sie. Default informal, current behaviour stays. The value is not yet stored on the server; the decision is open (AP24-01)."
       },
       "proxy-conflict-mode": {
         "title": "Proxy versus own vote",
@@ -17601,6 +18007,10 @@
       "mfa-admin-reset": {
         "title": "Reset second factor (four eyes)",
         "description": "Whether administrators may reset a user's lost second factor by request and approval of a second person. Off means: not possible."
+      },
+      "access-log-scope": {
+        "title": "Access log of personal data",
+        "description": "Whether reads of contacts and access exports (extended: also bank accounts and portal data) are logged with user and time, without content. Off means nothing is logged. Scope and retention are open (AP14-01)."
       },
       "access-export-third-party": {
         "title": "Access export: other persons",
@@ -17726,6 +18136,10 @@
         "by_due_date": "Assignment by due date",
         "by_resolution_date": "Assignment by statement resolution"
       },
+      "greeting-address": {
+        "du": "Du (current behaviour)",
+        "sie": "Sie"
+      },
       "proxy-conflict-mode": {
         "flag": "Mark the conflict as a review note",
         "first_vote": "First vote cast counts",
@@ -17768,6 +18182,11 @@
         "all_staff": "Required for all CRM roles",
         "roles": "Required for chosen roles",
         "voluntary": "Voluntary"
+      },
+      "access-log-scope": {
+        "off": "Off",
+        "contact": "Contact and access export",
+        "extended": "Extended"
       },
       "access-export-third-party": {
         "none": "Role only",

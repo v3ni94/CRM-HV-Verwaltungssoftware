@@ -243,6 +243,13 @@ def _money(value: Any) -> str | None:
     return None if value is None else format(value, "f")
 
 
+def _area(value: Any) -> str | None:
+    """Areas are stored as NUMERIC(20,8) (6.9.8) and exported with two decimals."""
+    if value is None:
+        return None
+    return format(Decimal(str(value)).quantize(Decimal("0.01")), "f")
+
+
 def _text(parent: Element, tag: str, value: Any) -> Element | None:
     if value is None or value == "":
         return None
@@ -332,7 +339,7 @@ def build_openimmo_xml(
 
     # flaechen -----------------------------------------------------------------------------
     flaechen = SubElement(immobilie, "flaechen")
-    _text(flaechen, "wohnflaeche", listing.living_area_sqm)
+    _text(flaechen, "wohnflaeche", _area(listing.living_area_sqm))
     _text(flaechen, "anzahl_zimmer", listing.rooms)
     if len(flaechen) == 0:
         immobilie.remove(flaechen)

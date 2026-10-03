@@ -56,6 +56,9 @@ GATED_ROUTES: tuple[tuple[str, str, str], ...] = (
     # AG07 (GAF-32): circular resolution vote in the owner portal.
     # AK14 (GAI-402, AJ28-02): payout order without invoice.
     ("POST", "/api/v1/accounting/payment-runs/payout-orders", "G2"),
+    # AP12 (GAK-104): posting of an approved write off and its reversal.
+    ("POST", "/api/v1/accounting/open-item-write-offs/{write_off_id}/posting", "G1"),
+    ("POST", "/api/v1/accounting/open-item-write-offs/{write_off_id}/posting/reversal", "G1"),
 )
 
 # AC03: routes that belong to the gate procedure itself (request, decision on a request).
@@ -158,6 +161,10 @@ REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(
         ("PUT", "/api/v1/imports/migration/ledgers/{ledger_id}/opening-balances"),
         # AO03 (GAK-203): release of platform index values (catalogue data, no money moved).
         ("POST", "/api/v1/platform/consumer-price-index/release"),
+        # AP21 (GAM-110): refund of a special levy only as a proposal behind the tenant switch
+        # levy_refund_proposals; nothing is posted or paid, the payout stays locked (G2, G4).
+        ("POST", "/api/v1/hoa/special-levies/{levy_id}/refunds"),
+        ("POST", "/api/v1/hoa/special-levies/{levy_id}/refunds/{refund_id}/withdraw"),
     }
 )
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { DocumentBundleList } from "@/components/portal/DocumentBundleList";
 import type { PortalDocument } from "@/components/portal/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -63,7 +64,7 @@ export default async function DocumentsPage({
           {t("apply")}
         </button>
       </form>
-      {rows.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
+      {rows.length === 0 ? <EmptyState title={t("empty")} hint={t("emptyHint")} /> : null}
       {rows.length > 0 ? <p className="text-xs text-subtle">{t("readNote")}</p> : null}
       {rows.length > 0 ? (
         <DocumentBundleList rows={rows} />

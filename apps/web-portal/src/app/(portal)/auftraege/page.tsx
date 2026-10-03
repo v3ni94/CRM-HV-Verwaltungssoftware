@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import type { WorkOrder } from "@/components/portal/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -17,7 +18,7 @@ export default async function OrdersPage() {
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
-      {rows.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
+      {rows.length === 0 ? <EmptyState title={t("empty")} hint={t("emptyHint")} /> : null}
       <ul className="flex flex-col gap-3">
         {rows.map((row) => (
           <li key={row.id}>

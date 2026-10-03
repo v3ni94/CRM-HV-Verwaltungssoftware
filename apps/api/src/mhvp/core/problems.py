@@ -461,6 +461,14 @@ class ErrorCodes:
         "Proposals and approvals of write offs need a person; API keys cannot satisfy the "
         "four eyes rule (AO12-05).",
     )
+    WRITE_OFF_POSTING_LOCKED = ErrorCode(
+        "MHVP-ACC-0044",
+        409,
+        "Buchung der Ausbuchung gesperrt",
+        "Posting an approved write off needs the tenant switch accounting.write_off_posting, "
+        "a counter account set by the tenant (AN15-02 open), gate G1 and the amount and "
+        "counter account confirmed from the posting preview (AP12, GAK-104).",
+    )
     ACC_ACCOUNT_RANGE_CATEGORY = ErrorCode(
         "MHVP-ACC-0032",
         422,
@@ -1265,6 +1273,24 @@ class ErrorCodes:
             "the mapped legal entity has no Lexware Office config (settings UI)."
         ),
     )
+    LEXOFFICE_OUTCOME_UNKNOWN = ErrorCode(
+        "MHVP-LEXO-0018",
+        409,
+        "Ergebnis eines früheren Exports ist ungeklärt",
+        (
+            "A previous POST for this entity timed out (maybe processed). No second create is "
+            "sent; reconcile in Lexware Office (voucher number lookup) or re-export with force."
+        ),
+    )
+    INTEGRATION_LIVE_MODE_LOCKED = ErrorCode(
+        "MHVP-LEXO-0019",
+        409,
+        "Live-Betrieb dieser Schnittstelle ist für den Mandanten gesperrt",
+        (
+            "integration_live_mode: live_allowed is false, or the bound release gate "
+            "(required_gate) is closed for the tenant (GAL-207)."
+        ),
+    )
     # Claims adjuster (Schadenstool, rule INT-SDT-01, docs/integrations/schadenstool.md).
     SCHADENSTOOL_NOT_ENABLED = ErrorCode(
         "MHVP-SDT-0001",
@@ -1304,6 +1330,15 @@ class ErrorCodes:
         502,
         "Schadenbearbeiter hat die Anfrage abgelehnt",
         "The claims adjuster answered with a 4xx other than 401/403/429.",
+    )
+    SCHADENSTOOL_SHARING_REFUSED = ErrorCode(
+        "MHVP-SDT-0007",
+        409,
+        "Weitergabe an den Schadenbearbeiter nicht zulässig",
+        (
+            "GAM-408: the resident contact has no data_sharing consent and the tenant policy "
+            "does not allow the transfer (consent_rules.data_sharing_decision)."
+        ),
     )
     # BrokerProvider (M28-01 stage 3, mhvp.letting.broker_provider).
     BROKER_NOT_CONFIGURED = ErrorCode(
@@ -1656,6 +1691,22 @@ class ErrorCodes:
         "Mehrheitsregel braucht die Freigabe einer zweiten Person",
         "The person who created the majority rule cannot approve it, or it is already "
         "approved or needs no approval (AN06, GAJ-602).",
+    )
+    # AP21 / GAM-109, GAM-110 (Welle 26).
+    HOA_SUB_COMMUNITY_BASIS_MISSING = ErrorCode(
+        "MHVP-HOA-0046",
+        409,
+        "Kostenposition einer Untergemeinschaft ohne belegte Grundlage",
+        "With the tenant switch sub_community_basis_lock a cost position assigned to a sub "
+        "community needs a basis resolution or basis document before the internal approval "
+        "(AP21, GAM-109, open question AP21-01).",
+    )
+    HOA_LEVY_REFUND_DISABLED = ErrorCode(
+        "MHVP-HOA-0047",
+        409,
+        "Erstattungsvorschläge zur Sonderumlage sind nicht freigeschaltet",
+        "Refund proposals of a special levy need the tenant switch levy_refund_proposals; the "
+        "refund procedure is open (AP21, GAM-110, open question AP21-02, G2 and G4).",
     )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
     CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(

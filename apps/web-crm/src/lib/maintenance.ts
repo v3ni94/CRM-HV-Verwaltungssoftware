@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "@/lib/session";
+import { formatDateTime } from "@/lib/format";
 
 /** GB16-01: announced maintenance window as served by the public feed GET /platform/maintenance/current. */
 export type MaintenanceItem = {
@@ -27,12 +28,7 @@ export async function fetchMaintenance(): Promise<MaintenanceItem[]> {
 
 /** Date and time in German business time (timestamps are stored in UTC). */
 export function formatWindow(iso: string, locale: string): string {
-  return new Date(iso).toLocaleString(locale === "de" ? "de-DE" : "en-GB", {
-    timeZone: "Europe/Berlin",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  void locale; // kept for the call sites, one format for every language
+  // Existing banner format "TT.MM.JJJJ, HH:MM".
+  return formatDateTime(iso).replace(" ", ", ");
 }

@@ -8,6 +8,7 @@ import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { AiPostingPanel } from "./AiPostingPanel";
+import { AllocationDetermination, type DeterminationState } from "./AllocationDetermination";
 
 import {
   accountLabel,
@@ -91,6 +92,7 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejected, setRejected] = useState<Set<string>>(new Set());
+  const [determination, setDetermination] = useState<DeterminationState>({ conflict: false, reason: "" });
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +181,9 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
   const restNeedsContra = restCents > 0 && !counterAccountId && !restAsCredit;
   const transferNeedsPartner = isTransfer && !counterAccountId;
   const periodLocked = proposals?.object_period_lock?.locked === true;
-  const canBook = !periodLocked && !busy && !loading && !overAllocated && !unreadableAmount && !invalidAmount && !restNeedsContra && !transferNeedsPartner;
+  // GAM-202: Abweichung von der Tilgungsbestimmung des Zahlers braucht eine Begründung.
+  const determinationMissing = determination.conflict && determination.reason.length < 3;
+  const canBook = !periodLocked && !busy && !loading && !overAllocated && !unreadableAmount && !invalidAmount && !restNeedsContra && !transferNeedsPartner && !determinationMissing;
 
   const applySplits = (splits: Split[] | undefined) => {
     setSettlements((splits ?? []).map((s) => ({ open_item_id: s.open_item_id, amount: s.amount })));
@@ -204,7 +208,8 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
       settlements: isTransfer && !transferElsewhere ? [] : settlements.map((s) => ({ open_item_id: s.open_item_id, amount: fromCents(toCents(s.amount)) })),
     };
     if (counterAccountId) body.counter_account_id = counterAccountId;
-    if (text.trim()) body.text = text.trim();
+    const bookingText = [determination.conflict && determination.reason ? `${t("determinationPrefix")} ${determination.reason}` : "", text.trim()].filter(Boolean).join(" | ");
+    if (bookingText) body.text = bookingText;
     const res = await bff<{ journal_entry_id: string; number: string }>(`/api/bff/banking/transactions/${tx.id}/book`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -335,6 +340,9 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
           </section>
         ) : null}
         {proposals ? <AiPostingPanel txId={tx.id} canRequest /> : null}
+        {proposals && !isTransfer && incoming ? (
+          <AllocationDetermination txId={tx.id} selectedItemIds={settlements.map((s) => s.open_item_id)} onChange={setDetermination} />
+        ) : null}
         {isTransfer ? (
           <section className="mt-4 flex flex-col gap-2">
             <h3 className={ui.h3}>{t("transferTitle")}</h3>

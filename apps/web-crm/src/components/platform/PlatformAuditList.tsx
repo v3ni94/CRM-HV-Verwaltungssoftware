@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { formatDateTime } from "@/lib/format";
 
 type AuditEvent = {
   id: string;
@@ -95,7 +96,7 @@ export function PlatformAuditList() {
             <tbody>
               {page.items.map((e) => (
                 <tr key={e.id}>
-                  <td>{new Date(e.occurred_at).toLocaleString("de-DE")}</td>
+                  <td>{formatDateTime(e.occurred_at)}</td>
                   <td>{e.action}</td>
                   <td>{e.actor_user_id ?? t("system")}</td>
                   <td>

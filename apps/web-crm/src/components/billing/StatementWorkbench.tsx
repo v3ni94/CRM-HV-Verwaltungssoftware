@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Co2SplitPanel } from "@/components/billing/Co2SplitPanel";
 import { PeriodLocksPanel } from "@/components/billing/PeriodLocksPanel";
@@ -13,6 +13,14 @@ import { useRefreshAfterPost } from "@/lib/useRefreshAfterPost";
 import { ui } from "@/lib/ui";
 
 type Key = { id: string; code: string; name: string };
+const ISSUABLE = ["internally_approved", "board_reviewed"];
+
+/** Earliest recorded access of the tenant letters (GAM-107): proposal for the access date of
+ *  the issue step; the operator confirms or changes it, the API checks the deadline. */
+export function earliestDelivery(rows: { delivered_at: string | null }[]): string {
+  const dates = rows.map((r) => r.delivered_at).filter((d): d is string => Boolean(d)).sort();
+  return dates[0] ?? "";
+}
 
 /** Cost items, calculation and status steps of an operating cost statement (M17).
  *  Heating costs come from an external statement (H01) and are entered via the API. */
@@ -23,6 +31,22 @@ export function StatementWorkbench({ id, status, keys, revision = "", contracts 
   const [key, setKey] = useState(keys[0]?.id ?? "");
   const [basis, setBasis] = useState("");
   const [delivered, setDelivered] = useState("");
+  const [deliveredProposed, setDeliveredProposed] = useState(false);
+  useEffect(() => {
+    if (!ISSUABLE.includes(status)) return;
+    let active = true;
+    void bff<{ delivered_at: string | null }[]>(`/api/bff/statements/${id}/results`).then((res) => {
+      if (!active || !res.ok) return;
+      const first = earliestDelivery(res.data ?? []);
+      if (first) {
+        setDelivered((cur) => cur || first);
+        setDeliveredProposed(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [id, status]);
   const [posting, setBusy] = useState(false);
   // Buttons stay disabled until the server component has re-rendered (see useRefreshAfterPost).
   const { refreshing, refresh } = useRefreshAfterPost(revision);
@@ -97,13 +121,14 @@ export function StatementWorkbench({ id, status, keys, revision = "", contracts 
           {t("approveInternal")}
         </button>
       ) : null}
-      {status === "internally_approved" ? (
+      {ISSUABLE.includes(status) ? (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1">
               <span className={ui.label}>{t("deliveredAt")}</span>
-              <input type="date" className={ui.input} value={delivered} onChange={(e) => setDelivered(e.target.value)} />
+              <input type="date" className={ui.input} value={delivered} required onChange={(e) => setDelivered(e.target.value)} />
             </label>
+            {deliveredProposed ? <span className={ui.help}>{t("deliveredAtProposed")}</span> : null}
             <button
               type="button"
               className={ui.primary}

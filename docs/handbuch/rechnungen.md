@@ -192,3 +192,17 @@ Bisher zugeordnet ergibt sich aus drei Teilen, die einzeln angezeigt werden: Rec
 ## Nummern von Mietrechnungs-Entwürfen
 
 Solange die Freigabestufe G1 geschlossen ist, sind Mietrechnungen und Gutschriften Entwürfe mit Wasserzeichen. Standardmäßig tragen sie eine Entwurfsnummer (ENTWURF-JJJJ-NNNNNN) und verbrauchen die fortlaufende Rechnungsnummer MR nicht. Die reguläre Nummer wird erst bei Ausgabe mit offenem G1 vergeben, ein Entwurf wird nicht umnummeriert. Im Vertrag unter Mietrechnungen kann der Nummernmodus gewählt werden: Entwurfsnummer (Standard), reguläre Nummer auch im Entwurf oder Ablehnung der Ausgabe bei geschlossenem G1. Die Einstufung ist mit Steuerberatung zu klären (OPEN_QUESTIONS AC03-01).
+
+## Rechnungsart, Abschlagsabzug und Aufteilung (Welle 26, AP16)
+
+Auf der Erfassungsmaske der Eingangsrechnung wählen Sie die Rechnungsart (Rechnung, Abschlagsrechnung, Schlussrechnung). Bei der Schlussrechnung listet die Maske die bereits gebuchten Abschlagsrechnungen desselben Ausstellers im selben Buchungskreis. Die angehakten Abschläge werden abgezogen, die Maske zeigt Leistungssumme, Abzug und Restverpflichtung (Beispiel D12: 5.950,00 EUR abzüglich 2.380,00 EUR ergibt 3.570,00 EUR). Die API prüft die Abzüge beim Buchen erneut.
+
+Für Mischrechnungen schalten Sie "Rechnung auf mehrere Zeilen aufteilen" ein. Je Zeile erfassen Sie Konto, Netto, Steuersatz und die Begründung der Aufteilung (zum Beispiel umlagefähig, Verwaltung, Instandsetzung). Die Summe der Zeilen muss dem Brutto laut Beleg entsprechen, sonst bleibt die Schaltfläche gesperrt und die Abweichung wird angezeigt (Beispiel D22). Im Belegeingang gilt dasselbe; der Steuersatz der einzeiligen Erfassung wird aus Netto und Steuer des Belegs abgeleitet, nicht fest mit 19 % gesetzt.
+
+## Skonto ziehen (Vorschau)
+
+An einer noch nicht gebuchten Rechnung mit Skontoangaben berechnet die Maske zum gewählten Zahltag Skonto und Zahlbetrag. Die Vorschau bucht und zahlt nichts, das Skonto wird im Zahllauf berücksichtigt. Nach Ablauf der Skontofrist gilt der volle Betrag.
+
+## Hinweis auf Handlungsanweisungen im Beleg
+
+Enthalten Warnungen oder Befunde einer Belegauswertung Text, der wie eine Anweisung klingt (neue IBAN, Selbstfreigabe, Export), erscheint der Hinweis "Dokument enthält Handlungsanweisung, nicht ausgeführt". Solche Texte werden nie befolgt; Änderungen von Bankverbindung oder Freigaben laufen nur über den vorgesehenen Prüfweg.

@@ -575,7 +575,14 @@ class Unit(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class AllocationKey(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "allocation_key"
-    __table_args__ = (UniqueConstraint("tenant_id", "property_id", "code"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "property_id", "code"),
+        CheckConstraint(
+            "source_kind IS NULL OR source_kind IN "
+            "('declaration_of_division', 'agreement', 'resolution')",
+            name="source_kind",
+        ),
+    )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
     code: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -592,6 +599,18 @@ class AllocationKey(IdMixin, TimestampMixin, TenantMixin, Base):
     # Miteigentumsanteile per Teilungserklärung); the CRM only warns when the unit values differ
     # (package C1, docs/OPEN_QUESTIONS.md C1-01). No default, nothing derives from it.
     expected_total: Mapped[Decimal | None] = mapped_column(AREA)
+    # AP17 / GAM-108 (migration 0467): recorded source of the key (Teilungserklärung,
+    # Vereinbarung, Beschluss) with reference, document and start of validity, and the
+    # confirmation by a person. Changing the source drops the confirmation. Whether a
+    # confirmed key is legally effective stays a human review (M17-01).
+    source_kind: Mapped[str | None] = mapped_column(String(32))
+    source_reference: Mapped[str | None] = mapped_column(String(500))
+    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id", ondelete="SET NULL")
+    )
+    source_valid_from: Mapped[date | None] = mapped_column(Date)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class UnitAllocationValue(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Viewing = { id: string; scheduled_at: string; status: string; location: string | null; note: string | null };
@@ -64,7 +64,7 @@ export function ProspectViewings({ prospectId }: { prospectId: string }) {
       <ul className="flex flex-col gap-1 text-xs">
         {rows.map((v) => (
           <li key={v.id} className="flex flex-wrap items-center gap-2">
-            <span>{formatDate(v.scheduled_at)} {new Date(v.scheduled_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>{formatDateTime(v.scheduled_at)}</span>
             {v.location ? <span className="text-muted">{v.location}</span> : null}
             <select aria-label={t("status")} className={ui.input} value={v.status} disabled={busy} onChange={(e) => void setStatus(v.id, e.target.value)}>
               {STATUSES.map((s) => (

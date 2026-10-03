@@ -45,6 +45,9 @@ from mhvp.billing.advance_routers import statement_router as advance_proposal_ro
 from mhvp.billing.ai_check_routers import router as statement_ai_check_router
 from mhvp.billing.allocability_routers import router as operating_cost_type_router
 from mhvp.billing.allocability_routers import statement_router as allocability_router
+from mhvp.billing.allocation_basis_routers import (
+    key_confirmation_router as allocation_key_confirmation_setting_router,
+)
 from mhvp.billing.allocation_basis_routers import router as allocation_basis_setting_router
 from mhvp.billing.allocation_basis_routers import statement_router as allocation_basis_router
 from mhvp.billing.calc_settings_routers import router as calc_settings_router
@@ -110,6 +113,7 @@ from mhvp.hoa.board import router as hoa_board_router
 from mhvp.hoa.finance import router as hoa_finance_router
 from mhvp.hoa.inspection import router as hoa_inspection_router
 from mhvp.hoa.levies import router as hoa_levies_router
+from mhvp.hoa.levy_cost import router as hoa_levy_cost_router
 from mhvp.hoa.majority import router as hoa_majority_router
 from mhvp.hoa.meeting_rules import router as hoa_meeting_rules_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
@@ -130,6 +134,7 @@ from mhvp.imports.routers import router as imports_router
 from mhvp.imports.vollimport_routers import router as vollimport_router
 from mhvp.imports.w3_routers import router as import_history_router
 from mhvp.integrations.lexoffice_ext.routers import router as lexoffice_ext_router
+from mhvp.integrations.live_mode import router as integration_live_mode_router
 from mhvp.integrations.routers import router as lexoffice_router
 from mhvp.integrations.schadenstool.routers import router as schadenstool_router
 from mhvp.integrations.schadenstool.webhook import router as schadenstool_webhook_router
@@ -335,6 +340,7 @@ def create_app(
     app.include_router(allocation_agreements_router, prefix=API_PREFIX)
     app.include_router(allocation_basis_router, prefix=API_PREFIX)
     app.include_router(allocation_basis_setting_router, prefix=API_PREFIX)
+    app.include_router(allocation_key_confirmation_setting_router, prefix=API_PREFIX)
     app.include_router(calc_settings_router, prefix=API_PREFIX)
     app.include_router(service_contracts_router, prefix=API_PREFIX)
     app.include_router(deposit_settlements_router, prefix=API_PREFIX)
@@ -386,6 +392,7 @@ def create_app(
     app.include_router(finapi_router, prefix=API_PREFIX)
     app.include_router(lexoffice_router, prefix=API_PREFIX)
     app.include_router(lexoffice_ext_router, prefix=API_PREFIX)
+    app.include_router(integration_live_mode_router, prefix=API_PREFIX)
     app.include_router(schadenstool_router, prefix=API_PREFIX)
     app.include_router(fints_router, prefix=API_PREFIX)
     app.include_router(ebics_router, prefix=API_PREFIX)
@@ -421,6 +428,7 @@ def create_app(
     app.include_router(hoa_reserve_statement_router, prefix=API_PREFIX)
     app.include_router(hoa_reserves_router, prefix=API_PREFIX)
     app.include_router(hoa_reserve_split_router, prefix=API_PREFIX)
+    app.include_router(hoa_levy_cost_router, prefix=API_PREFIX)
     app.include_router(rentindex_router, prefix=API_PREFIX)
     app.include_router(letting_router, prefix=API_PREFIX)
     app.include_router(letting_index_router, prefix=API_PREFIX)

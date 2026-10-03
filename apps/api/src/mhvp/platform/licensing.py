@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import (
     BigInteger,
+    CheckConstraint,
     Date,
     ForeignKey,
     Integer,
@@ -57,6 +58,10 @@ class License(IdMixin, TimestampMixin, Base):
     """Tenant, module, unit quota, validity, price per unit (6.8 license)."""
 
     __tablename__ = "license"
+    # AP05 / GAL-106: period order (0462).
+    __table_args__ = (
+        CheckConstraint("valid_until IS NULL OR valid_until >= valid_from", name="period_order"),
+    )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenant.id", ondelete="RESTRICT"), nullable=False

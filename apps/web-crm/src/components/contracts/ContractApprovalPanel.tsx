@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
+import { centsToDecimal, sumCents } from "@/lib/money";
 import { ui } from "@/lib/ui";
 
 export type PendingContract = {
@@ -52,8 +53,8 @@ export function ContractApprovalPanel({ initial, canApprove }: { initial: Pendin
   );
   const sums = (["ownership", "tenancy"] as const).map((k) => {
     const chosen = visible.filter((r) => r.kind === k);
-    const cents = chosen.reduce((acc, r) => acc + Math.round(Number(r.monthly_amount) * 100), 0);
-    return { kind: k, count: chosen.length, amount: (cents / 100).toFixed(2) };
+    const cents = sumCents(chosen.map((r) => r.monthly_amount ?? "0")) ?? 0n;
+    return { kind: k, count: chosen.length, amount: centsToDecimal(cents) };
   });
   const chosenIds = visible.filter((r) => selected.has(r.id)).map((r) => r.id);
 

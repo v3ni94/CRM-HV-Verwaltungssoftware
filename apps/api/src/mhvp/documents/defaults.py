@@ -76,6 +76,25 @@ STANDARD_RETENTION_PROFILES: tuple[tuple[str, int, int, bool, RetentionStart, st
     ),
 )
 
+# GAM-411 (7.11 S04): booking vouchers are a class of their own, separate from books and
+# organisational records. The period is not prefilled (matrix V17, operator with tax adviser,
+# stays open): the placeholder is "permanent" (never deletes) and cannot be released while it
+# is unchanged (``is_pending_matrix_placeholder``). Only an operator edit to a real period
+# makes it releasable.
+PENDING_MATRIX_NOTE = "Frist offen bis Aufbewahrungsmatrix V17, Freigabe gesperrt"
+PENDING_MATRIX_PROFILES: tuple[tuple[str, RetentionStart], ...] = (
+    ("booking_vouchers", RetentionStart.END_OF_YEAR_CREATED),
+)
+
+
+def is_pending_matrix_placeholder(profile: RetentionProfile) -> bool:
+    return (
+        profile.document_class in {c for c, _ in PENDING_MATRIX_PROFILES}
+        and profile.permanent
+        and profile.retention_years == 0
+        and profile.retention_months == 0
+    )
+
 
 async def ensure_retention_defaults(session: AsyncSession, tenant_id: uuid.UUID) -> int:
     """Adds the missing standard profiles as drafts; returns how many were added.
@@ -108,6 +127,24 @@ async def ensure_retention_defaults(session: AsyncSession, tenant_id: uuid.UUID)
                 permanent=permanent,
                 start_rule=start_rule,
                 review_note=REVIEW_NOTE,
+                created_by=None,
+            )
+        )
+        added += 1
+    for document_class, start_rule in PENDING_MATRIX_PROFILES:
+        if document_class in existing:
+            continue
+        session.add(
+            RetentionProfile(
+                tenant_id=tenant_id,
+                document_class=document_class,
+                legal_entity_kind=None,
+                legal_basis="Offene Entscheidung V17 (Aufbewahrungsmatrix, Anhang C S04)",
+                retention_years=0,
+                retention_months=0,
+                permanent=True,
+                start_rule=start_rule,
+                review_note=PENDING_MATRIX_NOTE,
                 created_by=None,
             )
         )

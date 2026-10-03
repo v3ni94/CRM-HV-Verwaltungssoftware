@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { formatDateTime } from "@/lib/format";
 
 export type OAuthStatus = { client_id: string | null; configured: boolean; source: "tenant" | "environment" | null; redirect_uri: string };
 export type Mailbox = {
@@ -177,7 +178,7 @@ function MailboxRow({
     if (!window.confirm(t("removeConfirm", { address: box.address }))) return;
     return run<null>(() => bff(`/api/bff/mail/mailboxes/${box.id}`, { method: "DELETE" }), () => onChange(null));
   };
-  const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE");
+  const fmt = (iso: string) => formatDateTime(iso);
   return (
     <li className="flex flex-col gap-2 border-t border-border py-3 first:border-t-0">
       <div className="flex flex-wrap items-center gap-2">

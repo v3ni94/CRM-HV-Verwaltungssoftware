@@ -68,6 +68,11 @@ ALERTING = {
     # productive tenants asks for a repeated scale measurement.
     "scale_trigger_partition_review",
     "scale_trigger_measure_again",
+    # GAM-504 to GAM-509 (wave 26 AP07): persisted job and task failures of the last 24 hours.
+    "auto_post_runs_failed_24h",
+    "event_consumer_failures_24h",
+    "job_failures_24h",
+    "tasks_failed_24h",
 }
 
 # Off-site status line of scripts/backup-offsite.sh: "backup-offsite: status=ok|failed
@@ -240,6 +245,12 @@ async def collect(request: Request) -> dict[str, int]:
         OrderStatus,
         PaymentOrder,
     )
+    from mhvp.core.job_failures import (
+        EVENT_CONSUMER_JOBS,
+        JOB_AUTO_POST,
+        JobFailure,
+        TaskFailure,
+    )
     from mhvp.core.webhooks import DeliveryStatus, WebhookDelivery
     from mhvp.documents.models import DocumentMirror, MirrorStatus
     from mhvp.workspace.models import Notification
@@ -255,6 +266,15 @@ async def collect(request: Request) -> dict[str, int]:
             )
         )
     since = datetime.now(UTC) - timedelta(hours=24)
+    async with platform_transaction(factory) as session:
+        tasks_failed = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(TaskFailure)
+                .where(TaskFailure.occurred_at >= since)
+            )
+            or 0
+        )
     totals = {
         "tenants_active": len(tenant_ids),
         "webhook_deliveries_pending": 0,
@@ -270,6 +290,10 @@ async def collect(request: Request) -> dict[str, int]:
         "dunning_cases_blocked": 0,
         "dunning_runs_failed_24h": 0,
         "payment_run_failed_24h": 0,
+        "job_failures_24h": 0,
+        "auto_post_runs_failed_24h": 0,
+        "event_consumer_failures_24h": 0,
+        "tasks_failed_24h": tasks_failed,
     }
     queries: dict[str, Any] = {
         "webhook_deliveries_pending": select(func.count()).where(
@@ -312,6 +336,16 @@ async def collect(request: Request) -> dict[str, int]:
         "payment_run_failed_24h": select(func.count()).where(
             PaymentRunPreview.created_at >= since, PaymentRunPreview.trigger == "failed"
         ),
+        # GAM-504 to GAM-508: tenant steps of scheduled jobs that raised (core.job_failures).
+        "job_failures_24h": select(func.count())
+        .select_from(JobFailure)
+        .where(JobFailure.occurred_at >= since),
+        "auto_post_runs_failed_24h": select(func.count())
+        .select_from(JobFailure)
+        .where(JobFailure.occurred_at >= since, JobFailure.job == JOB_AUTO_POST),
+        "event_consumer_failures_24h": select(func.count())
+        .select_from(JobFailure)
+        .where(JobFailure.occurred_at >= since, JobFailure.job.in_(EVENT_CONSUMER_JOBS)),
     }
     for tenant_id in tenant_ids:
         async with tenant_transaction(factory, tenant_id) as session:
@@ -475,3 +509,82 @@ async def revoke_metrics_key(
             )
             return Response(status_code=204)
     raise ProblemError(ErrorCodes.NOT_FOUND)
+
+
+# Failure protocol (GAM-509) ------------------------------------------------------------------
+
+
+class TaskFailureOut(BaseModel):
+    task: str
+    error_type: str
+    occurred_at: datetime
+
+
+class JobFailureOut(BaseModel):
+    tenant_id: uuid.UUID
+    job: str
+    ref_id: uuid.UUID | None
+    error_type: str
+    occurred_at: datetime
+
+
+class FailuresOut(BaseModel):
+    tasks: list[TaskFailureOut]
+    jobs: list[JobFailureOut]
+
+
+@router.get(
+    "/failures",
+    summary="Gescheiterte Hintergrundaufgaben und Jobschritte (letzte Einträge)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_failures(
+    request: Request,
+    hours: int = 24,
+    limit: int = 100,
+    _: Principal = Depends(require_platform_admin),
+) -> FailuresOut:
+    """Operator view of ``task_failure`` and ``job_failure`` (task name, job key, exception
+    class, time; no message text). Demo tenants are included, counts in ``/metrics`` are not."""
+    from mhvp.core.job_failures import JobFailure, TaskFailure
+
+    hours = max(1, min(hours, 24 * 30))
+    limit = max(1, min(limit, 500))
+    since = datetime.now(UTC) - timedelta(hours=hours)
+    factory = sessions(request)
+    async with platform_transaction(factory) as session:
+        task_rows = (
+            await session.scalars(
+                select(TaskFailure)
+                .where(TaskFailure.occurred_at >= since)
+                .order_by(TaskFailure.occurred_at.desc())
+                .limit(limit)
+            )
+        ).all()
+        tasks = [
+            TaskFailureOut(task=r.task, error_type=r.error_type, occurred_at=r.occurred_at)
+            for r in task_rows
+        ]
+    jobs: list[JobFailureOut] = []
+    for tenant_id in await _active_tenant_ids(request):
+        async with tenant_transaction(factory, tenant_id) as session:
+            rows = (
+                await session.scalars(
+                    select(JobFailure)
+                    .where(JobFailure.occurred_at >= since)
+                    .order_by(JobFailure.occurred_at.desc())
+                    .limit(limit)
+                )
+            ).all()
+            jobs += [
+                JobFailureOut(
+                    tenant_id=r.tenant_id,
+                    job=r.job,
+                    ref_id=r.ref_id,
+                    error_type=r.error_type,
+                    occurred_at=r.occurred_at,
+                )
+                for r in rows
+            ]
+    jobs.sort(key=lambda item: item.occurred_at, reverse=True)
+    return FailuresOut(tasks=tasks, jobs=jobs[:limit])

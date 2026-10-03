@@ -1028,6 +1028,7 @@ def _open_remaining(client: TestClient, h: dict[str, str], ledger: str) -> Decim
     return sum((Decimal(i["remaining"]) for i in rows), Decimal("0.00"))
 
 
+@pytest.mark.annex_d("D24")
 def test_d24_open_advances_shown_apart_calculation_creates_no_claim_and_issue_is_locked(
     client: TestClient, world: World
 ) -> None:
@@ -1069,6 +1070,7 @@ def test_d24_open_advances_shown_apart_calculation_creates_no_claim_and_issue_is
     assert len(_entries(client, h, ledger)) == entries_before
 
 
+@pytest.mark.annex_d("D24")
 @pytest.mark.parametrize(
     ("mode", "number"),
     [("offset_reversal", "435"), ("balance_against_due", "436")],
@@ -1109,6 +1111,7 @@ def test_d24_statement_balance_and_open_advance_items_claim_the_open_amount_once
     assert row["calculation_steps"]  # calculation disclosed
 
 
+@pytest.mark.annex_d("D24")
 def test_d24_default_info_only_keeps_double_view_until_ac10_01(
     client: TestClient, world: World
 ) -> None:

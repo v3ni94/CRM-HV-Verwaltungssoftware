@@ -147,6 +147,7 @@
   },
   "Documents": {
     "title": "Dokumente",
+    "emptyHint": "Dokumente erscheinen hier nach Freigabe durch die Verwaltung.",
     "empty": "Keine freigegebenen Dokumente.",
     "download": "Herunterladen",
     "created": "Bereitgestellt am",
@@ -203,6 +204,7 @@
   },
   "Tickets": {
     "title": "Meldungen",
+    "emptyHint": "Sie können oben eine neue Meldung erfassen. Der Bearbeitungsstand erscheint hier.",
     "empty": "Keine Meldungen vorhanden.",
     "new": "Neue Schadensmeldung",
     "titleField": "Titel",
@@ -271,6 +273,7 @@
   },
   "Account": {
     "title": "Kontoauszug",
+    "emptyHint": "Offene Posten erscheinen hier, sobald eine Forderung gebucht ist.",
     "empty": "Keine offenen Posten.",
     "contract": "Vertrag",
     "dueDate": "Fällig am",
@@ -396,6 +399,7 @@
   },
   "Orders": {
     "title": "Aufträge",
+    "emptyHint": "Aufträge erscheinen hier, sobald die Verwaltung einen Auftrag für Sie anlegt.",
     "empty": "Keine Aufträge vorhanden.",
     "back": "Zurück zur Übersicht",
     "quoteAmount": "Angebotsbetrag (EUR)",
@@ -1276,6 +1280,7 @@
   "OwnerStatements": {
     "title": "Hausgeldabrechnung",
     "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "emptyHint": "Die Abrechnung erscheint hier, sobald die Verwaltung sie freigegeben hat.",
     "empty": "Es liegt noch keine freigegebene Einzelabrechnung vor.",
     "row": "Einzelabrechnung {year}, Einheit {unit}",
     "version": "Version {version}",

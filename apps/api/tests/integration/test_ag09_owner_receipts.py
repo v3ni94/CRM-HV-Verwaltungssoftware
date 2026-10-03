@@ -3,6 +3,7 @@
 import asyncio
 import uuid
 from collections.abc import Iterator
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -136,7 +137,7 @@ def _hoa_entity(database: Database, tenant: UUID, prop: str) -> str:
 def _seed(database: Database, tenant: UUID, meta: dict[str, str], docs: dict[str, str]) -> str:
     from mhvp.accounting.models import Ledger
     from mhvp.billing.status import StatementStatus
-    from mhvp.hoa.models import HoaCostItem, HoaStatement
+    from mhvp.hoa.models import HoaCostItem, HoaStatement, Resolution
     from mhvp.properties.models import AllocationKey, LegalEntity, LegalEntityKind
 
     engine = create_engine(database.migrator_url)
@@ -174,12 +175,30 @@ def _seed(database: Database, tenant: UUID, meta: dict[str, str], docs: dict[str
                 (2025, 2, StatementStatus.ISSUED),
                 (2026, 1, StatementStatus.CALCULATED),
             ):
+                # ck_hoa_statement_resolved_needs_resolution (0462, AP05): an issued
+                # statement always references its resolution.
+                resolution_id = None
+                if status is StatementStatus.ISSUED:
+                    res = Resolution(
+                        tenant_id=tenant,
+                        legal_entity_id=hoa.id,
+                        number=year * 10 + version,
+                        decided_on=date(year + 1, 6, 1),
+                        subject="Jahresabrechnung",
+                        wording="Die Jahresabrechnung wird beschlossen.",
+                        status="positive",
+                        subject_type="hoa_statement",
+                    )
+                    s.add(res)
+                    s.flush()
+                    resolution_id = res.id
                 st = HoaStatement(
                     tenant_id=tenant,
                     ledger_id=ledger.id,
                     year=year,
                     version=version,
                     status=status,
+                    resolution_id=resolution_id,
                     reserve_opening=Decimal("0"),
                     reserve_withdrawals=Decimal("0"),
                     reserve_interest=Decimal("0"),

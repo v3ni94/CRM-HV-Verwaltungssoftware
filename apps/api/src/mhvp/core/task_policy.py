@@ -172,6 +172,80 @@ def retry_countdown(retries: int) -> int:
     return max(1, random.randint(ceiling // 2, ceiling))  # noqa: S311 (jitter, not security)
 
 
+RETRY_AFTER_CAP_SECONDS = 3600
+TRANSIENT_HTTP_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+
+def _status_and_retry_after(exc: BaseException) -> tuple[int | None, str | None]:
+    response = getattr(exc, "response", None)
+    status = getattr(exc, "status_code", None) or getattr(response, "status_code", None)
+    headers = getattr(response, "headers", None) or getattr(exc, "headers", None) or {}
+    try:
+        retry_after = headers.get("Retry-After")
+    except Exception:
+        retry_after = None
+    return (int(status) if isinstance(status, int) else None), retry_after
+
+
+def _retry_after_seconds(value: str | None) -> int | None:
+    """``Retry-After`` as delta seconds or HTTP date, capped; ``None`` when unusable."""
+    if not value:
+        return None
+    text = value.strip()
+    if text.isdigit():
+        return max(1, min(RETRY_AFTER_CAP_SECONDS, int(text)))
+    try:
+        from datetime import UTC, datetime
+        from email.utils import parsedate_to_datetime
+
+        delta = (parsedate_to_datetime(text) - datetime.now(UTC)).total_seconds()
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    return max(1, min(RETRY_AFTER_CAP_SECONDS, int(delta)))
+
+
+def is_transient(exc: BaseException) -> bool:
+    """Network errors, timeouts and HTTP 408/425/429/5xx are worth another attempt; validation,
+    authorisation or programming errors are not (GAL-206)."""
+    if isinstance(exc, TRANSIENT_ERRORS):
+        return True
+    from sqlalchemy.exc import InterfaceError, OperationalError
+
+    if isinstance(exc, OperationalError | InterfaceError):  # database unreachable or restarted
+        return True
+    status, _ = _status_and_retry_after(exc)
+    return status in TRANSIENT_HTTP_STATUS
+
+
+def transient_retry_countdown(exc: BaseException, retries: int) -> int | None:
+    """Shared delivery retry policy (GAL-206): ``None`` means do not retry; otherwise the
+    exponential backoff of :func:`retry_countdown`, or the provider's ``Retry-After`` when it
+    asks for a longer pause."""
+    if not is_transient(exc):
+        return None
+    countdown = retry_countdown(retries)
+    _, header = _status_and_retry_after(exc)
+    wanted = _retry_after_seconds(header)
+    return max(countdown, wanted) if wanted is not None else countdown
+
+
+def retry_transient(
+    task: Any, exc: BaseException, *, max_retries: int = RETRY_MAX
+) -> BaseException:
+    """Returns the exception a bound task should raise: ``task.retry(...)`` for a transient
+    error with backoff, otherwise ``exc`` itself (no blind repetition)."""
+    retries = int(getattr(task.request, "retries", 0) or 0)
+    countdown = transient_retry_countdown(exc, retries)
+    if countdown is None:
+        logger.error(
+            "task.failed_not_transient",
+            extra={"task": getattr(task, "name", ""), "error": type(exc).__name__},
+        )
+        return exc
+    retry: BaseException = task.retry(exc=exc, countdown=countdown, max_retries=max_retries)
+    return retry
+
+
 def _redis_client(url: str) -> Any:
     import redis
 

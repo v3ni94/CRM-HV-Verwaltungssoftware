@@ -181,6 +181,10 @@ class ConsentKind(StrEnum):
     EMAIL_DELIVERY = "email_delivery"
     MARKETING = "marketing"
     WHATSAPP = "whatsapp"
+    # GAM-406 (AP13, migration 0465): SMS to contacts and AI processing of a person's data;
+    # the legal basis is chosen by the operator in the register (OPEN_QUESTIONS AP13-04).
+    SMS = "sms"
+    AI_PROCESSING = "ai_processing"
 
 
 class Contact(IdMixin, TimestampMixin, TenantMixin, Base):

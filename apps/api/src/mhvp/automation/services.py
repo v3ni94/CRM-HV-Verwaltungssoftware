@@ -967,7 +967,29 @@ def public_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def webhook_body(rule: AutomationRule, context: dict[str, Any], extra: dict[str, str]) -> bytes:
+def webhook_body(
+    rule: AutomationRule,
+    context: dict[str, Any],
+    extra: dict[str, str],
+    payload_scope: str = "full",
+) -> bytes:
+    if payload_scope == "minimal":
+        # GAM-407: event type and ids only; extras without placeholders (no rendered data).
+        minimal = {
+            "rule": {"id": str(rule.id), "name": rule.name},
+            "tenant_id": str(rule.tenant_id),
+            "event": {
+                "type": context.get("type"),
+                "entity_type": context.get("entity_type"),
+                "entity_id": context.get("entity_id"),
+                "payload": None,
+            },
+            "entity": None,
+            "payload_scope": "minimal",
+            "sent_at": datetime.now(UTC).isoformat(),
+            **{k: v for k, v in extra.items() if "{" not in v},
+        }
+        return json.dumps(minimal, sort_keys=True, separators=(",", ":"), default=str).encode()
     document = {
         "rule": {"id": str(rule.id), "name": rule.name},
         "tenant_id": str(rule.tenant_id),
@@ -1018,7 +1040,7 @@ async def _webhook(
         crypto.decrypt(base64.b64decode(action.secret_enc))
     except (crypto.CryptoError, ValueError) as exc:
         raise ActionError("Webhook-Geheimnis kann nicht gelesen werden.") from exc
-    body = webhook_body(rule, context, action.extra)
+    body = webhook_body(rule, context, action.extra, action.payload_scope)
     return preview | {
         "ok": True,
         "detail": "Webhook eingereiht.",
@@ -2283,7 +2305,67 @@ async def _record(
     if pending:
         run.actions = [dict(a) for a in actions]
         await session.flush()
+        await _log_transfers(session, tenant_id, rule, event, pending)
     return run
+
+
+async def _log_transfers(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event: DomainEvent,
+    pending: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> None:
+    """GAM-407: every queued webhook is a transfer to a recipient. One event
+    ``automation.webhook_transfer`` per delivery names the target host, whether personal
+    fields were included and whether the host appears in a reviewed entry of the processing
+    register; with the contact it concerns, it appears under ``recipients`` of the access
+    export. No body content is stored."""
+    from urllib.parse import urlsplit
+
+    from mhvp.privacy.models import PrivacyRegisterEntry
+
+    reviewed = [
+        f"{e.name} {e.recipients or ''}".lower()
+        for e in (
+            await session.scalars(
+                select(PrivacyRegisterEntry).where(
+                    PrivacyRegisterEntry.legal_review_status == "reviewed",
+                    PrivacyRegisterEntry.active.is_(True),
+                )
+            )
+        ).all()
+    ]
+    for spec, result in pending:
+        host = (urlsplit(str(spec.get("url") or "")).hostname or "").lower()
+        try:
+            document = json.loads(spec["body"])
+        except (KeyError, ValueError):
+            document = {}
+        entity = document.get("entity") if isinstance(document, dict) else None
+        personal = isinstance(entity, dict) or bool((document.get("event") or {}).get("payload"))
+        contact_id: str | None = None
+        if event.entity_type == "contact" and event.entity_id is not None:
+            contact_id = str(event.entity_id)
+        elif isinstance(entity, dict) and entity.get("contact_id"):
+            contact_id = str(entity["contact_id"])
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="automation.webhook_transfer",
+            entity_type="automation_rule",
+            entity_id=rule.id,
+            actor_user_id=None,
+            payload={
+                "recipient": f"webhook:{host}" if host else "webhook",
+                "contact_id": contact_id if personal else None,
+                "personal_data": personal,
+                "target_reviewed": bool(host) and any(host in text for text in reviewed),
+                "delivery_id": result.get("delivery_id"),
+                "event_type": event.type,
+                **automation_marker(rule.id, event.id),
+            },
+        )
 
 
 async def _apply_data_sharing(

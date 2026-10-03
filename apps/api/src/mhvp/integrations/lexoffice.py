@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -36,6 +37,76 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 DEFAULT_BASE_URL = "https://api.lexware.io"
 DOCUMENTED_API = "lexoffice public REST API (developers.lexware.io, retrieved 27.09.2026)"
 TIMEOUT_SECONDS = 20.0
+# Hosts the tenant API key may be sent to (GAL-202). Staging and prod accept only these; dev
+# and test also accept other public https hosts (fakes), see ``validate_base_url``.
+ALLOWED_HOSTS = frozenset({"api.lexware.io", "api.lexoffice.io"})
+# Vendor error bodies may contain contact or invoice data (GAL-203): only these JSON keys of
+# the documented error format reach the problem's developer_message, values are never copied.
+_SAFE_ERROR_KEYS = ("status", "error", "traceId", "timestamp")
+_MAX_RETRY_AFTER = 86_400
+
+
+def validate_base_url(url: str, *, strict: bool) -> str:
+    """Return the normalised base URL or raise ``VALIDATION`` (GAL-202).
+
+    Always: https, no user info, no query or fragment, a host name. ``strict`` (staging, prod):
+    the host must be in ``ALLOWED_HOSTS`` and the port 443 or absent.
+    """
+    value = (url or "").strip().rstrip("/")
+    invalid = ProblemError(ErrorCodes.VALIDATION, detail="Die Basisadresse ist nicht zulässig.")
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+    except ValueError as exc:
+        raise invalid from exc
+    host = (parts.hostname or "").lower()
+    if (
+        parts.scheme != "https"
+        or not host
+        or parts.username is not None
+        or parts.password is not None
+        or parts.query
+        or parts.fragment
+    ):
+        raise invalid
+    if strict and (host not in ALLOWED_HOSTS or port not in (None, 443) or parts.path):
+        raise invalid
+    return value
+
+
+def strict_hosts(settings: Any) -> bool:
+    """Strict host allowlist outside dev and test (settings ``env``)."""
+    return str(getattr(settings, "env", "")) not in ("dev", "test")
+
+
+def retry_after_seconds(response: httpx.Response) -> int | None:
+    value = response.headers.get("Retry-After")
+    if value and value.strip().isdigit():
+        return min(int(value.strip()), _MAX_RETRY_AFTER)
+    return None
+
+
+def safe_error_summary(response: httpx.Response) -> str:
+    """Status plus the field names of the vendor error, never its values (GAL-203)."""
+    summary = f"lexoffice status {response.status_code}"
+    try:
+        body = response.json()
+    except ValueError:
+        return summary
+    if not isinstance(body, dict):
+        return summary
+    fields: list[str] = []
+    for issue in body.get("IssueList") or body.get("details") or []:
+        if isinstance(issue, dict):
+            source = issue.get("source") or issue.get("field")
+            if isinstance(source, str) and len(source) <= 80:
+                fields.append(source)
+    keys = [k for k in _SAFE_ERROR_KEYS if k in body]
+    if fields:
+        summary += f"; fields: {', '.join(sorted(set(fields))[:20])}"
+    if keys:
+        summary += f"; keys: {', '.join(keys)}"
+    return summary
 
 
 @dataclass(frozen=True)
@@ -48,6 +119,9 @@ class LexofficeClient:
     """Thin wrapper; every method maps to exactly one documented endpoint (see module doc)."""
 
     def __init__(self, credentials: LexofficeCredentials) -> None:
+        # Syntax check on every construction; the host allowlist is enforced by the callers
+        # with the environment (``validate_base_url(strict=...)``).
+        validate_base_url(credentials.base_url, strict=False)
         self._credentials = credentials
 
     def _client(self) -> httpx.Client:
@@ -65,9 +139,12 @@ class LexofficeClient:
             with self._client() as client:
                 response = client.request(method, path, **kwargs)
         except httpx.TimeoutException as exc:
+            # A write whose answer never arrived may have been processed (GAL-201): callers
+            # must not repeat it blindly (``extensions["maybe_processed"]``).
             raise ProblemError(
                 ErrorCodes.LEXOFFICE_UNAVAILABLE,
                 detail="lexoffice hat nicht rechtzeitig geantwortet.",
+                extensions={"maybe_processed": method.upper() != "GET"},
             ) from exc
         except httpx.HTTPError as exc:
             raise ProblemError(
@@ -76,12 +153,19 @@ class LexofficeClient:
         if response.status_code in (401, 403):
             raise ProblemError(ErrorCodes.LEXOFFICE_AUTH)
         if response.status_code == 429:
-            raise ProblemError(ErrorCodes.LEXOFFICE_RATE_LIMITED)
+            retry_after = retry_after_seconds(response)
+            raise ProblemError(
+                ErrorCodes.LEXOFFICE_RATE_LIMITED,
+                extensions={"retry_after": retry_after} if retry_after is not None else None,
+            )
         if response.status_code >= 400:
             raise ProblemError(
                 ErrorCodes.LEXOFFICE_UNAVAILABLE,
                 detail=f"lexoffice antwortete mit Status {response.status_code}.",
-                developer_message=response.text[:500],
+                developer_message=safe_error_summary(response),
+                extensions={
+                    "maybe_processed": method.upper() != "GET" and response.status_code == 504
+                },
             )
         return response
 

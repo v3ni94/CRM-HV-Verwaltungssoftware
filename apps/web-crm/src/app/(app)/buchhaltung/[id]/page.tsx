@@ -53,6 +53,7 @@ export default async function LedgerPage({
   const canEditOpenItems = me.data?.permissions.includes("accounting:update") ?? false;
   const canCreate = me.data?.permissions.includes("accounting:create") ?? false;
   const canApprove = me.data?.permissions.includes("accounting:approve") ?? false;
+  const canSettings = me.data?.permissions.includes("tenant_settings:update") ?? false;
   const [ledger, journal, trial, open, accounts, propertyList] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100, ...(propertyFilter ? { property_id: propertyFilter } : {}) } } }),
@@ -144,9 +145,9 @@ export default async function LedgerPage({
           accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name }))}
           keep={propertyFilter ? { property: propertyFilter } : {}}
         />
-        <OpenItemsTable rows={openRows} canEdit={canEditOpenItems} />
+        <OpenItemsTable rows={openRows} canEdit={canEditOpenItems} canRequestWriteOff={canEditOpenItems} today={today} />
         <SettlementProposalPanel ledgerId={id} debtors={debtors} bankAccounts={bankAccounts} today={today} />
-        <WriteOffPanel items={openRows} today={today} canPropose={canEditOpenItems} canApprove={canApprove} />
+        <WriteOffPanel items={openRows} today={today} canPropose={canEditOpenItems} canApprove={canApprove} canSettings={canSettings} />
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("journal")}</h2>

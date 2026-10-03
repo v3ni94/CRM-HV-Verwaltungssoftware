@@ -23,6 +23,7 @@ from mhvp.core.config import Settings
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.webhooks import RETRY_SCHEDULE_SECONDS, UnsafeWebhookTargetError, check_target
+from mhvp.integrations.lexoffice import strict_hosts, validate_base_url
 from mhvp.integrations.lexoffice_async import (
     AsyncCredentials,
     LexofficeAsyncClient,
@@ -154,7 +155,8 @@ def feature_on(config: LexofficeTenantConfig, feature: str | None) -> bool:
 
 
 def check_base_url(url: str, settings: Settings) -> str:
-    value = url.strip().rstrip("/")
+    # GAL-202: https, no user info, and in staging/prod only the Lexware API hosts.
+    value = validate_base_url(url, strict=strict_hosts(settings))
     try:
         check_target(value, allow_private=settings.webhook_allow_private_targets, resolve=False)
     except (UnsafeWebhookTargetError, ValueError) as exc:
@@ -173,10 +175,12 @@ def client_for(
 ) -> LexofficeAsyncClient:
     if not config.api_key:
         raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
+    # GAL-202: a stored address is checked again before the key leaves the platform.
+    base_url = validate_base_url(config.base_url, strict=strict_hosts(settings))
     return LexofficeAsyncClient(
         AsyncCredentials(
             api_key=config.api_key,
-            base_url=config.base_url,
+            base_url=base_url,
             organization_id=config.organization_id,
             rate_key=config.organization_id or str(config.id),
             redis=redis,

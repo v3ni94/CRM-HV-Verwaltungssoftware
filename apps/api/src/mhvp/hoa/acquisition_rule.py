@@ -20,6 +20,9 @@ from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import HoaAcquisitionRule
 from mhvp.hoa.property_scope import HOA_GUARD
+from mhvp.hoa.raw_responses import (
+    HoaAcquisitionRuleListRulesOut,
+)
 
 router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
@@ -101,6 +104,7 @@ def _out(kind: str, row: Any) -> dict[str, Any]:
     "/acquisition-rules",
     summary="Zuordnungsregeln je Erwerbsart (AA07-01)",
     dependencies=[Depends(strict_query)],
+    response_model=HoaAcquisitionRuleListRulesOut,
 )
 async def list_rules(
     request: Request, principal: TenantPrincipal = Depends(READ)

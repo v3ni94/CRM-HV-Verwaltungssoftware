@@ -25,6 +25,7 @@ REVIEWED = {
     "receipts/routers.py": "membership check of an inbound mail attachment",
     "accounting/routers.py": "incoming invoice attachments (input, not sent)",
     "accounting/models.py": "column definition",
+    "accounting/raw_responses.py": "response model field definitions only (AP22)",
     "accounting/invoice_checks.py": "reads inbound invoice attachments for checks",
     "integrations/lexoffice_ext/invoice_copy.py": "attaches the generated invoice copy only",
     "communication/duplicates.py": "duplicate detection and merge of inbound mails",
