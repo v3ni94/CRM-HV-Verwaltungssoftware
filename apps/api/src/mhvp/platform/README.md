@@ -146,3 +146,10 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 ### Mandantenvollexport und Zahlungsdateien (AN08)
 
 Bei geschlossenem G2 enthält das Export-ZIP keinen Inhalt von Zahlungsdateien (GAJ-301); die Metadaten bleiben in `data/documents.jsonl`, das Manifest listet sie unter `documents.withheld`.
+
+## AO07 (Welle 25): nicht validierte Prüfregeln
+
+`constraint_checks.py`: `GET /platform/constraint-checks` listet CHECK-Constraints mit
+`convalidated = false` und die Zahl der für den Mandanten sichtbaren Verstöße;
+`POST /platform/constraint-checks/validate` (`tenant_settings:update`) validiert sie über die
+Migrationsverbindung in einer Transaktion, bei Verstoß 409 `MHVP-ACC-0041` mit Liste.

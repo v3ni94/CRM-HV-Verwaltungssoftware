@@ -30,6 +30,18 @@ def _is_untyped(model: Any) -> bool:
     return False
 
 
+def _is_file_route(route: Any) -> bool:
+    """AO08: routes with an explicit non JSON ``response_class`` return a file (PDF, XML,
+    CSV, XLSX, Markdown); they have no JSON body to type."""
+    from fastapi.datastructures import DefaultPlaceholder
+    from fastapi.responses import JSONResponse
+
+    cls = route.response_class
+    if isinstance(cls, DefaultPlaceholder):
+        return False
+    return isinstance(cls, type) and not issubclass(cls, JSONResponse)
+
+
 def untyped_routes() -> set[str]:
     from mhvp.core.listparams import _walk_routes
     from mhvp.main import app
@@ -37,6 +49,8 @@ def untyped_routes() -> set[str]:
     found: set[str] = set()
     for path, route in _walk_routes(app.routes):
         if route.status_code == 204 or not _is_untyped(route.response_model):
+            continue
+        if _is_file_route(route):
             continue
         methods = ",".join(sorted(route.methods - {"HEAD"}))
         found.add(f"{methods} {path}")

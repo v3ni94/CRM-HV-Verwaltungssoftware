@@ -200,3 +200,10 @@ hidden from every other ORM select by a `do_orm_execute` filter in `contacts/mod
 (execution option `contact_address_history` opts out); bulk DELETE (erasure) still covers them.
 Retention of former addresses is not decided (AM14-01): nothing deletes them on a timer.
 Rule `docs/rules/AM14-adresshistorie.md`.
+
+### Adresshistorie in Portal und Zusammenführung (AO09)
+
+Bei aktivem Schalter `contacts.address_history` schließen der angenommene Portal-Adressvorschlag
+(`portal.routers._apply_address`) und die Kontaktzusammenführung (`merge._close_demoted_addresses`)
+die alte Anschrift (`address_history.close_row`) statt sie nur abzustufen. Fehlt `valid_from`, wird
+das Erstellungsdatum gesetzt und die Zeilen-Id im Ereignis vermerkt. Schalter aus: unverändert.

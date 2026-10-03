@@ -164,7 +164,9 @@ async def get_check(
         )
 
 
-@router.get("/exports/{export_id}/download", summary="Exportdatei herunterladen")
+@router.get(
+    "/exports/{export_id}/download", summary="Exportdatei herunterladen", response_class=Response
+)
 async def download_export(
     export_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> Response:

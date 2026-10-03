@@ -22,7 +22,7 @@ const pickers: Pickers = {
   teams: [{ id: "team-1", label: "Objektbetreuung" }],
   replyTemplates: [{ id: "rt-1", label: "Eingangsbestätigung" }],
   letterTemplates: [{ id: "lt-1", label: "Freier Brief (free_letter)" }],
-  eventTypes: ["ticket.created", "sla.escalated"],
+  eventTypes: ["ticket.created", "sla.escalated", "work_order.completed", "work_order.done"],
   aiTasks: ["summarize", "draft_reply"],
 };
 
@@ -206,6 +206,28 @@ describe("AutomationAdmin", () => {
     expect(
       await screen.findByText("Neue Regel", { selector: "span" }),
     ).toBeInTheDocument();
+  });
+
+  it("hints at the alias work_order.done for work order completion (GAK-303)", async () => {
+    renderIntl(
+      <AutomationAdmin
+        initialRules={[]}
+        initialRuns={[]}
+        pickers={pickers}
+        canManage={true}
+      />,
+    );
+    await userEvent.click(screen.getByText("Neue Regel"));
+    expect(screen.queryByTestId("work-order-alias-hint")).toBeNull();
+    const trigger = screen.getByLabelText("Ereignistyp");
+    await userEvent.selectOptions(trigger, "work_order.completed");
+    expect(screen.getByTestId("work-order-alias-hint").textContent).toContain(
+      "work_order.done",
+    );
+    await userEvent.selectOptions(trigger, "work_order.done");
+    expect(screen.getByTestId("work-order-alias-hint")).toBeTruthy();
+    await userEvent.selectOptions(trigger, "ticket.created");
+    expect(screen.queryByTestId("work-order-alias-hint")).toBeNull();
   });
 
   it("sends the selected rule owner (M9-08 Kleinbefund 27.09.2026)", async () => {

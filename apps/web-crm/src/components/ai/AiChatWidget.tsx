@@ -687,7 +687,7 @@ export function AiChatWidget() {
               </label>
               <textarea
                 aria-label={t("inputLabel")}
-                className={`${ui.input} max-h-28 min-h-9 resize-none`}
+                className={`${ui.input} max-h-28 pointer-fine:min-h-9 resize-none`}
                 rows={1}
                 value={text}
                 placeholder={needsFile ? t("placeholderFile") : t("placeholder")}

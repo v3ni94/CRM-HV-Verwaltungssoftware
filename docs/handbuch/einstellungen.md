@@ -674,3 +674,232 @@ die Variantenwahl ist offen (Frage AI09-01).
 ## Zweiten Faktor zurücksetzen (Vier-Augen-Prinzip)
 
 Unter Einstellungen, Benutzer erscheint für Personen mit dem Recht Mitglieder ändern der Block "Zweiten Faktor zurücksetzen". Die Funktion ist nur nutzbar, wenn der Mandantenschalter mfa_admin_reset_enabled eingeschaltet ist (Standard aus, Fachliche Regeln). Eine Person beantragt das Zurücksetzen mit Begründung (mindestens 10 Zeichen), eine zweite, andere Person gibt frei oder lehnt ab. Den eigenen zweiten Faktor kann man so nicht zurücksetzen. Wiederherstellungscodes gibt es noch nicht (offene Frage AI09-01). Schaltflächen sind während einer laufenden Anfrage gesperrt, damit Freigaben und Sperren nicht doppelt ausgelöst werden.
+
+## Schalterverzeichnis
+
+<!-- switch-index:start (generiert mit scripts/build_switch_index.py, nicht von Hand ändern) -->
+
+Stand der Registry: 97 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen.
+
+| Schalter | Bereich | Paket | Standard | Offene Frage |
+| --- | --- | --- | --- | --- |
+| `chart-coverage` | accounting | AE02 | null | P07-04, P07-05 |
+| `chart-four-eyes` | accounting | AE02 | true | M10-01 |
+| `dunning-day-count` | accounting | AI03 | act_365_fixed | AI03-01 |
+| `interest-tax` | accounting | AE05 | 0 | P01-01 |
+| `period-lock-auto` | accounting | AE20 | false | P06-02, AA08-01 |
+| `period-lock-mode` | accounting | AE20 | ledger_only | P06-02, AA08-01 |
+| `period-lock-reopen` | accounting | AE20 | false | P06-02, AA08-01 |
+| `rent-invoice-numbering` | accounting | AE04 | draft_numbers | AC03-01 |
+| `return-fee-pass-on` | accounting | AN15 | false | AN15-01 |
+| `rule-checkpoints` | accounting | AE19 | 0 | AB10-01 |
+| `subledger-exclude-written-off` | accounting | AE06 | true | AC01-02 |
+| `tax-35a-basis` | accounting | AI18 | invoice_date | AI17-01 |
+| `write-off-approval` | accounting | AN15 | false | AN15-02 |
+| `automation-switch` | banking | AE03 | false | BK2-03, M12-09 |
+| `credit-payable-four-eyes` | banking | AE22 | true | AE22-01, Q01-01 |
+| `credit-payable-mode` | banking | AE22 | off | AE22-01, Q01-01, P04-04 |
+| `ebics-enabled` | banking | AE23 | false | AE23-01 |
+| `ebics-signature-key-mode` | banking | AE23 | external | AE23-05 |
+| `g1-checklist` | banking | AE03 | null | M12-09 |
+| `advance-open-mode` | billing | AE15 | info_only | AC10-01, M17-03, P06-01 |
+| `allocation-basis-block` | billing | AE17 | true | M17-01 |
+| `check-amounts-tolerance` | billing | AK01 | 1 | AJ02-01 |
+| `deadline-policy` | billing | AE18 | block_claims | M17-04 |
+| `deadline-warn-first` | billing | AE18 | 60 | M17-04 |
+| `deadline-warn-second` | billing | AE18 | 30 | M17-04 |
+| `deadline-watch` | billing | AE18 | false | M17-04 |
+| `deposit-limit-hint` | billing | AI18 | false | AI17-04 |
+| `heating-negative-costs` | billing | AK01 | legacy_warn | AJ01-01 |
+| `text-block-second-person` | billing | AF12 | true | AA11-01, AA11-02 |
+| `text-blocks` | billing | AE16 | 0 | AA11-01, AA11-02 |
+| `acquisition-first-acquisition` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-foreclosure` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-gift` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-inheritance` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-other` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-purchase` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `allocation-proposal` | hoa | AG20 | false | AA07-01, P01 |
+| `correction-report` | hoa | AF08 | false | P02 |
+| `hoa-remainder-mode` | hoa | AK01 | report_only | AJ01-02 |
+| `majority-rule-four-eyes` | hoa | AN06 | false | AM02-01 |
+| `online-meeting` | hoa | AE12 | false | AD06-01 |
+| `opening-lock-mode` | hoa | AE07 | locked | V01-01 |
+| `plan-change-mode` | hoa | AE09 | notice | M12-L2, P07-01 |
+| `portal-circular-resolution` | hoa | AG07 | false | AE31-01 |
+| `proxy-conflict-mode` | hoa | AE31 | flag | AD06-02 |
+| `reserve-payment-mode` | hoa | AE08 | bound_only | P07-02, P07-04 |
+| `reserve-plan-tax` | hoa | AE07 | null | AE07-01 |
+| `virtual-basis-term-lock` | hoa | AE12 | false | AA06-02 |
+| `virtual-basis-transition-date` | hoa | AE12 | null | AA06-02 |
+| `virtual-meetings` | hoa | AE12 | false | V13, AA06-02 |
+| `acceptance-register` | platform | AE01 | null | V16, AE01-01 |
+| `ai-automation-ai-task` | platform | AM04 | true | AM04-03 |
+| `ai-master-data-proposals` | platform | AM04 | true | AM04-02 |
+| `ai-realtime-mail-classification` | platform | AM04 | true | AM04-01 |
+| `crm-branding-apply` | platform | AJ31 | false | AJ31-01 |
+| `invoice-intake-auto` | platform | AF10 | false | AF10-01 |
+| `onboarding-link-threshold` | platform | AG03 | 90 | GAF-11 |
+| `onboarding-suggest-threshold` | platform | AG03 | 60 | GAF-11 |
+| `rent-increase-block-comparison` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-graduated` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-index` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-mietspiegel` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-modernization` | platform | AN18 | null | AN18-01 |
+| `rent-increase-proposals` | platform | AN18 | off | AN18-01 |
+| `sale-marketing` | platform | AN19 | false | AN19-02 |
+| `webhook-auto-disable` | platform | AI07 | 0 | AI07-02 |
+| `meter-photo-mode` | portal | AN02 | hint | AM06-01 |
+| `owner-hoa-rental-statements-portal` | portal | AG12 | false | AF25-02 |
+| `owner-rental-income` | portal | AE13 | false | P13-01, Q10-02 |
+| `owner-rental-statements-portal` | portal | AF15 | false | AF15-01 |
+| `owner-ticket-scope` | portal | AE13 | released | P13-01 |
+| `portal-chat-bot` | portal | AE28 | false | AE28-01, AE28-03 |
+| `portal-chat-privacy` | portal | AE28 | false | AE28-01, AE28-02 |
+| `portal-owner-receipts` | portal | AG09 | false | AG09-01 |
+| `provider-rating-display` | portal | AE30 | off | AA14-02, AE30-02 |
+| `tenant-statement-portal` | portal | AF16 | false | AF16-01 |
+| `terms-version-mode` | portal | AE29 | manual | AE29-01, AC06-03 |
+| `access-export-communication` | security | AJ13 | false | AC07-01 |
+| `access-export-contracts` | security | AK06 | false | AC07-01 |
+| `access-export-documents` | security | AJ13 | false | AC07-01 |
+| `access-export-internal-notes` | security | AE33 | false | AC07-01, AE33-02 |
+| `access-export-payments` | security | AK06 | false | AC07-01 |
+| `access-export-portal-account` | security | AK06 | false | AC07-01 |
+| `access-export-third-party` | security | AE33 | none | AC07-01, AE33-02 |
+| `access-export-tickets` | security | AJ13 | false | AC07-01 |
+| `contact-address-history` | security | AN05 | false | AM14-01 |
+| `document-trash-days` | security | AE33 | 30 | AC07-03, AE33-01 |
+| `document-trash-enabled` | security | AE33 | false | AC07-03, AE33-01 |
+| `insurance-broker-access` | security | AG03 | false | GAC-07 |
+| `legal-basis-data-sharing` | security | AE34 | consent | AE34-01, AC06-01 |
+| `legal-basis-email-delivery` | security | AE34 | consent | AE34-01, AC06-01 |
+| `legal-basis-marketing` | security | AE34 | consent | AE34-02, AC06-01 |
+| `legal-basis-portal-terms` | security | AE34 | consent | AE34-01, AC06-03 |
+| `mfa-admin-reset` | security | AI09 | false | AI09-01 |
+| `mfa-crm-mode` | security | AE27 | voluntary | AE27-01 |
+| `mfa-portal-required` | security | AE27 | false | AE27-01 |
+| `objektakte-webhook-timestamp` | security | AI07 | false | AI07-01 |
+
+Schlüssel in den Mandantenquellen:
+
+- `contacts.address_history` (apps/api/src/mhvp/contacts/address_history.py)
+- `letting.sale_marketing` (apps/api/src/mhvp/letting/sale_scope.py)
+
+<!-- switch-index:end -->
+
+## Schalterverzeichnis
+
+<!-- switch-index:start (generiert mit build_switch_index.py, nicht von Hand ändern) -->
+
+Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen.
+
+| Schalter | Bereich | Paket | Standard | Offene Frage |
+| --- | --- | --- | --- | --- |
+| `chart-coverage` | accounting | AE02 | null | P07-04, P07-05 |
+| `chart-four-eyes` | accounting | AE02 | true | M10-01 |
+| `direct-debit-creator-may-not-approve` | accounting | AO07 | false | AN17-01 |
+| `dunning-day-count` | accounting | AI03 | act_365_fixed | AI03-01 |
+| `interest-tax` | accounting | AE05 | 0 | P01-01 |
+| `period-lock-auto` | accounting | AE20 | false | P06-02, AA08-01 |
+| `period-lock-mode` | accounting | AE20 | ledger_only | P06-02, AA08-01 |
+| `period-lock-reopen` | accounting | AE20 | false | P06-02, AA08-01 |
+| `rent-invoice-numbering` | accounting | AE04 | draft_numbers | AC03-01 |
+| `return-fee-pass-on` | accounting | AN15 | false | AN15-01 |
+| `rule-checkpoints` | accounting | AE19 | 0 | AB10-01 |
+| `subledger-exclude-written-off` | accounting | AE06 | true | AC01-02 |
+| `tax-35a-basis` | accounting | AI18 | invoice_date | AI17-01 |
+| `write-off-approval` | accounting | AN15 | false | AN15-02 |
+| `automation-switch` | banking | AE03 | false | BK2-03, M12-09 |
+| `bank-clearing-account` | banking | AO02 | null | AO02-01 |
+| `bank-reconciliation-basis` | banking | AO02 | booking_date | AO02-01 |
+| `credit-payable-four-eyes` | banking | AE22 | true | AE22-01, Q01-01 |
+| `credit-payable-mode` | banking | AE22 | off | AE22-01, Q01-01, P04-04 |
+| `ebics-enabled` | banking | AE23 | false | AE23-01 |
+| `ebics-signature-key-mode` | banking | AE23 | external | AE23-05 |
+| `g1-checklist` | banking | AE03 | null | M12-09 |
+| `advance-open-mode` | billing | AE15 | info_only | AC10-01, M17-03, P06-01 |
+| `allocation-basis-block` | billing | AE17 | true | M17-01 |
+| `check-amounts-tolerance` | billing | AK01 | 1 | AJ02-01 |
+| `deadline-policy` | billing | AE18 | block_claims | M17-04 |
+| `deadline-warn-first` | billing | AE18 | 60 | M17-04 |
+| `deadline-warn-second` | billing | AE18 | 30 | M17-04 |
+| `deadline-watch` | billing | AE18 | false | M17-04 |
+| `deposit-limit-hint` | billing | AI18 | false | AI17-04 |
+| `heating-negative-costs` | billing | AK01 | legacy_warn | AJ01-01 |
+| `text-block-second-person` | billing | AF12 | true | AA11-01, AA11-02 |
+| `text-blocks` | billing | AE16 | 0 | AA11-01, AA11-02 |
+| `acquisition-first-acquisition` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-foreclosure` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-gift` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-inheritance` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-other` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `acquisition-purchase` | hoa | AE10 | manual_release | AA07-01, P01 |
+| `allocation-proposal` | hoa | AG20 | false | AA07-01, P01 |
+| `correction-report` | hoa | AF08 | false | P02 |
+| `hoa-remainder-mode` | hoa | AK01 | report_only | AJ01-02 |
+| `majority-rule-four-eyes` | hoa | AN06 | false | AM02-01 |
+| `online-meeting` | hoa | AE12 | false | AD06-01 |
+| `opening-lock-mode` | hoa | AE07 | locked | V01-01 |
+| `plan-change-mode` | hoa | AE09 | notice | M12-L2, P07-01 |
+| `portal-circular-resolution` | hoa | AG07 | false | AE31-01 |
+| `proxy-conflict-mode` | hoa | AE31 | flag | AD06-02 |
+| `reserve-payment-mode` | hoa | AE08 | bound_only | P07-02, P07-04 |
+| `reserve-plan-tax` | hoa | AE07 | null | AE07-01 |
+| `virtual-basis-term-lock` | hoa | AE12 | false | AA06-02 |
+| `virtual-basis-transition-date` | hoa | AE12 | null | AA06-02 |
+| `virtual-meetings` | hoa | AE12 | false | V13, AA06-02 |
+| `acceptance-register` | platform | AE01 | null | V16, AE01-01 |
+| `ai-automation-ai-task` | platform | AM04 | true | AM04-03 |
+| `ai-master-data-proposals` | platform | AM04 | true | AM04-02 |
+| `ai-realtime-mail-classification` | platform | AM04 | true | AM04-01 |
+| `crm-branding-apply` | platform | AJ31 | false | AJ31-01 |
+| `invoice-intake-auto` | platform | AF10 | false | AF10-01 |
+| `onboarding-link-threshold` | platform | AG03 | 90 | GAF-11 |
+| `onboarding-suggest-threshold` | platform | AG03 | 60 | GAF-11 |
+| `rent-increase-block-comparison` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-graduated` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-index` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-mietspiegel` | platform | AN18 | null | AN18-01 |
+| `rent-increase-block-modernization` | platform | AN18 | null | AN18-01 |
+| `rent-increase-proposals` | platform | AN18 | off | AN18-01 |
+| `sale-marketing` | platform | AN19 | false | AN19-02 |
+| `webhook-auto-disable` | platform | AI07 | 0 | AI07-02 |
+| `meter-photo-mode` | portal | AN02 | hint | AM06-01 |
+| `owner-hoa-rental-statements-portal` | portal | AG12 | false | AF25-02 |
+| `owner-rental-income` | portal | AE13 | false | P13-01, Q10-02 |
+| `owner-rental-statements-portal` | portal | AF15 | false | AF15-01 |
+| `owner-ticket-scope` | portal | AE13 | released | P13-01 |
+| `portal-chat-bot` | portal | AE28 | false | AE28-01, AE28-03 |
+| `portal-chat-privacy` | portal | AE28 | false | AE28-01, AE28-02 |
+| `portal-owner-receipts` | portal | AG09 | false | AG09-01 |
+| `provider-rating-display` | portal | AE30 | off | AA14-02, AE30-02 |
+| `tenant-statement-portal` | portal | AF16 | false | AF16-01 |
+| `terms-version-mode` | portal | AE29 | manual | AE29-01, AC06-03 |
+| `access-export-communication` | security | AJ13 | false | AC07-01 |
+| `access-export-contracts` | security | AK06 | false | AC07-01 |
+| `access-export-documents` | security | AJ13 | false | AC07-01 |
+| `access-export-internal-notes` | security | AE33 | false | AC07-01, AE33-02 |
+| `access-export-payments` | security | AK06 | false | AC07-01 |
+| `access-export-portal-account` | security | AK06 | false | AC07-01 |
+| `access-export-third-party` | security | AE33 | none | AC07-01, AE33-02 |
+| `access-export-tickets` | security | AJ13 | false | AC07-01 |
+| `contact-address-history` | security | AN05 | false | AM14-01 |
+| `document-trash-days` | security | AE33 | 30 | AC07-03, AE33-01 |
+| `document-trash-enabled` | security | AE33 | false | AC07-03, AE33-01 |
+| `insurance-broker-access` | security | AG03 | false | GAC-07 |
+| `legal-basis-data-sharing` | security | AE34 | consent | AE34-01, AC06-01 |
+| `legal-basis-email-delivery` | security | AE34 | consent | AE34-01, AC06-01 |
+| `legal-basis-marketing` | security | AE34 | consent | AE34-02, AC06-01 |
+| `legal-basis-portal-terms` | security | AE34 | consent | AE34-01, AC06-03 |
+| `mfa-admin-reset` | security | AI09 | false | AI09-01 |
+| `mfa-crm-mode` | security | AE27 | voluntary | AE27-01 |
+| `mfa-portal-required` | security | AE27 | false | AE27-01 |
+| `objektakte-webhook-timestamp` | security | AI07 | false | AI07-01 |
+
+Schlüssel in den Mandantenquellen:
+
+- `contacts.address_history` (apps/api/src/mhvp/contacts/address_history.py)
+- `letting.sale_marketing` (apps/api/src/mhvp/letting/sale_scope.py)
+
+<!-- switch-index:end -->

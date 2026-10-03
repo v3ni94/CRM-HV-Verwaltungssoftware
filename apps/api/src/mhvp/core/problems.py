@@ -441,6 +441,26 @@ class ErrorCodes:
             "correction only through a new version (GAK-103, 7.6 A01, B03)."
         ),
     )
+    CONSTRAINT_VIOLATIONS = ErrorCode(
+        "MHVP-ACC-0041",
+        409,
+        "Bestandsdaten verletzen die Prüfregel",
+        "VALIDATE CONSTRAINT found rows that violate the check; correct them first (AN14-07).",
+    )
+    WRITE_OFF_AMOUNT_CHANGED = ErrorCode(
+        "MHVP-ACC-0042",
+        409,
+        "Restbetrag hat sich seit dem Vorschlag geändert",
+        "The remaining amount of the open item as of the effective date differs from the "
+        "proposal (payment in between); reject and propose again (AO12-04).",
+    )
+    WRITE_OFF_NEEDS_PERSON = ErrorCode(
+        "MHVP-ACC-0043",
+        403,
+        "Ausbuchung nur durch eine Person",
+        "Proposals and approvals of write offs need a person; API keys cannot satisfy the "
+        "four eyes rule (AO12-05).",
+    )
     ACC_ACCOUNT_RANGE_CATEGORY = ErrorCode(
         "MHVP-ACC-0032",
         422,
@@ -879,6 +899,17 @@ class ErrorCodes:
             "PUT /banking/automation/outgoing only switches off. Switching on needs a request "
             "with target outgoing (POST /banking/automation/switch-requests) approved by a "
             "second person while release gate G1 is open (AG19, AF25-01)."
+        ),
+    )
+    FINTS_STATEMENT_FORMAT_UNSUPPORTED = ErrorCode(
+        "MHVP-BANK-0065",
+        502,
+        "Bank bietet kein passendes Kontoumsatzformat",
+        (
+            "The bank offers no MT940 statement (HIKAZS) and no usable camt.052 statement "
+            "(HICAZS with a camt.052 format in its BPD), or it rejected the requested camt "
+            "format (return code 9010 naming camt, AO15). HKCAZ is only sent with formats the "
+            "bank's BPD list."
         ),
     )
     BILLING_PREFIX_MISSING = ErrorCode(

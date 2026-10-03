@@ -420,6 +420,13 @@ Wechsel (`POST /banking/ebics/subscribers/{id}/keys` mit Grund) und Sperre (`...
   BIC empty, BLZ from `bank_identifier.bank_code`.
 * An empty MT940 answer yields no transactions and no CAMT fallback (fallback only on the
   exception); `None` and blank CAMT documents are accepted.
+* AO15 (wave 25): the CAMT fallback sends HKCAZ only with the camt.052 formats the bank lists
+  in HICAZS (`camt_formats_from_bpd`, generic BPD segment, `fints/parser.py:216`), through
+  `RecordingClient.get_transactions_xml(camt_messages=...)`; python-fints alone always sends
+  `camt.052.001.02` (`fints/client.py:594`). No HICAZS or no camt.052 format: `MHVP-BANK-0065`
+  without a request. A 9xxx bank message naming camt maps to `MHVP-BANK-0065` (python-fints
+  raises "could not fetch BPD" for every 9010, `fints/client.py:1408`) and skips the
+  fresh-state retry. Runbook: `docs/runbooks/fints-betrieb.md`, "Fehlerbild 9010 camt".
 
 ## Kettenprüfung der Kontoauszüge (AI01, GAH-102)
 
@@ -442,3 +449,9 @@ The event consumer recomputes pending proposal snapshots on `contact.deleted`,
 - `POST /bulk-confirm`: Vorschau liefert `preview_id` (15 Minuten), `totals_by_legal_entity`, `bookable_transaction_ids`; Buchung nur mit passender `preview_id` (`MHVP-BANK-0031`), Ausnahmen nur mit `confirm_exceptions` (`MHVP-BANK-0032`), GAK-105.
 - Postenausgleich mit Rest oder Skonto: zulässige Kontenklassen, `MHVP-BANK-0033` (GAK-107).
 - `GET /accounts/{id}/reconciliation?basis=booking_date|bank_date`: `timing_difference`, `ledger_status`; mehrere verknüpfte Sachkonten ergeben `MHVP-BANK-0034` (GAK-108). Regel: docs/rules/AN16-bank-buchhaltungspruefungen.md.
+
+## AO02 (Welle 25): Klärungskonto und Abstimmungsbasis als Mandantenschalter
+
+- `GET|PUT /banking/reconciliation-settings` (Lesen `accounting:read`, Schreiben `tenant_settings:update`, Teilaktualisierung, `null` setzt auf Standard zurück, Ereignis `bank_reconciliation_settings.updated` mit alt und neu). Ablage in `tenant_settings.sources` (`banking.clearing_account_number`, `banking.reconciliation_basis`), keine Migration; Modul `reconciliation_settings.py`.
+- Klärungskonto (GAK-107): nur Konten der Kategorie `transit` oder `technical` aus den Kontenrahmen des Mandanten (sonst 422). Ein Überzahlungsrest über mehrere Debitoren ohne Gegenkonto geht auf das Konto dieser Nummer im Buchungskreis des Umsatzes; fehlt es dort, gilt das bisherige Verhalten (422, Gegenkonto nötig). Rest auf einem Debitor bleibt Guthaben (D07). Das Durchlaufkonto 027000 für Skonto bleibt zulässig.
+- Abstimmungsbasis (GAK-108): gespeicherter Standard `booking_date`; der Abfrageparameter `basis` übersteuert.

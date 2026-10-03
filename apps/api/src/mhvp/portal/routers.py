@@ -1105,12 +1105,32 @@ async def _apply_address(
 
     valid_from = date.fromisoformat(payload["valid_from"])
     due = valid_from <= local_today()
+    closed_ids: list[str] = []
+    backfilled_ids: list[str] = []
     if due:
-        await session.execute(
-            update(ContactAddress)
-            .where(ContactAddress.contact_id == contact_id, ContactAddress.is_primary.is_(True))
-            .values(is_primary=False)
-        )
+        from mhvp.contacts import address_history
+
+        if await address_history.is_enabled(session):
+            # AO09 (AN05): the former primary address is closed as history, not just demoted.
+            now = datetime.now(UTC)
+            for old in (
+                await session.scalars(
+                    select(ContactAddress).where(
+                        ContactAddress.contact_id == contact_id,
+                        ContactAddress.is_primary.is_(True),
+                    )
+                )
+            ).all():
+                if address_history.close_row(old, valid_from - timedelta(days=1), now):
+                    backfilled_ids.append(str(old.id))
+                closed_ids.append(str(old.id))
+            await session.flush()
+        else:
+            await session.execute(
+                update(ContactAddress)
+                .where(ContactAddress.contact_id == contact_id, ContactAddress.is_primary.is_(True))
+                .values(is_primary=False)
+            )
     address = ContactAddress(
         tenant_id=row.tenant_id,
         contact_id=contact_id,
@@ -1140,6 +1160,11 @@ async def _apply_address(
             "is_primary": due,
             "evidence_document_id": payload.get("document_id"),
             "source": "portal",
+            **(
+                {"closed_address_ids": closed_ids, "valid_from_backfilled_ids": backfilled_ids}
+                if closed_ids
+                else {}
+            ),
         },
     )
 

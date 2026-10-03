@@ -101,6 +101,30 @@ async def ensure_not_payment_file(session: AsyncSession, ids: list[uuid.UUID]) -
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
+ATTACHMENT_REJECTED_DETAIL = (
+    "Zahlungsdateien können nicht als Anhang verwendet werden (Freigabe G2 fehlt)."
+)
+
+
+async def ensure_no_payment_attachment(session: AsyncSession, ids: list[uuid.UUID]) -> None:
+    """AN14-04: every path that stores ``attachment_document_ids`` (drafts, ticket mail,
+    templates, portal notices) rejects payment files with 422 when the ids are saved, so a
+    payment file never becomes an attachment that a later job would send."""
+    if await payment_file_ids(session, list(ids)):
+        raise ProblemError(ErrorCodes.VALIDATION, detail=ATTACHMENT_REJECTED_DETAIL)
+
+
+async def releasable_ids(
+    session: AsyncSession, tenant_id: uuid.UUID, ids: list[uuid.UUID]
+) -> list[uuid.UUID]:
+    """Ids a background job may hand out: payment files are dropped unless G2 is open for the
+    tenant (fail closed, job resolver). Used by forwarding and distribution (AN14-04)."""
+    if not ids or await content_released(tenant_id):
+        return list(ids)
+    locked = await payment_file_ids(session, list(ids))
+    return [i for i in ids if i not in locked]
+
+
 async def recategorize(session: AsyncSession, tenant_id: uuid.UUID) -> int:
     """Put every referenced payment file into the ``payment_file`` category (data alignment
     for files stored before GAJ-301). Changes only the category, never the content."""

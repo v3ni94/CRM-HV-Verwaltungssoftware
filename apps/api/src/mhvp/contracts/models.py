@@ -228,6 +228,9 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # AO03 (GAK-203, migration 0456): structured index clause of the contract (index_name,
+    # base_index, base_month, source). Only an input for proposals; never changes the rent.
+    index_agreement: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class DebtorAccountReservation(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -502,4 +505,29 @@ class AllocationAgreement(IdMixin, TimestampMixin, TenantMixin, Base):
     document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class ContractGraduatedStep(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AO03 (GAK-203, migration 0456): graduated rent step agreed in the contract. Input for the
+    daily proposal job only; a step never changes the rent by itself (switch
+    ``rent_increase_proposals``, default off)."""
+
+    __tablename__ = "contract_graduated_step"
+    __table_args__ = (
+        Index(
+            "uq_contract_graduated_step_contract_from",
+            "tenant_id",
+            "contract_id",
+            "valid_from",
+            unique=True,
+        ),
+        CheckConstraint("net > 0", name="net_positive"),
+    )
+
+    contract_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contract.id", ondelete="CASCADE"), nullable=False
+    )
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    net: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)

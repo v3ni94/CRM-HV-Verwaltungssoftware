@@ -155,3 +155,7 @@ Unter Einstellungen, Automatisierung zeigt die Schaltfläche "Regelvorlagen" (nu
 ## Ereigniskatalog
 
 Beim Auslöser "Anderer Ereignistyp" schlägt die Maske alle im System ausgelösten Ereignistypen vor (Katalog aus `GET /automation/event-types`). Ein Typ, der nicht im Katalog steht, wird mit einem Hinweis markiert: Die Regel würde nie feuern, meist liegt ein Tippfehler vor. Die Eingabe bleibt möglich.
+
+## Regeln mit KI-Aufgabe ohne Freigeber (Welle 24, AM04)
+
+Die Regelliste kennzeichnet bestehende Regeln mit der Aktion "KI-Aufgabe" mit dem Hinweis "KI-Freigabe fehlt", wenn die Person, die die Regel zuletzt bearbeitet hat, das Recht ai:approve nicht besitzt oder keine aktive Mitgliedschaft hat. Die Anzeige ist rein lesend; sie ändert die Regel nicht. Ausgeführt wird die Aktion weiterhin nur, wenn der Mandantenschalter für KI-Aufgaben aus Regeln eingeschaltet ist. Lassen Sie die Regel von einer Person mit dem Recht ai:approve prüfen und erneut speichern, um den Hinweis aufzulösen.

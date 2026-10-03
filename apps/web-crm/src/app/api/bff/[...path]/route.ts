@@ -572,6 +572,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^ai\/posting-enabled$/ },
   { method: "GET", pattern: /^banking\/sync\/settings$/ },
   { method: "PUT", pattern: /^banking\/sync\/settings$/ },
+  { method: "GET", pattern: /^banking\/reconciliation-settings$/ },
+  { method: "PUT", pattern: /^banking\/reconciliation-settings$/ },
   { method: "POST", pattern: /^banking\/sync\/run$/ },
   { method: "GET", pattern: /^banking\/consent-sync\/settings$/ },
   { method: "PUT", pattern: /^banking\/consent-sync\/settings$/ },
@@ -690,6 +692,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^accounting\/payment-runs\/(preview|bank-status-reports|previews|settings)$/ },
   { method: "POST", pattern: /^accounting\/payment-runs\/(orders|payout-orders|bank-status-reports|previews)$/ },
   { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/reconciliation$`) },
+  // AO01 (GAK-104): write off proposals, decision (API: switch, four eyes, G1), posting preview.
+  { method: "GET", pattern: /^accounting\/open-item-write-offs$/ },
+  { method: "POST", pattern: /^accounting\/open-item-write-offs$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/open-item-write-offs/${ID}/decision$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/open-item-write-offs/${ID}/posting-preview$`) },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/bank-status$`) },
   { method: "PUT", pattern: /^accounting\/payment-runs\/settings$/ },
   { method: "GET", pattern: /^accounting\/tax\/section35a\/certificate(\.pdf)?$/ },
@@ -981,6 +988,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // AN06 / GAJ-602: four eyes approval of meeting majority rules and its tenant switch.
   { method: "POST", pattern: new RegExp(`^hoa/majority-rules/${ID}/approve$`) },
   { method: "GET", pattern: /^hoa\/majority-rule-four-eyes$/ },
+  // AO07: direct debit creator switch (GAK-106), unvalidated CHECK constraints (AN14-07).
+  { method: "GET", pattern: /^accounting\/direct-debit-settings$/ },
+  { method: "PUT", pattern: /^accounting\/direct-debit-settings$/ },
+  { method: "GET", pattern: /^platform\/constraint-checks$/ },
+  { method: "POST", pattern: /^platform\/constraint-checks\/validate$/ },
   { method: "PUT", pattern: /^hoa\/majority-rule-four-eyes$/ },
   { method: "GET", pattern: new RegExp(`^hoa/resolutions/${ID}/majority-check$`) },
   // AN19 (GAK-204): abhängige Pläne, Sonderumlagen, Abrechnungen; Prüfdatum Anfechtung.
@@ -1054,6 +1066,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Schalter Mieterhöhung: Sperrdauer je Begründung, Vorschläge (GAK-202, GAK-203, AN18).
   { method: "GET", pattern: /^letting\/rent-increase-settings$/ },
   { method: "PUT", pattern: /^letting\/rent-increase-settings$/ },
+  // AO03 (GAK-203): Indexklausel und Staffel je Mietvertrag, Vorschläge des Tagesjobs (nur Entwürfe).
+  { method: "GET", pattern: new RegExp(`^letting/contracts/${ID}/index-terms$`) },
+  { method: "PUT", pattern: new RegExp(`^letting/contracts/${ID}/index-terms$`) },
+  { method: "GET", pattern: /^letting\/rent-increase-proposals$/ },
   // Zählerstände übernehmen (Package F): Zählerstände des Protokolls in die Stammdaten der Einheit.
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/meters/transfer$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures|complete|versions|status|dispatches)$`) },

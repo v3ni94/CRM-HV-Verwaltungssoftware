@@ -737,6 +737,7 @@ async def search_open_items(session: AsyncSession, query: Query) -> list[dict[st
     contract party as of today (settlements deducted, B07), the largest first. With a term the
     debtor's name is matched; with a property open on the page its contracts."""
     from mhvp.accounting.models import Ledger, OpenItem, OpenItemSettlement
+    from mhvp.accounting.write_offs import not_written_off_as_of
     from mhvp.contacts.models import Party
     from mhvp.contracts.models import Contract
 
@@ -763,7 +764,8 @@ async def search_open_items(session: AsyncSession, query: Query) -> list[dict[st
         .outerjoin(settled, settled.c.open_item_id == OpenItem.id)
         .where(
             OpenItem.kind == "receivable",
-            OpenItem.written_off.is_(False),
+            # AO01 (GAK-104): date aware, written off only from written_off_on (B07).
+            not_written_off_as_of(query.today),
             OpenItem.booking_date <= query.today,
         )
         .group_by(Contract.id, Contract.number, Party.name, Ledger.id)

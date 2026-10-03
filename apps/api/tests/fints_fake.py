@@ -54,6 +54,10 @@ class FakeTan:
         return cls(data["kind"], data["decoupled"])
 
 
+CAMT_V2 = "urn:iso:std:iso:20022:tech:xsd:camt.052.001.02"
+CAMT_V8 = "urn:iso:std:iso:20022:tech:xsd:camt.052.001.08"
+
+
 class Scenario:
     """Class level switches a test sets before the workflow runs."""
 
@@ -79,6 +83,12 @@ class Scenario:
     # 9010 at dialog initialisation: "stored" rejects only a client built from stored state,
     # "always" rejects every dialog and the fake records the bank's return message.
     init_rejected: ClassVar[str | None] = None
+    # AO15: camt formats the bank lists in HICAZS (None: no HICAZS segment) and accepts in
+    # HKCAZ; any other requested format is answered with 9050 and 9010 "camt-Nachricht
+    # nicht zugelassen", which python-fints raises as "could not fetch BPD".
+    hicazs_formats: ClassVar[list[str] | None] = None
+    camt_accepted: ClassVar[list[str] | None] = None
+    camt_requests: ClassVar[list[list[str]]] = []
 
     @classmethod
     def reset(cls) -> None:
@@ -88,6 +98,9 @@ class Scenario:
         cls.balance_unsupported = cls.sepa_unsupported = False
         cls.mt940_empty = cls.camt_with_balance = False
         cls.init_rejected = None
+        cls.hicazs_formats = [CAMT_V2]
+        cls.camt_accepted = None
+        cls.camt_requests = []
         cls.transactions = [
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-1"),
             mt940_tx("2026-09-20", "700.00", "C", "GdWE Testweg Hausgeld 09/2026", "REF-2"),
@@ -293,8 +306,37 @@ class FakeClient:
             return []
         return list(Scenario.transactions)
 
-    def get_transactions_xml(self, account: Any, start: date | None, end: date | None) -> Any:
+    @property
+    def bpd(self) -> Any:
+        segs = []
+        if Scenario.hicazs_formats is not None:
+            # generic segment as python-fints parses an unknown HICAZS (fints/parser.py:216)
+            segs.append(
+                SimpleNamespace(
+                    _additional_data=[1, "450", "N", "N", "J", list(Scenario.hicazs_formats)]
+                )
+            )
+        return SimpleNamespace(find_segments=lambda query: list(segs) if query == "HICAZS" else [])
+
+    def get_transactions_xml(
+        self,
+        account: Any,
+        start: date | None,
+        end: date | None,
+        camt_messages: list[str] | None = None,
+    ) -> Any:
         assert self._in_dialog
+        # python-fints without a list sends camt.052.001.02 (fints/client.py:594)
+        requested = list(camt_messages or [CAMT_V2])
+        Scenario.camt_requests.append(requested)
+        accepted = Scenario.camt_accepted
+        if accepted is not None and not any(f in accepted for f in requested):
+            self.mhvp_responses.append(("9050", "Die Nachricht enthält Fehler."))
+            self.mhvp_responses.append(("9010", "camt-Nachricht nicht zugelassen"))
+            raise FinTSClientError(
+                "Error during dialog initialization, could not fetch BPD. Please check that "
+                "you passed the correct bank identifier to the HBCI URL of the correct bank."
+            )
         if account.iban != IBAN_1:
             return ([], [])
         if Scenario.camt_with_balance:

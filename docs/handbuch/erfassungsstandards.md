@@ -100,3 +100,7 @@ Das Foto zu einem Mangel oder Zähler wird direkt beim Anlegen des Eintrags aufg
 Detailfoto je Mangel; das Zählerfoto zeigt Zählernummer und Stand lesbar. Fotos werden
 serverseitig ohne Metadaten gespeichert (keine Ortsangabe, kein Aufnahmezeitpunkt aus der
 Kamera); der Zeitpunkt im Protokoll ist der Upload.
+
+## Listen laden in Seiten zu höchstens 200 Zeilen (Welle 24, GAK-301)
+
+Alle Listen der API liefern höchstens 200 Zeilen je Seite; größere Werte für Seitengröße oder limit werden mit 422 abgelehnt. Die CRM-Seiten laden größere Bestände (zum Beispiel Verträge, SEPA-Mandate, Freigabeliste) automatisch seitenweise nach. Eigene Auswertungen und Integrationen müssen blättern.

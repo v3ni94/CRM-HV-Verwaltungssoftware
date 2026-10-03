@@ -223,6 +223,30 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 25 (Stand 1.70.0, 03.10.2026)
+
+Reste der Welle 24 (AO01 bis AO14, darunter die Gegenprüfung AO12 in docs/reviews/REVIEW-W24-2026-10-03.md mit 17 Befunden, zwei sofort behoben: Logzeilen im Löschjournal-Export und Mehrheitsregel-Freigabe per API-Schlüssel) und drei lesende Lückenanalysen GAL-1 bis GAL-3 (Datenmodell, API und Integrationen, Oberfläche gegen Handbuch; 33 Befunde GAL-101 bis GAL-318, Grundlage der Welle 26). Zusätzlich acht lesende Prüfungen GAM-1 bis GAM-8 (Anhang D in der Oberfläche, Sicherheit, Datenschutz, Hintergrundjobs, Testqualität, Sprache, Dokumentation; rund 90 Befunde) und die Gesamtliste docs/plans/OFFENE-PUNKTE-2026-10-03.md. Die Freigabestufen G1 bis G5 bleiben geschlossen.
+
+- Migrationen 0456 (contract.index_agreement, contract_graduated_step, consumer_price_index), 0457 (special_levy.revenue_account_id, reference_date mit Datenübernahme), 0458 (Schalter direct_debit_creator_may_not_approve), Rundlauf 0455 bis 0458 getestet.
+- Teilweise (Grundlage Welle 26): GAK-104 (Buchung der Ausbuchung erst nach AN15-02), GAI-304 (81 JSON-Geldrouten weiter untypisiert, Aufzeichnung und Generator in Welle 26), GAK-203 (Maske Indeximport), GAM und GAL vollständig.
+
+| Paket | Befunde | Stand | Migration |
+| --- | --- | --- | --- |
+| AO01 | GAK-104, GAK-101, AO12-04, AO12-05 | partial, done, done, done | none |
+| AO02 | GAK-107, GAK-108 | done, done | none |
+| AO03 | GAK-203 | done | 0456 contract.index_agreement, contract_graduated_step (RLS), consumer_price_index (Plattform) |
+| AO04 | GAK-205 | done | 0457 ao04_special_levy_columns |
+| AO05 | AN19-CRM | done | none |
+| AO06 | AN14-04, AN14-12 | done, done | none |
+| AO07 | GAK-106, AN14-07 | done, done | 0458 tenant_settings.direct_debit_creator_may_not_approve |
+| AO08 | GAI-304 | partial | none |
+| AO09 | AN05 | done | none |
+| AO10 | GAK-402, GAK-303 | done, done | none |
+| AO11 | AN13, AN07, AN09 | done, done, done | none |
+| AO12 | Review | done | keine |
+| AO13 | Doku | done | keine |
+| AO14 | Wächter, Wächter Schalter gegen Regel/Frage, Wächter offene Fragen Eigentümer und Gate, Schalterverzeichnis einstellungen.md | done, done, done (163 Altfälle ohne Gate in Ratschenliste mit Begründung), done | none |
+
 ## Welle 24 (Stand 1.69.0, 03.10.2026)
 
 Technische Reste der Welle 23 (AN01 bis AN14, darunter die Gegenprüfung AN14 in docs/reviews/REVIEW-W23-2026-10-03.md mit 13 Befunden, zwei G2-Lücken sofort behoben: Zahlungsdateien als Mailanhang und im Belegeinsichtspaket des Eigentümerportals) und die Lückenanalyse GAK (25 Befunde GAK-101 bis GAK-406 aus vier lesenden Prüfpaketen zu Abschnitt 7, Mietverwaltung und WEG, Portale und Automatisierung, Betrieb und Anhang D und E; Pakete AN15 bis AN20). Quellen: Ergebnisdateien der Pakete, Versionsverlauf 1.69.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen.

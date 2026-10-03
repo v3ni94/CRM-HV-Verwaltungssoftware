@@ -16,7 +16,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import ADDRESS_HISTORY_OPTION, ContactAddress
-from mhvp.core.clock import local_today
+from mhvp.core.clock import local_date, local_today
 
 SWITCH_KEY = "contacts.address_history"
 _CONTENT = (
@@ -51,6 +51,20 @@ def closing_date(valid_from: date | None, today: date) -> date:
     return max(end, valid_from) if valid_from is not None else end
 
 
+def close_row(row: ContactAddress, valid_to: date, now: datetime) -> bool:
+    """Close an address as history (AO09). A row without ``valid_from`` first gets the business
+    date of its creation (``created_at``) so the validity range is complete; the result tells the
+    caller to note this backfill (event payload), the table has no note column. ``valid_to`` is
+    never before ``valid_from`` (CHECK)."""
+    backfilled = row.valid_from is None and row.created_at is not None
+    if backfilled:
+        row.valid_from = local_date(row.created_at)
+    row.valid_to = max(valid_to, row.valid_from) if row.valid_from is not None else valid_to
+    row.superseded_at = now
+    row.is_primary = False
+    return backfilled
+
+
 async def replace_with_history(
     session: AsyncSession,
     tenant_id: uuid.UUID,
@@ -83,9 +97,7 @@ async def replace_with_history(
             )
         )
     for row in unmatched.values():
-        row.valid_to = closing_date(row.valid_from, today)
-        row.superseded_at = now
-        row.is_primary = False
+        close_row(row, today - timedelta(days=1), now)
 
 
 async def addresses_as_of(

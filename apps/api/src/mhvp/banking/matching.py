@@ -91,6 +91,24 @@ DISCOUNT_CATEGORIES = (AccountCategory.REVENUE, AccountCategory.COST)
 DISCOUNT_HOLDING_ACCOUNT_NUMBER = "027000"
 
 
+async def _tenant_clearing_account(session: AsyncSession, ledger: Ledger) -> uuid.UUID | None:
+    """Account of the tenant standard ``banking.clearing_account_number`` in this ledger, if the
+    switch is set and the ledger carries the account with an allowed category."""
+    from mhvp.banking import reconciliation_settings
+
+    number = (await reconciliation_settings.load(session)).clearing_account_number
+    if number is None:
+        return None
+    account = await session.scalar(
+        select(LedgerAccount).where(
+            LedgerAccount.ledger_id == ledger.id, LedgerAccount.number == number
+        )
+    )
+    if account is None or account.category.value not in reconciliation_settings.CLEARING_CATEGORIES:
+        return None
+    return account.id
+
+
 async def _check_counter_account(
     session: AsyncSession,
     ledger: Ledger,
@@ -513,6 +531,9 @@ async def book_payment(
     if discount > 0 and counter_account_id is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Skonto braucht ein Gegenkonto.")
     rest = amount + discount - total
+    if rest > 0 and counter_account_id is None and len(per_account) > 1:
+        # AO02, GAK-107: stored tenant standard of the clearing account (default none).
+        counter_account_id = await _tenant_clearing_account(session, ledger)
     if counter_account_id is not None and per_account and (rest > 0 or discount > 0):
         await _check_counter_account(
             session, ledger, counter_account_id, rest, discount, settlements, text

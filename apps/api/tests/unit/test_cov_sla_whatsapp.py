@@ -324,10 +324,73 @@ def test_send_whatsapp_contact_with_consent_is_sent(monkeypatch: pytest.MonkeyPa
     async def consent(_session: Any, _contact_id: uuid.UUID) -> bool:
         return True
 
+    async def own_number(_session: Any, _contact_id: uuid.UUID, to: str) -> str:
+        assert to == "+49170"
+        return "+49170"
+
     monkeypatch.setattr(whatsapp, "has_whatsapp_consent", consent)
+    monkeypatch.setattr(whatsapp, "contact_number", own_number)
     session = _FakeSession()
     assert _send(session, recipient="contact", contact_id=uuid.uuid4()) is None
     assert len(session.added) == 1
+
+
+# --- AN14-12: a contact recipient is messaged only on a number of the contact -----------
+
+
+class _PhoneSession:
+    def __init__(self, rows: list[Any]) -> None:
+        self.rows = rows
+
+    async def scalars(self, _stmt: Any) -> Any:
+        rows = self.rows
+
+        class _R:
+            def all(self) -> list[Any]:
+                return rows
+
+        return _R()
+
+
+def _phone(number: str, label: str = "mobile", primary: bool = False) -> Any:
+    from mhvp.contacts.models import PhoneLabel
+
+    return type("P", (), {"number": number, "label": PhoneLabel(label), "is_primary": primary})()
+
+
+def test_contact_number_rejects_foreign_number() -> None:
+    from mhvp.core.problems import ProblemError
+
+    session = _PhoneSession([_phone("+491701234")])
+    with pytest.raises(ProblemError) as exc:
+        asyncio.run(whatsapp.contact_number(session, uuid.uuid4(), "+49999"))  # type: ignore[arg-type]
+    assert exc.value.error.status == 422
+
+
+def test_contact_number_matches_formatted_and_defaults_to_mobile() -> None:
+    rows = [_phone("+49301111", "work", True), _phone("+491701234")]
+    session = _PhoneSession(rows)
+    found = asyncio.run(whatsapp.contact_number(session, uuid.uuid4(), "+49 170 1234"))  # type: ignore[arg-type]
+    assert found == "+491701234"
+    assert asyncio.run(whatsapp.contact_number(session, uuid.uuid4(), "")) == "+491701234"  # type: ignore[arg-type]
+    assert asyncio.run(whatsapp.contact_number(_PhoneSession([]), uuid.uuid4(), "")) is None  # type: ignore[arg-type]
+
+
+def test_send_whatsapp_contact_foreign_number_is_422(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mhvp.core.problems import ProblemError
+
+    async def consent(_session: Any, _contact_id: uuid.UUID) -> bool:
+        return True
+
+    async def no_phones(_session: Any, _contact_id: uuid.UUID, to: str) -> str:
+        raise ProblemError(whatsapp.ErrorCodes.VALIDATION, detail=whatsapp.FOREIGN_NUMBER_DETAIL)
+
+    monkeypatch.setattr(whatsapp, "has_whatsapp_consent", consent)
+    monkeypatch.setattr(whatsapp, "contact_number", no_phones)
+    session = _FakeSession()
+    with pytest.raises(ProblemError):
+        _send(session, recipient="contact", contact_id=uuid.uuid4())
+    assert session.added == []
 
 
 @pytest.mark.parametrize("recipient", ["staff", "test"])

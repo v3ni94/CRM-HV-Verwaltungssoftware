@@ -84,4 +84,27 @@ describe("DirectDebitReconciliation", () => {
     expect(posts).toHaveLength(1);
     expect(JSON.parse(String(posts[0]?.[1]?.body))).toEqual({ status: "rejected", order_ids: ["o1", "o2"] });
   });
+
+  it("shows return evidence and pass on status and sends date and fee for one return (AO01, GAK-101)", async () => {
+    const calls: { url: string; body: unknown }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      calls.push({ url: String(url), body: init?.body });
+      return jsonResponse(
+        rec([row({ bank_status: "returned", returned_on: "2026-09-30", return_fee_amount: "3.50", return_fee_document_id: "d1", return_fee_pass_on: "locked" })]),
+      );
+    });
+    renderIntl(<DirectDebitReconciliation runId="r1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung und Abstimmung" }));
+    const ev = await screen.findByTestId("dd-return-o1");
+    expect(ev).toHaveTextContent("30.09.2026");
+    expect(ev).toHaveTextContent("Weiterbelastung gesperrt");
+    expect(screen.getByRole("link", { name: "Gebührenbeleg" })).toHaveAttribute("href", "/dokumente/d1");
+    await userEvent.click(screen.getByRole("button", { name: "Rückmeldung erfassen" }));
+    await userEvent.selectOptions(screen.getByLabelText("Bankstatus"), "returned");
+    await userEvent.type(screen.getByLabelText("Rückgabedatum"), "2026-09-30");
+    await userEvent.type(screen.getByLabelText("Rücklastschriftgebühr"), "3,50");
+    await userEvent.click(screen.getByRole("button", { name: "Rückmeldung speichern" }));
+    await waitFor(() => expect(calls.length).toBe(2));
+    expect(JSON.parse(String(calls[1]?.body))).toMatchObject({ status: "returned", order_ids: ["o1"], returned_on: "2026-09-30", return_fee_amount: "3.50" });
+  });
 });

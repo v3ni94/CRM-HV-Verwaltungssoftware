@@ -542,3 +542,13 @@ Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläc
 ### Mehrheitsregel freigeben (Vier Augen)
 
 Ist unter Einstellungen, Fachliche Regeln der Schalter „Vier-Augen-Freigabe der Mehrheitsregeln“ eingeschaltet (Standard aus), erscheint eine neu angelegte Mehrheitsregel auf der Versammlungsseite als „Entwurf“. Eine zweite Person mit Freigaberecht gibt sie mit „Freigeben“ frei. Bis dahin kann die Regel keinem Tagesordnungspunkt zugeordnet und nicht ausgezählt werden.
+
+## Beschluss angefochten oder nichtig: Hinweise (Welle 24, AN08)
+
+Setzen Sie den Status eines Beschlusses auf angefochten, für ungültig erklärt oder nichtig, benachrichtigt die Plattform die Freigabeberechtigten und kennzeichnet abhängige Wirtschaftspläne, Sonderumlagen und Abrechnungen. Es wird nichts storniert und nichts geändert; die Entscheidung über Folgen treffen Sie mit rechtlicher Beratung. Für die Anfechtung wird ein Prüfdatum als Fristeintrag angelegt. Das Datum ist ein Orientierungswert und vor Verwendung zu verifizieren.
+
+Die Sonderumlage verlangt ein Ertragskonto und einen Stichtag; die Berechnung nutzt je Einheit den Eigentümer zum Stichtag und zur Fälligkeit. Ein Buchungsvorschlag entsteht nur als Entwurf und erst hinter G4.
+
+## Beschlussfolgen und Prüfdatum in der Beschlussliste (Welle 25, AN19)
+
+In der Beschlussliste zeigt der Knopf "Folgen prüfen" die abhängigen Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses. Ist der Beschluss angefochten, für ungültig erklärt oder nichtig, tragen die abhängigen Unterlagen das Kennzeichen "angefochten". Es wird nichts storniert und nichts geändert. Mit "Prüfdatum als Frist anlegen" tragen Sie ein Prüfdatum für eine mögliche Anfechtung als Frist ein (Datum leer lassen, wenn es aus der Fristart berechnet werden soll). Die Dauer der Anfechtungsfrist ist nicht festgelegt; das Datum ist zu verifizieren und durch einen Rechtsanwalt zu prüfen. Die Benachrichtigung "Beschluss angefochten, Folgen prüfen" lässt sich unter Einstellungen, Benachrichtigungen je Kanal schalten und führt zur WEG-Übersicht.

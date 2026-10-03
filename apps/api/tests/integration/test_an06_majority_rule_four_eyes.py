@@ -141,6 +141,18 @@ def test_an06_four_eyes_majority_rule(client: TestClient, world: World) -> None:
     assert client.post(approve, headers=hb).status_code == 404  # foreign tenant
     assert client.post(f"{H}/majority-rules/{uuid.uuid4()}/approve", headers=h2).status_code == 404
     assert client.post(f"{H}/majority-rules/not-a-uuid/approve", headers=h2).status_code == 422
+    # AO12-02: an API key with hoa:approve has no person and must not approve.
+    key = _ok(
+        client.post(
+            "/api/v1/tenant/api-keys",
+            json={"name": f"ao12-{uuid.uuid4().hex[:6]}", "scopes": ["hoa:approve", "hoa:read"]},
+            headers=h1,
+        ),
+        201,
+    )["key"]
+    keyed = client.post(approve, headers={"X-API-Key": key})
+    assert keyed.status_code == 409, keyed.text
+    assert keyed.json()["code"] == "MHVP-HOA-0041"
     own = client.post(approve, headers=h1)
     assert own.status_code == 409
     assert own.json()["code"] == "MHVP-HOA-0041"

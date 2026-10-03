@@ -124,6 +124,9 @@ AUDIENCE_LABELS = {"tenant": "Mieter", "owner": "Eigentümer", "provider": "Dien
 
 
 async def _documents(session: Any, document_ids: list[uuid.UUID], audiences: list[str]) -> None:
+    from mhvp.documents import payment_files  # local: import cycle
+
+    await payment_files.ensure_no_payment_attachment(session, list(document_ids))
     for document_id in document_ids:
         document = await session.get(Document, document_id)
         if document is None:

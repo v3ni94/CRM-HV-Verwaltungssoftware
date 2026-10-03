@@ -3175,6 +3175,16 @@
  },
  {
   "kind": "handbook",
+  "title": "KI-Einstellungen: drei Schalter (Welle 24, AM04)",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, KI sind die Schalter \"Einzel-Einordnung von E-Mails\", \"Stammdatenvorschläge\" und \"KI-Aufgaben aus Regeln\" sichtbar und mit dem Recht zur Pflege der KI-Einstellungen schaltbar. Alle drei bleiben ausgeschaltet, bis Sie sie bewusst einschalten. KI liefert in all",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Ziel",
   "source": "Handbuch: Aufgabenverteilung Mail und Tickets: Vorschlag",
   "href": null,
@@ -3481,6 +3491,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Auslöser \"Anderer Ereignistyp\" schlägt die Maske alle im System ausgelösten Ereignistypen vor (Katalog aus GET /automation/event-types). Ein Typ, der nicht im Katalog steht, wird mit einem Hinweis markiert: Die Regel würde nie feuern, meist liegt ein Tippfehler vor. Die Eing",
+  "file": "docs/handbuch/automatisierung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Regeln mit KI-Aufgabe ohne Freigeber (Welle 24, AM04)",
+  "source": "Handbuch: Automatisierung (Regel-Engine)",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Regelliste kennzeichnet bestehende Regeln mit der Aktion \"KI-Aufgabe\" mit dem Hinweis \"KI-Freigabe fehlt\", wenn die Person, die die Regel zuletzt bearbeitet hat, das Recht ai:approve nicht besitzt oder keine aktive Mitgliedschaft hat. Die Anzeige ist rein lesend; sie ändert d",
   "file": "docs/handbuch/automatisierung.md"
  },
  {
@@ -3991,6 +4011,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Massenbestätigung: Die Vorschau zeigt Anzahl und Summen je Rechtsträger. Gebucht wird nur, was die Vorschau gezeigt hat; ändert sich ein Umsatz dazwischen oder ist die Vorschau älter als 15 Minuten, wird sie neu erzeugt. - Restbetrag einer Überzahlung bleibt Guthaben des Zahler",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Massenbestätigung mit Vorschau-Token (Welle 24, GAK-105)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Massenbestätigung bucht nur mit einer gültigen Vorschau. Die Vorschau liefert eine Vorschau-Kennung, die an Auswahl, Beträge und Zustände der Umsätze gebunden und befristet ist; die Oberfläche übergibt sie beim Bestätigen automatisch. Fehlt sie, ist sie abgelaufen oder haben ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Klärungskonto und Abstimmungsbasis (Welle 25)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, Bankabstimmung legen Sie im Bereich \"Klärungskonto und Abstimmungsbasis\" zwei Mandantenstandards fest (Recht Mandanteneinstellungen ändern). Das Klärungskonto wählen Sie aus den Transit und technischen Konten Ihres Kontenrahmens; es nimmt einen Überzahlungsrest auf, d",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -4701,6 +4741,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Bei einer Rücklastschrift erfassen Sie in der Bankrückmeldung des Lastschriftlaufs zusätzlich das Rückgabedatum der Bank, die tatsächlich berechnete Gebühr und den Gebührenbeleg. Der Verweis auf den ursprünglichen Einzug bleibt erhalten. Bereits erfasste Angaben lassen sich ergän",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Lastschriftlauf: Ersteller darf nicht freigeben",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Fachliche Regeln lässt sich der Schalter \"Lastschrift: Ersteller darf nicht freigeben\" einschalten (Recht Mandanteneinstellungen ändern, Standard aus). Dann kann der Ersteller eines Laufs ihn nicht selbst freigeben, die zweite Freigabe muss von einer anderen Person kommen. ",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Ausbuchungsvorschläge und Rücklastschrift-Nachweis (Welle 25, AO01)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Buchungskreis steht unter den offenen Posten der Bereich \"Ausbuchungsvorschläge\". Eine offene Forderung wird mit Stichtag und Grund (mindestens 10 Zeichen) vorgeschlagen; der Vorschlag wirkt nicht auf Salden. Die Freigabe ist nur möglich, wenn der Mandantenschalter eingeschalt",
   "file": "docs/handbuch/buchhaltung.md"
  },
  {
@@ -5785,6 +5845,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Schalterverzeichnis",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "<!-- switch-index:start (generiert mit scripts/buildswitchindex.py, nicht von Hand ändern) -- Stand der Registry: 97 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen. Schalter Bereich Paket Standard Offene Frage --- --- --- --- --- chart-coverage accoun",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Schalterverzeichnis",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "<!-- switch-index:start (generiert mit buildswitchindex.py, nicht von Hand ändern) -- Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen. Schalter Bereich Paket Standard Offene Frage --- --- --- --- --- chart-coverage accounting AE",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -5841,6 +5921,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Das Foto zu einem Mangel oder Zähler wird direkt beim Anlegen des Eintrags aufgenommen (Foto aufnehmen oder Aus Galerie wählen). Standard sind ein Übersichtsfoto je Raum und ein Detailfoto je Mangel; das Zählerfoto zeigt Zählernummer und Stand lesbar. Fotos werden serverseitig oh",
+  "file": "docs/handbuch/erfassungsstandards.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Listen laden in Seiten zu höchstens 200 Zeilen (Welle 24, GAK-301)",
+  "source": "Handbuch: Erfassungsstandards",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Alle Listen der API liefern höchstens 200 Zeilen je Seite; größere Werte für Seitengröße oder limit werden mit 422 abgelehnt. Die CRM-Seiten laden größere Bestände (zum Beispiel Verträge, SEPA-Mandate, Freigabeliste) automatisch seitenweise nach. Eigene Auswertungen und Integrati",
   "file": "docs/handbuch/erfassungsstandards.md"
  },
  {
@@ -7685,6 +7775,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Nicht validierte Prüfregeln",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Konsistenzprüfung der Buchhaltung weist Prüfregeln aus, die nur für neue Zeilen gelten, weil Bestandsdaten sie verletzen (Zahl der Verstöße je Regel). Nach Korrektur der Daten validiert ein Administrator mit dem Recht Mandanteneinstellungen ändern die Regeln über POST /platfo",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,
@@ -8775,6 +8875,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Kaution und Rückzahlungs-IBAN bei der Übergabe (Welle 24, AN12)",
+  "source": "Handbuch: uebergabeprotokoll",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim verbindlichen Abschluss eines Auszugsprotokolls wird die im Protokoll erfasste Kaution mit der Kaution des Vertrags abgeglichen; Abweichungen werden angezeigt und müssen geklärt werden. Die Rückzahlungs-IBAN aus dem Protokoll gilt als neue Bankverbindung der ausziehenden Mie",
+  "file": "docs/handbuch/uebergabeprotokoll.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kautionsverknüpfung im Übergabeprotokoll (Welle 25, AN19)",
+  "source": "Handbuch: uebergabeprotokoll",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Schritt Kaution zeigt der Block \"Kaution und Rückzahlungskonto\" den Abgleich der Kaution laut Vertrag mit der Kaution laut Protokoll, Hinweise und den Stand der Rückzahlungs-IBAN (nur die letzten Stellen). Mit \"Konto zur Freigabe übergeben\" wird die Rückzahlungs-IBAN dem Konta",
+  "file": "docs/handbuch/uebergabeprotokoll.md"
+ },
+ {
+  "kind": "handbook",
   "title": "1. Systembeschreibung",
   "source": "Handbuch: Verfahrensdokumentation (Entwurf für den Steuerberater)",
   "href": null,
@@ -8931,6 +9051,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "In der Interessentenliste zeigt \"Links anzeigen\" die erzeugten Selbstauskunft Links mit Status (offen, eingereicht, abgelaufen) und Ablaufdatum. Der vollständige Link wird nur bei der Erzeugung angezeigt.",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Verkaufsinserate (Welle 24, AN19)",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": "/vermietung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Verkaufsinserate sind für jeden Mandanten zunächst nicht freigeschaltet. Unter Einstellungen, Fachliche Regeln, Eintrag \"Verkaufsinserate und Maklerveröffentlichung\" schalten Sie sie ein (Standard aus; die Frage nach dem Umfang der Vermarktung ist noch nicht entschieden, siehe Of",
   "file": "docs/handbuch/vermietung.md"
  },
  {
@@ -9151,6 +9281,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Das Vertragsdetail zeigt unten den Versionsverlauf: alle Versionen mit Gültigkeit, die aktuelle Version markiert und frühere Versionen als Link. Je Version erscheinen die Zahlungszeilen, die gegenüber der Vorversion neu sind oder entfallen. Frühere Versionen bleiben unverändert e",
+  "file": "docs/handbuch/vertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Indexklausel und Staffelmiete (GAK-203, Welle 25)",
+  "source": "Handbuch: Verträge (Miete, WEG, SEV)",
+  "href": "/vertraege",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Vertragsdetail eines Mietvertrags erfasst der Abschnitt \"Indexklausel und Staffelmiete\" entweder die Indexvereinbarung (Indexreihe, Basisindex zum Stand der letzten Anpassung, Basismonat, Quelle) oder die Staffelstufen (Gültig ab, Nettomiete). Die Eingaben ändern die Miete nic",
   "file": "docs/handbuch/vertraege.md"
  },
  {
@@ -9521,6 +9661,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläche \"Einheit ...\" für die Einzelabrechnung als PDF-Entwurf. Sie bleibt gesperrt, solange die Freigabestufe G4 geschlossen ist oder die Abrechnung nicht intern freigegeben wurde. Der Abschnitt \"Zuordnung",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Beschluss angefochten oder nichtig: Hinweise (Welle 24, AN08)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Setzen Sie den Status eines Beschlusses auf angefochten, für ungültig erklärt oder nichtig, benachrichtigt die Plattform die Freigabeberechtigten und kennzeichnet abhängige Wirtschaftspläne, Sonderumlagen und Abrechnungen. Es wird nichts storniert und nichts geändert; die Entsche",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Beschlussfolgen und Prüfdatum in der Beschlussliste (Welle 25, AN19)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Beschlussliste zeigt der Knopf \"Folgen prüfen\" die abhängigen Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses. Ist der Beschluss angefochten, für ungültig erklärt oder nichtig, tragen die abhängigen Unterlagen das Kennzeichen \"angefochten\". Es wird nicht",
   "file": "docs/handbuch/weg.md"
  }
 ]

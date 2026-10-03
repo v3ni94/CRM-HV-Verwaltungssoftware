@@ -29,7 +29,7 @@ from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ProblemError
-from mhvp.documents import intake_address
+from mhvp.documents import intake_address, payment_files
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentSource, StorageKind
@@ -123,8 +123,12 @@ async def _collect(
                     "received_at": message.received_at,
                 },
             )
+            # AN14-04: payment files stay in the platform while G2 is closed.
+            allowed = await payment_files.releasable_ids(
+                session, message.tenant_id, list(message.attachment_document_ids)
+            )
             try:
-                for document_id in message.attachment_document_ids:
+                for document_id in allowed:
                     document = await session.get(Document, document_id)
                     if document is None or document.storage is not StorageKind.MINIO:
                         continue

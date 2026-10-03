@@ -387,15 +387,15 @@ export function TicketThroughput() {
           <>
             <label className="flex items-center gap-1 text-sm">
               <span className="sr-only">{t("from")}</span>
-              <input type="date" className={`${ui.input} min-h-9 w-auto py-1`} value={from} onChange={(e) => setFrom(e.target.value)} aria-label={t("from")} />
+              <input type="date" className={`${ui.input} pointer-fine:min-h-9 w-auto py-1`} value={from} onChange={(e) => setFrom(e.target.value)} aria-label={t("from")} />
             </label>
             <label className="flex items-center gap-1 text-sm">
               <span className="sr-only">{t("to")}</span>
-              <input type="date" className={`${ui.input} min-h-9 w-auto py-1`} value={to} onChange={(e) => setTo(e.target.value)} aria-label={t("to")} />
+              <input type="date" className={`${ui.input} pointer-fine:min-h-9 w-auto py-1`} value={to} onChange={(e) => setTo(e.target.value)} aria-label={t("to")} />
             </label>
           </>
         ) : null}
-        <select className={`${ui.input} min-h-9 w-auto py-1`} value={userId} onChange={(e) => setUserId(e.target.value)} aria-label={t("user.label")}>
+        <select className={`${ui.input} pointer-fine:min-h-9 w-auto py-1`} value={userId} onChange={(e) => setUserId(e.target.value)} aria-label={t("user.label")}>
           <option value="">{t("user.all")}</option>
           {members.map((m) => (
             <option key={m.user_id} value={m.user_id}>
@@ -403,14 +403,14 @@ export function TicketThroughput() {
             </option>
           ))}
         </select>
-        <select className={`${ui.input} min-h-9 w-auto py-1`} value={mailboxKind} onChange={(e) => setMailboxKind(e.target.value as MailboxKind)} aria-label={t("mailboxKind.label")}>
+        <select className={`${ui.input} pointer-fine:min-h-9 w-auto py-1`} value={mailboxKind} onChange={(e) => setMailboxKind(e.target.value as MailboxKind)} aria-label={t("mailboxKind.label")}>
           {(["all", "personal", "default"] as const).map((k) => (
             <option key={k} value={k}>
               {t(`mailboxKind.${k}`)}
             </option>
           ))}
         </select>
-        <select className={`${ui.input} min-h-9 w-auto py-1`} value={mailboxId} onChange={(e) => setMailboxId(e.target.value)} aria-label={t("mailbox.label")}>
+        <select className={`${ui.input} pointer-fine:min-h-9 w-auto py-1`} value={mailboxId} onChange={(e) => setMailboxId(e.target.value)} aria-label={t("mailbox.label")}>
           <option value="">{t("mailbox.all")}</option>
           {mailboxes.map((m) => (
             <option key={m.mailbox_id} value={m.mailbox_id}>

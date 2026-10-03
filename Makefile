@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: client-py help dev down migrate test test-api test-web e2e lint compose-exposure i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test pitr-drill pitr-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint compose-exposure i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test pitr-drill pitr-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate switch-index
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -136,3 +136,6 @@ kosit-validate: kosit-fetch ## Validate own XRechnung files: make kosit-validate
 
 compose-exposure: ## no published ports on api, web-crm, web-portal in the compose files (AL06-02)
 	python3 scripts/check_compose_exposure.py
+
+switch-index: ## Regenerate the switch index of docs/handbuch/einstellungen.md (CHECK=1: only verify)
+	python3 scripts/build_switch_index.py $(if $(CHECK),--check,)

@@ -8,6 +8,15 @@ by a second person is possible only with the tenant switch
 G1 open; it sets ``written_off`` with date, time, reason and author on the item. Nothing is
 posted here: the legal basis (waiver, uncollectibility) and the booking procedure stay an open
 decision; reports read the flag only from ``written_off_on`` onwards (as of date, B07).
+
+AO01 (GAK-104 rest): ``not_written_off_as_of`` is the shared date aware filter for selections
+(direct debit, credit payables, AI lookup). ``GET /{id}/posting-preview`` shows the booking an
+approved write off would need (credit of the receivable account at the remaining amount); the
+counter account is not decided (AN15-02), so ``posting_allowed`` stays false and nothing is
+posted, also with G1 open. A booking would never overwrite: a correction is a reversal. Taking
+back an approval (switch ``accounting.write_off_revocation`` in ``tenant_settings.sources``,
+default off) is only prepared: there is no route, the status says ``locked`` or
+``awaiting_decision`` (AN15-02).
 """
 
 import uuid
@@ -17,19 +26,23 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import period_lock
 from mhvp.accounting import services as acc
 from mhvp.accounting.audit_events import record_change, snap
-from mhvp.accounting.models import Ledger, OpenItem, OpenItemWriteOff
+from mhvp.accounting.models import Ledger, LedgerAccount, OpenItem, OpenItemWriteOff
 from mhvp.accounting.tax_models import AccountingTaxSettings
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.clock import local_today
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+from mhvp.core.release_gates import (
+    ClosedReleaseGateResolver,
+    ReleaseGate,
+    ensure_release_gate_open,
+)
 
 router = APIRouter(prefix="/open-item-write-offs", tags=["Buchhaltung"])
 READ = require_permission("accounting:read")
@@ -37,6 +50,7 @@ UPDATE = require_permission("accounting:update")
 APPROVE = require_permission("accounting:approve")
 
 QUESTION = "AN15-02"
+REVOCATION_SWITCH = "accounting.write_off_revocation"
 _FIELDS = ("status", "decided_by", "decided_at", "decision_note")
 _ITEM_FIELDS = (
     "written_off",
@@ -78,16 +92,96 @@ class AccountingWriteOffOut(BaseModel):
     posting_effect: bool = False
     approval_enabled: bool = False
     question: str = QUESTION
+    # AO01: taking back an approval is only prepared (AN15-02 open, no route).
+    revocation_status: Literal["locked", "awaiting_decision"] = "locked"
+
+
+class AccountingWriteOffPostingLineOut(BaseModel):
+    side: Literal["debit", "credit"]
+    account_id: uuid.UUID | None
+    account_number: str | None
+    amount: Decimal
+    note: str | None = None
+
+
+class AccountingWriteOffPostingPreviewOut(BaseModel):
+    write_off_id: uuid.UUID
+    status: str
+    effective_on: date
+    amount: Decimal
+    lines: list[AccountingWriteOffPostingLineOut]
+    posting_allowed: bool = False
+    blockers: list[str]
+    correction: str = "reversal"
+    question: str = QUESTION
+
+
+def not_written_off_as_of(as_of: date) -> ColumnElement[bool]:
+    """Item counts as open on ``as_of``: not written off, or written off only later (B07).
+    A legacy flag without date counts as written off for every date."""
+    return or_(
+        OpenItem.written_off.is_(False),
+        OpenItem.written_off_on.is_not(None) & (OpenItem.written_off_on > as_of),
+    )
 
 
 async def approval_enabled(session: AsyncSession) -> bool:
     return bool(await session.scalar(select(AccountingTaxSettings.write_off_approval_enabled)))
 
 
-def _out(row: OpenItemWriteOff, enabled: bool) -> AccountingWriteOffOut:
+async def revocation_enabled(session: AsyncSession) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    sources = await session.scalar(select(TenantSettings.sources))
+    return bool((sources or {}).get(REVOCATION_SWITCH) is True)
+
+
+def _out(row: OpenItemWriteOff, enabled: bool, revocation: bool = False) -> AccountingWriteOffOut:
     out = AccountingWriteOffOut.model_validate(row)
     out.approval_enabled = enabled
+    if row.status == "approved" and revocation:
+        out.revocation_status = "awaiting_decision"
     return out
+
+
+async def posting_preview(
+    session: AsyncSession, row: OpenItemWriteOff, *, g1_open: bool
+) -> AccountingWriteOffPostingPreviewOut:
+    """Booking an approved write off would need; never posts (counter account AN15-02)."""
+    item = await session.get(OpenItem, row.open_item_id)
+    if item is None:  # pragma: no cover
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    account = await session.get(LedgerAccount, item.account_id) if item.account_id else None
+    blockers = []
+    if row.status != "approved":
+        blockers.append("not_approved")
+    if not g1_open:
+        blockers.append("gate_g1_closed")
+    blockers.append("counter_account_undecided")
+    return AccountingWriteOffPostingPreviewOut(
+        write_off_id=row.id,
+        status=row.status,
+        effective_on=row.effective_on,
+        amount=row.amount,
+        lines=[
+            AccountingWriteOffPostingLineOut(
+                side="debit",
+                account_id=None,
+                account_number=None,
+                amount=row.amount,
+                note=f"Gegenkonto nicht festgelegt (offene Frage {QUESTION})",
+            ),
+            AccountingWriteOffPostingLineOut(
+                side="credit",
+                account_id=account.id if account else None,
+                account_number=account.number if account else None,
+                amount=row.amount,
+                note="Forderungskonto des Postens",
+            ),
+        ],
+        posting_allowed=False,
+        blockers=blockers,
+    )
 
 
 async def propose(
@@ -100,6 +194,8 @@ async def propose(
     user_id: uuid.UUID | None,
 ) -> OpenItemWriteOff:
     """Proposal without any effect; amount is the remaining amount as of ``effective_on``."""
+    if user_id is None:  # AO12-05: without a person the four eyes rule could be bypassed
+        raise ProblemError(ErrorCodes.WRITE_OFF_NEEDS_PERSON)
     if effective_on > local_today():
         raise ProblemError(ErrorCodes.VALIDATION, detail="Das Datum liegt in der Zukunft.")
     if effective_on < item.booking_date:
@@ -183,6 +279,18 @@ async def decide(
                 ErrorCodes.CONFLICT,
                 detail="Vier Augen: die vorschlagende Person kann nicht freigeben.",
             )
+        if row.proposed_by is None:  # AO12-05: legacy proposal without a person
+            raise ProblemError(ErrorCodes.WRITE_OFF_NEEDS_PERSON)
+        # AO12-04: a payment between proposal and approval changes the remaining amount.
+        current = await acc.remaining(session, item.id, row.effective_on)
+        if current != row.amount:
+            raise ProblemError(
+                ErrorCodes.WRITE_OFF_AMOUNT_CHANGED,
+                detail=(
+                    f"Restbetrag zum Stichtag jetzt {current}, im Vorschlag {row.amount}; "
+                    "bitte ablehnen und neu vorschlagen."
+                ),
+            )
         ledger = await session.get(Ledger, item.ledger_id)
         if ledger is not None:
             await period_lock.ensure_open_for_entry(
@@ -247,7 +355,34 @@ async def list_write_offs(
         if status is not None:
             query = query.where(OpenItemWriteOff.status == status)
         enabled = await approval_enabled(session)
-        return [_out(r, enabled) for r in (await session.scalars(query.limit(500))).all()]
+        revocation = await revocation_enabled(session)
+        rows = (await session.scalars(query.limit(500))).all()
+        return [_out(r, enabled, revocation) for r in rows]
+
+
+@router.get(
+    "/{write_off_id}/posting-preview",
+    summary="Buchungsvorschau einer Ausbuchung (nur Anzeige, Gegenkonto offen AN15-02, G1)",
+    response_model=AccountingWriteOffPostingPreviewOut,
+)
+async def write_off_posting_preview(
+    write_off_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> AccountingWriteOffPostingPreviewOut:
+    resolver = getattr(request.app.state, "release_gate_resolver", ClosedReleaseGateResolver())
+    try:
+        g1_open = (
+            principal.tenant_id is not None
+            and (await resolver.is_open(principal.tenant_id, ReleaseGate.G1)) is True
+        )
+    except Exception:
+        g1_open = False
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(OpenItemWriteOff, write_off_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return await posting_preview(session, row, g1_open=g1_open)
 
 
 @router.post(
@@ -288,7 +423,7 @@ async def decide_write_off(
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> AccountingWriteOffOut:
     if principal.user_id is None:
-        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Needs a person.")
+        raise ProblemError(ErrorCodes.WRITE_OFF_NEEDS_PERSON)
     async with tenant_tx(request, principal) as session:
         row = await session.get(OpenItemWriteOff, write_off_id, with_for_update=True)
         if row is None:
@@ -310,4 +445,4 @@ async def decide_write_off(
         row = await decide(
             session, row, decision=body.decision, note=body.note, user_id=principal.user_id
         )
-        return _out(row, enabled)
+        return _out(row, enabled, await revocation_enabled(session))

@@ -181,3 +181,11 @@ Ein Demo-Mandant enthält nur erfundene Daten (`make seed-demo`, Runbook `demo-m
 Ein Demo-Mandant ist aus der Plattformabrechnung (Lizenz, Nutzungszählung, Abrechnungsvorschau), aus Exporten (Mandantenexport, Journal-Export, DATEV, Prüfexport) und aus den Betriebsstatistiken ausgeschlossen. Ein Export im Demo-Mandanten endet mit der Meldung, dass die Funktion im Demo-Mandanten nicht möglich ist. Nehmen Sie keine echten Daten in einem Demo-Mandanten auf.
 
 Das Demo-Band in der Kopfzeile des CRM erscheint für Mandantenbenutzer, sobald der Mandant das Demo-Kennzeichen trägt (`GET /auth/me`, Feld `is_demo`, AF19).
+
+## Nicht validierte Prüfregeln
+
+Die Konsistenzprüfung der Buchhaltung weist Prüfregeln aus, die nur für neue Zeilen gelten, weil
+Bestandsdaten sie verletzen (Zahl der Verstöße je Regel). Nach Korrektur der Daten validiert ein
+Administrator mit dem Recht Mandanteneinstellungen ändern die Regeln über
+`POST /platform/constraint-checks/validate`. Bei weiteren Verstößen erscheint eine Liste, es wird
+nichts verändert.

@@ -1,4 +1,25 @@
 {
+  "ContractIndexTerms": {
+    "title": "Indexklausel und Staffelmiete",
+    "hint": "Nur Eingaben für Vorschläge. Die Miete ändert sich dadurch nicht. Vorschläge legt der Tagesjob nur bei eingeschaltetem Schalter Mieterhöhungsvorschläge als Entwurf an; Wartefrist und Wirksamkeit sind nicht geprüft (AN18-01).",
+    "latest": "Letzter freigegebener Indexwert {month}: {value}",
+    "mode": "Vereinbarung",
+    "modes": { "none": "Keine", "index": "Indexmiete", "graduated": "Staffelmiete" },
+    "indexName": "Indexreihe",
+    "baseIndex": "Basisindex (Stand der letzten Anpassung)",
+    "baseMonth": "Basismonat",
+    "source": "Quelle (Vertragsstelle)",
+    "validFrom": "Gültig ab",
+    "net": "Nettomiete",
+    "addStep": "Staffelstufe hinzufügen",
+    "remove": "Entfernen",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "invalidStep": "Jede Staffelstufe braucht Datum und einen positiven Betrag.",
+    "proposals": "Offene Vorschläge",
+    "noProposals": "Keine offenen Vorschläge.",
+    "proposalLine": "{basis} ab {date}: {from} auf {to} (Entwurf)"
+  },
   "OperationsMasks": {
     "delivery": {
       "open": "Zustellung erfassen",
@@ -2720,7 +2741,24 @@
       "chainFindings": "{count, plural, one {# Auszug mit Kettenbruch oder Zeitraumlücke.} other {# Auszüge mit Kettenbruch oder Zeitraumlücke.}}",
       "notCheckable": "{count, plural, one {# Auszug ohne Salden, nicht prüfbar (z. B. CSV).} other {# Auszüge ohne Salden, nicht prüfbar (z. B. CSV).}}",
       "na": "nicht ermittelbar",
-      "note": "Eine Differenz ist ein Befund zur Klärung; sie wird hier nicht korrigiert. Ohne Sachkonto oder Salden im Auszug bleibt die Spalte leer."
+      "note": "Eine Differenz ist ein Befund zur Klärung; sie wird hier nicht korrigiert. Ohne Sachkonto oder Salden im Auszug bleibt die Spalte leer.",
+      "basis": "Abstimmungsbasis",
+      "basisTenant": "Mandantenstandard",
+      "basisBookingDate": "Buchungsdatum",
+      "basisBankDate": "Bankbuchungstag",
+      "basisUsed": "Saldo Sachkonto nach {basis}.",
+      "timingDifference": "Zeitliche Differenz"
+    },
+    "reconciliationSettings": {
+      "title": "Klärungskonto und Abstimmungsbasis",
+      "intro": "Mandantenstandard: Ein Überzahlungsrest, der mehrere Debitoren betrifft, geht ohne ausdrückliches Gegenkonto auf das gewählte Klärungskonto (Transit oder technisches Konto des Kontenrahmens). Ohne Auswahl bleibt es beim bisherigen Verhalten: der Rest braucht ein Gegenkonto. Die Abstimmungsbasis bestimmt den Stichtag der Sachkontoseite. Speichern bucht nichts.",
+      "clearingAccount": "Klärungskonto",
+      "noClearingAccount": "Keines (Standard)",
+      "basis": "Abstimmungsbasis",
+      "basisBookingDate": "Buchungsdatum (Standard)",
+      "basisBankDate": "Bankbuchungstag",
+      "save": "Speichern",
+      "saved": "Einstellungen gespeichert."
     },
     "rules": {
       "title": "Bankregeln",
@@ -4778,6 +4816,8 @@
     "unknownEventWarning": "Dieser Ereignistyp wird im System nicht ausgelöst. Die Regel würde nie feuern. Bitte Schreibweise prüfen.",
     "eventTypeCode": "Ereignistyp (Code)",
     "events": {
+      "work_order_completed": "Auftrag abgeschlossen",
+      "work_order_done": "Auftrag erledigt (älterer Name)",
       "ticket_created": "Ticket angelegt",
       "ticket_merged": "Ticket zusammengeführt",
       "sla_escalated": "SLA eskaliert",
@@ -4970,6 +5010,7 @@
       }
     },
     "relatedHelp": "Bedingungen auf Objekt, Einheit, Kontakt und Vertrag werden beim Auswerten aus den verknüpften Stammdaten des Tickets gelesen; fehlt die Verknüpfung, trifft die Bedingung nicht zu.",
+    "workOrderDoneAlias": "Hinweis: Bei Abschluss eines Auftrags wird work_order.done (älterer Statusname) zusammen mit work_order.completed (Katalogname) ausgelöst. Eine Regel auf einen der beiden Namen genügt; Regeln auf beide lösen doppelt aus.",
     "attempts": "Versuch {count} von {max}",
     "nextAttempt": "Nächster Versuch {time}",
     "resend": "Erneut senden",
@@ -14954,7 +14995,8 @@
       "automation_webhook_dead": "Webhook dauerhaft fehlgeschlagen",
       "sla_escalation": "SLA Eskalation",
       "compliance_deadline": "Frist erreicht die Vorfrist",
-      "banking_consent_expiring": "Bankzustimmung läuft ab"
+      "banking_consent_expiring": "Bankzustimmung läuft ab",
+      "hoa_resolution_contested": "Beschluss angefochten, Folgen prüfen"
     }
   },
   "DeadlineEntries": {
@@ -15895,7 +15937,13 @@
     "seeded": "{count} Prüfpunkte im Fristenregister angelegt.",
     "nextChange": "Nächste Änderungstermine: {dates}"
   },
+  "WriteOffs": {"title": "Ausbuchungsvorschläge", "hint": "Ein Vorschlag hat keine Wirkung auf Salden und Auswertungen. Die Freigabe setzt nur das Ausbuchungskennzeichen ab dem Stichtag, gebucht wird nichts. Rechtsgrund und Buchungsweg sind offen (Frage AN15-02).", "item": "Offene Forderung", "choose": "Bitte wählen", "effectiveOn": "Stichtag", "reason": "Grund (mindestens 10 Zeichen)", "propose": "Ausbuchung vorschlagen", "empty": "Keine Ausbuchungsvorschläge für diesen Buchungskreis.", "asOf": "Stichtag {date}", "preview": "Buchungsvorschau", "approve": "Freigeben", "reject": "Ablehnen", "lockedG1": "Freigabe erst nach Freigabestufe G1 (produktive Buchhaltung).", "fourEyes": "Nur eine andere Person als die vorschlagende.", "switchOff": "Freigabe für diesen Mandanten ausgeschaltet (Fachliche Regeln, AN15-02).", "notPostable": "Nicht buchbar", "noAccount": "Konto offen", "status": {"proposed": "Vorgeschlagen", "approved": "Freigegeben", "rejected": "Abgelehnt"}, "revocation": {"locked": "Rücknahme gesperrt.", "awaiting_decision": "Rücknahme vorbereitet, Verfahren offen (AN15-02)."}, "side": {"debit": "Soll", "credit": "Haben"}, "blocker": {"not_approved": "nicht freigegeben", "gate_g1_closed": "G1 geschlossen", "counter_account_undecided": "Gegenkonto nicht festgelegt (AN15-02)"}},
   "DirectDebitFeedback": {
+    "returnedOn": "Rückgabedatum",
+    "returnFee": "Rücklastschriftgebühr",
+    "returnFeeDocument": "Gebührenbeleg",
+    "passOn": {"locked": "Weiterbelastung gesperrt", "proposal": "Weiterbelastung nur als Vorschlag"},
+    "returnHint": "Rückgabedatum und Gebühr nur bei einer einzelnen Rückgabe; erfasste Werte werden nie überschrieben.",
     "selectAll": "Alle Lastschriften auswählen",
     "selectOrder": "Lastschrift von {name} auswählen",
     "selection": "{count, plural, one {# Lastschrift ausgewählt} other {# Lastschriften ausgewählt}}. Die Rückmeldung gilt für alle ausgewählten Lastschriften gemeinsam; bei Fehlern wird nichts gespeichert.",
@@ -17439,6 +17487,10 @@
         "title": "Vier-Augen-Freigabe der Mehrheitsregeln",
         "description": "Ob neu angelegte Mehrheitsregeln der Versammlung erst nach Freigabe durch eine zweite Person mit Freigaberecht angewendet werden. Bestehende Regeln bleiben unverändert. Welches Regelmodell maßgeblich ist, ist offen (AM02-01)."
       },
+      "direct-debit-creator-may-not-approve": {
+        "title": "Lastschrift: Ersteller darf nicht freigeben",
+        "description": "Ob der Ersteller eines Lastschriftlaufs diesen nicht selbst freigeben darf. Standard aus, das heutige Verhalten bleibt. Die fachliche Festlegung ist offen (AN17-01)."
+      },
       "portal-circular-resolution": {
         "title": "Umlaufbeschluss im Eigentümerportal",
         "description": "Ob Eigentümer in laufenden Umlaufverfahren im Portal abstimmen. Die Stimmabgabe braucht zusätzlich die Freigabestufe G4; die Zulässigkeit prüft die Software nicht."
@@ -17494,6 +17546,15 @@
       "automation-switch": {
         "title": "Buchungsautomatik",
         "description": "Schalter der Buchungsautomatik für Bankumsätze. Einschalten verlangt ein offenes G1 sowie Antrag und Freigabe durch eine zweite Person, daher nur Anzeige."
+      },
+      "bank-reconciliation-basis": {
+        "title": "Bankabstimmung: Abstimmungsbasis",
+        "description": "Stichtag der Sachkontoseite in der Bankabstimmung: Buchungsdatum der Buchung (Standard, bisheriges Verhalten) oder Bankbuchungstag des zugeordneten Umsatzes. Der Unterschied steht als zeitliche Differenz. Ein Abfrageparameter in der Maske übersteuert den Standard."
+      },
+      "bank-clearing-account": {
+        "title": "Bankabstimmung: Klärungskonto",
+        "description": "Mandantenstandard für einen Überzahlungsrest über mehrere Debitoren: Transit oder technisches Konto aus dem Kontenrahmen. Auswahl in der Bankabstimmung.",
+        "defaultText": "Kein Klärungskonto, der Rest braucht ein Gegenkonto"
       },
       "g1-checklist": {
         "title": "G1 Öffnungsliste",
@@ -17694,6 +17755,10 @@
         "off": "Aus, keine Verbindlichkeitsposten",
         "subledger": "Posten zur gebuchten Gutschrift im Nebenbuch",
         "reclass": "Umbuchungsentwurf auf das Kreditorenkonto"
+      },
+      "bank-reconciliation-basis": {
+        "booking_date": "Buchungsdatum (Standard)",
+        "bank_date": "Bankbuchungstag"
       },
       "ebics-signature-key-mode": {
         "external": "Extern (Standard)",
@@ -18105,6 +18170,36 @@
       "confirm": "Ich habe den Entwurf nicht selbst erstellt und ihn geprüft.",
       "notDraft": "Nur ein Entwurf kann freigegeben werden.",
       "locked": "Gesperrt, solange die Freigabestufe G3 (Mietabrechnungen) geschlossen ist. Freigabe durch die Geschäftsführung erforderlich."
+    }
+  },
+  "Ao05": {
+    "followUps": {
+      "load": "Folgen prüfen",
+      "none": "Keine abhängigen Wirtschaftspläne, Sonderumlagen oder Abrechnungen.",
+      "contestedHint": "Der Beschluss ist angefochten, für ungültig erklärt oder nichtig. Abhängige Unterlagen sind gekennzeichnet; es wird nichts automatisch storniert.",
+      "contested": "angefochten",
+      "applied": "angewendet",
+      "types": {
+        "economic_plan": "Wirtschaftsplan",
+        "special_levy": "Sonderumlage",
+        "hoa_statement": "Abrechnung"
+      },
+      "dueOn": "Prüfdatum (leer: aus der Fristart berechnen)",
+      "note": "Notiz",
+      "deadlineHelp": "Die Dauer der Anfechtungsfrist ist nicht festgelegt. Das Prüfdatum ist zu verifizieren, bitte durch Rechtsanwalt prüfen lassen.",
+      "setDeadline": "Prüfdatum als Frist anlegen",
+      "created": "Frist angelegt zum {date}. Datum zu verifizieren."
+    },
+    "depositLink": {
+      "title": "Kaution und Rückzahlungskonto",
+      "fourEyes": "Vier-Augen-Prinzip: Die Rückzahlungs-IBAN wird nur zur Freigabe an den Kontakt gegeben. Eine andere Person mit Freigaberecht muss sie bestätigen. Es wird nichts gezahlt und die Kaution nicht geändert.",
+      "due": "Kaution laut Vertrag",
+      "protocol": "Kaution laut Protokoll",
+      "difference": "Differenz",
+      "account": "Rückzahlungskonto",
+      "none": "nicht angegeben",
+      "link": "Konto zur Freigabe übergeben",
+      "done": "Das Konto wurde zur Freigabe übergeben."
     }
   }
 }

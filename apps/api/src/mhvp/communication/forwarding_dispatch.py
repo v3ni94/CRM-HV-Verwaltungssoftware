@@ -76,10 +76,19 @@ async def load_attachments(
             select(Document).where(Document.id.in_(message.attachment_document_ids))
         )
     }
+    from mhvp.documents import payment_files
+
+    # AN14-04: a payment file never leaves through a forward while G2 is closed; it counts as
+    # missing, so the caller reports the forward as incomplete instead of sending it.
+    allowed = set(
+        await payment_files.releasable_ids(
+            session, message.tenant_id, list(message.attachment_document_ids)
+        )
+    )
     blobs = BlobStore(settings)
     out: list[tuple[str, str, bytes]] = []
     for doc_id in message.attachment_document_ids:
-        doc = docs.get(doc_id)
+        doc = docs.get(doc_id) if doc_id in allowed else None
         if doc is None:
             continue
         try:

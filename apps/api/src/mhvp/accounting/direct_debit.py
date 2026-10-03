@@ -36,6 +36,7 @@ from mhvp.accounting.direct_debit_models import (
     SequenceType,
 )
 from mhvp.accounting.models import Ledger, OpenItem, OpenItemKind
+from mhvp.accounting.write_offs import not_written_off_as_of
 from mhvp.core import crypto
 from mhvp.core.clock import local_today
 from mhvp.core.events import emit
@@ -308,7 +309,8 @@ async def select_due(
     query = select(OpenItem).where(
         OpenItem.ledger_id == ledger.id,
         OpenItem.kind == OpenItemKind.RECEIVABLE,
-        OpenItem.written_off.is_(False),
+        # AO01 (GAK-104): date aware, written off only from written_off_on (B07).
+        not_written_off_as_of(collection_date),
         OpenItem.due_date <= collection_date,
     )
     wanted = set(open_item_ids) if open_item_ids is not None else None
@@ -598,6 +600,28 @@ async def invalidate(session: AsyncSession, run: DirectDebitRun) -> None:
     await session.flush()
 
 
+async def _ensure_creator_may_approve(
+    session: AsyncSession, run: DirectDebitRun, user_id: uuid.UUID
+) -> None:
+    """AO07 (GAK-106): with the tenant switch ``direct_debit_creator_may_not_approve`` (default
+    off) the creator of a run may not approve it (403 MHVP-GATE-0002). Business question
+    AN17-01 stays open; a run without a recorded creator is not restricted."""
+    from mhvp.platform.models import TenantSettings
+
+    if run.created_by is None or run.created_by != user_id:
+        return
+    switch = await session.scalar(
+        select(TenantSettings.direct_debit_creator_may_not_approve).where(
+            TenantSettings.tenant_id == run.tenant_id
+        )
+    )
+    if switch:
+        raise ProblemError(
+            ErrorCodes.GATE_FOUR_EYES,
+            detail="Der Ersteller des Laufs darf ihn nicht selbst freigeben (Mandantenschalter).",
+        )
+
+
 async def approve(
     session: AsyncSession, run: DirectDebitRun, user_id: uuid.UUID, is_platform_admin: bool
 ) -> DirectDebitRun:
@@ -610,6 +634,7 @@ async def approve(
             ErrorCodes.GATE_FOUR_EYES,
             detail="Plattformadministratoren zählen nicht als Freigabeinstanz.",
         )
+    await _ensure_creator_may_approve(session, run, user_id)
     orders = await orders_of(session, run)
     valid = await valid_approvals(session, run, orders)
     if any(a.user_id == user_id for a in valid):

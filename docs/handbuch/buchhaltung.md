@@ -449,3 +449,14 @@ Auf der Seite "G1 Öffnung" zeigt die Spalte Nachweis je Prüfpunkt die Nachweis
 Bei einer Rücklastschrift erfassen Sie in der Bankrückmeldung des Lastschriftlaufs zusätzlich das Rückgabedatum der Bank, die tatsächlich berechnete Gebühr und den Gebührenbeleg. Der Verweis auf den ursprünglichen Einzug bleibt erhalten. Bereits erfasste Angaben lassen sich ergänzen, aber nicht überschreiben. Beim Import einer camt.054 übernimmt die Plattform den Buchungstag der Rückbelastung als Rückgabedatum. Die Gebühr wird nicht weiterbelastet; mit dem Schalter "Rücklastschriftgebühr als Weiterbelastungsvorschlag" erscheint sie in der Abstimmung nur als Vorschlag.
 
 Eine Forderung, die nicht mehr eingezogen werden soll, schlagen Sie zur Ausbuchung vor (Grund, Stichtag, Beleg). Der Vorschlag ändert keine Salden. Freigeben kann ihn nur eine zweite Person, wenn der Schalter "Freigabe von Forderungsausbuchungen" an und die Freigabestufe G1 offen ist. Die Nebenbuchprüfung zeigt den Posten erst ab dem Stichtag als ausgebucht.
+
+## Lastschriftlauf: Ersteller darf nicht freigeben
+
+Unter Fachliche Regeln lässt sich der Schalter "Lastschrift: Ersteller darf nicht freigeben"
+einschalten (Recht Mandanteneinstellungen ändern, Standard aus). Dann kann der Ersteller eines
+Laufs ihn nicht selbst freigeben, die zweite Freigabe muss von einer anderen Person kommen. Die
+fachliche Festlegung ist offen (AN17-01).
+
+## Ausbuchungsvorschläge und Rücklastschrift-Nachweis (Welle 25, AO01)
+
+Im Buchungskreis steht unter den offenen Posten der Bereich "Ausbuchungsvorschläge". Eine offene Forderung wird mit Stichtag und Grund (mindestens 10 Zeichen) vorgeschlagen; der Vorschlag wirkt nicht auf Salden. Die Freigabe ist nur möglich, wenn der Mandantenschalter eingeschaltet ist, G1 offen ist und eine andere Person freigibt; hat sich der Restbetrag seit dem Vorschlag geändert, wird die Freigabe abgelehnt und der Vorschlag ist neu anzulegen. Die Buchungsvorschau zeigt nur an, gebucht wird nichts (Gegenkonto offen, Frage AN15-02). In der Lastschriftabstimmung erscheinen bei Rückgaben Rückgabedatum, Gebühr, Gebührenbeleg und der Status der Weiterbelastung (gesperrt oder nur Vorschlag); bei einer einzelnen Rückgabe lassen sich Datum und Gebühr erfassen, erfasste Werte werden nie überschrieben.

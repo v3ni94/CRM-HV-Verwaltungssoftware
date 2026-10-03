@@ -79,3 +79,7 @@ Voraussetzung zum Ändern: Recht zum Ändern von Verträgen.
 ## Selbstauskunft Links je Interessent (GAI-420, Welle 21)
 
 In der Interessentenliste zeigt "Links anzeigen" die erzeugten Selbstauskunft Links mit Status (offen, eingereicht, abgelaufen) und Ablaufdatum. Der vollständige Link wird nur bei der Erzeugung angezeigt.
+
+## Verkaufsinserate (Welle 24, AN19)
+
+Verkaufsinserate sind für jeden Mandanten zunächst nicht freigeschaltet. Unter Einstellungen, Fachliche Regeln, Eintrag "Verkaufsinserate und Maklerveröffentlichung" schalten Sie sie ein (Standard aus; die Frage nach dem Umfang der Vermarktung ist noch nicht entschieden, siehe Offene Fragen AN19-02). Bei ausgeschaltetem Schalter lassen sich Verkaufsinserate als Entwurf anlegen, aber weder aktivieren noch an einen Makleranbieter übergeben; die Meldung nennt den Schalter. Vermietungsanzeigen und die Leerstandsliste sind davon nicht betroffen. Die Änderung des Schalters wird protokolliert.

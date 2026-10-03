@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
-import { formatEur } from "@/lib/format";
+import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Row = {
@@ -18,6 +18,11 @@ type Row = {
   collected_amount: string | null;
   open_item_remaining: string;
   finding: string | null;
+  /** AN15/AO01 (GAK-101): Nachweis der Rücklastschrift, der Einzugsverweis bleibt erhalten. */
+  returned_on?: string | null;
+  return_fee_amount?: string | null;
+  return_fee_document_id?: string | null;
+  return_fee_pass_on?: "locked" | "proposal" | null;
 };
 type Reconciliation = {
   status: string;
@@ -36,7 +41,7 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
   const [data, setData] = useState<Reconciliation | null>(null);
   // Q02/M15-01: Auswahl mehrerer Lastschriften für die Sammelrückmeldung (ein Aufruf, alles oder nichts).
   const [selected, setSelected] = useState<string[]>([]);
-  const [f, setF] = useState({ status: "collected", reason_code: "", reason: "", collected_amount: "" });
+  const [f, setF] = useState({ status: "collected", reason_code: "", reason: "", collected_amount: "", returned_on: "", return_fee_amount: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +61,10 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
     if (f.reason.trim()) body.reason = f.reason.trim();
     if (f.reason_code.trim()) body.reason_code = f.reason_code.trim();
     if (f.status === "collected" && selected.length === 1 && f.collected_amount.trim()) body.collected_amount = f.collected_amount.trim().replace(",", ".");
+    if (f.status === "returned" && selected.length === 1) {
+      if (f.returned_on) body.returned_on = f.returned_on;
+      if (f.return_fee_amount.trim()) body.return_fee_amount = f.return_fee_amount.trim().replace(",", ".");
+    }
     const res = await bff<Reconciliation>(`/api/bff/accounting/direct-debits/${runId}/bank-status`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -125,6 +134,16 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
                       {r.reason_code || r.reason ? (
                         <span className="block text-xs text-muted">{[r.reason_code, r.reason].filter(Boolean).join(" ")}</span>
                       ) : null}
+                      {r.returned_on || r.return_fee_amount ? (
+                        <span className="block text-xs" data-testid={`dd-return-${r.order_id}`}>
+                          {r.returned_on ? `${t("returnedOn")}: ${formatDate(r.returned_on)}` : null}
+                          {r.return_fee_amount ? ` ${t("returnFee")}: ${formatEur(r.return_fee_amount)}` : null}
+                          {r.return_fee_document_id ? (
+                            <a className="ml-1 underline" href={`/dokumente/${r.return_fee_document_id}`}>{t("returnFeeDocument")}</a>
+                          ) : null}
+                          {r.return_fee_pass_on ? <span className="block text-muted">{t(`passOn.${r.return_fee_pass_on}`)}</span> : null}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="num">{r.collected_amount ? formatEur(r.collected_amount) : ""}</td>
                     <td className="num">{formatEur(r.open_item_remaining)}</td>
@@ -163,6 +182,19 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
                   <span className={ui.label}>{t("collectedAmount")}</span>
                   <input className={`${ui.input} w-32`} inputMode="decimal" value={f.collected_amount} onChange={(e) => setF((v) => ({ ...v, collected_amount: e.target.value }))} />
                 </label>
+              ) : null}
+              {f.status === "returned" && selected.length === 1 ? (
+                <>
+                  <label className="flex flex-col gap-1">
+                    <span className={ui.label}>{t("returnedOn")}</span>
+                    <input type="date" className={ui.input} value={f.returned_on} onChange={(e) => setF((v) => ({ ...v, returned_on: e.target.value }))} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className={ui.label}>{t("returnFee")}</span>
+                    <input className={`${ui.input} w-28`} inputMode="decimal" value={f.return_fee_amount} onChange={(e) => setF((v) => ({ ...v, return_fee_amount: e.target.value }))} />
+                  </label>
+                  <p className={`w-full ${ui.help}`}>{t("returnHint")}</p>
+                </>
               ) : null}
               <button
                 type="button"

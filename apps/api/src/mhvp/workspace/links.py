@@ -41,6 +41,8 @@ CRM_LIST_ROUTES: dict[str, str] = {
     "deadline_entry": "/fristen",
     # GAH-206: failed outgoing webhook deliveries (settings page Webhooks).
     "webhook_subscription": "/einstellungen/webhooks",
+    # AN19-CRM: resolution has no property id on the notification, the WEG list is the target.
+    "resolution": "/weg",
 }
 # Portal: tickets are "Meldungen"; work orders and handovers have detail pages.
 PORTAL_DETAIL_ROUTES: dict[str, str] = {

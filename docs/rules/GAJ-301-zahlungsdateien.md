@@ -16,3 +16,13 @@
 - Objektakte-Export: Mit dem Objekt verknüpfte Zahlungsdateien werden bei geschlossenem G2 nicht in das ZIP aufgenommen; das Übergabeprotokoll nennt sie unter "Hinweise", die Zählung `documents_withheld` weist sie aus. Regulär sind Zahlungsdateien nur mit der Gesellschaft verknüpft, nicht mit dem Objekt.
 - Offene Entscheidung: Ob der Mandantenvollexport (Admin-Funktion, Datenportabilität) bei geschlossenem G2 den Inhalt enthalten soll, entscheidet der Betreiber; technisch gilt der konservative Stand (zurückgehalten).
 - Abnahmefall: tests/integration/test_an08_payment_file_exports.py (Gate zu und offen, Fehler im Resolver).
+
+## Ergänzung Welle 25 (AO06, Review AN14-04 und AN14-12)
+
+- Anhangswege beim Speichern: Wer eine Zahlungsdatei als Anhang einträgt, erhält 422 ("Zahlungsdateien können nicht als Anhang verwendet werden"). Das gilt für Entwurfsanhänge aus dem DMS (`POST /messages/{id}/attachments`), Ticketmails und Antwortvorlagen mit Standardanhängen (`tickets/routers.py`), Portalaushänge (`portal/notice_routers.py`) und die Übergabe an das Schadenstool (`integrations/schadenstool`). Prüfung zentral über `payment_files.ensure_no_payment_attachment`.
+- Anhangswege in Hintergrundjobs: Weiterleitung mit Anhängen (`communication/forwarding_dispatch.py`) und Verteilung an Fremdsysteme (`documents/distribution.py`) übernehmen Zahlungsdateien nur bei offenem G2 (`payment_files.releasable_ids`, Fehler gilt als geschlossen). Bei der Weiterleitung zählt eine zurückgehaltene Zahlungsdatei als fehlender Anhang; das Original wird dann nicht archiviert.
+- Versand: Der Mailversand prüft weiterhin G2 je Anhang (AN14-01).
+- Serienversand und Rechnungskopie hängen nur das jeweils erzeugte Schreiben an; sie sind im Wächtertest als geprüft vermerkt.
+- Wächtertest: `tests/unit/test_ao06_attachment_payment_guard.py` listet jedes Modul mit `attachment_document_ids`; ein neues Modul muss die Sperre aufrufen oder mit Begründung eingetragen werden.
+- WhatsApp an Kontakte (AN14-12, Produktschutz Einwilligung 0.1.13): Bei Empfängerart `contact` wird die Nummer aus den Telefonnummern des Kontakts genommen (Mobil vor Hauptnummer). Eine übergebene Nummer muss zu einer Nummer des Kontakts passen (Leerzeichen und Trennzeichen werden ignoriert), sonst 422. Die Einwilligungsprüfung bleibt vorgelagert.
+- Abnahmefall: tests/integration/test_ao06_attachment_paths.py, tests/unit/test_cov_sla_whatsapp.py (AN14-12).

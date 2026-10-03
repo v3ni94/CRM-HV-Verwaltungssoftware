@@ -31,3 +31,11 @@ Monitoring and alerts after the deployment: `monitoring.md`. Availability target
 per month and monthly evaluation: `verfuegbarkeit.md`.
 
 Split-Worker (optionales Profil `split-workers`): Ablauf und Release-Hinweise in `docs/runbooks/skalierung.md`, Entscheidung in ADR 0029. CSP-Nonce: `docs/runbooks/csp-nonce.md`. Abhängigkeitsaudit: `docs/runbooks/abhaengigkeitsaudit.md`.
+
+## Deploy-Checkliste 1.69.0 (Welle 24)
+
+1. Migrationen 0451 bis 0455 laufen mit `make migrate` (0451 Zählerfoto-Modus, 0452 Adresshistorie, 0453 Mehrheitsregel-Freigabe, 0454 Rücklastschrift und Ausbuchung, 0455 Buchhaltungsprüfungen). Vor Produktion Backup verifizieren (`make backup-verify`).
+2. `backup.sh` bricht mit Exit 3 ab, wenn `BACKUP_JOURNAL_CMD` fehlt und im Compose-Modus kein Standardbefehl greift. Im Compose-Betrieb ist der Standard `$BACKUP_COMPOSE exec -T api python -m mhvp.documents.export_deletions` (Service `api`). Nur bewusst und befristet `BACKUP_SKIP_JOURNAL=1`; Abschnitt zum Löschjournal in `backup.md`. `infra/env.backup.example` ergänzen.
+3. Geändertes API-Verhalten für Integrationen: Massenbestätigung in Banking bucht nur mit `preview_id` (ohne gültigen Token 409, MHVP-BANK-0031); Seitengröße und `limit` höchstens 200, größere Werte 422; Anschrift-Verlaufsfelder im Schreibzugriff nur leer; Zahlungsdateien bei geschlossenem G2 weder als Mailanhang noch in Vollexport, Objektexport oder Belegeinsicht.
+4. Neue Mandantenschalter, alle mit heutigem Verhalten als Standard (aus): Adresshistorie, Vier-Augen-Mehrheitsregel, Rücklastschriftgebühr als Weiterbelastungsvorschlag, Ausbuchung, Verkaufsinserate, Sperrdauer je Begründung; Foto beim Zählerstand mit Standard Hinweis. Offene Entscheidungsfragen stehen in `docs/OPEN_QUESTIONS.md`.
+5. Nach dem Deploy: Smoke-Test, `make staging-smoke`, und prüfen, dass `mhvp-deletions-<STAMP>.json.age` im nächsten Backup entsteht und `backup-verify.sh` es bestätigt.

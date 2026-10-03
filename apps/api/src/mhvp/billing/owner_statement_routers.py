@@ -530,7 +530,11 @@ def render_pdf(st: OwnerStatement) -> bytes:
     return buffer.getvalue()
 
 
-@router.get("/{statement_id}/pdf", summary="Ausgabe als PDF (nur mit Freigabestufe G3)")
+@router.get(
+    "/{statement_id}/pdf",
+    summary="Ausgabe als PDF (nur mit Freigabestufe G3)",
+    response_class=Response,
+)
 async def pdf(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> Response:

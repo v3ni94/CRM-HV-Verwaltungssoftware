@@ -1710,6 +1710,9 @@ async def checks(
             else await svc.subledger_exclude_switch(session)
         )
         subledger = await svc.subledger_reconciliation(session, ledger, as_of, exclude)
+        from mhvp.platform.constraint_checks import unvalidated_constraints
+
+        constraint_findings = await unvalidated_constraints(session)
         excluded = {
             "written_off": {
                 "count": sum(r["excluded_written_off_count"] for r in subledger),
@@ -1733,6 +1736,9 @@ async def checks(
             "excluded": excluded,
             "subledger": subledger,
             "subledger_differences": [r for r in subledger if Decimal(r["difference"]) != 0],
+            # AO07 (AN14-07): CHECKs added NOT VALID, shown for review, they do not set ok.
+            "constraint_ok": not constraint_findings,
+            "constraint_findings": constraint_findings,
         }
 
 

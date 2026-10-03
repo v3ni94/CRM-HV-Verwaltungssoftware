@@ -231,6 +231,11 @@ def create_celery(settings: Settings | None = None, *, set_as_current: bool = Fa
                 "task": "mhvp.letting.purge_prospects",
                 "schedule": crontab(hour=3, minute=30),
             },
+            # AO03 (GAK-203): draft rent increase proposals, only with the tenant switch on.
+            "letting-propose-rent-increases": {
+                "task": "mhvp.letting.propose_rent_increases",
+                "schedule": crontab(hour=4, minute=40),
+            },
             # Payment run preview (S15-02, 15.1 payments.payment_run): Monday 08:00, only for
             # tenants that switched it on; lists only, no order, file or posting (G2).
             "payments-payment-run-preview": {

@@ -10,6 +10,7 @@ import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
 import { OpenItemsFilter, parseAccountFilter } from "@/components/accounting/OpenItemsFilter";
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
+import { WriteOffPanel } from "@/components/accounting/WriteOffPanel";
 import { YearCarryoverPanel } from "@/components/accounting/YearCarryoverPanel";
 import { SettlementProposalPanel } from "@/components/accounting/SettlementProposalPanel";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
@@ -145,6 +146,7 @@ export default async function LedgerPage({
         />
         <OpenItemsTable rows={openRows} canEdit={canEditOpenItems} />
         <SettlementProposalPanel ledgerId={id} debtors={debtors} bankAccounts={bankAccounts} today={today} />
+        <WriteOffPanel items={openRows} today={today} canPropose={canEditOpenItems} canApprove={canApprove} />
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("journal")}</h2>

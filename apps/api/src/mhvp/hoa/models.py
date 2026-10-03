@@ -467,6 +467,13 @@ class SpecialLevy(IdMixin, TimestampMixin, TenantMixin, Base):
     Funds stay earmarked; they are not free current HOA fees."""
 
     __tablename__ = "special_levy"
+    # AO04 / GAK-205 (migration 0457).
+    __table_args__ = (
+        CheckConstraint(
+            "reference_date IS NULL OR reference_date <= first_due",
+            name="reference_date_order",
+        ),
+    )
 
     legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
@@ -488,6 +495,10 @@ class SpecialLevy(IdMixin, TimestampMixin, TenantMixin, Base):
     supersedes_id: Mapped[uuid.UUID | None] = _fk("special_levy.id")
     difference_due: Mapped[date | None] = mapped_column(Date)  # W09-01 amendment month
     change_reason: Mapped[str | None] = mapped_column(Text)
+    # AO04 / GAK-205: revenue account of the charges and reference date of the owner
+    # determination; mirrored in snapshot["terms"] for the resolution hash.
+    revenue_account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")
+    reference_date: Mapped[date | None] = mapped_column(Date)
 
 
 class MajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -27,7 +27,12 @@ export type ReconciliationRow = {
   period_status?: "first" | "ok" | "gap" | "overlap" | "not_checkable";
   gap_from?: string | null;
   gap_to?: string | null;
+  /** GAK-108, AO02: cut-off of the ledger side and the gap between both bases. */
+  date_basis?: "booking_date" | "bank_date";
+  timing_difference?: string | null;
 };
+
+type Basis = "" | "booking_date" | "bank_date";
 
 /** Bank reconciliation per statement (B09, `GET /banking/accounts/{id}/reconciliation`):
  *  opening balance plus movements against the closing balance of the statement and, when the
@@ -40,6 +45,7 @@ export function BankReconciliation() {
   const [rows, setRows] = useState<ReconciliationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [basis, setBasis] = useState<Basis>("");
 
   useEffect(() => {
     (async () => {
@@ -58,7 +64,8 @@ export function BankReconciliation() {
     (async () => {
       setBusy(true);
       setError(null);
-      const res = await bff<ReconciliationRow[]>(`/api/bff/banking/accounts/${accountId}/reconciliation`);
+      const path = `/api/bff/banking/accounts/${accountId}/reconciliation`;
+      const res = await bff<ReconciliationRow[]>(basis ? `${path}?basis=${basis}` : path);
       if (cancelled) return;
       setBusy(false);
       if (res.ok) setRows(res.data);
@@ -70,7 +77,7 @@ export function BankReconciliation() {
     return () => {
       cancelled = true;
     };
-  }, [accountId]);
+  }, [accountId, basis]);
 
   const diffClass = (value: string | null) => (value !== null && toCents(value) !== 0 ? "num text-danger-fg font-medium" : "num");
   const findings = (rows ?? []).filter((r) => toCents(r.statement_difference) !== 0 || toCents(r.ledger_difference) !== 0).length;
@@ -99,6 +106,14 @@ export function BankReconciliation() {
           ))}
         </select>
       </label>
+      <label className="flex max-w-md flex-col gap-1">
+        <span className={ui.label}>{t("basis")}</span>
+        <select className={ui.input} value={basis} onChange={(e) => setBasis(e.target.value as Basis)} data-testid="reconciliation-basis">
+          <option value="">{t("basisTenant")}</option>
+          <option value="booking_date">{t("basisBookingDate")}</option>
+          <option value="bank_date">{t("basisBankDate")}</option>
+        </select>
+      </label>
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
@@ -111,6 +126,11 @@ export function BankReconciliation() {
           <p className={findings > 0 ? ui.warning : ui.success} data-testid="reconciliation-summary">
             {findings > 0 ? t("findings", { count: findings }) : t("noFindings")}
           </p>
+          {rows[0]?.date_basis ? (
+            <p className="text-sm text-muted" data-testid="reconciliation-basis-used">
+              {t("basisUsed", { basis: t(rows[0].date_basis === "bank_date" ? "basisBankDate" : "basisBookingDate") })}
+            </p>
+          ) : null}
           {chainFindings > 0 ? (
             <p className={ui.warning} data-testid="reconciliation-chain-summary">
               {t("chainFindings", { count: chainFindings })}
@@ -133,6 +153,7 @@ export function BankReconciliation() {
                   <th className="num">{t("statementDifference")}</th>
                   <th className="num">{t("ledgerBalance")}</th>
                   <th className="num">{t("ledgerDifference")}</th>
+                  <th className="num">{t("timingDifference")}</th>
                   <th>{t("chain")}</th>
                 </tr>
               </thead>
@@ -147,6 +168,7 @@ export function BankReconciliation() {
                     <td className={diffClass(r.statement_difference)}>{r.statement_difference !== null ? formatEur(r.statement_difference) : t("na")}</td>
                     <td className="num">{r.ledger_balance !== null ? formatEur(r.ledger_balance) : t("na")}</td>
                     <td className={diffClass(r.ledger_difference)}>{r.ledger_difference !== null ? formatEur(r.ledger_difference) : t("na")}</td>
+                    <td className="num" data-testid="timing-difference">{r.timing_difference === undefined ? "" : r.timing_difference !== null ? formatEur(r.timing_difference) : t("na")}</td>
                     <td className={r.chain_status === "break" || r.period_status === "gap" || r.period_status === "overlap" ? "text-danger-fg" : undefined}>{chainText(r)}</td>
                   </tr>
                 ))}

@@ -152,3 +152,7 @@ ein Vorschlag; Änderungen entstehen weiterhin nur über bestätigte Vorschläge
 * Schalter: Unter Einstellungen, KI-Anbieter gibt es je Stufe (klein, groß) die Option "Werkzeuge (Tool Use) für Stufe ... erlauben". Standard aus. Wie alle Anbieterfelder hebt jede Änderung eine bestehende Freigabe auf; wirksam wird sie erst nach der Freigabe im Vier-Augen-Prinzip mit AVV-Nachweis. Ob und für welchen Mandanten das Nachschlagen eingeschaltet wird, ist eine offene Entscheidung des Betreibers (AC08-01).
 * Verlauf: Auch in einem wieder geöffneten Chat steht unter jeder Antwort, welche Nachschlagewerkzeuge verwendet wurden, mit Suchtext und Trefferzahl.
 * Links: Treffer der Werkzeuge (Kontakt, Vertrag, Dokument, Objekt und weitere) erscheinen unter der Antwort als Links in die jeweilige Akte. Die Links erzeugt die Plattform nach Prüfung Ihrer Rechte, nicht das Modell. Kontakttreffer zeigen keine Telefonnummer und keine E-Mail-Adresse.
+
+## KI-Einstellungen: drei Schalter (Welle 24, AM04)
+
+Unter Einstellungen, KI sind die Schalter "Einzel-Einordnung von E-Mails", "Stammdatenvorschläge" und "KI-Aufgaben aus Regeln" sichtbar und mit dem Recht zur Pflege der KI-Einstellungen schaltbar. Alle drei bleiben ausgeschaltet, bis Sie sie bewusst einschalten. KI liefert in allen Fällen nur Vorschläge; eine Übernahme erfolgt durch die Mitarbeiterin oder den Mitarbeiter.

@@ -2216,7 +2216,9 @@ async def approve_rule(
                 ErrorCodes.HOA_MAJORITY_RULE_SELF_APPROVAL,
                 detail="Regel ist bereits freigegeben oder braucht keine Freigabe.",
             )
-        if row.created_by == principal.user_id:
+        if principal.user_id is None or row.created_by == principal.user_id:
+            # AO12-02: an API key has no person; approved_by would stay NULL while the
+            # approval event is emitted, so only a named second person may approve.
             raise ProblemError(
                 ErrorCodes.HOA_MAJORITY_RULE_SELF_APPROVAL,
                 detail="Die anlegende Person kann die eigene Regel nicht freigeben.",

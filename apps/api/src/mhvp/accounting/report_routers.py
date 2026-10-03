@@ -388,7 +388,11 @@ async def report_liquidity(
         }
 
 
-@router.get("/ledgers/{ledger_id}/reports/xlsx", summary="Auswertung oder Journal als Excel")
+@router.get(
+    "/ledgers/{ledger_id}/reports/xlsx",
+    summary="Auswertung oder Journal als Excel",
+    response_class=Response,
+)
 async def report_xlsx_download(
     ledger_id: uuid.UUID,
     report: ReportName,
@@ -450,6 +454,7 @@ async def report_xlsx_download(
 @router.get(
     "/ledgers/{ledger_id}/procedure-documentation",
     summary="Verfahrensdokumentation als Entwurf aus dem Betrieb (M18-07)",
+    response_class=Response,
 )
 async def procedure_documentation(
     ledger_id: uuid.UUID,

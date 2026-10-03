@@ -22,8 +22,9 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.contacts.models import Consent, ConsentKind
+from mhvp.contacts.models import Consent, ConsentKind, ContactPhone, PhoneLabel
 from mhvp.core.config import Settings
+from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.sla.models import WhatsAppConfig, WhatsAppDelivery
 
 WHATSAPP_TIMEOUT_SECONDS = 10.0
@@ -34,6 +35,32 @@ WHATSAPP_TEST_TEMPLATE_KEY = "test"
 # no contact consent; ``contact`` always needs a granted, not revoked ``whatsapp`` consent.
 WhatsAppRecipient = Literal["staff", "test", "contact"]
 NO_CONSENT_ERROR = "Keine WhatsApp-Einwilligung des Kontakts erfasst; nicht gesendet."
+FOREIGN_NUMBER_DETAIL = (
+    "Die Nummer gehört nicht zum Kontakt; WhatsApp an Kontakte nur an dessen hinterlegte Nummer."
+)
+
+
+def _normalize_number(raw: str) -> str:
+    return "".join(ch for ch in raw if ch.isdigit() or ch == "+")
+
+
+async def contact_number(session: AsyncSession, contact_id: uuid.UUID, to: str) -> str | None:
+    """AN14-12: the number a ``contact`` recipient is messaged on comes from the contact's own
+    ``contact_phone`` rows. Without ``to`` the mobile (then primary) number is used; a given
+    ``to`` must match one of the contact's numbers, otherwise 422 (no foreign numbers)."""
+    rows = (
+        await session.scalars(select(ContactPhone).where(ContactPhone.contact_id == contact_id))
+    ).all()
+    wanted = _normalize_number(to)
+    if wanted:
+        for row in rows:
+            if _normalize_number(row.number) == wanted:
+                return row.number
+        raise ProblemError(ErrorCodes.VALIDATION, detail=FOREIGN_NUMBER_DETAIL)
+    ranked = sorted(
+        rows, key=lambda r: (r.label is not PhoneLabel.MOBILE, not r.is_primary, r.number)
+    )
+    return ranked[0].number if ranked else None
 
 
 class DeliveryResult:
@@ -167,6 +194,8 @@ async def send_whatsapp(
         contact_id is None or not await has_whatsapp_consent(session, contact_id)
     ):
         return NO_CONSENT_ERROR
+    if recipient == "contact" and contact_id is not None:
+        to = await contact_number(session, contact_id, to) or ""
     template = template_for(config, alert_type)
     if not template:
         return f"Keine WhatsApp-Vorlage für Alarmtyp {alert_type!r} hinterlegt."

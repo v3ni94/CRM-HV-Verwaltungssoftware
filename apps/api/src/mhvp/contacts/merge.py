@@ -11,7 +11,7 @@ the contact reference of a record moves, amounts and posting lines stay as they 
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select, text
@@ -238,6 +238,34 @@ def _require_proposed(row: ContactMerge) -> None:
         raise ProblemError(ErrorCodes.CONTACT_MERGE_STATE)
 
 
+async def _close_demoted_addresses(
+    session: AsyncSession, address_ids: list[uuid.UUID]
+) -> dict[str, list[str]]:
+    """AO09 (AN05): with the switch contacts.address_history on, a moved primary address that
+    loses the flag to the target's primary is closed as history (valid_to yesterday) instead of
+    staying a second current address. Rows without valid_from get their creation date; the
+    ids are noted in the merge result. Switch off: nothing changes."""
+    from mhvp.contacts import address_history
+    from mhvp.contacts.models import ContactAddress
+    from mhvp.core.clock import local_today
+
+    if not address_ids or not await address_history.is_enabled(session):
+        return {}
+    closed: list[str] = []
+    backfilled: list[str] = []
+    now = datetime.now(UTC)
+    yesterday = local_today() - timedelta(days=1)
+    rows = (
+        await session.scalars(select(ContactAddress).where(ContactAddress.id.in_(address_ids)))
+    ).all()
+    for address in rows:
+        if address_history.close_row(address, yesterday, now):
+            backfilled.append(str(address.id))
+        closed.append(str(address.id))
+    await session.flush()
+    return {"closed_address_ids": closed, "valid_from_backfilled_ids": backfilled}
+
+
 async def execute(
     session: AsyncSession, row: ContactMerge, *, user_id: uuid.UUID | None, note: str | None
 ) -> ContactMerge:
@@ -260,6 +288,7 @@ async def execute(
     moved: dict[str, int] = {}
     conflicts: dict[str, int] = {}
     target_has_primary: set[str] = set()
+    demoted_addresses: list[uuid.UUID] = []
     for child in _PRIMARY_CHILDREN:
         found = await session.execute(
             text(f'SELECT 1 FROM "{child}" WHERE contact_id = :t AND is_primary LIMIT 1'),  # noqa: S608
@@ -292,9 +321,12 @@ async def execute(
                             text(f'UPDATE "{table}" SET is_primary = false WHERE id = :i'),  # noqa: S608
                             {"i": row_id},
                         )
+                    if table == "contact_address" and table in target_has_primary:
+                        demoted_addresses.append(row_id)
                 moved[f"{table}.{column}"] = moved.get(f"{table}.{column}", 0) + 1
             except IntegrityError:
                 conflicts[f"{table}.{column}"] = conflicts.get(f"{table}.{column}", 0) + 1
+    history = await _close_demoted_addresses(session, demoted_addresses)
     for table, type_col, id_col, value in POLYMORPHIC:
         ids = (
             (
@@ -338,7 +370,7 @@ async def execute(
     row.decided_by = user_id
     row.decided_at = now
     row.decision_note = note
-    row.result = {"moved": moved, "conflicts": conflicts, "filled_fields": filled}
+    row.result = {"moved": moved, "conflicts": conflicts, "filled_fields": filled, **history}
     await emit(
         session,
         tenant_id=row.tenant_id,

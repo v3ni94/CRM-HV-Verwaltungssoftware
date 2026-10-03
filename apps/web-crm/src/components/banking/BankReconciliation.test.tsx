@@ -83,4 +83,27 @@ describe("BankReconciliation", () => {
     await userEvent.selectOptions(await screen.findByLabelText("Bankkonto"), PBA);
     expect(await screen.findByText("Für dieses Konto liegen keine Auszüge vor.")).toBeInTheDocument();
   });
+
+  it("shows the basis used and the timing difference, the basis select overrides the tenant default (AO02)", async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("/reconciliation")) {
+        const bank = url.includes("basis=bank_date");
+        return jsonResponse([
+          { statement_id: "s1", statement_ref: "2026/01", closing_date: "2026-01-31", opening_balance: "0.00", movements: "600.00", closing_balance: "600.00", statement_difference: "0.00", ledger_balance: bank ? "400.00" : "600.00", ledger_difference: bank ? "200.00" : "0.00", date_basis: bank ? "bank_date" : "booking_date", timing_difference: "-200.00" },
+        ]);
+      }
+      return jsonResponse(accounts);
+    });
+    renderIntl(<BankReconciliation />);
+    await userEvent.selectOptions(await screen.findByLabelText("Bankkonto"), PBA);
+    await waitFor(() => expect(screen.getByTestId("reconciliation-basis-used")).toHaveTextContent("Saldo Sachkonto nach Buchungsdatum."));
+    expect(screen.getByTestId("timing-difference")).toHaveTextContent("-200,00 EUR");
+    expect(calls.some((url) => url.endsWith(`/banking/accounts/${PBA}/reconciliation`))).toBe(true);
+    await userEvent.selectOptions(screen.getByTestId("reconciliation-basis"), "bank_date");
+    await waitFor(() => expect(screen.getByTestId("reconciliation-basis-used")).toHaveTextContent("Saldo Sachkonto nach Bankbuchungstag."));
+    expect(calls.some((url) => url.endsWith("/reconciliation?basis=bank_date"))).toBe(true);
+  });
 });

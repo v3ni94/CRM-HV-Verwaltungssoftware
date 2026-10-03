@@ -53,6 +53,8 @@ from mhvp.accounting.models import (
     OpenItemSettlement,
     ReversalReason,
 )
+from mhvp.accounting.write_offs import not_written_off_as_of
+from mhvp.core.clock import local_today
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 ZERO = Decimal("0.00")
@@ -356,7 +358,8 @@ async def _contract_receivables(
             OpenItem.ledger_id == ledger_id,
             OpenItem.contract_id == contract_id,
             OpenItem.kind == OpenItemKind.RECEIVABLE,
-            OpenItem.written_off.is_(False),
+            # AO01 (GAK-104): date aware, written off only from written_off_on (B07).
+            not_written_off_as_of(local_today()),
         )
     )
     return Decimal(total or 0)

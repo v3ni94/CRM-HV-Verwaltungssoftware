@@ -43,7 +43,7 @@ class LevyIn(BaseModel):
     instalments: int = Field(default=1, ge=1, le=60)
     account_id: uuid.UUID | None = None
     # AN19 (GAK-205): revenue account of the charges and the reference date of the owner
-    # determination. Kept in ``snapshot["terms"]`` (no column, no migration in this wave) and
+    # determination. Columns since AO04 (migration 0457), mirrored in ``snapshot["terms"]`` and
     # therefore part of the hash the resolution binds. The owner of record stays the owner at
     # the first due date until the reference date rule is decided (GA06-01, G4).
     revenue_account_id: uuid.UUID | None = None
@@ -93,15 +93,20 @@ def _out(lv: SpecialLevy) -> dict[str, Any]:
         "supersedes_id": lv.supersedes_id,
         "difference_due": lv.difference_due,
         "change_reason": lv.change_reason,
-        "revenue_account_id": _terms(lv).get("revenue_account_id"),
-        "reference_date": _terms(lv).get("reference_date"),
+        "revenue_account_id": lv.revenue_account_id,
+        "reference_date": lv.reference_date,
     }
 
 
 def _terms(lv: SpecialLevy) -> dict[str, Any]:
-    """AN19 (GAK-205): revenue account and reference date stored in the snapshot."""
-    terms = (lv.snapshot or {}).get("terms")
-    return dict(terms) if isinstance(terms, dict) else {}
+    """AN19 / AO04 (GAK-205): revenue account and reference date for the snapshot, read from
+    the columns (migration 0457 took the values over from snapshot.terms)."""
+    terms: dict[str, Any] = {}
+    if lv.revenue_account_id is not None:
+        terms["revenue_account_id"] = str(lv.revenue_account_id)
+    if lv.reference_date is not None:
+        terms["reference_date"] = lv.reference_date.isoformat()
+    return terms
 
 
 async def _check_terms(
@@ -154,10 +159,7 @@ async def create_levy(
             created_by=principal.user_id,
             legal_entity_id=ledger.legal_entity_id,
             snapshot={"terms": terms} if terms else None,
-            **(
-                body.model_dump(exclude={"revenue_account_id", "reference_date"})
-                | {"unit_ids": [str(u) for u in body.unit_ids]}
-            ),
+            **(body.model_dump() | {"unit_ids": [str(u) for u in body.unit_ids]}),
         )
         session.add(row)
         await session.flush()
@@ -498,6 +500,8 @@ async def amend_levy(
             difference_due=body.difference_due,
             change_reason=body.reason,
             snapshot={"terms": _terms(old)} if _terms(old) else None,  # AN19 (GAK-205)
+            revenue_account_id=old.revenue_account_id,  # AO04 (GAK-205)
+            reference_date=old.reference_date,
         )
         session.add(new)
         await session.flush()

@@ -1594,6 +1594,11 @@ function RuleForm({
                     <option value={CUSTOM}>{t("customEvent")}</option>
                   </select>
                 </label>
+                {eventType === "work_order.done" || eventType === "work_order.completed" ? (
+                  <p className={ui.help} data-testid="work-order-alias-hint">
+                    {t("workOrderDoneAlias")}
+                  </p>
+                ) : null}
                 {customEvent ? (
                   <>
                     <input

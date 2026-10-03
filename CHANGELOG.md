@@ -5,6 +5,39 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.70.0 (03.10.2026) Welle 25, Reste der Welle 24 und Lückenanalyse GAL: Ausbuchung mit Freigabe und Belegen im CRM, Klärungskonto und Abstimmungsbasis als Mandantenschalter, Indexklausel, Staffelmiete und Verbraucherpreisindex (0456), Sonderumlage mit Ertragskonto und Stichtag (0457), Beschlussfolgen und Kautionsverknüpfung im CRM, Zahlungsdateiprüfung auf allen Anhangspfaden, Ersteller-Ausschluss bei Lastschriftfreigabe (0458), Adresshistorie in Portal und Zusammenführung, Anhang-D-Zweittests D04 bis D55, Schalter-Wächter, Dateirouten als Dateiantworten
+
+- Übersicht: Welle 25 mit 14 Paketen AO01 bis AO14 (Reste der Welle 24 und Gegenprüfung) und drei lesenden Lückenanalysen GAL-1 bis GAL-3 (33 Befunde, Grundlage der Welle 26); Migrationen 0456 bis 0458; alle Entscheidungsfragen bleiben offen und sind als Mandantenschalter mit heutigem Verhalten als Standard vorbereitet.
+- Buchhaltung: Ausbuchungsvorschläge im Buchungskreis anlegen, freigeben (G1, Vier Augen) und ablehnen, mit Buchungsvorschau ohne Buchungswirkung.
+- Buchhaltung: Freigabe einer Ausbuchung prüft den Restbetrag erneut und verlangt eine Person (MHVP-ACC-0042, MHVP-ACC-0043).
+- Buchhaltung: Lastschrift, Guthabenauszahlung und KI-Nachschlagen werten Ausbuchungen stichtagsbezogen aus.
+- Prüfexport: Formatversion 2 mit Spalte 'Ausgebucht am' in den offenen Posten.
+- Lastschriften: Abstimmung zeigt Rückgabedatum, Gebühr, Beleg und Weiterbelastungsstatus und erfasst Datum und Gebühr bei Einzelrückgabe.
+- Bank: Mandantenschalter Klärungskonto (Transit oder technisches Konto des Kontenrahmens) nimmt Überzahlungsreste über mehrere Debitoren ohne Gegenkonto auf, Standard keines (GAK-107).
+- Bank: Abstimmungsbasis der Bankabstimmung als gespeicherter Mandantenschalter (Standard Buchungsdatum), Abfrageparameter basis übersteuert (GAK-108).
+- CRM Bankabstimmung: Auswahl der Basis, Anzeige der verwendeten Basis und Spalte Zeitliche Differenz sowie Einstellungsbereich Klärungskonto und Abstimmungsbasis.
+- Vermietung: Mietverträge erfassen Indexklausel (Indexreihe, Basisindex, Basismonat, Quelle) oder Staffelstufen im Vertragsdetail; die Miete ändert sich dadurch nicht.
+- Plattform: Verbraucherpreisindex als Plattformtabelle, Pflege nur per CSV-Import mit Quelle und Datenstand und Freigabe durch Plattform-Admin.
+- Vermietung: Tagesjob und Lauf je Mandant legen fällige Staffelstufen und Indexanpassungen nur als Entwurf eines Mieterhöhungsfalls an, ausschließlich mit Schalter Mieterhöhungsvorschläge auf Entwurf (Standard aus).
+- WEG: Ertragskonto und Stichtag der Sonderumlage sind eigene Datenbankspalten mit Prüfung, dass der Stichtag nicht nach der ersten Fälligkeit liegt; bestehende Angaben werden aus der Berechnungsgrundlage übernommen, der Beschluss-Hash bleibt unverändert.
+- WEG: Beschlussliste zeigt Folgen (abhängige Pläne, Sonderumlagen, Abrechnungen mit Kennzeichen angefochten) und legt ein Prüfdatum als Frist an, Hinweis Dauer nicht festgelegt.
+- Übergabe: Kautionsverknüpfung im Kautionsschritt mit Vier-Augen-Hinweis.
+- Benachrichtigungen: Art hoa.resolution_contested einstellbar, Link zur WEG-Übersicht.
+- Dokumente: Zahlungsdateien werden als Anhang von Entwürfen, Ticketmails, Antwortvorlagen, Portalaushängen und Schadenstool-Übergaben mit 422 abgewiesen; Weiterleitung und Verteilung lassen sie bei geschlossenem G2 weg (AN14-04).
+- SLA: WhatsApp an Kontakte geht nur an eine beim Kontakt hinterlegte Nummer, eine fremde Nummer ergibt 422 (AN14-12).
+- API: Dateidownloads in Buchhaltung, Abrechnung und Banking (PDF, XML, CSV, XLSX) sind in OpenAPI als Dateiantwort statt als JSON dokumentiert, die ausgelieferten Bytes bleiben gleich.
+- API: Neue Basisklasse TolerantRawJsonOut für Antwortmodelle, die die Antwort nur dokumentieren und nie in einen Fehler umwandeln (ADR 0037).
+- Kontakte: Bei aktiver Adresshistorie schließen angenommene Portal-Adressvorschläge und Kontaktzusammenführungen die alte Anschrift und setzen fehlendes gültig ab auf das Erstellungsdatum.
+- Tests: zweite unabhängige Tests für Anhang D D04, D17, D31, D34, D47 und D55 mit von Hand berechneten Erwartungswerten.
+- Automatisierung: Regel-Editor weist bei work_order.completed und work_order.done auf den Alias hin.
+- Tickets: Filterfelder in Durchsatz und Analyse behalten 44 px bei grobem Zeiger, Wächtertest gegen blankes min-h-9.
+- Automation: Regelliste und Regeldetail liefern ein typisiertes Antwortmodell mit dem Kennzeichen needs_ai_approval.
+- Bank: Der FinTS-Umsatzabruf im camt-Format (HKCAZ) sendet nur noch die camt.052-Formate, die die Bank in ihren Bankparametern (HICAZS) meldet, statt fest camt.052.001.02; behebt den Fehler 9010 'camt-Nachricht nicht zugelassen'.
+- Bank: Bietet die Bank weder MT940 noch ein camt.052-Format an, meldet die Software den neuen Problemcode MHVP-BANK-0065 mit verständlichem Hinweis, ohne Anfrage an die Bank.
+- Bank: Eine 9010-Ablehnung mit Nennung von camt zeigt jetzt auf das Kontoumsatzformat statt auf Produktregistrierung und löst keinen zweiten Dialog mit erneuter TAN mehr aus.
+- Automatisierung: Ereigniskatalog wieder alphabetisch sortiert (Einträge der Welle 25), Wächtertest grün.
+- Tests: Der Gmail-Renewal-Test prüft nur noch das eigene Postfach, weil der Erneuerungsjob alle Postfächer der Datenbank durchläuft und fremde Testreste als fehlgeschlagen zählte.
+
 ## 1.69.0 (03.10.2026) Welle 24, Reste der Welle 23 und Lückenanalyse GAK: Zahlungsplan-Korrektur im CRM, Fotopflicht Zählerstand als Schalter, Adresshistorie der Kontakte, Vier-Augen-Mehrheitsregel, Rücklastschrift-Historie und Ausbuchungsverfahren, Vorschau-Token für Massenbestätigung, Bankabstimmung nach Bankdatum, Seitengrößenlimit, Löschjournal im Backup, 60 weitere Geldrouten typisiert
 
 - Übersicht: Welle 24 mit 20 Paketen AN01 bis AN14 (technische Reste der Welle 23 und Gegenprüfung) und AN15 bis AN20 (25 Befunde der Lückenanalyse GAK); Migrationen 0451 bis 0455; alle Entscheidungsfragen bleiben offen und sind als Mandantenschalter mit heutigem Verhalten als Standard vorbereitet.

@@ -54,6 +54,7 @@ from mhvp.documents.models import Document, DocumentLink, StorageKind
 log = logging.getLogger(__name__)
 
 FORMAT = "audit_zip"
+FORMAT_VERSION = 2
 # Receipts are packed into the ZIP as files while their total size stays below this limit;
 # above it the ZIP carries only the reference list with SHA-256 (belege.csv). Configurable per
 # run through the request (``receipts_max_bytes``).
@@ -604,6 +605,7 @@ async def collect(
             "Vertrag-ID",
             "Komponente",
             "Ausgebucht",
+            "Ausgebucht am",
         ],
         [
             [
@@ -618,6 +620,7 @@ async def collect(
                 o.contract_id,
                 o.component,
                 o.written_off,
+                o.written_off_on,
             ]
             for o in open_items
         ],
@@ -1035,6 +1038,9 @@ async def collect(
     generated_at = datetime.now(UTC)
     meta: dict[str, Any] = {
         "format": FORMAT,
+        # AO01 (GAK-104): version 2 adds the column "Ausgebucht am" (written_off_on) to
+        # offene_posten; an older export without the column is format version 1.
+        "format_version": FORMAT_VERSION,
         "scope": "Prüfexport im Umfang von MASTER-PROMPT 7.7 (Konten, Buchungen, OP-Ausgleich, "
         "Eröffnungsbestände, Stammdatenhistorie, Freigaben, Ereignisse, Stornobeziehungen, "
         "Verteilungsschlüssel, Belege). Kein DATEV-Kontenrahmen, keine steuerliche Einordnung, "

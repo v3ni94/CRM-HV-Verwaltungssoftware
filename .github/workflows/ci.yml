@@ -38,6 +38,7 @@ jobs:
         run: |
           python3 scripts/build_handbook.py --check
           python3 scripts/build_help_index.py --check
+          python3 scripts/build_switch_index.py --check
 
   version-check:
     # VERSION, CHANGELOG.md und changelog.ts stimmen ueberein (GAI-112, scripts/bump_version.py).

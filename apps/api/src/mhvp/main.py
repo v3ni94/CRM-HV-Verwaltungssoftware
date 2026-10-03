@@ -22,6 +22,7 @@ from mhvp.accounting.credit_payable_routers import router as credit_payable_rout
 from mhvp.accounting.datev_check_routers import router as datev_check_router
 from mhvp.accounting.datev_mapping_routers import router as datev_mapping_router
 from mhvp.accounting.direct_debit_routers import router as direct_debit_router
+from mhvp.accounting.direct_debit_settings import router as direct_debit_settings_router
 from mhvp.accounting.g1_opening_routers import router as g1_opening_router
 from mhvp.accounting.period_lock_routers import router as period_lock_router
 from mhvp.accounting.rent_invoice_routers import router as rent_invoice_router
@@ -132,6 +133,8 @@ from mhvp.integrations.lexoffice_ext.routers import router as lexoffice_ext_rout
 from mhvp.integrations.routers import router as lexoffice_router
 from mhvp.integrations.schadenstool.routers import router as schadenstool_router
 from mhvp.integrations.schadenstool.webhook import router as schadenstool_webhook_router
+from mhvp.letting.index_rent import platform_router as letting_cpi_platform_router
+from mhvp.letting.index_rent import tenant_router as letting_index_router
 from mhvp.letting.rentindex import router as rentindex_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
@@ -153,6 +156,7 @@ from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.objektakte.webhook import router as objektakte_webhook_router
 from mhvp.platform.admin_routers import router as platform_admin_additions_router
 from mhvp.platform.availability_probe import warn_missing_probe_urls
+from mhvp.platform.constraint_checks import router as constraint_checks_router
 from mhvp.platform.demo_routers import router as platform_demo_router
 from mhvp.platform.export_routers import router as tenant_export_job_router
 from mhvp.platform.gates import DbReleaseGateResolver
@@ -419,6 +423,8 @@ def create_app(
     app.include_router(hoa_reserve_split_router, prefix=API_PREFIX)
     app.include_router(rentindex_router, prefix=API_PREFIX)
     app.include_router(letting_router, prefix=API_PREFIX)
+    app.include_router(letting_index_router, prefix=API_PREFIX)
+    app.include_router(letting_cpi_platform_router, prefix=API_PREFIX)
     app.include_router(rentlaw_router, prefix=API_PREFIX)
     app.include_router(rentlaw_platform_router, prefix=API_PREFIX)
     app.include_router(licensing_router, prefix=API_PREFIX)
@@ -426,6 +432,8 @@ def create_app(
     app.include_router(legal_texts_router, prefix=API_PREFIX)
     app.include_router(platform_overview_router, prefix=API_PREFIX)
     app.include_router(platform_maintenance_router, prefix=API_PREFIX)
+    app.include_router(direct_debit_settings_router, prefix=API_PREFIX)
+    app.include_router(constraint_checks_router, prefix=API_PREFIX)
     app.include_router(platform_demo_router, prefix=API_PREFIX)
     app.include_router(scale_router, prefix=API_PREFIX)
     app.include_router(assignment_review_router, prefix=API_PREFIX)

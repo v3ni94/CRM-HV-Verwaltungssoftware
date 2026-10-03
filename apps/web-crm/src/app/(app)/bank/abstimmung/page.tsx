@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { BankReconciliation } from "@/components/banking/BankReconciliation";
+import { ReconciliationSettingsPanel } from "@/components/banking/ReconciliationSettingsPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -22,6 +23,7 @@ export default async function BankReconciliationPage() {
         </Link>
       </p>
       <BankReconciliation />
+      <ReconciliationSettingsPanel />
     </div>
   );
 }

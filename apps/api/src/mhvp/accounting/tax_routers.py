@@ -921,7 +921,11 @@ async def certificate(
         return cert
 
 
-@router.get("/section35a/certificate.pdf", summary="§-35a-Ausweis als PDF-Entwurf")
+@router.get(
+    "/section35a/certificate.pdf",
+    summary="§-35a-Ausweis als PDF-Entwurf",
+    response_class=Response,
+)
 async def certificate_pdf(
     request: Request,
     contract_id: uuid.UUID,

@@ -57,6 +57,35 @@ Prüfschritte bei bleibendem 9010, in dieser Reihenfolge:
 Wichtig: Nicht mehrfach in kurzer Folge neu starten. Wiederholte Fehlversuche können den Zugang
 bei der Bank sperren (siehe Abschnitt 4).
 
+### Fehlerbild 9010 camt (AO15, Welle 25)
+
+Meldung bis 1.69.0: "Die Bank hat den Dialog nicht eröffnet (Rückmeldecode 9010). Rückmeldung der
+Bank: 9050 Die Nachricht enthält Fehler.; 9010 camt-Nachricht nicht zugelassen." mit
+`MHVP-BANK-0014`.
+
+Ursache: Der Dialog war bereits eröffnet. Die Bank bietet kein MT940 (leere HIKAZS-Liste), die
+Software fiel deshalb auf den camt-Abruf (HKCAZ) zurück. python-fints sendet in HKCAZ fest das
+Format `camt.052.001.02` (`fints/client.py:594`), unabhängig davon, welche Formate die Bank in
+ihren Bankparametern (HICAZS) meldet. Lässt die Bank nur ein anderes Format zu (zum Beispiel
+`camt.052.001.08`), antwortet sie mit 9050 und 9010. python-fints meldet jeden Rückmeldecode
+9010 mit dem Text "could not fetch BPD" (`fints/client.py:1408`), auch mitten im Dialog; daher
+der irreführende Hinweis auf die Dialogeröffnung und die Produktregistrierung.
+
+Verhalten ab AO15:
+
+1. HKCAZ wird nur gesendet, wenn die Bankparameter HICAZS mit mindestens einem camt.052-Format
+   enthalten, und nur mit genau diesen Formaten in der Schreibweise der Bank
+   (`camt_formats_from_bpd`). Die Initialisierungs- und BPD-Nachricht enthält nie HKCAZ.
+2. Fehlen MT940 und camt.052, meldet die Software `MHVP-BANK-0065` ("Bank bietet kein
+   passendes Kontoumsatzformat") ohne Anfrage an die Bank.
+3. Nennt die Bank bei 9xxx "camt", meldet die Software `MHVP-BANK-0065` mit Hinweis auf das
+   Kontoumsatzformat und verzichtet auf den zweiten Dialog mit frischem Zustand (keine weitere
+   SCA).
+
+Prüfschritte bei `MHVP-BANK-0065`: Verbindung einmal neu starten (frische Bankparameter). Bleibt
+der Fehler, bei der Bank erfragen, welche camt.052-Formate für FinTS freigeschaltet sind, und
+bis dahin die Umsätze als Datei (camt.053 oder MT940) importieren.
+
 ## 4. PIN abgelehnt, Zugang gesperrt, TAN, SCA
 
 | Code | Bedeutung | Reaktion im System | Maßnahme |

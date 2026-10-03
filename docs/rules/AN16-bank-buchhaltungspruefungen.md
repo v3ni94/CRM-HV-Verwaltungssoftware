@@ -11,3 +11,4 @@
 - Quellenstatus (Anhang C): keine Norm; Master-Prompt 7.1 B07, B09, 7.3 Skonto, 7.4 Nr. 5 und Massenbestätigung, 7.5.
 - Abnahmefall: tests/integration/test_an16_accounting_checks.py (vorberechnete Werte); Anhang D D07 (Überzahlung bleibt Guthaben).
 - Änderungsgrund: Welle 24, AN16 (Lückenanalyse GAK).
+- Nachtrag Welle 25 (AO02): GAK-107 Mandantenstandard Klärungskonto `banking.clearing_account_number` in `tenant_settings.sources` (Standard keines, bisheriges Verhalten; nur Kategorie transit oder technical des Kontenrahmens, sonst 422); bei Rest über mehrere Debitoren ohne Gegenkonto wird es im Buchungskreis des Umsatzes verwendet. GAK-108 Abstimmungsbasis `banking.reconciliation_basis` (Standard booking_date), Abfrageparameter `basis` übersteuert; CRM zeigt Basis und `timing_difference`. Abnahmefall: tests/integration/test_ao02_reconciliation_settings.py. Offene Frage AO02-01.

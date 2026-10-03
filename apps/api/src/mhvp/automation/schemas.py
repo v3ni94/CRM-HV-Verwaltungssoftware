@@ -517,3 +517,24 @@ class TestEventIn(_In):
     entity: dict[str, Any] = Field(default_factory=dict)
     # Schedule rules: the sample is a due moment (defaults to now); ``type`` is ignored.
     due_at: datetime | None = None
+
+
+class AutomationRuleOut(BaseModel):
+    """AO11 (AN07): rule as listed and read; ``needs_ai_approval`` marks an ``ai_task`` rule whose
+    last editor does not hold ``ai:approve`` (AM04-03). Actions are already stripped of secrets."""
+
+    id: uuid.UUID
+    name: str
+    description: str | None = None
+    active: bool
+    test_mode: bool
+    trigger_kind: str
+    trigger_event_type: str | None = None
+    schedule: dict[str, Any] | None = None
+    last_scheduled_at: datetime | None = None
+    conditions: dict[str, Any]
+    actions: list[dict[str, Any]]
+    owner_user_id: uuid.UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+    needs_ai_approval: bool = False

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { HandoverDepositLink } from "@/components/ao05/HandoverDepositLink";
 import { useConfirm } from "@/components/ui/ConfirmSheet";
 import { Sheet } from "@/components/ui/Sheet";
 import { bff } from "@/lib/bff";
@@ -497,6 +498,7 @@ export function HandoverEditor({ initial, offlineEnabled = false }: { initial: F
           <>
             <p className={ui.notice}>{t("deposit.notice")}</p>
             <ProtocolForm p={p} fields={DEPOSIT_FIELDS} onSave={patchProtocol} disabled={contentDisabled} t={t} id="deposit" />
+            <HandoverDepositLink base={base} disabled={contentDisabled} />
           </>
         ) : null}
         {tab === "internal" ? (

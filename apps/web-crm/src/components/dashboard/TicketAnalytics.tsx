@@ -248,7 +248,7 @@ export function TicketAnalytics() {
           <label className="flex items-center gap-2 text-sm">
             <span className="sr-only">{t("user.label")}</span>
             <select
-              className={`${ui.input} min-h-9 w-auto py-1`}
+              className={`${ui.input} pointer-fine:min-h-9 w-auto py-1`}
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
             >

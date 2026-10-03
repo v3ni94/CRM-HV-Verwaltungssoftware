@@ -169,6 +169,11 @@ describe("BFF proxy", () => {
     ["GET", `accounting/direct-debits/${ID}/file`],
     ["GET", `accounting/direct-debits/${ID}/downloads`],
     ["POST", `accounting/direct-debits/${ID}/submit`],
+    // AO01 (GAK-104): Ausbuchungsvorschläge.
+    ["GET", "accounting/open-item-write-offs"],
+    ["POST", "accounting/open-item-write-offs"],
+    ["POST", `accounting/open-item-write-offs/${ID}/decision`],
+    ["GET", `accounting/open-item-write-offs/${ID}/posting-preview`],
     ["POST", "statements"],
     ["POST", `statements/${ID}/calculate`],
     ["POST", `hoa/statements/${ID}/post`],
@@ -181,6 +186,8 @@ describe("BFF proxy", () => {
     ["PUT", "platform/rent-law/rules/cap_percent"],
     ["POST", `hoa/special-levies/${ID}/amend`],
     ["POST", "hoa/majority-rules"],
+    ["PUT", "accounting/direct-debit-settings"],
+    ["POST", "platform/constraint-checks/validate"],
     ["POST", "platform/rent-law/cap-areas"],
     ["PUT", `platform/rent-law/cap-areas/${ID}`],
     ["POST", "properties"],
@@ -233,6 +240,8 @@ describe("BFF proxy", () => {
     ["GET", "banking/csv-mappings"],
     ["POST", "banking/csv-mappings"],
     ["GET", `banking/accounts/${ID}/reconciliation`],
+    ["GET", "banking/reconciliation-settings"],
+    ["PUT", "banking/reconciliation-settings"],
     ["GET", "banking/rules"],
     ["POST", "banking/rules"],
     ["POST", `banking/rules/${ID}/approve`],
@@ -317,6 +326,7 @@ describe("BFF proxy", () => {
     ["POST", "banking/auto-post"],
     ["POST", "banking/automation"],
     ["DELETE", `banking/rules/${ID}`],
+    ["DELETE", "banking/reconciliation-settings"], // AO02: reset only via PUT null
     ["POST", `banking/transactions/${ID}/reject`],
     ["DELETE", `banking/payment-bank-config/${ID}`], // AJ16: config is never deleted
     ["POST", `banking/payment-bank-config/${ID}`],
@@ -508,6 +518,8 @@ describe("BFF proxy, Uprotokoll and Objektakte import paths (GAH-409)", () => {
     ["DELETE", `objektakte/imports/${ID}/ocr-cache`],
     ["GET", `objektakte/imports/${ID}/ocr-cache`],
     ["POST", "objektakte/imports/not-a-uuid/ocr-cache"],
+    ["DELETE", `accounting/open-item-write-offs/${ID}`], // AO01
+    ["POST", "accounting/open-item-write-offs/not-a-uuid/decision"], // AO01
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
@@ -542,6 +554,10 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
   it.each([
     ["POST", "hoa/inspection-requests/ownership-transfers/scan"],
     ["GET", `hoa/resolutions/${ID}/majority-check`],
+    ["GET", `hoa/resolutions/${ID}/dependents`], // AO05 (AN19-CRM)
+    ["POST", `hoa/resolutions/${ID}/review-deadline`],
+    ["GET", `handover/protocols/${ID}/deposit/link`],
+    ["POST", `handover/protocols/${ID}/deposit/link`],
     ["PATCH", `contracts/${ID}/custom-fields`],
     ["POST", `work-orders/${ID}/steps`],
     ["POST", "documents/bulk-link"],
@@ -555,6 +571,8 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["POST", `communication/calls/${ID}/assign`],
     ["GET", `contracts/${ID}/versions`], // GAK-207
     ["PUT", "letting/rent-increase-settings"], // AN18
+    ["PUT", `letting/contracts/${ID}/index-terms`], // AO03
+    ["GET", "letting/rent-increase-proposals"], // AO03
   ] as const)("forwards %s %s", async (method, path) => {
     const res = await call(method, path);
     expect(res.status).toBe(200);
@@ -571,11 +589,18 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["POST", "work-orders/not-a-uuid/steps"],
     ["DELETE", `contracts/${ID}/custom-fields`],
     ["POST", `hoa/resolutions/${ID}/majority-check`],
+    ["POST", `hoa/resolutions/${ID}/dependents`], // AO05 (AN19-CRM)
+    ["GET", `hoa/resolutions/${ID}/review-deadline`],
+    ["DELETE", `handover/protocols/${ID}/deposit/link`],
+    ["POST", "handover/protocols/not-a-uuid/deposit/link"],
     ["GET", "hoa/inspection-requests/ownership-transfers/scan"],
     ["POST", `letting/prospects/${ID}/self-disclosure-links`],
     ["GET", `communication/calls/${ID}/assign`],
     ["DELETE", `contracts/${ID}/versions`], // GAK-207
     ["DELETE", "letting/rent-increase-settings"], // AN18
+    ["DELETE", `letting/contracts/${ID}/index-terms`], // AO03
+    ["POST", "letting/rent-increase-proposals/run"], // AO03 (API only)
+    ["POST", "platform/consumer-price-index/import"], // AO03 (platform API only)
     ["POST", `mail/messages/${ID}/attachments/not-a-uuid/invoice-extraction`],
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);

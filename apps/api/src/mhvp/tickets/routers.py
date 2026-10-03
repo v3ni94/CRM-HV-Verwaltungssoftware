@@ -904,12 +904,15 @@ async def _attachments_out(session: AsyncSession, ids: list[uuid.UUID]) -> list[
 
 
 async def _assert_documents_exist(session: AsyncSession, ids: list[uuid.UUID]) -> None:
+    from mhvp.documents import payment_files  # local: import cycle
+
     for entry in await _attachments_out(session, ids):
         if entry["missing"]:
             raise ProblemError(
                 ErrorCodes.RESOURCE_NOT_FOUND,
                 detail=f"Anhang nicht gefunden: {entry['document_id']}",
             )
+    await payment_files.ensure_no_payment_attachment(session, list(ids))
 
 
 async def _assert_references_exist(

@@ -4738,6 +4738,16 @@
        "text": "Links: Treffer der Werkzeuge (Kontakt, Vertrag, Dokument, Objekt und weitere) erscheinen unter der Antwort als Links in die jeweilige Akte. Die Links erzeugt die Plattform nach Prüfung Ihrer Rechte, nicht das Modell. Kontakttreffer zeigen keine Telefonnummer und keine E-Mail-Adresse."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "KI-Einstellungen: drei Schalter (Welle 24, AM04)",
+     "id": "ki-einstellungen-drei-schalter-welle-24-am04"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, KI sind die Schalter \"Einzel-Einordnung von E-Mails\", \"Stammdatenvorschläge\" und \"KI-Aufgaben aus Regeln\" sichtbar und mit dem Recht zur Pflege der KI-Einstellungen schaltbar. Alle drei bleiben ausgeschaltet, bis Sie sie bewusst einschalten. KI liefert in allen Fällen nur Vorschläge; eine Übernahme erfolgt durch die Mitarbeiterin oder den Mitarbeiter."
     }
    ]
   },
@@ -5710,6 +5720,16 @@
     {
      "t": "p",
      "text": "Beim Auslöser \"Anderer Ereignistyp\" schlägt die Maske alle im System ausgelösten Ereignistypen vor (Katalog aus `GET /automation/event-types`). Ein Typ, der nicht im Katalog steht, wird mit einem Hinweis markiert: Die Regel würde nie feuern, meist liegt ein Tippfehler vor. Die Eingabe bleibt möglich."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Regeln mit KI-Aufgabe ohne Freigeber (Welle 24, AM04)",
+     "id": "regeln-mit-ki-aufgabe-ohne-freigeber-welle-24-am04"
+    },
+    {
+     "t": "p",
+     "text": "Die Regelliste kennzeichnet bestehende Regeln mit der Aktion \"KI-Aufgabe\" mit dem Hinweis \"KI-Freigabe fehlt\", wenn die Person, die die Regel zuletzt bearbeitet hat, das Recht ai:approve nicht besitzt oder keine aktive Mitgliedschaft hat. Die Anzeige ist rein lesend; sie ändert die Regel nicht. Ausgeführt wird die Aktion weiterhin nur, wenn der Mandantenschalter für KI-Aufgaben aus Regeln eingeschaltet ist. Lassen Sie die Regel von einer Person mit dem Recht ai:approve prüfen und erneut speichern, um den Hinweis aufzulösen."
     }
    ]
   },
@@ -6750,6 +6770,26 @@
        "text": "Liquiditätsvorschau (Buchhaltung): Guthaben von Debitoren werden als gebundene Mittel gezeigt und mindern die projizierten freien Mittel."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Massenbestätigung mit Vorschau-Token (Welle 24, GAK-105)",
+     "id": "massenbestaetigung-mit-vorschau-token-welle-24-gak-105"
+    },
+    {
+     "t": "p",
+     "text": "Die Massenbestätigung bucht nur mit einer gültigen Vorschau. Die Vorschau liefert eine Vorschau-Kennung, die an Auswahl, Beträge und Zustände der Umsätze gebunden und befristet ist; die Oberfläche übergibt sie beim Bestätigen automatisch. Fehlt sie, ist sie abgelaufen oder haben sich Positionen seit der Vorschau geändert, lehnt die API die Buchung mit 409 und dem Code MHVP-BANK-0031 ab, und es wird nichts gebucht. Erzeugen Sie dann die Vorschau neu. Die Vorschau zeigt Summen je Rechtsträger; Ausnahmen werden nur nach ausdrücklicher Bestätigung mitgebucht. Bei Überzahlungsrest und Skonto sind nur zulässige Kontenklassen als Gegenkonto wählbar (Codes MHVP-BANK-0032 bis 0034); das Durchlaufkonto 027000 Durchlaufposten Skonti bleibt zulässig. Externe Skripte und Integrationen müssen die Vorschau-Kennung ebenfalls mitsenden."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Klärungskonto und Abstimmungsbasis (Welle 25)",
+     "id": "klaerungskonto-und-abstimmungsbasis-welle-25"
+    },
+    {
+     "t": "p",
+     "text": "Unter Bank, Bankabstimmung legen Sie im Bereich \"Klärungskonto und Abstimmungsbasis\" zwei Mandantenstandards fest (Recht Mandanteneinstellungen ändern). Das Klärungskonto wählen Sie aus den Transit und technischen Konten Ihres Kontenrahmens; es nimmt einen Überzahlungsrest auf, der mehrere Debitoren betrifft, wenn beim Buchen kein Gegenkonto angegeben ist. Ohne Auswahl braucht ein solcher Rest wie bisher ein Gegenkonto. Ein Rest auf nur einem Debitor bleibt dessen Guthaben. Die Abstimmungsbasis legt fest, ob der Saldo des Sachkontos nach Buchungsdatum (Standard) oder nach Bankbuchungstag ermittelt wird. In der Abstimmung selbst können Sie die Basis für die Anzeige übersteuern; die Spalte \"Zeitliche Differenz\" zeigt den Unterschied zwischen beiden Stichtagen. Speichern bucht nichts. Die fachliche Festlegung ist offen (AO02-01)."
     }
    ]
   },
@@ -8322,6 +8362,26 @@
     {
      "t": "p",
      "text": "Eine Forderung, die nicht mehr eingezogen werden soll, schlagen Sie zur Ausbuchung vor (Grund, Stichtag, Beleg). Der Vorschlag ändert keine Salden. Freigeben kann ihn nur eine zweite Person, wenn der Schalter \"Freigabe von Forderungsausbuchungen\" an und die Freigabestufe G1 offen ist. Die Nebenbuchprüfung zeigt den Posten erst ab dem Stichtag als ausgebucht."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Lastschriftlauf: Ersteller darf nicht freigeben",
+     "id": "lastschriftlauf-ersteller-darf-nicht-freigeben"
+    },
+    {
+     "t": "p",
+     "text": "Unter Fachliche Regeln lässt sich der Schalter \"Lastschrift: Ersteller darf nicht freigeben\" einschalten (Recht Mandanteneinstellungen ändern, Standard aus). Dann kann der Ersteller eines Laufs ihn nicht selbst freigeben, die zweite Freigabe muss von einer anderen Person kommen. Die fachliche Festlegung ist offen (AN17-01)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Ausbuchungsvorschläge und Rücklastschrift-Nachweis (Welle 25, AO01)",
+     "id": "ausbuchungsvorschlaege-und-ruecklastschrift-nachweis-welle-25-ao01"
+    },
+    {
+     "t": "p",
+     "text": "Im Buchungskreis steht unter den offenen Posten der Bereich \"Ausbuchungsvorschläge\". Eine offene Forderung wird mit Stichtag und Grund (mindestens 10 Zeichen) vorgeschlagen; der Vorschlag wirkt nicht auf Salden. Die Freigabe ist nur möglich, wenn der Mandantenschalter eingeschaltet ist, G1 offen ist und eine andere Person freigibt; hat sich der Restbetrag seit dem Vorschlag geändert, wird die Freigabe abgelehnt und der Vorschlag ist neu anzulegen. Die Buchungsvorschau zeigt nur an, gebucht wird nichts (Gegenkonto offen, Frage AN15-02). In der Lastschriftabstimmung erscheinen bei Rückgaben Rückgabedatum, Gebühr, Gebührenbeleg und der Status der Weiterbelastung (gesperrt oder nur Vorschlag); bei einer einzelnen Rückgabe lassen sich Datum und Gebühr erfassen, erfasste Werte werden nie überschrieben."
     }
    ]
   },
@@ -10681,6 +10741,1479 @@
     {
      "t": "p",
      "text": "Unter Einstellungen, Benutzer erscheint für Personen mit dem Recht Mitglieder ändern der Block \"Zweiten Faktor zurücksetzen\". Die Funktion ist nur nutzbar, wenn der Mandantenschalter mfa_admin_reset_enabled eingeschaltet ist (Standard aus, Fachliche Regeln). Eine Person beantragt das Zurücksetzen mit Begründung (mindestens 10 Zeichen), eine zweite, andere Person gibt frei oder lehnt ab. Den eigenen zweiten Faktor kann man so nicht zurücksetzen. Wiederherstellungscodes gibt es noch nicht (offene Frage AI09-01). Schaltflächen sind während einer laufenden Anfrage gesperrt, damit Freigaben und Sperren nicht doppelt ausgelöst werden."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Schalterverzeichnis",
+     "id": "schalterverzeichnis"
+    },
+    {
+     "t": "p",
+     "text": "<!-- switch-index:start (generiert mit scripts/build_switch_index.py, nicht von Hand ändern) -->"
+    },
+    {
+     "t": "p",
+     "text": "Stand der Registry: 97 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen."
+    },
+    {
+     "t": "table",
+     "head": [
+      "Schalter",
+      "Bereich",
+      "Paket",
+      "Standard",
+      "Offene Frage"
+     ],
+     "rows": [
+      [
+       "`chart-coverage`",
+       "accounting",
+       "AE02",
+       "null",
+       "P07-04, P07-05"
+      ],
+      [
+       "`chart-four-eyes`",
+       "accounting",
+       "AE02",
+       "true",
+       "M10-01"
+      ],
+      [
+       "`dunning-day-count`",
+       "accounting",
+       "AI03",
+       "act_365_fixed",
+       "AI03-01"
+      ],
+      [
+       "`interest-tax`",
+       "accounting",
+       "AE05",
+       "0",
+       "P01-01"
+      ],
+      [
+       "`period-lock-auto`",
+       "accounting",
+       "AE20",
+       "false",
+       "P06-02, AA08-01"
+      ],
+      [
+       "`period-lock-mode`",
+       "accounting",
+       "AE20",
+       "ledger_only",
+       "P06-02, AA08-01"
+      ],
+      [
+       "`period-lock-reopen`",
+       "accounting",
+       "AE20",
+       "false",
+       "P06-02, AA08-01"
+      ],
+      [
+       "`rent-invoice-numbering`",
+       "accounting",
+       "AE04",
+       "draft_numbers",
+       "AC03-01"
+      ],
+      [
+       "`return-fee-pass-on`",
+       "accounting",
+       "AN15",
+       "false",
+       "AN15-01"
+      ],
+      [
+       "`rule-checkpoints`",
+       "accounting",
+       "AE19",
+       "0",
+       "AB10-01"
+      ],
+      [
+       "`subledger-exclude-written-off`",
+       "accounting",
+       "AE06",
+       "true",
+       "AC01-02"
+      ],
+      [
+       "`tax-35a-basis`",
+       "accounting",
+       "AI18",
+       "invoice_date",
+       "AI17-01"
+      ],
+      [
+       "`write-off-approval`",
+       "accounting",
+       "AN15",
+       "false",
+       "AN15-02"
+      ],
+      [
+       "`automation-switch`",
+       "banking",
+       "AE03",
+       "false",
+       "BK2-03, M12-09"
+      ],
+      [
+       "`credit-payable-four-eyes`",
+       "banking",
+       "AE22",
+       "true",
+       "AE22-01, Q01-01"
+      ],
+      [
+       "`credit-payable-mode`",
+       "banking",
+       "AE22",
+       "off",
+       "AE22-01, Q01-01, P04-04"
+      ],
+      [
+       "`ebics-enabled`",
+       "banking",
+       "AE23",
+       "false",
+       "AE23-01"
+      ],
+      [
+       "`ebics-signature-key-mode`",
+       "banking",
+       "AE23",
+       "external",
+       "AE23-05"
+      ],
+      [
+       "`g1-checklist`",
+       "banking",
+       "AE03",
+       "null",
+       "M12-09"
+      ],
+      [
+       "`advance-open-mode`",
+       "billing",
+       "AE15",
+       "info_only",
+       "AC10-01, M17-03, P06-01"
+      ],
+      [
+       "`allocation-basis-block`",
+       "billing",
+       "AE17",
+       "true",
+       "M17-01"
+      ],
+      [
+       "`check-amounts-tolerance`",
+       "billing",
+       "AK01",
+       "1",
+       "AJ02-01"
+      ],
+      [
+       "`deadline-policy`",
+       "billing",
+       "AE18",
+       "block_claims",
+       "M17-04"
+      ],
+      [
+       "`deadline-warn-first`",
+       "billing",
+       "AE18",
+       "60",
+       "M17-04"
+      ],
+      [
+       "`deadline-warn-second`",
+       "billing",
+       "AE18",
+       "30",
+       "M17-04"
+      ],
+      [
+       "`deadline-watch`",
+       "billing",
+       "AE18",
+       "false",
+       "M17-04"
+      ],
+      [
+       "`deposit-limit-hint`",
+       "billing",
+       "AI18",
+       "false",
+       "AI17-04"
+      ],
+      [
+       "`heating-negative-costs`",
+       "billing",
+       "AK01",
+       "legacy_warn",
+       "AJ01-01"
+      ],
+      [
+       "`text-block-second-person`",
+       "billing",
+       "AF12",
+       "true",
+       "AA11-01, AA11-02"
+      ],
+      [
+       "`text-blocks`",
+       "billing",
+       "AE16",
+       "0",
+       "AA11-01, AA11-02"
+      ],
+      [
+       "`acquisition-first-acquisition`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-foreclosure`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-gift`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-inheritance`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-other`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-purchase`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`allocation-proposal`",
+       "hoa",
+       "AG20",
+       "false",
+       "AA07-01, P01"
+      ],
+      [
+       "`correction-report`",
+       "hoa",
+       "AF08",
+       "false",
+       "P02"
+      ],
+      [
+       "`hoa-remainder-mode`",
+       "hoa",
+       "AK01",
+       "report_only",
+       "AJ01-02"
+      ],
+      [
+       "`majority-rule-four-eyes`",
+       "hoa",
+       "AN06",
+       "false",
+       "AM02-01"
+      ],
+      [
+       "`online-meeting`",
+       "hoa",
+       "AE12",
+       "false",
+       "AD06-01"
+      ],
+      [
+       "`opening-lock-mode`",
+       "hoa",
+       "AE07",
+       "locked",
+       "V01-01"
+      ],
+      [
+       "`plan-change-mode`",
+       "hoa",
+       "AE09",
+       "notice",
+       "M12-L2, P07-01"
+      ],
+      [
+       "`portal-circular-resolution`",
+       "hoa",
+       "AG07",
+       "false",
+       "AE31-01"
+      ],
+      [
+       "`proxy-conflict-mode`",
+       "hoa",
+       "AE31",
+       "flag",
+       "AD06-02"
+      ],
+      [
+       "`reserve-payment-mode`",
+       "hoa",
+       "AE08",
+       "bound_only",
+       "P07-02, P07-04"
+      ],
+      [
+       "`reserve-plan-tax`",
+       "hoa",
+       "AE07",
+       "null",
+       "AE07-01"
+      ],
+      [
+       "`virtual-basis-term-lock`",
+       "hoa",
+       "AE12",
+       "false",
+       "AA06-02"
+      ],
+      [
+       "`virtual-basis-transition-date`",
+       "hoa",
+       "AE12",
+       "null",
+       "AA06-02"
+      ],
+      [
+       "`virtual-meetings`",
+       "hoa",
+       "AE12",
+       "false",
+       "V13, AA06-02"
+      ],
+      [
+       "`acceptance-register`",
+       "platform",
+       "AE01",
+       "null",
+       "V16, AE01-01"
+      ],
+      [
+       "`ai-automation-ai-task`",
+       "platform",
+       "AM04",
+       "true",
+       "AM04-03"
+      ],
+      [
+       "`ai-master-data-proposals`",
+       "platform",
+       "AM04",
+       "true",
+       "AM04-02"
+      ],
+      [
+       "`ai-realtime-mail-classification`",
+       "platform",
+       "AM04",
+       "true",
+       "AM04-01"
+      ],
+      [
+       "`crm-branding-apply`",
+       "platform",
+       "AJ31",
+       "false",
+       "AJ31-01"
+      ],
+      [
+       "`invoice-intake-auto`",
+       "platform",
+       "AF10",
+       "false",
+       "AF10-01"
+      ],
+      [
+       "`onboarding-link-threshold`",
+       "platform",
+       "AG03",
+       "90",
+       "GAF-11"
+      ],
+      [
+       "`onboarding-suggest-threshold`",
+       "platform",
+       "AG03",
+       "60",
+       "GAF-11"
+      ],
+      [
+       "`rent-increase-block-comparison`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-graduated`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-index`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-mietspiegel`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-modernization`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-proposals`",
+       "platform",
+       "AN18",
+       "off",
+       "AN18-01"
+      ],
+      [
+       "`sale-marketing`",
+       "platform",
+       "AN19",
+       "false",
+       "AN19-02"
+      ],
+      [
+       "`webhook-auto-disable`",
+       "platform",
+       "AI07",
+       "0",
+       "AI07-02"
+      ],
+      [
+       "`meter-photo-mode`",
+       "portal",
+       "AN02",
+       "hint",
+       "AM06-01"
+      ],
+      [
+       "`owner-hoa-rental-statements-portal`",
+       "portal",
+       "AG12",
+       "false",
+       "AF25-02"
+      ],
+      [
+       "`owner-rental-income`",
+       "portal",
+       "AE13",
+       "false",
+       "P13-01, Q10-02"
+      ],
+      [
+       "`owner-rental-statements-portal`",
+       "portal",
+       "AF15",
+       "false",
+       "AF15-01"
+      ],
+      [
+       "`owner-ticket-scope`",
+       "portal",
+       "AE13",
+       "released",
+       "P13-01"
+      ],
+      [
+       "`portal-chat-bot`",
+       "portal",
+       "AE28",
+       "false",
+       "AE28-01, AE28-03"
+      ],
+      [
+       "`portal-chat-privacy`",
+       "portal",
+       "AE28",
+       "false",
+       "AE28-01, AE28-02"
+      ],
+      [
+       "`portal-owner-receipts`",
+       "portal",
+       "AG09",
+       "false",
+       "AG09-01"
+      ],
+      [
+       "`provider-rating-display`",
+       "portal",
+       "AE30",
+       "off",
+       "AA14-02, AE30-02"
+      ],
+      [
+       "`tenant-statement-portal`",
+       "portal",
+       "AF16",
+       "false",
+       "AF16-01"
+      ],
+      [
+       "`terms-version-mode`",
+       "portal",
+       "AE29",
+       "manual",
+       "AE29-01, AC06-03"
+      ],
+      [
+       "`access-export-communication`",
+       "security",
+       "AJ13",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-contracts`",
+       "security",
+       "AK06",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-documents`",
+       "security",
+       "AJ13",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-internal-notes`",
+       "security",
+       "AE33",
+       "false",
+       "AC07-01, AE33-02"
+      ],
+      [
+       "`access-export-payments`",
+       "security",
+       "AK06",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-portal-account`",
+       "security",
+       "AK06",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-third-party`",
+       "security",
+       "AE33",
+       "none",
+       "AC07-01, AE33-02"
+      ],
+      [
+       "`access-export-tickets`",
+       "security",
+       "AJ13",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`contact-address-history`",
+       "security",
+       "AN05",
+       "false",
+       "AM14-01"
+      ],
+      [
+       "`document-trash-days`",
+       "security",
+       "AE33",
+       "30",
+       "AC07-03, AE33-01"
+      ],
+      [
+       "`document-trash-enabled`",
+       "security",
+       "AE33",
+       "false",
+       "AC07-03, AE33-01"
+      ],
+      [
+       "`insurance-broker-access`",
+       "security",
+       "AG03",
+       "false",
+       "GAC-07"
+      ],
+      [
+       "`legal-basis-data-sharing`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-01, AC06-01"
+      ],
+      [
+       "`legal-basis-email-delivery`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-01, AC06-01"
+      ],
+      [
+       "`legal-basis-marketing`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-02, AC06-01"
+      ],
+      [
+       "`legal-basis-portal-terms`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-01, AC06-03"
+      ],
+      [
+       "`mfa-admin-reset`",
+       "security",
+       "AI09",
+       "false",
+       "AI09-01"
+      ],
+      [
+       "`mfa-crm-mode`",
+       "security",
+       "AE27",
+       "voluntary",
+       "AE27-01"
+      ],
+      [
+       "`mfa-portal-required`",
+       "security",
+       "AE27",
+       "false",
+       "AE27-01"
+      ],
+      [
+       "`objektakte-webhook-timestamp`",
+       "security",
+       "AI07",
+       "false",
+       "AI07-01"
+      ]
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Schlüssel in den Mandantenquellen:"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "`contacts.address_history` (apps/api/src/mhvp/contacts/address_history.py)"
+      },
+      {
+       "depth": 0,
+       "text": "`letting.sale_marketing` (apps/api/src/mhvp/letting/sale_scope.py)"
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "<!-- switch-index:end -->"
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Schalterverzeichnis",
+     "id": "schalterverzeichnis"
+    },
+    {
+     "t": "p",
+     "text": "<!-- switch-index:start (generiert mit build_switch_index.py, nicht von Hand ändern) -->"
+    },
+    {
+     "t": "p",
+     "text": "Stand der Registry: 100 Schalter der Seite Fachliche Regeln und 2 Schlüssel in den Mandantenquellen."
+    },
+    {
+     "t": "table",
+     "head": [
+      "Schalter",
+      "Bereich",
+      "Paket",
+      "Standard",
+      "Offene Frage"
+     ],
+     "rows": [
+      [
+       "`chart-coverage`",
+       "accounting",
+       "AE02",
+       "null",
+       "P07-04, P07-05"
+      ],
+      [
+       "`chart-four-eyes`",
+       "accounting",
+       "AE02",
+       "true",
+       "M10-01"
+      ],
+      [
+       "`direct-debit-creator-may-not-approve`",
+       "accounting",
+       "AO07",
+       "false",
+       "AN17-01"
+      ],
+      [
+       "`dunning-day-count`",
+       "accounting",
+       "AI03",
+       "act_365_fixed",
+       "AI03-01"
+      ],
+      [
+       "`interest-tax`",
+       "accounting",
+       "AE05",
+       "0",
+       "P01-01"
+      ],
+      [
+       "`period-lock-auto`",
+       "accounting",
+       "AE20",
+       "false",
+       "P06-02, AA08-01"
+      ],
+      [
+       "`period-lock-mode`",
+       "accounting",
+       "AE20",
+       "ledger_only",
+       "P06-02, AA08-01"
+      ],
+      [
+       "`period-lock-reopen`",
+       "accounting",
+       "AE20",
+       "false",
+       "P06-02, AA08-01"
+      ],
+      [
+       "`rent-invoice-numbering`",
+       "accounting",
+       "AE04",
+       "draft_numbers",
+       "AC03-01"
+      ],
+      [
+       "`return-fee-pass-on`",
+       "accounting",
+       "AN15",
+       "false",
+       "AN15-01"
+      ],
+      [
+       "`rule-checkpoints`",
+       "accounting",
+       "AE19",
+       "0",
+       "AB10-01"
+      ],
+      [
+       "`subledger-exclude-written-off`",
+       "accounting",
+       "AE06",
+       "true",
+       "AC01-02"
+      ],
+      [
+       "`tax-35a-basis`",
+       "accounting",
+       "AI18",
+       "invoice_date",
+       "AI17-01"
+      ],
+      [
+       "`write-off-approval`",
+       "accounting",
+       "AN15",
+       "false",
+       "AN15-02"
+      ],
+      [
+       "`automation-switch`",
+       "banking",
+       "AE03",
+       "false",
+       "BK2-03, M12-09"
+      ],
+      [
+       "`bank-clearing-account`",
+       "banking",
+       "AO02",
+       "null",
+       "AO02-01"
+      ],
+      [
+       "`bank-reconciliation-basis`",
+       "banking",
+       "AO02",
+       "booking_date",
+       "AO02-01"
+      ],
+      [
+       "`credit-payable-four-eyes`",
+       "banking",
+       "AE22",
+       "true",
+       "AE22-01, Q01-01"
+      ],
+      [
+       "`credit-payable-mode`",
+       "banking",
+       "AE22",
+       "off",
+       "AE22-01, Q01-01, P04-04"
+      ],
+      [
+       "`ebics-enabled`",
+       "banking",
+       "AE23",
+       "false",
+       "AE23-01"
+      ],
+      [
+       "`ebics-signature-key-mode`",
+       "banking",
+       "AE23",
+       "external",
+       "AE23-05"
+      ],
+      [
+       "`g1-checklist`",
+       "banking",
+       "AE03",
+       "null",
+       "M12-09"
+      ],
+      [
+       "`advance-open-mode`",
+       "billing",
+       "AE15",
+       "info_only",
+       "AC10-01, M17-03, P06-01"
+      ],
+      [
+       "`allocation-basis-block`",
+       "billing",
+       "AE17",
+       "true",
+       "M17-01"
+      ],
+      [
+       "`check-amounts-tolerance`",
+       "billing",
+       "AK01",
+       "1",
+       "AJ02-01"
+      ],
+      [
+       "`deadline-policy`",
+       "billing",
+       "AE18",
+       "block_claims",
+       "M17-04"
+      ],
+      [
+       "`deadline-warn-first`",
+       "billing",
+       "AE18",
+       "60",
+       "M17-04"
+      ],
+      [
+       "`deadline-warn-second`",
+       "billing",
+       "AE18",
+       "30",
+       "M17-04"
+      ],
+      [
+       "`deadline-watch`",
+       "billing",
+       "AE18",
+       "false",
+       "M17-04"
+      ],
+      [
+       "`deposit-limit-hint`",
+       "billing",
+       "AI18",
+       "false",
+       "AI17-04"
+      ],
+      [
+       "`heating-negative-costs`",
+       "billing",
+       "AK01",
+       "legacy_warn",
+       "AJ01-01"
+      ],
+      [
+       "`text-block-second-person`",
+       "billing",
+       "AF12",
+       "true",
+       "AA11-01, AA11-02"
+      ],
+      [
+       "`text-blocks`",
+       "billing",
+       "AE16",
+       "0",
+       "AA11-01, AA11-02"
+      ],
+      [
+       "`acquisition-first-acquisition`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-foreclosure`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-gift`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-inheritance`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-other`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`acquisition-purchase`",
+       "hoa",
+       "AE10",
+       "manual_release",
+       "AA07-01, P01"
+      ],
+      [
+       "`allocation-proposal`",
+       "hoa",
+       "AG20",
+       "false",
+       "AA07-01, P01"
+      ],
+      [
+       "`correction-report`",
+       "hoa",
+       "AF08",
+       "false",
+       "P02"
+      ],
+      [
+       "`hoa-remainder-mode`",
+       "hoa",
+       "AK01",
+       "report_only",
+       "AJ01-02"
+      ],
+      [
+       "`majority-rule-four-eyes`",
+       "hoa",
+       "AN06",
+       "false",
+       "AM02-01"
+      ],
+      [
+       "`online-meeting`",
+       "hoa",
+       "AE12",
+       "false",
+       "AD06-01"
+      ],
+      [
+       "`opening-lock-mode`",
+       "hoa",
+       "AE07",
+       "locked",
+       "V01-01"
+      ],
+      [
+       "`plan-change-mode`",
+       "hoa",
+       "AE09",
+       "notice",
+       "M12-L2, P07-01"
+      ],
+      [
+       "`portal-circular-resolution`",
+       "hoa",
+       "AG07",
+       "false",
+       "AE31-01"
+      ],
+      [
+       "`proxy-conflict-mode`",
+       "hoa",
+       "AE31",
+       "flag",
+       "AD06-02"
+      ],
+      [
+       "`reserve-payment-mode`",
+       "hoa",
+       "AE08",
+       "bound_only",
+       "P07-02, P07-04"
+      ],
+      [
+       "`reserve-plan-tax`",
+       "hoa",
+       "AE07",
+       "null",
+       "AE07-01"
+      ],
+      [
+       "`virtual-basis-term-lock`",
+       "hoa",
+       "AE12",
+       "false",
+       "AA06-02"
+      ],
+      [
+       "`virtual-basis-transition-date`",
+       "hoa",
+       "AE12",
+       "null",
+       "AA06-02"
+      ],
+      [
+       "`virtual-meetings`",
+       "hoa",
+       "AE12",
+       "false",
+       "V13, AA06-02"
+      ],
+      [
+       "`acceptance-register`",
+       "platform",
+       "AE01",
+       "null",
+       "V16, AE01-01"
+      ],
+      [
+       "`ai-automation-ai-task`",
+       "platform",
+       "AM04",
+       "true",
+       "AM04-03"
+      ],
+      [
+       "`ai-master-data-proposals`",
+       "platform",
+       "AM04",
+       "true",
+       "AM04-02"
+      ],
+      [
+       "`ai-realtime-mail-classification`",
+       "platform",
+       "AM04",
+       "true",
+       "AM04-01"
+      ],
+      [
+       "`crm-branding-apply`",
+       "platform",
+       "AJ31",
+       "false",
+       "AJ31-01"
+      ],
+      [
+       "`invoice-intake-auto`",
+       "platform",
+       "AF10",
+       "false",
+       "AF10-01"
+      ],
+      [
+       "`onboarding-link-threshold`",
+       "platform",
+       "AG03",
+       "90",
+       "GAF-11"
+      ],
+      [
+       "`onboarding-suggest-threshold`",
+       "platform",
+       "AG03",
+       "60",
+       "GAF-11"
+      ],
+      [
+       "`rent-increase-block-comparison`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-graduated`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-index`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-mietspiegel`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-block-modernization`",
+       "platform",
+       "AN18",
+       "null",
+       "AN18-01"
+      ],
+      [
+       "`rent-increase-proposals`",
+       "platform",
+       "AN18",
+       "off",
+       "AN18-01"
+      ],
+      [
+       "`sale-marketing`",
+       "platform",
+       "AN19",
+       "false",
+       "AN19-02"
+      ],
+      [
+       "`webhook-auto-disable`",
+       "platform",
+       "AI07",
+       "0",
+       "AI07-02"
+      ],
+      [
+       "`meter-photo-mode`",
+       "portal",
+       "AN02",
+       "hint",
+       "AM06-01"
+      ],
+      [
+       "`owner-hoa-rental-statements-portal`",
+       "portal",
+       "AG12",
+       "false",
+       "AF25-02"
+      ],
+      [
+       "`owner-rental-income`",
+       "portal",
+       "AE13",
+       "false",
+       "P13-01, Q10-02"
+      ],
+      [
+       "`owner-rental-statements-portal`",
+       "portal",
+       "AF15",
+       "false",
+       "AF15-01"
+      ],
+      [
+       "`owner-ticket-scope`",
+       "portal",
+       "AE13",
+       "released",
+       "P13-01"
+      ],
+      [
+       "`portal-chat-bot`",
+       "portal",
+       "AE28",
+       "false",
+       "AE28-01, AE28-03"
+      ],
+      [
+       "`portal-chat-privacy`",
+       "portal",
+       "AE28",
+       "false",
+       "AE28-01, AE28-02"
+      ],
+      [
+       "`portal-owner-receipts`",
+       "portal",
+       "AG09",
+       "false",
+       "AG09-01"
+      ],
+      [
+       "`provider-rating-display`",
+       "portal",
+       "AE30",
+       "off",
+       "AA14-02, AE30-02"
+      ],
+      [
+       "`tenant-statement-portal`",
+       "portal",
+       "AF16",
+       "false",
+       "AF16-01"
+      ],
+      [
+       "`terms-version-mode`",
+       "portal",
+       "AE29",
+       "manual",
+       "AE29-01, AC06-03"
+      ],
+      [
+       "`access-export-communication`",
+       "security",
+       "AJ13",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-contracts`",
+       "security",
+       "AK06",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-documents`",
+       "security",
+       "AJ13",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-internal-notes`",
+       "security",
+       "AE33",
+       "false",
+       "AC07-01, AE33-02"
+      ],
+      [
+       "`access-export-payments`",
+       "security",
+       "AK06",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-portal-account`",
+       "security",
+       "AK06",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`access-export-third-party`",
+       "security",
+       "AE33",
+       "none",
+       "AC07-01, AE33-02"
+      ],
+      [
+       "`access-export-tickets`",
+       "security",
+       "AJ13",
+       "false",
+       "AC07-01"
+      ],
+      [
+       "`contact-address-history`",
+       "security",
+       "AN05",
+       "false",
+       "AM14-01"
+      ],
+      [
+       "`document-trash-days`",
+       "security",
+       "AE33",
+       "30",
+       "AC07-03, AE33-01"
+      ],
+      [
+       "`document-trash-enabled`",
+       "security",
+       "AE33",
+       "false",
+       "AC07-03, AE33-01"
+      ],
+      [
+       "`insurance-broker-access`",
+       "security",
+       "AG03",
+       "false",
+       "GAC-07"
+      ],
+      [
+       "`legal-basis-data-sharing`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-01, AC06-01"
+      ],
+      [
+       "`legal-basis-email-delivery`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-01, AC06-01"
+      ],
+      [
+       "`legal-basis-marketing`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-02, AC06-01"
+      ],
+      [
+       "`legal-basis-portal-terms`",
+       "security",
+       "AE34",
+       "consent",
+       "AE34-01, AC06-03"
+      ],
+      [
+       "`mfa-admin-reset`",
+       "security",
+       "AI09",
+       "false",
+       "AI09-01"
+      ],
+      [
+       "`mfa-crm-mode`",
+       "security",
+       "AE27",
+       "voluntary",
+       "AE27-01"
+      ],
+      [
+       "`mfa-portal-required`",
+       "security",
+       "AE27",
+       "false",
+       "AE27-01"
+      ],
+      [
+       "`objektakte-webhook-timestamp`",
+       "security",
+       "AI07",
+       "false",
+       "AI07-01"
+      ]
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Schlüssel in den Mandantenquellen:"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "`contacts.address_history` (apps/api/src/mhvp/contacts/address_history.py)"
+      },
+      {
+       "depth": 0,
+       "text": "`letting.sale_marketing` (apps/api/src/mhvp/letting/sale_scope.py)"
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "<!-- switch-index:end -->"
     }
    ]
   },
@@ -10933,6 +12466,16 @@
     {
      "t": "p",
      "text": "Das Foto zu einem Mangel oder Zähler wird direkt beim Anlegen des Eintrags aufgenommen (Foto aufnehmen oder Aus Galerie wählen). Standard sind ein Übersichtsfoto je Raum und ein Detailfoto je Mangel; das Zählerfoto zeigt Zählernummer und Stand lesbar. Fotos werden serverseitig ohne Metadaten gespeichert (keine Ortsangabe, kein Aufnahmezeitpunkt aus der Kamera); der Zeitpunkt im Protokoll ist der Upload."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Listen laden in Seiten zu höchstens 200 Zeilen (Welle 24, GAK-301)",
+     "id": "listen-laden-in-seiten-zu-hoechstens-200-zeilen-welle-24-gak-301"
+    },
+    {
+     "t": "p",
+     "text": "Alle Listen der API liefern höchstens 200 Zeilen je Seite; größere Werte für Seitengröße oder limit werden mit 422 abgelehnt. Die CRM-Seiten laden größere Bestände (zum Beispiel Verträge, SEPA-Mandate, Freigabeliste) automatisch seitenweise nach. Eigene Auswertungen und Integrationen müssen blättern."
     }
    ]
   },
@@ -15844,6 +17387,16 @@
     {
      "t": "p",
      "text": "Das Demo-Band in der Kopfzeile des CRM erscheint für Mandantenbenutzer, sobald der Mandant das Demo-Kennzeichen trägt (`GET /auth/me`, Feld `is_demo`, AF19)."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Nicht validierte Prüfregeln",
+     "id": "nicht-validierte-pruefregeln"
+    },
+    {
+     "t": "p",
+     "text": "Die Konsistenzprüfung der Buchhaltung weist Prüfregeln aus, die nur für neue Zeilen gelten, weil Bestandsdaten sie verletzen (Zahl der Verstöße je Regel). Nach Korrektur der Daten validiert ein Administrator mit dem Recht Mandanteneinstellungen ändern die Regeln über `POST /platform/constraint-checks/validate`. Bei weiteren Verstößen erscheint eine Liste, es wird nichts verändert."
     }
    ]
   },
@@ -18254,6 +19807,26 @@
     {
      "t": "p",
      "text": "Unter Maklerfunktionen, Übergabe, Karte \"Dateien aus U-Protokoll zuordnen\": Lauf ID eingeben und \"Zuordnungen laden\" wählen. Die Liste zeigt je Datei die Anzahl der Verknüpfungen zu Protokoll, Raum, Mangel, Zähler oder Position sowie die Dateien, die noch nicht zugeordnet sind. \"Lösen\" entfernt nur die Verknüpfungen, das Dokument bleibt im Dokumentenspeicher erhalten. Unterschriftsdateien lassen sich nicht lösen, sie gehören zum Nachweis des Protokolls (Meldung mit Konflikt). Eine gelöste Datei lässt sich durch erneutes Zuordnen mit demselben ZIP wieder verknüpfen. Zum Lösen ist das Recht zum Ändern von Verträgen nötig, zum Ansehen das Leserecht."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Kaution und Rückzahlungs-IBAN bei der Übergabe (Welle 24, AN12)",
+     "id": "kaution-und-rueckzahlungs-iban-bei-der-uebergabe-welle-24-an12"
+    },
+    {
+     "t": "p",
+     "text": "Beim verbindlichen Abschluss eines Auszugsprotokolls wird die im Protokoll erfasste Kaution mit der Kaution des Vertrags abgeglichen; Abweichungen werden angezeigt und müssen geklärt werden. Die Rückzahlungs-IBAN aus dem Protokoll gilt als neue Bankverbindung der ausziehenden Mieterin oder des ausziehenden Mieters und geht in die Vier-Augen-Freigabe von Bankverbindungen; erst nach der Freigabe durch eine zweite Person darf sie für Zahlungen genutzt werden."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Kautionsverknüpfung im Übergabeprotokoll (Welle 25, AN19)",
+     "id": "kautionsverknuepfung-im-uebergabeprotokoll-welle-25-an19"
+    },
+    {
+     "t": "p",
+     "text": "Im Schritt Kaution zeigt der Block \"Kaution und Rückzahlungskonto\" den Abgleich der Kaution laut Vertrag mit der Kaution laut Protokoll, Hinweise und den Stand der Rückzahlungs-IBAN (nur die letzten Stellen). Mit \"Konto zur Freigabe übergeben\" wird die Rückzahlungs-IBAN dem Kontakt als neue Bankverbindung zur Freigabe übergeben. Es gilt das Vier-Augen-Prinzip: Eine andere Person mit Freigaberecht muss die Bankverbindung bestätigen. Es wird nichts gezahlt und die Kaution nicht geändert."
     }
    ]
   },
@@ -19048,6 +20621,16 @@
     {
      "t": "p",
      "text": "In der Interessentenliste zeigt \"Links anzeigen\" die erzeugten Selbstauskunft Links mit Status (offen, eingereicht, abgelaufen) und Ablaufdatum. Der vollständige Link wird nur bei der Erzeugung angezeigt."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Verkaufsinserate (Welle 24, AN19)",
+     "id": "verkaufsinserate-welle-24-an19"
+    },
+    {
+     "t": "p",
+     "text": "Verkaufsinserate sind für jeden Mandanten zunächst nicht freigeschaltet. Unter Einstellungen, Fachliche Regeln, Eintrag \"Verkaufsinserate und Maklerveröffentlichung\" schalten Sie sie ein (Standard aus; die Frage nach dem Umfang der Vermarktung ist noch nicht entschieden, siehe Offene Fragen AN19-02). Bei ausgeschaltetem Schalter lassen sich Verkaufsinserate als Entwurf anlegen, aber weder aktivieren noch an einen Makleranbieter übergeben; die Meldung nennt den Schalter. Vermietungsanzeigen und die Leerstandsliste sind davon nicht betroffen. Die Änderung des Schalters wird protokolliert."
     }
    ]
   },
@@ -19543,6 +21126,16 @@
     {
      "t": "p",
      "text": "Das Vertragsdetail zeigt unten den Versionsverlauf: alle Versionen mit Gültigkeit, die aktuelle Version markiert und frühere Versionen als Link. Je Version erscheinen die Zahlungszeilen, die gegenüber der Vorversion neu sind oder entfallen. Frühere Versionen bleiben unverändert erhalten."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Indexklausel und Staffelmiete (GAK-203, Welle 25)",
+     "id": "indexklausel-und-staffelmiete-gak-203-welle-25"
+    },
+    {
+     "t": "p",
+     "text": "Im Vertragsdetail eines Mietvertrags erfasst der Abschnitt \"Indexklausel und Staffelmiete\" entweder die Indexvereinbarung (Indexreihe, Basisindex zum Stand der letzten Anpassung, Basismonat, Quelle) oder die Staffelstufen (Gültig ab, Nettomiete). Die Eingaben ändern die Miete nicht. Ist in den Fachlichen Regeln der Schalter Mieterhöhungsvorschläge auf Entwurf gestellt, legt der Tagesjob fällige Staffelstufen (60 Tage im Voraus) und Indexanpassungen aus freigegebenen Indexwerten als Entwurf eines Mieterhöhungsfalls an; der Abschnitt listet diese offenen Vorschläge mit Link zum Fall. Wartefrist, Wirksamkeit und Form sind dort zu prüfen. Die Indexwerte pflegt die Plattformverwaltung per CSV-Import mit Quelle und Datenstand und gibt sie frei."
     }
    ]
   },
@@ -20398,6 +21991,30 @@
     {
      "t": "p",
      "text": "Ist unter Einstellungen, Fachliche Regeln der Schalter „Vier-Augen-Freigabe der Mehrheitsregeln“ eingeschaltet (Standard aus), erscheint eine neu angelegte Mehrheitsregel auf der Versammlungsseite als „Entwurf“. Eine zweite Person mit Freigaberecht gibt sie mit „Freigeben“ frei. Bis dahin kann die Regel keinem Tagesordnungspunkt zugeordnet und nicht ausgezählt werden."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Beschluss angefochten oder nichtig: Hinweise (Welle 24, AN08)",
+     "id": "beschluss-angefochten-oder-nichtig-hinweise-welle-24-an08"
+    },
+    {
+     "t": "p",
+     "text": "Setzen Sie den Status eines Beschlusses auf angefochten, für ungültig erklärt oder nichtig, benachrichtigt die Plattform die Freigabeberechtigten und kennzeichnet abhängige Wirtschaftspläne, Sonderumlagen und Abrechnungen. Es wird nichts storniert und nichts geändert; die Entscheidung über Folgen treffen Sie mit rechtlicher Beratung. Für die Anfechtung wird ein Prüfdatum als Fristeintrag angelegt. Das Datum ist ein Orientierungswert und vor Verwendung zu verifizieren."
+    },
+    {
+     "t": "p",
+     "text": "Die Sonderumlage verlangt ein Ertragskonto und einen Stichtag; die Berechnung nutzt je Einheit den Eigentümer zum Stichtag und zur Fälligkeit. Ein Buchungsvorschlag entsteht nur als Entwurf und erst hinter G4."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Beschlussfolgen und Prüfdatum in der Beschlussliste (Welle 25, AN19)",
+     "id": "beschlussfolgen-und-pruefdatum-in-der-beschlussliste-welle-25-an19"
+    },
+    {
+     "t": "p",
+     "text": "In der Beschlussliste zeigt der Knopf \"Folgen prüfen\" die abhängigen Wirtschaftspläne, Sonderumlagen und Abrechnungen eines Beschlusses. Ist der Beschluss angefochten, für ungültig erklärt oder nichtig, tragen die abhängigen Unterlagen das Kennzeichen \"angefochten\". Es wird nichts storniert und nichts geändert. Mit \"Prüfdatum als Frist anlegen\" tragen Sie ein Prüfdatum für eine mögliche Anfechtung als Frist ein (Datum leer lassen, wenn es aus der Fristart berechnet werden soll). Die Dauer der Anfechtungsfrist ist nicht festgelegt; das Datum ist zu verifizieren und durch einen Rechtsanwalt zu prüfen. Die Benachrichtigung \"Beschluss angefochten, Folgen prüfen\" lässt sich unter Einstellungen, Benachrichtigungen je Kanal schalten und führt zur WEG-Übersicht."
     }
    ]
   }

@@ -35,6 +35,7 @@ from mhvp.automation.schemas import (
     AI_TASKS,
     AutomationActivateIn,
     AutomationRuleIn,
+    AutomationRuleOut,
     AutomationRulePatch,
     TestEventIn,
     check_trigger,
@@ -256,12 +257,17 @@ _RULE_LIST = ListSpec(  # GA04-05
 )
 
 
-@router.get("/rules", summary="Regeln auflisten", dependencies=[Depends(strict_query)])
+@router.get(
+    "/rules",
+    summary="Regeln auflisten",
+    dependencies=[Depends(strict_query)],
+    response_model=list[AutomationRuleOut],
+)
 async def list_rules(
     request: Request,
     params: ListParams = Depends(_RULE_LIST.dependency),
     principal: TenantPrincipal = Depends(_read_principal),
-) -> list[dict[str, Any]]:
+) -> Any:
     async with tenant_tx(request, principal) as session:
         rows = await session.scalars(
             _RULE_LIST.apply(
@@ -271,7 +277,7 @@ async def list_rules(
         rule_list = list(rows)
         gaps = await mark_needs_ai_approval(session, principal.tenant_id, rule_list)
         out = [{**_rule_out(r), "needs_ai_approval": gaps.get(r.id, False)} for r in rule_list]
-        return sparse(out, params, None)  # type: ignore[no-any-return]
+        return sparse(out, params, None)
 
 
 def _assert_ai_task_permission(principal: TenantPrincipal, actions: Any) -> None:
@@ -317,7 +323,7 @@ async def create_rule(
         return _rule_out(rule)
 
 
-@router.get("/rules/{rule_id}", summary="Regel lesen")
+@router.get("/rules/{rule_id}", summary="Regel lesen", response_model=AutomationRuleOut)
 async def get_rule(
     rule_id: uuid.UUID,
     request: Request,

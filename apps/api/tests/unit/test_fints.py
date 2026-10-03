@@ -509,3 +509,87 @@ def test_9010_with_stored_state_fails_twice_reports_once() -> None:
         )
     assert info.value.error is ErrorCodes.FINTS_BANK_REJECTED
     assert len(fake.Scenario.constructed) == 2
+
+
+# --- AO15: 9010 "camt-Nachricht nicht zugelassen" ------------------------------------------
+
+
+def test_ao15_library_default_camt_format_reproduces_production_9010() -> None:
+    """Reproduces the production error: the bank lists only camt.052.001.08 in HICAZS,
+    python-fints always requests camt.052.001.02 (fints/client.py:594) and the bank
+    answers 9050 plus 9010 "camt-Nachricht nicht zugelassen"; python-fints raises its
+    dialog initialisation text for every 9010 (fints/client.py:1408)."""
+    fake.Scenario.hicazs_formats = [fake.CAMT_V8]
+    fake.Scenario.camt_accepted = [fake.CAMT_V8]
+    client = fake.FakeClient("38250110", "user", fake.GOOD_PIN, "u", product_id="X")
+    with client, pytest.raises(fake.FinTSClientError) as info:
+        client.get_transactions_xml(object(), None, None)  # call as before AO15
+    assert fints_mod.is_dialog_init_rejection(info.value)
+    problem = fints_mod.problem_for_exception(info.value, messages=client.mhvp_responses)
+    assert problem.error is ErrorCodes.FINTS_STATEMENT_FORMAT_UNSUPPORTED
+    detail = problem.detail or ""
+    assert "camt-Nachricht nicht zugelassen" in detail
+    assert "Kontoumsatzformat" in detail
+    assert "Produktregistrierung ist" not in detail
+
+
+def test_ao15_camt_request_uses_only_bpd_formats() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_unsupported = True
+    fake.Scenario.hicazs_formats = [fake.CAMT_V8]
+    fake.Scenario.camt_accepted = [fake.CAMT_V8]
+    done = _start(fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None))
+    assert done.status == "done"
+    assert fake.Scenario.camt_requests
+    assert all(req == [fake.CAMT_V8] for req in fake.Scenario.camt_requests)
+
+
+def test_ao15_no_hkcaz_without_hicazs_gives_own_problem_code() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_unsupported = True
+    fake.Scenario.hicazs_formats = None
+    with pytest.raises(ProblemError) as info:
+        _start(fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None))
+    assert info.value.error is ErrorCodes.FINTS_STATEMENT_FORMAT_UNSUPPORTED
+    assert fake.Scenario.camt_requests == []
+    assert "9010" not in (info.value.detail or "")
+
+
+def test_ao15_hicazs_without_camt052_format_sends_nothing() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_unsupported = True
+    fake.Scenario.hicazs_formats = ["urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"]
+    with pytest.raises(ProblemError) as info:
+        _start(fints_mod.Progress(with_transactions=True, since="2026-09-01", until=None))
+    assert info.value.error is ErrorCodes.FINTS_STATEMENT_FORMAT_UNSUPPORTED
+    assert fake.Scenario.camt_requests == []
+
+
+def test_ao15_camt_rejection_with_stored_state_is_not_retried_fresh() -> None:
+    fake.Scenario.init_tan = False
+    fake.Scenario.mt940_unsupported = True
+    fake.Scenario.hicazs_formats = [fake.CAMT_V8]
+    fake.Scenario.camt_accepted = ["urn:iso:std:iso:20022:tech:xsd:camt.052.001.99"]
+    stored = json.dumps({"mechanism": "912", "medium": "Handy 1"}).encode()
+    with pytest.raises(ProblemError) as info:
+        fints_mod.start_session(
+            CREDS,
+            client_data=stored,
+            tan_mechanism="912",
+            tan_medium="Handy 1",
+            progress=fints_mod.Progress(with_transactions=True, since="2026-09-01"),
+        )
+    assert info.value.error is ErrorCodes.FINTS_STATEMENT_FORMAT_UNSUPPORTED
+    assert len(fake.Scenario.constructed) == 1
+
+
+def test_ao15_camt_formats_from_bpd_keeps_bank_spelling_and_order() -> None:
+    seg = type(
+        "Seg",
+        (),
+        {"_additional_data": [1, "J", ["camt.052.001.08", fake.CAMT_V2, "camt.053.001.02", "x"]]},
+    )()
+    bpd = type("B", (), {"find_segments": staticmethod(lambda q: [seg])})()
+    client = type("C", (), {"bpd": bpd})()
+    assert fints_mod.camt_formats_from_bpd(client) == ["camt.052.001.08", fake.CAMT_V2]
+    assert fints_mod.camt_formats_from_bpd(object()) == []

@@ -385,6 +385,11 @@ async def queue_attachment(
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Das Dokument gehört nicht zu diesem Ticket."
         )
+    from mhvp.documents import payment_files  # local: import cycle
+
+    # AN14-04: a payment file is never handed over to the damage tool (G2 closed or not,
+    # the handover is no payment path).
+    await payment_files.ensure_no_payment_attachment(session, [document_id])
     existing = await session.scalar(
         select(SchadenstoolItemLink).where(
             SchadenstoolItemLink.kind == ItemKind.ATTACHMENT.value,

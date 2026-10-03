@@ -89,6 +89,7 @@ const RULE_SEARCH: Record<string, [title: string, keywords: string[]]> = {
   "virtual-basis-transition-date": ["Stichtag der Übergangsregel virtuelle Versammlung", ["übergangsregel", "stichtag", "48"]],
   "online-meeting": ["Online-Versammlung im Portal", ["online teilnahme", "abstimmung portal", "eigentümerversammlung"]],
   "majority-rule-four-eyes": ["Vier-Augen-Freigabe der Mehrheitsregeln", ["mehrheitsregel", "vier augen", "freigabe", "versammlung", "beschluss"]],
+  "direct-debit-creator-may-not-approve": ["Lastschrift: Ersteller darf nicht freigeben", ["lastschrift", "sepa", "freigabe", "ersteller", "vier augen"]],
   "portal-circular-resolution": ["Umlaufbeschluss im Eigentümerportal", ["umlaufbeschluss", "umlaufverfahren", "abstimmung portal", "textform"]],
   "proxy-conflict-mode": ["Vollmacht gegen eigene Stimme", ["vollmacht", "stimme", "konflikt", "online abstimmung"]],
   "crm-branding-apply": ["Mandantenfarben im CRM", ["branding", "farben", "white label", "primärfarbe", "akzentfarbe", "corporate design"]],
@@ -133,6 +134,8 @@ const RULE_SEARCH: Record<string, [title: string, keywords: string[]]> = {
   "document-trash-days": ["Dokument-Papierkorb, Frist in Tagen", ["papierkorb frist", "30 tage", "aufbewahrung gelöscht"]],
   "credit-payable-mode": ["Guthaben aus Abrechnungen, Verbindlichkeitsposten", ["guthaben", "verbindlichkeit", "auszahlung ohne rechnung", "umbuchung", "kreditor", "nebenbuch", "zahlungsauftrag"]],
   "credit-payable-four-eyes": ["Guthaben-Auszahlung, Freigabe durch zwei Personen", ["guthaben", "vier augen", "freigabe", "auszahlung"]],
+  "bank-reconciliation-basis": ["Bankabstimmung, Abstimmungsbasis", ["abstimmungsbasis", "buchungsdatum", "bankbuchungstag", "zeitliche differenz", "bankabstimmung"]],
+  "bank-clearing-account": ["Bankabstimmung, Klärungskonto", ["klärungskonto", "transitkonto", "überzahlung", "restbetrag", "kontenrahmen"]],
   "g1-checklist": ["G1 Öffnungsliste (Fachliche Regeln)", ["g1", "öffnungsliste", "checkliste", "nachweis"]],
 };
 

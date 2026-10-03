@@ -24,3 +24,13 @@ Lückenanalyse GAJ (03.10.2026): Regel wurde ohne Gültigkeitsprüfung verwendet
 - Eine nicht freigegebene Regel wird weder einem Tagesordnungspunkt zugeordnet noch in der Auszählung angewendet (422 MHVP-HOA-0040). Regeln, die vor dem Einschalten angelegt wurden, bleiben unverändert anwendbar.
 - Der Versammlungstag für die Gültigkeitsprüfung ist das fachliche Datum in Europe/Berlin (mhvp.core.clock.local_date), nicht das UTC-Datum (Befund AN14-09).
 - Migration 0453. Die Modellfrage AM02-01 bleibt offen; Prüfung: tests/integration/test_an06_majority_rule_four_eyes.py, tests/unit/test_am02_majority_rule_validity.py.
+
+### Nicht validierte Prüfregeln (AO07, AN14-07)
+
+Prüfregeln, die eine Migration mit `NOT VALID` anlegt (zum Beispiel 0449 bei Altverstößen), gelten
+nur für neue Zeilen. Die Konsistenzprüfung des Buchungskreises (`constraint_findings`) und
+`GET /platform/constraint-checks` nennen sie mit der Zahl der für den Mandanten sichtbaren
+Verstöße. `POST /platform/constraint-checks/validate` (Recht `tenant_settings:update`) führt
+`VALIDATE CONSTRAINT` in einer Transaktion über die Migrationsrolle aus; bei Verstößen 409
+`MHVP-ACC-0041` mit Liste, nichts wird validiert. Es wird nichts gelöscht oder gebucht.
+Abnahmefall: `tests/integration/test_ao07_switch_and_constraints.py`.

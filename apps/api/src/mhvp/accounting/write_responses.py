@@ -4,6 +4,7 @@
 return amounts stay untyped until the JSON format of Decimal amounts is decided (AK11).
 """
 
+import logging
 import uuid
 from datetime import date, datetime
 from typing import Any
@@ -14,6 +15,7 @@ from pydantic import (
     PrivateAttr,
     SerializationInfo,
     SerializerFunctionWrapHandler,
+    ValidationError,
     ValidatorFunctionWrapHandler,
     model_serializer,
     model_validator,
@@ -124,3 +126,26 @@ class RawJsonOut(BaseModel):
         if info.mode_is_json() and self._raw is not None:
             return self._raw
         return handler(self)
+
+
+_log = logging.getLogger(__name__)
+
+
+class TolerantRawJsonOut(RawJsonOut):
+    """AO08 (GAI-304, ADR 0037): ``RawJsonOut`` for models derived from observed responses.
+
+    The declared fields document the response for OpenAPI. A handler result that does not
+    match them (a branch no test covered) is still delivered unchanged and only logged, so
+    adding the documentation can never turn a working response into an error 500.
+    """
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _tolerate(cls, data: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        try:
+            return handler(data)
+        except ValidationError as exc:
+            _log.warning("response model %s does not match: %s", cls.__name__, exc)
+            instance = cls.model_construct()
+            instance._raw = data
+            return instance

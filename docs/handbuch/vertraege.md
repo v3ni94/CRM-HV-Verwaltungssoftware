@@ -251,3 +251,7 @@ Im Vertragsdetail listet der Abschnitt Zahlungspläne alle Pläne des Vertrags. 
 ## Versionsverlauf (GAK-207, Welle 24)
 
 Das Vertragsdetail zeigt unten den Versionsverlauf: alle Versionen mit Gültigkeit, die aktuelle Version markiert und frühere Versionen als Link. Je Version erscheinen die Zahlungszeilen, die gegenüber der Vorversion neu sind oder entfallen. Frühere Versionen bleiben unverändert erhalten.
+
+## Indexklausel und Staffelmiete (GAK-203, Welle 25)
+
+Im Vertragsdetail eines Mietvertrags erfasst der Abschnitt "Indexklausel und Staffelmiete" entweder die Indexvereinbarung (Indexreihe, Basisindex zum Stand der letzten Anpassung, Basismonat, Quelle) oder die Staffelstufen (Gültig ab, Nettomiete). Die Eingaben ändern die Miete nicht. Ist in den Fachlichen Regeln der Schalter Mieterhöhungsvorschläge auf Entwurf gestellt, legt der Tagesjob fällige Staffelstufen (60 Tage im Voraus) und Indexanpassungen aus freigegebenen Indexwerten als Entwurf eines Mieterhöhungsfalls an; der Abschnitt listet diese offenen Vorschläge mit Link zum Fall. Wartefrist, Wirksamkeit und Form sind dort zu prüfen. Die Indexwerte pflegt die Plattformverwaltung per CSV-Import mit Quelle und Datenstand und gibt sie frei.

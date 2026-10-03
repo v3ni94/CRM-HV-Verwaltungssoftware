@@ -37,6 +37,7 @@ CATALOGUE: tuple[str, ...] = (
     "sla_escalation",
     "compliance_deadline",
     "banking.consent_expiring",
+    "hoa.resolution_contested",
 )
 MAIL_BATCH = 100
 MAIL_PAGES = 20

@@ -131,16 +131,19 @@ def test_switch_on_closes_and_queries_by_date(client: TestClient, world: World) 
         assert mettmann["valid_from"] is None  # unchanged row kept, not rewritten
         history = client.get(f"{C}/{cid}/addresses?include_history=true", headers=admin).json()
         hilden = next(a for a in history["items"] if a["city"] == "Hilden")
-        assert hilden["valid_to"] == (today - timedelta(days=1)).isoformat()
+        # AO09: no valid_from before, so it is the creation date (today) and valid_to is not
+        # before it (CHECK), although yesterday would be the closing day otherwise.
+        assert hilden["valid_from"] == today.isoformat()
+        assert hilden["valid_to"] == today.isoformat()
         assert hilden["superseded_at"] is not None
         assert hilden["is_primary"] is False
         past = (today - timedelta(days=1)).isoformat()
         before = client.get(f"{C}/{cid}/addresses?as_of={past}", headers=reader)
         assert before.status_code == 200, before.text
-        assert sorted(a["city"] for a in before.json()["items"]) == ["Hilden", "Mettmann"]
+        assert sorted(a["city"] for a in before.json()["items"]) == ["Mettmann"]
         assert before.json()["as_of"] == past
         now = client.get(f"{C}/{cid}/addresses?as_of={today.isoformat()}", headers=admin).json()
-        assert sorted(a["city"] for a in now["items"]) == ["Erkrath", "Mettmann"]
+        assert sorted(a["city"] for a in now["items"]) == ["Erkrath", "Hilden", "Mettmann"]
         bad = client.get(f"{C}/{cid}/addresses?as_of=gestern", headers=admin)
         assert bad.status_code == 422
         assert client.get(f"{C}/{cid}/addresses?as_of={past}", headers=other).status_code == 404

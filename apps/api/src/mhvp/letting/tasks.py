@@ -93,3 +93,40 @@ def hash_self_disclosure_tokens() -> dict[str, int]:
     """Manual trigger (no beat entry): ``celery -A mhvp.worker call
     mhvp.letting.hash_self_disclosure_tokens``, or via the platform admin endpoint."""
     return asyncio.run(hash_self_disclosure_tokens_once(get_settings()))
+
+
+async def propose_rent_increases_once(
+    settings: Settings, today: date | None = None
+) -> dict[str, int]:
+    """AO03 (GAK-203): drafts graduated step and index proposals for tenants with the switch
+    ``rent_increase_proposals = draft`` (default off). Never applies, sends or posts."""
+    from mhvp.letting import increase_proposals, increase_settings
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals: dict[str, int] = {"tenants": 0, "graduated": 0, "index": 0, "skipped": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                if (await increase_settings.load(session)).proposals != "draft":
+                    continue
+                totals["tenants"] += 1
+                counts = await increase_proposals.propose_for_tenant(
+                    session, tenant_id, today or local_today()
+                )
+                for key, value in counts.items():
+                    totals[key] += value
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.letting.propose_rent_increases")
+def propose_rent_increases() -> dict[str, int]:
+    return asyncio.run(propose_rent_increases_once(get_settings()))

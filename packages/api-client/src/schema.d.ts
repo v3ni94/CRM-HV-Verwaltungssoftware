@@ -910,6 +910,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/direct-debit-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lastschrift: Ersteller darf nicht freigeben (Schalter) */
+        get: operations["get_direct_debit_settings_api_v1_accounting_direct_debit_settings_get"];
+        /** Lastschrift: Ersteller darf nicht freigeben setzen */
+        put: operations["put_direct_debit_settings_api_v1_accounting_direct_debit_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/direct-debits": {
         parameters: {
             query?: never;
@@ -2868,6 +2886,23 @@ export interface paths {
         put?: never;
         /** Ausbuchungsvorschlag freigeben (Schalter, Vier Augen, G1) oder ablehnen */
         post: operations["decide_write_off_api_v1_accounting_open_item_write_offs__write_off_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/open-item-write-offs/{write_off_id}/posting-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buchungsvorschau einer Ausbuchung (nur Anzeige, Gegenkonto offen AN15-02, G1) */
+        get: operations["write_off_posting_preview_api_v1_accounting_open_item_write_offs__write_off_id__posting_preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6770,6 +6805,29 @@ export interface paths {
         put?: never;
         /** Auftrag verwerfen */
         post: operations["cancel_order_api_v1_banking_payment_orders__order_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/reconciliation-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mandantenschalter Klärungskonto und Abstimmungsbasis lesen (AO02) */
+        get: operations["get_reconciliation_settings_api_v1_banking_reconciliation_settings_get"];
+        /**
+         * Mandantenschalter Klärungskonto und Abstimmungsbasis setzen (AO02)
+         * @description GAK-107, GAK-108: the clearing account must be a transit or technical account of the
+         *     tenant's chart of accounts (422 otherwise); nothing is booked. Recorded as an event with
+         *     the previous values.
+         */
+        put: operations["put_reconciliation_settings_api_v1_banking_reconciliation_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16887,6 +16945,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/consumer-price-index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verbraucherpreisindex (Plattformdaten, lesend) */
+        get: operations["list_cpi_api_v1_letting_consumer_price_index_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/contracts/{contract_id}/index-terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Indexklausel und Staffelstufen des Mietvertrags */
+        get: operations["get_index_terms_api_v1_letting_contracts__contract_id__index_terms_get"];
+        /** Indexklausel und Staffelstufen erfassen (nur Eingabe, keine Mietänderung) */
+        put: operations["put_index_terms_api_v1_letting_contracts__contract_id__index_terms_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/letting/flow-import/preview": {
         parameters: {
             query?: never;
@@ -17362,6 +17455,40 @@ export interface paths {
         put?: never;
         /** Besichtigungstermin anlegen */
         post: operations["create_prospect_viewing_api_v1_letting_prospects__prospect_id__viewings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/rent-increase-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorschläge des Tagesjobs (Staffel, Index), nur Entwürfe */
+        get: operations["list_proposals_api_v1_letting_rent_increase_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/rent-increase-proposals/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vorschläge jetzt erzeugen (nur mit Schalter Entwurf) */
+        post: operations["run_proposals_api_v1_letting_rent_increase_proposals_run_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20561,6 +20688,81 @@ export interface paths {
         /** Schalter: Wartungsfenster zählen als Ausfall (AD10-02) */
         put: operations["set_availability_settings_api_v1_platform_availability_settings_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/constraint-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Nicht validierte Prüfregeln (NOT VALID) mit Zahl der Verstöße */
+        get: operations["get_constraint_checks_api_v1_platform_constraint_checks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/constraint-checks/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nicht validierte Prüfregeln validieren (Administrator)
+         * @description Runs ``VALIDATE CONSTRAINT`` for every unvalidated CHECK in one transaction. On a
+         *     violation nothing is validated and the answer is 409 with the list.
+         */
+        post: operations["validate_constraints_api_v1_platform_constraint_checks_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/consumer-price-index/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Indexwerte per CSV importieren (Quelle und Stand Pflicht, nicht freigegeben)
+         * @description A changed value of a month resets its release; equal values stay as they are.
+         */
+        post: operations["import_cpi_api_v1_platform_consumer_price_index_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/consumer-price-index/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Indexwerte einer Reihe bis Monat freigeben */
+        post: operations["release_cpi_api_v1_platform_consumer_price_index_release_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31297,8 +31499,66 @@ export interface components {
             question: string;
             /** Reason */
             reason: string;
+            /**
+             * Revocation Status
+             * @default locked
+             * @enum {string}
+             */
+            revocation_status: "locked" | "awaiting_decision";
             /** Status */
             status: string;
+        };
+        /** AccountingWriteOffPostingLineOut */
+        AccountingWriteOffPostingLineOut: {
+            /** Account Id */
+            account_id: string | null;
+            /** Account Number */
+            account_number: string | null;
+            /** Amount */
+            amount: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "debit" | "credit";
+        };
+        /** AccountingWriteOffPostingPreviewOut */
+        AccountingWriteOffPostingPreviewOut: {
+            /** Amount */
+            amount: string;
+            /** Blockers */
+            blockers: string[];
+            /**
+             * Correction
+             * @default reversal
+             */
+            correction: string;
+            /**
+             * Effective On
+             * Format: date
+             */
+            effective_on: string;
+            /** Lines */
+            lines: components["schemas"]["AccountingWriteOffPostingLineOut"][];
+            /**
+             * Posting Allowed
+             * @default false
+             */
+            posting_allowed: boolean;
+            /**
+             * Question
+             * @default AN15-02
+             */
+            question: string;
+            /** Status */
+            status: string;
+            /**
+             * Write Off Id
+             * Format: uuid
+             */
+            write_off_id: string;
         };
         /** AccountingWriteOffProposeIn */
         AccountingWriteOffProposeIn: {
@@ -33018,6 +33278,61 @@ export interface components {
              */
             trigger_kind: string;
         };
+        /**
+         * AutomationRuleOut
+         * @description AO11 (AN07): rule as listed and read; ``needs_ai_approval`` marks an ``ai_task`` rule whose
+         *     last editor does not hold ``ai:approve`` (AM04-03). Actions are already stripped of secrets.
+         */
+        AutomationRuleOut: {
+            /** Actions */
+            actions: {
+                [key: string]: unknown;
+            }[];
+            /** Active */
+            active: boolean;
+            /** Conditions */
+            conditions: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Scheduled At */
+            last_scheduled_at?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Needs Ai Approval
+             * @default false
+             */
+            needs_ai_approval: boolean;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Schedule */
+            schedule?: {
+                [key: string]: unknown;
+            } | null;
+            /** Test Mode */
+            test_mode: boolean;
+            /** Trigger Event Type */
+            trigger_event_type?: string | null;
+            /** Trigger Kind */
+            trigger_kind: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** AutomationRulePatch */
         AutomationRulePatch: {
             /** Actions */
@@ -33505,6 +33820,30 @@ export interface components {
             settlements?: components["schemas"]["SettleIn"][];
             /** Text */
             text?: string | null;
+        };
+        /**
+         * BankReconciliationSettingsIn
+         * @description Partial update: only fields sent are changed; ``null`` resets to the default.
+         */
+        BankReconciliationSettingsIn: {
+            /** Clearing Account Number */
+            clearing_account_number?: string | null;
+            /** Reconciliation Basis */
+            reconciliation_basis?: ("booking_date" | "bank_date") | null;
+        };
+        /** BankReconciliationSettingsOut */
+        BankReconciliationSettingsOut: {
+            /** Clearing Account Number */
+            clearing_account_number: string | null;
+            /** Clearing Account Options */
+            clearing_account_options: {
+                [key: string]: string;
+            }[];
+            /**
+             * Reconciliation Basis
+             * @enum {string}
+             */
+            reconciliation_basis: "booking_date" | "bank_date";
         };
         /** BankStatusIn */
         BankStatusIn: {
@@ -36667,6 +37006,15 @@ export interface components {
             source: string;
             /** Text Version */
             text_version?: string | null;
+        };
+        /** ConstraintCheckOut */
+        ConstraintCheckOut: {
+            /** Constraints */
+            constraints: components["schemas"]["UnvalidatedConstraintOut"][];
+            /** Hint */
+            hint?: string | null;
+            /** Ok */
+            ok: boolean;
         };
         /** ConsumptionIn */
         ConsumptionIn: {
@@ -39846,6 +40194,16 @@ export interface components {
             status: string;
             /** Transaction Count */
             transaction_count: number;
+        };
+        /** DirectDebitSettingsIn */
+        DirectDebitSettingsIn: {
+            /** Direct Debit Creator May Not Approve */
+            direct_debit_creator_may_not_approve: boolean;
+        };
+        /** DirectDebitSettingsOut */
+        DirectDebitSettingsOut: {
+            /** Direct Debit Creator May Not Approve */
+            direct_debit_creator_may_not_approve: boolean;
         };
         /** DirectDebitSubmitIn */
         DirectDebitSubmitIn: {
@@ -45427,6 +45785,51 @@ export interface components {
             /** Letter Date */
             letter_date?: string | null;
         };
+        /** LettingCpiOut */
+        LettingCpiOut: {
+            /**
+             * Data As Of
+             * Format: date
+             */
+            data_as_of: string;
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /** Released */
+            released: boolean;
+            /** Series */
+            series: string;
+            /** Source */
+            source: string;
+            /** Value */
+            value: string;
+        };
+        /** LettingGraduatedStepIo */
+        "LettingGraduatedStepIo-Input": {
+            /** Net */
+            net: number | string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+        };
+        /** LettingGraduatedStepIo */
+        "LettingGraduatedStepIo-Output": {
+            /** Net */
+            net: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+        };
         /**
          * LettingIncreaseSettingsIo
          * @description Tenant switches of the rent increase process (GAK-202, GAK-203, AN18-01).
@@ -45441,6 +45844,96 @@ export interface components {
              * @default off
              */
             proposals: string;
+        };
+        /** LettingIndexAgreementIo */
+        "LettingIndexAgreementIo-Input": {
+            /** Base Index */
+            base_index: number | string;
+            /**
+             * Base Month
+             * Format: date
+             */
+            base_month: string;
+            /** Index Name */
+            index_name: string;
+            /** Source */
+            source?: string | null;
+        };
+        /** LettingIndexAgreementIo */
+        "LettingIndexAgreementIo-Output": {
+            /** Base Index */
+            base_index: string;
+            /**
+             * Base Month
+             * Format: date
+             */
+            base_month: string;
+            /** Index Name */
+            index_name: string;
+            /** Source */
+            source?: string | null;
+        };
+        /** LettingIndexTermsIn */
+        LettingIndexTermsIn: {
+            /** Graduated Steps */
+            graduated_steps?: components["schemas"]["LettingGraduatedStepIo-Input"][];
+            index_agreement?: components["schemas"]["LettingIndexAgreementIo-Input"] | null;
+        };
+        /** LettingIndexTermsOut */
+        LettingIndexTermsOut: {
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /** Graduated Steps */
+            graduated_steps: components["schemas"]["LettingGraduatedStepIo-Output"][];
+            index_agreement: components["schemas"]["LettingIndexAgreementIo-Output"] | null;
+            /** Latest Index Month */
+            latest_index_month: string | null;
+            /** Latest Index Value */
+            latest_index_value: string | null;
+        };
+        /** LettingProposalOut */
+        LettingProposalOut: {
+            /** Basis */
+            basis: string;
+            /** Basis Data */
+            basis_data: {
+                [key: string]: unknown;
+            };
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /** Current Rent */
+            current_rent: string;
+            /**
+             * Effective Date
+             * Format: date
+             */
+            effective_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Source Note */
+            source_note: string | null;
+            /** Status */
+            status: string;
+            /** Target Rent */
+            target_rent: string;
+        };
+        /** LettingProposalRunOut */
+        LettingProposalRunOut: {
+            /** Graduated */
+            graduated: number;
+            /** Index */
+            index: number;
+            /** Skipped */
+            skipped: number;
         };
         /** LevelDecisionIn */
         LevelDecisionIn: {
@@ -50578,6 +51071,44 @@ export interface components {
             offset: number;
             /** Total */
             total: number;
+        };
+        /** PlatformCpiImportIn */
+        PlatformCpiImportIn: {
+            /** Csv */
+            csv: string;
+            /**
+             * Data As Of
+             * Format: date
+             */
+            data_as_of: string;
+            /** Series */
+            series: string;
+            /** Source */
+            source: string;
+        };
+        /** PlatformCpiImportOut */
+        PlatformCpiImportOut: {
+            /** Created */
+            created: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** PlatformCpiReleaseIn */
+        PlatformCpiReleaseIn: {
+            /** Series */
+            series: string;
+            /**
+             * Up To
+             * Format: date
+             */
+            up_to: string;
+        };
+        /** PlatformCpiReleaseOut */
+        PlatformCpiReleaseOut: {
+            /** Released */
+            released: number;
         };
         /** PlatformDemoFlagIn */
         PlatformDemoFlagIn: {
@@ -58093,6 +58624,15 @@ export interface components {
          * @enum {string}
          */
         UnitType: "apartment" | "commercial" | "office" | "parking" | "garage" | "storage" | "garden" | "other";
+        /** UnvalidatedConstraintOut */
+        UnvalidatedConstraintOut: {
+            /** Constraint */
+            constraint: string;
+            /** Table */
+            table: string;
+            /** Violations */
+            violations: number;
+        };
         /** UsageIn */
         UsageIn: {
             /**
@@ -61107,9 +61647,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -61148,6 +61686,66 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    get_direct_debit_settings_api_v1_accounting_direct_debit_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectDebitSettingsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    put_direct_debit_settings_api_v1_accounting_direct_debit_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectDebitSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectDebitSettingsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
             /** @description Validation Error */
             422: {
                 headers: {
@@ -61573,9 +62171,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -65311,9 +65907,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -65857,9 +66451,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -66203,6 +66795,41 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    write_off_posting_preview_api_v1_accounting_open_item_write_offs__write_off_id__posting_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                write_off_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountingWriteOffPostingPreviewOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description Validation Error */
             422: {
                 headers: {
@@ -68261,9 +68888,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -68628,9 +69253,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -71569,9 +72192,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["AutomationRuleOut"][];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -71635,9 +72256,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AutomationRuleOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -72047,8 +72666,8 @@ export interface operations {
     reconciliation_api_v1_banking_accounts__bank_account_id__reconciliation_get: {
         parameters: {
             query?: {
-                /** @description GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag */
-                basis?: "booking_date" | "bank_date";
+                /** @description GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag; ohne Angabe gilt der Mandantenschalter banking.reconciliation_basis (AO02) */
+                basis?: ("booking_date" | "bank_date") | null;
             };
             header?: never;
             path: {
@@ -75146,6 +75765,66 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    get_reconciliation_settings_api_v1_banking_reconciliation_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankReconciliationSettingsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    put_reconciliation_settings_api_v1_banking_reconciliation_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankReconciliationSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankReconciliationSettingsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     list_rule_proposals_api_v1_banking_rule_proposals_get: {
         parameters: {
             query?: {
@@ -77387,9 +78066,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -99819,6 +100496,115 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    list_cpi_api_v1_letting_consumer_price_index_get: {
+        parameters: {
+            query: {
+                series: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LettingCpiOut"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    get_index_terms_api_v1_letting_contracts__contract_id__index_terms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LettingIndexTermsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    put_index_terms_api_v1_letting_contracts__contract_id__index_terms_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LettingIndexTermsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LettingIndexTermsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     flow_import_preview_api_v1_letting_flow_import_preview_post: {
         parameters: {
             query?: never;
@@ -101091,6 +101877,65 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    list_proposals_api_v1_letting_rent_increase_proposals_get: {
+        parameters: {
+            query?: {
+                contract_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LettingProposalOut"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    run_proposals_api_v1_letting_rent_increase_proposals_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LettingProposalRunOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -108738,6 +109583,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AvailabilitySettingsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    get_constraint_checks_api_v1_platform_constraint_checks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstraintCheckOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    validate_constraints_api_v1_platform_constraint_checks_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstraintCheckOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    import_cpi_api_v1_platform_consumer_price_index_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformCpiImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformCpiImportOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    release_cpi_api_v1_platform_consumer_price_index_release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformCpiReleaseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformCpiReleaseOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];

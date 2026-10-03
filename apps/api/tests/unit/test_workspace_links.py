@@ -66,3 +66,13 @@ def test_missing_target() -> None:
 def test_portal_routes(target_type: str, expected: str | None) -> None:
     """Portal recipients never receive CRM routes."""
     assert target_href(target_type, ID, portal=True) == expected
+
+
+def test_resolution_contested_notification_kind_and_target() -> None:
+    """AN19-CRM: the kind is switchable in the preferences, the target leads to the WEG list."""
+    from mhvp.workspace.notification_prefs import CATALOGUE, MANDATORY_KINDS
+
+    assert "hoa.resolution_contested" in CATALOGUE
+    assert "hoa.resolution_contested" not in MANDATORY_KINDS
+    assert target_href("resolution", ID) == "/weg"
+    assert target_href("resolution", ID, portal=True) is None

@@ -64,3 +64,13 @@ Schalter `letting.sale_marketing` in `tenant_settings.sources` (Standard aus, `G
 - Aktion `apply` setzt den Zahlungsgrund aus der Begründung und legt `check.block_proposal` ab; Aktion `set_block` schreibt `contract.rent_increase_block_until` nach Bestätigung.
 - `increase_proposals.py`: Rechenkern für fällige Staffelstufen und Indexanpassungen (nur Vorschlag, ohne Job, bis die Vertragsfelder existieren).
 - `prospect_erasure.py`: Löschvorschlag (privacy_erasure_request proposed) für den Kontakt eines gelöschten Interessenten.
+
+## Indexklausel, Staffel, Verbraucherpreisindex (Welle 25, AO03, GAK-203)
+
+- `letting/index_rent.py`: `GET/PUT /letting/contracts/{id}/index-terms` (Indexklausel als `contract.index_agreement`,
+  Staffelstufen in `contract_graduated_step`, Migration 0456), `GET /letting/rent-increase-proposals` (Entwürfe des
+  Jobs), `POST /letting/rent-increase-proposals/run` (nur mit Schalter draft, sonst 409),
+  `GET /letting/consumer-price-index?series=`; Plattform: `POST /platform/consumer-price-index/import` (CSV, Quelle,
+  Datenstand, nicht freigegeben) und `/release` (nur Plattform-Admin).
+- `increase_proposals.propose_for_tenant` und Celery `mhvp.letting.propose_rent_increases` (täglich 04:40): legen nur
+  `rent_increase_case` draft an, nie Mietzeilen. Regel `docs/rules/AO03-indexklausel-staffel-vpi-vorschlaege.md`.

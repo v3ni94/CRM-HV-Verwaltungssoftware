@@ -1,4 +1,25 @@
 {
+  "ContractIndexTerms": {
+    "title": "Index clause and graduated rent",
+    "hint": "Inputs for proposals only. The rent does not change. The daily job drafts proposals only with the rent increase proposals switch on; waiting period and effective date are not checked (AN18-01).",
+    "latest": "Latest released index value {month}: {value}",
+    "mode": "Agreement",
+    "modes": { "none": "None", "index": "Indexed rent", "graduated": "Graduated rent" },
+    "indexName": "Index series",
+    "baseIndex": "Base index (at the last adjustment)",
+    "baseMonth": "Base month",
+    "source": "Source (contract clause)",
+    "validFrom": "Valid from",
+    "net": "Net rent",
+    "addStep": "Add step",
+    "remove": "Remove",
+    "save": "Save",
+    "saved": "Saved.",
+    "invalidStep": "Every step needs a date and a positive amount.",
+    "proposals": "Open proposals",
+    "noProposals": "No open proposals.",
+    "proposalLine": "{basis} from {date}: {from} to {to} (draft)"
+  },
   "OperationsMasks": {
     "delivery": {
       "open": "Record delivery",
@@ -2720,7 +2741,24 @@
       "chainFindings": "{count, plural, one {# statement with chain break or period gap.} other {# statements with chain break or period gap.}}",
       "notCheckable": "{count, plural, one {# statement without balances, not checkable (e.g. CSV).} other {# statements without balances, not checkable (e.g. CSV).}}",
       "na": "not available",
-      "note": "A difference is a finding to clear; it is not corrected here. Without a ledger account or statement balances the column stays empty."
+      "note": "A difference is a finding to clear; it is not corrected here. Without a ledger account or statement balances the column stays empty.",
+      "basis": "Reconciliation basis",
+      "basisTenant": "Tenant default",
+      "basisBookingDate": "Booking date",
+      "basisBankDate": "Bank booking day",
+      "basisUsed": "Ledger balance by {basis}.",
+      "timingDifference": "Timing difference"
+    },
+    "reconciliationSettings": {
+      "title": "Clearing account and reconciliation basis",
+      "intro": "Tenant default: an overpayment remainder spread over several debtors goes to the selected clearing account (transit or technical account of the chart of accounts) when no counter account is given. Without a selection the previous behaviour applies: the remainder needs a counter account. The reconciliation basis sets the cut-off of the ledger side. Saving books nothing.",
+      "clearingAccount": "Clearing account",
+      "noClearingAccount": "None (default)",
+      "basis": "Reconciliation basis",
+      "basisBookingDate": "Booking date (default)",
+      "basisBankDate": "Bank booking day",
+      "save": "Save",
+      "saved": "Settings saved."
     },
     "rules": {
       "title": "Bank rules",
@@ -4778,6 +4816,8 @@
     "unknownEventWarning": "The system never emits this event type, so the rule would never fire. Please check the spelling.",
     "eventTypeCode": "Event type (code)",
     "events": {
+      "work_order_completed": "Work order completed",
+      "work_order_done": "Work order done (older name)",
       "ticket_created": "Ticket created",
       "ticket_merged": "Ticket merged",
       "sla_escalated": "SLA escalated",
@@ -4970,6 +5010,7 @@
       }
     },
     "relatedHelp": "Conditions on property, unit, contact and contract are read from the master data linked to the ticket at evaluation time; without a link the condition does not match.",
+    "workOrderDoneAlias": "Note: when a work order is completed, work_order.done (older status name) is emitted together with work_order.completed (catalogue name). A rule on one of the two names is enough; rules on both trigger twice.",
     "attempts": "Attempt {count} of {max}",
     "nextAttempt": "Next attempt {time}",
     "resend": "Resend",
@@ -14954,7 +14995,8 @@
       "automation_webhook_dead": "Webhook failed permanently",
       "sla_escalation": "SLA escalation",
       "compliance_deadline": "Deadline reaches its lead time",
-      "banking_consent_expiring": "Bank consent expiring"
+      "banking_consent_expiring": "Bank consent expiring",
+      "hoa_resolution_contested": "Resolution contested, check consequences"
     }
   },
   "DeadlineEntries": {
@@ -15895,7 +15937,13 @@
     "seeded": "{count} check points created in the deadline register.",
     "nextChange": "Next change dates: {dates}"
   },
+  "WriteOffs": {"title": "Write off proposals", "hint": "A proposal has no effect on balances or reports. Approval only sets the write off flag from the effective date; nothing is posted. Legal basis and booking path are open (question AN15-02).", "item": "Open receivable", "choose": "Please choose", "effectiveOn": "Effective date", "reason": "Reason (at least 10 characters)", "propose": "Propose write off", "empty": "No write off proposals for this ledger.", "asOf": "as of {date}", "preview": "Posting preview", "approve": "Approve", "reject": "Reject", "lockedG1": "Approval only after release gate G1 (productive bookkeeping).", "fourEyes": "Only a person other than the proposer.", "switchOff": "Approval is switched off for this tenant (business rules, AN15-02).", "notPostable": "Not postable", "noAccount": "account open", "status": {"proposed": "Proposed", "approved": "Approved", "rejected": "Rejected"}, "revocation": {"locked": "Revocation locked.", "awaiting_decision": "Revocation prepared, procedure open (AN15-02)."}, "side": {"debit": "Debit", "credit": "Credit"}, "blocker": {"not_approved": "not approved", "gate_g1_closed": "G1 closed", "counter_account_undecided": "counter account not decided (AN15-02)"}},
   "DirectDebitFeedback": {
+    "returnedOn": "Return date",
+    "returnFee": "Return fee",
+    "returnFeeDocument": "Fee voucher",
+    "passOn": {"locked": "Pass on locked", "proposal": "Pass on as proposal only"},
+    "returnHint": "Return date and fee only for a single return; recorded values are never overwritten.",
     "selectAll": "Select all direct debits",
     "selectOrder": "Select direct debit of {name}",
     "selection": "{count, plural, one {# direct debit selected} other {# direct debits selected}}. The feedback applies to all selected direct debits together; on errors nothing is saved.",
@@ -17439,6 +17487,10 @@
         "title": "Four eyes approval of majority rules",
         "description": "Whether newly created meeting majority rules apply only after approval by a second person with approval right. Existing rules stay unchanged. Which rule model is authoritative is open (AM02-01)."
       },
+      "direct-debit-creator-may-not-approve": {
+        "title": "Direct debit: creator may not approve",
+        "description": "Whether the creator of a direct debit run may not approve it. Default off, the current behaviour stays. The business decision is open (AN17-01)."
+      },
       "portal-circular-resolution": {
         "title": "Circular resolution in the owner portal",
         "description": "Whether owners vote in running circular procedures in the portal. Voting additionally needs release gate G4; the software does not check admissibility."
@@ -17494,6 +17546,15 @@
       "automation-switch": {
         "title": "Posting automation",
         "description": "Switch of the posting automation for bank transactions. Switching on needs an open G1 and a request approved by a second person, so it is display only here."
+      },
+      "bank-reconciliation-basis": {
+        "title": "Bank reconciliation: basis",
+        "description": "Cut-off of the ledger side of the bank reconciliation: booking date of the entry (default, previous behaviour) or bank booking day of the linked transaction. The gap is shown as timing difference. A query parameter in the mask overrides the default."
+      },
+      "bank-clearing-account": {
+        "title": "Bank reconciliation: clearing account",
+        "description": "Tenant default for an overpayment remainder over several debtors: transit or technical account of the chart of accounts. Selected in the bank reconciliation.",
+        "defaultText": "No clearing account, the remainder needs a counter account"
       },
       "g1-checklist": {
         "title": "G1 opening list",
@@ -17694,6 +17755,10 @@
         "off": "Off, no payable items",
         "subledger": "Item for the posted credit in the subledger",
         "reclass": "Reclassification draft to the creditor account"
+      },
+      "bank-reconciliation-basis": {
+        "booking_date": "Booking date (default)",
+        "bank_date": "Bank booking day"
       },
       "ebics-signature-key-mode": {
         "external": "External (default)",
@@ -18105,6 +18170,36 @@
       "confirm": "I did not create the draft myself and have reviewed it.",
       "notDraft": "Only a draft can be released.",
       "locked": "Locked while release gate G3 (rental statements) is closed. Approval by the management required."
+    }
+  },
+  "Ao05": {
+    "followUps": {
+      "load": "Check consequences",
+      "none": "No dependent plans, special levies or statements.",
+      "contestedHint": "The resolution is contested, annulled or void. Dependent records are flagged; nothing is reversed automatically.",
+      "contested": "contested",
+      "applied": "applied",
+      "types": {
+        "economic_plan": "Economic plan",
+        "special_levy": "Special levy",
+        "hoa_statement": "Statement"
+      },
+      "dueOn": "Review date (empty: computed from the deadline type)",
+      "note": "Note",
+      "deadlineHelp": "The duration of the contest period is not fixed. The review date must be verified, please have it checked by a lawyer.",
+      "setDeadline": "Create review date as deadline",
+      "created": "Deadline created for {date}. Date to be verified."
+    },
+    "depositLink": {
+      "title": "Deposit and refund account",
+      "fourEyes": "Four eyes principle: the refund IBAN is only handed to the contact for release. Another person with approval rights must confirm it. Nothing is paid and the deposit is not changed.",
+      "due": "Deposit per contract",
+      "protocol": "Deposit per protocol",
+      "difference": "Difference",
+      "account": "Refund account",
+      "none": "not stated",
+      "link": "Hand account over for release",
+      "done": "The account was handed over for release."
     }
   }
 }

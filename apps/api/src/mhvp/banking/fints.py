@@ -395,6 +395,12 @@ def is_dialog_init_rejection(exc: BaseException) -> bool:
     return type(exc).__name__ == "FinTSClientError" and "could not fetch BPD" in str(exc)
 
 
+def is_camt_rejection(messages: list[tuple[str, str]] | None) -> bool:
+    """True when a 9xxx return message of the bank names camt (for example "9010
+    camt-Nachricht nicht zugelassen"): the bank rejected the camt statement request."""
+    return any(code.startswith("9") and "camt" in text.lower() for code, text in messages or [])
+
+
 def problem_for_exception(
     exc: BaseException,
     *,
@@ -428,6 +434,22 @@ def problem_for_exception(
         return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=message)
     message = str(exc)
     bank_text = _format_bank_messages(messages)
+    if is_dialog_init_rejection(exc) and is_camt_rejection(messages):
+        # python-fints raises its "could not fetch BPD" text for every 9010, also inside an
+        # open dialog (fints/client.py:1408). When the bank names camt the rejection belongs
+        # to the statement request (HKCAZ), not to the dialog initialisation (AO15).
+        return ProblemError(
+            ErrorCodes.FINTS_STATEMENT_FORMAT_UNSUPPORTED,
+            detail=(
+                "Die Bank hat den Kontoumsatzabruf im camt-Format abgelehnt (Rückmeldecode "
+                "9010)."
+                + bank_text
+                + " Ursache ist das angeforderte Kontoumsatzformat, nicht die Anmeldung oder "
+                "die Produktregistrierung. Bitte den Bankparameterstand neu laden lassen "
+                "(Verbindung erneut einrichten) und, falls der Fehler bleibt, bei der Bank "
+                "erfragen, welche camt-Formate (camt.052) für FinTS freigeschaltet sind."
+            )[:900],
+        )
     if is_dialog_init_rejection(exc):
         # Return code 9010 during dialog initialisation. Seen causes: a stale stored dialog
         # state (system id, BPD) after changes on the bank side (start_session retries once
@@ -567,6 +589,38 @@ def _client_class() -> Any:
                 self.mhvp_responses.append((code, text))
                 del self.mhvp_responses[:-20]
             super()._process_response(dialog, segment, response)
+
+        def get_transactions_xml(
+            self,
+            account: Any,
+            start_date: date | None = None,
+            end_date: date | None = None,
+            camt_messages: list[str] | None = None,
+        ) -> Any:
+            """python-fints' HKCAZ request (fints/client.py:569 to 601) with the camt format
+            list taken from the BPD instead of the fixed camt.052.001.02
+            (fints/client.py:594). Without ``camt_messages`` the library method runs."""
+            if not camt_messages:
+                return super().get_transactions_xml(account, start_date, end_date)
+            from fints.client import FinTS3Client
+            from fints.formals import SupportedMessageTypes
+            from fints.segments.statement import HKCAZ1
+
+            with self._get_dialog() as dialog:
+                hkcaz = self._find_highest_supported_command(HKCAZ1)
+                return self._fetch_with_touchdowns(
+                    dialog,
+                    lambda touchdown: hkcaz(
+                        account=hkcaz._fields["account"].type.from_sepa_account(account),
+                        all_accounts=False,
+                        date_start=start_date,
+                        date_end=end_date,
+                        touchdown_point=touchdown,
+                        supported_camt_messages=SupportedMessageTypes(list(camt_messages)),
+                    ),
+                    FinTS3Client._response_handler_get_transactions_xml,
+                    "HICAZ",
+                )
 
     return RecordingClient
 
@@ -954,9 +1008,55 @@ def _fetch_transactions(
     except Exception as exc:
         if not _is_unsupported(exc):
             raise
-        logger.info("fints_mt940_unsupported fallback=camt")
-        rows = client.get_transactions_xml(sepa, since, until)
+        formats = camt_formats_from_bpd(client)
+        if not formats:
+            # HKCAZ is only sent when the BPD list HICAZS with a camt.052 format (AO15).
+            raise ProblemError(
+                ErrorCodes.FINTS_STATEMENT_FORMAT_UNSUPPORTED, detail=NO_STATEMENT_FORMAT_DETAIL
+            ) from None
+        logger.info("fints_mt940_unsupported fallback=camt formats=%s", ",".join(formats))
+        rows = client.get_transactions_xml(sepa, since, until, camt_messages=formats)
     return _rows_to_raw(_guard(rows), statement_ref, snap)
+
+
+NO_STATEMENT_FORMAT_DETAIL = (
+    "Die Bank bietet für dieses Konto per FinTS weder Kontoumsätze im MT940-Format (HKKAZ) "
+    "noch im camt.052-Format (HKCAZ mit gemeldetem camt-Format) an. Es wurde keine "
+    "Umsatzanfrage gesendet. Bitte bei der Bank die Freischaltung des Kontoumsatzabrufs "
+    "per FinTS erfragen oder die Umsätze als Datei (camt.053 oder MT940) importieren."
+)
+
+_CAMT052 = re.compile(r"^(urn:iso:std:iso:20022:tech:xsd:)?camt\.052\.\d{3}\.\d{2}$")
+
+
+def _strings(value: Any, depth: int = 0) -> list[str]:
+    if depth > 6 or value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list | tuple):
+        return [s for v in value for s in _strings(v, depth + 1)]
+    out: list[str] = []
+    for attr in ("_additional_data", "expected_type"):
+        out.extend(_strings(getattr(value, attr, None), depth + 1))
+    return out
+
+
+def camt_formats_from_bpd(client: Any) -> list[str]:
+    """camt.052 formats of the bank's HICAZS parameter segments (BPD), in the bank's order
+    and spelling. python-fints has no HICAZS class and keeps the parameters as generic
+    data (fints/parser.py:216); the format list is the DEG "Unterstützte camt-messages"
+    (fints/formals.py:1039). Empty when the bank sends no HICAZS or no camt.052 format."""
+    bpd = getattr(client, "bpd", None)
+    if bpd is None:
+        return []
+    found: list[str] = []
+    for seg in bpd.find_segments("HICAZS"):
+        for text in _strings(seg):
+            text = text.strip()
+            if _CAMT052.match(text) and text not in found:
+                found.append(text)
+    return found
 
 
 def _pause(client: Any, response: Any, result: StepResult, progress: Progress) -> StepResult:
@@ -996,7 +1096,11 @@ def start_session(
     except ProblemError:
         raise
     except Exception as exc:
-        if client_data and is_dialog_init_rejection(exc):
+        if (
+            client_data
+            and is_dialog_init_rejection(exc)
+            and not is_camt_rejection(bank_messages(clients[-1]) if clients else None)
+        ):
             logger.warning(
                 "fints_dialog_init_rejected_with_stored_state blz=%s retry=fresh_state",
                 creds.blz,

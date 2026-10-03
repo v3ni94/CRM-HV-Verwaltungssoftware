@@ -151,6 +151,9 @@ async def add_attachment(
         document = await session.scalar(query)
         if document is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Dokument nicht gefunden.")
+        from mhvp.documents import payment_files  # local: import cycle
+
+        await payment_files.ensure_no_payment_attachment(session, [document.id])
         _append(row, document.id)
         row.updated_by = principal.user_id
         await session.flush()

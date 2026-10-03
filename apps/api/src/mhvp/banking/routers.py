@@ -477,9 +477,12 @@ async def review(
 async def reconciliation(
     bank_account_id: uuid.UUID,
     request: Request,
-    basis: Literal["booking_date", "bank_date"] = Query(
-        "booking_date",
-        description="GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag",
+    basis: Literal["booking_date", "bank_date"] | None = Query(
+        None,
+        description=(
+            "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag; ohne "
+            "Angabe gilt der Mandantenschalter banking.reconciliation_basis (AO02)"
+        ),
     ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
@@ -488,7 +491,106 @@ async def reconciliation(
 
         if await session.get(PropertyBankAccount, bank_account_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        return await svc.reconcile(session, bank_account_id, basis)
+        from mhvp.banking import reconciliation_settings
+
+        effective = basis or (await reconciliation_settings.load(session)).reconciliation_basis
+        return await svc.reconcile(session, bank_account_id, effective)
+
+
+class BankReconciliationSettingsOut(BaseModel):
+    clearing_account_number: str | None
+    reconciliation_basis: Literal["booking_date", "bank_date"]
+    clearing_account_options: list[dict[str, str]]
+
+
+class BankReconciliationSettingsIn(BaseModel):
+    """Partial update: only fields sent are changed; ``null`` resets to the default."""
+
+    clearing_account_number: str | None = Field(default=None, pattern=r"^[0-9]{6}$")
+    reconciliation_basis: Literal["booking_date", "bank_date"] | None = None
+
+
+async def _reconciliation_settings_out(session: Any) -> BankReconciliationSettingsOut:
+    from mhvp.banking import reconciliation_settings as rs
+
+    current = await rs.load(session)
+    return BankReconciliationSettingsOut(
+        clearing_account_number=current.clearing_account_number,
+        reconciliation_basis=current.reconciliation_basis,
+        clearing_account_options=await rs.chart_accounts(session),
+    )
+
+
+@router.get(
+    "/reconciliation-settings",
+    summary="Mandantenschalter Klärungskonto und Abstimmungsbasis lesen (AO02)",
+    dependencies=[Depends(strict_query)],
+)
+async def get_reconciliation_settings(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> BankReconciliationSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        return await _reconciliation_settings_out(session)
+
+
+@router.put(
+    "/reconciliation-settings",
+    summary="Mandantenschalter Klärungskonto und Abstimmungsbasis setzen (AO02)",
+)
+async def put_reconciliation_settings(
+    body: BankReconciliationSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(FINAPI_SETTINGS),
+) -> BankReconciliationSettingsOut:
+    """GAK-107, GAK-108: the clearing account must be a transit or technical account of the
+    tenant's chart of accounts (422 otherwise); nothing is booked. Recorded as an event with
+    the previous values."""
+    from mhvp.banking import reconciliation_settings as rs
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        sent = body.model_fields_set
+        if body.clearing_account_number is not None:
+            await rs.validate_clearing_number(session, body.clearing_account_number)
+        before = rs.from_sources(row.sources)
+        sources = dict(row.sources or {})
+        for key, field_name in (
+            (rs.CLEARING_KEY, "clearing_account_number"),
+            (rs.BASIS_KEY, "reconciliation_basis"),
+        ):
+            if field_name not in sent:
+                continue
+            value = getattr(body, field_name)
+            if value is None:
+                sources.pop(key, None)
+            else:
+                sources[key] = value
+        row.sources = sources
+        after = rs.from_sources(sources)
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="bank_reconciliation_settings.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "before": {
+                    "clearing_account_number": before.clearing_account_number,
+                    "reconciliation_basis": before.reconciliation_basis,
+                },
+                "after": {
+                    "clearing_account_number": after.clearing_account_number,
+                    "reconciliation_basis": after.reconciliation_basis,
+                },
+            },
+        )
+        return await _reconciliation_settings_out(session)
 
 
 # Matching and controlled automation (M12, 7.4, 6.9.4) ---------------------------------

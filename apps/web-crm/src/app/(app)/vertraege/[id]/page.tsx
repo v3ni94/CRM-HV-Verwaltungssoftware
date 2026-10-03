@@ -7,6 +7,7 @@ import { AllocationAgreementsPanel } from "@/components/contracts/AllocationAgre
 import { AmountsPanel } from "@/components/contracts/AmountsPanel";
 import { ContractAllocationValues } from "@/components/contracts/ContractAllocationValues";
 import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAccount";
+import { ContractIndexTermsPanel } from "@/components/contracts/ContractIndexTermsPanel";
 import { ContractCustomFieldsForm } from "@/components/aj17/ContractCustomFieldsForm";
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
 import { ContractMandates } from "@/components/contracts/ContractMandates";
@@ -170,6 +171,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       {contract.kind === "tenancy"
         ? deposits.map((deposit) => <DepositInterestPanel key={deposit.id} depositId={deposit.id} canUpdate={canUpdate} />)
         : null}
+      {contract.kind === "tenancy" ? <ContractIndexTermsPanel contractId={contract.id} canUpdate={canUpdate} /> : null}
       {contract.kind === "tenancy" ? <AllocationAgreementsPanel contractId={contract.id} propertyId={contract.property_id} canUpdate={canUpdate} /> : null}
       {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} canSettings={permissions.includes("tenant_settings:update")} /> : null}
       {permissions.includes("tickets:read") ? (

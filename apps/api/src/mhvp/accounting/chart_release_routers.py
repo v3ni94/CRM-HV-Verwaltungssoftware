@@ -133,7 +133,11 @@ async def history(
         ]
 
 
-@router.get("/{template_id}/export", summary="Kontenrahmen als CSV oder PDF für den Steuerberater")
+@router.get(
+    "/{template_id}/export",
+    summary="Kontenrahmen als CSV oder PDF für den Steuerberater",
+    response_class=Response,
+)
 async def export(
     template_id: uuid.UUID,
     request: Request,

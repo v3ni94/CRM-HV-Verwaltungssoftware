@@ -805,6 +805,11 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     hoa_majority_rule_four_eyes: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # AO07 / GAK-106 (migration 0458): the creator of a direct debit run may not approve it,
+    # default off (behaviour before AO07). The business question stays open (AN17-01).
+    direct_debit_creator_may_not_approve: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Einladungsfrist in Wochen (M25-03, migration 0187): draft default 3, source status
     # "to be verified"; the check only warns and asks for a documented reason.
     hoa_invitation_weeks: Mapped[int] = mapped_column(
@@ -1020,3 +1025,29 @@ class TenantExportJob(IdMixin, TimestampMixin, TenantMixin, Base):
     # archive is ready and the tenant has ``export_retention_days``); NULL keeps it.
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ConsumerPriceIndex(IdMixin, Base):
+    """AO03 (GAK-203, migration 0456): monthly consumer price index values, platform wide (no
+    tenant, no RLS). Maintained only by a platform administrator via CSV import with source and
+    data date; no automatic source. Only released values feed rent increase proposals."""
+
+    __tablename__ = "consumer_price_index"
+    __table_args__ = (
+        UniqueConstraint("series", "month", name="uq_consumer_price_index_series_month"),
+        CheckConstraint("value > 0", name="value_positive"),
+        CheckConstraint("EXTRACT(DAY FROM month) = 1", name="month_first_day"),
+    )
+
+    series: Mapped[str] = mapped_column(String(40), nullable=False)
+    month: Mapped[date] = mapped_column(Date, nullable=False)
+    value: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    data_as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    released: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    imported_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    imported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )

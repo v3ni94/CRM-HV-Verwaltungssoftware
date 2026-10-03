@@ -4760,6 +4760,15 @@
             "title": "Reason",
             "type": "string"
           },
+          "revocation_status": {
+            "default": "locked",
+            "enum": [
+              "locked",
+              "awaiting_decision"
+            ],
+            "title": "Revocation Status",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -4780,6 +4789,127 @@
           "decision_note"
         ],
         "title": "AccountingWriteOffOut",
+        "type": "object"
+      },
+      "AccountingWriteOffPostingLineOut": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Number"
+          },
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "side": {
+            "enum": [
+              "debit",
+              "credit"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "account_id",
+          "account_number",
+          "amount"
+        ],
+        "title": "AccountingWriteOffPostingLineOut",
+        "type": "object"
+      },
+      "AccountingWriteOffPostingPreviewOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "correction": {
+            "default": "reversal",
+            "title": "Correction",
+            "type": "string"
+          },
+          "effective_on": {
+            "format": "date",
+            "title": "Effective On",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/AccountingWriteOffPostingLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "posting_allowed": {
+            "default": false,
+            "title": "Posting Allowed",
+            "type": "boolean"
+          },
+          "question": {
+            "default": "AN15-02",
+            "title": "Question",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "write_off_id": {
+            "format": "uuid",
+            "title": "Write Off Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "write_off_id",
+          "status",
+          "effective_on",
+          "amount",
+          "lines",
+          "blockers"
+        ],
+        "title": "AccountingWriteOffPostingPreviewOut",
         "type": "object"
       },
       "AccountingWriteOffProposeIn": {
@@ -9987,6 +10117,131 @@
         "title": "AutomationRuleIn",
         "type": "object"
       },
+      "AutomationRuleOut": {
+        "description": "AO11 (AN07): rule as listed and read; ``needs_ai_approval`` marks an ``ai_task`` rule whose\nlast editor does not hold ``ai:approve`` (AM04-03). Actions are already stripped of secrets.",
+        "properties": {
+          "actions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "conditions": {
+            "additionalProperties": true,
+            "title": "Conditions",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Scheduled At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needs_ai_approval": {
+            "default": false,
+            "title": "Needs Ai Approval",
+            "type": "boolean"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "test_mode": {
+            "title": "Test Mode",
+            "type": "boolean"
+          },
+          "trigger_event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Event Type"
+          },
+          "trigger_kind": {
+            "title": "Trigger Kind",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "active",
+          "test_mode",
+          "trigger_kind",
+          "conditions",
+          "actions",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AutomationRuleOut",
+        "type": "object"
+      },
       "AutomationRulePatch": {
         "additionalProperties": false,
         "properties": {
@@ -11592,6 +11847,80 @@
           "reason"
         ],
         "title": "BankCorrectionIn",
+        "type": "object"
+      },
+      "BankReconciliationSettingsIn": {
+        "description": "Partial update: only fields sent are changed; ``null`` resets to the default.",
+        "properties": {
+          "clearing_account_number": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clearing Account Number"
+          },
+          "reconciliation_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "booking_date",
+                  "bank_date"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Basis"
+          }
+        },
+        "title": "BankReconciliationSettingsIn",
+        "type": "object"
+      },
+      "BankReconciliationSettingsOut": {
+        "properties": {
+          "clearing_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clearing Account Number"
+          },
+          "clearing_account_options": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Clearing Account Options",
+            "type": "array"
+          },
+          "reconciliation_basis": {
+            "enum": [
+              "booking_date",
+              "bank_date"
+            ],
+            "title": "Reconciliation Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clearing_account_number",
+          "reconciliation_basis",
+          "clearing_account_options"
+        ],
+        "title": "BankReconciliationSettingsOut",
         "type": "object"
       },
       "BankStatusIn": {
@@ -21737,6 +22066,38 @@
         "title": "ConsentOut",
         "type": "object"
       },
+      "ConstraintCheckOut": {
+        "properties": {
+          "constraints": {
+            "items": {
+              "$ref": "#/components/schemas/UnvalidatedConstraintOut"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "constraints"
+        ],
+        "title": "ConstraintCheckOut",
+        "type": "object"
+      },
       "ConsumptionIn": {
         "additionalProperties": false,
         "properties": {
@@ -31398,6 +31759,33 @@
           "exported_at"
         ],
         "title": "DirectDebitRunOut",
+        "type": "object"
+      },
+      "DirectDebitSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "direct_debit_creator_may_not_approve": {
+            "title": "Direct Debit Creator May Not Approve",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "direct_debit_creator_may_not_approve"
+        ],
+        "title": "DirectDebitSettingsIn",
+        "type": "object"
+      },
+      "DirectDebitSettingsOut": {
+        "properties": {
+          "direct_debit_creator_may_not_approve": {
+            "title": "Direct Debit Creator May Not Approve",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "direct_debit_creator_may_not_approve"
+        ],
+        "title": "DirectDebitSettingsOut",
         "type": "object"
       },
       "DirectDebitSubmitIn": {
@@ -48833,6 +49221,121 @@
         "title": "LettersIn",
         "type": "object"
       },
+      "LettingCpiOut": {
+        "properties": {
+          "data_as_of": {
+            "format": "date",
+            "title": "Data As Of",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "released": {
+            "title": "Released",
+            "type": "boolean"
+          },
+          "series": {
+            "title": "Series",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series",
+          "month",
+          "value",
+          "source",
+          "data_as_of",
+          "released"
+        ],
+        "title": "LettingCpiOut",
+        "type": "object"
+      },
+      "LettingGraduatedStepIo-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "net": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Net"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valid_from",
+          "net"
+        ],
+        "title": "LettingGraduatedStepIo",
+        "type": "object"
+      },
+      "LettingGraduatedStepIo-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "net": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+            "title": "Net",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valid_from",
+          "net"
+        ],
+        "title": "LettingGraduatedStepIo",
+        "type": "object"
+      },
       "LettingIncreaseSettingsIo": {
         "additionalProperties": false,
         "description": "Tenant switches of the rent increase process (GAK-202, GAK-203, AN18-01).",
@@ -48852,6 +49355,265 @@
           }
         },
         "title": "LettingIncreaseSettingsIo",
+        "type": "object"
+      },
+      "LettingIndexAgreementIo-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "base_index": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Base Index"
+          },
+          "base_month": {
+            "format": "date",
+            "title": "Base Month",
+            "type": "string"
+          },
+          "index_name": {
+            "pattern": "^[A-Za-z0-9_.-]{1,40}$",
+            "title": "Index Name",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "index_name",
+          "base_index",
+          "base_month"
+        ],
+        "title": "LettingIndexAgreementIo",
+        "type": "object"
+      },
+      "LettingIndexAgreementIo-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "base_index": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+            "title": "Base Index",
+            "type": "string"
+          },
+          "base_month": {
+            "format": "date",
+            "title": "Base Month",
+            "type": "string"
+          },
+          "index_name": {
+            "pattern": "^[A-Za-z0-9_.-]{1,40}$",
+            "title": "Index Name",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "index_name",
+          "base_index",
+          "base_month"
+        ],
+        "title": "LettingIndexAgreementIo",
+        "type": "object"
+      },
+      "LettingIndexTermsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "graduated_steps": {
+            "items": {
+              "$ref": "#/components/schemas/LettingGraduatedStepIo-Input"
+            },
+            "maxItems": 60,
+            "title": "Graduated Steps",
+            "type": "array"
+          },
+          "index_agreement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LettingIndexAgreementIo-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "LettingIndexTermsIn",
+        "type": "object"
+      },
+      "LettingIndexTermsOut": {
+        "properties": {
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "graduated_steps": {
+            "items": {
+              "$ref": "#/components/schemas/LettingGraduatedStepIo-Output"
+            },
+            "title": "Graduated Steps",
+            "type": "array"
+          },
+          "index_agreement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LettingIndexAgreementIo-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_index_month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Index Month"
+          },
+          "latest_index_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Index Value"
+          }
+        },
+        "required": [
+          "contract_id",
+          "index_agreement",
+          "graduated_steps",
+          "latest_index_month",
+          "latest_index_value"
+        ],
+        "title": "LettingIndexTermsOut",
+        "type": "object"
+      },
+      "LettingProposalOut": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "basis_data": {
+            "additionalProperties": true,
+            "title": "Basis Data",
+            "type": "object"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "current_rent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Current Rent",
+            "type": "string"
+          },
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_rent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Target Rent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contract_id",
+          "basis",
+          "current_rent",
+          "target_rent",
+          "effective_date",
+          "status",
+          "source_note",
+          "basis_data"
+        ],
+        "title": "LettingProposalOut",
+        "type": "object"
+      },
+      "LettingProposalRunOut": {
+        "properties": {
+          "graduated": {
+            "title": "Graduated",
+            "type": "integer"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "graduated",
+          "index",
+          "skipped"
+        ],
+        "title": "LettingProposalRunOut",
         "type": "object"
       },
       "LevelDecisionIn": {
@@ -64172,6 +64934,98 @@
           "offset"
         ],
         "title": "PlatformAuditPage",
+        "type": "object"
+      },
+      "PlatformCpiImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csv": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Csv",
+            "type": "string"
+          },
+          "data_as_of": {
+            "format": "date",
+            "title": "Data As Of",
+            "type": "string"
+          },
+          "series": {
+            "pattern": "^[A-Za-z0-9_.-]{1,40}$",
+            "title": "Series",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series",
+          "source",
+          "data_as_of",
+          "csv"
+        ],
+        "title": "PlatformCpiImportIn",
+        "type": "object"
+      },
+      "PlatformCpiImportOut": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "unchanged"
+        ],
+        "title": "PlatformCpiImportOut",
+        "type": "object"
+      },
+      "PlatformCpiReleaseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "series": {
+            "pattern": "^[A-Za-z0-9_.-]{1,40}$",
+            "title": "Series",
+            "type": "string"
+          },
+          "up_to": {
+            "format": "date",
+            "title": "Up To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series",
+          "up_to"
+        ],
+        "title": "PlatformCpiReleaseIn",
+        "type": "object"
+      },
+      "PlatformCpiReleaseOut": {
+        "properties": {
+          "released": {
+            "title": "Released",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "released"
+        ],
+        "title": "PlatformCpiReleaseOut",
         "type": "object"
       },
       "PlatformDemoFlagIn": {
@@ -87943,6 +88797,29 @@
         "title": "UnitType",
         "type": "string"
       },
+      "UnvalidatedConstraintOut": {
+        "properties": {
+          "constraint": {
+            "title": "Constraint",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "violations": {
+            "title": "Violations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "constraint",
+          "table",
+          "violations"
+        ],
+        "title": "UnvalidatedConstraintOut",
+        "type": "object"
+      },
       "UsageIn": {
         "additionalProperties": false,
         "properties": {
@@ -90662,7 +91539,7 @@
   "info": {
     "description": "Offene REST-API der MH Verwaltungsplattform. Fachbegriffe deutsch, Feldnamen englisch. Fehler als RFC 9457 Problem Details (application/problem+json).",
     "title": "MH Verwaltungsplattform API",
-    "version": "1.69.0"
+    "version": "1.70.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -94612,11 +95489,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -94714,6 +95586,103 @@
           }
         ],
         "summary": "Testdatei mit 20 fiktiven Buchungen für den Importtest",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debit-settings": {
+      "get": {
+        "operationId": "get_direct_debit_settings_api_v1_accounting_direct_debit_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Lastschrift: Ersteller darf nicht freigeben (Schalter)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "put": {
+        "operationId": "put_direct_debit_settings_api_v1_accounting_direct_debit_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectDebitSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Lastschrift: Ersteller darf nicht freigeben setzen",
         "tags": [
           "Buchhaltung"
         ]
@@ -95462,11 +96431,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -102853,11 +103817,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -104241,11 +105200,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -104976,6 +105930,70 @@
           }
         ],
         "summary": "Ausbuchungsvorschlag freigeben (Schalter, Vier Augen, G1) oder ablehnen",
+        "tags": [
+          "Buchhaltung",
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/open-item-write-offs/{write_off_id}/posting-preview": {
+      "get": {
+        "operationId": "write_off_posting_preview_api_v1_accounting_open_item_write_offs__write_off_id__posting_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "write_off_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Write Off Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingWriteOffPostingPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Buchungsvorschau einer Ausbuchung (nur Anzeige, Gegenkonto offen AN15-02, G1)",
         "tags": [
           "Buchhaltung",
           "Buchhaltung"
@@ -109053,11 +110071,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -109744,11 +110757,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -115020,8 +116028,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/AutomationRuleOut"
                   },
                   "title": "Response List Rules Api V1 Automation Rules Get",
                   "type": "array"
@@ -115192,9 +116199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Rule Api V1 Automation Rules  Rule Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AutomationRuleOut"
                 }
               }
             },
@@ -116012,19 +117017,25 @@
             }
           },
           {
-            "description": "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag",
+            "description": "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag; ohne Angabe gilt der Mandantenschalter banking.reconciliation_basis (AO02)",
             "in": "query",
             "name": "basis",
             "required": false,
             "schema": {
-              "default": "booking_date",
-              "description": "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag",
-              "enum": [
-                "booking_date",
-                "bank_date"
+              "anyOf": [
+                {
+                  "enum": [
+                    "booking_date",
+                    "bank_date"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "title": "Basis",
-              "type": "string"
+              "description": "GAK-108: Stichtag der Hauptbuchseite, Buchungsdatum oder Bankbuchungstag; ohne Angabe gilt der Mandantenschalter banking.reconciliation_basis (AO02)",
+              "title": "Basis"
             }
           }
         ],
@@ -121778,6 +122789,104 @@
         ]
       }
     },
+    "/api/v1/banking/reconciliation-settings": {
+      "get": {
+        "operationId": "get_reconciliation_settings_api_v1_banking_reconciliation_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankReconciliationSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Mandantenschalter Klärungskonto und Abstimmungsbasis lesen (AO02)",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "put": {
+        "description": "GAK-107, GAK-108: the clearing account must be a transit or technical account of the\ntenant's chart of accounts (422 otherwise); nothing is booked. Recorded as an event with\nthe previous values.",
+        "operationId": "put_reconciliation_settings_api_v1_banking_reconciliation_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankReconciliationSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankReconciliationSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Mandantenschalter Klärungskonto und Abstimmungsbasis setzen (AO02)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/rule-proposals": {
       "get": {
         "operationId": "list_rule_proposals_api_v1_banking_rule_proposals_get",
@@ -125997,11 +127106,6 @@
         ],
         "responses": {
           "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
             "description": "Successful Response"
           },
           "401": {
@@ -169190,6 +170294,207 @@
         ]
       }
     },
+    "/api/v1/letting/consumer-price-index": {
+      "get": {
+        "operationId": "list_cpi_api_v1_letting_consumer_price_index_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "series",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_.-]{1,40}$",
+              "title": "Series",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LettingCpiOut"
+                  },
+                  "title": "Response List Cpi Api V1 Letting Consumer Price Index Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Verbraucherpreisindex (Plattformdaten, lesend)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/contracts/{contract_id}/index-terms": {
+      "get": {
+        "operationId": "get_index_terms_api_v1_letting_contracts__contract_id__index_terms_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettingIndexTermsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Indexklausel und Staffelstufen des Mietvertrags",
+        "tags": [
+          "letting"
+        ]
+      },
+      "put": {
+        "operationId": "put_index_terms_api_v1_letting_contracts__contract_id__index_terms_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LettingIndexTermsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettingIndexTermsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Indexklausel und Staffelstufen erfassen (nur Eingabe, keine Mietänderung)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
     "/api/v1/letting/flow-import/preview": {
       "post": {
         "operationId": "flow_import_preview_api_v1_letting_flow_import_preview_post",
@@ -171621,6 +172926,121 @@
           }
         ],
         "summary": "Besichtigungstermin anlegen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-increase-proposals": {
+      "get": {
+        "operationId": "list_proposals_api_v1_letting_rent_increase_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "contract_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contract Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LettingProposalOut"
+                  },
+                  "title": "Response List Proposals Api V1 Letting Rent Increase Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Vorschläge des Tagesjobs (Staffel, Index), nur Entwürfe",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-increase-proposals/run": {
+      "post": {
+        "operationId": "run_proposals_api_v1_letting_rent_increase_proposals_run_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettingProposalRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Vorschläge jetzt erzeugen (nur mit Schalter Entwurf)",
         "tags": [
           "letting"
         ]
@@ -186333,6 +187753,212 @@
         "summary": "Schalter: Wartungsfenster zählen als Ausfall (AD10-02)",
         "tags": [
           "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/constraint-checks": {
+      "get": {
+        "operationId": "get_constraint_checks_api_v1_platform_constraint_checks_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstraintCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Nicht validierte Prüfregeln (NOT VALID) mit Zahl der Verstöße",
+        "tags": [
+          "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/constraint-checks/validate": {
+      "post": {
+        "description": "Runs ``VALIDATE CONSTRAINT`` for every unvalidated CHECK in one transaction. On a\nviolation nothing is validated and the answer is 409 with the list.",
+        "operationId": "validate_constraints_api_v1_platform_constraint_checks_validate_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstraintCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Nicht validierte Prüfregeln validieren (Administrator)",
+        "tags": [
+          "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/consumer-price-index/import": {
+      "post": {
+        "description": "A changed value of a month resets its release; equal values stay as they are.",
+        "operationId": "import_cpi_api_v1_platform_consumer_price_index_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformCpiImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformCpiImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Indexwerte per CSV importieren (Quelle und Stand Pflicht, nicht freigegeben)",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/consumer-price-index/release": {
+      "post": {
+        "operationId": "release_cpi_api_v1_platform_consumer_price_index_release_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformCpiReleaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformCpiReleaseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Indexwerte einer Reihe bis Monat freigeben",
+        "tags": [
+          "platform"
         ]
       }
     },

@@ -156,6 +156,8 @@ REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(
         ("PUT", "/api/v1/accounting/payment-runs/settings"),
         ("PUT", "/api/v1/banking/payment-bank-config/{account_id}"),
         ("PUT", "/api/v1/imports/migration/ledgers/{ledger_id}/opening-balances"),
+        # AO03 (GAK-203): release of platform index values (catalogue data, no money moved).
+        ("POST", "/api/v1/platform/consumer-price-index/release"),
     }
 )
 

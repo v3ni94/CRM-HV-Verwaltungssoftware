@@ -402,7 +402,9 @@ async def generate_file(
         return await _run_out(session, run)
 
 
-@router.get("/{run_id}/file", summary="Lastschriftdatei herunterladen (G2)")
+@router.get(
+    "/{run_id}/file", summary="Lastschriftdatei herunterladen (G2)", response_class=Response
+)
 async def download_file(
     run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> Response:

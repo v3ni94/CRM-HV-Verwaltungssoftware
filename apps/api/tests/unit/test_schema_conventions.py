@@ -65,6 +65,7 @@ PLATFORM_TABLES: dict[str, str] = {
     "platform_scale_setting": "platform operations",
     "platform_scale_snapshot": "platform operations",
     "platform_settings": "platform operations",
+    "consumer_price_index": "global index catalogue, platform admin import only (AO03)",
     "price_list_entry": "platform price list",
     "pricing_plan_item": "platform price list",
     "rent_cap_area": "global catalogue of regulated areas",

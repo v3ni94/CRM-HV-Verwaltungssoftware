@@ -43,10 +43,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _logs_to_stderr() -> None:
+    """AO12-01: with ``--out -`` stdout carries only the journal (scripts/backup.sh stores it
+    as the backup file); log lines on stdout would corrupt it, so the handlers write to stderr."""
+    import logging
+
+    for handler in logging.getLogger().handlers:
+        if isinstance(handler, logging.StreamHandler):
+            handler.setStream(sys.stderr)
+
+
 async def run(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     settings = get_settings()
     configure_logging(settings)
+    if str(args.out) == "-":
+        _logs_to_stderr()
     log = get_logger("mhvp.export_deletions")
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
