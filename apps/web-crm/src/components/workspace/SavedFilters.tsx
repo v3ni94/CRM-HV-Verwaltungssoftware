@@ -31,7 +31,7 @@ export function SavedFilters({
 
   const load = useCallback(async () => {
     const result = await bff<SavedFilter[]>(`/api/bff/workspace/filters?resource=${resource}`);
-    if (result.ok) setFilters(result.data);
+    if (result.ok && Array.isArray(result.data)) setFilters(result.data);
   }, [resource]);
 
   useEffect(() => {

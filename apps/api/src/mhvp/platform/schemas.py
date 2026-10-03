@@ -696,6 +696,8 @@ class GateRequestOut(BaseModel):
     scope_legal_entity_ids: list[uuid.UUID] | None = None
     scope_functions: list[str] | None = None
     checklist: dict[str, str] | None = None
+    # GAJ-504: confirmed checklist codes without a checkable evidence reference in the note.
+    checklist_unverified: list[str] = []
 
 
 class GateChecklistItemOut(BaseModel):

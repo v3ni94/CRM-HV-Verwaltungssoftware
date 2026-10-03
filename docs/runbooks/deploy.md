@@ -14,7 +14,11 @@ network (`infra/compose.prod.yaml`).
 4. Check `/api/v1/health/ready` and `/api/v1/platform/ops/metrics`. Staging: template
    `infra/env.staging.example` (own secrets, hosts, database, bucket; M9-07) and, after the
    deploy, `STAGING_API_URL=... STAGING_CRM_URL=... make staging-smoke` (reads only; refuses
-   hosts without `staging`).
+   hosts without `staging`). Since wave 23 (GAJ-508) `scripts/deploy.sh` runs the smoke test
+   itself after a staging deploy (needs `STAGING_API_URL`, `STAGING_CRM_URL`, exit 3 without
+   them, `DEPLOY_SKIP_SMOKE=1` skips). On failure it prints the rollback step to the previous
+   tag (exit 4); `DEPLOY_AUTO_ROLLBACK=1` runs it. A rollback (`DEPLOY_ROLLBACK=1`) switches code
+   and images only and skips the migrate step, the schema stays.
 5. Production additionally needs `DEPLOY_CONFIRM=<tag>`; the script runs a backup before
    migrations. Rollback: previous tag, and for a failed migration restore the backup taken in
    step 5.

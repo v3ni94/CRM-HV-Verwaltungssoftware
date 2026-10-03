@@ -238,3 +238,7 @@ Ein erneuter Import aus der Objektakte stellt ein Dokument, das im Papierkorb li
 ## Dokumente verknüpfen, Download-Link, Spiegelung (GAI-417, Welle 21)
 
 Auf der Dokumentenliste verknüpft der Abschnitt "Dokumente mit einem Objekt verknüpfen" (Schreibrecht Dokumente) mehrere Dokumente mit Objekt, Einheit, Vertrag oder Ticket. Das Ergebnis nennt je Dokument Erfolg oder Grund des Fehlschlags. Am Dokument erzeugt "Download-Link erzeugen" einen kurz gültigen signierten Link, "Spiegelung erneut anstoßen" wiederholt die Ablage in den angebundenen Systemen.
+
+## Zahlungsdateien (gesperrt bis G2)
+
+Lastschrift- und Zahlungsdateien liegen in der Kategorie "Zahlungsdatei (gesperrt bis G2)". Solange die Freigabe G2 nicht erteilt ist, lassen sie sich weder in der Dokumentenliste herunterladen noch über das Portal abrufen oder in Paperless und Google Drive spiegeln. Titel und Metadaten bleiben sichtbar. Ältere Dateien ordnet die Schaltfläche "Fehlende Standardkategorien ergänzen" der Kategorie zu.

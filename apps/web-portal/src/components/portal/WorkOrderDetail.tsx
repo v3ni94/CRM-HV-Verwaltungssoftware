@@ -33,7 +33,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   const [slots, setSlots] = useState(["", "", ""]);
   const [slotNote, setSlotNote] = useState("");
   const [report, setReport] = useState("");
-  const [photos, setPhotos] = useState<FileList | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [invoiceGross, setInvoiceGross] = useState("");
@@ -149,7 +149,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
         return;
       }
       const ids: string[] = [];
-      for (const file of Array.from(photos ?? [])) {
+      for (const file of photos) {
         const id = await uploadOne(file);
         if (id === null) return;
         ids.push(id);
@@ -362,7 +362,22 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           <label htmlFor="photos" className={ui.label}>
             {t("photos")}
           </label>
-          <input id="photos" type="file" multiple accept="image/*" className={ui.input} onChange={(e) => setPhotos(e.target.files)} />
+          <input id="photos" type="file" multiple accept="image/*" className={ui.input} onChange={(e) => setPhotos(Array.from(e.target.files ?? []))} />
+          <label htmlFor="photos-camera" className={`${ui.button} mt-2 inline-block cursor-pointer`}>
+            {t("photosCamera")}
+            <input
+              id="photos-camera"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              data-testid="photos-camera"
+              onChange={(e) => {
+                const shot = Array.from(e.target.files ?? []);
+                setPhotos((prev) => [...prev, ...shot]);
+              }}
+            />
+          </label>
         </div>
         <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
           {t("completeSubmit")}

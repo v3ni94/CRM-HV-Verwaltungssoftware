@@ -119,11 +119,17 @@ class AiAutomationIn(_In):
 
     rent_increase_check: bool | None = None
     batch_mail_classification: bool | None = None
+    realtime_mail_classification: bool | None = None
+    master_data_change_proposals: bool | None = None
+    automation_ai_task: bool | None = None
 
 
 class AutomationOut(BaseModel):
     rent_increase_check: bool
     batch_mail_classification: bool
+    realtime_mail_classification: bool = True
+    master_data_change_proposals: bool = True
+    automation_ai_task: bool = True
     provider_released: bool
     blocked_reason: str | None = None
 

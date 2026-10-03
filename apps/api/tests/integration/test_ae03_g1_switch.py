@@ -248,3 +248,36 @@ def test_outgoing_four_eyes_with_g1_open(database: Database, redis_url: str, wor
             off = {"enabled": False, "reason": "AG19 Ende"}
             _ok(c.put(f"{B}/outgoing", json=off, headers=h))
         assert _ok(c.get(f"{B}/switch-requests", headers=h))["outgoing_enabled"] is False
+
+
+def test_am10_evidence_required_items(client: TestClient, world: World) -> None:
+    """GAJ-503/504: the 18.0 items can only be ticked with linked evidence."""
+    h = bearer(login(client, world, "ae03admin"))
+    body = {"status": "passed", "confirmed_on": "2026-10-03", "confirmed_by_name": "AM10 Prüfer"}
+    for key in ("migration_verified", "legal_entity_separation", "documented_correction"):
+        assert client.put(f"{G1}/items/{key}", json=body, headers=h).status_code == 422
+    assert (
+        client.put(
+            f"{G1}/items/migration_verified", json=body | {"evidence_ref": "ci-run:7"}, headers=h
+        ).status_code
+        == 422
+    )
+    item = _ok(
+        client.put(
+            f"{G1}/items/migration_verified",
+            json=body | {"evidence_ref": "doc:docs/acceptance/m8-abgleich.md"},
+            headers=h,
+        )
+    )
+    assert item["evidence_kind"] == "document"
+    assert item["evidence_required"] is True
+    case = _ok(
+        client.put(f"{G1}/items/D04", json=body | {"evidence_ref": "ci-run:99@abcdef1"}, headers=h)
+    )
+    assert case["evidence_kind"] == "test_run"
+    state = _ok(client.get(G1, headers=h))
+    keys = {m["item_key"] for m in state["manual"]}
+    assert {"migration_verified", "legal_entity_separation", "documented_correction"} <= keys
+    assert "cases_passed_without_test_run" in state
+    r = bearer(login(client, world, "ae03reader"))
+    assert client.put(f"{G1}/items/migration_verified", json=body, headers=r).status_code == 403

@@ -323,7 +323,7 @@ describe("BFF proxy", () => {
     ["POST", `banking/payment-batches/${ID}/submit`],
     ["POST", "banking/csv-mappings/import"],
     ["DELETE", `platform/licenses/${ID}`], // M27-03: licences are ended, never deleted
-    ["POST", `accounting/receivable-runs/${ID}/reverse`],
+    ["POST", `hoa/statements/${ID}/units/${ID}/pdf`],
     ["PATCH", `hoa/resolutions/${ID}`],
     ["DELETE", `platform/rent-law/cap-areas/${ID}`],
     ["PUT", `platform/tenants/${ID}/g5-evidence/Not-A-Code`],
@@ -544,6 +544,8 @@ describe("BFF proxy, AJ17 mask paths (GAI-412 to GAI-420)", () => {
     ["POST", "documents/bulk-link"],
     ["GET", `documents/${ID}/download-url`],
     ["POST", `documents/${ID}/mirror`],
+    ["POST", `accounting/receivable-runs/${ID}/reverse`], // GAJ-101
+    ["GET", `hoa/statements/${ID}/units/${ID}/pdf`], // GAJ-203
     ["POST", `mail/messages/${ID}/attachments/${ID}/invoice-extraction`],
     ["PUT", `billing/heating-cost-imports/${ID}/rows`],
     ["GET", `letting/prospects/${ID}/self-disclosure-links`],

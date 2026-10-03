@@ -28,6 +28,7 @@ from mhvp.billing.models import (
 )
 from mhvp.billing.routers import StatementSettingsIn, check_period
 from mhvp.billing.status import StatementStatus
+from mhvp.billing.write_responses import BillingIdOut, BillingInspectionOut, BillingResultEntriesOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
@@ -210,7 +211,11 @@ _COST_ITEM_AUDIT_FIELDS = (
 )
 
 
-@router.put("/{statement_id}/cost-items/{item_id}", summary="Kostenposition im Entwurf ändern")
+@router.put(
+    "/{statement_id}/cost-items/{item_id}",
+    response_model=BillingIdOut,
+    summary="Kostenposition im Entwurf ändern",
+)
 async def update_item(
     statement_id: uuid.UUID,
     item_id: uuid.UUID,
@@ -392,6 +397,7 @@ async def get_diff(
 
 @router.post(
     "/{statement_id}/result-entries",
+    response_model=BillingResultEntriesOut,
     status_code=201,
     summary="Ergebnisbuchungen als Entwurf erzeugen (Forderung/Gutschrift, G3)",
 )
@@ -476,7 +482,10 @@ _INSPECTION_AUDIT_FIELDS = (
 
 
 @router.post(
-    "/{statement_id}/inspections", status_code=201, summary="Belegeinsicht: Anfrage erfassen"
+    "/{statement_id}/inspections",
+    status_code=201,
+    summary="Belegeinsicht: Anfrage erfassen",
+    response_model=BillingInspectionOut,
 )
 async def create_inspection(
     statement_id: uuid.UUID,
@@ -514,6 +523,7 @@ async def create_inspection(
 
 @router.patch(
     "/{statement_id}/inspections/{inspection_id}",
+    response_model=BillingInspectionOut,
     summary="Belegeinsicht: Bereitstellung, Schwärzung, Einwendung, Abschluss",
 )
 async def patch_inspection(

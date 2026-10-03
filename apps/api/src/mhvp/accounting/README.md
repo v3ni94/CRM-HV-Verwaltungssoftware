@@ -512,3 +512,13 @@ Trigger `open_item_guard` (erweitert), `journal_entry_period_lock`, `payment_ord
 ## Nachweisereignisse und Kontoauszugskette (AJ04, Welle 21)
 
 Siehe docs/rules/AJ04-kontoauszugskette-und-nachweis.md: die Hauptbuchprüfung liefert Brüche der Kontoauszugskette getrennt als bank_findings mit bank_ok, ohne das Prüfergebnis der Buchungen zu verändern (GAI-604), Steuer, Gläubiger und Zahlungskonfiguration emittieren Ereignisse mit alt und neu (GAI-307), die alte Liquiditätsroute prüft den Rechtsträgerbereich (GAI-601).
+
+## Typed write responses (AL04, GAI-304)
+
+Writing routes without money amounts declare response models from `accounting/write_responses.py`
+(`extra="allow"`, no field loss). Routes returning amounts stay in
+`tests/unit/data/untyped_routes_allowlist.txt` until the JSON format of Decimal is decided.
+
+## AL03 (GAI-307 Rest): Ereignisse auf den restlichen Geldrouten
+
+Über `audit_events.record_change` (alt und neu) emittieren jetzt zusätzlich: Standardvorlage anlegen (`chart_template.default_saved`), Debitoren- und Kreditorenabgleich (`ledger.debtors_synced`, `ledger.creditors_synced`), Prüfung eines Buchungsentwurfs durch die zweite Person (`journal_entry.approved`), Kostenumbuchung und Zinsbuchung als Entwurf (`journal_entry.cost_transfer_drafted`, `journal_entry.interest_drafted`), Storno eines Sollstellungslaufs (`receivable_run.reversed`), Zustellnachweis (`dunning_delivery_proof.created`) und Mahnbescheid-Vorbereitung (`dunning_mahnbescheid.prepared`, ohne Name und Anschrift des Schuldners im Ereignis). In der Abrechnung: Abrechnung anlegen und neue Version (`statement.created`, `statement.version_created`), Heizkosteneingaben (`statement_heating.*`), Messdienstimport (`heating_cost_import.*`) und Eigentümerabrechnung anlegen, Optionen, Freigabe (`owner_statement.*`). Die CO2-Aufteilung (`/statements/co2-split`) ist eine reine Berechnung ohne Speicherung und emittiert bewusst nichts; ebenso Vorschau- und Prüfrouten.

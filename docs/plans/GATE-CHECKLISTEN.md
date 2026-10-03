@@ -19,6 +19,17 @@ Verweis, Welle 16, AE03). Der Automatikschalter lässt sich erst nach offener G1
 und Freigabe durch eine zweite Person einschalten (`/api/v1/banking/automation/switch-requests`);
 der Vergleichslauf (`GET /api/v1/banking/automation/comparison`) ist Nachweis, kein Beweis.
 
+Welle 23 (AM10, GAJ-503): eigene Prüfpunkte für die in 18.0 genannten Voraussetzungen
+geprüfte Migration (`migration_verified`, Abgleichbericht ohne ungeklärte Differenz, Abnahme
+M8-08), Rechtsträgertrennung (`legal_entity_separation`) und dokumentierte Korrektur
+(`documented_correction`). Diese drei Punkte lassen sich nur mit verknüpftem Nachweis abhaken
+(422 sonst). GAJ-504: Nachweisverweise sind prüfbar typisiert, `ci-run:<Lauf>@<Commit>`
+(CI-Lauf mit den annex_d-Markern), `commit:<SHA>`, `version:<x.y.z>`, `doc:<Pfad>`; die
+Übersicht zeigt `evidence_kind` je Punkt und `cases_passed_without_test_run`, der G1-Antrag
+nennt beide Lücken im Nachweistext. Für G2 bis G4 zeigt `checklist_unverified` am Antrag die
+Codes, deren Bestätigung keinen solchen Verweis enthält; die Genehmigungsregel selbst bleibt
+unverändert (AA02-01).
+
 ## G2 Zahlungsveranlassung
 
 | Code | Prüfpunkt | Nachweis |

@@ -53,6 +53,7 @@ from mhvp.platform.gate_checklists import (
     missing_checklist_items,
     unknown_checklist_items,
     unknown_functions,
+    unverified_checklist_items,
 )
 from mhvp.platform.models import (
     ApiKey,
@@ -2628,6 +2629,9 @@ def _gate_out(item: ReleaseGateRequest) -> GateRequestOut:
         scope_legal_entity_ids=item.scope_legal_entity_ids,
         scope_functions=item.scope_functions,
         checklist=item.checklist,
+        checklist_unverified=unverified_checklist_items(ReleaseGate(item.gate), item.checklist)
+        if ReleaseGate(item.gate) in GATE_CHECKLISTS
+        else [],
     )
 
 

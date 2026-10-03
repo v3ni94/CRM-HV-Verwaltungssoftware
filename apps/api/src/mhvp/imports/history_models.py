@@ -142,3 +142,105 @@ class MigratedOpenItem(IdMixin, TimestampMixin, TenantMixin, Base):
     resolution_ref: Mapped[str | None] = mapped_column(String(200))
     cutoff_date: Mapped[date | None] = mapped_column(Date)
     source_file_id: Mapped[uuid.UUID | None] = _fk("import_source_file.id", ondelete="SET NULL")
+
+
+# GAJ-501 (AM09, migration 0450): historical statements and resolutions of the old system.
+# Filed as evidence and checked, never posted, never sent, never a live statement or a live
+# resolution of the platform (G3, G4 closed). Versions are kept side by side.
+
+STATEMENT_KINDS = (
+    "hoa_annual",  # WEG Jahresabrechnung
+    "hoa_budget",  # WEG Wirtschaftsplan
+    "operating_costs",  # Betriebskostenabrechnung Miete
+    "heating_costs",  # Heizkostenabrechnung
+    "other",
+)
+RESOLUTION_RESULTS = ("accepted", "rejected", "postponed", "unknown")
+RESOLUTION_FORMS = ("meeting", "circular", "unknown")
+
+
+class MigratedStatement(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "migrated_statement"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "property_id",
+            "kind",
+            "period_start",
+            "period_end",
+            "unit_number",
+            "version",
+            name="uq_migrated_statement_tenant_id",
+        ),
+        CheckConstraint("period_end >= period_start", name="period"),
+        CheckConstraint("version >= 1", name="version"),
+        CheckConstraint(
+            "kind IN ('hoa_annual', 'hoa_budget', 'operating_costs', 'heating_costs', 'other')",
+            name="kind",
+        ),
+        Index("ix_migrated_statement_property", "tenant_id", "property_id", "period_end"),
+    )
+
+    source: Mapped[str] = mapped_column(
+        String(40), nullable=False, default=SOURCE, server_default=SOURCE
+    )
+    property_id: Mapped[uuid.UUID] = _fk("property.id", nullable=False, ondelete="CASCADE")
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default=sql_text("1")
+    )
+    # Empty string: statement of the whole property (keeps the unique key total).
+    unit_number: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="", server_default=""
+    )
+    unit_id: Mapped[uuid.UUID | None] = _fk("unit.id", ondelete="SET NULL")
+    recipient: Mapped[str | None] = mapped_column(String(300))
+    # Result as the source states it (positive: back payment, negative: credit); information
+    # only, no receivable is derived from it.
+    result_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    sent_on: Mapped[date | None] = mapped_column(Date)
+    resolution_ref: Mapped[str | None] = mapped_column(String(200))
+    document_ref: Mapped[str | None] = mapped_column(String(300))
+    note: Mapped[str | None] = mapped_column(Text)
+    source_file_id: Mapped[uuid.UUID | None] = _fk("import_source_file.id", ondelete="SET NULL")
+    row_number: Mapped[int | None] = mapped_column(Integer)
+
+
+class MigratedResolution(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "migrated_resolution"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "property_id",
+            "resolved_on",
+            "item_number",
+            name="uq_migrated_resolution_tenant_id",
+        ),
+        CheckConstraint(
+            "result IN ('accepted', 'rejected', 'postponed', 'unknown')",
+            name="result",
+        ),
+        CheckConstraint("form IN ('meeting', 'circular', 'unknown')", name="form"),
+        Index("ix_migrated_resolution_property", "tenant_id", "property_id", "resolved_on"),
+    )
+
+    source: Mapped[str] = mapped_column(
+        String(40), nullable=False, default=SOURCE, server_default=SOURCE
+    )
+    property_id: Mapped[uuid.UUID] = _fk("property.id", nullable=False, ondelete="CASCADE")
+    resolved_on: Mapped[date] = mapped_column(Date, nullable=False)
+    item_number: Mapped[str] = mapped_column(String(50), nullable=False)  # TOP
+    reference: Mapped[str | None] = mapped_column(String(200))  # Beschlussnummer der Sammlung
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    wording: Mapped[str | None] = mapped_column(Text)
+    result: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="unknown", server_default="unknown"
+    )
+    form: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="unknown", server_default="unknown"
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    source_file_id: Mapped[uuid.UUID | None] = _fk("import_source_file.id", ondelete="SET NULL")
+    row_number: Mapped[int | None] = mapped_column(Integer)

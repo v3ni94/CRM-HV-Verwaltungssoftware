@@ -19,6 +19,10 @@ from sqlalchemy import insert, select, update
 from mhvp.accounting import direct_debit as dd
 from mhvp.accounting.direct_debit_models import DirectDebitRun, DirectDebitRunStatus
 from mhvp.accounting.models import Ledger
+from mhvp.accounting.write_responses import (
+    AccountingEntityCreditorIdOut,
+    AccountingTenantCreditorIdOut,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import diff, emit
@@ -185,6 +189,7 @@ async def list_creditor_ids(
 
 @router.put(
     "/creditor-ids/legal-entities/{legal_entity_id}",
+    response_model=AccountingEntityCreditorIdOut,
     summary="Gläubiger-Identifikationsnummer des Rechtsträgers hinterlegen",
 )
 async def set_creditor_id(
@@ -220,7 +225,9 @@ async def set_creditor_id(
 
 
 @router.put(
-    "/creditor-ids/tenant", summary="Gläubiger-Identifikationsnummer des Mandanten (Rückfall)"
+    "/creditor-ids/tenant",
+    summary="Gläubiger-Identifikationsnummer des Mandanten (Rückfall)",
+    response_model=AccountingTenantCreditorIdOut,
 )
 async def set_tenant_creditor_id(
     body: CreditorIdIn,
@@ -375,7 +382,7 @@ async def generate_file(
 ) -> DirectDebitRunOut:
     async with tenant_tx(request, principal) as session:
         run = await _run(session, run_id)
-        _, document_id = await dd.generate_file(
+        await dd.generate_file(
             session, BlobStore(request.app.state.settings), run, user_id=principal.user_id
         )
         await emit(
@@ -385,7 +392,8 @@ async def generate_file(
             entity_type="direct_debit_run",
             entity_id=run.id,
             actor_user_id=principal.user_id,
-            payload={"document_id": str(document_id), "format": run.format},
+            # GAJ-301: no document id in the payload (webhooks would point at the file).
+            payload={"format": run.format},
         )
         return await _run_out(session, run)
 

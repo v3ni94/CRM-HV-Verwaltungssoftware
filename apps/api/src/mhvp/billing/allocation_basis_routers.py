@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from mhvp.billing import allocation_basis
 from mhvp.billing.models import Statement
+from mhvp.billing.write_responses import BillingAllocationBasisSettingOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
@@ -51,7 +52,11 @@ async def get_setting(
         return {"block_output": await allocation_basis.blocking_enabled(session)}
 
 
-@router.put("", summary="Schalter: Prüfbericht blockiert die Ausgabe setzen")
+@router.put(
+    "",
+    response_model=BillingAllocationBasisSettingOut,
+    summary="Schalter: Prüfbericht blockiert die Ausgabe setzen",
+)
 async def put_setting(
     body: AllocationBasisSettingIn,
     request: Request,

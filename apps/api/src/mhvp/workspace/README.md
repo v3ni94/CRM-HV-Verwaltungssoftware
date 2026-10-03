@@ -203,3 +203,5 @@ Der Mandantenschalter `notification_mail_content` (`voll` Standard, `hinweis`) l
 * Regel `docs/rules/AE36-SCALE.md`, Runbook `docs/runbooks/leistungsmessung.md` (Abschnitt AE36). Tests: `tests/unit/test_ae36_scale.py`, `tests/integration/test_ae36_demo_scale.py`.
 
 GAI-110 (Welle 21): `FILTER_RESOURCES` enthält zusätzlich `journal`, `open_items`, `dunning_cases`, `hoa_properties` und `work_orders`. Angebunden sind das Journal (Parameter `property`) und die Auftragsliste (`status`); Offene Posten, Mahnfälle und WEG Listen haben noch keine Abfrageparameter in der Oberfläche, die Ressourcen stehen für die Anbindung bereit.
+
+AL05 (Welle 23, GAI-110 Rest): `FILTER_RESOURCES` enthält zusätzlich `payment_runs` (gespeicherte Zahllauf-Vorschauen, Parameter `as_of`, `trigger`) und `mailbox` (Postfach, Parameter `tab`, `status`, `postfach`, `q`, `abgleich`). `GET /accounting/payment-runs/previews` nimmt zusätzlich `as_of` (Stichtag, exakt) und `trigger` (`manual`, `schedule`, `failed`) an; unbekannte Parameter bleiben 422. Tests: `tests/integration/test_al05_preview_filters.py`.

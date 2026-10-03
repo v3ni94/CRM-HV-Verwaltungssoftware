@@ -27,6 +27,17 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 scripts/sync_agent_docs.py --check
+      # GAJ-506: the same repository checks as `make lint`, directly in CI (not only via Vitest).
+      - name: i18n consistency
+        run: python3 scripts/check_i18n.py
+      - name: i18n key usage
+        run: python3 scripts/check_i18n_usage.py
+      - name: Client import guard
+        run: python3 scripts/check_client_imports.py
+      - name: Handbook and help index up to date
+        run: |
+          python3 scripts/build_handbook.py --check
+          python3 scripts/build_help_index.py --check
 
   version-check:
     # VERSION, CHANGELOG.md und changelog.ts stimmen ueberein (GAI-112, scripts/bump_version.py).
@@ -76,6 +87,17 @@ jobs:
           echo "AGE-SECRET-KEY-CI-DRY-RUN" > "$RUNNER_TEMP/identity.txt"
           BACKUP_AGE_IDENTITY="$RUNNER_TEMP/identity.txt" make restore-drill DRY_RUN=1
 
+  pitr-drill:
+    # PITR mit WAL-Replay gegen einen Wegwerf-Cluster, Dauer gegen RTO 4 Stunden (GAJ-505).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-16
+      - run: make pitr-drill-test
+
   secrets-scan:
     # Vollstaendiger Secrets-Scan der Historie dieses Pushs/PRs (Sicherheitspruefung 27.09.2026,
     # Befund 6 / OE-M27-02-03; der bisherige Muster-Grep deckte nur den aktuellen Stand ab).
@@ -108,14 +130,35 @@ jobs:
       - name: Migrationen gegen Basis pruefen
         env:
           PR_BASE: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        # GAJ-507: a push is checked against the state before the push and, in addition,
+        # against the newest release tag (or origin/main). Fetch errors fail the job.
         run: |
+          set -euo pipefail
+          bases=()
           if [ -n "$PR_BASE" ]; then
-            BASE="origin/$PR_BASE"
+            git fetch --no-tags origin "$PR_BASE"
+            bases+=("origin/$PR_BASE")
           else
-            BASE="origin/claude/funny-cerf-ppg9in"
+            if [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ] \
+              && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+              bases+=("$PUSH_BEFORE")
+            fi
+            tag="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+            if [ -n "$tag" ]; then
+              bases+=("$tag")
+            elif git ls-remote --exit-code --heads origin main >/dev/null; then
+              git fetch --no-tags origin main
+              bases+=("origin/main")
+            fi
           fi
-          git fetch --no-tags origin "${BASE#origin/}" || true
-          scripts/check-migrations.sh "$BASE"
+          if [ "${#bases[@]}" -eq 0 ]; then
+            echo "migrations-guard: keine Vergleichsbasis (weder Vorgaengerstand noch Tag noch main)" >&2
+            exit 1
+          fi
+          for base in "${bases[@]}"; do
+            scripts/check-migrations.sh "$base"
+          done
 
   api:
     runs-on: ubuntu-24.04

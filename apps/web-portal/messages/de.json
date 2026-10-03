@@ -236,6 +236,22 @@
       "rejected": "Abgelehnt"
     },
     "photoHint": "Fotos werden ohne Aufnahmedaten (Ort, Kamera) gespeichert. HEIC-Fotos werden in JPEG umgewandelt.",
+    "photoCamera": "Foto aufnehmen",
+    "ordersTitle": "Stand der Aufträge",
+    "orderNumber": "Auftrag {n}",
+    "orderScheduled": "Termin: {date}",
+    "orderStatus": {
+      "requested": "angefragt",
+      "quoted": "Angebot liegt vor",
+      "approved": "beauftragt",
+      "scheduled": "terminiert",
+      "in_progress": "in Ausführung",
+      "done": "ausgeführt",
+      "invoiced": "abgerechnet",
+      "accepted": "abgenommen",
+      "rejected": "abgelehnt",
+      "cancelled": "storniert"
+    },
     "attachments": "Anhänge",
     "appointments": "Terminvorschläge des Handwerkers",
     "appointmentsHint": "Bitte wählen Sie einen Termin. Die Auswahl gilt als Bestätigung gegenüber Handwerker und Verwaltung.",
@@ -308,6 +324,11 @@
     "estimatedHint": "Geschätzte Werte sind gekennzeichnet; fehlende Werte werden nicht durch Null ersetzt."
   },
   "Meter": {
+    "photo": "Foto des Zählerstands",
+    "photoCamera": "Foto aufnehmen",
+    "photoHint": "Ein Foto des Zählers mit gut lesbarem Stand dient der Verwaltung als Ablesebeleg.",
+    "photoMissing": "Ohne Foto kann die Verwaltung die Ablesung nur eingeschränkt prüfen. Bitte fügen Sie nach Möglichkeit ein Foto bei.",
+    "photoMissingSent": "Der Stand wurde ohne Foto übermittelt. Bitte reichen Sie ein Foto nach, falls die Verwaltung danach fragt.",
     "title": "Zählerstand melden",
     "meterId": "Zähler-ID",
     "meterIdHint": "Die Zähler-ID entnehmen Sie Ihren Unterlagen oder erfragen Sie bei der Verwaltung.",
@@ -425,6 +446,7 @@
     "proposalsList": "Gesendete Terminvorschläge",
     "appointmentDirect": "Termin direkt festlegen (ohne Vorschlag)",
     "photosStored": "Fotos der Ausführung",
+    "photosCamera": "Foto aufnehmen",
     "proposalStatus": {
       "proposed": "Offen",
       "accepted": "Bestätigt",
@@ -1222,6 +1244,32 @@
     "open": "Beleg herunterladen",
     "unavailable": "Für Sie nicht abrufbar",
     "truncated": "Die Liste ist gekürzt, bitte Suche oder Jahr eingrenzen."
+  },
+  "OwnerInspection": {
+    "title": "Einsichtsanfrage",
+    "intro": "Sie können Einsicht in die Verwaltungsunterlagen Ihrer Gemeinschaft beantragen. Die Verwaltung prüft die Anfrage und stimmt den Weg der Einsicht mit Ihnen ab.",
+    "community": "Gemeinschaft",
+    "scope": "Umfang",
+    "scopeText": "Beschreibung (optional)",
+    "scopeRequired": "Bitte einen Umfang wählen oder beschreiben.",
+    "submit": "Anfrage senden",
+    "submitted": "Die Einsichtsanfrage wurde übermittelt.",
+    "list": "Ihre Anfragen",
+    "requestedOn": "Gestellt am {date}",
+    "kinds": {
+      "statement": "Abrechnung",
+      "receipts": "Belege",
+      "contracts": "Verträge",
+      "resolutions": "Beschlüsse"
+    },
+    "status": {
+      "requested": "eingegangen",
+      "released": "freigegeben",
+      "provided": "bereitgestellt",
+      "retrieved": "abgerufen",
+      "closed": "abgeschlossen",
+      "rejected": "abgelehnt"
+    }
   },
   "OwnerStatements": {
     "title": "Hausgeldabrechnung",

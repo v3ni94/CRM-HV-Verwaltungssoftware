@@ -1,4 +1,86 @@
 {
+  "OperationsMasks": {
+    "delivery": {
+      "open": "Zustellung erfassen",
+      "title": "Zustellung der Verbrauchsinformation",
+      "channel": "Weg",
+      "channels": {
+        "post": "Post",
+        "email": "E-Mail",
+        "hand_delivery": "Persönliche Übergabe"
+      },
+      "deliveredOn": "Zugestellt am",
+      "evidence": "Nachweis",
+      "evidenceHint": "Kurzer Nachweis, mindestens 3 Zeichen, zum Beispiel Einlieferungsbeleg oder Übergabeprotokoll. Die Erfassung versendet nichts.",
+      "save": "Zustellung speichern",
+      "cancel": "Abbrechen",
+      "saved": "Zustellung gespeichert."
+    },
+    "reverse": {
+      "open": "Lauf stornieren",
+      "hint": "Storniert die Sollstellungen dieses Laufs durch Gegenbuchungen. Die ursprünglichen Buchungen bleiben erhalten. Erfordert die Berechtigung zur Freigabe.",
+      "reason": "Begründung",
+      "date": "Stornodatum (optional)",
+      "submit": "Storno ausführen",
+      "cancel": "Abbrechen",
+      "confirm": "Alle Sollstellungen dieses Laufs stornieren? Die Geschäftsführung ist über den Vorgang zu informieren.",
+      "done": "Lauf storniert."
+    },
+    "diff": {
+      "title": "Differenz zur Vorversion",
+      "load": "Differenz zur Vorversion anzeigen",
+      "hint": "Vergleich der Version {version} mit der ersetzten Version, berechnet aus den gespeicherten Ständen.",
+      "none": "Keine Unterschiede.",
+      "unit": "Einheit",
+      "status": "Status",
+      "costs": "Kosten",
+      "balance": "Ergebnis",
+      "position": "Position",
+      "old": "Alt",
+      "new": "Neu",
+      "delta": "Differenz",
+      "statuses": {
+        "added": "neu",
+        "removed": "entfallen",
+        "changed": "geändert",
+        "unchanged": "unverändert"
+      }
+    },
+    "proposal": {
+      "title": "Zuordnungsvorschlag bei Eigentümerwechsel",
+      "notice": "Vorschlag ohne Buchungswirkung. Die Zuordnung des Ergebnisses beim Eigentümerwechsel ist fachlich noch nicht entschieden.",
+      "load": "Vorschlag laden",
+      "empty": "Keine Einheit mit Ergebnis.",
+      "day": "Stichtag Beschluss: {date}",
+      "unit": "Einheit",
+      "result": "Ergebnis",
+      "used": "Verwendet",
+      "proposed": "Vorschlag",
+      "noOwner": "kein Eigentümer",
+      "differs": "weicht ab"
+    },
+    "correct": {
+      "title": "Zahlungsposition korrigieren",
+      "help": "Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet.",
+      "net": "Netto",
+      "vat": "USt in Prozent",
+      "gross": "Brutto",
+      "grossPending": "Brutto folgt nach gültiger Eingabe",
+      "reason": "Grund",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "save": "Korrektur speichern",
+      "cancel": "Abbrechen",
+      "reasons": {
+        "initial": "Erstanlage",
+        "increase": "Erhöhung",
+        "index": "Index",
+        "graduated": "Staffel",
+        "adjustment_from_statement": "Anpassung aus Abrechnung",
+        "other": "Sonstiges"
+      }
+    }
+  },
   "HoaNewVersion": {
     "open": "Neue Version",
     "title": "Neue Version der Jahresabrechnung",
@@ -1332,7 +1414,9 @@
       "meter": "Zähler",
       "energy_certificate": "Energieausweise",
       "service_provider": "Dienstleisterverhältnisse",
-      "portal_user": "Portalnutzer (nur Status)"
+      "portal_user": "Portalnutzer (nur Status)",
+      "historical_statement": "Altabrechnungen je Version (nur Ablage)",
+      "resolution": "Beschlusssammlung (nur Ablage)"
     },
     "stagedOnlyBadge": "nur Zwischenablage",
     "stagedOnlyHint": "Journal und Bankumsätze werden nur zwischengespeichert, bis die Buchhaltung verfügbar ist. Es entstehen keine Buchungen.",
@@ -12316,6 +12400,7 @@
   },
   "contracts": {
     "amounts": {
+      "correct": "Korrigieren",
       "title": "Sollbeträge",
       "help": "Miete, Vorauszahlungen, Hausgeld, Rücklagenzuführung und weitere Zahlungsarten mit Gültigkeitszeitraum. Ein neuer Betrag gilt ab einem Datum und schließt den offenen Vorbetrag derselben Art am Vortag; frühere Stände bleiben unverändert. Das Erfassen bucht nichts: Sollstellungen entstehen im Sollstellungslauf der Buchhaltung, Abrechnungen bleiben bis zur Freigabestufe G3 Entwürfe.",
       "formHelp": "Neuer Betrag ab Datum. Brutto wird aus Netto und Umsatzsteuer berechnet. Negative Beträge nur bei Mietminderung.",
@@ -12494,6 +12579,7 @@
     "empty": "Noch keine Verbrauchsinformation erzeugt.",
     "rows": "{count, plural, one {# Datensatz je Einheit und Monat} other {# Datensätze je Einheit und Monat}}",
     "columns": {
+      "delivery": "Zustellung",
       "month": "Monat",
       "units": "Einheiten",
       "incomplete": "ohne Verbrauch",
@@ -17066,6 +17152,18 @@
         "title": "Ausweis haushaltsnaher Leistungen, Auswahl der Rechnungen",
         "description": "Rechnungsdatum im Jahr (bisheriges Verhalten) oder nur bezahlte Rechnungen mit Zahlungsdatum im Jahr. Jede Zeile zeigt den Zahlungsstand, ein zweiter Ausweis desselben Jahres erhält einen Hinweis. Die steuerliche Festlegung bleibt offen."
       },
+      "ai-realtime-mail-classification": {
+        "title": "KI-Einordnung je eingehender Ticket-Mail",
+        "description": "Jede eingehende Mail zu einem Ticket wird sofort von der KI eingeordnet und erhält einen Antwortvorschlag. Standard an wie bisher; Anbieterfreigabe und Monatsbudget gelten weiter. Ob der Standard auf aus gestellt wird, ist offen."
+      },
+      "ai-master-data-proposals": {
+        "title": "KI-Stammdatenvorschlag aus Ticket-Mails",
+        "description": "Eingehende Ticket-Mails werden von der KI auf geänderte Kontaktdaten geprüft; das Ergebnis ist nur ein Vorschlag zur Freigabe. Standard an wie bisher; die Prüfung auf Rechnungskopien bleibt unberührt."
+      },
+      "ai-automation-ai-task": {
+        "title": "KI-Aufgaben aus Automationsregeln",
+        "description": "Automationsregeln dürfen die Aktion KI-Aufgabe ausführen. Aus bedeutet: die Aktion wird übersprungen. Anlegen oder Ändern solcher Regeln erfordert unabhängig davon das Recht ai:approve."
+      },
       "deposit-limit-hint": {
         "title": "Prüfhinweis zur Kautionshöhe und Ratenzahl",
         "description": "Bei Wohnraum erscheint ein nicht sperrender Hinweis, wenn die Kaution über dem eingestellten Vielfachen der Miete ohne Nebenkosten (Standard 3) oder die Ratenzahl über dem Vergleichswert (Standard 3) liegt. Keine rechtliche Bewertung."
@@ -17795,7 +17893,11 @@
       "empty": "Noch keine gespeicherte Vorschau.",
       "row": "Stand {asOf}, {trigger}, {count} Rechnungen",
       "triggerManual": "manuell",
-      "triggerScheduled": "wöchentlich"
+      "triggerScheduled": "wöchentlich",
+      "triggerFailed": "fehlgeschlagen",
+      "filterAsOf": "Stichtag",
+      "filterTrigger": "Auslöser",
+      "filterAll": "Alle"
     },
     "payout": {
       "title": "Auszahlung ohne Rechnung (Entwurf)",
@@ -17824,6 +17926,13 @@
       "action": "Mahnschreiben versenden",
       "hint": "Bis zur Freigabe erfolgt der Versand außerhalb der Plattform und wird mit „Als versendet markieren“ dokumentiert.",
       "locked": "Gesperrt, solange die Freigabestufe G1 (produktive Buchhaltung) geschlossen ist und der Versandweg nicht freigegeben ist."
+    },
+    "unitPdf": {
+      "title": "Einzelabrechnung als PDF",
+      "action": "Einheit {unit}",
+      "hint": "Entwurf der Einzelabrechnung zur Prüfung vor der Ausgabe.",
+      "notApproved": "Erst nach interner Freigabe der Abrechnung möglich.",
+      "locked": "Gesperrt, solange die Freigabestufe G4 (WEG Abrechnungen) geschlossen ist."
     },
     "ownerPdf": {
       "action": "Abrechnung als PDF",

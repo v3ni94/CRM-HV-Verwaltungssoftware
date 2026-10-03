@@ -633,3 +633,7 @@ Die Bankabstimmung zeigt je Auszug in der Spalte "Kette zum Vorauszug", ob der A
 ## Bankrückmeldung: Ausgeführt und Zurückgegeben (GAI-404, Welle 22)
 
 Unter Bank, Zahlungen bietet Bankrückmeldung erfassen zusätzlich die Status Ausgeführt und Zurückgegeben. Beide haben Buchungswirkung: Ausgeführt gleicht die Verbindlichkeit in Höhe der Belastung aus und verlangt die ID des Bankumsatzes als Nachweis, Zurückgegeben storniert diesen Ausgleich (Grund ist Pflicht) und öffnet die Verbindlichkeit wieder. Gebuchte Werte werden nie überschrieben. Die Maske zeigt den Stand der Freigabestufe G2; solange G2 für den Mandanten nicht offen ist oder der Stand nicht geladen werden kann, ist Erfassen gesperrt. Erfassen Sie Ausführung oder Rückgabe nur mit dem Bankbeleg und lassen Sie die Buchung von einer zweiten Person prüfen (Vier Augen). Der Import der Bankrückmeldung bleibt der bevorzugte Weg.
+
+## Gespeicherte Zahllauf-Vorschauen filtern
+
+Auf der Seite Zahllauf lassen sich die gespeicherten Vorschauen nach Stichtag und Auslöser (manuell, wöchentlich, fehlgeschlagen) eingrenzen. Eine Filterkombination kann unter einem Namen gespeichert werden und steht danach als Schnellauswahl über der Liste bereit. Das Filtern ändert keine Daten und löst keine Zahlung aus.

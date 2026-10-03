@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ui } from "@/lib/ui";
@@ -10,12 +10,18 @@ import type { PortalDocument } from "./types";
  *  den BFF und prüft dieselbe Sichtbarkeit wie der Einzelabruf. */
 export function DocumentBundleList({
   rows,
-  formatDate,
+  formatDate: formatDateProp,
 }: {
   rows: PortalDocument[];
-  formatDate: (value: string) => string;
+  /** Only for tests: a server page must not pass a function to this client component
+   *  (React refuses to serialise it), so the default formats with next-intl here. */
+  formatDate?: (value: string) => string;
 }) {
   const t = useTranslations("Documents");
+  const format = useFormatter();
+  const formatDate =
+    formatDateProp ??
+    ((value: string) => format.dateTime(new Date(value), { day: "2-digit", month: "2-digit", year: "numeric" }));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

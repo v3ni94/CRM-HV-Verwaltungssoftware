@@ -28,6 +28,7 @@ from mhvp.accounting.tax_models import (
     Section35aCertificateLog,
     SupplierTaxProfile,
 )
+from mhvp.accounting.write_responses import AccountingS35aCertificateDocumentOut
 from mhvp.contacts.models import Contact, Party, PartyMember
 from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -878,6 +879,7 @@ async def certificate_pdf(
 
 @router.post(
     "/section35a/certificate/document",
+    response_model=AccountingS35aCertificateDocumentOut,
     status_code=201,
     summary="§-35a-Ausweis als Entwurf im Dokumentenindex ablegen",
 )

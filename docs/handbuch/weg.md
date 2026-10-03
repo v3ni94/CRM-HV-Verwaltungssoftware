@@ -534,3 +534,7 @@ Die Schaltfläche "Neue Version" öffnet einen Dialog. Dort wählen Sie optional
 ## Eigentümerwechsel prüfen und Mehrheit je Beschluss (GAI-412, GAI-413, Welle 21)
 
 Auf der Seite Einsichtsanfragen einer Gemeinschaft prüft die Schaltfläche "Eigentümerwechsel prüfen" (Recht WEG bearbeiten), ob bei offenen Anfragen der Eigentümer seit der Anfrage gewechselt hat. Es entsteht nur ein Prüfvermerk, keine Anfrage wird geschlossen und kein Paket widerrufen. In der Beschlusssammlung zeigt "Mehrheit prüfen" je Beschluss das gespeicherte und das aktuelle Ergebnis der Mehrheitsprüfung. Die Anzeige ändert den Beschlussstatus nicht und ersetzt keine rechtliche Würdigung.
+
+## Einzelabrechnung als PDF und Zuordnungsvorschlag (GAJ-201, GAJ-203, Welle 23)
+
+Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläche "Einheit ..." für die Einzelabrechnung als PDF-Entwurf. Sie bleibt gesperrt, solange die Freigabestufe G4 geschlossen ist oder die Abrechnung nicht intern freigegeben wurde. Der Abschnitt "Zuordnungsvorschlag bei Eigentümerwechsel" lädt auf Klick den Vorschlag, wer das Ergebnis je Einheit trägt, und zeigt Abweichungen zur verwendeten Zuordnung. Der Vorschlag hat keine Buchungswirkung und ist nur bei eingeschaltetem Mandantenschalter abrufbar.

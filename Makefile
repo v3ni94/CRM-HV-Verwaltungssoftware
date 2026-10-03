@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify restore-drill restore-drill-test pitr-drill pitr-drill-test commit-lint version-check check-s3 kosit-fetch kosit-test kosit-validate
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -106,6 +106,12 @@ restore-drill: ## Restore drill (infra/scripts/restore-drill.sh); DRY_RUN=1 chec
 
 restore-drill-test: ## Script test of the restore drill dry run (no network, no database)
 	bash infra/scripts/tests/test-restore-drill.sh
+
+pitr-drill: ## PITR drill (base backup plus WAL replay, GAJ-505); PITR_DRILL_ARGS='--base .. --wal-dir .. --target ..', default --selftest
+	infra/scripts/pitr-drill.sh $(if $(PITR_DRILL_ARGS),$(PITR_DRILL_ARGS),--selftest)
+
+pitr-drill-test: ## Script test of the PITR drill incl. self test against a throwaway cluster
+	bash infra/scripts/tests/test-pitr-drill.sh
 
 commit-lint: ## Conventional Commits check of RANGE (default origin/main..HEAD), GAI-113
 	python3 scripts/check_commits.py $(or $(RANGE),origin/main..HEAD)

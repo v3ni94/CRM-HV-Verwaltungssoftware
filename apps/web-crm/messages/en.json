@@ -1,4 +1,86 @@
 {
+  "OperationsMasks": {
+    "delivery": {
+      "open": "Record delivery",
+      "title": "Delivery of the consumption information",
+      "channel": "Channel",
+      "channels": {
+        "post": "Post",
+        "email": "Email",
+        "hand_delivery": "Hand delivery"
+      },
+      "deliveredOn": "Delivered on",
+      "evidence": "Evidence",
+      "evidenceHint": "Short evidence, at least 3 characters, for example postal receipt or handover record. Recording sends nothing.",
+      "save": "Save delivery",
+      "cancel": "Cancel",
+      "saved": "Delivery saved."
+    },
+    "reverse": {
+      "open": "Reverse run",
+      "hint": "Reverses the receivables of this run by counter postings. The original postings stay. Requires the approval permission.",
+      "reason": "Reason",
+      "date": "Reversal date (optional)",
+      "submit": "Reverse",
+      "cancel": "Cancel",
+      "confirm": "Reverse all receivables of this run? Management must be informed.",
+      "done": "Run reversed."
+    },
+    "diff": {
+      "title": "Difference to previous version",
+      "load": "Show difference to previous version",
+      "hint": "Comparison of version {version} with the replaced version, computed from the stored states.",
+      "none": "No differences.",
+      "unit": "Unit",
+      "status": "Status",
+      "costs": "Costs",
+      "balance": "Result",
+      "position": "Item",
+      "old": "Old",
+      "new": "New",
+      "delta": "Difference",
+      "statuses": {
+        "added": "new",
+        "removed": "removed",
+        "changed": "changed",
+        "unchanged": "unchanged"
+      }
+    },
+    "proposal": {
+      "title": "Allocation proposal on owner change",
+      "notice": "Proposal without posting effect. The allocation of the result on an owner change is not decided yet.",
+      "load": "Load proposal",
+      "empty": "No unit with a result.",
+      "day": "Resolution date: {date}",
+      "unit": "Unit",
+      "result": "Result",
+      "used": "Used",
+      "proposed": "Proposal",
+      "noOwner": "no owner",
+      "differs": "differs"
+    },
+    "correct": {
+      "title": "Correct payment row",
+      "help": "Amount, period and type can only change while no posted receivable uses the row.",
+      "net": "Net",
+      "vat": "VAT percent",
+      "gross": "Gross",
+      "grossPending": "Gross follows after valid input",
+      "reason": "Reason",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "save": "Save correction",
+      "cancel": "Cancel",
+      "reasons": {
+        "initial": "Initial",
+        "increase": "Increase",
+        "index": "Index",
+        "graduated": "Graduated",
+        "adjustment_from_statement": "Adjustment from statement",
+        "other": "Other"
+      }
+    }
+  },
   "HoaNewVersion": {
     "open": "New version",
     "title": "New version of the annual statement",
@@ -1332,7 +1414,9 @@
       "meter": "Meters",
       "energy_certificate": "Energy certificates",
       "service_provider": "Service providers",
-      "portal_user": "Portal users (status only)"
+      "portal_user": "Portal users (status only)",
+      "historical_statement": "Historical statements per version (filing only)",
+      "resolution": "Resolution collection (filing only)"
     },
     "stagedOnlyBadge": "staging only",
     "stagedOnlyHint": "Journal and bank transactions are only staged until accounting is available. No postings are created.",
@@ -12316,6 +12400,7 @@
   },
   "contracts": {
     "amounts": {
+      "correct": "Correct",
       "title": "Standing amounts",
       "help": "Rent, advance payments, HOA fee, reserve contribution and other payment types with a validity period. A new amount applies from a date and closes the open previous amount of the same kind the day before; earlier states stay unchanged. Recording posts nothing: receivables come from the receivable run in accounting, statements stay drafts until release gate G3.",
       "formHelp": "New amount from a date. Gross is computed from net and VAT. Negative amounts only for rent reductions.",
@@ -12494,6 +12579,7 @@
     "empty": "No consumption information generated yet.",
     "rows": "{count, plural, one {# record per unit and month} other {# records per unit and month}}",
     "columns": {
+      "delivery": "Delivery",
       "month": "Month",
       "units": "Units",
       "incomplete": "without consumption",
@@ -17066,6 +17152,18 @@
         "title": "Household services certificate, invoice selection",
         "description": "Invoice date in the year (previous behaviour) or only paid invoices with a payment date in the year. Each line shows its payment state, a second certificate of the same year gets a notice. The tax decision stays open."
       },
+      "ai-realtime-mail-classification": {
+        "title": "AI classification of each inbound ticket mail",
+        "description": "Each inbound mail on a ticket is classified by the AI at once and receives a reply proposal. Default on as before; provider release and monthly budget still apply. Whether the default turns off is open."
+      },
+      "ai-master-data-proposals": {
+        "title": "AI master data proposal from ticket mails",
+        "description": "Inbound ticket mails are checked by the AI for changed contact data; the result is only a proposal for approval. Default on as before; the invoice copy check is not affected."
+      },
+      "ai-automation-ai-task": {
+        "title": "AI tasks from automation rules",
+        "description": "Automation rules may run the AI task action. Off means: the action is skipped. Creating or changing such rules needs the permission ai:approve regardless."
+      },
       "deposit-limit-hint": {
         "title": "Review hint on deposit amount and instalments",
         "description": "For residential units a non blocking hint appears when the deposit exceeds the set multiple of the rent without operating costs (default 3) or the instalments exceed the comparison value (default 3). No legal assessment."
@@ -17795,7 +17893,11 @@
       "empty": "No saved preview yet.",
       "row": "As of {asOf}, {trigger}, {count} invoices",
       "triggerManual": "manual",
-      "triggerScheduled": "weekly"
+      "triggerScheduled": "weekly",
+      "triggerFailed": "failed",
+      "filterAsOf": "Reference date",
+      "filterTrigger": "Trigger",
+      "filterAll": "All"
     },
     "payout": {
       "title": "Payout without invoice (draft)",
@@ -17824,6 +17926,13 @@
       "action": "Send dunning letter",
       "hint": "Until released, letters are sent outside the platform and documented with \"Mark as sent\".",
       "locked": "Locked while release gate G1 (productive bookkeeping) is closed and the dispatch path is not released."
+    },
+    "unitPdf": {
+      "title": "Single statement as PDF",
+      "action": "Unit {unit}",
+      "hint": "Draft of the single statement for review before output.",
+      "notApproved": "Only possible after internal approval of the statement.",
+      "locked": "Locked while release gate G4 (HOA statements) is closed."
     },
     "ownerPdf": {
       "action": "Statement as PDF",

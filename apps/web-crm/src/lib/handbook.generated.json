@@ -753,6 +753,16 @@
     {
      "t": "p",
      "text": "Dieses Handbuch ist im CRM unter Hilfe (`/hilfe`) lesbar, mit Kapitelübersicht und Volltextsuche. Die Seiten entstehen aus den Markdown-Dateien in `docs/handbuch` durch `python3 scripts/build_handbook.py`; `make lint` prüft, dass die erzeugte Datei aktuell ist."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "KI-Schalter je Mail und Regel",
+     "id": "ki-schalter-je-mail-und-regel"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Fachliche Regeln, Bereich Plattform lassen sich die KI-Einordnung je eingehender Ticket-Mail, der KI-Stammdatenvorschlag aus Ticket-Mails und KI-Aufgaben aus Automationsregeln einzeln abschalten. Standard ist an. Regeln mit KI-Aufgabe können nur Personen mit dem Recht zur KI-Freigabe anlegen oder ändern."
     }
    ]
   },
@@ -1208,6 +1218,16 @@
     {
      "t": "p",
      "text": "Jede Änderung wird als Ereignis protokolliert. Die Entscheidung über die Variante trifft die Geschäftsführung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Differenz zur Vorversion (GAJ-104, Welle 23)",
+     "id": "differenz-zur-vorversion-gaj-104-welle-23"
+    },
+    {
+     "t": "p",
+     "text": "Bei einer Korrekturversion einer Betriebskostenabrechnung zeigt der Abschnitt \"Differenz zur Vorversion\" nach Klick auf \"Differenz zur Vorversion anzeigen\" je Einheit Kosten und Ergebnis alt und neu sowie geänderte Kostenpositionen. Die Anzeige liest nur gespeicherte Stände und dient der Prüfung vor der Freigabe."
     }
    ]
   },
@@ -6673,6 +6693,16 @@
     {
      "t": "p",
      "text": "Unter Bank, Zahlungen bietet Bankrückmeldung erfassen zusätzlich die Status Ausgeführt und Zurückgegeben. Beide haben Buchungswirkung: Ausgeführt gleicht die Verbindlichkeit in Höhe der Belastung aus und verlangt die ID des Bankumsatzes als Nachweis, Zurückgegeben storniert diesen Ausgleich (Grund ist Pflicht) und öffnet die Verbindlichkeit wieder. Gebuchte Werte werden nie überschrieben. Die Maske zeigt den Stand der Freigabestufe G2; solange G2 für den Mandanten nicht offen ist oder der Stand nicht geladen werden kann, ist Erfassen gesperrt. Erfassen Sie Ausführung oder Rückgabe nur mit dem Bankbeleg und lassen Sie die Buchung von einer zweiten Person prüfen (Vier Augen). Der Import der Bankrückmeldung bleibt der bevorzugte Weg."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Gespeicherte Zahllauf-Vorschauen filtern",
+     "id": "gespeicherte-zahllauf-vorschauen-filtern"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Zahllauf lassen sich die gespeicherten Vorschauen nach Stichtag und Auslöser (manuell, wöchentlich, fehlgeschlagen) eingrenzen. Eine Filterkombination kann unter einem Namen gespeichert werden und steht danach als Schnellauswahl über der Liste bereit. Das Filtern ändert keine Daten und löst keine Zahlung aus."
     }
    ]
   },
@@ -8211,6 +8241,16 @@
     {
      "t": "p",
      "text": "Die Liste der Offenen Posten lässt sich je Sachkonto eingrenzen, die Mahnläufe nach Status und Laufdatum, die WEG Liste nach Verwaltungsart (WEG oder WEG mit SEV). Die Auswahl steht in der Adresszeile des Browsers, die Ansicht lässt sich daher als Lesezeichen speichern oder weitergeben. Über \"Filter speichern\" legt jeder Benutzer eigene Ansichten ab, die nur für ihn sichtbar sind."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Sollstellungslauf stornieren (GAJ-101, Welle 23)",
+     "id": "sollstellungslauf-stornieren-gaj-101-welle-23"
+    },
+    {
+     "t": "p",
+     "text": "Bei einem gebuchten Sollstellungslauf steht die Schaltfläche \"Lauf stornieren\" (Recht Buchungen freigeben). Sie verlangt eine Begründung, fragt vor der Ausführung nach und storniert die Sollstellungen durch Gegenbuchungen; die ursprünglichen Buchungen bleiben erhalten. Die Geschäftsführung ist über den Vorgang zu informieren."
     }
    ]
   },
@@ -9267,6 +9307,16 @@
     {
      "t": "p",
      "text": "Auf der Dokumentenliste verknüpft der Abschnitt \"Dokumente mit einem Objekt verknüpfen\" (Schreibrecht Dokumente) mehrere Dokumente mit Objekt, Einheit, Vertrag oder Ticket. Das Ergebnis nennt je Dokument Erfolg oder Grund des Fehlschlags. Am Dokument erzeugt \"Download-Link erzeugen\" einen kurz gültigen signierten Link, \"Spiegelung erneut anstoßen\" wiederholt die Ablage in den angebundenen Systemen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zahlungsdateien (gesperrt bis G2)",
+     "id": "zahlungsdateien-gesperrt-bis-g2"
+    },
+    {
+     "t": "p",
+     "text": "Lastschrift- und Zahlungsdateien liegen in der Kategorie \"Zahlungsdatei (gesperrt bis G2)\". Solange die Freigabe G2 nicht erteilt ist, lassen sie sich weder in der Dokumentenliste herunterladen noch über das Portal abrufen oder in Paperless und Google Drive spiegeln. Titel und Metadaten bleiben sichtbar. Ältere Dateien ordnet die Schaltfläche \"Fehlende Standardkategorien ergänzen\" der Kategorie zu."
     }
    ]
   },
@@ -9463,7 +9513,7 @@
     },
     {
      "t": "p",
-     "text": "Der Kanal SMS läuft über ein anbieterneutrales HTTP-Gateway je Mandant (Reiter SMS-Gateway, mit Testnachricht). Ein WhatsApp-Kanal ist zum Stand dieses Handbuchs nicht umgesetzt; sofern eine Anfrage WhatsApp erwähnt, ist dies als offener Punkt zu behandeln und nicht als vorhandene Funktion zu bestätigen."
+     "text": "Der Kanal SMS läuft über ein anbieterneutrales HTTP-Gateway je Mandant (Reiter SMS-Gateway, mit Testnachricht). Der WhatsApp-Kanal ist im Bereich SLA für Eskalationen an Mitarbeiter und für den Testversand umgesetzt. Nachrichten an Kontakte gehen nur mit erfasster WhatsApp-Einwilligung hinaus, sonst werden sie ohne Anbieteraufruf abgewiesen. Einzelheiten zu Zustellstatus und Einwilligung stehen im Kapitel Kommunikation."
     },
     {
      "t": "h",
@@ -13136,6 +13186,95 @@
        "text": "\"Kurz senden\" reicht den Entwurf zur Freigabe ein; beim Einreichen wird keine zweite Signatur angefügt. Vier-Augen-Regel und Bestätigung gelten wie beim normalen Versand."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "WhatsApp-Kanal, Zustellstatus und Einwilligung",
+     "id": "whatsapp-kanal-zustellstatus-und-einwilligung"
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Zweck",
+     "id": "zweck"
+    },
+    {
+     "t": "p",
+     "text": "WhatsApp ist ein zusätzlicher Kanal für Eskalationen und Notfallmeldungen an Mitarbeiter (WhatsApp Business Platform, Meta Cloud API). Gesendet werden ausschließlich bei Meta freigegebene Vorlagennachrichten, nie Freitext. Je Mandant kann bei einem Fehler auf SMS ausgewichen werden."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Voraussetzungen",
+     "id": "voraussetzungen"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Einstellungen, SLA, Reiter WhatsApp: Nummern-ID, Konto-ID, Zugriffstoken, Vorlagensprache und je Alarmtyp (SLA-Eskalation, Notfall, Test) der Name der freigegebenen Vorlage; Kanal aktiviert (Recht Mandanteneinstellungen ändern). Die Einrichtung bei Meta beschreibt docs/integrations/whatsapp.md."
+      },
+      {
+       "depth": 0,
+       "text": "Empfänger Mitarbeiter: Mobilnummer im Benutzerprofil. Mitarbeiter gelten als interner Kanal und brauchen keine Kontakteinwilligung (dokumentierte Annahme)."
+      },
+      {
+       "depth": 0,
+       "text": "Empfänger Kontakt (Mieter, Eigentümer): nur mit erfasster, nicht widerrufener Einwilligung der Art WhatsApp in der Kontaktakte. Fehlt sie, sendet die Plattform nichts, legt keinen Zustelleintrag an und meldet \"Keine WhatsApp-Einwilligung des Kontakts erfasst; nicht gesendet.\" Ein Versand an Kontakte ist zum Stand dieses Handbuchs nicht als Bedienfunktion freigeschaltet; die Prüfung sichert den Sendeweg für eine spätere Erweiterung ab."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Schritt für Schritt",
+     "id": "schritt-fuer-schritt"
+    },
+    {
+     "t": "ol",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Testversand: Im Reiter WhatsApp eine Nummer eingeben und Testnachricht senden. Der Testversand nutzt die Vorlage des Alarmtyps Test und ist auf Benutzer mit dem Recht Mandanteneinstellungen ändern beschränkt."
+      },
+      {
+       "depth": 0,
+       "text": "Eskalation: Erreicht ein Ticket eine Eskalationsstufe mit Kanal WhatsApp, geht die Vorlage an die Mobilnummer der zuständigen Person. Schlägt der Versand fehl und ist der SMS-Ausweichweg aktiv, folgt eine SMS."
+      },
+      {
+       "depth": 0,
+       "text": "Zustellstatus: Jeder Versuch erhält einen Zustelleintrag mit Status gesendet oder fehlgeschlagen (mit Fehlertext, ohne Zugangsdaten). Meta meldet danach über den signierten Webhook zugestellt und gelesen; ein Status wird nur vorwärts übernommen (gelesen fällt nie auf zugestellt zurück), fehlgeschlagen ist endgültig. Meldungen außerhalb des Zeitfensters von sieben Tagen werden verworfen."
+      }
+     ]
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Häufige Fehler",
+     "id": "haeufige-fehler"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "**Keine WhatsApp-Vorlage für Alarmtyp hinterlegt**: Vorlagenname im Reiter WhatsApp ergänzen."
+      },
+      {
+       "depth": 0,
+       "text": "**WhatsApp nicht eingerichtet oder deaktiviert**: Kanal aktivieren, Nummer und Token pflegen."
+      },
+      {
+       "depth": 0,
+       "text": "**Keine WhatsApp-Einwilligung des Kontakts erfasst**: Einwilligung in der Kontaktakte erfassen oder anderen Zustellweg wählen."
+      },
+      {
+       "depth": 0,
+       "text": "**Status bleibt auf gesendet**: Webhook bei Meta nicht eingerichtet oder Signatur (App-Geheimnis) passt nicht."
+      }
+     ]
     }
    ]
   },
@@ -14186,6 +14325,16 @@
     {
      "t": "p",
      "text": "Status, Suche, Postfach und Abgleichstand der Nachrichtenliste stehen in der Adresszeile (zusätzlich zu Reiter, Seite und \"Erledigte anzeigen\"). Eine so aufgerufene Ansicht lässt sich als Lesezeichen speichern oder weitergeben; ungültige Werte werden ignoriert."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Gespeicherte Filter im Postfach",
+     "id": "gespeicherte-filter-im-postfach"
+    },
+    {
+     "t": "p",
+     "text": "Die aktuelle Auswahl aus Reiter, Status, Postfach, Suchbegriff und Gmail Abgleich lässt sich über das Feld \"Filtername\" speichern. Ein gespeicherter Filter wird per Klick angewendet und kann mit dem Kreuz gelöscht werden."
     }
    ]
   },
@@ -14801,6 +14950,20 @@
        "text": "Jede Änderung setzt die bearbeitende Person neu; unterzeichnen darf danach nur eine andere Person."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Altabrechnungen und Beschlusssammlung (Welle 23)",
+     "id": "altabrechnungen-und-beschlusssammlung-welle-23"
+    },
+    {
+     "t": "p",
+     "text": "Im Importassistenten stehen die Berichtsarten \"Altabrechnungen je Version (nur Ablage)\" und \"Beschlusssammlung (nur Ablage)\" bereit. Die Spalten des Exports werden wie bei den anderen Berichtsarten zugeordnet. Jede Version einer Abrechnung wird als eigene Zeile abgelegt; ein erneuter Import legt nichts doppelt an, abweichende Angaben erscheinen als Konflikt. Das Ergebnis laut Abrechnung ist nur eine Information, es entsteht keine Forderung und keine Buchung. Der Prüfbericht zeigt fehlende Beschlüsse, fehlende Beschlussbezüge, unbekannte Einheiten und mehrfache Versionen."
+    },
+    {
+     "t": "p",
+     "text": "Der tägliche Abgleichbericht enthält zusätzlich den Abschnitt Stammdaten: je Berichtsart die offenen Zeilen der neuesten Datei und übernommene Datensätze, die auf der Plattform nicht mehr vorhanden sind."
     }
    ]
   },
@@ -16581,6 +16744,46 @@
     {
      "t": "p",
      "text": "Ist der zweite Faktor verloren (Smartphone verloren), kann die Verwaltung ihn nur zurücksetzen, wenn sie das Verfahren freigeschaltet hat (Standard aus); zwei Mitarbeitende müssen zustimmen."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zählerstand mit Foto melden (GAJ-401)",
+     "id": "zaehlerstand-mit-foto-melden-gaj-401"
+    },
+    {
+     "t": "p",
+     "text": "Unter Zählerstand melden fügen Sie ein Foto des Zählers bei, über die Dateiauswahl oder direkt mit der Kamera (Schaltfläche Foto aufnehmen). Das Foto wird ohne Aufnahmedaten gespeichert und dient der Verwaltung als Ablesebeleg. Ohne Foto erscheint ein Hinweis; die Meldung bleibt möglich und wird für die Verwaltung als ohne Foto gekennzeichnet. Übernimmt die Verwaltung den Stand, bleibt das Foto am Zählerstand verknüpft."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Fotos direkt mit der Kamera (GAJ-404)",
+     "id": "fotos-direkt-mit-der-kamera-gaj-404"
+    },
+    {
+     "t": "p",
+     "text": "Bei der Schadensmeldung und bei den Ausführungsfotos des Dienstleisters öffnet die Schaltfläche Foto aufnehmen auf dem Smartphone direkt die Kamera. Die Dateiauswahl bleibt daneben erhalten."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Stand der Aufträge zur Meldung (GAJ-402)",
+     "id": "stand-der-auftraege-zur-meldung-gaj-402"
+    },
+    {
+     "t": "p",
+     "text": "In der Einzelansicht einer Meldung zeigt der Abschnitt Stand der Aufträge den laufenden Status jedes Auftrags (angefragt, beauftragt, terminiert, in Ausführung, ausgeführt usw.) und den Termin. Dienstleister, Preise und interne Vermerke werden nicht angezeigt; Aufträge im Entwurf bleiben intern."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Einsichtsanfrage im Eigentümerportal (GAJ-202)",
+     "id": "einsichtsanfrage-im-eigentuemerportal-gaj-202"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die Verwaltungsunterlagen ihrer Gemeinschaft (Umfang Abrechnung, Belege, Verträge, Beschlüsse oder eine Beschreibung) und sehen den Stand ihrer Anfragen. Die Anfrage geht in die Einsichtsanfragen des CRM; Freigabe, Bereitstellung und Ablehnung bleiben bei der Verwaltung. Die Funktion erscheint nur, wenn die Verwaltung den Schalter der Belegeinsicht (Portalverwaltung, Funktionen) eingeschaltet hat. Interne Vermerke der Verwaltung sind im Portal nicht sichtbar."
     }
    ]
   },
@@ -19195,6 +19398,20 @@
     {
      "t": "p",
      "text": "Unter einem gespeicherten Entwurf der Kautionsabrechnung steht Kautionsabrechnung freigeben. Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat; sie bestätigt das durch Anhaken. Die Schaltfläche bleibt gesperrt, solange die Freigabestufe G3 geschlossen ist; der Stand steht unter der Schaltfläche. Freigegebene Abrechnungen lassen sich nicht erneut freigeben."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Zahlungsposition korrigieren und Zustellung der Verbrauchsinformation (GAJ-102, GAJ-103, Welle 23)",
+     "id": "zahlungsposition-korrigieren-und-zustellung-der-verbrauchsinformation-gaj-102-gaj-103-welle-23"
+    },
+    {
+     "t": "p",
+     "text": "In der Tabelle der Sollbeträge öffnet \"Korrigieren\" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst meldet das System den Konflikt. Die Korrektur eines Zahlungsplans bleibt vorerst der Schnittstelle vorbehalten."
+    },
+    {
+     "t": "p",
+     "text": "Im Panel Verbrauchsinformation eines Objekts erfasst \"Zustellung erfassen\" (Recht Objekte bearbeiten) im Ersatzprozess ohne Portal den Weg (Post, E-Mail, persönliche Übergabe), das Datum und einen Nachweis. Die Erfassung versendet nichts und dient dem Nachweis der Zustellung."
     }
    ]
   },
@@ -20030,6 +20247,16 @@
     {
      "t": "p",
      "text": "Auf der Seite Einsichtsanfragen einer Gemeinschaft prüft die Schaltfläche \"Eigentümerwechsel prüfen\" (Recht WEG bearbeiten), ob bei offenen Anfragen der Eigentümer seit der Anfrage gewechselt hat. Es entsteht nur ein Prüfvermerk, keine Anfrage wird geschlossen und kein Paket widerrufen. In der Beschlusssammlung zeigt \"Mehrheit prüfen\" je Beschluss das gespeicherte und das aktuelle Ergebnis der Mehrheitsprüfung. Die Anzeige ändert den Beschlussstatus nicht und ersetzt keine rechtliche Würdigung."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Einzelabrechnung als PDF und Zuordnungsvorschlag (GAJ-201, GAJ-203, Welle 23)",
+     "id": "einzelabrechnung-als-pdf-und-zuordnungsvorschlag-gaj-201-gaj-203-welle-23"
+    },
+    {
+     "t": "p",
+     "text": "Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläche \"Einheit ...\" für die Einzelabrechnung als PDF-Entwurf. Sie bleibt gesperrt, solange die Freigabestufe G4 geschlossen ist oder die Abrechnung nicht intern freigegeben wurde. Der Abschnitt \"Zuordnungsvorschlag bei Eigentümerwechsel\" lädt auf Klick den Vorschlag, wer das Ergebnis je Einheit trägt, und zeigt Abweichungen zur verwendeten Zuordnung. Der Vorschlag hat keine Buchungswirkung und ist nur bei eingeschaltetem Mandantenschalter abrufbar."
     }
    ]
   }

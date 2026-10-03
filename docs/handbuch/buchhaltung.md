@@ -435,3 +435,7 @@ Die Liste der Offenen Posten lässt sich je Sachkonto eingrenzen, die Mahnläufe
 Laufdatum, die WEG Liste nach Verwaltungsart (WEG oder WEG mit SEV). Die Auswahl steht in der
 Adresszeile des Browsers, die Ansicht lässt sich daher als Lesezeichen speichern oder weitergeben.
 Über "Filter speichern" legt jeder Benutzer eigene Ansichten ab, die nur für ihn sichtbar sind.
+
+## Sollstellungslauf stornieren (GAJ-101, Welle 23)
+
+Bei einem gebuchten Sollstellungslauf steht die Schaltfläche "Lauf stornieren" (Recht Buchungen freigeben). Sie verlangt eine Begründung, fragt vor der Ausführung nach und storniert die Sollstellungen durch Gegenbuchungen; die ursprünglichen Buchungen bleiben erhalten. Die Geschäftsführung ist über den Vorgang zu informieren.

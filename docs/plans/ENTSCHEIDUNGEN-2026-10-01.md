@@ -1424,3 +1424,81 @@ Frage: Reichen die bestehenden Schreibrechte (`communication:update`, `sla:updat
 Varianten: A bestehende Rechte (umgesetzt, keine neuen Rollen); B eigene Rechte je Aktion mit Rollenmigration.
 Empfehlung: A, B nur bei konkretem Bedarf einer Rolle, die quittieren, aber nicht verwalten soll.
 Risiko: gering. Gate: keins. Technischer Stand: A umgesetzt, Test tests/unit/test_aj21_write_with_read_permission.py.
+
+## Lückenanalyse GAJ (Welle 23): Entscheidungsvorlagen AM13-01 bis AM13-06
+
+Hinweis: Die folgenden Vorlagen entscheiden nichts. Grundlage sind alle Befunde der Lückenanalyse GAJ (GAJ-101 bis GAJ-610, 39 Befunde, Liste docs/plans/LUECKENLISTE-2026-10-03.md) mit Entscheidungsbedarf "ja": GAJ-501, GAJ-602, GAJ-605, GAJ-606, GAJ-607, GAJ-610. Wo ein Paket der Welle 23 eine eigene Frage anlegt (AM02-01, AM04-01 bis AM04-03, AM09-01, AM14-01), verweist die Vorlage darauf, statt sie zu doppeln. Alle Schalter stehen auf dem konservativen Standard oder bewahren das heutige Verhalten mit Vermerk, G1 bis G5 bleiben geschlossen. Rechtliche Punkte sind Einschätzungen und vor der Entscheidung mit Rechtsanwalt oder Datenschutzberatung abzustimmen. Normen, Fristen und Werte werden hier nicht festgelegt.
+
+Priorität: zuerst Beschlussergebnis und Abrechnungsnachweis (AM13-02, AM13-01), dann KI-Pfade gebündelt (AM13-03 bis AM13-05), zuletzt Adresshistorie (AM13-06).
+
+### AM13-01 Übernahme historischer Abrechnungen und Beschlüsse (GAJ-501) (Eigentümer Timo Müller)
+Frage: In welcher Form werden versandte Altabrechnungen (WEG und Miete) und die Beschluss-Sammlung aus Immoware24 übernommen, und aus welcher Exportquelle?
+Varianten: A eigene Importberichtsarten mit strukturierten Datensätzen und Prüfbericht, nur Ablage und Abgleich, keine Buchung; B nur Ablage als Dokumente (PDF) mit Verknüpfung zu Objekt und Jahr, ohne strukturierte Felder; C keine Übernahme, Nachweis nur im Altsystem.
+Empfehlung: A für die Beschluss-Sammlung und die Ergebnisse je Einheit, B ergänzend für die Originaldokumente. Die Exportfähigkeit von Immoware24 ist vorher zu prüfen; Felder werden nicht vermutet.
+Risiko: Bei C ist eine Abrechnung nach unterjähriger Übernahme nicht belegbar (Bezug G3, G4). Gate: keins (Bezug G3, G4). Technischer Stand: geplant (Welle 23, AM09), Frage AM09-01.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Strukturiert mit Prüfbericht | mittel | gering |
+| B Nur Dokumente | gering | mittel |
+| C Keine Übernahme | keiner | hoch |
+
+### AM13-02 Maßgebliches Mehrheitsregelmodell (GAJ-602) (Eigentümer Timo Müller, Geschäftsführung)
+Frage: Welches der beiden Modelle ist maßgeblich: `hoa_majority_rule` mit fachlicher Freigabe (approved_by) oder `majority_rule` der Versammlung ohne Freigabefeld?
+Varianten: A `hoa_majority_rule` maßgeblich, Versammlungsregel verweist darauf (Migration der Bestandsdaten); B `majority_rule` behalten und um Freigabe durch eine zweite Person ergänzen; C beide Modelle unverändert weiterführen.
+Empfehlung: A oder B nach Aufwandsschätzung von AM02; entscheidend ist, dass jede für die Auszählung verwendete Regel eine dokumentierte Freigabe hat. Welche Mehrheit für welchen Beschlussgegenstand gilt, wird hier nicht festgelegt.
+Risiko: Bei C kann ein Beschlussergebnis auf einer nicht freigegebenen Regel beruhen. Gate: keins (Bezug G4). Technischer Stand: Gültigkeitsprüfung geplant (Welle 23, AM02), Frage AM02-01.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Freigabemodell maßgeblich | mittel | gering |
+| B Versammlungsmodell mit Freigabe | mittel | gering |
+| C Status quo | keiner | hoch |
+
+### AM13-03 Echtzeitklassifikation eingehender Ticket-Mails (GAJ-605) (Eigentümer Timo Müller, Datenschutz)
+Frage: Soll die KI-Klassifikation je eingehender Mail einen eigenen Mandantenschalter erhalten, und mit welchem Standard?
+Varianten: A Schalter, Standard an (heutiges Verhalten, Schutz über Anbieterfreigabe und Budget); B Schalter, Standard aus (Freigabe je Mandant nötig); C kein Schalter.
+Empfehlung: B nach Prüfung der Auftragsverarbeitung je Anbieter; bis dahin A mit Vermerk, damit kein laufender Betrieb ausfällt.
+Risiko: Kosten und Datenschutz bei C. Gate: keins (Datenschutz). Technischer Stand: geplant (Welle 23, AM04), Frage AM04-01.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Schalter an | gering | mittel |
+| B Schalter aus | gering | gering |
+| C Kein Schalter | keiner | mittel |
+
+### AM13-04 Automatischer Stammdatenänderungsvorschlag aus Ticket-Mails (GAJ-606) (Eigentümer Timo Müller, Datenschutz)
+Frage: Wird der Vorschlag `contact_master_data_change` je eingehender Mail weiter automatisch eingereiht oder hinter einen eigenen Schalter gestellt?
+Varianten: A Schalter, Standard an; B Schalter, Standard aus; C kein Schalter. Der Vorschlag ändert in allen Varianten keine Stammdaten ohne menschliche Freigabe.
+Empfehlung: A mit Vermerk, weil der Vorschlag selbst nichts ändert; B, sobald der Datenschutz die Verarbeitung je Mandant freigeben soll.
+Risiko: mittel bei C. Gate: keins. Technischer Stand: geplant (Welle 23, AM04), Frage AM04-02.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Schalter an | gering | gering |
+| B Schalter aus | gering | gering |
+| C Kein Schalter | keiner | mittel |
+
+### AM13-05 Regelaktion ai_task (GAJ-607) (Eigentümer Timo Müller)
+Frage: Darf jede Person mit Regelschreibrecht eine Regel mit KI-Aktion anlegen, oder braucht es einen Mandantenschalter und das Recht ai:approve?
+Varianten: A Mandantenschalter plus Recht ai:approve für Anlage und Änderung; B nur Recht ai:approve; C Status quo (Gateway-Freigabe und Budget).
+Empfehlung: A. Ein dauerhafter Kostenpfad sollte nur bewusst und durch berechtigte Personen eingerichtet werden.
+Risiko: Kosten bei C. Gate: keins. Technischer Stand: geplant (Welle 23, AM04), Frage AM04-03.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Schalter und Recht | gering | gering |
+| B Nur Recht | gering | gering |
+| C Status quo | keiner | mittel |
+
+### AM13-06 Umfang der Adresshistorie (GAJ-610) (Eigentümer Timo Müller, Datenschutz)
+Frage: Werden Kontaktadressen mit valid_to und Stichtagsabfrage historisiert, und wie lange werden frühere Anschriften aufbewahrt?
+Varianten: A volle Historie mit valid_from, valid_to und as_of-Abfrage (Schemaänderung); B nur Protokoll der Änderung im Audit ohne Stichtagsabfrage; C Status quo, Nachweis nur über archivierte Schreiben.
+Empfehlung: A, Aufbewahrungsdauer früherer Anschriften durch den Datenschutz festlegen lassen; eine Dauer wird hier nicht vorgegeben.
+Risiko: gering bis mittel (Zugangsnachweis früherer Schreiben). Gate: keins. Technischer Stand: vorbereitet ohne Migration (Welle 23, AM14), Frage AM14-01.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Volle Historie | mittel | gering |
+| B Nur Audit | gering | mittel |
+| C Status quo | keiner | mittel |

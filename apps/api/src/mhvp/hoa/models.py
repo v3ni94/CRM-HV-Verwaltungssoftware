@@ -495,6 +495,13 @@ class MajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
     come from the community's documents with their source; the system only evaluates them."""
 
     __tablename__ = "majority_rule"
+    # AM02 / GAJ-604 (migration 0449).
+    __table_args__ = (
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="period_order",
+        ),
+    )
 
     legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
     label: Mapped[str] = mapped_column(String(200), nullable=False)

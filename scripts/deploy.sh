@@ -54,8 +54,53 @@ PRE=""
 [[ "$ENV_NAME" == prod ]] && PRE="set -a && . ./.env.backup && set +a && scripts/backup.sh &&"
 # umask 022: files pulled under a restrictive umask would be unreadable for the non-root
 # users inside the images (seen 24.09.2026); the .env files keep their 600.
+# GAJ-508: DEPLOY_ROLLBACK=1 returns to an older tag without the migrate step (an older
+# migrate image does not know the newer head revision; the schema stays).
+MIGRATE="$COMPOSE run --rm migrate &&"
+if [[ "${DEPLOY_ROLLBACK:-0}" == 1 ]]; then
+  MIGRATE=""
+  PRE=""
+fi
+# GAJ-508: remember the running release for the rollback step (empty on the first deploy).
+PREV_TAG="$(ssh "$DEPLOY_HOST" "cd '$DEPLOY_PATH' && git describe --tags --exact-match 2>/dev/null || true")"
 ssh "$DEPLOY_HOST" "cd '$DEPLOY_PATH' && umask 022 && git fetch --quiet --tags && git checkout --quiet '$TAG' \
   && chmod -R u=rwX,go=rX apps packages infra scripts \
   && export MHVP_IMAGE_REGISTRY='$REG' MHVP_IMAGE_TAG='$TAG' MHVP_APP_VERSION='$TAG' \
-  && $FETCH && $PRE $COMPOSE run --rm migrate && $COMPOSE up -d --remove-orphans"
-echo "deploy: $ENV_NAME $TAG done; check /api/v1/health/ready"
+  && $FETCH && $PRE $MIGRATE $COMPOSE up -d --remove-orphans"
+echo "deploy: $ENV_NAME $TAG done${PREV_TAG:+ (previous $PREV_TAG)}"
+
+# GAJ-508: smoke test after the deploy (staging only, scripts/staging-smoke.sh reads only).
+# On failure the script offers the rollback to the previous tag: images and code only, the
+# database schema stays (migrations are forward only, docs/runbooks/deploy.md); with
+# DEPLOY_AUTO_ROLLBACK=1 it runs the rollback itself. Production keeps the manual check.
+if [[ "$ENV_NAME" != staging ]]; then
+  echo "deploy: check /api/v1/health/ready"
+  exit 0
+fi
+if [[ "${DEPLOY_SKIP_SMOKE:-0}" == 1 ]]; then
+  echo "deploy: smoke test skipped (DEPLOY_SKIP_SMOKE=1); run make staging-smoke" >&2
+  exit 0
+fi
+if [[ -z "${STAGING_API_URL:-}" || -z "${STAGING_CRM_URL:-}" ]]; then
+  echo "deploy: STAGING_API_URL and STAGING_CRM_URL missing, smoke test not run" >&2
+  exit 3
+fi
+if "$(dirname "${BASH_SOURCE[0]}")/staging-smoke.sh"; then
+  echo "deploy: staging smoke test passed"
+  exit 0
+fi
+echo "deploy: staging smoke test FAILED for $TAG" >&2
+if [[ -z "$PREV_TAG" ]]; then
+  echo "deploy: no previous tag known, rollback must be done manually" >&2
+  exit 4
+fi
+ROLLBACK="ENV=staging MHVP_IMAGE_TAG=$PREV_TAG DEPLOY_ROLLBACK=1 scripts/deploy.sh"
+if [[ "${DEPLOY_AUTO_ROLLBACK:-0}" != 1 || "${DEPLOY_ROLLBACK:-0}" == 1 ]]; then
+  echo "deploy: rollback step: $ROLLBACK" >&2
+  exit 4
+fi
+echo "deploy: rolling back to $PREV_TAG (code and images only, schema stays)" >&2
+ssh "$DEPLOY_HOST" "cd '$DEPLOY_PATH' && umask 022 && git checkout --quiet '$PREV_TAG' \
+  && export MHVP_IMAGE_REGISTRY='$REG' MHVP_IMAGE_TAG='$PREV_TAG' MHVP_APP_VERSION='$PREV_TAG' \
+  && $COMPOSE up -d --remove-orphans"
+exit 4

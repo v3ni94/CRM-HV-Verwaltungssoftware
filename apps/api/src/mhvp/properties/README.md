@@ -200,3 +200,10 @@ results_created, confirmed, closed (one step, back allowed, never out of closed;
 ## AF21 (GAB-16)
 
 `POST /units/bulk` setzt Geschoss, Lage oder Ausstattung vieler Einheiten (Teilerfolgsbericht über `core/bulk.py`, Savepoint je Einheit, Ereignis `unit.updated`). Felder mit Geldwirkung (Flächen, Umlagewerte, USt) gibt es bewusst nicht.
+
+## Owner periods (GAJ-603, wave 23)
+
+`POST /properties/{id}/owners` rejects with 422 an overlapping period of the same party and a
+sum of known shares above 100 percent on any day (`services.owner_period_problems`, rule
+`docs/rules/PROP-OWNER-PERIOD.md`). The ownership import ends earlier owners of other parties
+the day before the key date and reports later owners or share violations as conflicts.

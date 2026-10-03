@@ -62,6 +62,9 @@ FILTER_RESOURCES = (
     "dunning_cases",
     "hoa_properties",
     "work_orders",
+    # AL05: payment run previews and the mailbox.
+    "payment_runs",
+    "mailbox",
 )
 MAX_BULK = 500
 MAX_RANGE_DAYS = 400

@@ -25,6 +25,9 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 
 # Tables that keep pointing at the source: the merge record itself and the erasure history.
 _KEEP = {"contact_merge", "privacy_erasure_request"}
+# Child tables with one primary row per contact (AM14, GAJ-610): moved rows lose the primary
+# flag when the target already has a primary row, so the target keeps exactly one.
+_PRIMARY_CHILDREN = ("contact_address", "contact_phone", "contact_email")
 # Scalar fields of the target that are filled from the source when empty.
 FILL_FIELDS = (
     "salutation",
@@ -256,6 +259,14 @@ async def execute(
         )
     moved: dict[str, int] = {}
     conflicts: dict[str, int] = {}
+    target_has_primary: set[str] = set()
+    for child in _PRIMARY_CHILDREN:
+        found = await session.execute(
+            text(f'SELECT 1 FROM "{child}" WHERE contact_id = :t AND is_primary LIMIT 1'),  # noqa: S608
+            {"t": target.id},
+        )
+        if found.first() is not None:
+            target_has_primary.add(child)
     for table, column in await _existing_registry(session):
         if table == "contact":
             continue
@@ -276,6 +287,11 @@ async def execute(
                         text(f'UPDATE "{table}" SET "{column}" = :t WHERE id = :i'),  # noqa: S608
                         {"t": target.id, "i": row_id},
                     )
+                    if table in target_has_primary and column == "contact_id":
+                        await session.execute(
+                            text(f'UPDATE "{table}" SET is_primary = false WHERE id = :i'),  # noqa: S608
+                            {"i": row_id},
+                        )
                 moved[f"{table}.{column}"] = moved.get(f"{table}.{column}", 0) + 1
             except IntegrityError:
                 conflicts[f"{table}.{column}"] = conflicts.get(f"{table}.{column}", 0) + 1

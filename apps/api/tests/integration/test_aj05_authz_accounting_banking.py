@@ -86,6 +86,14 @@ SEPARATION_ROUTES: list[tuple[str, str]] = [
     ("GET", "/banking/ebics/subscribers/{subscriber_id}/letters.pdf"),
     ("GET", "/banking/invoice-matching/{invoice_id}"),
     ("GET", "/banking/payment-bank-config/{account_id}"),
+    # GAJ-302 (Welle 23, AM12): routes with a path parameter found without a 404 test.
+    ("POST", "/accounting/credit-payables/{row_id}/release"),
+    ("GET", "/accounting/ledgers/{ledger_id}/accounts/{account_id}/sheet"),
+    ("GET", "/accounting/admin-fees/{fee_id}/invoice-preview"),
+    ("GET", "/accounting/invoices/{invoice_id}/discount"),
+    ("GET", "/accounting/tax/invoices/{invoice_id}/approval"),
+    ("GET", "/accounting/ledgers/{ledger_id}/reports/liquidity"),
+    ("POST", "/banking/ebics/subscribers/{subscriber_id}/hpb"),
 ]
 
 # GAI-3_liste_ohne_403_test.txt, routes of the accounting and banking modules.
@@ -145,6 +153,7 @@ PRECONDITION_FIRST: dict[tuple[str, str], tuple[int, str]] = {
     ),
     ("POST", "/banking/transactions/{tx_id}/ai-posting"): (403, "MHVP-AI-0001"),
     ("POST", "/banking/ebics/subscribers/{subscriber_id}/ini/external"): (409, "MHVP-BANK-0051"),
+    ("POST", "/banking/ebics/subscribers/{subscriber_id}/hpb"): (409, "MHVP-BANK-0051"),
 }
 
 # Writing methods that persist nothing (previews and proposals) and are guarded by the read

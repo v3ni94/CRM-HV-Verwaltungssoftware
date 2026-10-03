@@ -15,6 +15,7 @@ from mhvp.accounting.audit_events import record_change
 from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import heating_calc, heating_services
 from mhvp.billing.models import HeatingRuleTable, HeatingRuleTableKind, Statement
+from mhvp.billing.write_responses import BillingHeatingRuleTableOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.listparams import strict_query
@@ -27,6 +28,28 @@ READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")
 H = "/statements/{statement_id}/heating"
+
+
+def _heating_snap(row: Any) -> dict[str, Any]:
+    """AL03 (GAI-307): audit snapshot of the heating inputs of a statement."""
+    return audit_snap(row, ("statement_id", "total_costs", "settings", "co2", "result_hash")) | {
+        "consumption_count": len(row.consumptions or {}),
+        "unit_total_count": len(row.unit_totals or {}),
+    }
+
+
+def _heating_event_kw(
+    principal: TenantPrincipal, row: Any, before: dict[str, Any]
+) -> dict[str, Any]:
+    """AL03 (GAI-307): shared arguments of record_change (old and new state)."""
+    return {
+        "tenant_id": principal.tenant_id,
+        "actor_user_id": principal.user_id,
+        "entity_type": "statement_heating",
+        "entity_id": row.id,
+        "before": before,
+        "after": _heating_snap(row),
+    }
 
 
 class _In(BaseModel):
@@ -183,6 +206,7 @@ async def put_heating(
         st = await _statement(session, statement_id)
         _draft_only(st)
         row = await heating_services.get_or_create(session, st, principal.user_id)
+        before = _heating_snap(row)
         row.total_costs = body.total_costs
         row.settings = {
             k: (str(v) if isinstance(v, Decimal) else v)
@@ -198,6 +222,9 @@ async def put_heating(
         row.result_hash = None
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session, type="statement_heating.updated", **_heating_event_kw(principal, row, before)
+        )
         return _out(row)
 
 
@@ -212,6 +239,7 @@ async def put_consumptions(
         st = await _statement(session, statement_id)
         _draft_only(st)
         row = await heating_services.get_or_create(session, st, principal.user_id)
+        before = _heating_snap(row)
         merged = dict(row.consumptions)
         for key, c in body.consumptions.items():
             entry = {
@@ -234,6 +262,11 @@ async def put_consumptions(
         row.result_hash = None
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            type="statement_heating.consumptions_saved",
+            **_heating_event_kw(principal, row, before),
+        )
         return _out(row)
 
 
@@ -248,12 +281,18 @@ async def import_consumptions(
         st = await _statement(session, statement_id)
         _draft_only(st)
         row = await heating_services.get_or_create(session, st, principal.user_id)
+        before = _heating_snap(row)
         summary = await heating_services.import_from_metering(
             session,
             st,
             row,
             heating_kinds=tuple(body.heating_kinds),
             hot_water_kinds=tuple(body.hot_water_kinds),
+        )
+        await record_change(
+            session,
+            type="statement_heating.consumptions_imported",
+            **_heating_event_kw(principal, row, before),
         )
         return _out(row) | {"import": summary}
 
@@ -277,7 +316,11 @@ async def apply_heating(
     async with tenant_tx(request, principal) as session:
         st = await _statement(session, statement_id)
         row = await heating_services.get_or_create(session, st, principal.user_id)
+        before = _heating_snap(row)
         item = await heating_services.apply(session, st, row, principal.user_id)
+        await record_change(
+            session, type="statement_heating.applied", **_heating_event_kw(principal, row, before)
+        )
         return _out(row) | {"item": {"id": item.id, "amount": item.amount, "label": item.label}}
 
 
@@ -333,6 +376,7 @@ async def list_rule_tables(
 
 @router.put(
     "/billing/heating-rule-tables",
+    response_model=BillingHeatingRuleTableOut,
     summary="Regeltabelle Heizkosten hinterlegen (Quelle Pflicht, Status zu prüfen)",
 )
 async def put_rule_table(

@@ -814,6 +814,7 @@ async def generate_file(
     """Build, check and file the pain.008 as a document. Requires a fully approved run of a
     leading ledger; the document is never handed out here (download is behind G2)."""
     from mhvp.banking.models import PaymentBankConfig
+    from mhvp.documents import payment_files
     from mhvp.documents import services as docs
     from mhvp.documents.models import DocumentSource, LinkRole
     from mhvp.properties.models import PropertyBankAccount
@@ -861,7 +862,8 @@ async def generate_file(
         filename=f"{run.message_id}.xml",
         mime_type="application/xml",
         source=DocumentSource.GENERATED,
-        category_id=None,
+        # GAJ-301: locked document kind, general routes hand it out only with G2.
+        category_id=await payment_files.category_id(session, run.tenant_id),
         links=[("legal_entity", run.legal_entity_id, LinkRole.GENERATED)],
         created_by=user_id,
     )
@@ -894,7 +896,7 @@ async def record_download(
         entity_type="direct_debit_run",
         entity_id=run.id,
         actor_user_id=user_id,
-        payload={"file_sha256": checksum, "document_id": str(run.document_id)},
+        payload={"file_sha256": checksum},  # GAJ-301: no document id in event payloads
     )
     return checksum
 

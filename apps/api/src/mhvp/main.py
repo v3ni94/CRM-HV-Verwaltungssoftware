@@ -180,6 +180,7 @@ from mhvp.portal.notice_routers import portal_router as notice_portal_router
 from mhvp.portal.owner import router as portal_owner_router
 from mhvp.portal.owner_assets import router as portal_owner_assets_router
 from mhvp.portal.owner_extra import router as portal_owner_extra_router
+from mhvp.portal.owner_inspection import router as portal_owner_inspection_router
 from mhvp.portal.owner_meetings import router as portal_owner_meetings_router
 from mhvp.portal.owner_overview import router as portal_owner_overview_router
 from mhvp.portal.owner_receipts import router as portal_owner_receipts_router
@@ -484,6 +485,7 @@ def create_app(
     app.include_router(portal_tenant_statements_router, prefix=API_PREFIX)
     app.include_router(portal_owner_assets_router, prefix=API_PREFIX)
     app.include_router(portal_owner_receipts_router, prefix=API_PREFIX)
+    app.include_router(portal_owner_inspection_router, prefix=API_PREFIX)
     app.include_router(portal_provider_einvoice_router, prefix=API_PREFIX)
     app.include_router(portal_provider_info_router, prefix=API_PREFIX)
     app.include_router(portal_provider_info_admin_router, prefix=API_PREFIX)

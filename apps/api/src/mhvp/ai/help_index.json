@@ -2205,6 +2205,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Differenz zur Vorversion (GAJ-104, Welle 23)",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei einer Korrekturversion einer Betriebskostenabrechnung zeigt der Abschnitt \"Differenz zur Vorversion\" nach Klick auf \"Differenz zur Vorversion anzeigen\" je Einheit Kosten und Ergebnis alt und neu sowie geänderte Kostenpositionen. Die Anzeige liest nur gespeicherte Stände und d",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Periodensperren in der Abrechnungswerkbank",
   "source": "Handbuch: abrechnung",
   "href": null,
@@ -3945,6 +3955,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Gespeicherte Zahllauf-Vorschauen filtern",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Zahllauf lassen sich die gespeicherten Vorschauen nach Stichtag und Auslöser (manuell, wöchentlich, fehlgeschlagen) eingrenzen. Eine Filterkombination kann unter einem Namen gespeichert werden und steht danach als Schnellauswahl über der Liste bereit. Das Filtern än",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4635,6 +4655,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Sollstellungslauf stornieren (GAJ-101, Welle 23)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei einem gebuchten Sollstellungslauf steht die Schaltfläche \"Lauf stornieren\" (Recht Buchungen freigeben). Sie verlangt eine Begründung, fragt vor der Ausführung nach und storniert die Sollstellungen durch Gegenbuchungen; die ursprünglichen Buchungen bleiben erhalten. Die Geschä",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschprofile",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -5135,6 +5165,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Zahlungsdateien (gesperrt bis G2)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Lastschrift- und Zahlungsdateien liegen in der Kategorie \"Zahlungsdatei (gesperrt bis G2)\". Solange die Freigabe G2 nicht erteilt ist, lassen sie sich weder in der Dokumentenliste herunterladen noch über das Portal abrufen oder in Paperless und Google Drive spiegeln. Titel und Me",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -5280,7 +5320,7 @@
   "href": "/einstellungen",
   "keywords": [],
   "permission": null,
-  "excerpt": "Der Kanal SMS läuft über ein anbieterneutrales HTTP-Gateway je Mandant (Reiter SMS-Gateway, mit Testnachricht). Ein WhatsApp-Kanal ist zum Stand dieses Handbuchs nicht umgesetzt; sofern eine Anfrage WhatsApp erwähnt, ist dies als offener Punkt zu behandeln und nicht als vorhanden",
+  "excerpt": "Der Kanal SMS läuft über ein anbieterneutrales HTTP-Gateway je Mandant (Reiter SMS-Gateway, mit Testnachricht). Der WhatsApp-Kanal ist im Bereich SLA für Eskalationen an Mitarbeiter und für den Testversand umgesetzt. Nachrichten an Kontakte gehen nur mit erfasster WhatsApp-Einwil",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -6415,6 +6455,16 @@
  },
  {
   "kind": "handbook",
+  "title": "WhatsApp-Kanal, Zustellstatus und Einwilligung",
+  "source": "Handbuch: Kommunikation (Telefonie, Zustellungen, ausgehende Webhooks)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Zweck WhatsApp ist ein zusätzlicher Kanal für Eskalationen und Notfallmeldungen an Mitarbeiter (WhatsApp Business Platform, Meta Cloud API). Gesendet werden ausschließlich bei Meta freigegebene Vorlagennachrichten, nie Freitext. Je Mandant kann bei einem Fehler auf SMS ausgewiche",
+  "file": "docs/handbuch/kommunikation.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Kontakte",
   "href": "/kontakte",
@@ -6945,6 +6995,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Gespeicherte Filter im Postfach",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die aktuelle Auswahl aus Reiter, Status, Postfach, Suchbegriff und Gmail Abgleich lässt sich über das Feld \"Filtername\" speichern. Ein gespeicherter Filter wird per Klick angewendet und kann mit dem Kreuz gelöscht werden.",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Makler",
   "href": "/makler",
@@ -7191,6 +7251,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Ein Abnahmeprotokoll im Status Entwurf ändern Sie auf der Seite Importe, Migration über Bearbeiten und Änderungen speichern (Recht accounting:update). Nach der Unterzeichnung durch die zweite Person ist das Protokoll gesperrt: die Schaltfläche Bearbeiten entfällt, die Schnittstel",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Altabrechnungen und Beschlusssammlung (Welle 23)",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Importassistenten stehen die Berichtsarten \"Altabrechnungen je Version (nur Ablage)\" und \"Beschlusssammlung (nur Ablage)\" bereit. Die Spalten des Exports werden wie bei den anderen Berichtsarten zugeordnet. Jede Version einer Abrechnung wird als eigene Zeile abgelegt; ein erne",
   "file": "docs/handbuch/migration-immoware.md"
  },
  {
@@ -8031,6 +8101,46 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Sicherheit ändern Portalnutzer ihr Passwort: aktuelles Passwort, neues Passwort und Wiederholung eingeben, dann Passwort ändern wählen. Danach enden alle Sitzungen des Kontos, auch auf anderen Geräten; die Anmeldung erfolgt mit dem neuen Passwort. Die Liste Aktive Sitzungen",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zählerstand mit Foto melden (GAJ-401)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Zählerstand melden fügen Sie ein Foto des Zählers bei, über die Dateiauswahl oder direkt mit der Kamera (Schaltfläche Foto aufnehmen). Das Foto wird ohne Aufnahmedaten gespeichert und dient der Verwaltung als Ablesebeleg. Ohne Foto erscheint ein Hinweis; die Meldung bleibt ",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Fotos direkt mit der Kamera (GAJ-404)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei der Schadensmeldung und bei den Ausführungsfotos des Dienstleisters öffnet die Schaltfläche Foto aufnehmen auf dem Smartphone direkt die Kamera. Die Dateiauswahl bleibt daneben erhalten.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Stand der Aufträge zur Meldung (GAJ-402)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Einzelansicht einer Meldung zeigt der Abschnitt Stand der Aufträge den laufenden Status jedes Auftrags (angefragt, beauftragt, terminiert, in Ausführung, ausgeführt usw.) und den Termin. Dienstleister, Preise und interne Vermerke werden nicht angezeigt; Aufträge im Entwurf",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Einsichtsanfrage im Eigentümerportal (GAJ-202)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die Verwaltungsunterlagen ihrer Gemeinschaft (Umfang Abrechnung, Belege, Verträge, Beschlüsse oder eine Beschreibung) und sehen den Stand ihrer Anfragen. Die Anfrage geht in die Einsichtsanfragen des CRM;",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -8935,6 +9045,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Zahlungsposition korrigieren und Zustellung der Verbrauchsinformation (GAJ-102, GAJ-103, Welle 23)",
+  "source": "Handbuch: Verträge (Miete, WEG, SEV)",
+  "href": "/vertraege",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Tabelle der Sollbeträge öffnet \"Korrigieren\" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst ",
+  "file": "docs/handbuch/vertraege.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
   "href": "/weg",
@@ -9291,6 +9411,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Auf der Seite Einsichtsanfragen einer Gemeinschaft prüft die Schaltfläche \"Eigentümerwechsel prüfen\" (Recht WEG bearbeiten), ob bei offenen Anfragen der Eigentümer seit der Anfrage gewechselt hat. Es entsteht nur ein Prüfvermerk, keine Anfrage wird geschlossen und kein Paket wide",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Einzelabrechnung als PDF und Zuordnungsvorschlag (GAJ-201, GAJ-203, Welle 23)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Abrechnungsseite einer Gemeinschaft erscheint je Einheit die Schaltfläche \"Einheit ...\" für die Einzelabrechnung als PDF-Entwurf. Sie bleibt gesperrt, solange die Freigabestufe G4 geschlossen ist oder die Abrechnung nicht intern freigegeben wurde. Der Abschnitt \"Zuordnung",
   "file": "docs/handbuch/weg.md"
  }
 ]

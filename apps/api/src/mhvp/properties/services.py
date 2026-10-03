@@ -542,6 +542,60 @@ def owner_open_filter(as_of: date) -> Any:
     return or_(PropertyOwner.valid_to.is_(None), PropertyOwner.valid_to >= as_of)
 
 
+async def owner_period_problems(
+    session: AsyncSession,
+    property_id: uuid.UUID,
+    party_id: uuid.UUID,
+    valid_from: date,
+    valid_to: date | None,
+    share_percent: Decimal | None,
+    *,
+    exclude_ids: Sequence[uuid.UUID] = (),
+) -> list[str]:
+    """Data quality of a new owner period (GAJ-603, rule PROP-OWNER-PERIOD): the same party
+    must not own the property twice in overlapping periods, and the known shares of all
+    owners active on any day of the new period must not exceed 100 percent. Owners without
+    share are co-owners of unknown share and do not count. Returns German messages."""
+    query = select(PropertyOwner).where(
+        PropertyOwner.property_id == property_id,
+        or_(PropertyOwner.valid_to.is_(None), PropertyOwner.valid_to >= valid_from),
+    )
+    if valid_to is not None:
+        query = query.where(PropertyOwner.valid_from <= valid_to)
+    if exclude_ids:
+        query = query.where(PropertyOwner.id.not_in(list(exclude_ids)))
+    rows = list(await session.scalars(query))
+    problems: list[str] = []
+    same = [r for r in rows if r.party_id == party_id]
+    if same:
+        problems.append(
+            "Die Partei ist im Zeitraum bereits Eigentümer des Objekts "
+            f"(ab {same[0].valid_from.strftime('%d.%m.%Y')})."
+        )
+    if share_percent is not None:
+        # The sum can only rise where a period starts: check the new start and every start
+        # of an overlapping row inside the new period.
+        points = {valid_from} | {r.valid_from for r in rows if r.valid_from > valid_from}
+        for day in sorted(points):
+            total = share_percent + sum(
+                (
+                    r.share_percent
+                    for r in rows
+                    if r.share_percent is not None
+                    and r.valid_from <= day
+                    and (r.valid_to is None or r.valid_to >= day)
+                ),
+                Decimal(0),
+            )
+            if total > Decimal(100):
+                problems.append(
+                    f"Die Eigentumsanteile ergäben am {day.strftime('%d.%m.%Y')} "
+                    f"{total.normalize():f} Prozent (mehr als 100 Prozent)."
+                )
+                break
+    return problems
+
+
 def default_owner_start(prop: Property, today: date) -> date:
     """Start of an owner entry without date: management start, else 1 January of the year
     (the default start of the import assignment, so that tenancies find their landlord)."""

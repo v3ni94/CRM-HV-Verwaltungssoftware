@@ -314,3 +314,10 @@ Der Assistent schlägt aus Listen Kontakte, Objekte und Verträge vor; nichts wi
 Dieses Handbuch ist im CRM unter Hilfe (`/hilfe`) lesbar, mit Kapitelübersicht und Volltextsuche.
 Die Seiten entstehen aus den Markdown-Dateien in `docs/handbuch` durch
 `python3 scripts/build_handbook.py`; `make lint` prüft, dass die erzeugte Datei aktuell ist.
+
+### KI-Schalter je Mail und Regel
+
+Unter Einstellungen, Fachliche Regeln, Bereich Plattform lassen sich die KI-Einordnung je
+eingehender Ticket-Mail, der KI-Stammdatenvorschlag aus Ticket-Mails und KI-Aufgaben aus
+Automationsregeln einzeln abschalten. Standard ist an. Regeln mit KI-Aufgabe können nur
+Personen mit dem Recht zur KI-Freigabe anlegen oder ändern.

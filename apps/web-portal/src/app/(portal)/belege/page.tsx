@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { OwnerInspectionPanel } from "@/components/portal/OwnerInspectionPanel";
 import { formatEur } from "@/lib/format-eur";
 import { ui } from "@/lib/ui";
 
@@ -99,6 +100,7 @@ export default async function ReceiptsPage({
         ))}
       </ul>
       {data.truncated ? <p className="text-xs text-subtle">{t("truncated")}</p> : null}
+      <OwnerInspectionPanel />
     </div>
   );
 }

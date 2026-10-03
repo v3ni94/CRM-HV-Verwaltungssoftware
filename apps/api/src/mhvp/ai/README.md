@@ -439,3 +439,19 @@ become the latest numbered prompt. Rule: `docs/rules/AE28-01.md`.
 - GAH-204: Negativtests `tests/integration/test_ai06_withdrawn_release.py` (Gateway, Batch Einreichen und Abruf, Einbettungsroute; Fake-Anbieter zählt Aufrufe).
 - GAH-205: Goldstandard `tests/ai_eval/reply_draft` (20 Fälle, zwei Injektionsfälle), Bewertung über `suggest.reply_task_payload` in `evaluate._reply_draft`.
 * GAI-610 (AJ25): when the release, the DPA, the DPA document or the training opt-out is withdrawn while a provider batch is open, `batch.poll_submitted` no longer polls it but cancels it at the provider (`AnthropicClient.cancel_batch`, `messages.batches.cancel`, only the batch id is sent) and emits `ai.batch_cancelled` with the outcome `cancelled`, `failed` or `not_possible` (no stored key or no cancel capability). The runs go back to `deferred` with `provider_cancel` set. Tests use a fake provider (`test_ai06_withdrawn_release.py`), no network.
+
+## Schalter der KI-Pfade je Mail und Regel (AM04, GAJ-605 bis GAJ-607)
+
+`ai_automation` in `TenantSettings.objektakte_classification` trägt drei weitere Schalter, die
+über `GET/PUT /ai/automation` gelesen und gesetzt werden und auf der Seite Fachliche Regeln
+erscheinen: `realtime_mail_classification` (Vorschlag je eingehender Ticket-Mail),
+`master_data_change_proposals` (Stammdatenvorschlag je Ticket-Mail) und `automation_ai_task`
+(Regelaktion `ai_task`). Standard an, damit das bisherige Verhalten erhalten bleibt; die
+Standardfrage ist offen (OPEN_QUESTIONS AM04-01 bis AM04-03). Regeln mit `ai_task` dürfen nur
+Personen mit `ai:approve` anlegen oder ändern (403 sonst).
+
+## Budget warning notification (GAJ-609, wave 23)
+
+When a run crosses 80 percent of the monthly budget, `ai.budget_warning` is emitted and
+`gateway.notify_budget_warning` notifies every member with `tenant_settings:update`
+(kind `ai.budget_warning`, idempotent on the unread notification).

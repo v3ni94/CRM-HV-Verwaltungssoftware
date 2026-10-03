@@ -52,4 +52,14 @@ TENANT_AUTO_POSTING_OUTGOING_CHANGED = "tenant.auto_posting_outgoing_changed"
 # banking into accounting, plan 3.1 no. 9).
 JOURNAL_ENTRY_REVERSED = "journal_entry.reversed"
 CONTACT_DELETED = "contact.deleted"
+# GAJ-608: payer evidence (``ContactBankAccount``) changes like on ``contact.deleted``.
+BANK_ACCOUNT_APPROVED = "bank_account.approved"
+BANK_ACCOUNT_ENDED = "bank_account.ended"
+CONTACT_MANDATE_IBAN_CHANGED = "contact.mandate_iban_changed"
+PAYER_EVIDENCE_EVENTS = (
+    CONTACT_DELETED,
+    BANK_ACCOUNT_APPROVED,
+    BANK_ACCOUNT_ENDED,
+    CONTACT_MANDATE_IBAN_CHANGED,
+)
 INVOICE_UPDATED = "invoice.updated"

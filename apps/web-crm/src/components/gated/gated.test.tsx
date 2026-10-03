@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, messages, renderIntl } from "@/test/intl";
@@ -132,6 +132,23 @@ describe("AJ28 gated masks", () => {
     expect(screen.getByRole("button", { name: m.savedPreviews.save })).toBeDisabled();
     expect(calls.some((c) => c.url === "/api/bff/accounting/payment-runs/previews?limit=20")).toBe(true);
     expect(posts(calls)).toEqual([]);
+  });
+
+  it("filters stored previews by reference date and trigger and offers saved filters (AL05)", async () => {
+    const calls = mockApi([], (url, method) => (method === "GET" && url.includes("/payment-runs/previews") ? jsonResponse([]) : null));
+    renderIntl(<SavedPaymentRunPreviews />);
+    await screen.findByText(m.savedPreviews.empty);
+    await userEvent.selectOptions(screen.getByLabelText(m.savedPreviews.filterTrigger), "schedule");
+    await waitFor(() =>
+      expect(calls.some((c) => c.url === "/api/bff/accounting/payment-runs/previews?limit=20&trigger=schedule")).toBe(true),
+    );
+    fireEvent.change(screen.getByLabelText(m.savedPreviews.filterAsOf), { target: { value: "2026-09-07" } });
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.url === "/api/bff/accounting/payment-runs/previews?limit=20&as_of=2026-09-07&trigger=schedule"),
+      ).toBe(true),
+    );
+    expect(calls.some((c) => c.url.includes("/api/bff/workspace/filters?resource=payment_runs"))).toBe(true);
   });
 
   it("saves a preview when G2 is open and reloads the list", async () => {

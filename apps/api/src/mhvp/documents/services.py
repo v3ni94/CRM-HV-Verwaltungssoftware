@@ -261,6 +261,10 @@ async def queue_mirrors(session: AsyncSession, tenant_id: uuid.UUID, document_id
     ).all()
     if await objektakte_upload.is_routed(session, document_id):
         kinds = [k for k in kinds if k not in (StorageKind.PAPERLESS, StorageKind.GOOGLE_DRIVE)]
+    from mhvp.documents import payment_files  # local: avoids an import cycle
+
+    if await payment_files.payment_file_ids(session, [document_id]):
+        return 0  # GAJ-301: payment files never leave the platform through a DMS mirror
     for kind in kinds:
         exists = await session.scalar(
             select(DocumentMirror.id).where(

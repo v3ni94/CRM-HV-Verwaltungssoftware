@@ -358,6 +358,10 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
 
     if entity_type in w5_reports.UNDOABLE_ENTITY_TYPES:
         return await w5_reports.referenced(session, entity_type, entity_id)
+    from mhvp.imports import statement_reports
+
+    if entity_type in statement_reports.UNDOABLE_ENTITY_TYPES:
+        return await statement_reports.referenced(session, entity_type, entity_id)
     if entity_type == "invoice":
         invoice = await session.get(Invoice, entity_id)
         if invoice is not None and invoice.posting_status is not PostingStatus.UNPOSTED:
@@ -498,6 +502,11 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
 
     if entity_type in w5_reports.UNDOABLE_ENTITY_TYPES:
         await w5_reports.remove(session, entity_type, entity_id)
+        return
+    from mhvp.imports import statement_reports
+
+    if entity_type in statement_reports.UNDOABLE_ENTITY_TYPES:
+        await statement_reports.remove(session, entity_type, entity_id)
         return
     if entity_type == "contact":
         contact = await session.get(Contact, entity_id)

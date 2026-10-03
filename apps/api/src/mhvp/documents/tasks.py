@@ -19,6 +19,7 @@ from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.problems import ProblemError
+from mhvp.documents import payment_files
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.dms import (
     DmsError,
@@ -133,6 +134,10 @@ async def mirror_tenant(
             if mirror.status is MirrorStatus.PENDING:
                 document = await session.get(Document, mirror.document_id)
                 if document is None:  # pragma: no cover - cascade deletes the mirror
+                    continue
+                if await payment_files.is_payment_file(session, document):
+                    # GAJ-301: mirrors queued before the lock never upload a payment file.
+                    mirror.status, mirror.last_error = MirrorStatus.FAILED, "payment_file_locked"
                     continue
                 result = await store.put(
                     blobs.get(document.storage_ref), await _meta(session, tenant.slug, document)

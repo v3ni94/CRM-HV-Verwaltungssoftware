@@ -277,3 +277,15 @@ Vorprüfung meldet dann den Blocker "Schriften nicht eingebettet" mit Installati
 The BFF forwards a JSON body on DELETE when one is present (needed for the lift reason).
 API coverage: `tests/integration/test_u11_retention_procedure_holds.py` (422, 403, 404, 409,
 second person) and `test_q03_documents_w3.py`.
+
+## AM01 (GAJ-301, wave 23): payment files locked behind G2
+
+`mhvp.documents.payment_files`: a document is a payment file when its category code is
+`payment_file` or a direct debit run (pain.008) or payment batch (pain.001) references it. For
+such a document `GET /documents/{id}/content` and `/download-url` answer 403
+`MHVP-GATE-0001` while G2 is closed; the portal single download and `POST /portal/documents/bundle`
+answer 404; `queue_mirrors` queues no DMS mirror and the mirror job marks older queued mirrors
+`failed` (`payment_file_locked`). The pain.008 file is stored in the `payment_file` category
+(created on demand); `POST /document-categories/ensure-defaults` aligns older files. Events
+`direct_debit_run.file_generated` and `.file_downloaded` carry no document id. Rule
+`docs/rules/GAJ-301-zahlungsdateien.md`.

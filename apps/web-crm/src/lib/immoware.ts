@@ -31,6 +31,9 @@ const WAVE5_REPORT_TYPES = [
   "portal_user",
 ] as unknown as ReportType[];
 
+/** Report types added in Welle 23 (GAJ-501): filed and checked only, nothing posts. */
+const WAVE23_REPORT_TYPES = ["historical_statement", "resolution"] as unknown as ReportType[];
+
 export const REPORT_TYPES: ReportType[] = [
   "properties",
   "units",
@@ -42,6 +45,7 @@ export const REPORT_TYPES: ReportType[] = [
   "bank_transactions",
   ...WAVE3_REPORT_TYPES,
   ...WAVE5_REPORT_TYPES,
+  ...WAVE23_REPORT_TYPES,
 ];
 
 /** Reports without target fields: rows are only staged until the ledger exists (18, M8). */

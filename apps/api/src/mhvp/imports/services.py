@@ -9,7 +9,7 @@ import csv
 import io
 import uuid
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -28,7 +28,7 @@ from mhvp.contracts.models import Contract, ContractKind, ContractPayment, Payme
 from mhvp.core.clock import local_today
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.imports import w3_reports, w5_reports
+from mhvp.imports import statement_reports, w3_reports, w5_reports
 from mhvp.imports.fields import FIELDS, convert
 from mhvp.imports.models import ImportSourceFile, ReportType, RowStatus, StagingRow
 from mhvp.properties import services as property_services
@@ -349,15 +349,64 @@ async def _apply_contract(
         )
         if existing_owner is not None:
             return RowStatus.UNCHANGED, "property_owner", existing_owner.id, []
+        # GAJ-603: owners of other parties still open on the key date and starting before it
+        # are ended the day before; an owner starting after the key date is a conflict for
+        # the import report (nothing is changed). Same start date means co-ownership.
+        open_owners = list(
+            await session.scalars(
+                select(PropertyOwner).where(
+                    PropertyOwner.property_id == prop.id,
+                    property_services.owner_open_filter(start),
+                )
+            )
+        )
+        later = [o for o in open_owners if o.valid_from > start]
+        if later:
+            return (
+                RowStatus.CONFLICT,
+                "property_owner",
+                later[0].id,
+                [
+                    "Eigentümer mit späterem Beginn vorhanden "
+                    f"({later[0].valid_from.strftime('%d.%m.%Y')})"
+                ],
+            )
+        notes: list[str] = []
+        ended = [o for o in open_owners if o.valid_from < start]
+        for old in ended:
+            old.valid_to = start - timedelta(days=1)
+            notes.append(f"Bisheriger Eigentümer zum {old.valid_to.strftime('%d.%m.%Y')} beendet")
+        await session.flush()
+        problems = await property_services.owner_period_problems(
+            session, prop.id, party.id, start, None, None
+        )
+        if problems:
+            return RowStatus.CONFLICT, "property_owner", None, problems
         owner = PropertyOwner(
             tenant_id=principal.tenant_id, property_id=prop.id, party_id=party.id, valid_from=start
         )
         session.add(owner)
         await session.flush()
         await property_services.owner_entity(session, prop, party.id)
+        for old in ended:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="property.owner_updated",
+                entity_type="property",
+                entity_id=prop.id,
+                actor_user_id=principal.user_id,
+                payload={"owner_id": str(old.id), "source": "import"},
+                changes={
+                    "valid_to": {
+                        "old": None,
+                        "new": old.valid_to.isoformat() if old.valid_to else None,
+                    }
+                },
+            )
         if rec:
             rec.add("property_owner", owner.id)
-        return RowStatus.CREATED, "property_owner", owner.id, []
+        return RowStatus.CREATED, "property_owner", owner.id, notes
     existing = await session.scalar(
         select(Contract).where(
             Contract.unit_id == unit.id, Contract.kind == kind, Contract.start_date == start
@@ -469,6 +518,8 @@ async def apply_row(
         return await w3_reports.apply_row(session, principal, report_type, values, ctx or {})
     if w5_reports.handles(report_type):
         return await w5_reports.apply_row(session, principal, report_type, values, ctx or {})
+    if statement_reports.handles(report_type):  # GAJ-501: filing only, nothing posts
+        return await statement_reports.apply_row(session, principal, report_type, values, ctx or {})
     if report_type is ReportType.PROPERTIES:
         return await _apply_property(session, principal, values, rec)
     if report_type is ReportType.UNITS:
@@ -557,7 +608,12 @@ async def run(
         if (
             rec is not None
             and status is RowStatus.CREATED
-            and entity_type in (w3_reports.UNDOABLE_ENTITY_TYPES | w5_reports.UNDOABLE_ENTITY_TYPES)
+            and entity_type
+            in (
+                w3_reports.UNDOABLE_ENTITY_TYPES
+                | w5_reports.UNDOABLE_ENTITY_TYPES
+                | statement_reports.UNDOABLE_ENTITY_TYPES
+            )
             and entity_id is not None
         ):
             rec.add(entity_type, entity_id)  # Q08: history rows are undone like other imports

@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ReceivableRunReverseForm } from "./ReceivableRunReverseForm";
+
 type Item = {
   contract_id: string;
   payment_type_code: string;
@@ -30,7 +32,7 @@ export type Run = {
 
 /** Receivable run (M13, 7.5): preview first, posting only after confirmation; a stale preview
  *  is rejected by the API (409). Postings stay non leading until G1 (ADR 0007). */
-export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
+export function ReceivableRunPanel({ initialMonth, canApprove = false }: { initialMonth: string; canApprove?: boolean }) {
   const t = useTranslations("Receivables");
   const [month, setMonth] = useState(initialMonth);
   const [run, setRun] = useState<Run | null>(null);
@@ -134,6 +136,7 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
               .map(([k, v]) => `${t(`itemStatus.${k}`)}: ${v.count} (${formatEur(v.amount)})`)
               .join(" · ")}
           </p>
+          {run.status === "posted" ? <ReceivableRunReverseForm runId={run.id} canApprove={canApprove} onReversed={() => void openRun(run.id)} /> : null}
           {typeof run.totals.skipped_pending_approval === "number" && run.totals.skipped_pending_approval > 0 ? (
             <p className={ui.notice} data-testid="run-skipped">
               {t("skippedPending", { count: run.totals.skipped_pending_approval })}

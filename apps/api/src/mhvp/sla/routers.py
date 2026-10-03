@@ -825,6 +825,7 @@ async def send_whatsapp_test(
             alert_id=None,
             to=body.to,
             alert_type=WHATSAPP_TEST_TEMPLATE_KEY,
+            recipient="test",
             params=["Testnachricht MH Verwaltungsplattform"],
         )
     return {"ok": error is None, "error": error}

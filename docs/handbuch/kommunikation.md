@@ -185,3 +185,49 @@ Mandanten. Beim Einzelunternehmen entfällt die Funktionsbezeichnung.
   pflegen" (Einstellungen, Profil). Bis dahin enthält die Signatur nur Name und Gesellschaft.
 - "Kurz senden" reicht den Entwurf zur Freigabe ein; beim Einreichen wird keine zweite Signatur
   angefügt. Vier-Augen-Regel und Bestätigung gelten wie beim normalen Versand.
+
+## WhatsApp-Kanal, Zustellstatus und Einwilligung
+
+### Zweck
+
+WhatsApp ist ein zusätzlicher Kanal für Eskalationen und Notfallmeldungen an Mitarbeiter
+(WhatsApp Business Platform, Meta Cloud API). Gesendet werden ausschließlich bei Meta
+freigegebene Vorlagennachrichten, nie Freitext. Je Mandant kann bei einem Fehler auf SMS
+ausgewichen werden.
+
+### Voraussetzungen
+
+- Einstellungen, SLA, Reiter WhatsApp: Nummern-ID, Konto-ID, Zugriffstoken, Vorlagensprache und
+  je Alarmtyp (SLA-Eskalation, Notfall, Test) der Name der freigegebenen Vorlage; Kanal
+  aktiviert (Recht Mandanteneinstellungen ändern). Die Einrichtung bei Meta beschreibt
+  docs/integrations/whatsapp.md.
+- Empfänger Mitarbeiter: Mobilnummer im Benutzerprofil. Mitarbeiter gelten als interner Kanal
+  und brauchen keine Kontakteinwilligung (dokumentierte Annahme).
+- Empfänger Kontakt (Mieter, Eigentümer): nur mit erfasster, nicht widerrufener Einwilligung
+  der Art WhatsApp in der Kontaktakte. Fehlt sie, sendet die Plattform nichts, legt keinen
+  Zustelleintrag an und meldet "Keine WhatsApp-Einwilligung des Kontakts erfasst; nicht
+  gesendet." Ein Versand an Kontakte ist zum Stand dieses Handbuchs nicht als Bedienfunktion
+  freigeschaltet; die Prüfung sichert den Sendeweg für eine spätere Erweiterung ab.
+
+### Schritt für Schritt
+
+1. Testversand: Im Reiter WhatsApp eine Nummer eingeben und Testnachricht senden. Der
+   Testversand nutzt die Vorlage des Alarmtyps Test und ist auf Benutzer mit dem Recht
+   Mandanteneinstellungen ändern beschränkt.
+2. Eskalation: Erreicht ein Ticket eine Eskalationsstufe mit Kanal WhatsApp, geht die Vorlage
+   an die Mobilnummer der zuständigen Person. Schlägt der Versand fehl und ist der
+   SMS-Ausweichweg aktiv, folgt eine SMS.
+3. Zustellstatus: Jeder Versuch erhält einen Zustelleintrag mit Status gesendet oder
+   fehlgeschlagen (mit Fehlertext, ohne Zugangsdaten). Meta meldet danach über den
+   signierten Webhook zugestellt und gelesen; ein Status wird nur vorwärts übernommen
+   (gelesen fällt nie auf zugestellt zurück), fehlgeschlagen ist endgültig. Meldungen
+   außerhalb des Zeitfensters von sieben Tagen werden verworfen.
+
+### Häufige Fehler
+
+- **Keine WhatsApp-Vorlage für Alarmtyp hinterlegt**: Vorlagenname im Reiter WhatsApp ergänzen.
+- **WhatsApp nicht eingerichtet oder deaktiviert**: Kanal aktivieren, Nummer und Token pflegen.
+- **Keine WhatsApp-Einwilligung des Kontakts erfasst**: Einwilligung in der Kontaktakte erfassen
+  oder anderen Zustellweg wählen.
+- **Status bleibt auf gesendet**: Webhook bei Meta nicht eingerichtet oder Signatur
+  (App-Geheimnis) passt nicht.

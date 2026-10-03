@@ -8363,6 +8363,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Aktuelle Anschriften eines Kontakts (Stichtag noch nicht verfügbar)
+         * @description GAJ-610: addresses have no valid_to yet, a change overwrites the previous one. A cut off
+         *     date query is refused explicitly (422) instead of returning today's addresses for a past
+         *     date, which would be a wrong delivery proof.
+         */
+        get: operations["list_contact_addresses_api_v1_contacts__contact_id__addresses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/bank-accounts": {
         parameters: {
             query?: never;
@@ -14742,6 +14764,57 @@ export interface paths {
         };
         /** Summen der Einzelposten je Art (Abgleich) */
         get: operations["history_open_item_summary_api_v1_imports_immoware24_history_open_items_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/history/resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Übernommene Beschlusssammlung (nur Ablage) */
+        get: operations["history_resolutions_api_v1_imports_immoware24_history_resolutions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/history/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Übernommene Altabrechnungen je Version (nur Ablage) */
+        get: operations["history_statements_api_v1_imports_immoware24_history_statements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/history/statements/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prüfbericht Altabrechnungen und Beschlüsse (ohne Korrektur) */
+        get: operations["history_statement_check_api_v1_imports_immoware24_history_statements_check_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -23139,6 +23212,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/owner/inspection-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigene Einsichtsanfragen (Eigentümer) */
+        get: operations["list_owner_inspections_api_v1_portal_owner_inspection_requests_get"];
+        put?: never;
+        /** Einsichtsanfrage stellen (Eigentümer) */
+        post: operations["create_owner_inspection_api_v1_portal_owner_inspection_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/owner/inspection-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Einsichtsanfrage mit Statusverlauf (Eigentümer) */
+        get: operations["get_owner_inspection_api_v1_portal_owner_inspection_requests__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/owner/payment-resolutions": {
         parameters: {
             query?: never;
@@ -29924,6 +30032,18 @@ export interface components {
          * @enum {string}
          */
         AccountVatOption: "none" | "full" | "reduced";
+        /** AccountingAdminFeeCreatedOut */
+        AccountingAdminFeeCreatedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lexoffice Recurring Prep Id */
+            lexoffice_recurring_prep_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AccountingAllocationIn */
         AccountingAllocationIn: {
             /** Items */
@@ -30000,6 +30120,71 @@ export interface components {
             /** Linked */
             linked: number;
         };
+        /** AccountingDatevExportOut */
+        AccountingDatevExportOut: {
+            /** Content */
+            content: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rows */
+            rows: number;
+            /** Sha256 */
+            sha256?: string | null;
+            /**
+             * Skipped Split Bookings
+             * @default []
+             */
+            skipped_split_bookings: unknown[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingDeliveryProofOut */
+        AccountingDeliveryProofOut: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Created At */
+            created_at?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Proof Date
+             * Format: date
+             */
+            proof_date: string;
+            /** Reference */
+            reference?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingDocumentStoredOut */
+        AccountingDocumentStoredOut: {
+            /** Created */
+            created: boolean;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * AccountingDunningBlockOut
          * @description AK11 (GAI-304): typed response of a dunning block per open item.
@@ -30031,6 +30216,18 @@ export interface components {
             released_at?: string | null;
             /** Released By */
             released_by?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingEntityCreditorIdOut */
+        AccountingEntityCreditorIdOut: {
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Sepa Creditor Id */
+            sepa_creditor_id?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -30161,6 +30358,22 @@ export interface components {
             /** Ledgers Total */
             ledgers_total: number;
         };
+        /** AccountingJournalExportOut */
+        AccountingJournalExportOut: {
+            /** Content */
+            content: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rows */
+            rows: number;
+            /** Sha256 */
+            sha256?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AccountingLeadingEffectiveOut */
         AccountingLeadingEffectiveOut: {
             /** Kind */
@@ -30280,6 +30493,60 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** AccountingPaperlessIntakeOut */
+        AccountingPaperlessIntakeOut: {
+            /** Document Id */
+            document_id: string;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Run Id */
+            run_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingPaymentTypeAccountOut */
+        AccountingPaymentTypeAccountOut: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Payment Type Code */
+            payment_type_code: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingReceivableRunReverseOut */
+        AccountingReceivableRunReverseOut: {
+            /** Reversed */
+            reversed: number;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingRecurringPlanCreatedOut */
+        AccountingRecurringPlanCreatedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Next Due */
+            next_due?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingS35aCertificateDocumentOut */
+        AccountingS35aCertificateDocumentOut: {
+            /** Contract Id */
+            contract_id: string;
+            /** Document Id */
+            document_id: string;
+            /** Repeat Notice */
+            repeat_notice?: string | null;
+            /** Year */
+            year: number;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * AccountingSyncDebtorsOut
          * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
@@ -30287,6 +30554,18 @@ export interface components {
         AccountingSyncDebtorsOut: {
             /** Created */
             created: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AccountingTenantCreditorIdOut */
+        AccountingTenantCreditorIdOut: {
+            /** Sepa Creditor Id */
+            sepa_creditor_id?: string | null;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
         } & {
             [key: string]: unknown;
         };
@@ -30693,8 +30972,14 @@ export interface components {
          * @description Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.
          */
         AiAutomationIn: {
+            /** Automation Ai Task */
+            automation_ai_task?: boolean | null;
             /** Batch Mail Classification */
             batch_mail_classification?: boolean | null;
+            /** Master Data Change Proposals */
+            master_data_change_proposals?: boolean | null;
+            /** Realtime Mail Classification */
+            realtime_mail_classification?: boolean | null;
             /** Rent Increase Check */
             rent_increase_check?: boolean | null;
         };
@@ -31895,12 +32180,27 @@ export interface components {
         };
         /** AutomationOut */
         AutomationOut: {
+            /**
+             * Automation Ai Task
+             * @default true
+             */
+            automation_ai_task: boolean;
             /** Batch Mail Classification */
             batch_mail_classification: boolean;
             /** Blocked Reason */
             blocked_reason?: string | null;
+            /**
+             * Master Data Change Proposals
+             * @default true
+             */
+            master_data_change_proposals: boolean;
             /** Provider Released */
             provider_released: boolean;
+            /**
+             * Realtime Mail Classification
+             * @default true
+             */
+            realtime_mail_classification: boolean;
             /** Rent Increase Check */
             rent_increase_check: boolean;
         };
@@ -32581,6 +32881,54 @@ export interface components {
             /** Order Ids */
             order_ids: string[];
         };
+        /** BillingAdvanceRuleOut */
+        BillingAdvanceRuleOut: {
+            /** Formula */
+            formula: string;
+            /** Months */
+            months: number;
+            /** Open Advance Decision */
+            open_advance_decision: string;
+            /** Open Advance Mode */
+            open_advance_mode: string;
+            /** Open Advance Modes */
+            open_advance_modes: string[];
+            /** Rule Version */
+            rule_version: string;
+            /** Surcharge Percent */
+            surcharge_percent: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingAiCheckStateOut */
+        BillingAiCheckStateOut: {
+            /** Latest */
+            latest?: {
+                [key: string]: unknown;
+            } | null;
+            /** Latest Run */
+            latest_run?: {
+                [key: string]: unknown;
+            } | null;
+            /** Proposals */
+            proposals: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Statement Id
+             * Format: uuid
+             */
+            statement_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingAllocationBasisSettingOut */
+        BillingAllocationBasisSettingOut: {
+            /** Block Output */
+            block_output: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** BillingCalcSettingsIn */
         BillingCalcSettingsIn: {
             /** Check Amounts Tolerance Cents */
@@ -32608,6 +32956,36 @@ export interface components {
              */
             hoa_remainder_mode: "report_only" | "first_month" | "last_month";
         };
+        /** BillingConsumptionInfoRunOut */
+        BillingConsumptionInfoRunOut: {
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingConsumptionInfoSettingsOut */
+        BillingConsumptionInfoSettingsOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Notifications Enabled */
+            notifications_enabled: boolean;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Rule Version */
+            rule_version: string;
+            /** Template Verified */
+            template_verified: boolean;
+            /** Tenant Enabled */
+            tenant_enabled: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** BillingDeadlineSettingIn */
         BillingDeadlineSettingIn: {
             /** Policy */
@@ -32619,6 +32997,110 @@ export interface components {
             /** Watch Enabled */
             watch_enabled?: boolean | null;
         };
+        /** BillingDeadlineSettingOut */
+        BillingDeadlineSettingOut: {
+            /** Notice */
+            notice: string;
+            /** Policy */
+            policy: string;
+            /** Warn Days First */
+            warn_days_first?: number | null;
+            /** Warn Days Second */
+            warn_days_second?: number | null;
+            /** Watch Enabled */
+            watch_enabled: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingHeatingRuleTableOut */
+        BillingHeatingRuleTableOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingIdOut */
+        BillingIdOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingInfoSheetFiledOut */
+        BillingInfoSheetFiledOut: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Snapshot Hash */
+            snapshot_hash?: string | null;
+            /**
+             * Statement Id
+             * Format: uuid
+             */
+            statement_id: string;
+            /** Text Status */
+            text_status: string;
+            /** Texts Status */
+            texts_status?: {
+                [key: string]: unknown;
+            } | unknown[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BillingInspectionOut */
+        BillingInspectionOut: {
+            /** Channel */
+            channel?: string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Document Ids */
+            document_ids?: unknown[] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note?: string | null;
+            /** Objection Received At */
+            objection_received_at?: string | null;
+            /** Objection Text */
+            objection_text?: string | null;
+            /** Provided At */
+            provided_at?: string | null;
+            /** Provision */
+            provision?: string | null;
+            /** Redaction Note */
+            redaction_note?: string | null;
+            /** Requested At */
+            requested_at?: string | null;
+            /** Scope */
+            scope?: string | null;
+            /**
+             * Statement Id
+             * Format: uuid
+             */
+            statement_id: string;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * BillingNewVersionIn
          * @description GAI-602: correction reason for a new statement version (rule 7, traceability).
@@ -32626,6 +33108,26 @@ export interface components {
         BillingNewVersionIn: {
             /** Reason */
             reason: string;
+        };
+        /** BillingOwnerOutputsFiledOut */
+        BillingOwnerOutputsFiledOut: {
+            /** Items */
+            items: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Statement Id
+             * Format: uuid
+             */
+            statement_id: string;
+            /** Text Status */
+            text_status: string;
+            /** Texts Status */
+            texts_status?: {
+                [key: string]: unknown;
+            } | unknown[] | null;
+        } & {
+            [key: string]: unknown;
         };
         /** BillingPeriodIn */
         BillingPeriodIn: {
@@ -32704,6 +33206,20 @@ export interface components {
              * @enum {string}
              */
             status: "open" | "results_created" | "confirmed" | "closed";
+        };
+        /** BillingResultEntriesOut */
+        BillingResultEntriesOut: {
+            /** Entry Ids */
+            entry_ids: string[];
+            /**
+             * Statement Id
+             * Format: uuid
+             */
+            statement_id: string;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
         };
         /** BillingResultOut */
         BillingResultOut: {
@@ -35102,6 +35618,20 @@ export interface components {
              * @enum {string}
              */
             third_party_scope: "none" | "names";
+        };
+        /**
+         * ContactAddressListOut
+         * @description Current addresses of a contact (AM14, GAJ-610). ``history_available`` stays false until
+         *     the address history (valid_to, AM14-01) exists; ``as_of`` is refused with 422 until then.
+         */
+        ContactAddressListOut: {
+            /**
+             * History Available
+             * @default false
+             */
+            history_available: boolean;
+            /** Items */
+            items: components["schemas"]["AddressOut"][];
         };
         /**
          * ContactBankAccountKind
@@ -40177,6 +40707,8 @@ export interface components {
             confirmed_on: string | null;
             /** Evidence Document Id */
             evidence_document_id?: string | null;
+            /** Evidence Kind */
+            evidence_kind?: string | null;
             /**
              * Evidence Missing
              * @default false
@@ -40184,6 +40716,11 @@ export interface components {
             evidence_missing: boolean;
             /** Evidence Ref */
             evidence_ref?: string | null;
+            /**
+             * Evidence Required
+             * @default false
+             */
+            evidence_required: boolean;
             /** Item Key */
             item_key: string;
             /** Note */
@@ -40236,6 +40773,11 @@ export interface components {
             cases: components["schemas"]["G1AcceptanceItemOut"][];
             /** Cases Passed */
             cases_passed: number;
+            /**
+             * Cases Passed Without Test Run
+             * @default 0
+             */
+            cases_passed_without_test_run: number;
             /** Cases Total */
             cases_total: number;
             chart: components["schemas"]["ChartState"];
@@ -40346,6 +40888,11 @@ export interface components {
             checklist?: {
                 [key: string]: string;
             } | null;
+            /**
+             * Checklist Unverified
+             * @default []
+             */
+            checklist_unverified: string[];
             /** Decided At */
             decided_at: string | null;
             /** Decided By */
@@ -40837,6 +41384,60 @@ export interface components {
             /** Source Entry Id */
             source_entry_id: string | null;
         };
+        /** HistoryCheckFindingOut */
+        HistoryCheckFindingOut: {
+            /** Code */
+            code: string;
+            /** Entity */
+            entity: string;
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Message */
+            message: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Property Number */
+            property_number: string;
+        };
+        /** HistoryCheckOut */
+        HistoryCheckOut: {
+            /** Findings */
+            findings: components["schemas"]["HistoryCheckFindingOut"][];
+            /** Properties */
+            properties: components["schemas"]["HistoryCheckPropertyOut"][];
+            totals: components["schemas"]["HistoryCheckTotalsOut"];
+        };
+        /** HistoryCheckPropertyOut */
+        HistoryCheckPropertyOut: {
+            /** Findings */
+            findings: number;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Property Number */
+            property_number: string;
+            /** Resolutions */
+            resolutions: number;
+            /** Statements */
+            statements: number;
+        };
+        /** HistoryCheckTotalsOut */
+        HistoryCheckTotalsOut: {
+            /** Findings */
+            findings: number;
+            /** Resolutions */
+            resolutions: number;
+            /** Statements */
+            statements: number;
+        };
         /** HistoryJournalCandidateOut */
         HistoryJournalCandidateOut: {
             /** Amount */
@@ -40897,6 +41498,81 @@ export interface components {
             source_item_id: string;
             /** Unit Id */
             unit_id: string | null;
+        };
+        /** HistoryResolutionOut */
+        HistoryResolutionOut: {
+            /** Form */
+            form: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Item Number */
+            item_number: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Reference */
+            reference: string | null;
+            /**
+             * Resolved On
+             * Format: date
+             */
+            resolved_on: string;
+            /** Result */
+            result: string;
+            /** Title */
+            title: string;
+            /** Wording */
+            wording: string | null;
+        };
+        /** HistoryStatementOut */
+        HistoryStatementOut: {
+            /** Document Ref */
+            document_ref: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Recipient */
+            recipient: string | null;
+            /** Resolution Ref */
+            resolution_ref: string | null;
+            /** Result Amount */
+            result_amount: string | null;
+            /** Sent On */
+            sent_on: string | null;
+            /** Unit Id */
+            unit_id: string | null;
+            /** Unit Number */
+            unit_number: string;
+            /** Version */
+            version: number;
         };
         /** HistoryTicketOut */
         HistoryTicketOut: {
@@ -48886,6 +49562,77 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** PortalInspectionCommunityOut */
+        PortalInspectionCommunityOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** PortalInspectionIn */
+        PortalInspectionIn: {
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Scope Kinds */
+            scope_kinds?: string[];
+            /** Scope Text */
+            scope_text?: string | null;
+        };
+        /** PortalInspectionListOut */
+        PortalInspectionListOut: {
+            /** Communities */
+            communities?: components["schemas"]["PortalInspectionCommunityOut"][];
+            /** Enabled */
+            enabled: boolean;
+            /** Items */
+            items: components["schemas"]["PortalInspectionOut"][];
+            /** Note */
+            note: string;
+        };
+        /** PortalInspectionOut */
+        PortalInspectionOut: {
+            /** Delivery Kind */
+            delivery_kind: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /**
+             * Requested On
+             * Format: date
+             */
+            requested_on: string;
+            /** Scope Kinds */
+            scope_kinds: string[];
+            /** Scope Text */
+            scope_text: string | null;
+            /** Status */
+            status: string;
+            /** Steps */
+            steps?: components["schemas"]["PortalInspectionStepOut"][];
+        };
+        /** PortalInspectionStepOut */
+        PortalInspectionStepOut: {
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** To Status */
+            to_status: string | null;
+        };
         /** PortalInviteIn */
         PortalInviteIn: {
             /**
@@ -49003,6 +49750,8 @@ export interface components {
         };
         /** PortalMeterIn */
         PortalMeterIn: {
+            /** Document Ids */
+            document_ids?: string[];
             /**
              * Meter Id
              * Format: uuid
@@ -51500,6 +52249,10 @@ export interface components {
             lines: {
                 [key: string]: unknown;
             }[];
+            /** Master Data */
+            master_data?: {
+                [key: string]: unknown;
+            } | null;
             /** Properties */
             properties: {
                 [key: string]: unknown;
@@ -52163,7 +52916,7 @@ export interface components {
          * ReportType
          * @enum {string}
          */
-        ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions" | "sepa_overview" | "chart_of_accounts" | "bank_history" | "document_index" | "ticket_history" | "open_items" | "deposit" | "allocation_key" | "meter" | "energy_certificate" | "service_provider" | "portal_user";
+        ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions" | "sepa_overview" | "chart_of_accounts" | "bank_history" | "document_index" | "ticket_history" | "open_items" | "deposit" | "allocation_key" | "meter" | "energy_certificate" | "service_provider" | "portal_user" | "historical_statement" | "resolution";
         /** RequestIn */
         RequestIn: {
             /**
@@ -57218,9 +57971,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDocumentStoredOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -57400,9 +58151,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDocumentStoredOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -57653,9 +58402,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingAdminFeeCreatedOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -59010,9 +59757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingEntityCreditorIdOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -59050,9 +59795,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingTenantCreditorIdOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -59651,9 +60394,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDeliveryProofOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -61231,9 +61972,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDocumentStoredOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -62359,9 +63098,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDatevExportOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -62400,9 +63137,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingJournalExportOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -62986,9 +63721,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingPaymentTypeAccountOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -64231,6 +64964,10 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /** @description Stichtag der Vorschau (exakt) */
+                as_of?: string | null;
+                /** @description Auslöser der Vorschau */
+                trigger?: string | null;
             };
             header?: never;
             path?: never;
@@ -64784,9 +65521,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingReceivableRunReverseOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -64867,9 +65602,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingRecurringPlanCreatedOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -65968,9 +66701,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingS35aCertificateDocumentOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -74078,9 +74809,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingAdvanceRuleOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -74142,9 +74871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: boolean;
-                    };
+                    "application/json": components["schemas"]["BillingAllocationBasisSettingOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -74266,9 +74993,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingDeadlineSettingOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -74694,9 +75419,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingHeatingRuleTableOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -75101,9 +75824,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingOwnerOutputsFiledOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -77016,6 +77737,44 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    list_contact_addresses_api_v1_contacts__contact_id__addresses_get: {
+        parameters: {
+            query?: {
+                /** @description Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAddressListOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description Validation Error */
             422: {
                 headers: {
@@ -90673,9 +91432,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingAiCheckStateOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -92711,6 +93468,113 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    history_resolutions_api_v1_imports_immoware24_history_resolutions_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryResolutionOut"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    history_statements_api_v1_imports_immoware24_history_statements_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                kind?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryStatementOut"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    history_statement_check_api_v1_imports_immoware24_history_statements_check_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryCheckOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -96913,9 +97777,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingPaperlessIntakeOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -112058,6 +112920,101 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    list_owner_inspections_api_v1_portal_owner_inspection_requests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalInspectionListOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    create_owner_inspection_api_v1_portal_owner_inspection_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalInspectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalInspectionOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    get_owner_inspection_api_v1_portal_owner_inspection_requests__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalInspectionOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     payment_resolutions_api_v1_portal_owner_payment_resolutions_get: {
         parameters: {
             query?: never;
@@ -115868,9 +116825,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingConsumptionInfoRunOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -115910,9 +116865,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingConsumptionInfoSettingsOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -119924,9 +120877,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingAiCheckStateOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -120078,9 +121029,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingIdOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -120121,9 +121070,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingIdOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -120622,9 +121569,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingInfoSheetFiledOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -120737,9 +121682,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingInspectionOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -120780,9 +121723,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingInspectionOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -121095,9 +122036,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BillingResultEntriesOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];

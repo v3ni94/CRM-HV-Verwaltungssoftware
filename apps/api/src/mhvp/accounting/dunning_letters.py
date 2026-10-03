@@ -48,6 +48,7 @@ from mhvp.accounting.models import (
     OpenItem,
 )
 from mhvp.contacts import recipients
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents import services as docs
@@ -138,7 +139,7 @@ SAMPLE_ITEMS: list[dict[str, Any]] = [
 
 def fmt_eur(value: Decimal) -> str:
     """``1.234,56 EUR`` (rule 10, section 4.1)."""
-    quantized = value.quantize(Decimal("0.01"))
+    quantized = round_cents(value)
     sign = "-" if quantized < 0 else ""
     whole, cents = f"{abs(quantized):.2f}".split(".")
     groups: list[str] = []

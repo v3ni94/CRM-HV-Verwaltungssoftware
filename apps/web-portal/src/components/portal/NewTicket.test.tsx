@@ -82,4 +82,21 @@ describe("NewTicket", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Das Bild konnte nicht gelesen werden.");
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+  it("offers a direct camera capture that adds to the photos (AM06, GAJ-404)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ id: "d9" }, 201))
+      .mockResolvedValueOnce(jsonResponse({ id: "t9" }, 201));
+    renderIntl(<NewTicket />);
+    const camera = screen.getByTestId("ticket-photo-camera");
+    expect(camera).toHaveAttribute("capture", "environment");
+    await user.type(screen.getByLabelText("Titel"), "Fenster");
+    await user.type(screen.getByLabelText("Beschreibung"), "Scheibe gesprungen");
+    await user.upload(camera, new File(["c"], "cam.jpg", { type: "image/jpeg" }));
+    await user.click(screen.getByRole("button", { name: "Melden" }));
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(String(calls[0]?.[0])).toBe("/api/bff/portal/uploads");
+    expect(JSON.parse(String(calls[1]?.[1]?.body)).document_ids).toEqual(["d9"]);
+  });
 });

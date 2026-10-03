@@ -12,6 +12,7 @@ page, never here. Nothing in this module opens a gate, posts or pays.
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date
 
@@ -68,7 +69,24 @@ MANUAL_ITEMS: list[tuple[str, str]] = [
         "Lastschriftlauf (M12-09 Nr. 5)",
     ),
     ("retention_run", "Löschlauf 24 Monate für Entscheidungsspeicher und Regelvorschläge (M12-06)"),
+    # GAJ-503: section 18.0 names these three as G1 prerequisites in their own right.
+    (
+        "migration_verified",
+        "Geprüfte Migration: Abgleichbericht ohne ungeklärte Differenz, Abnahme M8-08 (18.0)",
+    ),
+    (
+        "legal_entity_separation",
+        "Rechtsträgertrennung geprüft: Forderungen, Salden, Bankmittel, Rücklagen und "
+        "Kautionen je Rechtsträger (18.0, 6.9.1)",
+    ),
+    (
+        "documented_correction",
+        "Dokumentierte Korrektur geprüft: Storno und Neubuchung statt Überschreiben (18.0, 7.1)",
+    ),
 ]
+# GAJ-504: items that may only be ticked as passed with a linked evidence (document,
+# test run or reference). The older items keep their behaviour (evidence_missing marker).
+EVIDENCE_REQUIRED_KEYS = {"migration_verified", "legal_entity_separation", "documented_correction"}
 MANUAL_KEYS = {key for key, _ in MANUAL_ITEMS}
 CASE_KEYS = {key for key, _ in ALL_CASES}
 VALID_KEYS = CASE_KEYS | MANUAL_KEYS
@@ -82,6 +100,41 @@ DOCUMENTS: list[tuple[str, str]] = [
 
 
 GATE_CHECKLIST_REF = "docs/plans/GATE-CHECKLISTEN.md#g1"
+
+# GAJ-504: machine checkable evidence references. ``ci-run:<run id or URL>@<commit>`` links a
+# CI run (annex_d markers) to the tested commit, ``commit:<sha>`` and ``version:<semver>`` name
+# the tested state, ``doc:<path>`` a repository document. Anything else is a free reference.
+_SHA = r"[0-9a-f]{7,40}"
+_CI_RUN = re.compile(rf"^ci-run:(?P<run>[A-Za-z0-9:/._?=&%-]{{1,300}})@(?P<sha>{_SHA})$")
+_COMMIT = re.compile(rf"^commit:{_SHA}$")
+_VERSION = re.compile(r"^version:\d+\.\d+\.\d+$")
+_DOC = re.compile(r"^doc:[A-Za-z0-9_./#-]{1,400}$")
+_TYPED_PREFIXES = ("ci-run:", "commit:", "version:", "doc:")
+
+
+def evidence_kind(ref: str | None, document_id: uuid.UUID | None = None) -> str | None:
+    """Kind of the linked evidence: test_run, test_state, document, reference or None."""
+    value = (ref or "").strip()
+    if _CI_RUN.match(value):
+        return "test_run"
+    if _COMMIT.match(value) or _VERSION.match(value):
+        return "test_state"
+    if document_id is not None or _DOC.match(value):
+        return "document"
+    return "reference" if value else None
+
+
+def check_evidence_ref(ref: str | None) -> None:
+    """A typed reference must be well formed, otherwise the link would not be checkable."""
+    value = (ref or "").strip()
+    if value.startswith(_TYPED_PREFIXES) and evidence_kind(value) in (None, "reference"):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                "Nachweisverweis ungültig. Zulässig: ci-run:<Lauf>@<Commit>, commit:<SHA>, "
+                "version:<x.y.z>, doc:<Pfad> oder freier Verweis ohne diese Präfixe."
+            ),
+        )
 
 
 class G1AcceptanceItemIn(BaseModel):
@@ -108,6 +161,9 @@ class G1AcceptanceItemOut(BaseModel):
     evidence_ref: str | None = None
     # A passed item without evidence is shown as a gap; the status itself stays as recorded.
     evidence_missing: bool = False
+    # GAJ-504: kind of the linked evidence and whether passing requires it.
+    evidence_kind: str | None = None
+    evidence_required: bool = False
 
 
 class G1RequestIn(BaseModel):
@@ -161,6 +217,8 @@ class G1OpeningOut(BaseModel):
     documents: dict[str, str]
     items_without_responsible: int = 0
     items_without_evidence: int = 0
+    # GAJ-504: passed annex D cases without a linked CI test run (ci-run:<run>@<commit>).
+    cases_passed_without_test_run: int = 0
     gate_checklist_ref: str = GATE_CHECKLIST_REF
     acceptance_register: G1AcceptanceRegisterState | None = None
 
@@ -173,6 +231,8 @@ def _item_out(key: str, title: str, row: G1AcceptanceItem | None) -> G1Acceptanc
         evidence_ref=row.evidence_ref if row else None,
         evidence_missing=bool(row and row.status == G1AcceptanceStatus.PASSED.value)
         and not has_evidence,
+        evidence_kind=evidence_kind(row.evidence_ref, row.evidence_document_id) if row else None,
+        evidence_required=key in EVIDENCE_REQUIRED_KEYS,
         item_key=key,
         title=title,
         status=row.status if row else G1AcceptanceStatus.OPEN.value,
@@ -261,6 +321,9 @@ async def overview(session: AsyncSession) -> G1OpeningOut:
             1 for i in [*cases, *manual] if i.responsible_user_id is None
         ),
         items_without_evidence=sum(1 for i in [*cases, *manual] if i.evidence_missing),
+        cases_passed_without_test_run=sum(
+            1 for c in cases if c.status == passed and c.evidence_kind != "test_run"
+        ),
     )
 
 
@@ -307,6 +370,17 @@ async def set_item(
         raise ProblemError(
             ErrorCodes.VALIDATION,
             detail="Ein Ergebnis braucht den Namen der bestätigenden Person.",
+        )
+    check_evidence_ref(body.evidence_ref)
+    if (
+        item_key in EVIDENCE_REQUIRED_KEYS
+        and body.status is G1AcceptanceStatus.PASSED
+        and body.evidence_document_id is None
+        and not (body.evidence_ref or "").strip()
+    ):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Dieser Prüfpunkt kann nur mit verknüpftem Nachweis abgehakt werden.",
         )
     await _check_refs(session, tenant_id, body)
     row = await session.scalar(
@@ -360,6 +434,8 @@ def evidence_text(state: G1OpeningOut, comment: str | None) -> str:
         chart,
         f"Anhang D Fälle bestanden {state.cases_passed} von {state.cases_total}",
         f"manuelle Prüfpunkte bestanden {state.manual_passed} von {state.manual_total}",
+        f"Prüfpunkte ohne Nachweis {state.items_without_evidence}",
+        f"bestandene Fälle ohne verknüpften Testlauf {state.cases_passed_without_test_run}",
         "Unterlagen: " + ", ".join(path for _, path in DOCUMENTS),
     ]
     if comment:

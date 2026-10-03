@@ -36,7 +36,7 @@ def _app(enabled: bool = True) -> FastAPI:
     async def plain(request: Request) -> dict[str, int]:
         return {"size": len(await request.body())}
 
-    app.add_middleware(BodyLimitMiddleware)
+    app.add_middleware(BodyLimitMiddleware, upload_paths=("/api/v1/upload",))
     return app
 
 
@@ -60,11 +60,17 @@ def _multipart(payload: bytes) -> tuple[bytes, str]:
 
 
 def test_path_groups() -> None:
-    assert path_group("/api/v1/whatsapp/webhook", "") == "webhook"
-    assert path_group("/api/v1/documents/webhooks/paperless/x", "") == "webhook"
-    assert path_group("/api/v1/integrations/gmail/push", "") == "webhook"
-    assert path_group("/api/v1/x", "multipart/form-data; boundary=a") == "upload"
-    assert path_group("/api/v1/webhook-settings", "application/json") == "default"
+    assert path_group("/api/v1/whatsapp/webhook") == "webhook"
+    assert path_group("/api/v1/documents/webhooks/paperless/x") == "webhook"
+    assert path_group("/api/v1/integrations/gmail/push") == "webhook"
+    assert path_group("/api/v1/documents") == "upload"
+    assert path_group("/api/v1/documents/0190a/redactions") == "upload"
+    # AL06-01: unregistered paths, other methods and extra segments stay in the default group.
+    assert path_group("/api/v1/x") == "default"
+    assert path_group("/api/v1/documents", "GET") == "default"
+    assert path_group("/api/v1/documents/a/b/redactions") == "default"
+    assert path_group("/api/v1/documentsX") == "default"
+    assert path_group("/api/v1/webhook-settings") == "default"
 
 
 def test_defaults_above_endpoint_limits() -> None:

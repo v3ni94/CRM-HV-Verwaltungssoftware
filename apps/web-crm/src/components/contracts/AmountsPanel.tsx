@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { AMOUNT_REASONS, type AmountReason, type AmountRow, amountsValidOn, findOverlap, grossFromNet, monthlyTotal, parseAmount, type PaymentTypeOption, sortAmounts, withNewAmount } from "./amounts";
+import { AmountCorrectionForm } from "./AmountCorrectionForm";
 import { today as businessToday } from "@/lib/today";
 
 /** Draft of an amount in the create form: recorded after POST /contracts from the start date. */
@@ -122,6 +123,7 @@ export function AmountsPanel({
   const [reason, setReason] = useState<AmountReason>("initial");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [correctingId, setCorrectingId] = useState<string | null>(null);
 
   const parsedNet = parseAmount(net, { allowNegative: true });
   const parsedVat = normaliseVat(vat);
@@ -187,11 +189,13 @@ export function AmountsPanel({
                 <th>{t("amounts.validFrom")}</th>
                 <th>{t("amounts.validTo")}</th>
                 <th>{t("amounts.reason")}</th>
+                {canUpdate ? <th /> : null}
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} data-testid={currentIds.has(r.id) ? "amount-row-current" : "amount-row"}>
+                <Fragment key={r.id}>
+                <tr data-testid={currentIds.has(r.id) ? "amount-row-current" : "amount-row"}>
                   <td>
                     {typeLabel(paymentTypes, r.payment_type_code)}
                     {currentIds.has(r.id) ? <span className={`${ui.badgeSuccess} ml-2`}>{t("amounts.current")}</span> : null}
@@ -202,7 +206,31 @@ export function AmountsPanel({
                   <td>{formatDate(r.valid_from)}</td>
                   <td>{r.valid_to ? formatDate(r.valid_to) : t("amounts.open")}</td>
                   <td>{t(`amounts.reasons.${r.reason}`)}</td>
+                  {canUpdate ? (
+                    <td>
+                      <button type="button" className={ui.buttonSm} onClick={() => setCorrectingId(correctingId === r.id ? null : r.id)}>
+                        {t("amounts.correct")}
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
+                {correctingId === r.id ? (
+                  <tr>
+                    <td colSpan={8}>
+                      <AmountCorrectionForm
+                        contractId={contractId}
+                        row={r}
+                        onCancel={() => setCorrectingId(null)}
+                        onSaved={(updated) => {
+                          setRows((prev) => sortAmounts(prev.map((x) => (x.id === updated.id ? updated : x))));
+                          setCorrectingId(null);
+                          router.refresh();
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>

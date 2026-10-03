@@ -12,7 +12,8 @@ from mhvp.core import crypto
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.platform import services
-from mhvp.sla.whatsapp import has_whatsapp_consent
+from mhvp.sla.models import WhatsAppConfig, WhatsAppDelivery
+from mhvp.sla.whatsapp import NO_CONSENT_ERROR, has_whatsapp_consent, send_whatsapp
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import RUN, _settings
 
@@ -41,6 +42,27 @@ async def _run(settings: Any) -> None:
 
         async with tenant_transaction(factory, tenant_id) as session:
             assert await has_whatsapp_consent(session, contact_id) is False
+            # GAJ-405: the send path refuses a contact without consent before any API call.
+            config = WhatsAppConfig(
+                tenant_id=tenant_id,
+                enabled=True,
+                phone_number_id="1",
+                access_token="t",
+                template_names={"test": "test_de"},
+            )
+            error = await send_whatsapp(
+                session,
+                settings,
+                config,
+                alert_id=None,
+                to="+49170",
+                alert_type="test",
+                params=[],
+                recipient="contact",
+                contact_id=contact_id,
+            )
+            assert error == NO_CONSENT_ERROR
+            assert not [o for o in session.new if isinstance(o, WhatsAppDelivery)]
 
         from datetime import UTC, datetime
 

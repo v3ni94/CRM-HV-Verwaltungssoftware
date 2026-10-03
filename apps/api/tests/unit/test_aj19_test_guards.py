@@ -24,13 +24,7 @@ _NAME_TOKEN = re.compile(r"(?:^|_)d(\d\d)(?=_|$)")
 
 # Cases covered by exactly one test today (GAI-612, rule 8). Remove an entry once a second
 # independent test names the case; adding an entry is not allowed.
-SINGLE_TEST_CASES = frozenset(
-    {
-        "D05", "D06", "D15",
-        "D18", "D20", "D29", "D32",
-        "D33", "D35", "D36", "D37", "D38",
-    }
-)  # fmt: skip
+SINGLE_TEST_CASES: frozenset[str] = frozenset()  # fmt: skip
 
 
 def _marker_cases(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:

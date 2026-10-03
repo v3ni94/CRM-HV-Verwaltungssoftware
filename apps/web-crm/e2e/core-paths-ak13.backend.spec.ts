@@ -20,6 +20,14 @@ test.describe("CRM core paths AK13 @backend", () => {
     await page.getByLabel("Vorname").fill("Erika");
     await page.getByLabel("Nachname").fill(run);
     await page.getByRole("button", { name: "Speichern" }).click();
+    // Earlier runs may have left a similar contact behind: the duplicate check then asks for a
+    // confirmation before saving.
+    const confirmAnyway = page.getByRole("button", { name: "Trotzdem speichern" });
+    await Promise.race([
+      page.waitForURL(/\/kontakte\/[0-9a-f-]{36}$/, { timeout: 60_000 }).catch(() => undefined),
+      confirmAnyway.waitFor({ state: "visible", timeout: 60_000 }).catch(() => undefined),
+    ]);
+    if (await confirmAnyway.isVisible()) await confirmAnyway.click();
     await expect(page).toHaveURL(/\/kontakte\/[0-9a-f-]{36}$/, { timeout: 90_000 });
     await expect(page.getByRole("heading", { level: 1 })).toContainText(run);
     const contactId = /\/kontakte\/([0-9a-f-]{36})$/.exec(page.url())![1];

@@ -496,3 +496,19 @@ werden im Protokoll der Verwaltung festgehalten, ohne Passwörter oder Codes.
 
 Ist der zweite Faktor verloren (Smartphone verloren), kann die Verwaltung ihn nur zurücksetzen,
 wenn sie das Verfahren freigeschaltet hat (Standard aus); zwei Mitarbeitende müssen zustimmen.
+
+## Zählerstand mit Foto melden (GAJ-401)
+
+Unter Zählerstand melden fügen Sie ein Foto des Zählers bei, über die Dateiauswahl oder direkt mit der Kamera (Schaltfläche Foto aufnehmen). Das Foto wird ohne Aufnahmedaten gespeichert und dient der Verwaltung als Ablesebeleg. Ohne Foto erscheint ein Hinweis; die Meldung bleibt möglich und wird für die Verwaltung als ohne Foto gekennzeichnet. Übernimmt die Verwaltung den Stand, bleibt das Foto am Zählerstand verknüpft.
+
+## Fotos direkt mit der Kamera (GAJ-404)
+
+Bei der Schadensmeldung und bei den Ausführungsfotos des Dienstleisters öffnet die Schaltfläche Foto aufnehmen auf dem Smartphone direkt die Kamera. Die Dateiauswahl bleibt daneben erhalten.
+
+## Stand der Aufträge zur Meldung (GAJ-402)
+
+In der Einzelansicht einer Meldung zeigt der Abschnitt Stand der Aufträge den laufenden Status jedes Auftrags (angefragt, beauftragt, terminiert, in Ausführung, ausgeführt usw.) und den Termin. Dienstleister, Preise und interne Vermerke werden nicht angezeigt; Aufträge im Entwurf bleiben intern.
+
+## Einsichtsanfrage im Eigentümerportal (GAJ-202)
+
+Auf der Seite Belegeinsicht stellen Eigentümer eine Anfrage auf Einsicht in die Verwaltungsunterlagen ihrer Gemeinschaft (Umfang Abrechnung, Belege, Verträge, Beschlüsse oder eine Beschreibung) und sehen den Stand ihrer Anfragen. Die Anfrage geht in die Einsichtsanfragen des CRM; Freigabe, Bereitstellung und Ablehnung bleiben bei der Verwaltung. Die Funktion erscheint nur, wenn die Verwaltung den Schalter der Belegeinsicht (Portalverwaltung, Funktionen) eingeschaltet hat. Interne Vermerke der Verwaltung sind im Portal nicht sichtbar.

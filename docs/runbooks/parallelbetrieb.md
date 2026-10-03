@@ -1,6 +1,6 @@
 # Runbook: Parallelbetrieb mit Immoware24 (M9-05)
 
-Stand 27.09.2026. Betrifft die Ablösephase, in der Immoware24 führendes System bleibt und die
+Stand 27.09.2026, angepasst 03.10.2026 an B27 und M8-08 (GAJ-509). Betrifft die Ablösephase, in der Immoware24 führendes System bleibt und die
 Hausverwaltung Müller GmbH gleichzeitig mit Stammdaten in der MH Verwaltungsplattform
 arbeitet (Abnahme M9, `docs/OPEN_QUESTIONS.md` M9-05). Voraussetzung ist der abgeschlossene
 Stammdatenimport (M8-01, `docs/handbuch/datenuebernahmen.md`,
@@ -57,11 +57,17 @@ Der Stichtag ist eine Betreiberentscheidung (M9-05, Feld "Vorschlag" in
 `docs/OPEN_QUESTIONS.md`: nach M8-01 und M9-01 festzulegen). Ablauf am gewählten Stichtag,
 außerhalb der Geschäftszeiten:
 
-1. **Einfrieren:** keine neuen Buchungen mehr in Immoware24 ab dem festgelegten
-   Umstellungszeitpunkt (Datum und Uhrzeit); dies ist organisatorisch mit der
+Nach der Betreiberentscheidung B27 (01.10.2026, `docs/OPEN_QUESTIONS.md`) ist Immoware24
+nicht das führende Buchhaltungssystem: die Daten werden einmalig übernommen, danach wird die
+Buchhaltung ausschließlich in der Plattform geführt. Es gibt kein Weiterbuchen in Immoware24
+und kein Rückschreiben dorthin; `leading_system = immoware24` am Buchungskreis bedeutet nur
+"noch nicht produktiv in der Plattform" bis zur Umstellung nach Abgleich und G1.
+
+1. **Übernahmezeitpunkt:** ab dem festgelegten Umstellungszeitpunkt (Datum und Uhrzeit)
+   werden in Immoware24 keine Buchungen mehr erfasst; dies ist organisatorisch mit der
    Immoware24-Buchhaltung abzustimmen, die Plattform kann Immoware24 nicht sperren.
-2. **Letzter Export:** letzten vollständigen Journal- und Bankumsätze-Export aus Immoware24
-   ziehen und importieren.
+2. **Einmalige Übernahme:** letzten vollständigen Journal- und Bankumsätze-Export aus
+   Immoware24 ziehen und importieren (Migrationsjournal, Eröffnungssalden als Entwurf).
 3. **Letzter Abgleichbericht:** Abgleichbericht mit Stichtag = Umstellungszeitpunkt manuell
    erstellen ("Bericht jetzt erstellen"), CSV herunterladen und archivieren
    (Nachweis des Übergabestands).
@@ -69,15 +75,20 @@ außerhalb der Geschäftszeiten:
    je Zeile entscheiden: Ursache geklärt und ohne Auswirkung, Ursache geklärt und
    Korrekturbuchung erforderlich, oder Ursache ungeklärt. Ungeklärte Abweichungen sperren die
    Umstellung für das betroffene Objekt; hier wird nicht pauschal weitergemacht.
-5. **Freigabeentscheidung:** die Geschäftsführung (Timo Müller) bestätigt für jedes Objekt
-   ohne ungeklärte Abweichung die Umstellung. Für Objekte mit ungeklärten Abweichungen bleibt
-   der Parallelbetrieb bestehen, bis geklärt ist.
+5. **Freigabeentscheidung:** je Objekt wird in der Plattform das Abnahmeprotokoll der
+   Migration erfasst (Seite Importe, Migration; Regel `docs/rules/M8-08-uebernahmejahr-abnahme.md`):
+   Prüfumfang, verantwortliche Personen, nicht migrierbare Daten, Rückfallplan und
+   Archivkonzept, danach Unterzeichnung durch eine zweite Person (Vier-Augen). Die
+   Geschäftsführung (Timo Müller) bestätigt die Umstellung je Objekt ohne ungeklärte
+   Abweichung. Für Objekte mit ungeklärten Abweichungen bleibt die Umstellung gesperrt, bis
+   geklärt ist; in Immoware24 wird dennoch nicht weitergebucht.
 6. **Gates freischalten:** je Mandant und im dokumentierten Umfang die betroffenen
    Freigabestufen setzen (`docs/MASTER-PROMPT.md` Abschnitt 18.0); dies löst den
    Parallelbetrieb nicht automatisch ab, sondern erlaubt erst die produktive Nutzung der
    jeweiligen Funktion.
 7. **Rückwärtskompatibilität:** Immoware24 bleibt für den Zeitraum vor dem Stichtag als
-   Nachweis erhalten (Lesezugriff, keine neuen Buchungen); Abschaltung von Immoware24 selbst
+   Nachweis erhalten (Lesezugriff, keine neuen Buchungen; Rückfallplan laut
+   Abnahmeprotokoll); Abschaltung von Immoware24 selbst
    ist ein eigener, hier nicht geregelter Schritt (siehe `docs/runbooks/hub-abschaltung.md` für
    den bereits abgeschalteten Immoware Hub).
 
@@ -101,5 +112,7 @@ außerhalb der Geschäftszeiten:
   Referenzzahlen aus Immoware24 sind vom Betreiber zu liefern (M8-02, V9).
 * Umgang mit laufenden Zahlläufen und Mahnverfahren zum Stichtag: `[zu ergänzen, sobald diese
   Module produktiv gesetzt werden]`.
-* Formale Bestätigung der Geschäftsführung je Objekt (Schritt 5): Ablageort und Vorlage sind
-  noch nicht festgelegt; bis dahin genügt eine dokumentierte E-Mail- oder Ticketentscheidung.
+* Formale Bestätigung je Objekt (Schritt 5): erfasst im Abnahmeprotokoll der Migration in
+  der Plattform (M8-08, M8-09, Zweitunterzeichnung, unterzeichnete Protokolle unveränderlich).
+  Ob zusätzlich eine gesonderte Erklärung der Geschäftsführung abgelegt wird, entscheidet der
+  Betreiber.

@@ -197,9 +197,10 @@ Namen lässt sich Speichern nicht abschließen.
 ## SMS und WhatsApp Hinweis
 
 Der Kanal SMS läuft über ein anbieterneutrales HTTP-Gateway je Mandant (Reiter
-SMS-Gateway, mit Testnachricht). Ein WhatsApp-Kanal ist zum Stand dieses Handbuchs nicht
-umgesetzt; sofern eine Anfrage WhatsApp erwähnt, ist dies als offener Punkt zu behandeln
-und nicht als vorhandene Funktion zu bestätigen.
+SMS-Gateway, mit Testnachricht). Der WhatsApp-Kanal ist im Bereich SLA für Eskalationen an
+Mitarbeiter und für den Testversand umgesetzt. Nachrichten an Kontakte gehen nur mit erfasster
+WhatsApp-Einwilligung hinaus, sonst werden sie ohne Anbieteraufruf abgewiesen. Einzelheiten zu
+Zustellstatus und Einwilligung stehen im Kapitel Kommunikation.
 
 ## KI und Wissensbasis
 

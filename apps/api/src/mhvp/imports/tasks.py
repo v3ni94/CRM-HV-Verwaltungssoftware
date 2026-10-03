@@ -49,7 +49,7 @@ async def report_tenant_once(
             ):
                 counts["skipped"] += 1
                 return counts
-            if not await rec.latest_sources(session):
+            if not await rec.latest_sources(session) and not await rec.has_master_sources(session):
                 counts["skipped"] += 1
                 return counts
             try:

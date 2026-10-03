@@ -205,6 +205,7 @@ async def escalate_level(
                         alert_id=None,
                         to=number,
                         alert_type=alert_type,
+                        recipient="staff",
                         params=params,
                     )
                     if wa_error is not None and wa_config.sms_fallback:

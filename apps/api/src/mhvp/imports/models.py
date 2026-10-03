@@ -57,6 +57,10 @@ class ReportType(StrEnum):
     ENERGY_CERTIFICATE = "energy_certificate"  # Energieausweise
     SERVICE_PROVIDER = "service_provider"  # Dienstleisterverhältnisse
     PORTAL_USER = "portal_user"  # Portalnutzer (nur Status)
+    # Welle 23 (GAJ-501, AM09): historical statements and resolutions, filed and checked only
+    # (``mhvp.imports.statement_reports``), migration 0450.
+    HISTORICAL_STATEMENT = "historical_statement"  # versandte Altabrechnungen je Version
+    RESOLUTION = "resolution"  # Beschlusssammlung
 
 
 class FileStatus(StrEnum):

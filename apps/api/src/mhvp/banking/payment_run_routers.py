@@ -345,14 +345,23 @@ async def create_preview(
 async def list_previews(
     request: Request,
     limit: int = Query(default=20, ge=1, le=200),
+    as_of: date | None = Query(default=None, description="Stichtag der Vorschau (exakt)"),
+    trigger: str | None = Query(
+        default=None, pattern="^(manual|schedule|failed)$", description="Auslöser der Vorschau"
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[PaymentRunPreviewOut]:
+    stmt = select(PaymentRunPreview)
+    if as_of is not None:
+        stmt = stmt.where(PaymentRunPreview.as_of == as_of)
+    if trigger is not None:
+        stmt = stmt.where(PaymentRunPreview.trigger == trigger)
     async with tenant_tx(request, principal) as session:
         rows = (
             await session.scalars(
-                select(PaymentRunPreview)
-                .order_by(PaymentRunPreview.created_at.desc(), PaymentRunPreview.id)
-                .limit(limit)
+                stmt.order_by(PaymentRunPreview.created_at.desc(), PaymentRunPreview.id).limit(
+                    limit
+                )
             )
         ).all()
         return [PaymentRunPreviewOut.model_validate(r) for r in rows]

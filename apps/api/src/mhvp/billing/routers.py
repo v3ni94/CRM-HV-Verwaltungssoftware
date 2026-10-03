@@ -21,6 +21,7 @@ from mhvp.billing.models import (
     StatementSnapshot,
 )
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
+from mhvp.billing.write_responses import BillingIdOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.listparams import strict_query
@@ -157,6 +158,18 @@ async def _out(session: AsyncSession, st: Statement) -> dict[str, Any]:
     }
 
 
+_ST_FIELDS = (
+    "kind",
+    "status",
+    "ledger_id",
+    "property_id",
+    "period_from",
+    "period_to",
+    "version",
+    "supersedes_id",
+)
+
+
 @router.post("", status_code=201, summary="Betriebskostenabrechnung anlegen (Entwurf)")
 async def create(
     body: StatementIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -190,11 +203,25 @@ async def create(
         )
         session.add(st)
         await session.flush()
+        # AL03 (GAI-307): new statement drafts stay traceable.
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement.created",
+            entity_type="statement",
+            entity_id=st.id,
+            before={},
+            after=audit_snap(st, _ST_FIELDS),
+        )
         return await _out(session, st)
 
 
 @router.post(
-    "/{statement_id}/cost-items", status_code=201, summary="Kostenposition mit Grundlage erfassen"
+    "/{statement_id}/cost-items",
+    status_code=201,
+    summary="Kostenposition mit Grundlage erfassen",
+    response_model=BillingIdOut,
 )
 async def add_item(
     statement_id: uuid.UUID,
@@ -463,6 +490,17 @@ async def new_version(
                 )
             )
         await session.flush()
+        # AL03 (GAI-307): a correction version names the superseded statement and the reason.
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement.version_created",
+            entity_type="statement",
+            entity_id=new.id,
+            before={},
+            after=audit_snap(new, _ST_FIELDS) | {"reason": reason},
+        )
         return await _out(session, new)
 
 

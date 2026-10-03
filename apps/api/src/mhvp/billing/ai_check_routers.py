@@ -15,6 +15,7 @@ from mhvp.ai import jobs
 from mhvp.ai.models import AiProposal, AiTaskRun
 from mhvp.billing import ai_check
 from mhvp.billing.models import Statement
+from mhvp.billing.write_responses import BillingAiCheckStateOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
@@ -121,6 +122,7 @@ async def _start(
 
 @router.post(
     "/statements/{statement_id}/ai-check",
+    response_model=BillingAiCheckStateOut,
     status_code=202,
     summary="KI-Plausibilität des Abrechnungsentwurfs anstoßen (nur Hinweise)",
 )
@@ -155,6 +157,7 @@ async def get_statement_check(
 
 @router.post(
     "/hoa/statements/{statement_id}/ai-check",
+    response_model=BillingAiCheckStateOut,
     status_code=202,
     summary="KI-Plausibilität der Hausgeldabrechnung anstoßen (nur Hinweise)",
 )

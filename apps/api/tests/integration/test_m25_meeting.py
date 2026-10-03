@@ -422,7 +422,34 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
         ).status_code
         == 422
     )
+    # AM02 / GAJ-601, GAJ-604: valid_to before valid_from is refused; a rule that is not in
+    # force on the meeting day (20.06.2026) cannot be assigned to an agenda item.
+    period = {
+        "legal_entity_id": hoa,
+        "label": "Testregel abgelaufen",
+        "principle": "head",
+        "share_of_votes_cast": "0.5",
+        "source": "Altregel (Testannahme)",
+        "valid_from": "2020-01-01",
+    }
+    assert (
+        client.post(
+            f"{H}/majority-rules", json=period | {"valid_to": "2019-12-31"}, headers=h
+        ).status_code
+        == 422
+    )
+    expired = _ok(
+        client.post(f"{H}/majority-rules", json=period | {"valid_to": "2025-12-31"}, headers=h),
+        201,
+    )
     m3 = _ok(client.post(f"{H}/meetings", json=base, headers=h), 201)
+    refused = client.post(
+        f"{H}/meetings/{m3['id']}/agenda",
+        json={"title": "Altregel", "rule_id": expired["id"]},
+        headers=h,
+    )
+    assert refused.status_code == 422
+    assert refused.json()["code"] == "MHVP-HOA-0039"
     items3 = [
         _ok(
             client.post(
@@ -464,7 +491,11 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
     u = _ok(client.get(f"{H}/agenda/{items3[1]['id']}/tally", headers=h))
     assert (u["proposal"], u["checks"]["unanimous"]["passed"]) == ("negative", False)
     rules = _ok(client.get(f"{H}/majority-rules", params={"legal_entity_id": hoa}, headers=h))
-    assert {r["label"] for r in rules} == {"Testregel qualifiziert", "Testregel allstimmig"}
+    assert {r["label"] for r in rules} == {
+        "Testregel qualifiziert",
+        "Testregel allstimmig",
+        "Testregel abgelaufen",
+    }
 
 
 def _hoa_with_owners(

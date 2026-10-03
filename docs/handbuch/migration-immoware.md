@@ -133,3 +133,9 @@ Auf der Seite Importe, Migration pflegen Sie das Abnahmeprotokoll je Objekt (Anl
 * Ein Abnahmeprotokoll im Status Entwurf ändern Sie auf der Seite Importe, Migration über Bearbeiten und Änderungen speichern (Recht accounting:update).
 * Nach der Unterzeichnung durch die zweite Person ist das Protokoll gesperrt: die Schaltfläche Bearbeiten entfällt, die Schnittstelle (`PUT /api/v1/imports/migration/acceptance/{id}`) antwortet mit 409 (MHVP-MIG-0002).
 * Jede Änderung setzt die bearbeitende Person neu; unterzeichnen darf danach nur eine andere Person.
+
+## Altabrechnungen und Beschlusssammlung (Welle 23)
+
+Im Importassistenten stehen die Berichtsarten "Altabrechnungen je Version (nur Ablage)" und "Beschlusssammlung (nur Ablage)" bereit. Die Spalten des Exports werden wie bei den anderen Berichtsarten zugeordnet. Jede Version einer Abrechnung wird als eigene Zeile abgelegt; ein erneuter Import legt nichts doppelt an, abweichende Angaben erscheinen als Konflikt. Das Ergebnis laut Abrechnung ist nur eine Information, es entsteht keine Forderung und keine Buchung. Der Prüfbericht zeigt fehlende Beschlüsse, fehlende Beschlussbezüge, unbekannte Einheiten und mehrfache Versionen.
+
+Der tägliche Abgleichbericht enthält zusätzlich den Abschnitt Stammdaten: je Berichtsart die offenen Zeilen der neuesten Datei und übernommene Datensätze, die auf der Plattform nicht mehr vorhanden sind.

@@ -236,6 +236,20 @@ async def list_rules(
         return sparse([_rule_out(r) for r in rows], params, None)  # type: ignore[no-any-return]
 
 
+def _assert_ai_task_permission(principal: TenantPrincipal, actions: Any) -> None:
+    """GAJ-607 (AM04): an ``ai_task`` action is a lasting AI cost path; only a person with
+    ``ai:approve`` may create or change rules containing one."""
+    if principal.has("ai:approve"):
+        return
+    for action in actions or []:
+        kind = action.get("type") if isinstance(action, dict) else getattr(action, "type", None)
+        if kind == "ai_task":
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN,
+                detail="Regeln mit KI-Aufgabe erfordern das Recht ai:approve.",
+            )
+
+
 @router.post("/rules", status_code=201, summary="Regel anlegen")
 async def create_rule(
     body: AutomationRuleIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
@@ -243,6 +257,7 @@ async def create_rule(
     async with tenant_tx(request, principal) as session:
         await _assert_unique_name(session, body.name, None)
         values = body.model_dump()
+        _assert_ai_task_permission(principal, values["actions"])
         values["actions"] = seal_actions(values["actions"])
         rule = AutomationRule(
             tenant_id=principal.tenant_id,
@@ -293,6 +308,7 @@ async def patch_rule(
         if "name" in values and values["name"] is not None:
             await _assert_unique_name(session, values["name"], rule.id)
         if values.get("actions") is not None:
+            _assert_ai_task_permission(principal, values["actions"])
             carried = carry_secrets(values["actions"], rule.actions)
             try:
                 require_webhook_secrets(carried)

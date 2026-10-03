@@ -140,7 +140,11 @@ export type Ticket = {
   attachments: Attachment[];
   appointment_proposals: AppointmentProposal[];
   completed_work_order_ids?: string[];
+  /** AM06 (GAJ-402): laufender Status der Aufträge zur Meldung. */
+  work_orders?: TicketWorkOrder[];
 };
+
+export type TicketWorkOrder = { id: string; status: string; scheduled_at: string | null };
 
 export type AccountItem = {
   contract_number: string;

@@ -26,6 +26,7 @@ from mhvp.accounting import admin_fees, numbering, receivables, xrechnung_credit
 from mhvp.accounting import xrechnung as xr
 from mhvp.accounting.dunning_letters import fmt_eur
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, AdminFeeSetting
+from mhvp.accounting.write_responses import AccountingDocumentStoredOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -155,6 +156,7 @@ def _links(row: AdminFeeInvoice) -> list[tuple[str, uuid.UUID, LinkRole]]:
 
 @router.post(
     "/admin-fee-invoices/{invoice_id}/document",
+    response_model=AccountingDocumentStoredOut,
     status_code=201,
     summary="Honorarrechnung oder Gutschrift als PDF auf dem Briefbogen ablegen",
 )
@@ -206,6 +208,7 @@ async def store_pdf(
 
 @router.post(
     "/admin-fee-invoices/{invoice_id}/xrechnung-credit-note/document",
+    response_model=AccountingDocumentStoredOut,
     status_code=201,
     summary="Gutschrift-XRechnung als Dokument ablegen",
 )

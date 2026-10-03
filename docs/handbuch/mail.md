@@ -271,3 +271,7 @@ In der Mailansicht startet "Als Rechnung vorschlagen (KI)" neben einem PDF Anhan
 Status, Suche, Postfach und Abgleichstand der Nachrichtenliste stehen in der Adresszeile
 (zusätzlich zu Reiter, Seite und "Erledigte anzeigen"). Eine so aufgerufene Ansicht lässt sich als
 Lesezeichen speichern oder weitergeben; ungültige Werte werden ignoriert.
+
+## Gespeicherte Filter im Postfach
+
+Die aktuelle Auswahl aus Reiter, Status, Postfach, Suchbegriff und Gmail Abgleich lässt sich über das Feld "Filtername" speichern. Ein gespeicherter Filter wird per Klick angewendet und kann mit dem Kreuz gelöscht werden.

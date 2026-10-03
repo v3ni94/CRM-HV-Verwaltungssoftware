@@ -351,6 +351,35 @@ async def get_contact(
         return out
 
 
+@router.get(
+    "/contacts/{contact_id}/addresses",
+    summary="Aktuelle Anschriften eines Kontakts (Stichtag noch nicht verfügbar)",
+    dependencies=[Depends(strict_query)],
+)
+async def list_contact_addresses(
+    contact_id: uuid.UUID,
+    request: Request,
+    as_of: Annotated[
+        str | None,
+        Query(description="Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden."),
+    ] = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> schemas.ContactAddressListOut:
+    """GAJ-610: addresses have no valid_to yet, a change overwrites the previous one. A cut off
+    date query is refused explicitly (422) instead of returning today's addresses for a past
+    date, which would be a wrong delivery proof."""
+    async with tenant_tx(request, principal) as session:
+        out = await services.load(session, contact_id)
+        if out is None:
+            raise _not_found()
+        if as_of is not None:
+            raise ProblemError(
+                ErrorCodes.CONTACT_ADDRESS_HISTORY_MISSING,
+                extensions={"open_question": "AM14-01", "as_of": as_of},
+            )
+        return schemas.ContactAddressListOut(items=out.addresses)
+
+
 @router.get("/contacts/{contact_id}/name", summary="Anzeigename eines Kontakts (nur Name)")
 async def get_contact_name(
     contact_id: uuid.UUID,

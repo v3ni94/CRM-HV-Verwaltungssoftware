@@ -223,6 +223,70 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 23 (Stand 1.68.0, 03.10.2026)
+
+Reste der Welle 22 (AL01 bis AL06, darunter die Gegenprüfung AL06 in docs/reviews/REVIEW-W22-2026-10-03.md, keine Codefehler, zwei Härtungen AL06-01 und AL06-02 in AM15 umgesetzt) und die Lückenanalyse GAJ (39 Befunde GAJ-101 bis GAJ-610 entlang der durchgängigen Geschäftsprozesse, Pakete AM01 bis AM15). Quellen: Ergebnisdateien der Pakete, Versionsverlauf 1.68.0 in `CHANGELOG.md`, Lückenliste `docs/plans/LUECKENLISTE-2026-10-03.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen.
+
+- Migrationen 0449 (CHECK valid_to >= valid_from auf property_owner, property_contact, contact_relation, deposit, majority_rule, NOT VALID plus VALIDATE) und 0450 (Importberichtsarten historical_statement und resolution mit Tabellen migrated_statement und migrated_resolution), beide mit Rundlauf getestet.
+- Sicherheits- und Produktschutzbefunde aus GAJ: Lastschrift- und Zahlungsdateien waren über die allgemeinen Dokumentrouten ohne Gate G2 abrufbar (GAJ-301, behoben in AM01 auf content, download-url, Portal, Bundle, Spiegelung und Ereignis-Payload); Mehrheitsregel wurde nicht gegen den Versammlungstag geprüft (GAJ-601); WhatsApp ohne Einwilligungsprüfung im Sendepfad (GAJ-405); Upload-Limit hing vom Content-Type des Clients ab (AL06-01).
+- Produktfehler aus den Tests behoben: Portalseite Dokumente stürzte ab (Funktion an Client-Komponente, AM07); Kontaktzusammenführung erzeugte zwei Hauptanschriften (AM14); Terminbutton verlor Fehlermeldungen (AK08, Welle 22); der API-Nutzungstest zählte die Allowlist selbst als Aufruf und war wirkungslos (AM05).
+- Tests: alle 49 Anhang-D-Fälle haben zwei unabhängige Tests (SINGLE_TEST_CASES leer); Invarianten B06 und B07 als Tests; 84 plus 7 Fremdmandantentests; Playwright phone-Projekt mit Schadensmeldung, Zählerstand, Auftrag, Dokumente; PITR-Selbsttest gegen echten Wegwerf-Cluster in CI.
+- Neue offene Punkte: AL06-01, AL06-02, AM02-01, AM04-01, AM04-03, AM06-01, AM09-01, AM10-01, AM14-01, AM13-01 bis AM13-06 (Vorlagen in `docs/plans/ENTSCHEIDUNGEN-2026-10-01.md`).
+- Teilweise erledigt (Rest für Welle 24): GAI-304 (AL04), GAJ-602 (AM02), GAJ-102 (AM05), GAJ-401 (AM06), GAJ-403 (AM07), GAJ-501 (AM09), GAJ-504 (AM10), GAJ-505 (AM11), GAJ-610 (AM14), AL06-02 (AM15).
+- Vom Koordinator bei der Integration erledigt: ruff fix und format, Allowlist um vier neue Pfade, OpenAPI-Export und api-client, Hilfeindex und Handbuch, i18n-Nutzungsprüfung, Migrationsrundlauf 0450 nach 0448 und zurück, 76 Wächtertests, Gesamtsuiten API, CRM und Portal, Builds, Playwright (Ergebnis siehe Versionsverlauf und Ergebnisbericht).
+- Deploy-Hinweise 1.68.0: zwei Migrationen (0449, 0450); 0449 validiert Zeitraum-Prüfregeln und bricht ab, wenn Bestandsdaten valid_to vor valid_from haben (vorher mit dem Abgleichbericht prüfen); nach dem Deploy einmal POST /document-categories/ensure-defaults je Mandant, damit bestehende Zahlungsdateien die Kategorie payment_file erhalten; deploy.sh verlangt für Staging die Smoke-URLs (STAGING_API_URL, STAGING_CRM_URL) oder DEPLOY_SKIP_SMOKE=1; neue CI-Jobs pitr-drill und erweiterte agent-docs-Prüfungen; drei KI-Schalter stehen auf an (bisheriges Verhalten), Entscheidung AM04-01 bis AM04-03.
+
+| Befund-ID | Paket | Status | Hinweis |
+| --- | --- | --- | --- |
+| GAI-612 | AL01 | done |  |
+| GAI-612 | AL02 | done |  |
+| GAI-307 | AL03 | done |  |
+| GAI-215 | AL04 | done |  |
+| GAI-304 | AL04 | partial |  |
+| GAI-110 | AL05 | done |  |
+| GAJ-301 | AM01 | done |  |
+| GAJ-601 | AM02 | done |  |
+| GAJ-602 | AM02 | partial |  |
+| GAJ-604 | AM02 | done |  |
+| GAJ-603 | AM03 | done |  |
+| GAJ-608 | AM03 | done |  |
+| GAJ-609 | AM03 | done |  |
+| GAJ-605 | AM04 | done |  |
+| GAJ-606 | AM04 | done |  |
+| GAJ-607 | AM04 | done |  |
+| GAJ-101 | AM05 | done |  |
+| GAJ-102 | AM05 | partial | nur PATCH Zahlungsposition (AmountCorrectionForm); Zahlungsplan PATCH fehlt, weil das CRM keine Planliste lädt |
+| GAJ-103 | AM05 | done |  |
+| GAJ-104 | AM05 | done |  |
+| GAJ-201 | AM05 | done |  |
+| GAJ-203 | AM05 | done |  |
+| GAJ-204 | AM05 | done |  |
+| GAJ-202 | AM06 | done |  |
+| GAJ-401 | AM06 | partial | Fotopflicht nur als Code-Vorgabe (Hinweis, keine Ablehnung); gespeicherter Mandantenschalter braucht Migration (AM06-01) |
+| GAJ-402 | AM06 | done |  |
+| GAJ-404 | AM06 | done |  |
+| GAJ-403 | AM07 | partial | Dokumente-Test schlug gegen den vorhandenen Build fehl (Absturz der Seite, siehe Fehlerbehebung); nach dem Fix nicht erneut per Playwright geprüft, da ein next  |
+| GAJ-406 | AM07 | done |  |
+| GAJ-405 | AM08 | done |  |
+| GAJ-407 | AM08 | done |  |
+| GAJ-501 | AM09 | partial | keine CRM-Ansicht für Altabrechnungen, Beschlüsse und Prüfbericht (nur API; Import über bestehenden Assistenten mit neuen Berichtsarten) |
+| GAJ-502 | AM09 | done |  |
+| GAJ-503 | AM10 | done |  |
+| GAJ-504 | AM10 | partial | typisierte prüfbare Nachweisverweise (ci-run:<Lauf>@<Commit>, commit:, version:, doc:) mit evidence_kind, cases_passed_without_test_run, Nachweistext im G1-Antr |
+| GAJ-506 | AM10 | done |  |
+| GAJ-507 | AM10 | done |  |
+| GAJ-508 | AM10 | done |  |
+| GAJ-505 | AM11 | partial | Protokoll eines realen Drills mit Produktionsbasisbackup fehlt weiterhin (Betreiberschritt auf dem Server); kein systemd-Timer für den PITR-Drill angelegt |
+| GAJ-509 | AM11 | done |  |
+| GAJ-302 | AM12 | done |  |
+| GAJ-303 | AM12 | done |  |
+| GAJ-304 | AM12 | done |  |
+| GAJ-305 | AM12 | done |  |
+| Entscheidungen | AM13 | done |  |
+| GAJ-610 | AM14 | partial | valid_to und echte Stichtagsabfrage fehlen (Schema und Entscheidung AM14-01) |
+| AL06-01 | AM15 | done |  |
+| AL06-02 | AM15 | partial | forwarded-for.ts kann die direkte Gegenstelle als rechtesten Eintrag anhängen (getestet), Next.js-Routen liefern die Socketadresse aber nicht, daher übergibt no |
+
 ## Welle 22 (Stand 1.67.0, 03.10.2026)
 
 Reste der Welle 21 (41 Teilbefunde der Lückenanalyse GAI) in 19 Paketen AK01 bis AK19, darunter die Gegenprüfung AK19 (docs/reviews/REVIEW-W21-2026-10-03.md, Befunde AK19-01 bis AK19-09, keine Regression, ein Zeitzonenfehler bei naiven Zeitstempeln behoben). Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.67.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen.

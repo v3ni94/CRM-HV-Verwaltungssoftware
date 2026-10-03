@@ -17,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting.audit_events import record_change
+from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import owner_statement as svc
 from mhvp.billing import owner_statement_pdf as owner_pdf
 from mhvp.billing import statement_lifecycle as lifecycle
@@ -26,6 +28,7 @@ from mhvp.billing.owner_statement import (
     OwnerStatementStatus,
 )
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
+from mhvp.billing.write_responses import BillingOwnerOutputsFiledOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.listparams import strict_query
@@ -106,6 +109,32 @@ def _out(st: OwnerStatement, *, with_snapshot: bool = True) -> dict[str, Any]:
     return out
 
 
+_OS_FIELDS = (
+    "status",
+    "ledger_id",
+    "legal_entity_id",
+    "property_id",
+    "period_from",
+    "period_to",
+    "attach_receipts",
+    "approved_by",
+)
+
+
+def _os_event_kw(
+    principal: TenantPrincipal, st: OwnerStatement, before: dict[str, Any]
+) -> dict[str, Any]:
+    """AL03 (GAI-307): shared arguments of record_change (old and new state)."""
+    return {
+        "tenant_id": principal.tenant_id,
+        "actor_user_id": principal.user_id,
+        "entity_type": "owner_statement",
+        "entity_id": st.id,
+        "before": before,
+        "after": audit_snap(st, _OS_FIELDS),
+    }
+
+
 @router.post("", status_code=201, summary="Eigentümerabrechnung anlegen (Entwurf)")
 async def create(
     body: OwnerStatementIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -143,6 +172,9 @@ async def create(
         )
         session.add(st)
         await session.flush()
+        await record_change(
+            session, type="owner_statement.created", **_os_event_kw(principal, st, {})
+        )
         return _out(st)
 
 
@@ -200,8 +232,12 @@ async def approve(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur eine berechnete Abrechnung wird freigegeben."
             )
+        before = audit_snap(st, _OS_FIELDS)
         _approve(st, principal, None)
         await session.flush()
+        await record_change(
+            session, type="owner_statement.approved", **_os_event_kw(principal, st, before)
+        )
         return _out(st)
 
 
@@ -307,9 +343,13 @@ async def options(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Gebuchte oder gesperrte Abrechnung nicht änderbar."
             )
+        before = audit_snap(st, _OS_FIELDS)
         st.attach_receipts = body.attach_receipts
         st.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session, type="owner_statement.options_updated", **_os_event_kw(principal, st, before)
+        )
         return _out(st)
 
 
@@ -523,6 +563,7 @@ async def output_preview(
 
 @router.post(
     "/{statement_id}/outputs",
+    response_model=BillingOwnerOutputsFiledOut,
     status_code=201,
     summary="Anschreiben und § 35a-Nachweis ablegen (GA06-03, nur mit Freigabestufe G3)",
 )

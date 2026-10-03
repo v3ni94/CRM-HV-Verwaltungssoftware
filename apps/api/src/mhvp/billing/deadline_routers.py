@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from mhvp.billing import deadline
 from mhvp.billing.models import Statement, StatementSnapshot
+from mhvp.billing.write_responses import BillingDeadlineSettingOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
@@ -53,7 +54,9 @@ async def get_settings(
         return _out(await deadline.setting(session, principal.tenant_id))
 
 
-@router.put("", summary="Schalter der Abrechnungsfrist setzen")
+@router.put(
+    "", response_model=BillingDeadlineSettingOut, summary="Schalter der Abrechnungsfrist setzen"
+)
 async def put_settings(
     body: BillingDeadlineSettingIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:

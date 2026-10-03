@@ -869,8 +869,19 @@ def _denied_crm_link(c: TestClient, h: dict[str, str], doc: str, title: str) -> 
     return c.post(f"/api/v1/documents/{doc}/links", json=body, headers=h).status_code == 403
 
 
+def _denied_portal_bundle(c: TestClient, h: dict[str, str], doc: str, title: str) -> bool:
+    # Portal ZIP bundle (M25-06): a foreign id answers 404 for the whole request, also when it
+    # is mixed with documents the user may see; the title never leaks into the archive.
+    alone = c.post(f"{P}/documents/bundle", json={"document_ids": [doc]}, headers=h)
+    own = sorted(_portal_ids(c, h))
+    mixed = c.post(f"{P}/documents/bundle", json={"document_ids": [*own, doc]}, headers=h)
+    assert (alone.status_code, mixed.status_code) == (404, 404), (alone.text, mixed.text)
+    assert title.encode() not in alone.content + mixed.content
+    return True
+
+
 def _denied_bulk_export(c: TestClient, h: dict[str, str], doc: str, title: str) -> bool:
-    # No document bulk export exists for portal users; the CRM wide listing and the only ZIP
+    # Besides the portal bundle (own path above), the CRM wide listing and the only ZIP
     # export of the API (listings, M26) are the bulk paths a portal token could try.
     listing = c.get("/api/v1/documents", headers=h)
     archive = c.get("/api/v1/letting/listings/openimmo.zip", headers=h)
@@ -881,6 +892,7 @@ def _denied_bulk_export(c: TestClient, h: dict[str, str], doc: str, title: str) 
 PATHS = {
     "portal_list": _denied_portal_list,
     "portal_download": _denied_portal_download,
+    "portal_bundle": _denied_portal_bundle,
     "crm_read": _denied_crm_read,
     "crm_download": _denied_crm_download,
     "crm_search": _denied_crm_search,
@@ -914,6 +926,26 @@ def test_d30_foreign_gdwe_and_sev_files_denied_on_every_path(
     assert PATHS[path](
         access_client, access_world.owner1, access_world.docs[kind], access_world.titles[kind]
     )
+
+
+def test_d30_bundle_of_own_documents_excludes_foreign_files(
+    access_client: TestClient, access_world: AccessWorld
+) -> None:
+    """D30 over the bundle (GAJ-406): the owner's own GdWE documents bundle with 200; the ZIP
+    and its INDEX.csv contain none of the foreign GdWE or SEV files."""
+    import io
+    import zipfile
+
+    own = sorted(_portal_ids(access_client, access_world.owner1))
+    assert own
+    response = access_client.post(
+        f"{P}/documents/bundle", json={"document_ids": own}, headers=access_world.owner1
+    )
+    assert response.status_code == 200, response.text
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        blob = b"".join(archive.read(n) for n in archive.namelist())
+    for kind in ("fremde_gdwe", "sev_vertrag", "sev_akte", "o2_kaufvertrag"):
+        assert access_world.titles[kind].encode() not in blob
 
 
 @pytest.mark.parametrize("path", sorted(PATHS))

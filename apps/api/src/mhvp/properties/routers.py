@@ -1189,6 +1189,16 @@ async def add_owner(
             )
         await _get(session, Party, body.party_id)
         await _check_owner_details(session, property_id, body)
+        problems = await svc.owner_period_problems(
+            session,
+            property_id,
+            body.party_id,
+            body.valid_from,
+            body.valid_to,
+            body.share_percent,
+        )
+        if problems:
+            raise svc.invalid(" ".join(problems))
         owner = PropertyOwner(
             tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
         )

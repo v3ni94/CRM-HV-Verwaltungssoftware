@@ -456,7 +456,12 @@ async def _queue_suggestion(
 ) -> None:
     """Vorschlag je Mail (M20 Übernahme aus dem Immoware Hub): synchron in Tests und
     Entwicklung (``ai_inline``, wie der Assistent in ``mhvp.ai.routers``), sonst über die Queue
-    ``ai``. Ein Fehler beim Vorschlag darf die Mailaufnahme nie stören."""
+    ``ai``. Ein Fehler beim Vorschlag darf die Mailaufnahme nie stören. Mandantenschalter
+    ``ai_automation.realtime_mail_classification`` (GAJ-605, AM04)."""
+    from mhvp.ai import automation
+
+    if not await automation.is_enabled(session, "realtime_mail_classification"):
+        return
     if settings.ai_inline:
         from mhvp.communication import suggest
 

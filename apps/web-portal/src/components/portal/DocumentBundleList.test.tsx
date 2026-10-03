@@ -21,6 +21,15 @@ function renderList() {
 describe("DocumentBundleList", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("formats dates itself, so the server page passes no function (GAJ-403)", () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={de} timeZone="Europe/Berlin">
+        <DocumentBundleList rows={rows} />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByText(/01\.01\.2026/)).toBeInTheDocument();
+  });
+
   it("disables the bundle button until documents are selected and posts the chosen ids", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["zip"]) });

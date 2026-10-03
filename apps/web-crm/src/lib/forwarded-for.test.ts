@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forwardedForHeaders, forwardedForValue } from "./forwarded-for";
+import { forwardedForHeaders, forwardedForValue, peerAddress } from "./forwarded-for";
 
 const on = { MHVP_RATE_LIMIT_TRUSTED_PROXIES: "10.0.0.0/8" } as unknown as NodeJS.ProcessEnv;
 const off = {} as unknown as NodeJS.ProcessEnv;
@@ -21,5 +21,20 @@ describe("forwarded-for (GAI-311)", () => {
   });
   it("accepts IPv6", () => {
     expect(forwardedForValue(new Headers({ "x-forwarded-for": "2001:db8::1" }), on)).toBe("2001:db8::1");
+  });
+  it("appends the direct peer as rightmost hop (AL06-02)", () => {
+    const h = new Headers({ "x-forwarded-for": "1.2.3.4" });
+    expect(forwardedForValue(h, on, "10.0.0.9")).toBe("1.2.3.4, 10.0.0.9");
+    expect(forwardedForValue(h, on, "::ffff:10.0.0.9")).toBe("1.2.3.4, 10.0.0.9");
+    expect(forwardedForValue(new Headers(), on, "2001:db8::2")).toBe("2001:db8::2");
+    expect(forwardedForValue(new Headers({ "x-forwarded-for": "evil;" }), on, "10.0.0.9")).toBe("10.0.0.9");
+    expect(forwardedForHeaders(h, on, "10.0.0.9")).toEqual({ "x-forwarded-for": "1.2.3.4, 10.0.0.9" });
+  });
+  it("ignores invalid peers and stays off without trusted proxies", () => {
+    const h = new Headers({ "x-forwarded-for": "1.2.3.4" });
+    expect(forwardedForValue(h, on, "evil")).toBe("1.2.3.4");
+    expect(forwardedForValue(h, on, "1.2.3.4; x")).toBe("1.2.3.4");
+    expect(forwardedForValue(h, off, "10.0.0.9")).toBeNull();
+    expect(peerAddress(undefined)).toBeNull();
   });
 });

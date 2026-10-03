@@ -797,6 +797,37 @@ async def notify_budget_block(session: AsyncSession, tenant_id: uuid.UUID, reaso
     return count
 
 
+BUDGET_WARNING_KIND = "ai.budget_warning"
+
+
+async def notify_budget_warning(
+    session: AsyncSession, tenant_id: uuid.UUID, provider: str | None
+) -> int:
+    """80 percent budget warning with notification (9.1, GAJ-609): same recipients and
+    idempotence as ``notify_budget_block``. Returns the number of notifications created."""
+    from mhvp.banking.tasks import users_with_permission
+    from mhvp.workspace.services import notify
+
+    label = f" ({provider})" if provider else ""
+    count = 0
+    for user_id in await users_with_permission(session, tenant_id, BUDGET_BLOCK_PERMISSION):
+        created = await notify(
+            session,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            kind=BUDGET_WARNING_KIND,
+            title="KI: 80 Prozent des Monatsbudgets erreicht",
+            body=(
+                f"Das KI-Monatsbudget{label} ist zu 80 Prozent verbraucht. Bei 100 Prozent "
+                "werden weitere KI-Läufe gesperrt."
+            ),
+            target_type="ai_usage",
+            target_id=tenant_id,
+        )
+        count += 1 if created is not None else 0
+    return count
+
+
 async def _provider_order(session: AsyncSession, strategy: str) -> list[AiProvider]:
     """Preferred provider first; "alternate" starts with the provider not used last."""
     if strategy in ONLY:
@@ -2098,6 +2129,9 @@ async def execute(
                 entity_id=run.id,
                 actor_user_id=actor_user_id,
                 payload={"threshold": "80%"},
+            )
+            await notify_budget_warning(
+                session, tenant_id, run.provider.value if run.provider else None
             )
         await emit(
             session,

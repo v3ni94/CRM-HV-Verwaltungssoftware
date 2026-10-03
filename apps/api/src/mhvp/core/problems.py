@@ -1557,6 +1557,13 @@ class ErrorCodes:
         "The correcting resolution must belong to the same legal entity as the statement "
         "ledger (GAH-403, 6.9.1).",
     )
+    HOA_MAJORITY_RULE_NOT_IN_FORCE = ErrorCode(
+        "MHVP-HOA-0039",
+        422,
+        "Mehrheitsregel gilt am Versammlungstag nicht",
+        "The majority rule of the agenda item is not valid on the meeting day (valid_from to "
+        "valid_to); assignment and tally are refused (AM02, GAJ-601).",
+    )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
     CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(
         "MHVP-CONT-0001",
@@ -1628,6 +1635,13 @@ class ErrorCodes:
         "SEPA-Firmenlastschrift (B2B) wird nicht unterstützt",
         "B2B direct debit mandates are not supported: no B2B collection run exists, the legal and "
         "bank agreement is open (GAA-05, AF07-01). Capture the mandate as CORE or not at all.",
+    )
+    CONTACT_ADDRESS_HISTORY_MISSING = ErrorCode(
+        "MHVP-CONT-0034",
+        422,
+        "Stichtagsabfrage der Anschriften ist noch nicht verfügbar",
+        "Contact addresses carry no valid_to and are overwritten on change; a cut off date query "
+        "(as_of) cannot be answered yet. Open question AM14-01 (GAJ-610).",
     )
     MIG_CUTOFF_MISSING = ErrorCode(
         "MHVP-MIG-0001",

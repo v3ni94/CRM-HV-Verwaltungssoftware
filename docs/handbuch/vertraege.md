@@ -237,3 +237,9 @@ Auf der Vertragsseite pflegt der Abschnitt "Zusatzfelder des Vertrags" (Schreibr
 ## Kautionsabrechnung freigeben (Vier Augen, gesperrt)
 
 Unter einem gespeicherten Entwurf der Kautionsabrechnung steht Kautionsabrechnung freigeben. Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat; sie bestätigt das durch Anhaken. Die Schaltfläche bleibt gesperrt, solange die Freigabestufe G3 geschlossen ist; der Stand steht unter der Schaltfläche. Freigegebene Abrechnungen lassen sich nicht erneut freigeben.
+
+## Zahlungsposition korrigieren und Zustellung der Verbrauchsinformation (GAJ-102, GAJ-103, Welle 23)
+
+In der Tabelle der Sollbeträge öffnet "Korrigieren" (Recht Verträge bearbeiten) ein Formular für Netto, Umsatzsteuer, Zeitraum und Grund einer bestehenden Position. Betrag, Zeitraum und Art lassen sich nur ändern, solange keine gebuchte Sollstellung die Position verwendet; sonst meldet das System den Konflikt. Die Korrektur eines Zahlungsplans bleibt vorerst der Schnittstelle vorbehalten.
+
+Im Panel Verbrauchsinformation eines Objekts erfasst "Zustellung erfassen" (Recht Objekte bearbeiten) im Ersatzprozess ohne Portal den Weg (Post, E-Mail, persönliche Übergabe), das Datum und einen Nachweis. Die Erfassung versendet nichts und dient dem Nachweis der Zustellung.

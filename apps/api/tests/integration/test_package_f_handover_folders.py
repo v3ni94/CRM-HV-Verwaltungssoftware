@@ -275,8 +275,12 @@ def test_folder_structure_categories_and_upload_links(client: TestClient, world:
     assert by_code["owner_file"]["name"] == "Eigentümerakte"
     assert len(categories) == 12
 
-    # ensure-defaults is idempotent and needs tenant_settings:update.
-    assert len(_ok(client.post("/api/v1/document-categories/ensure-defaults", headers=h))) == 12
+    # ensure-defaults is idempotent and needs tenant_settings:update. Since GAJ-301 it also
+    # creates the payment_file category (sort order 900) that locks payment files behind G2.
+    ensured = _ok(client.post("/api/v1/document-categories/ensure-defaults", headers=h))
+    assert len(ensured) == 13
+    assert {c["code"] for c in ensured} == set(by_code) | {"payment_file"}
+    assert len(_ok(client.post("/api/v1/document-categories/ensure-defaults", headers=h))) == 13
     reader = bearer(login(client, world, "pkfreader"))
     assert (
         client.post("/api/v1/document-categories/ensure-defaults", headers=reader).status_code

@@ -402,6 +402,13 @@ class Deposit(IdMixin, TimestampMixin, TenantMixin, Base):
     """Rental deposit on a segregated account of the landlord (6.9.1, D56, annex C)."""
 
     __tablename__ = "deposit"
+    # AM02 / GAJ-604 (migration 0449).
+    __table_args__ = (
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="period_order",
+        ),
+    )
 
     contract_id: Mapped[uuid.UUID] = _fk("contract.id")
     kind: Mapped[DepositKind] = mapped_column(_enum(DepositKind, "deposit_kind"), nullable=False)

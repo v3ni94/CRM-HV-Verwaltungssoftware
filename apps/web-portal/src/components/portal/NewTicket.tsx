@@ -132,6 +132,21 @@ export function NewTicket() {
           className={ui.input}
           onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
         />
+        <label htmlFor="ticket-photo-camera" className={`${ui.button} mt-2 inline-block cursor-pointer`}>
+          {t("photoCamera")}
+          <input
+            id="ticket-photo-camera"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            data-testid="ticket-photo-camera"
+            onChange={(e) => {
+              const shot = Array.from(e.target.files ?? []);
+              setPhotos((prev) => [...prev, ...shot].slice(0, MAX_PHOTOS));
+            }}
+          />
+        </label>
         <p id="ticket-photo-hint" className={ui.help}>
           {t("photoHint")}
         </p>

@@ -93,6 +93,16 @@ from mhvp.accounting.schemas import (
     SettlementConfirmIn,
     SettlementProposalIn,
 )
+from mhvp.accounting.write_responses import (
+    AccountingAdminFeeCreatedOut,
+    AccountingDatevExportOut,
+    AccountingDeliveryProofOut,
+    AccountingJournalExportOut,
+    AccountingPaperlessIntakeOut,
+    AccountingPaymentTypeAccountOut,
+    AccountingReceivableRunReverseOut,
+    AccountingRecurringPlanCreatedOut,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
@@ -237,9 +247,19 @@ async def create_default_template(
     request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> ChartTemplateOut:
     async with tenant_tx(request, principal) as session:
-        return ChartTemplateOut.model_validate(
-            await svc.default_template(session, principal.tenant_id)
+        template = await svc.default_template(session, principal.tenant_id)
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="chart_template.default_saved",
+            entity_type="chart_template",
+            entity_id=template.id,
+            before={},
+            after=snap(template, ("code", "version"))
+            | {"account_count": len(template.accounts or [])},
         )
+        return ChartTemplateOut.model_validate(template)
 
 
 @router.post(
@@ -349,9 +369,19 @@ async def sync_debtors(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, int]:
     async with tenant_tx(request, principal) as session:
-        return {
-            "created": await svc.sync_debtor_accounts(session, await _ledger(session, ledger_id))
-        }
+        ledger = await _ledger(session, ledger_id)
+        created = await svc.sync_debtor_accounts(session, ledger)
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="ledger.debtors_synced",
+            entity_type="ledger",
+            entity_id=ledger.id,
+            before={},
+            after={"created": created},
+        )
+        return {"created": created}
 
 
 @router.post(
@@ -1086,8 +1116,19 @@ async def approve_entry(
             raise ProblemError(
                 ErrorCodes.GATE_FOUR_EYES, detail="Die Prüfung muss eine andere Person vornehmen."
             )
+        before = snap(entry, ("approved_by",))
         entry.approved_by = principal.user_id
         await session.flush()
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="journal_entry.approved",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            before=before,
+            after=snap(entry, ("approved_by",)),
+        )
         return await _out(session, entry)
 
 
@@ -1243,8 +1284,17 @@ async def sync_creditors(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> AccountingCreditorSyncOut:
     async with tenant_tx(request, principal) as session:
-        created, linked = await ledger_ops.sync_creditor_accounts(
-            session, await _ledger(session, ledger_id)
+        ledger = await _ledger(session, ledger_id)
+        created, linked = await ledger_ops.sync_creditor_accounts(session, ledger)
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="ledger.creditors_synced",
+            entity_type="ledger",
+            entity_id=ledger.id,
+            before={},
+            after={"created": created, "linked": linked},
         )
         return AccountingCreditorSyncOut(created=created, linked=linked)
 
@@ -1269,7 +1319,18 @@ async def create_cost_transfer(
             user_id=principal.user_id,
             **body.model_dump(),
         )
-        return await _out(session, entry)
+        created = await _out(session, entry)
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="journal_entry.cost_transfer_drafted",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            before={},
+            after=created.model_dump(mode="json"),
+        )
+        return created
 
 
 @router.post(
@@ -1292,7 +1353,18 @@ async def create_interest(
             user_id=principal.user_id,
             **body.model_dump(),
         )
-        return await _out(session, entry)
+        created = await _out(session, entry)
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="journal_entry.interest_drafted",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            before={},
+            after=created.model_dump(mode="json"),
+        )
+        return created
 
 
 # P01-01 withholding taxes on credit interest (AE05) -------------------------------------
@@ -1749,7 +1821,11 @@ async def _items(session: AsyncSession, run_id: uuid.UUID) -> list[ReceivableIte
     )
 
 
-@router.put("/ledgers/{ledger_id}/payment-type-accounts", summary="Erlöskonto je Zahlungsart")
+@router.put(
+    "/ledgers/{ledger_id}/payment-type-accounts",
+    response_model=AccountingPaymentTypeAccountOut,
+    summary="Erlöskonto je Zahlungsart",
+)
 async def set_mapping(
     ledger_id: uuid.UUID,
     body: PaymentTypeMappingIn,
@@ -1960,7 +2036,11 @@ async def post_run(
         return _run_out(run, await _items(session, run.id))
 
 
-@router.post("/receivable-runs/{run_id}/reverse", summary="Sollstellungslauf stornieren")
+@router.post(
+    "/receivable-runs/{run_id}/reverse",
+    response_model=AccountingReceivableRunReverseOut,
+    summary="Sollstellungslauf stornieren",
+)
 async def reverse_run(
     run_id: uuid.UUID,
     body: RunReverseIn,
@@ -1971,13 +2051,29 @@ async def reverse_run(
         run = await session.get(ReceivableRun, run_id, with_for_update=True)
         if run is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = snap(run, ("status",))
         count = await receivables.reverse_run(
             session, run, principal.user_id, body.reason, body.booking_date or local_today()
+        )
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="receivable_run.reversed",
+            entity_type="receivable_run",
+            entity_id=run.id,
+            before=before,
+            after=snap(run, ("status",)) | {"reversed": count, "reason": body.reason},
         )
         return {"reversed": count, "status": run.status.value}
 
 
-@router.post("/admin-fees", status_code=201, summary="Verwalterhonorar einrichten")
+@router.post(
+    "/admin-fees",
+    response_model=AccountingAdminFeeCreatedOut,
+    status_code=201,
+    summary="Verwalterhonorar einrichten",
+)
 async def create_fee(
     body: FeeIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
@@ -2920,7 +3016,12 @@ class PlanIn(BaseModel):
     auto_post: bool = False
 
 
-@router.post("/recurring-invoices", status_code=201, summary="Rechnungsplan anlegen")
+@router.post(
+    "/recurring-invoices",
+    response_model=AccountingRecurringPlanCreatedOut,
+    status_code=201,
+    summary="Rechnungsplan anlegen",
+)
 async def create_plan(
     body: PlanIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
@@ -3688,6 +3789,7 @@ class DunningInterestRateIn(BaseModel):
 
 @router.post(
     "/dunning-cases/{case_id}/delivery-proofs",
+    response_model=AccountingDeliveryProofOut,
     status_code=201,
     summary="Zustellnachweis zum Mahnfall erfassen (Einschreiben, Post, E-Mail, Portal)",
 )
@@ -3710,6 +3812,16 @@ async def dunning_add_delivery_proof(
             document_id=body.document_id,
             note=body.note,
             user_id=principal.user_id,
+        )
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_delivery_proof.created",
+            entity_type="dunning_delivery_proof",
+            entity_id=proof.id,
+            before={},
+            after=snap(proof, ("case_id", "kind", "proof_date", "reference", "document_id")),
         )
         return _proof_out(proof)
 
@@ -4165,6 +4277,20 @@ async def dunning_prepare_mahnbescheid(
                 detail="Mahnbescheid nur nach der letzten Mahnstufe vorzubereiten.",
             )
         prep = await dunning.prepare_mahnbescheid(session, case, principal.user_id)
+        # No debtor name or address in the event: only references and the claim amount.
+        await record_change(  # AL03 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_mahnbescheid.prepared",
+            entity_type="dunning_mahnbescheid_prep",
+            entity_id=prep.id,
+            before={},
+            after=snap(
+                prep,
+                ("case_id", "antragsteller_legal_entity_id", "hauptforderung", "status"),
+            ),
+        )
         return _mahnbescheid_out(prep)
 
 
@@ -4332,6 +4458,7 @@ async def _ensure_not_demo_export(
 
 @router.post(
     "/ledgers/{ledger_id}/exports/journal",
+    response_model=AccountingJournalExportOut,
     status_code=201,
     summary="Journal-Export (CSV) mit Prüfsumme",
 )
@@ -4372,6 +4499,7 @@ async def export_journal(
 
 @router.post(
     "/ledgers/{ledger_id}/exports/datev",
+    response_model=AccountingDatevExportOut,
     status_code=201,
     summary="DATEV-Buchungsstapel (nur mit hinterlegten Beraterdaten)",
 )
@@ -4478,7 +4606,10 @@ class PaperlessIntakeIn(BaseModel):
 
 
 @intake_router.post(
-    "/paperless", status_code=202, summary="Beleg aus Paperless holen und Rechnung erfassen"
+    "/paperless",
+    status_code=202,
+    summary="Beleg aus Paperless holen und Rechnung erfassen",
+    response_model=AccountingPaperlessIntakeOut,
 )
 async def paperless_intake(
     body: PaperlessIntakeIn, request: Request, principal: TenantPrincipal = Depends(CREATE)

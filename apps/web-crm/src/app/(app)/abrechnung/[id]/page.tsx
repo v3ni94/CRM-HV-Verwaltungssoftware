@@ -9,6 +9,7 @@ import { DeadlineExceptionPanel, type DeadlineException } from "@/components/bil
 import { HeatingPanel } from "@/components/billing/HeatingPanel";
 import { HeatingComparisonPanel } from "@/components/billing/HeatingComparisonPanel";
 import { RuleRegisterNote } from "@/components/billing/RuleRegisterNote";
+import { StatementDiffPanel } from "@/components/billing/StatementDiffPanel";
 import { StatementLettersPanel } from "@/components/billing/StatementLettersPanel";
 import { StatementOutputsPanel } from "@/components/billing/StatementOutputsPanel";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
@@ -84,6 +85,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         contracts={(snap?.results ?? []).filter((r) => r.contract_id).map((r) => ({ contract_id: String(r.contract_id), unit_number: r.unit_number }))}
         keys={((keys.data ?? []) as { id: string; code: string; name: string }[]).map((k) => ({ id: k.id, code: k.code, name: k.name }))}
       />
+      {(data as { supersedes_id?: string | null }).supersedes_id && snap ? <StatementDiffPanel statementId={id} /> : null}
       <HeatingPanel id={id} status={String(data.status)} />
       <HeatingComparisonPanel id={id} />
       {snap?.results ? (

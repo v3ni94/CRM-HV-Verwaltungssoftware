@@ -29,6 +29,7 @@ from mhvp.accounting.models import (
     AdminFeeSetting,
     Invoice,
 )
+from mhvp.accounting.write_responses import AccountingDocumentStoredOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -825,6 +826,7 @@ async def xrechnung_check(
 
 @router.post(
     "/invoices/{invoice_id}/xrechnung/document",
+    response_model=AccountingDocumentStoredOut,
     status_code=201,
     summary="XRechnung als Dokument ablegen (Objekt und Rechtsträger verknüpft)",
 )

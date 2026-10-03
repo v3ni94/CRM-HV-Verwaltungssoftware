@@ -151,4 +151,18 @@ describe("WorkOrderDetail", () => {
     const body = JSON.parse(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body));
     expect(body).toMatchObject({ net: "100.00", vat_rate: "19", iban: "DE89 3704 0044 0532 0130 00" });
   });
+  it("offers a direct camera capture for execution photos (AM06, GAJ-404)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ id: "d7" }, 201))
+      .mockResolvedValueOnce(jsonResponse({ ...order, status: "done" }));
+    renderIntl(<WorkOrderDetail order={{ ...order, status: "scheduled" }} />);
+    const camera = screen.getByTestId("photos-camera");
+    expect(camera).toHaveAttribute("capture", "environment");
+    await user.type(screen.getByLabelText("Ausführungsbericht"), "Erledigt");
+    await user.upload(camera, new File(["c"], "cam.jpg", { type: "image/jpeg" }));
+    await user.click(screen.getByRole("button", { name: "Ausführung dokumentieren" }));
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body)).document_ids).toEqual(["d7"]);
+  });
 });

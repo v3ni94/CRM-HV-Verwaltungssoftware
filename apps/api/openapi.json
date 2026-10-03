@@ -1472,6 +1472,33 @@
         "title": "AccountVatOption",
         "type": "string"
       },
+      "AccountingAdminFeeCreatedOut": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lexoffice_recurring_prep_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexoffice Recurring Prep Id"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AccountingAdminFeeCreatedOut",
+        "type": "object"
+      },
       "AccountingAllocationIn": {
         "additionalProperties": false,
         "properties": {
@@ -1677,6 +1704,158 @@
         "title": "AccountingCreditorSyncOut",
         "type": "object"
       },
+      "AccountingDatevExportOut": {
+        "additionalProperties": true,
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "skipped_split_bookings": {
+            "default": [],
+            "items": {},
+            "title": "Skipped Split Bookings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "rows",
+          "content"
+        ],
+        "title": "AccountingDatevExportOut",
+        "type": "object"
+      },
+      "AccountingDeliveryProofOut": {
+        "additionalProperties": true,
+        "properties": {
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "proof_date": {
+            "format": "date",
+            "title": "Proof Date",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "id",
+          "case_id",
+          "kind",
+          "proof_date"
+        ],
+        "title": "AccountingDeliveryProofOut",
+        "type": "object"
+      },
+      "AccountingDocumentStoredOut": {
+        "additionalProperties": true,
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "created"
+        ],
+        "title": "AccountingDocumentStoredOut",
+        "type": "object"
+      },
       "AccountingDunningBlockOut": {
         "additionalProperties": true,
         "description": "AK11 (GAI-304): typed response of a dunning block per open item.",
@@ -1777,6 +1956,32 @@
           "active"
         ],
         "title": "AccountingDunningBlockOut",
+        "type": "object"
+      },
+      "AccountingEntityCreditorIdOut": {
+        "additionalProperties": true,
+        "properties": {
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "sepa_creditor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Creditor Id"
+          }
+        },
+        "required": [
+          "legal_entity_id"
+        ],
+        "title": "AccountingEntityCreditorIdOut",
         "type": "object"
       },
       "AccountingEntryNoteIn": {
@@ -2172,6 +2377,42 @@
         "title": "AccountingInterestTaxSummaryOut",
         "type": "object"
       },
+      "AccountingJournalExportOut": {
+        "additionalProperties": true,
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          }
+        },
+        "required": [
+          "id",
+          "rows",
+          "content"
+        ],
+        "title": "AccountingJournalExportOut",
+        "type": "object"
+      },
       "AccountingLeadingEffectiveOut": {
         "properties": {
           "kind": {
@@ -2484,6 +2725,144 @@
         "title": "AccountingOpenItemNoticeOut",
         "type": "object"
       },
+      "AccountingPaperlessIntakeOut": {
+        "additionalProperties": true,
+        "properties": {
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "run_id"
+        ],
+        "title": "AccountingPaperlessIntakeOut",
+        "type": "object"
+      },
+      "AccountingPaymentTypeAccountOut": {
+        "additionalProperties": true,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "payment_type_code": {
+            "title": "Payment Type Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_type_code"
+        ],
+        "title": "AccountingPaymentTypeAccountOut",
+        "type": "object"
+      },
+      "AccountingReceivableRunReverseOut": {
+        "additionalProperties": true,
+        "properties": {
+          "reversed": {
+            "title": "Reversed",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reversed",
+          "status"
+        ],
+        "title": "AccountingReceivableRunReverseOut",
+        "type": "object"
+      },
+      "AccountingRecurringPlanCreatedOut": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "next_due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AccountingRecurringPlanCreatedOut",
+        "type": "object"
+      },
+      "AccountingS35aCertificateDocumentOut": {
+        "additionalProperties": true,
+        "properties": {
+          "contract_id": {
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "repeat_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repeat Notice"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id",
+          "contract_id",
+          "year"
+        ],
+        "title": "AccountingS35aCertificateDocumentOut",
+        "type": "object"
+      },
       "AccountingSyncDebtorsOut": {
         "additionalProperties": true,
         "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
@@ -2497,6 +2876,32 @@
           "created"
         ],
         "title": "AccountingSyncDebtorsOut",
+        "type": "object"
+      },
+      "AccountingTenantCreditorIdOut": {
+        "additionalProperties": true,
+        "properties": {
+          "sepa_creditor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Creditor Id"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id"
+        ],
+        "title": "AccountingTenantCreditorIdOut",
         "type": "object"
       },
       "AccountsIn": {
@@ -3868,6 +4273,17 @@
         "additionalProperties": false,
         "description": "Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.",
         "properties": {
+          "automation_ai_task": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Ai Task"
+          },
           "batch_mail_classification": {
             "anyOf": [
               {
@@ -3878,6 +4294,28 @@
               }
             ],
             "title": "Batch Mail Classification"
+          },
+          "master_data_change_proposals": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Data Change Proposals"
+          },
+          "realtime_mail_classification": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realtime Mail Classification"
           },
           "rent_increase_check": {
             "anyOf": [
@@ -7384,6 +7822,11 @@
       },
       "AutomationOut": {
         "properties": {
+          "automation_ai_task": {
+            "default": true,
+            "title": "Automation Ai Task",
+            "type": "boolean"
+          },
           "batch_mail_classification": {
             "title": "Batch Mail Classification",
             "type": "boolean"
@@ -7399,8 +7842,18 @@
             ],
             "title": "Blocked Reason"
           },
+          "master_data_change_proposals": {
+            "default": true,
+            "title": "Master Data Change Proposals",
+            "type": "boolean"
+          },
           "provider_released": {
             "title": "Provider Released",
+            "type": "boolean"
+          },
+          "realtime_mail_classification": {
+            "default": true,
+            "title": "Realtime Mail Classification",
             "type": "boolean"
           },
           "rent_increase_check": {
@@ -9513,6 +9966,115 @@
         "title": "BatchIn",
         "type": "object"
       },
+      "BillingAdvanceRuleOut": {
+        "additionalProperties": true,
+        "properties": {
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "months": {
+            "title": "Months",
+            "type": "integer"
+          },
+          "open_advance_decision": {
+            "title": "Open Advance Decision",
+            "type": "string"
+          },
+          "open_advance_mode": {
+            "title": "Open Advance Mode",
+            "type": "string"
+          },
+          "open_advance_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Open Advance Modes",
+            "type": "array"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "surcharge_percent": {
+            "title": "Surcharge Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "surcharge_percent",
+          "months",
+          "rule_version",
+          "formula",
+          "open_advance_mode",
+          "open_advance_modes",
+          "open_advance_decision"
+        ],
+        "title": "BillingAdvanceRuleOut",
+        "type": "object"
+      },
+      "BillingAiCheckStateOut": {
+        "additionalProperties": true,
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest"
+          },
+          "latest_run": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Run"
+          },
+          "proposals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement_id",
+          "proposals"
+        ],
+        "title": "BillingAiCheckStateOut",
+        "type": "object"
+      },
+      "BillingAllocationBasisSettingOut": {
+        "additionalProperties": true,
+        "properties": {
+          "block_output": {
+            "title": "Block Output",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "block_output"
+        ],
+        "title": "BillingAllocationBasisSettingOut",
+        "type": "object"
+      },
       "BillingCalcSettingsIn": {
         "additionalProperties": false,
         "properties": {
@@ -9602,6 +10164,61 @@
         "title": "BillingCalcSettingsOut",
         "type": "object"
       },
+      "BillingConsumptionInfoRunOut": {
+        "additionalProperties": true,
+        "properties": {
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "BillingConsumptionInfoRunOut",
+        "type": "object"
+      },
+      "BillingConsumptionInfoSettingsOut": {
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "notifications_enabled": {
+            "title": "Notifications Enabled",
+            "type": "boolean"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "template_verified": {
+            "title": "Template Verified",
+            "type": "boolean"
+          },
+          "tenant_enabled": {
+            "title": "Tenant Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "property_id",
+          "enabled",
+          "tenant_enabled",
+          "notifications_enabled",
+          "template_verified",
+          "rule_version"
+        ],
+        "title": "BillingConsumptionInfoSettingsOut",
+        "type": "object"
+      },
       "BillingDeadlineSettingIn": {
         "additionalProperties": false,
         "properties": {
@@ -9658,6 +10275,310 @@
         "title": "BillingDeadlineSettingIn",
         "type": "object"
       },
+      "BillingDeadlineSettingOut": {
+        "additionalProperties": true,
+        "properties": {
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "policy": {
+            "title": "Policy",
+            "type": "string"
+          },
+          "warn_days_first": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn Days First"
+          },
+          "warn_days_second": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn Days Second"
+          },
+          "watch_enabled": {
+            "title": "Watch Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "policy",
+          "watch_enabled",
+          "notice"
+        ],
+        "title": "BillingDeadlineSettingOut",
+        "type": "object"
+      },
+      "BillingHeatingRuleTableOut": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "valid_from"
+        ],
+        "title": "BillingHeatingRuleTableOut",
+        "type": "object"
+      },
+      "BillingIdOut": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "BillingIdOut",
+        "type": "object"
+      },
+      "BillingInfoSheetFiledOut": {
+        "additionalProperties": true,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Hash"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "text_status": {
+            "title": "Text Status",
+            "type": "string"
+          },
+          "texts_status": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texts Status"
+          }
+        },
+        "required": [
+          "statement_id",
+          "document_id",
+          "text_status"
+        ],
+        "title": "BillingInfoSheetFiledOut",
+        "type": "object"
+      },
+      "BillingInspectionOut": {
+        "additionalProperties": true,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "document_ids": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ids"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "objection_received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objection Received At"
+          },
+          "objection_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objection Text"
+          },
+          "provided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provided At"
+          },
+          "provision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provision"
+          },
+          "redaction_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redaction Note"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "statement_id",
+          "status"
+        ],
+        "title": "BillingInspectionOut",
+        "type": "object"
+      },
       "BillingNewVersionIn": {
         "additionalProperties": false,
         "description": "GAI-602: correction reason for a new statement version (rule 7, traceability).",
@@ -9673,6 +10594,51 @@
           "reason"
         ],
         "title": "BillingNewVersionIn",
+        "type": "object"
+      },
+      "BillingOwnerOutputsFiledOut": {
+        "additionalProperties": true,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "text_status": {
+            "title": "Text Status",
+            "type": "string"
+          },
+          "texts_status": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texts Status"
+          }
+        },
+        "required": [
+          "statement_id",
+          "items",
+          "text_status"
+        ],
+        "title": "BillingOwnerOutputsFiledOut",
         "type": "object"
       },
       "BillingPeriodIn": {
@@ -9817,6 +10783,35 @@
           "status"
         ],
         "title": "BillingPeriodTransitionIn",
+        "type": "object"
+      },
+      "BillingResultEntriesOut": {
+        "additionalProperties": true,
+        "properties": {
+          "entry_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Entry Ids",
+            "type": "array"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement_id",
+          "entry_ids",
+          "status"
+        ],
+        "title": "BillingResultEntriesOut",
         "type": "object"
       },
       "BillingResultOut": {
@@ -17570,6 +18565,28 @@
           "include_internal_notes"
         ],
         "title": "ContactAccessExportSettingsOut",
+        "type": "object"
+      },
+      "ContactAddressListOut": {
+        "description": "Current addresses of a contact (AM14, GAJ-610). ``history_available`` stays false until\nthe address history (valid_to, AM14-01) exists; ``as_of`` is refused with 422 until then.",
+        "properties": {
+          "history_available": {
+            "default": false,
+            "title": "History Available",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AddressOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ContactAddressListOut",
         "type": "object"
       },
       "ContactBankAccountKind": {
@@ -31571,7 +32588,7 @@
             "type": "object"
           },
           "resource": {
-            "pattern": "^(contacts|properties|units|contracts|documents|imports|tickets|bank_transactions|invoices|journal|open_items|dunning_cases|hoa_properties|work_orders)$",
+            "pattern": "^(contacts|properties|units|contracts|documents|imports|tickets|bank_transactions|invoices|journal|open_items|dunning_cases|hoa_properties|work_orders|payment_runs|mailbox)$",
             "title": "Resource",
             "type": "string"
           }
@@ -33243,6 +34260,17 @@
             ],
             "title": "Evidence Document Id"
           },
+          "evidence_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Kind"
+          },
           "evidence_missing": {
             "default": false,
             "title": "Evidence Missing",
@@ -33258,6 +34286,11 @@
               }
             ],
             "title": "Evidence Ref"
+          },
+          "evidence_required": {
+            "default": false,
+            "title": "Evidence Required",
+            "type": "boolean"
           },
           "item_key": {
             "title": "Item Key",
@@ -33391,6 +34424,11 @@
           },
           "cases_passed": {
             "title": "Cases Passed",
+            "type": "integer"
+          },
+          "cases_passed_without_test_run": {
+            "default": 0,
+            "title": "Cases Passed Without Test Run",
             "type": "integer"
           },
           "cases_total": {
@@ -33743,6 +34781,14 @@
               }
             ],
             "title": "Checklist"
+          },
+          "checklist_unverified": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Checklist Unverified",
+            "type": "array"
           },
           "decided_at": {
             "anyOf": [
@@ -35437,6 +36483,131 @@
         "title": "HistoryBankLinkOut",
         "type": "object"
       },
+      "HistoryCheckFindingOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_number": {
+            "title": "Property Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "property_id",
+          "property_number",
+          "entity",
+          "entity_id",
+          "code",
+          "message"
+        ],
+        "title": "HistoryCheckFindingOut",
+        "type": "object"
+      },
+      "HistoryCheckOut": {
+        "properties": {
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryCheckFindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryCheckPropertyOut"
+            },
+            "title": "Properties",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/HistoryCheckTotalsOut"
+          }
+        },
+        "required": [
+          "totals",
+          "properties",
+          "findings"
+        ],
+        "title": "HistoryCheckOut",
+        "type": "object"
+      },
+      "HistoryCheckPropertyOut": {
+        "properties": {
+          "findings": {
+            "title": "Findings",
+            "type": "integer"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_number": {
+            "title": "Property Number",
+            "type": "string"
+          },
+          "resolutions": {
+            "title": "Resolutions",
+            "type": "integer"
+          },
+          "statements": {
+            "title": "Statements",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "property_id",
+          "property_number",
+          "statements",
+          "resolutions",
+          "findings"
+        ],
+        "title": "HistoryCheckPropertyOut",
+        "type": "object"
+      },
+      "HistoryCheckTotalsOut": {
+        "properties": {
+          "findings": {
+            "title": "Findings",
+            "type": "integer"
+          },
+          "resolutions": {
+            "title": "Resolutions",
+            "type": "integer"
+          },
+          "statements": {
+            "title": "Statements",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "statements",
+          "resolutions",
+          "findings"
+        ],
+        "title": "HistoryCheckTotalsOut",
+        "type": "object"
+      },
       "HistoryJournalCandidateOut": {
         "properties": {
           "amount": {
@@ -35613,6 +36784,222 @@
           "cutoff_date"
         ],
         "title": "HistoryOpenItemOut",
+        "type": "object"
+      },
+      "HistoryResolutionOut": {
+        "properties": {
+          "form": {
+            "title": "Form",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "item_number": {
+            "title": "Item Number",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "resolved_on": {
+            "format": "date",
+            "title": "Resolved On",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "wording": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wording"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "resolved_on",
+          "item_number",
+          "reference",
+          "title",
+          "wording",
+          "result",
+          "form",
+          "note"
+        ],
+        "title": "HistoryResolutionOut",
+        "type": "object"
+      },
+      "HistoryStatementOut": {
+        "properties": {
+          "document_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ref"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "recipient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient"
+          },
+          "resolution_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Ref"
+          },
+          "result_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Amount"
+          },
+          "sent_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent On"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "unit_number": {
+            "title": "Unit Number",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "kind",
+          "period_start",
+          "period_end",
+          "version",
+          "unit_number",
+          "unit_id",
+          "recipient",
+          "result_amount",
+          "sent_on",
+          "resolution_ref",
+          "document_ref",
+          "note"
+        ],
+        "title": "HistoryStatementOut",
         "type": "object"
       },
       "HistoryTicketOut": {
@@ -59806,6 +61193,189 @@
         "title": "PortalFormPreviewIn",
         "type": "object"
       },
+      "PortalInspectionCommunityOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PortalInspectionCommunityOut",
+        "type": "object"
+      },
+      "PortalInspectionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "scope_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Scope Kinds",
+            "type": "array"
+          },
+          "scope_text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Text"
+          }
+        },
+        "required": [
+          "legal_entity_id"
+        ],
+        "title": "PortalInspectionIn",
+        "type": "object"
+      },
+      "PortalInspectionListOut": {
+        "properties": {
+          "communities": {
+            "items": {
+              "$ref": "#/components/schemas/PortalInspectionCommunityOut"
+            },
+            "title": "Communities",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PortalInspectionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "note",
+          "items"
+        ],
+        "title": "PortalInspectionListOut",
+        "type": "object"
+      },
+      "PortalInspectionOut": {
+        "properties": {
+          "delivery_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Kind"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "requested_on": {
+            "format": "date",
+            "title": "Requested On",
+            "type": "string"
+          },
+          "scope_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scope Kinds",
+            "type": "array"
+          },
+          "scope_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Text"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/PortalInspectionStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "legal_entity_id",
+          "requested_on",
+          "scope_kinds",
+          "scope_text",
+          "status",
+          "delivery_kind"
+        ],
+        "title": "PortalInspectionOut",
+        "type": "object"
+      },
+      "PortalInspectionStepOut": {
+        "properties": {
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "to_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Status"
+          }
+        },
+        "required": [
+          "to_status",
+          "occurred_at"
+        ],
+        "title": "PortalInspectionStepOut",
+        "type": "object"
+      },
       "PortalInviteIn": {
         "additionalProperties": false,
         "properties": {
@@ -60130,6 +61700,15 @@
       "PortalMeterIn": {
         "additionalProperties": false,
         "properties": {
+          "document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Document Ids",
+            "type": "array"
+          },
           "meter_id": {
             "format": "uuid",
             "title": "Meter Id",
@@ -68177,6 +69756,18 @@
             "title": "Lines",
             "type": "array"
           },
+          "master_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Data"
+          },
           "properties": {
             "items": {
               "additionalProperties": true,
@@ -70286,7 +71877,9 @@
           "meter",
           "energy_certificate",
           "service_provider",
-          "portal_user"
+          "portal_user",
+          "historical_statement",
+          "resolution"
         ],
         "title": "ReportType",
         "type": "string"
@@ -84650,7 +86243,7 @@
   "info": {
     "description": "Offene REST-API der MH Verwaltungsplattform. Fachbegriffe deutsch, Feldnamen englisch. Fehler als RFC 9457 Problem Details (application/problem+json).",
     "title": "MH Verwaltungsplattform API",
-    "version": "1.66.0"
+    "version": "1.68.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -85536,9 +87129,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Store Pdf Api V1 Accounting Admin Fee Invoices  Invoice Id  Document Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDocumentStoredOut"
                 }
               }
             },
@@ -85864,9 +87455,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Store Credit Note Xml Api V1 Accounting Admin Fee Invoices  Invoice Id  Xrechnung Credit Note Document Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDocumentStoredOut"
                 }
               }
             },
@@ -86363,9 +87952,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Fee Api V1 Accounting Admin Fees Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingAdminFeeCreatedOut"
                 }
               }
             },
@@ -88938,9 +90525,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Set Creditor Id Api V1 Accounting Direct Debits Creditor Ids Legal Entities  Legal Entity Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingEntityCreditorIdOut"
                 }
               }
             },
@@ -89004,9 +90589,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Set Tenant Creditor Id Api V1 Accounting Direct Debits Creditor Ids Tenant Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingTenantCreditorIdOut"
                 }
               }
             },
@@ -90122,9 +91705,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Dunning Add Delivery Proof Api V1 Accounting Dunning Cases  Case Id  Delivery Proofs Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDeliveryProofOut"
                 }
               }
             },
@@ -93040,9 +94621,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Xrechnung Store Api V1 Accounting Invoices  Invoice Id  Xrechnung Document Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDocumentStoredOut"
                 }
               }
             },
@@ -95480,9 +97059,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Export Datev Api V1 Accounting Ledgers  Ledger Id  Exports Datev Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDatevExportOut"
                 }
               }
             },
@@ -95568,9 +97145,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Export Journal Api V1 Accounting Ledgers  Ledger Id  Exports Journal Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingJournalExportOut"
                 }
               }
             },
@@ -96714,9 +98289,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Set Mapping Api V1 Accounting Ledgers  Ledger Id  Payment Type Accounts Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingPaymentTypeAccountOut"
                 }
               }
             },
@@ -99458,6 +101031,44 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Stichtag der Vorschau (exakt)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag der Vorschau (exakt)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Auslöser der Vorschau",
+            "in": "query",
+            "name": "trigger",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(manual|schedule|failed)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Auslöser der Vorschau",
+              "title": "Trigger"
+            }
           }
         ],
         "responses": {
@@ -100591,9 +102202,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Reverse Run Api V1 Accounting Receivable Runs  Run Id  Reverse Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingReceivableRunReverseOut"
                 }
               }
             },
@@ -100792,9 +102401,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Plan Api V1 Accounting Recurring Invoices Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingRecurringPlanCreatedOut"
                 }
               }
             },
@@ -102933,9 +104540,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Certificate Document Api V1 Accounting Tax Section35A Certificate Document Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingS35aCertificateDocumentOut"
                 }
               }
             },
@@ -117989,9 +119594,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Rule Api V1 Billing Advance Rule Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingAdvanceRuleOut"
                 }
               }
             },
@@ -118092,11 +119695,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Put Setting Api V1 Billing Allocation Basis Setting Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingAllocationBasisSettingOut"
                 }
               }
             },
@@ -118292,9 +119891,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Settings Api V1 Billing Deadline Settings Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingDeadlineSettingOut"
                 }
               }
             },
@@ -119069,9 +120666,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Rule Table Api V1 Billing Heating Rule Tables Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingHeatingRuleTableOut"
                 }
               }
             },
@@ -119793,9 +121388,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response File Outputs Api V1 Billing Owner Statements  Statement Id  Outputs Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingOwnerOutputsFiledOut"
                 }
               }
             },
@@ -123619,6 +125212,88 @@
           }
         ],
         "summary": "Auskunftsexport geprüft (zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/addresses": {
+      "get": {
+        "description": "GAJ-610: addresses have no valid_to yet, a change overwrites the previous one. A cut off\ndate query is refused explicitly (422) instead of returning today's addresses for a past\ndate, which would be a wrong delivery proof.",
+        "operationId": "list_contact_addresses_api_v1_contacts__contact_id__addresses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag (ISO). Noch nicht verfügbar: 422 bis AM14-01 entschieden.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAddressListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Aktuelle Anschriften eines Kontakts (Stichtag noch nicht verfügbar)",
         "tags": [
           "Kontakte"
         ]
@@ -149971,9 +151646,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Start Hoa Statement Check Api V1 Hoa Statements  Statement Id  Ai Check Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingAiCheckStateOut"
                 }
               }
             },
@@ -153969,6 +155642,278 @@
           }
         ],
         "summary": "Summen der Einzelposten je Art (Abgleich)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/history/resolutions": {
+      "get": {
+        "operationId": "history_resolutions_api_v1_imports_immoware24_history_resolutions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryResolutionOut"
+                  },
+                  "title": "Response History Resolutions Api V1 Imports Immoware24 History Resolutions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Übernommene Beschlusssammlung (nur Ablage)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/history/statements": {
+      "get": {
+        "operationId": "history_statements_api_v1_imports_immoware24_history_statements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(hoa_annual|hoa_budget|operating_costs|heating_costs|other)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryStatementOut"
+                  },
+                  "title": "Response History Statements Api V1 Imports Immoware24 History Statements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Übernommene Altabrechnungen je Version (nur Ablage)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/history/statements/check": {
+      "get": {
+        "operationId": "history_statement_check_api_v1_imports_immoware24_history_statements_check_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Prüfbericht Altabrechnungen und Beschlüsse (ohne Korrektur)",
         "tags": [
           "Import Immoware24"
         ]
@@ -161786,9 +163731,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Paperless Intake Api V1 Invoices Intake Paperless Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingPaperlessIntakeOut"
                 }
               }
             },
@@ -190331,6 +192274,166 @@
         ]
       }
     },
+    "/api/v1/portal/owner/inspection-requests": {
+      "get": {
+        "operationId": "list_owner_inspections_api_v1_portal_owner_inspection_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInspectionListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Eigene Einsichtsanfragen (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "post": {
+        "operationId": "create_owner_inspection_api_v1_portal_owner_inspection_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalInspectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInspectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Einsichtsanfrage stellen (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/inspection-requests/{request_id}": {
+      "get": {
+        "operationId": "get_owner_inspection_api_v1_portal_owner_inspection_requests__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInspectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Einsichtsanfrage mit Statusverlauf (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/owner/payment-resolutions": {
       "get": {
         "operationId": "payment_resolutions_api_v1_portal_owner_payment_resolutions_get",
@@ -197409,9 +199512,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Month Api V1 Properties  Property Id  Consumption Info Run Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingConsumptionInfoRunOut"
                 }
               }
             },
@@ -197487,9 +199588,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Settings Api V1 Properties  Property Id  Consumption Info Settings Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingConsumptionInfoSettingsOut"
                 }
               }
             },
@@ -205267,9 +207366,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Start Statement Check Api V1 Statements  Statement Id  Ai Check Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingAiCheckStateOut"
                 }
               }
             },
@@ -205543,9 +207640,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Add Item Api V1 Statements  Statement Id  Cost Items Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingIdOut"
                 }
               }
             },
@@ -205699,9 +207794,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Update Item Api V1 Statements  Statement Id  Cost Items  Item Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingIdOut"
                 }
               }
             },
@@ -206604,9 +208697,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Info Sheet File Api V1 Statements  Statement Id  Info Sheet Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingInfoSheetFiledOut"
                 }
               }
             },
@@ -206811,9 +208902,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Inspection Api V1 Statements  Statement Id  Inspections Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingInspectionOut"
                 }
               }
             },
@@ -206900,9 +208989,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Patch Inspection Api V1 Statements  Statement Id  Inspections  Inspection Id  Patch",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingInspectionOut"
                 }
               }
             },
@@ -207488,9 +209575,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Result Entries Api V1 Statements  Statement Id  Result Entries Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BillingResultEntriesOut"
                 }
               }
             },

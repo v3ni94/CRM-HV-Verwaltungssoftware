@@ -175,3 +175,12 @@ when the switches change later. Events without `options` count as the defaults. 
 `contact-access-export-settings` carries three further switches `include_tickets`,
 `include_communication`, `include_documents` (stored in `tenant_settings.sources`
 `access_export_sources`, default off, omitted in PUT keeps the stored value). Off: count only.
+
+## Address list and cut off date (AM14, GAJ-610)
+
+`GET /contacts/{contact_id}/addresses` returns the current addresses (`history_available`
+false). The parameter `as_of` is refused with 422 `MHVP-CONT-0034` until the address history
+(valid_to, open question AM14-01, schema draft there) is decided: returning today's address for
+a past date would be a wrong delivery proof. A contact merge moves the source addresses, phones
+and emails to the target; moved rows lose `is_primary` when the target already has a primary
+row, so the target keeps exactly one.

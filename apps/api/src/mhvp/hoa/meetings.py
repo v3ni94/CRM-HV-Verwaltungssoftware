@@ -12,7 +12,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import and_, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -219,6 +219,26 @@ class MajorityRuleIn(MeetingBaseIn):
     source: str = Field(min_length=3, max_length=4000)
     valid_from: date
     valid_to: date | None = None
+
+    @model_validator(mode="after")
+    def _period(self) -> "MajorityRuleIn":
+        # AM02 / GAJ-601, GAJ-604: same rule as ck_majority_rule_period_order (0449).
+        if self.valid_to is not None and self.valid_to < self.valid_from:
+            raise ValueError("valid_to liegt vor valid_from")
+        return self
+
+
+def _ensure_rule_in_force(rule: MajorityRule, day: date) -> None:
+    """AM02 / GAJ-601: a majority rule applies only on days within its validity."""
+    if rule.valid_from > day or (rule.valid_to is not None and rule.valid_to < day):
+        raise ProblemError(
+            ErrorCodes.HOA_MAJORITY_RULE_NOT_IN_FORCE,
+            detail=(
+                f"Mehrheitsregel „{rule.label}“ gilt vom {rule.valid_from:%d.%m.%Y}"
+                + (f" bis {rule.valid_to:%d.%m.%Y}" if rule.valid_to else "")
+                + f", Versammlungstag {day:%d.%m.%Y}."
+            ),
+        )
 
 
 class InviteIn(MeetingBaseIn):
@@ -542,6 +562,7 @@ async def add_agenda(
             rule = await session.get(MajorityRule, body.rule_id)
             if rule is None or rule.legal_entity_id != meeting.legal_entity_id:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Regel gehört nicht zur GdWE.")
+            _ensure_rule_in_force(rule, meeting.scheduled_at.date())
         _validate_item_principle(body.voting_principle, body.voting_principle_basis)
         row = AgendaItem(
             tenant_id=principal.tenant_id,
@@ -850,6 +871,8 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
     prop = await _hoa_property(session, meeting.legal_entity_id)
     day = meeting.scheduled_at.date()
     rule = await session.get(MajorityRule, item.rule_id) if item.rule_id else None
+    if rule is not None:
+        _ensure_rule_in_force(rule, day)
     principle = rule.principle if rule else (item.voting_principle or meeting.voting_principle)
     votes = (await session.scalars(select(Vote).where(Vote.agenda_item_id == item.id))).all()
     sums = {"yes": ZERO, "no": ZERO, "abstain": ZERO}

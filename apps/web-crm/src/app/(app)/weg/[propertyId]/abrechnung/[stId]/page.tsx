@@ -10,6 +10,8 @@ import { ReservePayments } from "@/components/hoa/ReservePayments";
 import { ReserveYearsTable, type ReserveYearRow } from "@/components/hoa/ReserveYears";
 import { StatementCorrectionReport, type CorrectionReport } from "@/components/hoa/StatementCorrectionReport";
 import { StatementCostsFromLedger } from "@/components/hoa/StatementCostsFromLedger";
+import { AllocationProposalPanel } from "@/components/hoa/AllocationProposalPanel";
+import { UnitStatementPdfLink } from "@/components/gated/UnitStatementPdfLink";
 import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -90,7 +92,11 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
       />
       <p className={ui.notice}>{t("statementNotice")}</p>
       {data.snapshot_hash && data.status !== "draft" && data.status !== "calculated" ? (
-        <StatementPdfButton statementId={stId} year={Number(data.year)} version={Number(data.version)} />
+        <>
+          <StatementPdfButton statementId={stId} year={Number(data.year)} version={Number(data.version)} />
+          <UnitStatementPdfLink statementId={stId} approved units={((data.snapshot as { units?: { unit_id?: string; unit_number: string }[] } | null)?.units ?? []).filter((u) => u.unit_id).map((u) => ({ unit_id: String(u.unit_id), unit_number: u.unit_number }))} />
+          <AllocationProposalPanel statementId={stId} />
+        </>
       ) : null}
       {blocking.length ? (
         <div className={ui.alert} data-testid="package-blocking">

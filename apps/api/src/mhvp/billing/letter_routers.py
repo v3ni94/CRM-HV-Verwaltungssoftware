@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing import info_sheet
 from mhvp.billing import letters as tenant_letters
 from mhvp.billing.models import Statement, StatementSnapshot
+from mhvp.billing.write_responses import BillingInfoSheetFiledOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -166,6 +167,7 @@ async def info_sheet_preview(
 
 @router.post(
     "/{statement_id}/info-sheet",
+    response_model=BillingInfoSheetFiledOut,
     status_code=201,
     summary="Informationsblatt als Dokument zum Abrechnungslauf ablegen (GA06-02, G3)",
 )

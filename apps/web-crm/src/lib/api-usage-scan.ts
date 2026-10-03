@@ -11,7 +11,7 @@ function walk(dir: string, out: string[]) {
     if (entry.isDirectory()) {
       if (entry.name === "node_modules" || entry.name === "test") continue;
       walk(full, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|spec)\./.test(entry.name)) out.push(full);
+    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|spec)\./.test(entry.name) && entry.name !== "api-usage-allowlist.ts") out.push(full);
   }
 }
 

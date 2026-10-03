@@ -187,7 +187,9 @@ def _receivables(c: TestClient, h: dict[str, str], ledger: str, month: str) -> N
     _ok(c.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
 
 
-def test_direct_debit_run(clients: tuple[TestClient, TestClient], world: World) -> None:
+def test_direct_debit_run(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
     client, open_g2 = clients
     h = bearer(login(client, world, "ddadmin"))
     acc_user = bearer(login(client, world, "ddacc"))
@@ -373,6 +375,8 @@ def test_direct_debit_run(clients: tuple[TestClient, TestClient], world: World) 
     assert blocked.status_code == 403, blocked.text
     assert blocked.json()["code"] == "MHVP-GATE-0001"
     assert _ok(client.get(f"{D}/{run['id']}", headers=h))["status"] == "file_generated"
+    _am01_bypass_checks(client, open_g2, world, h, generated["document_id"])
+    asyncio.run(_am01_db_checks(_settings(database, redis_url), world, generated["document_id"]))
 
     # Behind G2 the file is handed out once and the run counts as exported.
     gh = bearer(login(open_g2, world, "ddadmin"))
@@ -403,6 +407,87 @@ def test_direct_debit_run(clients: tuple[TestClient, TestClient], world: World) 
     assert cancelled["status"] == "cancelled"
     assert cancelled["approvals"] == 0
     assert client.post(f"{D}/{second['id']}/approve", headers=acc_user).status_code == 409
+
+
+class _RollbackError(Exception):
+    pass
+
+
+def _am01_bypass_checks(
+    closed: TestClient, open_g2: TestClient, world: World, h: dict[str, str], document_id: str
+) -> None:
+    """GAJ-301: the general document routes are no way around G2 for the pain.008 file."""
+    doc = f"/api/v1/documents/{document_id}"
+    for path in (f"{doc}/content", f"{doc}/download-url"):
+        refused = closed.get(path, headers=h)
+        assert refused.status_code == 403, refused.text
+        assert refused.json()["code"] == "MHVP-GATE-0001"
+    meta = _ok(closed.get(doc, headers=h))  # metadata stays readable, content does not
+    categories = {
+        c["id"]: c["code"] for c in _ok(closed.get("/api/v1/document-categories", headers=h))
+    }
+    assert categories[meta["category_id"]] == "payment_file"
+    # Moving the file out of the category does not lift the lock (the run references it).
+    _ok(closed.patch(doc, json={"category_id": None}, headers=h))
+    assert closed.get(f"{doc}/content", headers=h).status_code == 403
+    assert closed.get(f"{doc}/download-url", headers=h).status_code == 403
+    # Data alignment puts it back into the payment_file category.
+    _ok(closed.post("/api/v1/document-categories/ensure-defaults", headers=h))
+    assert categories[_ok(closed.get(doc, headers=h))["category_id"]] == "payment_file"
+    # Another tenant sees nothing, with or without G2.
+    other = bearer(login(open_g2, world, "ddother"))
+    assert open_g2.get(f"{doc}/content", headers=other).status_code == 404
+    assert open_g2.get(f"{doc}/download-url", headers=other).status_code == 404
+    # With G2 open the general route serves the same file as the domain route.
+    gh = bearer(login(open_g2, world, "ddadmin"))
+    served = open_g2.get(f"{doc}/content", headers=gh)
+    assert served.status_code == 200, served.text
+    assert dd.validate_pain008(served.content) == []
+
+
+async def _am01_db_checks(settings: Any, world: World, document_id: str) -> None:
+    """GAJ-301: no document id in the event payload, no DMS mirror, no portal hand-out."""
+    from sqlalchemy import select
+
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.core.events import DomainEvent
+    from mhvp.core.problems import ErrorCodes, ProblemError
+    from mhvp.documents import payment_files
+    from mhvp.documents import services as docs
+    from mhvp.documents.models import DmsConnection, DocumentMirror, StorageKind
+
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, world.tenant_a) as session:
+            payloads = (
+                await session.scalars(
+                    select(DomainEvent.payload).where(
+                        DomainEvent.type == "direct_debit_run.file_generated"
+                    )
+                )
+            ).all()
+            assert payloads
+            assert all("document_id" not in p for p in payloads)
+            session.add(
+                DmsConnection(tenant_id=world.tenant_a, kind=StorageKind.PAPERLESS, enabled=True)
+            )
+            await session.flush()
+            assert await docs.queue_mirrors(session, world.tenant_a, UUID(document_id)) == 0
+            assert (
+                await session.scalar(
+                    select(DocumentMirror.id).where(DocumentMirror.document_id == UUID(document_id))
+                )
+            ) is None
+            with pytest.raises(ProblemError) as refused:
+                await payment_files.ensure_not_payment_file(session, [UUID(document_id)])
+            assert refused.value.error is ErrorCodes.RESOURCE_NOT_FOUND
+            raise _RollbackError  # leave no DMS connection behind for other tests
+    except _RollbackError:
+        pass
+    finally:
+        await engine.dispose()
 
 
 def test_direct_debit_requires_leading_ledger_and_own_account(

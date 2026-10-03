@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from mhvp.accounting.audit_events import record_change, snap
 from mhvp.billing import heating_import
 from mhvp.billing.models import HeatingCostImport, Statement
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -22,6 +23,37 @@ router = APIRouter(tags=["Abrechnung"])
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 P = "/billing/heating-cost-imports"
+
+_HCI_FIELDS = (
+    "status",
+    "property_id",
+    "provider_name",
+    "period_from",
+    "period_to",
+    "document_total",
+)
+
+
+def _hci_snap(row: HeatingCostImport) -> dict[str, Any]:
+    """AL03 (GAI-307): audit snapshot of a heating cost import (header, status, row count)."""
+    return snap(row, _HCI_FIELDS) | {
+        "row_count": len(row.rows or []),
+        "mapped_numbers": len(row.user_mapping or {}),
+    }
+
+
+def _hci_event_kw(
+    principal: TenantPrincipal, row: HeatingCostImport, before: dict[str, Any]
+) -> dict[str, Any]:
+    """AL03 (GAI-307): shared arguments of record_change (old and new state)."""
+    return {
+        "tenant_id": principal.tenant_id,
+        "actor_user_id": principal.user_id,
+        "entity_type": "heating_cost_import",
+        "entity_id": row.id,
+        "before": before,
+        "after": _hci_snap(row),
+    }
 
 
 class _HciIn(BaseModel):
@@ -186,6 +218,9 @@ async def create_heating_cost_import(
         )
         session.add(row)
         await session.flush()
+        await record_change(
+            session, type="heating_cost_import.created", **_hci_event_kw(principal, row, {})
+        )
         return _out(row)
 
 
@@ -209,6 +244,7 @@ async def update_heating_cost_import(
         if body.property_id != row.property_id:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Objekt ist nicht änderbar.")
         await _refs(session, body)
+        before = _hci_snap(row)
         heating_import.reset(row)
         row.document_id = body.document_id
         row.provider_contact_id = body.provider_contact_id
@@ -219,6 +255,9 @@ async def update_heating_cost_import(
         row.co2 = _co2(body.co2)
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session, type="heating_cost_import.updated", **_hci_event_kw(principal, row, before)
+        )
         return _out(row)
 
 
@@ -231,6 +270,7 @@ async def put_heating_cost_import_mapping(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _load(session, import_id)
+        before = _hci_snap(row)
         heating_import.reset(row)
         merged = dict(row.user_mapping)
         for number, entry in body.mapping.items():
@@ -241,6 +281,11 @@ async def put_heating_cost_import_mapping(
         row.user_mapping = merged
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            type="heating_cost_import.mapping_saved",
+            **_hci_event_kw(principal, row, before),
+        )
         return _out(row)
 
 
@@ -253,11 +298,15 @@ async def put_heating_cost_import_rows(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _load(session, import_id)
+        before = _hci_snap(row)
         heating_import.reset(row)
         row.rows = heating_import.normalise_rows([r.model_dump() for r in body.rows])
         row.csv_meta = None
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session, type="heating_cost_import.rows_saved", **_hci_event_kw(principal, row, before)
+        )
         return _out(row)
 
 
@@ -270,6 +319,7 @@ async def import_heating_cost_csv(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _load(session, import_id)
+        before = _hci_snap(row)
         heating_import.reset(row)
         row.rows = heating_import.parse_csv(
             body.content,
@@ -286,6 +336,11 @@ async def import_heating_cost_csv(
         }
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            type="heating_cost_import.csv_imported",
+            **_hci_event_kw(principal, row, before),
+        )
         return _out(row)
 
 
@@ -315,5 +370,9 @@ async def apply_heating_cost_import(
         if st is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         ensure_session_property_allowed(session, st.property_id)
+        before = _hci_snap(row)
         item = await heating_import.apply(session, st, row, principal.user_id)
+        await record_change(
+            session, type="heating_cost_import.applied", **_hci_event_kw(principal, row, before)
+        )
         return _out(row) | {"item": {"id": item.id, "amount": item.amount, "label": item.label}}

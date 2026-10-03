@@ -533,6 +533,11 @@ class ContactRelation(IdMixin, TimestampMixin, TenantMixin, Base):
             "delivery_mode IN ('both', 'representative_only', 'owner_only')",
             name="ck_contact_relation_delivery_mode",
         ),
+        # AM02 / GAJ-604 (migration 0449).
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="period_order",
+        ),
     )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()

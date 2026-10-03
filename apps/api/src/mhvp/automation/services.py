@@ -1856,6 +1856,14 @@ async def _ai_task(
 
     instruction = render(action.instruction, context) or action.instruction
     preview = {"type": "ai_task", "task": action.task, "instruction": instruction[:200]}
+    from mhvp.ai import automation as ai_automation
+
+    # GAJ-607 (AM04): tenant switch ai_automation.automation_ai_task (default on, AM04-03).
+    if not await ai_automation.is_enabled(session, "automation_ai_task"):
+        return preview | {
+            "ok": False,
+            "detail": "KI-Aufgaben aus Regeln sind für den Mandanten ausgeschaltet.",
+        }
     if dry_run:
         return preview | {"ok": True, "detail": "Testlauf: KI-Aufgabe würde gestartet."}
     entity_id = _uuid_or_none(context.get("entity_id"), "entity_id")

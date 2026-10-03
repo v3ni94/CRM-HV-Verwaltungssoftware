@@ -313,3 +313,10 @@ Belegsuche für Eigentümer: `GET /portal/owner/receipts?year=&q=` (Modul `porta
 ## Endpunkttest Magic-Link-Code (GAG-36, Welle 19)
 
 `tests/integration/test_ah19_magic_link_verify_code.py` prüft `POST /portal/magic-link/verify-code` über HTTP: richtiger Code stellt die Sitzung aus, falscher Code wird mit MHVP-AUTH-0011 abgewiesen ohne den Code zu verbrauchen, abgelaufener Code, fremder Mandant und unbekannte Link-Id ergeben 401, der Code ist einmalig, fehlerhafte Eingaben 422, die anonyme Ratenbegrenzung antwortet mit 429. Die CRM-Kontaktseite bietet "Berechtigungen neu ableiten" (`POST /portal-admin/accounts/{id}/sync-grants`, GAG-32).
+
+## Zählerstand mit Foto, Auftragsstatus, Einsichtsanfrage (AM06, Welle 23)
+
+- `POST /portal/meter-readings` accepts `document_ids` (max. 5, own portal uploads only, otherwise 404). The photos are linked to the proposal (`document_link`, entity_type `portal_change_request`) and, on acceptance, to the created meter reading (entity_type `meter_reading`). Without photo the proposal carries `photo_missing: true` and the answer a note (code default `METER_PHOTO_REQUIRED_DEFAULT`, no rejection; open point AM06-01). No migration.
+- `GET /portal/tickets` returns `work_orders` per ticket (id, status, scheduled_at; drafts excluded; no provider, price or notes) (GAJ-402).
+- `GET|POST /portal/owner/inspection-requests`, `GET /portal/owner/inspection-requests/{id}` (`portal/owner_inspection.py`, GAJ-202): owners file inspection requests for their own community into the existing `hoa_inspection_request` process and follow the status trail (status events only). Behind switch `portal_owner_receipts_enabled` (AG09, default off: list empty with note, POST 403); foreign community or tenant 404.
+- Portal: camera capture (`capture="environment"`) in MeterReadingForm, NewTicket and WorkOrderDetail (GAJ-404); `TicketOrderStatus` and `OwnerInspectionPanel` components.

@@ -40,7 +40,12 @@ test.describe("Immoware24 import assistant against the API @backend", () => {
     // Step 3: mapping; required fields are Objektnummer, Bezeichnung and Verwaltungsart.
     await expect(page.getByRole("heading", { name: "Spalten zuordnen" })).toBeVisible();
     await expect(page.getByText(/Objekte: 3 Zeilen, 7 Spalten/)).toBeVisible();
-    await expect(page.getByTestId("required-missing")).toBeVisible();
+    // A saved column assignment from an earlier run may pre-fill the required fields; the hint
+    // is only shown while required fields are unmapped.
+    const requiredHint = page.getByTestId("required-missing");
+    if ((await page.getByLabel(/Objektnummer \(dreistellig\)/).inputValue()) === "") {
+      await expect(requiredHint).toBeVisible();
+    }
     await page.getByLabel(/Objektnummer \(dreistellig\)/).selectOption("Objekt-Nr");
     await page.getByLabel(/^Bezeichnung/).selectOption("Bezeichnung");
     await page.getByLabel(/^Verwaltungsart/).selectOption("Typ");

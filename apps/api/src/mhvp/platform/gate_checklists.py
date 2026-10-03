@@ -63,6 +63,23 @@ def missing_checklist_items(gate: ReleaseGate, checklist: dict[str, str] | None)
     return [code for code in required if not str(given.get(code) or "").strip()]
 
 
+def unverified_checklist_items(gate: ReleaseGate, checklist: dict[str, str] | None) -> list[str]:
+    """GAJ-504: confirmed codes whose note names no checkable evidence (ci-run:<run>@<commit>,
+    commit:<sha>, version:<x.y.z> or doc:<path>). Shown to the deciding person; the
+    approval rule itself is unchanged (operator decision AA02-01)."""
+    from mhvp.accounting.g1_opening import evidence_kind
+
+    given = checklist or {}
+    out: list[str] = []
+    for code in GATE_CHECKLISTS.get(gate, {}):
+        note = str(given.get(code) or "").strip()
+        if not note:
+            continue
+        if not any(evidence_kind(token) not in (None, "reference") for token in note.split()):
+            out.append(code)
+    return out
+
+
 def unknown_checklist_items(gate: ReleaseGate, checklist: dict[str, str] | None) -> list[str]:
     return sorted(set(checklist or {}) - set(GATE_CHECKLISTS.get(gate, {})))
 

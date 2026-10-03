@@ -71,10 +71,10 @@ def test_g1_opening_checklist_acceptance_request_and_separation(
     r = bearer(login(client, world, "g1reader"))
     o = bearer(login(client, world, "g1other"))
 
-    # Fixed values: 20 G1 cases plus 3 cross cutting cases, 5 manual items, nothing passed.
+    # Fixed values: 20 G1 cases plus 3 cross cutting cases, 8 manual items, nothing passed.
     state = _ok(client.get(G, headers=h))
     assert state["cases_total"] == 23 == len(ALL_CASES)
-    assert state["manual_total"] == 5 == len(MANUAL_ITEMS)
+    assert state["manual_total"] == 8 == len(MANUAL_ITEMS)
     assert state["cases_passed"] == 0
     assert state["manual_passed"] == 0
     assert state["chart"]["released"] is False

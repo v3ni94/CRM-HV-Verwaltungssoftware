@@ -37,6 +37,7 @@ from mhvp.core.events import emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.uploads import read_limited
+from mhvp.documents import payment_files
 from mhvp.portal import access, magic_link, public_terms, read_receipts
 from mhvp.portal.models import AccessGrant, ChangeRequest, PortalAccount
 from mhvp.portal.property_scope import (
@@ -120,6 +121,20 @@ class PortalMeterIn(_In):
     meter_id: uuid.UUID
     value: Decimal = Field(ge=0)
     read_at: date
+    # AM06 (GAJ-401, section 14 "Zählerstand mit Foto melden"): photos of the meter uploaded
+    # by this account via POST /portal/uploads; linked to the proposal as attachments
+    # (entity_type "portal_change_request") and, on acceptance, to the meter reading.
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=5)
+
+
+# AM06 (GAJ-401): the reading photo is expected (section 14). Without a migration the switch
+# is a code default (on = hint and ``photo_missing`` flag, never a rejection, so the reading
+# still reaches the review); a persisted tenant switch needs a column (open point AM06-01).
+METER_PHOTO_REQUIRED_DEFAULT = True
+METER_PHOTO_MISSING_NOTE = (
+    "Ohne Foto des Zählerstands kann die Verwaltung die Ablesung nur eingeschränkt prüfen. "
+    "Bitte reichen Sie ein Foto nach oder melden Sie den Stand erneut mit Foto."
+)
 
 
 class PortalDecideIn(_In):
@@ -794,15 +809,29 @@ async def decide(
                     )
                 )
             elif row.kind == "meter_reading":
-                session.add(
-                    MeterReading(
-                        tenant_id=row.tenant_id,
-                        meter_id=uuid.UUID(payload["meter_id"]),
-                        value=Decimal(payload["value"]),
-                        read_at=date.fromisoformat(payload["read_at"]),
-                        source=ReadingSource.PORTAL,
-                    )
+                reading = MeterReading(
+                    tenant_id=row.tenant_id,
+                    meter_id=uuid.UUID(payload["meter_id"]),
+                    value=Decimal(payload["value"]),
+                    read_at=date.fromisoformat(payload["read_at"]),
+                    source=ReadingSource.PORTAL,
                 )
+                session.add(reading)
+                if payload.get("document_ids"):
+                    # AM06 (GAJ-401): the reading photo stays the evidence of the reading.
+                    from mhvp.documents.models import DocumentLink, LinkRole
+
+                    await session.flush()
+                    for doc_id in payload["document_ids"]:
+                        session.add(
+                            DocumentLink(
+                                tenant_id=row.tenant_id,
+                                document_id=uuid.UUID(doc_id),
+                                entity_type="meter_reading",
+                                entity_id=reading.id,
+                                role=LinkRole.ATTACHMENT,
+                            )
+                        )
             elif row.kind == "bank_account":
                 from mhvp.contacts.validation import normalise_iban
                 from mhvp.core import crypto
@@ -1691,6 +1720,7 @@ async def documents_bundle(
         ids = list(dict.fromkeys(body.document_ids))
         if any(i not in visible for i in ids):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await payment_files.ensure_not_payment_file(session, ids)  # GAJ-301
         store = BlobStore(request.app.state.settings)
         buffer = io.BytesIO()
         index = io.StringIO()
@@ -1796,6 +1826,7 @@ async def download(
         document = docs.get(document_id)
         if document is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # no hint whether it exists
+        await payment_files.ensure_not_payment_file(session, [document.id])  # GAJ-301
         data = BlobStore(request.app.state.settings).get(document.storage_ref)
         note = (await access.redaction_notes(session, {document.id})).get(document.id)
         # D34: the download is recorded as an indication only (no delivery, no receipt).
@@ -2091,9 +2122,33 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
                     # GAF-35: completed orders of the ticket; the affected resident rates them
                     # via POST /portal/work-orders/{id}/rating (switch applies to display only).
                     "completed_work_order_ids": await _completed_order_ids(session, t.id),
+                    # AM06 (GAJ-402): running status of the orders to this ticket (section 14
+                    # "Status für Verwaltung und Bewohner sichtbar"); no provider, price or
+                    # internal note is shown to the resident.
+                    "work_orders": await _ticket_order_status(session, t.id),
                 }
             )
         return out
+
+
+async def _ticket_order_status(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:
+    from mhvp.tickets.models import OrderStatus, WorkOrder
+
+    rows = (
+        await session.scalars(
+            select(WorkOrder)
+            .where(WorkOrder.ticket_id == ticket_id, WorkOrder.status != OrderStatus.DRAFT)
+            .order_by(WorkOrder.created_at)
+        )
+    ).all()
+    return [
+        {
+            "id": o.id,
+            "status": OrderStatus(o.status).value,
+            "scheduled_at": o.scheduled_at,
+        }
+        for o in rows
+    ]
 
 
 async def _completed_order_ids(session: AsyncSession, ticket_id: uuid.UUID) -> list[uuid.UUID]:
@@ -2254,9 +2309,29 @@ async def meter_reading(
             "unit", set()
         ):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        return await _propose(
-            session, principal, account, "meter_reading", body.model_dump(mode="json")
-        )
+        from mhvp.documents.models import DocumentLink, LinkRole
+
+        photos = await _own_uploads(session, account, body.document_ids)
+        payload = body.model_dump(mode="json")
+        payload["document_ids"] = [str(d.id) for d in photos]
+        photo_missing = METER_PHOTO_REQUIRED_DEFAULT and not photos
+        payload["photo_missing"] = photo_missing
+        out = await _propose(session, principal, account, "meter_reading", payload)
+        for doc in photos:
+            session.add(
+                DocumentLink(
+                    tenant_id=principal.tenant_id,
+                    document_id=doc.id,
+                    entity_type="portal_change_request",
+                    entity_id=out["id"],
+                    role=LinkRole.ATTACHMENT,
+                )
+            )
+        await session.flush()
+        out["attachments"] = [_attachment_out(d) for d in photos]
+        out["photo_missing"] = photo_missing
+        out["note"] = METER_PHOTO_MISSING_NOTE if photo_missing else None
+        return out
 
 
 @router.get("/account", summary="Kontoauszug: offene Posten der eigenen Verträge")

@@ -66,12 +66,7 @@ export default async function DocumentsPage({
       {rows.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
       {rows.length > 0 ? <p className="text-xs text-subtle">{t("readNote")}</p> : null}
       {rows.length > 0 ? (
-        <DocumentBundleList
-          rows={rows}
-          formatDate={(value) =>
-            format.dateTime(new Date(value), { day: "2-digit", month: "2-digit", year: "numeric" })
-          }
-        />
+        <DocumentBundleList rows={rows} />
       ) : null}
       {handovers ? (
         <section className={ui.pageGap}>

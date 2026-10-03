@@ -212,6 +212,35 @@ laufende Produktionsdatenbank. Freigabe durch die Geschäftsführung, Verfahren 
    Befund) im Wiederherstellungsprotokoll festhalten; Wiederherstellungsverzeichnis und
    entschlüsselte Dateien löschen.
 
+### Skript und CI-Nachweis (GAJ-505, 03.10.2026)
+
+Die Schritte 1 bis 6 automatisiert `infra/scripts/pitr-drill.sh`: Basisbackup (Verzeichnis,
+`.tar` oder `.tar.age`) und WAL-Segmente (auch `.age`, entschlüsselt mit
+`BACKUP_AGE_IDENTITY`) werden in ein temporäres Arbeitsverzeichnis gelegt, ein
+Wegwerf-Cluster mit `recovery_target_time` startet nur auf einem Unix-Socket, ohne
+Archivierung und ohne Netz. Das Skript misst die Dauer von Entpacken, WAL-Replay und
+Hochstufung, vergleicht sie mit der Vorgabe RTO unter 4 Stunden (`PITR_RTO_SECONDS`, Standard
+14.400 s, Quelle MASTER-PROMPT 3.5 und Abschnitt 16, Zeile Backup) und schreibt ein Protokoll
+nach `docs/reviews/pitr-YYYY-MM-DD.md` mit Zielzeitpunkt, letztem eingespieltem Segment,
+Alembic-Revision, Anzahl `journal_entry` und Feldern für Basisbackup-STAMP, Prüfer und Befund.
+Exitcode 1 bei fehlgeschlagener Prüfung oder überschrittener RTO.
+
+    infra/scripts/pitr-drill.sh --base /srv/mhvp-backup/base-<STAMP>.tar.age \
+      --wal-dir /srv/mhvp-restore/wal --target '2026-09-27 06:45:00+00'
+    make pitr-drill PITR_DRILL_ARGS="--base ... --wal-dir ... --target '...'"
+
+Läuft das Skript als root, starten die Serverprozesse als `PITR_RUN_AS` (Standard `postgres`);
+`PG_BIN` wählt die PostgreSQL-Binärdateien (gleiche Hauptversion wie die Produktion, 16).
+Die Datenbank für die Prüfungen ist `PITR_DATABASE` (Standard `mhvp`).
+
+Selbsttest ohne echte Daten: `make pitr-drill` (oder `--selftest`) baut einen eigenen
+Primärcluster mit `archive_mode=on`, zieht ein Basisbackup mit `-X none`, schreibt Zeilen vor
+und nach einem festgehaltenen Zeitpunkt und prüft nach dem WAL-Replay, dass genau die Zeilen bis
+zu diesem Zeitpunkt vorhanden sind. Der CI-Job `pitr-drill` führt `make pitr-drill-test`
+(Selbsttest plus Fall überschrittene RTO) bei jedem Lauf aus. Der Selbsttest weist nur das
+Verfahren nach; das erste Protokoll eines realen Laufs mit dem Produktionsbasisbackup steht
+weiterhin aus und ist vierteljährlich zu wiederholen.
+
 ## Restore-Übung (D47, M9-05, B18, M27-03)
 
 Ergänzt `scripts/backup-verify.sh` (lokaler Dump) und die vierteljährliche

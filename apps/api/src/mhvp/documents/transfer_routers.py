@@ -21,7 +21,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.storage import presigned_download_url, presigned_upload_url
-from mhvp.documents import intake_address
+from mhvp.documents import intake_address, payment_files
 from mhvp.documents import schemas as s
 from mhvp.documents import services as svc
 from mhvp.documents.models import (
@@ -161,6 +161,10 @@ async def download_url(
     blobs = routers._blobs(request)
     async with tenant_tx(request, principal) as session:
         document = await routers._get(session, Document, document_id)
+        # GAJ-301: no signed URL for a payment file while G2 is closed.
+        await payment_files.ensure_released(
+            session, document, principal.tenant_id, request.app.state.release_gate_resolver
+        )
         if document.storage is not StorageKind.MINIO:
             raise svc.invalid("Nur Originale im Dokumentenspeicher haben eine Download-URL.")
         try:

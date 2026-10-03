@@ -48,7 +48,13 @@ from mhvp.core.escaping import csv_safe_cell
 from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports.fields import parse_date, parse_decimal
-from mhvp.imports.models import ImportMapping, ImportSourceFile, ReportType, StagingRow
+from mhvp.imports.models import (
+    ImportMapping,
+    ImportSourceFile,
+    ReportType,
+    RowStatus,
+    StagingRow,
+)
 from mhvp.properties.models import Property, PropertyBankAccount
 
 RECONCILIATION_SOURCE = "immoware24:reconciliation"
@@ -777,6 +783,122 @@ async def latest_sources(session: AsyncSession) -> list[ImportSourceFile]:
     return result
 
 
+# GAJ-502 (AM09): master data and further report types in the daily report ----------------
+
+# Newest staged file per type is compared: row status counts and entities that the import
+# created or matched but that no longer exist on the platform. Reads only.
+MASTER_DATA_TYPES = (
+    ReportType.PROPERTIES,
+    ReportType.UNITS,
+    ReportType.CONTACTS,
+    ReportType.TENANCIES,
+    ReportType.OWNERSHIPS,
+    ReportType.PAYMENTS,
+    ReportType.DEPOSIT,
+    ReportType.ALLOCATION_KEY,
+    ReportType.METER,
+    ReportType.SEPA_OVERVIEW,
+    ReportType.SERVICE_PROVIDER,
+    ReportType.HISTORICAL_STATEMENT,
+    ReportType.RESOLUTION,
+)
+# Rows not settled by the import: never validated, valid but not applied, invalid, conflict.
+OPEN_ROW_STATUSES = ("pending", "valid", "invalid", "conflict")
+MATCHED_ROW_STATUSES = (RowStatus.CREATED, RowStatus.UNCHANGED)
+
+
+async def _missing_entities(session: AsyncSession, source_id: uuid.UUID) -> int:
+    """Rows whose created or matched entity is gone (deleted or undone after the import)."""
+    from sqlalchemy import Table
+
+    from mhvp.core.db.base import Base
+
+    staged = await session.execute(
+        select(StagingRow.entity_type, StagingRow.entity_id).where(
+            StagingRow.source_file_id == source_id,
+            StagingRow.status.in_(MATCHED_ROW_STATUSES),
+            StagingRow.entity_id.is_not(None),
+        )
+    )
+    by_type: dict[str, set[uuid.UUID]] = defaultdict(set)
+    for entity_type, entity_id in staged.all():
+        if entity_type:
+            by_type[entity_type].add(entity_id)
+    missing = 0
+    for entity_type, ids in by_type.items():
+        table = Base.metadata.tables.get(entity_type)  # registered tables only, no free SQL
+        if not isinstance(table, Table) or "id" not in table.c:
+            continue
+        present = await session.scalar(
+            select(func.count()).select_from(table).where(table.c.id.in_(ids))
+        )
+        missing += len(ids) - int(present or 0)
+    return missing
+
+
+async def has_master_sources(session: AsyncSession) -> bool:
+    return (
+        await session.scalar(
+            select(ImportSourceFile.id)
+            .where(ImportSourceFile.report_type.in_(MASTER_DATA_TYPES))
+            .limit(1)
+        )
+    ) is not None
+
+
+async def master_data_section(session: AsyncSession) -> dict[str, Any] | None:
+    """Counters per report type of the newest staged file plus platform entity counters."""
+    from mhvp.contacts.models import Contact
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import Unit
+
+    types: list[dict[str, Any]] = []
+    for report_type in MASTER_DATA_TYPES:
+        source = await session.scalar(
+            select(ImportSourceFile)
+            .where(ImportSourceFile.report_type == report_type)
+            .order_by(ImportSourceFile.created_at.desc())
+            .limit(1)
+        )
+        if source is None:
+            continue
+        status_rows = await session.execute(
+            select(StagingRow.status, func.count())
+            .where(StagingRow.source_file_id == source.id)
+            .group_by(StagingRow.status)
+        )
+        by_status = {status.value: int(n) for status, n in status_rows.all()}
+        open_rows = sum(by_status.get(s, 0) for s in OPEN_ROW_STATUSES)
+        missing = await _missing_entities(session, source.id)
+        types.append(
+            {
+                "report_type": report_type.value,
+                "source_file_id": str(source.id),
+                "file_status": source.status.value,
+                "rows": sum(by_status.values()),
+                "status": by_status,
+                "open_rows": open_rows,
+                "missing_entities": missing,
+                "deviates": open_rows > 0 or missing > 0,
+            }
+        )
+    if not types:
+        return None
+    contracts = await session.execute(select(Contract.kind, func.count()).group_by(Contract.kind))
+    platform = {
+        "properties": int(await session.scalar(select(func.count()).select_from(Property)) or 0),
+        "units": int(await session.scalar(select(func.count()).select_from(Unit)) or 0),
+        "contacts": int(await session.scalar(select(func.count()).select_from(Contact)) or 0),
+    }
+    for kind, n in contracts.all():
+        platform[f"contracts_{kind.value}"] = int(n)
+    return {
+        "types": types,
+        "platform": platform,
+        "open_differences": sum(t["open_rows"] + t["missing_entities"] for t in types),
+    }
+
+
 async def create_report(
     session: AsyncSession,
     tenant_id: uuid.UUID,
@@ -805,13 +927,17 @@ async def create_report(
             )
     else:
         sources = await latest_sources(session)
-    if not sources:
+    master = None if source_file_ids else await master_data_section(session)
+    if not sources and master is None:
         raise ProblemError(
             ErrorCodes.VALIDATION,
             detail="Keine Rohzeilen (Journal oder Bankumsätze) zum Abgleich vorhanden.",
         )
     columns, _ = await load_columns(session)
     report = await build_report(session, sources, columns, as_of)
+    report["master_data"] = master
+    if master is not None:
+        report["totals"]["master_data_open"] = master["open_differences"]
     report["trigger"] = trigger
     run = ImportRun(
         tenant_id=tenant_id,
@@ -866,6 +992,7 @@ def scope_report(report: dict[str, Any], allowed: frozenset[uuid.UUID] | None) -
         "totals": totals,
         "warnings": [],
         "counts": {},
+        "master_data": None,  # tenant wide counters, not split by property
     }
 
 

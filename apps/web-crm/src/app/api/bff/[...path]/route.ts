@@ -527,7 +527,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Receivable runs (M13): preview and posting; postings stay non leading until G1.
   { method: "POST", pattern: /^accounting\/receivable-runs$/ },
   { method: "GET", pattern: new RegExp(`^accounting/receivable-runs/${ID}$`) },
-  { method: "POST", pattern: new RegExp(`^accounting/receivable-runs/${ID}/post$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/receivable-runs/${ID}/(post|reverse)$`) },
   // M13-08: earlier runs per month; M13-03 to M13-06: Verwalterhonorar settings, due periods,
   // issued invoices (release, credit note) and the XRechnung download, check and filing.
   { method: "GET", pattern: /^accounting\/receivable-runs$/ },
@@ -1449,6 +1449,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/asset-reports/${ID}/dispatch$`) },
   // Gesamtabrechnung WEG als PDF (M24-03): nur nach interner Freigabe und bei offenem G4 (API).
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/pdf$`) },
+  // GAJ-203: Einzelabrechnung je Einheit als PDF (G4 und interne Freigabe prüft die API).
+  { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/units/${ID}/pdf$`) },
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/correction-report$`) },
   { method: "PUT", pattern: new RegExp(`^hoa/statements/${ID}/loan-allocation$`) },
   { method: "POST", pattern: /^hoa\/audits$/ },

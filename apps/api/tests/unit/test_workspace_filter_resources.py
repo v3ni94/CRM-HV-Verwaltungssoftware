@@ -10,7 +10,15 @@ def _body_model() -> type:
     return routers.FilterIn
 
 
-NEW = ["journal", "open_items", "dunning_cases", "hoa_properties", "work_orders"]
+NEW = [
+    "journal",
+    "open_items",
+    "dunning_cases",
+    "hoa_properties",
+    "work_orders",
+    "payment_runs",
+    "mailbox",
+]
 
 
 @pytest.mark.parametrize("resource", NEW)

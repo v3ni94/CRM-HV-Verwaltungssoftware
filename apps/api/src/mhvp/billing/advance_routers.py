@@ -18,6 +18,7 @@ from mhvp.accounting.audit_events import record_change
 from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import advance_rule as rule
 from mhvp.billing.models import Statement, StatementSnapshot
+from mhvp.billing.write_responses import BillingAdvanceRuleOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.listparams import strict_query
@@ -77,7 +78,11 @@ async def get_rule(request: Request, principal: TenantPrincipal = Depends(READ))
         return _rule_out(await rule.setting(session, principal.tenant_id))
 
 
-@router.put("", summary="Sicherheitsaufschlag und Behandlung offener Vorauszahlungen setzen")
+@router.put(
+    "",
+    response_model=BillingAdvanceRuleOut,
+    summary="Sicherheitsaufschlag und Behandlung offener Vorauszahlungen setzen",
+)
 async def put_rule(
     body: AdvanceRuleIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:

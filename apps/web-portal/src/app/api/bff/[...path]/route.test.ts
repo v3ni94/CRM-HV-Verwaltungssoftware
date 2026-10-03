@@ -183,4 +183,20 @@ describe("portal bff", () => {
     ).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
   });
+  it("relays the owner inspection requests (AM06) and nothing beyond", async () => {
+    serverFetch.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    expect((await GET(new Request("http://portal.localhost/x"), ctx("portal/owner/inspection-requests"))).status).toBe(200);
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx(`portal/owner/inspection-requests/${ID}`))).status,
+    ).toBe(200);
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx(`portal/owner/inspection-requests/${ID}/package`))).status,
+    ).toBe(404);
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx("portal/owner/inspection-requests/not-an-id"))).status,
+    ).toBe(404);
+  });
 });

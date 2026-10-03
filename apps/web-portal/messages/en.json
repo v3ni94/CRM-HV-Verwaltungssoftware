@@ -236,6 +236,22 @@
       "rejected": "Rejected"
     },
     "photoHint": "Photos are stored without capture data (location, camera). HEIC photos are converted to JPEG.",
+    "photoCamera": "Take photo",
+    "ordersTitle": "Status of the orders",
+    "orderNumber": "Order {n}",
+    "orderScheduled": "Appointment: {date}",
+    "orderStatus": {
+      "requested": "requested",
+      "quoted": "quote received",
+      "approved": "commissioned",
+      "scheduled": "scheduled",
+      "in_progress": "in progress",
+      "done": "carried out",
+      "invoiced": "invoiced",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "cancelled": "cancelled"
+    },
     "attachments": "Attachments",
     "appointments": "Appointment proposals of the contractor",
     "appointmentsHint": "Please choose an appointment. Your choice counts as confirmation towards contractor and management.",
@@ -308,6 +324,11 @@
     "estimatedHint": "Estimated values are marked; missing values are never replaced by zero."
   },
   "Meter": {
+    "photo": "Photo of the meter reading",
+    "photoCamera": "Take photo",
+    "photoHint": "A photo of the meter with a clearly legible reading serves the management as evidence of the reading.",
+    "photoMissing": "Without a photo the management can check the reading only to a limited extent. Please attach a photo if possible.",
+    "photoMissingSent": "The reading was sent without a photo. Please provide a photo if the management asks for it.",
     "title": "Report meter reading",
     "meterId": "Meter ID",
     "meterIdHint": "You find the meter ID in your documents or can ask the management for it.",
@@ -425,6 +446,7 @@
     "proposalsList": "Sent appointment proposals",
     "appointmentDirect": "Set appointment directly (without proposal)",
     "photosStored": "Photos of the execution",
+    "photosCamera": "Take photo",
     "proposalStatus": {
       "proposed": "Open",
       "accepted": "Confirmed",
@@ -1222,6 +1244,32 @@
     "open": "Download receipt",
     "unavailable": "Not available to you",
     "truncated": "The list is truncated, please narrow the search or the year."
+  },
+  "OwnerInspection": {
+    "title": "Inspection request",
+    "intro": "You can request inspection of the administration documents of your community. The management checks the request and agrees the way of inspection with you.",
+    "community": "Community",
+    "scope": "Scope",
+    "scopeText": "Description (optional)",
+    "scopeRequired": "Please choose or describe a scope.",
+    "submit": "Send request",
+    "submitted": "The inspection request was sent.",
+    "list": "Your requests",
+    "requestedOn": "Filed on {date}",
+    "kinds": {
+      "statement": "Statement",
+      "receipts": "Receipts",
+      "contracts": "Contracts",
+      "resolutions": "Resolutions"
+    },
+    "status": {
+      "requested": "received",
+      "released": "released",
+      "provided": "provided",
+      "retrieved": "retrieved",
+      "closed": "closed",
+      "rejected": "rejected"
+    }
   },
   "OwnerStatements": {
     "title": "Annual statement",

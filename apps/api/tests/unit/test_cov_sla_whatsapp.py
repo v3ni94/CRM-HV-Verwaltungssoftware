@@ -136,6 +136,7 @@ def test_send_whatsapp_without_template_records_nothing() -> None:
             session,  # type: ignore[arg-type]
             _settings(),
             _config(),
+            recipient="staff",
             alert_id=None,
             to="+49170",
             alert_type="unbekannt",
@@ -154,6 +155,7 @@ def test_send_whatsapp_without_number_records_nothing() -> None:
             session,  # type: ignore[arg-type]
             _settings(),
             _config(),
+            recipient="staff",
             alert_id=None,
             to="   ",
             alert_type="test",
@@ -175,6 +177,7 @@ def test_send_whatsapp_records_sent_delivery() -> None:
             session,  # type: ignore[arg-type]
             _settings(),
             _config(),
+            recipient="staff",
             alert_id=alert_id,
             to=" +49 170 1 ",
             alert_type="sla_escalation",
@@ -205,6 +208,7 @@ def test_send_whatsapp_records_failed_delivery_without_token_leak() -> None:
             session,  # type: ignore[arg-type]
             _settings(),
             _config(),
+            recipient="staff",
             alert_id=None,
             to="+49170",
             alert_type="test",
@@ -269,3 +273,71 @@ def test_check_clocks_task_runs_once_with_settings(monkeypatch: pytest.MonkeyPat
         "backfilled": 0,
     }
     assert seen["settings"] is marker
+
+
+# --- GAJ-405: consent check in the send path --------------------------------------------
+
+
+def _send(session: Any, **kw: Any) -> str | None:
+    transport = httpx.MockTransport(
+        lambda r: httpx.Response(200, json={"messages": [{"id": "wamid.GAJ405"}]})
+    )
+    return asyncio.run(
+        whatsapp.send_whatsapp(
+            session,
+            _settings(),
+            _config(),
+            alert_id=None,
+            to="+49170",
+            alert_type="sla_escalation",
+            params=[],
+            http_transport=transport,
+            **kw,
+        )
+    )
+
+
+def test_send_whatsapp_contact_without_contact_id_is_blocked() -> None:
+    session = _FakeSession()
+    assert _send(session, recipient="contact") == whatsapp.NO_CONSENT_ERROR
+    assert session.added == []
+
+
+def test_send_whatsapp_contact_without_consent_is_blocked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checked: list[uuid.UUID] = []
+
+    async def no_consent(_session: Any, contact_id: uuid.UUID) -> bool:
+        checked.append(contact_id)
+        return False
+
+    monkeypatch.setattr(whatsapp, "has_whatsapp_consent", no_consent)
+    session = _FakeSession()
+    contact_id = uuid.uuid4()
+    assert _send(session, recipient="contact", contact_id=contact_id) == whatsapp.NO_CONSENT_ERROR
+    assert checked == [contact_id]
+    assert session.added == []
+
+
+def test_send_whatsapp_contact_with_consent_is_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def consent(_session: Any, _contact_id: uuid.UUID) -> bool:
+        return True
+
+    monkeypatch.setattr(whatsapp, "has_whatsapp_consent", consent)
+    session = _FakeSession()
+    assert _send(session, recipient="contact", contact_id=uuid.uuid4()) is None
+    assert len(session.added) == 1
+
+
+@pytest.mark.parametrize("recipient", ["staff", "test"])
+def test_send_whatsapp_staff_and_test_skip_consent(
+    monkeypatch: pytest.MonkeyPatch, recipient: str
+) -> None:
+    async def must_not_be_called(_session: Any, _contact_id: uuid.UUID) -> bool:
+        raise AssertionError("consent check must not run for internal recipients")
+
+    monkeypatch.setattr(whatsapp, "has_whatsapp_consent", must_not_be_called)
+    session = _FakeSession()
+    assert _send(session, recipient=recipient) is None
+    assert len(session.added) == 1

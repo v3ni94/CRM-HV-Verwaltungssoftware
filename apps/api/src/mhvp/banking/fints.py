@@ -43,6 +43,7 @@ from urllib.parse import urlsplit
 
 from mhvp.banking import mt940 as mt940_norm
 from mhvp.banking.camt import RawTransaction, parse_report_balances, parse_report_entries
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCode, ErrorCodes, ProblemError
 
 logger = logging.getLogger(__name__)
@@ -699,7 +700,7 @@ def _apply_balance(target: dict[str, Any], balance: Any) -> None:
     value = getattr(amount, "amount", amount)
     if value is None:
         return
-    target["balance"] = str(Decimal(str(value)).quantize(Decimal("0.01")))
+    target["balance"] = str(round_cents(Decimal(str(value))))
     target["currency"] = getattr(amount, "currency", None) or "EUR"
     when = getattr(balance, "date", None)
     target["balance_date"] = when.isoformat() if isinstance(when, date) else None
@@ -910,7 +911,7 @@ def _apply_camt_balance(snap: dict[str, Any] | None, doc: bytes) -> None:
     for bal in balances:
         if bal.iban is not None and bal.iban != snap.get("iban"):
             continue
-        snap["balance"] = str(bal.amount.quantize(Decimal("0.01")))
+        snap["balance"] = str(round_cents(bal.amount))
         snap["currency"] = bal.currency
         snap["balance_date"] = bal.balance_date.isoformat() if bal.balance_date else None
         return

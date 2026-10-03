@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ConsumptionInfoDeliveryForm } from "./ConsumptionInfoDeliveryForm";
+
 type Settings = {
   property_id: string;
   enabled: boolean;
@@ -182,6 +184,7 @@ export function ConsumptionInfoPanel({ propertyId, permissions }: { propertyId: 
                       <th scope="col">{t("columns.hotWater")}</th>
                       <th scope="col">{t("columns.missing")}</th>
                       <th scope="col">{t("columns.created")}</th>
+                      <th scope="col">{t("columns.delivery")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -193,6 +196,9 @@ export function ConsumptionInfoPanel({ propertyId, permissions }: { propertyId: 
                         <td>{value(r.values.hot_water)}</td>
                         <td>{r.missing_labels.join(", ")}</td>
                         <td>{formatDateTime(r.created_at)}</td>
+                        <td>
+                          <ConsumptionInfoDeliveryForm propertyId={propertyId} infoId={r.id} canUpdate={canUpdate} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>

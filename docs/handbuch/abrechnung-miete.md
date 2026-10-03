@@ -231,3 +231,7 @@ Unter Einstellungen, Fachliche Regeln stehen drei Rechenschalter, die nur mit Fr
 * Bruttoprüfung, Toleranz in Cent: Standard 1 Cent, alternativ 0 Cent, für Zahlungen im Vertrag und beim Import (AJ02-01).
 
 Jede Änderung wird als Ereignis protokolliert. Die Entscheidung über die Variante trifft die Geschäftsführung.
+
+## Differenz zur Vorversion (GAJ-104, Welle 23)
+
+Bei einer Korrekturversion einer Betriebskostenabrechnung zeigt der Abschnitt "Differenz zur Vorversion" nach Klick auf "Differenz zur Vorversion anzeigen" je Einheit Kosten und Ergebnis alt und neu sowie geänderte Kostenpositionen. Die Anzeige liest nur gespeicherte Stände und dient der Prüfung vor der Freigabe.

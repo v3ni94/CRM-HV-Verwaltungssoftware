@@ -430,3 +430,9 @@ Wechsel (`POST /banking/ebics/subscribers/{id}/keys` mit Grund) und Sperre (`...
 `POST /accounting/payment-runs/payout-orders` checks release gate G2 before any lookup
 (403 `MHVP-GATE-0001` while G2 is closed), like the payment batches. Registered in
 `GATED_ROUTES` (`tests/unit/test_ga14_gate_coverage.py`).
+
+## Payer evidence events (GAJ-608, wave 23)
+
+The event consumer recomputes pending proposal snapshots on `contact.deleted`,
+`bank_account.approved`, `bank_account.ended` and `contact.mandate_iban_changed`
+(`event_types.PAYER_EVIDENCE_EVENTS`). Nothing is posted.

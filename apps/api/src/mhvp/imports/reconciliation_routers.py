@@ -64,6 +64,8 @@ class ReconciliationReportOut(ReportListOut):
     columns: dict[str, dict[str, str]]
     properties: list[dict[str, Any]]
     lines: list[dict[str, Any]]
+    # GAJ-502: master data and further report types (None for older or scoped reports).
+    master_data: dict[str, Any] | None = None
 
 
 def _list_out(run: ImportRun, allowed: frozenset[uuid.UUID] | None = None) -> ReportListOut:
@@ -87,6 +89,7 @@ def _out(run: ImportRun, allowed: frozenset[uuid.UUID] | None = None) -> Reconci
         columns=s.get("columns", {}),
         properties=s.get("properties", []),
         lines=s.get("lines", []),
+        master_data=s.get("master_data"),
     )
 
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { Pagination } from "@/components/ui/Pagination";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import type { Preparation } from "@/lib/ai";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
@@ -514,6 +515,24 @@ export function MailWorkspace({
           {t("refresh")}
         </button>
       </div>
+      <SavedFilters
+        resource="mailbox"
+        basePath="/mail"
+        current={Object.fromEntries(
+          Object.entries({ tab: tab === "inbox" ? "" : tab, status, postfach: mailboxId, q: q.trim(), abgleich: syncState }).filter(
+            ([, v]) => v !== "",
+          ),
+        )}
+        onApply={(p) => {
+          const nextTab = TABS.includes(p.tab as Tab) ? (p.tab as Tab) : "inbox";
+          setTab(nextTab);
+          setStatus(nextTab === "inbox" && (INBOX_STATUSES as readonly string[]).includes(p.status ?? "") ? (p.status as string) : "");
+          setMailboxId(UUID_RE.test(p.postfach ?? "") ? (p.postfach as string) : "");
+          setQueryText((p.q ?? "").slice(0, 200));
+          setQ((p.q ?? "").slice(0, 200));
+          setSyncState((SYNC_FILTERS as readonly string[]).includes(p.abgleich ?? "") ? (p.abgleich as string) : "");
+        }}
+      />
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

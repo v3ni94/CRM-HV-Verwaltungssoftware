@@ -5,6 +5,65 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.68.0 (03.10.2026) Welle 23, Reste der Welle 22 und Lückenanalyse GAJ: Zahlungsdateien hinter G2 auf allen Dokumentwegen, Mehrheitsregel gegen Versammlungstag, Zeitraum-Prüfregeln, Eigentümer-Zeitraumprüfung, WhatsApp nur mit Einwilligung, Zählerfoto und Auftragsstatus im Portal, Altabrechnungen und Beschlüsse im Import, G1-Paket mit Nachweispflicht, PITR-Wiederherstellung automatisiert, alle 49 Anhang-D-Fälle doppelt getestet
+
+- Portal: Kleine Schaltflächen und Download-Links (ui.buttonSm) sind auf Geräten mit grobem Zeiger 44 px hoch (36 px nur bei feinem Zeiger); gefunden durch den Phone-Test der Dokumentenliste, der ein Touch-Ziel von 36 px meldete.
+- Übersicht: Welle 23 mit 21 Paketen AL01 bis AL06 (Reste der Welle 22 und Gegenprüfung) und AM01 bis AM15 (39 Befunde der Lückenanalyse GAJ entlang der Geschäftsprozesse Miete, WEG, Bank, Portale, Betrieb und KI); Migrationen 0449 (Zeitraum-Prüfregeln) und 0450 (Altabrechnungen und Beschlüsse); die Freigabestufen G1 bis G5 bleiben geschlossen; neue Lückenliste docs/plans/LUECKENLISTE-2026-10-03.md und sechs Entscheidungsvorlagen AM13-01 bis AM13-06.
+- Tests: Anhang D Fälle D05, D06, D15, D18 und D20 haben einen zweiten unabhängigen Integrationstest mit eigenen, von Hand vorberechneten Erwartungswerten; die Liste der Fälle mit nur einem Test ist leer.
+- Tests: Zweite unabhängige Integrationstests für die Anhang-D-Fälle D29, D32, D33 und D35 bis D38 mit eigenen Szenarien und Erwartungswerten; die Liste der nur einfach getesteten Fälle ist damit leer.
+- Buchhaltung und Abrechnung: Ereignisse mit alt und neu auch für Messdienstimport, Heizkosteneingaben, Eigentümerabrechnung, Abrechnung anlegen und neue Version, Kostenumbuchung, Zinsbuchung, Buchungsprüfung, Debitoren- und Kreditorenabgleich, Storno Sollstellungslauf, Standardvorlage, Zustellnachweis und Mahnbescheid-Vorbereitung (GAI-307).
+- Abrechnung: Summentest der Eigentuemerabrechnung mit Restcentbetraegen und handgerechnetem Fall ergaenzt.
+- API: 29 schreibende Routen der Buchhaltung und Abrechnung ohne Geldbetraege liefern ein typisiertes Antwortmodell (OpenAPI), Liste untypisierter Routen verkuerzt.
+- Zahlläufe: GET /accounting/payment-runs/previews filtert zusätzlich nach Stichtag (as_of) und Auslöser (trigger).
+- Arbeitsplatz: gespeicherte Filter für die Ressourcen payment_runs und mailbox, angebunden an die Zahllauf-Vorschauen und das Postfach.
+- Review: Integrationstests für Umgehungsversuche bei Kautionsfreigabe, Auszahlung ohne Rechnung, Körperlimit und X-Forwarded-For ergänzt.
+- Dokumente: Lastschrift- und Zahlungsdateien sind über Inhalt, Download-URL, Portal und DMS-Spiegelung nur bei offener Freigabe G2 erreichbar (GAJ-301).
+- Lastschriften: Die pain.008-Datei liegt in der neuen Kategorie Zahlungsdatei, Ereignisse enthalten keine Dokument-Id mehr.
+- Versammlung: Mehrheitsregeln werden bei Zuordnung zum Tagesordnungspunkt und bei der Auszählung gegen den Versammlungstag geprüft; außerhalb der Gültigkeit Ablehnung mit Problemcode MHVP-HOA-0039.
+- Versammlung: Mehrheitsregeln mit Gültigkeitsende vor Gültigkeitsbeginn werden abgelehnt.
+- Datenbank: Prüfregel Gültigkeitsende nicht vor Gültigkeitsbeginn für Objekteigentümer, Objektkontakte, Kontaktbeziehungen, Kautionen und Mehrheitsregeln (Migration 0449).
+- Verträge: Kautionsanlage lehnt Gültigkeitsende vor Gültigkeitsbeginn ab.
+- Objekte: Objekteigentümer der Mietverwaltung lehnen überlappende Zeiträume derselben Partei und eine Anteilssumme über 100 Prozent mit 422 ab.
+- Importe: Der Eigentumsimport für Mietobjekte beendet bisherige Eigentümer zum Vortag des Stichtags und meldet spätere Eigentümer oder Anteilskonflikte im Importbericht.
+- Banking: Freigabe oder Ende einer Bankverbindung und IBAN-Änderung bei SEPA-Mandat berechnen offene Zuordnungsvorschläge neu.
+- KI: Bei 80 Prozent des Monatsbudgets erhalten Berechtigte für KI-Einstellungen eine Benachrichtigung.
+- KI: Neue Mandantenschalter fuer die KI-Einordnung je Ticket-Mail, den KI-Stammdatenvorschlag und KI-Aufgaben aus Regeln (Standard an, Seite Fachliche Regeln).
+- Automation: Regeln mit KI-Aufgabe koennen nur Personen mit dem Recht ai:approve anlegen oder aendern.
+- CRM Sollstellungen: gebuchte Läufe lassen sich mit Begründung stornieren (Gegenbuchungen, Recht Buchungen freigeben).
+- CRM Verbrauchsinformation: Zustellung im Ersatzprozess (Weg, Datum, Nachweis) ist erfassbar.
+- CRM Abrechnung: Differenz zur Vorversion wird bei Korrekturversionen angezeigt.
+- CRM Verträge: bestehende Zahlungspositionen lassen sich korrigieren.
+- CRM WEG Abrechnung: Zuordnungsvorschlag bei Eigentümerwechsel und Einzelabrechnung je Einheit als PDF (G4) sind abrufbar.
+- CRM Tests: der Aufrufscan schließt die Allowlist aus, Kategorie offen bereinigt.
+- Portal: Zählerstandsmeldung nimmt Fotos an (Dateiauswahl oder Kamera), verknüpft sie am Vorschlag und am übernommenen Zählerstand und weist auf ein fehlendes Foto hin.
+- Portal: Meldungsansicht zeigt den laufenden Status und Termin der Aufträge ohne Dienstleister, Preis oder interne Vermerke.
+- Portal: Schadensmeldung und Ausführungsfotos des Dienstleisters bieten die direkte Kameraaufnahme.
+- Portal: Eigentümer stellen Einsichtsanfragen für ihre Gemeinschaft und sehen den Stand, hinter dem Schalter der Belegeinsicht.
+- Portal: Die Seite Dokumente stürzt nicht mehr ab; die Datumsformatierung der Dokumentliste läuft jetzt in der Komponente selbst.
+- Portal: Neue Playwright-Tests auf Telefonbreite für Schadensmeldung mit Foto, Zählerstand, Dienstleisterauftrag mit Angebot, Fotos und Rechnung sowie Dokumente mit Sammel-Download.
+- Portal DMS: Der D30-Matrixtest prüft jetzt auch den Sammel-Download POST /portal/documents/bundle (fremde GdWE und private SEV-Akte werden mit 404 abgewiesen, auch gemischt mit eigenen Dokumenten).
+- SLA/WhatsApp: Der Sendepfad prüft die Empfängerart; Kontakte erhalten WhatsApp-Nachrichten nur mit erfasster, nicht widerrufener WhatsApp-Einwilligung, Mitarbeiter-Eskalation und Testversand bleiben ausgenommen.
+- Handbuch: Kapitel Kommunikation beschreibt WhatsApp-Kanal, Zustellstatus und Einwilligungsvoraussetzung.
+- Import: Neue Berichtsarten Altabrechnungen je Version und Beschlusssammlung werden nur abgelegt und geprüft, ohne Buchung, Forderung oder Versand (Migration 0450).
+- Import: Prüfbericht für Altabrechnungen meldet fehlende Beschlüsse, fehlenden Beschlussbezug, unbekannte Einheiten und mehrfache Versionen.
+- Import: Der tägliche Abgleichbericht enthält einen Stammdatenabschnitt mit offenen Zeilen und fehlenden Datensätzen je Berichtsart, auch für Kautionen, Umlageschlüssel, Zähler, SEPA und Dienstleister.
+- Buchhaltung: G1-Öffnungspaket um die 18.0-Punkte geprüfte Migration, Rechtsträgertrennung und dokumentierte Korrektur ergänzt, abhaken nur mit Nachweis.
+- Plattform: Nachweisverweise der Gate-Checklisten sind typisiert (CI-Lauf mit Commit, Commit, Version, Dokument) und Lücken werden angezeigt.
+- CI: i18n-, Client-Import-, Handbuch- und Hilfeindexprüfung laufen direkt in CI; migrations-guard prüft Pushes gegen Vorgängerstand und letzten Tag ohne verschluckte Fehler.
+- Betrieb: deploy.sh führt nach dem Staging-Deploy den Smoke-Test aus und bietet einen Rückrollschritt auf den vorherigen Tag.
+- Betrieb: Neues Skript infra/scripts/pitr-drill.sh stellt Basisbackup plus WAL-Segmente bis zu einem Zielzeitpunkt in einem Wegwerf-Cluster wieder her, misst die Dauer gegen die RTO von 4 Stunden und schreibt ein Protokoll.
+- CI: Neuer Job pitr-drill prüft die Point-in-Time-Wiederherstellung bei jedem Lauf mit Selbsttest und RTO-Fall (make pitr-drill-test).
+- Doku: Runbook Parallelbetrieb an die einmalige Übernahme aus Immoware24 (B27) und das Abnahmeprotokoll mit Zweitunterzeichnung (M8-08) angepasst.
+- Buchhaltung: Mietrechnung, Mahnschreiben und FinTS-Saldo runden Cent-Beträge jetzt kaufmännisch (ROUND_HALF_UP) über round_cents.
+- Tests: Fremdmandanten-404-Nachweis für sieben weitere Buchhaltungs- und Bankrouten.
+- Tests: eigene Nachweise der Invarianten B06 (Reihenfolgeunabhängigkeit der Cent-Ergebnisse) und B07 (Stichtagswahrheit für Saldenliste, offene Posten und Kontenblatt).
+- Dokumentation: Lückenliste GAJ vom 03.10.2026 mit 39 Befunden, Paketzuordnung der Welle 23 und Stand je Befund.
+- Dokumentation: Entscheidungsvorlagen AM13-01 bis AM13-06 für die GAJ-Befunde mit Entscheidungsbedarf, Fragen in OPEN_QUESTIONS ergänzt.
+- Kontakte: neue Abfrage der aktuellen Anschriften eines Kontakts; eine Stichtagsabfrage wird bis zur Entscheidung AM14-01 ausdrücklich mit Hinweis abgelehnt.
+- Kontakte: bei der Zusammenführung behält der Zielkontakt genau eine Hauptanschrift, Haupttelefonnummer und Haupt-E-Mail.
+- Kern: Das große Upload-Körperlimit gilt nur noch für die registrierten Upload-Routen; ein Multipart-Content-Type an einer JSON-Route fällt unter das Standardlimit (AL06-01).
+- CRM: X-Forwarded-For kann um die direkte Gegenstelle ergänzt werden; Runbook nennt die Voraussetzung, dass das CRM nur über Traefik erreichbar ist (AL06-02).
+
 ## 1.67.0 (03.10.2026) Welle 22, Reste der Welle 21: persistente Rechenschalter, Vier-Augen-Prüfung in der API, Gate G2 vor Auszahlungen, Auskunftsanträge mit Fristenregister, Körperlimit je Pfadgruppe, Proxy-Weitergabe, Ereignisse für Geldrouten, Mandantentrennungstests mit echten Objekten, 17 Anhang-D-Zweittests, Coverage-Schwellen, Gegenprüfung der Welle 21
 
 - Übersicht: Welle 22 mit 19 Paketen AK01 bis AK19 zu den 41 Teilbefunden der Welle 21 (Lückenanalyse GAI) und einer Gegenprüfung der Geld-, Datenbankschutz- und Sicherheitsänderungen aus Welle 21; Migrationen 0447 (Rechenschalter negative Heizkosten, Restcent Hausgeld, Toleranz Bruttoprüfung) und 0448 (Auskunftsanträge); die Freigabestufen G1 bis G5 bleiben geschlossen; die Welle wurde nach einem zweiten Container-Neustart mit Fortsetzungsagenten ohne Datenverlust abgeschlossen.

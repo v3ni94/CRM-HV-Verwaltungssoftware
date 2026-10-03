@@ -77,6 +77,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info|allocation-properties|rental-income|statements|takeover-checklist)$/ },
   { method: "GET", pattern: new RegExp(`^portal/owner/consumption-info/${ID}$`) },
+  // AM06 (GAJ-202): inspection requests of the owner.
+  { method: "GET", pattern: /^portal\/owner\/inspection-requests$/ },
+  { method: "POST", pattern: /^portal\/owner\/inspection-requests$/ },
+  { method: "GET", pattern: new RegExp(`^portal/owner/inspection-requests/${ID}$`) },
   { method: "GET", pattern: /^portal\/support-consent$/ },
   { method: "POST", pattern: /^portal\/support-consent$/ },
   { method: "DELETE", pattern: /^portal\/support-consent$/ },

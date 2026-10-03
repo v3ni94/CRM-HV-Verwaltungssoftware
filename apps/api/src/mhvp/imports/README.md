@@ -241,3 +241,9 @@ Die Seite `/importe/immoware24` zeigt unter den benötigten Exporten die gemerkt
 
 * `PUT /imports/migration/acceptance/{id}` bearbeitet nur Entwürfe; nach der Unterzeichnung 409 `MHVP-MIG-0002`. Test um Leserecht 403, fremder Mandant 404, Validierung 422 und unveränderten Inhalt nach 409 ergänzt (`test_m8_year_acceptance.py`).
 * CRM: Bearbeiten in `MigrationExtras`, Exporttypen in `ExportKinds` (Seite Importe, Vollimport), Summen je Art (`/history/open-items/summary`) in `MigrationHistory`; Vitest `MigrationAcceptanceEdit.test.tsx`.
+
+## Welle 23, AM09 (GAJ-501, GAJ-502)
+
+- Report types `historical_statement` and `resolution` (`statement_reports.py`, tables `migrated_statement` and `migrated_resolution` in `history_models.py`, migration 0450). Filing and checking only: no posting, no receivable from a stated result, no dispatch. Versions are separate rows; equal rows `unchanged`, different `conflict`; undo through the import run.
+- Read endpoints `GET /imports/immoware24/history/statements`, `/resolutions` and `/statements/check` (check report with codes `resolution_missing`, `resolution_ref_empty`, `unit_unknown`, `several_versions`), permission `accounting:read`, property scope applied.
+- Reconciliation report: section `master_data` (`reconciliation.master_data_section`) with row status counters and missing entities per report type of the newest file (master data, deposits, allocation keys, meters, SEPA, service providers, statements, resolutions); the report also runs without journal or bank rows; scoped members get `master_data: null`. Rule: `docs/rules/AM09-altabrechnungen-beschluesse.md`, open question AM09-01.

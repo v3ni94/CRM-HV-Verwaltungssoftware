@@ -166,3 +166,12 @@ snapshot is refused as well (the cascade hits the guard). Rule B03.
 ## Rundung (Welle 21, AJ01)
 
 Alle `quantize` Aufrufe runden ausdrücklich ROUND_HALF_UP. `billing.calc.distribute` verteilt negative Summen vorzeichensymmetrisch und summentreu. Details und Schalter (`negative_costs_mode`, `remainder_mode`): docs/rules/RUNDUNG.md.
+
+## Typed write responses (AL04, GAI-304)
+
+Writing routes without money amounts declare response models from `billing/write_responses.py`
+(`extra="allow"`, no field loss). Routes returning amounts stay in
+`tests/unit/data/untyped_routes_allowlist.txt` until the JSON format of Decimal is decided.
+
+Sum invariants of the owner statement `build_results` (block totals, fee net plus VAT, free
+liquidity, operating result, ROUND_HALF_UP per line): `tests/unit/test_al04_owner_statement_sums.py`.

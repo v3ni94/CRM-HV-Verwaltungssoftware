@@ -994,6 +994,11 @@ async def queue_for_message(
         return
     # Lexware Office (INT-LEXO-01): deterministic invoice copy detection, queue rows only.
     await lexoffice_invoice_copy.queue_for_message(session, tenant_id, message)
+    from mhvp.ai import automation
+
+    # GAJ-606 (AM04): tenant switch for the per mail master data proposal.
+    if not await automation.is_enabled(session, "master_data_change_proposals"):
+        return
     if settings.ai_inline:
         ticket = await session.get(Ticket, message.ticket_id)
         if ticket is None:

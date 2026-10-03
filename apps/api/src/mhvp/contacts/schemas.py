@@ -234,6 +234,14 @@ class AddressOut(AddressIn):
     id: uuid.UUID
 
 
+class ContactAddressListOut(BaseModel):
+    """Current addresses of a contact (AM14, GAJ-610). ``history_available`` stays false until
+    the address history (valid_to, AM14-01) exists; ``as_of`` is refused with 422 until then."""
+
+    items: list[AddressOut]
+    history_available: bool = False
+
+
 class PhoneOut(BaseModel):
     id: uuid.UUID
     label: PhoneLabel

@@ -39,6 +39,7 @@ from mhvp.accounting.rent_invoice_models import (
 from mhvp.contacts import recipients
 from mhvp.contacts.models import ContactIdentifier, IdentifierKind, PartyMember
 from mhvp.contracts.models import Contract, ContractVatOption
+from mhvp.core.money import round_cents
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents import services as docs
@@ -79,7 +80,7 @@ def format_number(year: int, number: int) -> str:
 
 
 def _money(value: Decimal | str | None) -> Decimal:
-    return Decimal(str(value or "0")).quantize(Decimal("0.01"))
+    return round_cents(Decimal(str(value or "0")))
 
 
 def _eur(value: Decimal | str) -> str:

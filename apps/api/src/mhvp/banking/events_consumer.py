@@ -17,7 +17,9 @@ Handled events:
   is emitted for the audit log and later learning (S3, S5).
 * ``bank_transaction.reviewed``: ``ignore`` closes the pending round as ``ignored`` with the
   review reason; ``keep`` takes the pending snapshot.
-* ``contact.deleted``: payer evidence (``ContactBankAccount``) changed, so every pending
+* ``contact.deleted``, ``bank_account.approved``, ``bank_account.ended`` and
+  ``contact.mandate_iban_changed`` (GAJ-608): payer evidence (``ContactBankAccount``)
+  changed, so every pending
   snapshot of the tenant is recomputed; closed rows are evidence and stay (retention concept
   is an open operator decision, OPEN_QUESTIONS M12-06).
 
@@ -51,7 +53,11 @@ log = logging.getLogger(__name__)
 
 PROCESS_LAG = timedelta(seconds=5)
 BATCH_LIMIT = 500
-HANDLED_TYPES = (ev.JOURNAL_ENTRY_REVERSED, ev.BANK_TRANSACTION_REVIEWED, ev.CONTACT_DELETED)
+HANDLED_TYPES = (
+    ev.JOURNAL_ENTRY_REVERSED,
+    ev.BANK_TRANSACTION_REVIEWED,
+    *ev.PAYER_EVIDENCE_EVENTS,
+)
 
 
 async def process_tenant(
@@ -119,7 +125,7 @@ async def _handle(session: AsyncSession, tenant_id: uuid.UUID, event: DomainEven
         await _on_entry_reversed(session, tenant_id, event)
     elif event.type == ev.BANK_TRANSACTION_REVIEWED:
         await _on_transaction_reviewed(session, event)
-    elif event.type == ev.CONTACT_DELETED:
+    elif event.type in ev.PAYER_EVIDENCE_EVENTS:
         await proposals.refresh_pending(session)
 
 

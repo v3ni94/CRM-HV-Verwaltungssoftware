@@ -16,8 +16,14 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.imports import w3_reports
-from mhvp.imports.history_models import MigratedBankLink, MigratedOpenItem, MigratedTicket
+from mhvp.imports import statement_reports, w3_reports
+from mhvp.imports.history_models import (
+    MigratedBankLink,
+    MigratedOpenItem,
+    MigratedResolution,
+    MigratedStatement,
+    MigratedTicket,
+)
 from mhvp.properties.models import Property
 
 # M2-02, R08-01: property and ledger query parameters outside the assignment answer 404.
@@ -235,3 +241,151 @@ async def history_bank_link_candidates(
         await ensure_account_visible(session, tx.property_bank_account_id)  # Y01, M2-02
         rows = await w3_reports.journal_candidates(session, tx, tolerance_days, limit)
         return [HistoryJournalCandidateOut.model_validate(r) for r in rows]
+
+
+# GAJ-501 (AM09): filed historical statements and resolutions with check report. Read only.
+
+
+class HistoryStatementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    property_id: uuid.UUID
+    kind: str
+    period_start: date
+    period_end: date
+    version: int
+    unit_number: str
+    unit_id: uuid.UUID | None
+    recipient: str | None
+    result_amount: Decimal | None
+    sent_on: date | None
+    resolution_ref: str | None
+    document_ref: str | None
+    note: str | None
+
+
+class HistoryResolutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    property_id: uuid.UUID
+    resolved_on: date
+    item_number: str
+    reference: str | None
+    title: str
+    wording: str | None
+    result: str
+    form: str
+    note: str | None
+
+
+class HistoryCheckFindingOut(BaseModel):
+    property_id: uuid.UUID
+    property_number: str
+    entity: str
+    entity_id: uuid.UUID
+    code: str
+    message: str
+
+
+class HistoryCheckPropertyOut(BaseModel):
+    property_id: uuid.UUID
+    property_number: str
+    statements: int
+    resolutions: int
+    findings: int
+
+
+class HistoryCheckTotalsOut(BaseModel):
+    statements: int
+    resolutions: int
+    findings: int
+
+
+class HistoryCheckOut(BaseModel):
+    totals: HistoryCheckTotalsOut
+    properties: list[HistoryCheckPropertyOut]
+    findings: list[HistoryCheckFindingOut]
+
+
+@router.get(
+    "/statements",
+    summary="Übernommene Altabrechnungen je Version (nur Ablage)",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HistoryStatementOut],
+)
+async def history_statements(
+    request: Request,
+    property_id: uuid.UUID | None = None,
+    kind: str | None = Query(
+        default=None, pattern="^(hoa_annual|hoa_budget|operating_costs|heating_costs|other)$"
+    ),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    principal: TenantPrincipal = Depends(READ_ACCOUNTING),
+) -> list[HistoryStatementOut]:
+    async with tenant_tx(request, principal) as session:
+        query = select(MigratedStatement)
+        if property_id:
+            query = query.where(MigratedStatement.property_id == property_id)
+        if kind:
+            query = query.where(MigratedStatement.kind == kind)
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            query = query.where(MigratedStatement.property_id.in_(allowed))
+        rows = await session.scalars(
+            query.order_by(
+                MigratedStatement.period_end.desc(),
+                MigratedStatement.kind,
+                MigratedStatement.unit_number,
+                MigratedStatement.version,
+            )
+            .offset(offset)
+            .limit(limit)
+        )
+        return [HistoryStatementOut.model_validate(r) for r in rows.all()]
+
+
+@router.get(
+    "/resolutions",
+    summary="Übernommene Beschlusssammlung (nur Ablage)",
+    dependencies=[Depends(strict_query)],
+    response_model=list[HistoryResolutionOut],
+)
+async def history_resolutions(
+    request: Request,
+    property_id: uuid.UUID | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    principal: TenantPrincipal = Depends(READ_ACCOUNTING),
+) -> list[HistoryResolutionOut]:
+    async with tenant_tx(request, principal) as session:
+        query = select(MigratedResolution)
+        if property_id:
+            query = query.where(MigratedResolution.property_id == property_id)
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            query = query.where(MigratedResolution.property_id.in_(allowed))
+        rows = await session.scalars(
+            query.order_by(MigratedResolution.resolved_on.desc(), MigratedResolution.item_number)
+            .offset(offset)
+            .limit(limit)
+        )
+        return [HistoryResolutionOut.model_validate(r) for r in rows.all()]
+
+
+@router.get(
+    "/statements/check",
+    summary="Prüfbericht Altabrechnungen und Beschlüsse (ohne Korrektur)",
+    dependencies=[Depends(strict_query)],
+    response_model=HistoryCheckOut,
+)
+async def history_statement_check(
+    request: Request,
+    property_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ_ACCOUNTING),
+) -> HistoryCheckOut:
+    async with tenant_tx(request, principal) as session:
+        report = await statement_reports.check_report(
+            session, property_id, session_allowed_property_ids(session)
+        )
+        return HistoryCheckOut.model_validate(report)

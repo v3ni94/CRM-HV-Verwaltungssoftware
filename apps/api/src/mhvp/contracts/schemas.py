@@ -457,6 +457,13 @@ class DepositIn(_In):
     property_bank_account_id: uuid.UUID | None = None
     interest_rule: str | None = None
 
+    @model_validator(mode="after")
+    def _period(self) -> Self:
+        # AM02 / GAJ-604: same rule as the DB check ck_deposit_period_order (0449).
+        if self.valid_to is not None and self.valid_to < self.valid_from:
+            raise ValueError("valid_to liegt vor valid_from")
+        return self
+
 
 class DepositMovementIn(_In):
     date: date

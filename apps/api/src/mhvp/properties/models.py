@@ -364,6 +364,13 @@ class PropertyOwner(IdMixin, TimestampMixin, TenantMixin, Base):
     """Owner of a rental property (Mietverwaltung) with period."""
 
     __tablename__ = "property_owner"
+    # AM02 / GAJ-604 (migration 0449).
+    __table_args__ = (
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="period_order",
+        ),
+    )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
     party_id: Mapped[uuid.UUID] = _fk("party.id")
@@ -447,6 +454,13 @@ class PropertyPortalDocument(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class PropertyContact(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "property_contact"
+    # AM02 / GAJ-604 (migration 0449).
+    __table_args__ = (
+        CheckConstraint(
+            "valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from",
+            name="period_order",
+        ),
+    )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
     contact_id: Mapped[uuid.UUID] = _fk("contact.id")

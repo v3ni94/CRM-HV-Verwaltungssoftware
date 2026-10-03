@@ -14,6 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing import consumption_info
 from mhvp.billing.models import ConsumptionInfo
+from mhvp.billing.write_responses import (
+    BillingConsumptionInfoRunOut,
+    BillingConsumptionInfoSettingsOut,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, property_path_guard
 from mhvp.core.events import emit
@@ -122,7 +126,11 @@ async def list_consumption_info(
         }
 
 
-@router.put(f"{P}/settings", summary="Objektschalter der Verbrauchsinformation")
+@router.put(
+    f"{P}/settings",
+    response_model=BillingConsumptionInfoSettingsOut,
+    summary="Objektschalter der Verbrauchsinformation",
+)
 async def put_settings(
     property_id: uuid.UUID,
     body: ConsumptionInfoSettingsIn,
@@ -148,7 +156,11 @@ async def put_settings(
         return _settings_out(prop, settings_row)
 
 
-@router.post(f"{P}/run", summary="Verbrauchsinformation für einen Monat erzeugen (manuell)")
+@router.post(
+    f"{P}/run",
+    response_model=BillingConsumptionInfoRunOut,
+    summary="Verbrauchsinformation für einen Monat erzeugen (manuell)",
+)
 async def run_month(
     property_id: uuid.UUID,
     body: ConsumptionInfoRunIn,

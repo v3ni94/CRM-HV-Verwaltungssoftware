@@ -16,7 +16,7 @@ import hashlib
 import hmac
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 import httpx
 from sqlalchemy import select
@@ -28,6 +28,12 @@ from mhvp.sla.models import WhatsAppConfig, WhatsAppDelivery
 
 WHATSAPP_TIMEOUT_SECONDS = 10.0
 WHATSAPP_TEST_TEMPLATE_KEY = "test"
+
+# GAJ-405: kind of recipient of a WhatsApp message. ``staff`` (tenant member, internal channel)
+# and ``test`` (operator test send to a number typed in by a user with the manage right) need
+# no contact consent; ``contact`` always needs a granted, not revoked ``whatsapp`` consent.
+WhatsAppRecipient = Literal["staff", "test", "contact"]
+NO_CONSENT_ERROR = "Keine WhatsApp-Einwilligung des Kontakts erfasst; nicht gesendet."
 
 
 class DeliveryResult:
@@ -146,10 +152,21 @@ async def send_whatsapp(
     to: str,
     alert_type: str,
     params: list[str],
+    recipient: WhatsAppRecipient,
+    contact_id: uuid.UUID | None = None,
     http_transport: httpx.AsyncBaseTransport | None = None,
 ) -> str | None:
     """Sends a template message and records the delivery row; returns an error text or
-    ``None`` on success (mirrors :func:`mhvp.sla.channels.send_sms`)."""
+    ``None`` on success (mirrors :func:`mhvp.sla.channels.send_sms`).
+
+    ``recipient`` is required (fail closed, GAJ-405): a ``contact`` recipient is only messaged
+    with a recorded ``whatsapp`` consent (rule 0.1.13); without ``contact_id`` or consent
+    nothing is sent and no delivery row is written.
+    """
+    if recipient == "contact" and (
+        contact_id is None or not await has_whatsapp_consent(session, contact_id)
+    ):
+        return NO_CONSENT_ERROR
     template = template_for(config, alert_type)
     if not template:
         return f"Keine WhatsApp-Vorlage für Alarmtyp {alert_type!r} hinterlegt."

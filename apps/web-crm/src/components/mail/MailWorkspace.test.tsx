@@ -238,3 +238,24 @@ describe("MailWorkspace Filter per URL (GAI-110)", () => {
     expect(window.location.search).toContain("status=assigned");
   });
 });
+
+describe("MailWorkspace gespeicherte Filter (AL05)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("applies a saved filter of the resource mailbox", async () => {
+    window.history.replaceState(null, "", "/mail");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input: unknown) => {
+      if (String(input).includes("/api/bff/workspace/filters?resource=mailbox")) {
+        return jsonResponse([{ id: "f1", resource: "mailbox", name: "Offene Rechnungen", params: { status: "new", q: "Rechnung" } }]);
+      }
+      return jsonResponse([]);
+    });
+    renderIntl(<MailWorkspace canApprove={false} canReadMembers={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Offene Rechnungen" }));
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.map((c: unknown[]) => String(c[0])).filter((u: string) => u.includes("/mail/messages?"));
+      expect(urls.at(-1)).toContain("status=new");
+      expect(urls.at(-1)).toContain("q=Rechnung");
+    });
+  });
+});

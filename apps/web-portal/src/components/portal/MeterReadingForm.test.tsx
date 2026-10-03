@@ -38,7 +38,7 @@ describe("MeterReadingForm", () => {
       await userEvent.click(screen.getByRole("button"));
     });
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/bff/portal/meter-readings");
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ meter_id: "M-1", value: "12.5", read_at: "2026-10-01" });
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ meter_id: "M-1", value: "12.5", read_at: "2026-10-01", document_ids: [] });
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -50,5 +50,49 @@ describe("MeterReadingForm", () => {
       await userEvent.click(screen.getByRole("button"));
     });
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+  it("uploads the meter photo first and sends its id (AM06, GAJ-401)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ id: "doc1" }, 201))
+      .mockResolvedValueOnce(jsonResponse({ id: "mr2", photo_missing: false }, 201));
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<MeterReadingForm />);
+    expect(screen.getByTestId("meter-photo-missing")).toBeInTheDocument();
+    const camera = screen.getByTestId("meter-photo-camera");
+    expect(camera).toHaveAttribute("capture", "environment");
+    fireEvent.change(camera, { target: { files: [new File(["x"], "zaehler.jpg", { type: "image/jpeg" })] } });
+    expect(screen.queryByTestId("meter-photo-missing")).toBeNull();
+    fill("M-1", "7", "2026-10-01");
+    await act(async () => {
+      await userEvent.click(screen.getByRole("button"));
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/bff/portal/uploads");
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string).document_ids).toEqual(["doc1"]);
+  });
+
+  it("notes a reading sent without photo", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ id: "mr3", photo_missing: true }, 201)));
+    renderIntl(<MeterReadingForm />);
+    fill("M-1", "7", "2026-10-01");
+    await act(async () => {
+      await userEvent.click(screen.getByRole("button"));
+    });
+    expect(await screen.findByText(/ohne Foto übermittelt/)).toBeInTheDocument();
+  });
+
+  it("stops when the photo upload fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ title: "x", status: 422, detail: "Datei zu groß" }, 422));
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<MeterReadingForm />);
+    fireEvent.change(document.getElementById("meter-photo")!, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    fill("M-1", "7", "2026-10-01");
+    await act(async () => {
+      await userEvent.click(screen.getByRole("button"));
+    });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

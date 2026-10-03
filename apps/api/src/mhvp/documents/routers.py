@@ -31,7 +31,7 @@ from mhvp.core.listparams import (
     strict_query,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters, mirror_deletion, retention, trash
+from mhvp.documents import letters, mirror_deletion, payment_files, retention, trash
 from mhvp.documents import schemas as s
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
@@ -761,6 +761,10 @@ async def download(
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
+        # GAJ-301: a payment file is handed out only with G2, as on its domain route.
+        await payment_files.ensure_released(
+            session, document, principal.tenant_id, request.app.state.release_gate_resolver
+        )
         if document.storage is StorageKind.GOOGLE_DRIVE:
             # M35 takeover documents: no local copy, `storage_ref` is the Drive file id (the
             # same convention `mhvp.documents.dms.GoogleDriveStore.put`/`resolve` use for a
@@ -1179,6 +1183,8 @@ async def ensure_default_categories(
 
     async with tenant_tx(request, principal) as session:
         await ensure_document_defaults(session, principal.tenant_id)
+        # GAJ-301: payment files stored before the lock get the payment_file category.
+        await payment_files.recategorize(session, principal.tenant_id)
         rows = (
             await session.scalars(
                 select(DocumentCategory).order_by(
