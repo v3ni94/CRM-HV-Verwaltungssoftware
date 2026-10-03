@@ -49,7 +49,14 @@ describe("MailApprovalSettings", () => {
       return jsonResponse({ title: "unerwartet" }, 500);
     });
     renderIntl(
-      <MailApprovalSettings initial="external_only" canUpdate={false} deputies={[]} members={MEMBERS} currentUserId="u-1" />,
+      <MailApprovalSettings
+        initial="external_only"
+        canUpdate={false}
+        canManageDeputies
+        deputies={[]}
+        members={MEMBERS}
+        currentUserId="u-1"
+      />,
     );
     expect(screen.getByText("Derzeit keine Vertretung eingetragen.")).toBeInTheDocument();
     await userEvent.setup().selectOptions(screen.getByLabelText("Vertreter"), "u-2");
@@ -74,6 +81,7 @@ describe("MailApprovalSettings", () => {
       <MailApprovalSettings
         initial="external_only"
         canUpdate
+        canManageDeputies
         deputies={[
           {
             id: "d-1",
@@ -90,5 +98,28 @@ describe("MailApprovalSettings", () => {
     );
     await userEvent.setup().click(screen.getByRole("button", { name: "Widerrufen" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/bff/mail/mail-approval/deputies/d-1", expect.objectContaining({ method: "DELETE" })));
+  });
+
+  it("hides creating and revoking deputies without communication:update (GAI-301)", () => {
+    renderIntl(
+      <MailApprovalSettings
+        initial="external_only"
+        canUpdate
+        deputies={[
+          {
+            id: "d-1",
+            absent_user_id: "u-1",
+            deputy_user_id: "u-2",
+            starts_at: "2026-10-01T08:00:00Z",
+            ends_at: "2026-10-10T18:00:00Z",
+            note: null,
+          },
+        ]}
+        members={MEMBERS}
+        currentUserId="u-1"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Widerrufen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Vertretung anlegen" })).not.toBeInTheDocument();
   });
 });

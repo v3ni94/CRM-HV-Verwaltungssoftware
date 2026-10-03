@@ -991,6 +991,10 @@ async def branding_logo(variant: Literal["light", "dark"], request: Request) -> 
     from mhvp.documents.blobs import BlobStore
 
     tenant_id = await _public_branding_tenant(request)
+    if tenant_id is None and request.headers.get("authorization"):
+        from mhvp.core.auth.principal import get_principal
+
+        tenant_id = (await get_principal(request)).tenant_id
     if tenant_id is None:
         raise _not_found()
     async with tenant_transaction(sessions(request), tenant_id) as session:

@@ -382,3 +382,4 @@ Status der bisher nicht verlinkten Dateien ist dem jeweiligen Dateikopf zu entne
 | [AJ04-kontoauszugskette-und-nachweis](AJ04-kontoauszugskette-und-nachweis.md) | Kontoauszugskette in checks(), Ereignisse Steuer, Zahlung, WEG Finanzierung (GAI-604, 307, 105, 601, 606) | 7.1 B09, 0.1.6 | implemented, not accepted |
 | [AJ10-upload-limits](AJ10-upload-limits.md) | Upload- und Webhook-Körperlimits, Typprüfung der Dump-Importe (GAI-313 bis 315, 106) | 4.1, Produktschutz | implemented, not accepted |
 | [AJ13-datenschutzaufsicht](AJ13-datenschutzaufsicht.md) | Auskunftsumfang, Fristenüberwachung, Einwilligungsübersicht, Art.-30-Detektoren und Vor-G1-Auswertung (GAI-506 bis 510, 414) | 16 | implemented, not accepted |
+| [AK06-auskunftsantraege](AK06-auskunftsantraege.md) | Eingangsdatensatz für Auskunftsanträge mit Fristenregister; Auskunft um Portalkonto, Zahlungs- und Vertragsdaten (GAI-506, 507) | 16 | implemented, not accepted |

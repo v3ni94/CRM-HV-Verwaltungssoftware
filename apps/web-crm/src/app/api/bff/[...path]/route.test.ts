@@ -26,6 +26,22 @@ describe("BFF proxy", () => {
     expect(bad.status).toBe(404);
   });
 
+  it("passes the binary tenant logo through for light and dark only (AK15)", async () => {
+    const png = new Uint8Array([137, 80, 78, 71]);
+    serverFetch.mockResolvedValue(new Response(png, { status: 200, headers: { "content-type": "image/png" } }));
+    const ok = await GET(new Request("http://crm.localhost/api/bff/tenant/branding/logo/light"), ctx("tenant/branding/logo/light"));
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toBe("image/png");
+    expect(new Uint8Array(await ok.arrayBuffer())).toEqual(png);
+    const bad = await GET(new Request("http://crm.localhost/api/bff/tenant/branding/logo/other"), ctx("tenant/branding/logo/other"));
+    expect(bad.status).toBe(404);
+    const write = await PUT(
+      new Request("http://crm.localhost/api/bff/tenant/branding/logo/light", { method: "PUT", headers: { host: "crm.localhost", origin: "http://crm.localhost" }, body: "x" }),
+      ctx("tenant/branding/logo/light"),
+    );
+    expect(write.status).toBe(404);
+  });
+
   it("rejects operations outside the allowlist", async () => {
     const res = await GET(new Request("http://crm.localhost/api/bff/platform/tenants"), ctx("platform/tenants"));
     expect(res.status).toBe(404);
@@ -39,6 +55,20 @@ describe("BFF proxy", () => {
     });
     expect((await DELETE(req, ctx(`contacts/${ID}`))).status).toBe(403);
     expect(serverFetch).not.toHaveBeenCalled();
+  });
+
+  it("forwards X-Forwarded-For only when trusted proxies are configured (GAI-311)", async () => {
+    const call = async () => {
+      serverFetch.mockReset();
+      serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+      await GET(new Request("http://crm.localhost/api/bff/search", { headers: { "x-forwarded-for": "203.0.113.9" } }), ctx("search"));
+      return new Headers(serverFetch.mock.calls[0]![1].headers).get("x-forwarded-for");
+    };
+    vi.stubEnv("MHVP_RATE_LIMIT_TRUSTED_PROXIES", "");
+    expect(await call()).toBeNull();
+    vi.stubEnv("MHVP_RATE_LIMIT_TRUSTED_PROXIES", "172.16.0.0/12");
+    expect(await call()).toBe("203.0.113.9");
+    vi.unstubAllEnvs();
   });
 
   it("forwards allowed calls with If-Match and relays ETag", async () => {
@@ -577,6 +607,10 @@ describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
     ["GET", "privacy/request-deadlines/monitor"],
     ["PUT", "privacy/request-deadlines"],
     ["GET", "privacy/register/readiness"],
+    ["GET", "privacy/access-requests"],
+    ["POST", "privacy/access-requests"],
+    ["GET", `privacy/access-requests/${ID}`],
+    ["POST", `privacy/access-requests/${ID}/status`],
   ] as const)("forwards %s %s", async (method, path) => {
     expect((await call(method, path)).status).toBe(200);
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
@@ -588,6 +622,8 @@ describe("BFF proxy, AJ12 deletion proposals (GAI-501)", () => {
     ["POST", "privacy/erasure-requests/not-a-uuid/accept"],
     ["POST", "privacy/request-deadlines"],
     ["PUT", "privacy/register/readiness"],
+    ["DELETE", `privacy/access-requests/${ID}`],
+    ["POST", "privacy/access-requests/not-a-uuid/status"],
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
@@ -616,6 +652,8 @@ describe("BFF proxy, AJ28 gated mask paths", () => {
     ["GET", `billing/owner-statements/${ID}/pdf`],
     ["POST", `statements/${ID}/letters/send`],
     ["POST", `deposit-settlements/${ID}/release`],
+    ["GET", "billing/calculation-settings"],
+    ["PUT", "billing/calculation-settings"],
   ] as const)("forwards %s %s", async (method, path) => {
     expect((await call(method, path)).status).toBe(200);
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
@@ -628,6 +666,8 @@ describe("BFF proxy, AJ28 gated mask paths", () => {
     ["POST", `billing/owner-statements/${ID}/pdf`],
     ["POST", "statements/not-a-uuid/letters/send"],
     ["GET", `deposit-settlements/${ID}/release`],
+    ["DELETE", "billing/calculation-settings"],
+    ["POST", "billing/calculation-settings"],
   ] as const)("rejects %s %s with 404", async (method, path) => {
     expect((await call(method, path)).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();

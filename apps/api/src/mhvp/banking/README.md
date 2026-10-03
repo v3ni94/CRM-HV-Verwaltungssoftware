@@ -424,3 +424,9 @@ Wechsel (`POST /banking/ebics/subscribers/{id}/keys` mit Grund) und Sperre (`...
 ## Kettenprüfung der Kontoauszüge (AI01, GAH-102)
 
 `GET /banking/accounts/{id}/reconciliation` liefert je Auszug zusätzlich `status` (ok, difference, not_checkable), `chain_status` und `chain_difference` gegen den vorherigen Auszug sowie `period_status` mit `gap_from` und `gap_to`. Regel AI01-01. Nebenläufigkeit (GAH-201): paralleler Import derselben oder überlappender Auszüge eines Kontos wird mit 409 abgewiesen und bei Wiederholung ohne Doppelung übernommen; paralleles Einreichen eines Zahlungsstapels ergibt genau eine Einreichung (Test `test_ai01_bank_chain_concurrency.py`).
+
+### AK14: payout orders behind G2 (GAI-402)
+
+`POST /accounting/payment-runs/payout-orders` checks release gate G2 before any lookup
+(403 `MHVP-GATE-0001` while G2 is closed), like the payment batches. Registered in
+`GATED_ROUTES` (`tests/unit/test_ga14_gate_coverage.py`).

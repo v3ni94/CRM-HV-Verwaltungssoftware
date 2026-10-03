@@ -6,6 +6,7 @@
 import { serverFetch } from "@/lib/api-server";
 import { rejectForeignOrigin } from "@/lib/csrf";
 import { problemJson } from "@/lib/problem";
+import { forwardedForValue } from "@/lib/forwarded-for";
 
 const ID = "[0-9a-fA-F-]{36}";
 const ALLOWED: { method: string; pattern: RegExp }[] = [
@@ -332,6 +333,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // AJ13 (GAI-507, 508, 510): Einwilligungsübersicht, Fristen, Vor-G1-Auswertung.
   { method: "GET", pattern: /^privacy\/(consent-overview|request-deadlines|request-deadlines\/monitor|register\/readiness)$/ },
   { method: "PUT", pattern: /^privacy\/request-deadlines$/ },
+  // AK06 (GAI-507): Eingangsdatensatz für Auskunftsanträge.
+  { method: "GET", pattern: new RegExp(`^privacy/access-requests(/${ID})?$`) },
+  { method: "POST", pattern: /^privacy\/access-requests$/ },
+  { method: "POST", pattern: new RegExp(`^privacy/access-requests/${ID}/status$`) },
   // Portalformulare (A56): Vorlagen je Mandant.
   { method: "GET", pattern: /^portal-admin\/forms$/ },
   { method: "POST", pattern: /^portal-admin\/forms$/ },
@@ -358,6 +363,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^tenant\/webhook-settings$/ },
   // GAE-30, GAF-20, GAF-21: API-Schlüssel (nur Präfix, Widerruf), Branding, Mailquellen mit Geheimnisrotation.
   { method: "GET", pattern: /^tenant\/(api-keys|branding)$/ },
+  // AK15 (GAI-109): binary tenant logo for the CRM shell, only the two variants.
+  { method: "GET", pattern: /^tenant\/branding\/logo\/(light|dark)$/ },
   { method: "POST", pattern: /^tenant\/api-keys$/ },
   { method: "DELETE", pattern: new RegExp(`^tenant/api-keys/${ID}$`) },
   { method: "GET", pattern: /^mail\/inbound\/sources$/ },
@@ -841,6 +848,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^contracts/${ID}/allocation-agreements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/allocation-agreements/bulk$`) },
   { method: "GET", pattern: /^billing\/allocation-basis-setting$/ },
+  { method: "GET", pattern: /^billing\/calculation-settings$/ },
+  { method: "PUT", pattern: /^billing\/calculation-settings$/ },
   { method: "PUT", pattern: /^billing\/allocation-basis-setting$/ },
   { method: "GET", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
@@ -1626,6 +1635,9 @@ async function proxy(request: Request, context: Context): Promise<Response> {
   const headers = new Headers({ accept: "application/json" });
   const ifMatch = request.headers.get("if-match");
   if (ifMatch) headers.set("if-match", ifMatch);
+  // GAI-311: client chain for the API rate limit, only when trusted proxies are configured.
+  const forwardedFor = forwardedForValue(request.headers);
+  if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
   let body: string | ArrayBuffer | undefined;
   if (method === "POST" && MULTIPART.test(path)) {
     const type = request.headers.get("content-type") ?? "";

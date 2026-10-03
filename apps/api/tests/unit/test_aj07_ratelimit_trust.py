@@ -111,3 +111,103 @@ def test_self_disclosure_payload_limits() -> None:
     for payload in bad:
         with pytest.raises(ValidationError):
             SelfDisclosureSubmitIn(consent_privacy=True, payload=payload)
+
+
+class _MemRedis:
+    """Minimal pipeline fake: INCR and EXPIRE in memory (AK04)."""
+
+    def __init__(self) -> None:
+        self.counts: dict[str, int] = {}
+
+    def pipeline(self, transaction: bool = True) -> Any:
+        outer = self
+
+        class _Pipe:
+            def __init__(self) -> None:
+                self.ops: list[tuple[str, str]] = []
+
+            async def __aenter__(self) -> "_Pipe":
+                return self
+
+            async def __aexit__(self, *exc: object) -> None:
+                return None
+
+            def incr(self, key: str) -> None:
+                self.ops.append(("incr", key))
+
+            def expire(self, key: str, seconds: int) -> None:
+                self.ops.append(("expire", key))
+
+            async def execute(self) -> list[Any]:
+                out: list[Any] = []
+                for op, key in self.ops:
+                    if op == "incr":
+                        outer.counts[key] = outer.counts.get(key, 0) + 1
+                        out.append(outer.counts[key])
+                    else:
+                        out.append(True)
+                return out
+
+        return _Pipe()
+
+
+def _run_from(settings: Any, redis: Any, calls: list[tuple[str, str]]) -> list[int]:
+    statuses: list[int] = []
+
+    async def app(scope: Any, receive: Any, send: Any) -> None:
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    middleware = ratelimit.RateLimitMiddleware(app)
+    state = SimpleNamespace(settings=settings, resources=SimpleNamespace(redis=redis))
+
+    async def go() -> None:
+        for peer, path in calls:
+            scope = _scope(peer, path=path)
+            scope["app"] = SimpleNamespace(state=state)
+
+            async def receive() -> dict[str, Any]:
+                return {"type": "http.request", "body": b""}
+
+            async def send(message: dict[str, Any]) -> None:
+                if message["type"] == "http.response.start":
+                    statuses.append(int(message["status"]))
+
+            await middleware(scope, receive, send)
+
+    asyncio.run(go())
+    return statuses
+
+
+def _token_settings(fail_closed: bool = False) -> Any:
+    s = _settings(fail_closed)
+    s.rate_limit_per_minute_anonymous = 100
+    s.rate_limit_per_minute_token_path = 2
+    return s
+
+
+def test_token_path_limited_across_client_addresses() -> None:
+    path = "/api/v1/letting/self-disclosure/ak04abc.tok"
+    redis = _MemRedis()
+    calls = [(f"192.0.2.{i}", path) for i in range(1, 5)]
+    assert _run_from(_token_settings(), redis, calls) == [200, 200, 429, 429]
+    # Another token has its own counter; the token is never part of a Redis key.
+    other = "/api/v1/letting/self-disclosure/ak04other.tok"
+    assert _run_from(_token_settings(), redis, [("192.0.2.9", other)]) == [200]
+    assert not any("ak04" in key for key in redis.counts)
+
+
+def test_token_path_limit_not_applied_to_other_routes() -> None:
+    redis = _MemRedis()
+    calls = [(f"192.0.2.{i}", "/api/v1/workspace/calendar-feed/token") for i in range(1, 5)]
+    assert _run_from(_token_settings(), redis, calls) == [200] * 4
+    calls = [(f"192.0.2.{i}", "/api/v1/auth/login") for i in range(1, 5)]
+    assert _run_from(_token_settings(), redis, calls) == [200] * 4
+
+
+def test_token_path_emergency_counter_on_redis_failure() -> None:
+    ratelimit._local_counts.clear()
+    path = "/api/v1/workspace/calendar-feed/ak04feed.ics"
+    calls = [(f"192.0.2.{i}", path) for i in range(1, 5)]
+    assert _run_from(_token_settings(True), _BrokenRedis(), calls) == [200, 200, 429, 429]
+    ratelimit._local_counts.clear()

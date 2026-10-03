@@ -5,6 +5,49 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.67.0 (03.10.2026) Welle 22, Reste der Welle 21: persistente Rechenschalter, Vier-Augen-Prüfung in der API, Gate G2 vor Auszahlungen, Auskunftsanträge mit Fristenregister, Körperlimit je Pfadgruppe, Proxy-Weitergabe, Ereignisse für Geldrouten, Mandantentrennungstests mit echten Objekten, 17 Anhang-D-Zweittests, Coverage-Schwellen, Gegenprüfung der Welle 21
+
+- Übersicht: Welle 22 mit 19 Paketen AK01 bis AK19 zu den 41 Teilbefunden der Welle 21 (Lückenanalyse GAI) und einer Gegenprüfung der Geld-, Datenbankschutz- und Sicherheitsänderungen aus Welle 21; Migrationen 0447 (Rechenschalter negative Heizkosten, Restcent Hausgeld, Toleranz Bruttoprüfung) und 0448 (Auskunftsanträge); die Freigabestufen G1 bis G5 bleiben geschlossen; die Welle wurde nach einem zweiten Container-Neustart mit Fortsetzungsagenten ohne Datenverlust abgeschlossen.
+- Abrechnung: Neue Rechenschalter je Mandant fuer negative Heizkostenanteile, Restcent der Hausgeldmonatsraten und Bruttotoleranz (Migration 0447, Seite Fachliche Regeln), Standard unveraendert konservativ.
+- Abrechnung: Summentests fuer Heizkostenkomponente, Monatsraten, Zeitanteile und Kautionszins ergaenzt.
+- Buchhaltung: Konten, Buchungsentwürfe, Mahneinstellungen, Mahnsperren, Mahnzinssätze, Verwalterhonorar und Rechnungspläne schreiben beim Anlegen, Ändern und Löschen ein Ereignis mit alten und neuen Werten in das Audit-Protokoll.
+- Abrechnung: Kostenpositionen, Einsichtnahmen, Vorauszahlungsregel, Heizkostentabellen und BetrKV-Kontozuordnung protokollieren Änderungen mit alten und neuen Werten.
+- Tests: Mandantentrennung mit echten Objekten für Abrechnung, Heizkostenimport, Eigentümerabrechnung, Messdienst, Telefonie, Postfach, Playbook und Portalübergabe abgesichert (Fremdmandant 404, Leserecht 403).
+- Plattform: Die API begrenzt anonyme Aufrufe mit Token im Pfad (Selbstauskunft, Kalenderfeed) zusaetzlich je Route und Token, auch im Notzaehler bei Redis-Ausfall; der Token erscheint nur als Hash.
+- CRM: BFF und Sitzungsrouten reichen X-Forwarded-For an die API weiter, sofern MHVP_RATE_LIMIT_TRUSTED_PROXIES gesetzt ist (Standard aus).
+- Betrieb: Die Beat Zeitplandatei liegt auf dem Volume beat-schedule und übersteht Neustarts; das API-Image legt dafür /var/lib/mhvp/beat an.
+- Betrieb: Optionales Compose-Profil worker-heavy startet einen zweiten Worker für die Queues ai, ocr und bank; die Queues des Standardworkers sind über MHVP_WORKER_QUEUES einschränkbar.
+- Betrieb: Acht ereignisgetriebene Tasks sind auf Idempotenz geprüft und bewusst ohne automatische Wiederholung; ein Fehlschlag wird mit Begründung im Log vermerkt.
+- Doku: Runbook Ressourcen um zweiten Worker, Beat Volume und Idempotenzprüfung ergänzt.
+- Datenschutz: Auskunftsanträge erhalten einen Eingangsdatensatz mit Eingangsdatum, Weg und Status (Migration 0448) samt CRM-Maske unter Einstellungen, Datenschutz.
+- Datenschutz: offene Auskunftsanträge erscheinen in der Fristenüberwachung und mit hinterlegter Frist im Fristenregister; ohne Mandanteneinstellung gibt es keine Fälligkeit.
+- Kontakte: die DSGVO-Auskunft kann Portalkonto mit Anmeldeereignissen und Sitzungen, Zahlungs- und Vertragsdaten enthalten, je per Mandantenschalter, Standard aus.
+- Doku: Runbooks für 2FA-Reset, FinTS-Betrieb (mit Rückmeldecode 9010) und Webhook-Betrieb ergänzt.
+- Doku: ADR 0031 bis 0036 zu Mandantenschalter-Muster, Zwei-Personen-Reset, Tenant-Index-Wächter, Kettenprüfung, Snapshot-Trigger und Audit-CI.
+- Handbuch: Abschnitt Brotkrümelnavigation in Globale Suche und Verknüpfungen.
+- Web-CRM: Komponententests fuer Ticket-Checkliste, Ortsfelder, Mailverlauf, Playbooks, Mail-Vorbereitung, Interessenten, Termin-Button, Termin-Details, Jobeinstellungen, Telefonassistenz und PWA-Registrierung ergaenzt.
+- Web-CRM: Termin anlegen aus Ticket oder Uebergabe zeigt Fehlermeldungen der API wieder im Dialog an (guard() verwarf den Rueckgabewert).
+- Tests: zweite unabhängige Abnahmetests mit vorberechneten Werten für Anhang D Fälle D01, D02, D03, D07, D10, D12, D13, D19, D21, D22 und D23; Liste der nur einfach getesteten Fälle verkleinert.
+- Tests: zweite unabhängige Tests mit vorberechneten Werten für Anhang D Fälle D26, D28, D39, D40, D48 und D49; Ratchet-Liste SINGLE_TEST_CASES entsprechend verkleinert.
+- API: Elf schreibende Routen in Buchhaltung, WEG und Portal liefern typisierte Antwortmodelle (zusaetzliche Felder bleiben erhalten).
+- Tests: Ratschentest verhindert neue Routen ohne typisiertes Antwortmodell (Allowlist mit 966 Bestandsrouten).
+- Offene Posten: Filter nach Sachkonto in der Adresszeile mit gespeicherten Filtern.
+- Mahnwesen: Mahnläufe nach Status und Laufdatum filterbar, gespeicherte Filter angebunden.
+- WEG: Liste nach Verwaltungsart filterbar, gespeicherte Filter angebunden.
+- Mail: Status, Suche, Postfach und Abgleichstand der Nachrichtenliste stehen in der Adresszeile.
+- E2E: Neuer Playwright-Test legt Kontakt und Ticket über die CRM-Oberfläche gegen die echte API an; Bankbuchung mit Abstimmung läuft gegen den Produktionsbuild grün.
+- Datenschutz: Integrationstest für Export und Wiederanwendung des Löschjournals nach einer Wiederherstellung gegen die Datenbank.
+- Werkzeuge: scripts/e2e-backend.sh wartet über MHVP_E2E_API_WAIT einstellbar auf den API-Start.
+- Verträge: Die Freigabe einer Kautionsabrechnung durch die Person, die den Entwurf erstellt hat, wird mit 409 MHVP-CONTR-0002 abgelehnt (Vier Augen).
+- Zahlungsläufe: Auszahlungen ohne Rechnung (POST /accounting/payment-runs/payout-orders) sind serverseitig hinter Freigabestufe G2 gesperrt.
+- web-crm: busy-Sperren in AppointmentButton, LocalModelStatus, OccupancyList, AvailabilitySelfMeasurement und CostTypeAccountsAdmin.
+- web-crm: Mandantenlogo ueber BFF-Durchleitung tenant/branding/logo/{variant} im Layout, nur mit Schalter branding.crm_apply.
+- web-crm, web-portal: Testabdeckung (vitest coverage v8) mit gemessenen Mindestschwellen.
+- Bank: Bankrückmeldung je Zahlungsdatei erfasst auch Ausgeführt (mit Bankumsatz) und Zurückgegeben (mit Grund), nur bei offener Freigabestufe G2, mit Hinweis auf Buchungswirkung und Vier-Augen-Prüfung.
+- Kern: Anfragekörper werden je Pfadgruppe (Uploads 600 MiB, Webhooks 2 MiB, Standard 100 MiB, per MHVP_BODY_LIMIT_* einstellbar) vor dem Multipart-Parsing begrenzt und mit 413 MHVP-DOC-0010 abgewiesen, auch ohne Content-Length.
+- CRM Berechtigungen: Schaltflächen Quittieren (SLA-Alarme), Vertretung anlegen und widerrufen (Mailfreigabe) sowie Playbook einfügen und bewerten erscheinen nur noch mit dem jeweiligen Schreibrecht (GAI-301).
+- Kern: Fachliches Datum liest naive Zeitstempel als UTC und haengt nicht mehr von der Zeitzone des Servers ab (AK19-01).
+
 ## 1.66.0 (02.10.2026) Welle 21, Befunde der Lückenanalyse GAI: kaufmännische Rundung und summentreue Verteilung, Datenbankschutz gebuchter Datensätze, Berechtigungs- und Mandantentrennungstests, Magic-Link-Sperre, Upload- und Webhook-Limits, Celery-Zeitlimits, DSGVO-Löschvorschläge und Auskunft, OpenAPI-Sicherheitsschema, 26 neue CRM-Masken, Vertragsanlage per Kontakt
 
 - Übersicht: Welle 21 mit 32 Paketen AJ01 bis AJ32 zu den 126 Befunden der Lückenanalyse GAI (GAI-101 bis GAI-623, alle Abschnitte des Master-Prompts); Migrationen 0444 bis 0446 (Datenbankschutz für offene Posten, Zahlungsaufträge, Kautionsbewegungen, Forderungen und Belegnummern, Löschvorschläge je Datenart, Fehlversuchszähler des Magic-Link-Codes); die Freigabestufen G1 bis G5 bleiben geschlossen; 28 neue Entscheidungsvorlagen AJ30-01 bis AJ30-28; Produktionsfehler der Vertragsanlage (Kontakt-ID als Partei-ID) behoben.

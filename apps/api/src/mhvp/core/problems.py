@@ -1049,6 +1049,13 @@ class ErrorCodes:
         "Eigentümerwechsel nicht möglich",
         "Only an open ownership can be transferred, and not to its current owner.",
     )
+    # AK14 (GAI-410, AJ28-04): four eyes on deposit settlement release (product protection).
+    CONTRACT_DEPOSIT_RELEASE_SAME_USER = ErrorCode(
+        "MHVP-CONTR-0002",
+        409,
+        "Freigabe durch eine zweite Person erforderlich",
+        "A deposit settlement cannot be released by the user who created it (four eyes).",
+    )
     # Stammdaten in der Oberfläche (C2, 28.09.2026): maintenance completion.
     PROPERTY_MAINTENANCE_ALREADY_DONE = ErrorCode(
         "MHVP-PROP-0005",

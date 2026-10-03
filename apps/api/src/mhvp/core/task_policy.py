@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from celery.exceptions import SoftTimeLimitExceeded
+from celery.exceptions import Retry, SoftTimeLimitExceeded
 
 from mhvp.core.config import Settings
 
@@ -102,6 +102,23 @@ NETWORK_RETRY_TASKS: frozenset[str] = frozenset(
         "mhvp.metering.run_sync_job",
     }
 )
+
+# Idempotency review of the remaining event triggered tasks (AK05, GAI-317). None of them gets
+# the generic retry: either the task never raises (errors are stored on the row), it claims its
+# row before the work so a retry would only skip, it keeps its own retry, or a repeat could
+# touch money or a bank dialog. A failure is logged with the verdict (``task.failed_no_retry``)
+# so the operator sees that the run is not repeated automatically and must be triggered again.
+NO_RETRY_REVIEWED: Mapping[str, str] = {
+    "mhvp.communication.archive_message": "own_retry",  # self.retry, 3 x 60 s (Gmail labels)
+    "mhvp.communication.suggest_message": "errors_stored",  # suggestion_status failed
+    "mhvp.communication.prepare_mail": "errors_stored",  # suggestion.preparation failed
+    "mhvp.documents.paperless_receipt_intake": "claim_before_work",  # open draft blocks repeat
+    "mhvp.portal.assistant_answer": "claim_before_work",  # job_started_at claim, timeout poll
+    "mhvp.platform.tenant_export": "claim_before_work",  # job_status running before the build
+    "mhvp.platform.tenant_export_job": "claim_before_work",  # status queued checked first
+    "mhvp.banking.compute_proposals": "money",  # runs the auto post runner (L2/L3)
+    "mhvp.banking.fints_step": "bank_dialog",  # TAN dialog step, never repeated blindly
+}
 
 TRANSIENT_ERRORS: tuple[type[BaseException], ...] = (
     ConnectionError,
@@ -220,6 +237,27 @@ def _retry_around(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any
     return around
 
 
+def _no_retry_note_around(
+    name: str, verdict: str
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def around(call: Callable[..., Any]) -> Callable[..., Any]:
+        def noted_call(task: Any, *args: Any, **kwargs: Any) -> Any:
+            try:
+                return call(task, *args, **kwargs)
+            except Retry:
+                raise
+            except Exception as exc:
+                logger.error(
+                    "task.failed_no_retry",
+                    extra={"task": name, "verdict": verdict, "error": type(exc).__name__},
+                )
+                raise
+
+        return noted_call
+
+    return around
+
+
 class TaskPolicyAnnotation:
     """Celery annotation object: resolves limits, lock and retry per task name."""
 
@@ -236,6 +274,8 @@ class TaskPolicyAnnotation:
         result: dict[str, Any] = {"soft_time_limit": limits.soft, "time_limit": limits.hard}
         if name in NETWORK_RETRY_TASKS:
             result["@__call__"] = _retry_around(name)
+        elif name in NO_RETRY_REVIEWED:
+            result["@__call__"] = _no_retry_note_around(name, NO_RETRY_REVIEWED[name])
         elif self.lock_enabled and name in FAST_BEAT_TASKS:
             result["@__call__"] = _lock_around(name, limits.hard + 30, self.redis_url)
         return result

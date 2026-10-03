@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.billing import calc_settings
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.etag import check_if_match, etag_of
@@ -557,7 +558,13 @@ async def calculate_plan(
         if not items:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Planpositionen.")
         result = await calc.plan_results(
-            session, ledger.property_id, items, date(plan.year, 1, 1), date(plan.year, 12, 31)
+            session,
+            ledger.property_id,
+            items,
+            date(plan.year, 1, 1),
+            date(plan.year, 12, 31),
+            # AK01 (GAI-214): tenant switch, default report_only.
+            remainder_mode=(await calc_settings.load(session)).hoa_remainder_mode,
         )
         basis_items = (
             list(
@@ -1649,7 +1656,19 @@ async def get_correction_report_setting(
         return {"enabled": await correction_report_enabled(session), "note": CORRECTION_NOTE}
 
 
-@router.put("/correction-report-settings", summary="Korrekturbericht (Schalter setzen)")
+class HoaCorrectionReportSettingOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    enabled: bool
+    note: str
+
+
+@router.put(
+    "/correction-report-settings",
+    summary="Korrekturbericht (Schalter setzen)",
+    response_model=HoaCorrectionReportSettingOut,
+)
 async def put_correction_report_setting(
     body: HoaCorrectionReportSettingIn,
     request: Request,

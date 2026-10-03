@@ -18,9 +18,14 @@ BUSINESS_TZ = ZoneInfo(BUSINESS_TZ_NAME)
 def local_today(now: datetime | None = None) -> date:
     """Calendar day in ``Europe/Berlin``; ``now`` (aware) allows deterministic tests."""
     moment = now if now is not None else datetime.now(UTC)
-    return moment.astimezone(BUSINESS_TZ).date()
+    return local_date(moment)
 
 
 def local_date(moment: datetime) -> date:
-    """Calendar day of an aware timestamp in the business time zone."""
+    """Calendar day of a timestamp in the business time zone.
+
+    A naive timestamp is read as UTC (internal convention, section 4.1), never as the host's
+    local time, so the result does not depend on the server's TZ setting (AK19-01)."""
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
     return moment.astimezone(BUSINESS_TZ).date()

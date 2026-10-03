@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 
+from mhvp.billing import calc_settings
 from mhvp.contacts.models import Contact, ContactBankAccount, Party, PartyMember
 from mhvp.contacts.services import approval_block_reason, party_for_contact, recompute_for_party
 from mhvp.contacts.validation import mask_iban
@@ -1215,7 +1216,13 @@ async def add_payment(
     async with tenant_tx(request, principal) as session:
         contract = await _get(session, Contract, contract_id)
         await check_catalog(session, "payment_type", body.payment_type_code)
-        svc.check_amounts(body.payment_type_code, body.net, body.vat_percent, body.gross)
+        svc.check_amounts(
+            body.payment_type_code,
+            body.net,
+            body.vat_percent,
+            body.gross,
+            await calc_settings.check_amounts_tolerance(session),
+        )
         await check_ledger_account(
             session, body.revenue_account_id, contract.property_id, "Das Ertragskonto"
         )

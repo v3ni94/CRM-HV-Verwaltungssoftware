@@ -230,7 +230,13 @@ def test_ah04_deposit_settlement_reclass_flow(clients: dict[str, TestClient], wo
     assert (locked.json()["code"], locked.json()["gate"]) == ("MHVP-GATE-0001", "G3")
     gh = bearer(login(g3, world, "ah04admin"))
     assert g3.post(f"/api/v1/deposit-settlements/{sid}/release", headers=other).status_code == 404
-    released_settlement = _ok(g3.post(f"/api/v1/deposit-settlements/{sid}/release", headers=gh))
+    # AK14 (GAI-410): four eyes, the creator of the draft cannot release it (409).
+    own = g3.post(f"/api/v1/deposit-settlements/{sid}/release", headers=gh)
+    assert (own.status_code, own.json()["code"]) == (409, "MHVP-CONTR-0002"), own.text
+    g3_approver = bearer(login(g3, world, "ah04approver"))
+    released_settlement = _ok(
+        g3.post(f"/api/v1/deposit-settlements/{sid}/release", headers=g3_approver)
+    )
     assert released_settlement["status"] == "released"
 
     # Candidate in the ledger of the owner entity (B01), invisible to the foreign tenant.

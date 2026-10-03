@@ -202,3 +202,9 @@ same holds optionally for `sev_fee_debtor_party_id` / `sev_fee_debtor_contact_id
 resolved via `mhvp.contacts.services.party_for_contact` (own single member party, created when
 missing; unknown contact 404). `GET /sepa-mandates?contact_id=` lists the mandates of all parties
 the contact is a member of. The CRM contract form sends `contact_id` and loads mandates this way.
+
+### AK14: four eyes on deposit settlement release (GAI-410)
+
+`POST /deposit-settlements/{id}/release` refuses the release by the user who created the
+draft with 409 `MHVP-CONTR-0002` (product protection, same rule as payment approval).
+Drafts without a recorded creator stay releasable. G3 remains the outer lock.

@@ -30,6 +30,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/accounting/payment-runs", tags=["Buchhaltung"])
@@ -150,6 +151,11 @@ async def create_orders(
 async def create_payout(
     body: PaymentRunPayoutIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> OrderOut:
+    # AK14 (GAI-402, AJ28-02): a payout order is a payment instruction, behind G2 like the
+    # payment batches; checked before any lookup.
+    await ensure_release_gate_open(
+        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
+    )
     async with tenant_tx(request, principal) as session:
         order = await payment_run.order_for_payout(
             session,

@@ -180,3 +180,47 @@ class PrivacyErasureRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     executed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+ACCESS_REQUEST_STATUSES = ("received", "in_progress", "answered", "rejected", "withdrawn")
+ACCESS_REQUEST_OPEN = ("received", "in_progress")
+ACCESS_REQUEST_CHANNELS = ("email", "letter", "portal", "phone", "in_person", "other")
+
+
+class PrivacyAccessRequest(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Intake record of a data subject access request (AK06, GAI-507, migration 0448).
+
+    The record carries the receipt date and the status; the response deadline is computed
+    from the tenant setting ``privacy_request_deadlines.access_days`` which has no default
+    (OPEN_QUESTIONS AJ13-01). Without that setting no due date exists and nothing is
+    entered into the deadline register. Closed requests are kept (evidence), never deleted.
+    """
+
+    __tablename__ = "privacy_access_request"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('received', 'in_progress', 'answered', 'rejected', 'withdrawn')",
+            name="ck_privacy_access_request_status",
+        ),
+        CheckConstraint(
+            "channel IN ('email', 'letter', 'portal', 'phone', 'in_person', 'other')",
+            name="ck_privacy_access_request_channel",
+        ),
+        Index("ix_privacy_access_request_status", "tenant_id", "status", "received_on"),
+        Index("ix_privacy_access_request_contact", "tenant_id", "contact_id"),
+    )
+
+    contact_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id", ondelete="RESTRICT"), nullable=False
+    )
+    received_on: Mapped[date] = mapped_column(Date, nullable=False)
+    channel: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="received", server_default="received"
+    )
+    note: Mapped[str | None] = mapped_column(String(1000))
+    # Access export prepared for this request (``contacts.access_export``, event journal id).
+    export_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    closed_on: Mapped[date | None] = mapped_column(Date)
+    closed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    close_note: Mapped[str | None] = mapped_column(String(1000))

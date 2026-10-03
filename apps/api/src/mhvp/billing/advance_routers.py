@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting.audit_events import record_change
+from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import advance_rule as rule
 from mhvp.billing.models import Statement, StatementSnapshot
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -86,12 +88,23 @@ async def put_rule(
                 ErrorCodes.VALIDATION,
                 detail="Sicherheitsaufschlag oder Behandlung offener Vorauszahlungen angeben.",
             )
+        before = audit_snap(row, ("surcharge_percent", "open_advance_mode"))
         if body.surcharge_percent is not None:
             row.surcharge_percent = body.surcharge_percent
         if body.open_advance_mode is not None:
             row.open_advance_mode = body.open_advance_mode.value
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="advance_rule.updated",
+            entity_type="advance_rule_setting",
+            entity_id=row.id,
+            before=before,
+            after=audit_snap(row, ("surcharge_percent", "open_advance_mode")),
+        )
         return _rule_out(row)
 
 

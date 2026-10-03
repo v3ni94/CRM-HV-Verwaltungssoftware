@@ -221,3 +221,13 @@ Eine ausgegebene oder freigegebene Betriebskostenabrechnung wird nie überschrie
 ## Abrechnung als PDF und Zustellung der Anschreiben (gesperrt)
 
 In der Eigentümerabrechnung steht Abrechnung als PDF, im Abschnitt Anschreiben Anschreiben zustellen. Beide zeigen den Stand der Freigabestufe G3 und bleiben gesperrt, solange G3 geschlossen ist; das PDF zusätzlich bis zur internen Freigabe der Abrechnung. Die Zustellung lehnt die Plattform auch bei offener Freigabestufe ab, bis der Zustellweg freigegeben ist.
+
+## Rechenschalter (Welle 22, AK01)
+
+Unter Einstellungen, Fachliche Regeln stehen drei Rechenschalter, die nur mit Freigaberecht geändert werden können und ausschließlich Rechenentwürfe betreffen (G3 und G4 bleiben geschlossen):
+
+* Negative Heizkostenanteile verteilen: Standard ist "Nicht verteilen, Warnhinweis"; die Alternative verteilt vorzeichengerecht (offene Frage AJ01-01).
+* Hausgeld, Restcent der Monatsraten: Standard ist "Nur ausweisen"; alternativ wird die Rundungsdifferenz im ersten oder letzten Monat ausgeglichen (AJ01-02).
+* Bruttoprüfung, Toleranz in Cent: Standard 1 Cent, alternativ 0 Cent, für Zahlungen im Vertrag und beim Import (AJ02-01).
+
+Jede Änderung wird als Ereignis protokolliert. Die Entscheidung über die Variante trifft die Geschäftsführung.

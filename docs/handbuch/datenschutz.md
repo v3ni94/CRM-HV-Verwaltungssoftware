@@ -58,3 +58,7 @@ Unter Einstellungen, Datenschutz zeigt die Datenschutzübersicht die Einwilligun
 Im Abschnitt Einwilligungsregeln wird festgelegt, ob E-Mail-Zustellung und Datenweitergabe nur mit Einwilligung (Standard) oder auch auf Vertragsgrundlage zulässig sind. Die Änderung ist eine Rechtsentscheidung und wird protokolliert.
 
 Im Abschnitt Umfang der DSGVO-Auskunft lassen sich Vorgänge, Nachrichten und Dokumentbezüge des Kontakts zuschalten. Ausgeschaltet erscheinen sie in der Auskunft nur als Anzahl.
+
+## Auskunftsanträge erfassen und überwachen
+
+Unter Einstellungen, Datenschutz, Auskunftsanträge erfassen Sie den Eingang eines Auskunftsantrags: Kontakt suchen, Eingangsdatum und Eingangsweg wählen, Antrag erfassen. Über die Schaltflächen der Zeile setzen Sie den Status (In Bearbeitung, Beantwortet, Abgelehnt, Zurückgenommen). Eine Frist wird nur angezeigt, wenn unter Fristen für Datenschutzanträge eine Auskunftsfrist hinterlegt ist; dann erscheint der Antrag auch in der Fristenliste. Die Daten sind eine Orientierung und zu prüfen. Die Auskunft selbst bereiten Sie am Kontakt über den Auskunftsexport vor. Unter Umfang der DSGVO-Auskunft können Portalkonto mit Anmeldungen, Zahlungsdaten und Vertragsdaten zugeschaltet werden (Standard aus, Rechtsfrage AC07-01).

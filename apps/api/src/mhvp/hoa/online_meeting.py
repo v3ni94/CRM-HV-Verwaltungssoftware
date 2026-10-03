@@ -204,7 +204,29 @@ async def get_online_setting(
         return setting_out(await online_enabled(session), await proxy_conflict_mode(session))
 
 
-@router.put("/online-meeting-settings", summary="Online-Versammlung im Portal setzen")
+class HoaOnlineModeOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    code: str
+    label: str
+
+
+class HoaOnlineSettingOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    enabled: bool
+    proxy_conflict_mode: str
+    proxy_conflict_modes: list[HoaOnlineModeOut]
+    note: str
+
+
+@router.put(
+    "/online-meeting-settings",
+    summary="Online-Versammlung im Portal setzen",
+    response_model=HoaOnlineSettingOut,
+)
 async def put_online_setting(
     body: HoaOnlineSettingIn,
     request: Request,

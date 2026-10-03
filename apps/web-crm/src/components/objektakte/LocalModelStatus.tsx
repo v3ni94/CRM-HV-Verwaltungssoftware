@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Status = { enabled: boolean; version: string | null; artifact: Record<string, unknown> | null };
 
@@ -15,6 +16,7 @@ export function LocalModelStatus({ canPropose }: { canPropose: boolean }) {
   const [caseId, setCaseId] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { busy, guard } = useBusy();
 
   useEffect(() => {
     void bff<Status>("/api/bff/objektakte/local-model").then((res) => {
@@ -23,13 +25,13 @@ export function LocalModelStatus({ canPropose }: { canPropose: boolean }) {
     });
   }, []);
 
-  const propose = async () => {
+  const propose = guard(async () => {
     setError(null);
     setResult(null);
     const res = await bff<Record<string, unknown>>(`/api/bff/objektakte/local-model/cases/${caseId.trim()}/propose`, { method: "POST", body: "{}" });
     if (!res.ok) return setError(res.message);
     setResult(JSON.stringify(res.data));
-  };
+  });
 
   return (
     <section className={ui.card} aria-label={t("modelTitle")}>
@@ -57,7 +59,7 @@ export function LocalModelStatus({ canPropose }: { canPropose: boolean }) {
             <span className={ui.label}>{t("caseId")}</span>
             <input className={ui.input} value={caseId} onChange={(e) => setCaseId(e.target.value)} />
           </label>
-          <button type="submit" className={ui.buttonSm} disabled={!caseId.trim()}>
+          <button type="submit" className={ui.buttonSm} disabled={busy || !caseId.trim()}>
             {t("propose")}
           </button>
         </form>

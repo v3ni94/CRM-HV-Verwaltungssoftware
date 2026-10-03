@@ -43,3 +43,4 @@ apps/web-crm/.e2e-auth.json
 
 # KoSIT validator downloaded by scripts/kosit_fetch.sh (make kosit-fetch)
 .cache/
+coverage/

@@ -70,6 +70,13 @@ VALID_BODIES: dict[str, dict[str, Any]] = {
     "/api/v1/hoa/reserve-statements/{reserve_statement_id}/transition": {"target": "issued"},
     "/api/v1/letting/rent-increases/{case_id}/letter/pdf": {"dispatch": {"channel": "portal"}},
     "/api/v1/letting/rent-increases/{case_id}/actions": {"action": "send"},
+    "/api/v1/accounting/payment-runs/payout-orders": {
+        "open_item_id": _U,
+        "contact_bank_account_id": _U,
+        "property_bank_account_id": _U,
+        "execution_date": "2026-09-30",
+        "reason": "owner_payout",
+    },
 }
 
 # Routes whose gate check is reached only after a record or configuration exists (lookup

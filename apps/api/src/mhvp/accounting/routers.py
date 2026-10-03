@@ -35,6 +35,7 @@ from mhvp.accounting import (
     xrechnung_credit,
 )
 from mhvp.accounting import services as svc
+from mhvp.accounting.audit_events import record_change, snap
 from mhvp.accounting.chart_rules import account_range_problem
 from mhvp.accounting.models import (
     AccountCategory,
@@ -323,8 +324,26 @@ async def get_ledger(
         return LedgerOut.model_validate(await _ledger(session, ledger_id))
 
 
+class AccountingSyncDebtorsOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    created: int
+
+
+class AccountingLockOut(BaseModel):
+    """AK11 (GAI-304): typed response of the period lock."""
+
+    model_config = ConfigDict(extra="allow")
+    locked_until: date
+    drafts_in_locked_period: int
+    unclarified_bank_movements: int
+
+
 @router.post(
-    "/ledgers/{ledger_id}/sync-debtors", summary="Debitorenkonten aus Verträgen übernehmen"
+    "/ledgers/{ledger_id}/sync-debtors",
+    summary="Debitorenkonten aus Verträgen übernehmen",
+    response_model=AccountingSyncDebtorsOut,
 )
 async def sync_debtors(
     ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -335,7 +354,9 @@ async def sync_debtors(
         }
 
 
-@router.post("/ledgers/{ledger_id}/lock", summary="Festschreiben bis Datum")
+@router.post(
+    "/ledgers/{ledger_id}/lock", summary="Festschreiben bis Datum", response_model=AccountingLockOut
+)
 async def lock(
     ledger_id: uuid.UUID,
     body: LockIn,
@@ -627,7 +648,18 @@ async def create_account(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Kontonummer bereits vergeben."
             ) from None
-        return AccountOut.model_validate(account)
+        out = AccountOut.model_validate(account)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="ledger_account.created",
+            entity_type="ledger_account",
+            entity_id=account.id,
+            before={},
+            after=out.model_dump(mode="json"),
+        )
+        return out
 
 
 @router.patch(
@@ -644,11 +676,23 @@ async def patch_account(
         account = await _get(session, LedgerAccount, account_id)
         if account.ledger_id != ledger_id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = AccountOut.model_validate(account).model_dump(mode="json")
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(account, key, value)
         account.updated_by = principal.user_id
         await session.flush()
-        return AccountOut.model_validate(account)
+        out = AccountOut.model_validate(account)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="ledger_account.updated",
+            entity_type="ledger_account",
+            entity_id=account.id,
+            before=before,
+            after=out.model_dump(mode="json"),
+        )
+        return out
 
 
 @router.delete(
@@ -675,7 +719,18 @@ async def delete_account(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Konten mit Buchungen können nur deaktiviert werden."
             )
+        before = AccountOut.model_validate(account).model_dump(mode="json")
         await session.delete(account)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="ledger_account.deleted",
+            entity_type="ledger_account",
+            entity_id=account_id,
+            before=before,
+            after={},
+        )
 
 
 # Entries ------------------------------------------------------------------------------
@@ -719,7 +774,18 @@ async def create_entry(
         await svc.write_draft(
             session, ledger, entry, _lines(body), [s.model_dump() for s in body.settlements]
         )
-        return await _out(session, entry)
+        created = await _out(session, entry)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="journal_entry.draft_created",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            before={},
+            after=created.model_dump(mode="json"),
+        )
+        return created
 
 
 @router.put("/ledgers/{ledger_id}/entries/{entry_id}", summary="Entwurf ersetzen")
@@ -739,6 +805,7 @@ async def update_entry(
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Stornos entstehen nur über die Stornofunktion."
             )
+        before = (await _out(session, entry)).model_dump(mode="json")
         for key, value in body.model_dump(
             exclude={"lines", "settlements", "idempotency_key"}
         ).items():
@@ -747,7 +814,18 @@ async def update_entry(
         await svc.write_draft(
             session, ledger, entry, _lines(body), [s.model_dump() for s in body.settlements]
         )
-        return await _out(session, entry)
+        updated = await _out(session, entry)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="journal_entry.draft_updated",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            before=before,
+            after=updated.model_dump(mode="json"),
+        )
+        return updated
 
 
 @router.delete(
@@ -788,7 +866,19 @@ async def delete_entry(
                 InterestTaxWithholding.journal_entry_id == entry.id
             )
         )
+        # AK02 (GAI-307): the removed draft stays visible in the event log.
+        before = (await _out(session, entry)).model_dump(mode="json")
         await session.delete(entry)
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="journal_entry.draft_deleted",
+            entity_type="journal_entry",
+            entity_id=entry_id,
+            before=before,
+            after={},
+        )
 
 
 @router.get(
@@ -1689,6 +1779,7 @@ async def set_mapping(
                 PaymentTypeAccount.payment_type_code == body.payment_type_code,
             )
         )
+        before = snap(row, ("payment_type_code", "account_id"))
         if row is None:
             row = PaymentTypeAccount(
                 tenant_id=principal.tenant_id, ledger_id=ledger.id, **body.model_dump()
@@ -1697,6 +1788,16 @@ async def set_mapping(
         else:
             row.account_id = body.account_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="payment_type_account.updated",
+            entity_type="ledger",
+            entity_id=ledger.id,
+            before=before,
+            after=snap(row, ("payment_type_code", "account_id")),
+        )
         return {"payment_type_code": row.payment_type_code, "account_id": row.account_id}
 
 
@@ -1894,6 +1995,16 @@ async def create_fee(
         row = AdminFeeSetting(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
         session.add(row)
         await session.flush()
+        await record_change(  # AK02 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="admin_fee.created",
+            entity_type="admin_fee_setting",
+            entity_id=row.id,
+            before={},
+            after=snap(row, sorted(data)),
+        )
         # Lexware Office (INT-LEXO-01): prepare the recurring invoice (API is read only for
         # recurring templates, so a checklist for the manual creation); never fails the fee.
         from mhvp.integrations.lexoffice_ext import invoice_drafts as lexoffice_drafts
@@ -2831,6 +2942,16 @@ async def create_plan(
         )
         session.add(plan)
         await session.flush()
+        await record_change(  # AK02 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="recurring_invoice_plan.created",
+            entity_type="recurring_invoice_plan",
+            entity_id=plan.id,
+            before={},
+            after=snap(plan, sorted({*body.model_dump(), "next_due"})),
+        )
         return {"id": plan.id, "next_due": plan.next_due}
 
 
@@ -3149,6 +3270,18 @@ async def list_dunning_overrides(
         ]
 
 
+_DUNNING_AUDIT_FIELDS = (
+    "property_id",
+    "levels",
+    "threshold_amount",
+    "fee_from_level",
+    "interest_enabled",
+    "interest_base_rate",
+    "interest_spread",
+    "default_start_mode",
+)
+
+
 @router.put("/dunning-settings", summary="Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins")
 async def put_dunning_settings(
     body: DunningSettingsIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -3175,6 +3308,7 @@ async def put_dunning_settings(
                 detail="Eine Objektüberschreibung braucht mindestens einen eigenen Wert.",
             )
         row = await dunning.settings_row(session, body.property_id)
+        before = snap(row, _DUNNING_AUDIT_FIELDS)
         if row is None:
             row = DunningSettings(tenant_id=principal.tenant_id, property_id=body.property_id)
             session.add(row)
@@ -3201,6 +3335,16 @@ async def put_dunning_settings(
                     "(halbjährlich zu pflegen, kein Wert hinterlegt bis Eingabe)."
                 ),
             )
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_settings.updated",
+            entity_type="dunning_settings",
+            entity_id=row.id,
+            before=before,
+            after=snap(row, _DUNNING_AUDIT_FIELDS),
+        )
         return _dunning_settings_out(eff, body.property_id)
 
 
@@ -3216,8 +3360,20 @@ async def delete_dunning_override(
         row = await dunning.settings_row(session, property_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = {**snap(row, _DUNNING_AUDIT_FIELDS), "property_id": str(property_id)}
+        row_id = row.id
         await session.delete(row)
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_settings.override_deleted",
+            entity_type="dunning_settings",
+            entity_id=row_id,
+            before=before,
+            after={},
+        )
     return Response(status_code=204)
 
 
@@ -3237,6 +3393,7 @@ async def post_dunning_settings_presets(
                 detail="Zuerst die Mandantenvorgabe anlegen, dann Objekte überschreiben.",
             )
         row = await dunning.settings_row(session, body.property_id)
+        before = snap(row, _DUNNING_AUDIT_FIELDS)
         if row is None:
             row = DunningSettings(tenant_id=principal.tenant_id, property_id=body.property_id)
             session.add(row)
@@ -3249,6 +3406,16 @@ async def post_dunning_settings_presets(
         if body.interest_profile:
             row.interest_spread = Decimal(dunning.interest_spread_presets()[body.interest_profile])
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_settings.presets_loaded",
+            entity_type="dunning_settings",
+            entity_id=row.id,
+            before=before,
+            after=snap(row, _DUNNING_AUDIT_FIELDS),
+        )
         eff = dunning.resolve(
             tenant_row if body.property_id is not None else row,
             row if body.property_id is not None else None,
@@ -3589,6 +3756,31 @@ async def dunning_interest_draft(
         }
 
 
+class AccountingDunningBlockOut(BaseModel):
+    """AK11 (GAI-304): typed response of a dunning block per open item."""
+
+    model_config = ConfigDict(extra="allow")
+    id: uuid.UUID
+    open_item_id: uuid.UUID
+    reason_code: str
+    reason_label: str | None = None
+    note: str | None = None
+    active: bool
+    created_by: uuid.UUID | None = None
+    created_at: datetime | None = None
+    released_at: datetime | None = None
+    released_by: uuid.UUID | None = None
+
+
+class AccountingOpenItemNoticeOut(BaseModel):
+    """AK11 (GAI-304): typed response of the notice receipt (no amounts)."""
+
+    model_config = ConfigDict(extra="allow")
+    id: uuid.UUID
+    due_date: date | None = None
+    notice_received_on: date | None = None
+
+
 def _block_out(block: Any) -> dict[str, Any]:
     return {
         "id": block.id,
@@ -3608,6 +3800,7 @@ def _block_out(block: Any) -> dict[str, Any]:
     "/open-items/{open_item_id}/dunning-blocks",
     status_code=201,
     summary="Mahnsperre je Posten setzen (Ratenplan, bestritten, Aufrechnung, Prozess, Insolvenz)",
+    response_model=AccountingDunningBlockOut,
 )
 async def dunning_block_create(
     open_item_id: uuid.UUID,
@@ -3629,6 +3822,16 @@ async def dunning_block_create(
         )
         session.add(block)
         await session.flush()
+        await record_change(  # AK02 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_block.created",
+            entity_type="dunning_item_block",
+            entity_id=block.id,
+            before={},
+            after=snap(block, ("open_item_id", "reason_code", "note")),
+        )
         return _block_out(block)
 
 
@@ -3656,7 +3859,11 @@ async def dunning_block_list(
         return [_block_out(b) for b in (await session.scalars(query.limit(500))).all()]
 
 
-@router.post("/dunning-blocks/{block_id}/release", summary="Mahnsperre je Posten aufheben")
+@router.post(
+    "/dunning-blocks/{block_id}/release",
+    summary="Mahnsperre je Posten aufheben",
+    response_model=AccountingDunningBlockOut,
+)
 async def dunning_block_release(
     block_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
@@ -3670,10 +3877,21 @@ async def dunning_block_release(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if block.released_at is not None:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Die Sperre ist bereits aufgehoben.")
+        before = snap(block, ("released_at", "released_by"))
         block.released_at = datetime.now(UTC)
         block.released_by = principal.user_id
         block.updated_by = principal.user_id
         await session.flush()
+        await record_change(  # AK02 (GAI-307)
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_block.released",
+            entity_type="dunning_item_block",
+            entity_id=block.id,
+            before=before,
+            after=snap(block, ("released_at", "released_by")),
+        )
         return _block_out(block)
 
 
@@ -3739,6 +3957,16 @@ async def dunning_interest_rate_create(
         )
         session.add(rate)
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="dunning_interest_rate.created",
+            entity_type="dunning_interest_rate",
+            entity_id=rate.id,
+            before={},
+            after=snap(rate, ("valid_from", "base_rate", "source")),
+        )
         return _rate_out(rate)
 
 
@@ -3767,6 +3995,7 @@ async def dunning_mark_sent(
 @router.patch(
     "/open-items/{open_item_id}/notice-received",
     summary="Zugang der Zahlungsaufforderung beim Schuldner erfassen (Verzugsmodus M16-03)",
+    response_model=AccountingOpenItemNoticeOut,
 )
 async def open_item_notice_received(
     open_item_id: uuid.UUID,
@@ -3778,8 +4007,19 @@ async def open_item_notice_received(
         item = await session.get(OpenItem, open_item_id, with_for_update=True)
         if item is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = snap(item, ("notice_received_on",))
         item.notice_received_on = body.notice_received_on
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="open_item.notice_received_set",
+            entity_type="open_item",
+            entity_id=item.id,
+            before=before,
+            after=snap(item, ("notice_received_on",)),
+        )
         return {
             "id": item.id,
             "due_date": item.due_date,

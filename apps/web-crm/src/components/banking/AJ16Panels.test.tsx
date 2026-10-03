@@ -71,14 +71,14 @@ describe("PaymentBatchBankStatus (GAI-404)", () => {
     expect(screen.queryByTestId("batch-bank-status")).toBeNull();
   });
 
-  it("offers no execution or return status and posts the feedback", async () => {
+  it("offers all statuses and posts the feedback without loading the gate", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse([{ id: "o1" }, { id: "o2" }]));
     vi.stubGlobal("fetch", fetchMock);
     const onDone = vi.fn();
     renderIntl(<PaymentBatchBankStatus batchId={ID} canApprove onDone={onDone} />);
     await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung erfassen" }));
     const options = screen.getAllByRole("option").map((o) => o.getAttribute("value"));
-    expect(options).toEqual(["submitted", "accepted_by_bank", "rejected"]);
+    expect(options).toEqual(["submitted", "accepted_by_bank", "rejected", "executed", "returned"]);
     await userEvent.click(screen.getByRole("button", { name: "Erfassen" }));
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/bff/banking/payment-batches/${ID}/bank-status`);
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ status: "accepted_by_bank", reason: null });
@@ -91,6 +91,59 @@ describe("PaymentBatchBankStatus (GAI-404)", () => {
     renderIntl(<PaymentBatchBankStatus batchId={ID} canApprove />);
     await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung erfassen" }));
     await userEvent.selectOptions(screen.getByLabelText("Rückmeldung der Bank"), "rejected");
+    expect(screen.getByRole("button", { name: "Erfassen" })).toBeDisabled();
+  });
+});
+
+describe("PaymentBatchBankStatus booking statuses (AK16, GAI-404)", () => {
+  const gates = (open: boolean) => jsonResponse([{ gate: "G2", label: "Zahlungsauslösung", open, scopes: [] }]);
+
+  it("locks execution while G2 is closed and shows the booking effect", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(gates(false));
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<PaymentBatchBankStatus batchId={ID} canApprove />);
+    await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung erfassen" }));
+    await userEvent.selectOptions(screen.getByLabelText("Rückmeldung der Bank"), "executed");
+    expect(await screen.findByText(/Achtung, Buchungswirkung/)).toBeInTheDocument();
+    expect(screen.getByText(/Vier Augen/)).toBeInTheDocument();
+    expect(await screen.findByText(/gesperrt, bis die Freigabestufe G2/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Bankumsatz (ID, bei Ausführung Pflicht)"), "tx-1");
+    expect(screen.getByRole("button", { name: "Erfassen" })).toBeDisabled();
+    expect(fetchMock.mock.calls.every((c) => String(c[0]).includes("release-gates"))).toBe(true);
+  });
+
+  it("treats a failed gate lookup as closed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("x", { status: 500 })));
+    renderIntl(<PaymentBatchBankStatus batchId={ID} canApprove />);
+    await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung erfassen" }));
+    await userEvent.selectOptions(screen.getByLabelText("Rückmeldung der Bank"), "returned");
+    await userEvent.type(screen.getByLabelText("Grund (bei Ablehnung und Rückgabe Pflicht)"), "Konto erloschen");
+    await waitFor(() => expect(screen.getByTestId("gate-status-G2")).toHaveAttribute("data-gate-open", "false"));
+    expect(screen.getByRole("button", { name: "Erfassen" })).toBeDisabled();
+  });
+
+  it("posts execution with the bank transaction once G2 is open", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(gates(true)).mockResolvedValueOnce(jsonResponse([{ id: "o1" }]));
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<PaymentBatchBankStatus batchId={ID} canApprove />);
+    await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung erfassen" }));
+    await userEvent.selectOptions(screen.getByLabelText("Rückmeldung der Bank"), "executed");
+    const button = screen.getByRole("button", { name: "Erfassen" });
+    expect(button).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Bankumsatz (ID, bei Ausführung Pflicht)"), "tx-1");
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    const post = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/bank-status"));
+    expect(JSON.parse(post?.[1]?.body as string)).toEqual({ status: "executed", reason: null, bank_transaction_id: "tx-1" });
+    expect(await screen.findByText("Rückmeldung erfasst, betroffene Aufträge: 1.")).toBeInTheDocument();
+  });
+
+  it("requires a reason for a return", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(gates(true)));
+    renderIntl(<PaymentBatchBankStatus batchId={ID} canApprove />);
+    await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung erfassen" }));
+    await userEvent.selectOptions(screen.getByLabelText("Rückmeldung der Bank"), "returned");
+    await waitFor(() => expect(screen.getByTestId("gate-status-G2")).toHaveAttribute("data-gate-open", "true"));
     expect(screen.getByRole("button", { name: "Erfassen" })).toBeDisabled();
   });
 });

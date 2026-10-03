@@ -195,7 +195,20 @@ async def get_plan_change_setting(
         return {"mode": await plan_change_mode(session), "modes": MODES, "note": PLAN_CHANGE_NOTE}
 
 
-@router.put("/plan-change-settings", summary="Variante der unterjährigen Planänderung setzen")
+class HoaPlanChangeSettingOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    mode: str
+    modes: list[str]
+    note: str
+
+
+@router.put(
+    "/plan-change-settings",
+    summary="Variante der unterjährigen Planänderung setzen",
+    response_model=HoaPlanChangeSettingOut,
+)
 async def put_plan_change_setting(
     body: HoaPlanChangeSettingIn,
     request: Request,

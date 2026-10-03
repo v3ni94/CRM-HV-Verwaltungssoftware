@@ -56,7 +56,11 @@ export default async function AiSettingsPage() {
       <AiAutomationSwitches />
       <FastTableImportSwitch />
       <EmbeddingsStatus initial={null} />
-      <KnowledgeSettings initial={knowledge.data ?? []} properties={propertyOptions} />
+      <KnowledgeSettings
+        initial={knowledge.data ?? []}
+        properties={propertyOptions}
+        canFeedback={me.data?.permissions.includes("ai:create") ?? false}
+      />
     </div>
   );
 }

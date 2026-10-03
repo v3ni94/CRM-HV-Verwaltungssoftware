@@ -5,6 +5,7 @@ import { problemJson } from "@/lib/problem";
 import { COOKIE, cookieOptions, writeTokens } from "@/lib/session";
 
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../../_shared";
+import { forwardedForHeaders } from "@/lib/forwarded-for";
 
 /** Login step 2: TOTP code (optionally with tenant_id). Sets the session cookies. */
 export async function POST(request: Request): Promise<Response> {
@@ -24,7 +25,10 @@ export async function POST(request: Request): Promise<Response> {
         tenant_id: tenantId,
         remember_device: rememberDevice,
       },
-      headers: { "user-agent": request.headers.get("user-agent") ?? "" },
+      headers: {
+        "user-agent": request.headers.get("user-agent") ?? "",
+        ...forwardedForHeaders(request.headers),
+      },
     });
     if (!data) return relayProblem(response.status, error);
     const secure = secureOf(request);

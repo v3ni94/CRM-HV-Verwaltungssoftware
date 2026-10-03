@@ -24,7 +24,12 @@ from mhvp.core.listparams import strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import Tenant, TenantSettings
 from mhvp.privacy import config_sources
-from mhvp.privacy.models import PrivacyErasureRequest, PrivacyRegisterEntry
+from mhvp.privacy.models import (
+    ACCESS_REQUEST_OPEN,
+    PrivacyAccessRequest,
+    PrivacyErasureRequest,
+    PrivacyRegisterEntry,
+)
 
 router = APIRouter(tags=["Datenschutz"])
 READ = require_permission("privacy:read")
@@ -116,7 +121,7 @@ class PrivacyDeadlinesOut(PrivacyDeadlinesIn):
 
 
 class PrivacyDeadlineItemOut(BaseModel):
-    kind: Literal["erasure"]
+    kind: Literal["erasure", "access"]
     request_id: str
     contact_id: str
     status: str
@@ -207,9 +212,9 @@ def deadline_state(
 async def monitor_deadlines(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> PrivacyDeadlineListOut:
-    """Open erasure requests with warn and due date computed from the tenant setting. Access
-    requests have no intake record yet (schema need, AJ13 open point), so they are not listed.
-    Dates are an orientation to be verified, never a legal calculation."""
+    """Open erasure and access requests with warn and due date computed from the tenant
+    setting (access requests since migration 0448, AK06). Dates are an orientation to be
+    verified, never a legal calculation."""
     today = local_today()
     async with tenant_tx(request, principal) as session:
         row = await session.scalar(select(TenantSettings))
@@ -234,8 +239,28 @@ async def monitor_deadlines(
                     state=state,
                 )
             )
+        # AK06 (GAI-507): access requests have an intake record since migration 0448.
+        access = await session.scalars(
+            select(PrivacyAccessRequest)
+            .where(PrivacyAccessRequest.status.in_(ACCESS_REQUEST_OPEN))
+            .order_by(PrivacyAccessRequest.received_on, PrivacyAccessRequest.id)
+        )
+        for a in access:
+            warn, due, state = deadline_state(a.received_on, cfg.access_days, cfg.warn_days, today)
+            items.append(
+                PrivacyDeadlineItemOut(
+                    kind="access",
+                    request_id=str(a.id),
+                    contact_id=str(a.contact_id),
+                    status=a.status,
+                    received_on=a.received_on,
+                    warn_on=warn,
+                    due_on=due,
+                    state=state,
+                )
+            )
     return PrivacyDeadlineListOut(
-        settings=cfg, today=today, items=items, access_requests_tracked=False
+        settings=cfg, today=today, items=items, access_requests_tracked=True
     )
 
 

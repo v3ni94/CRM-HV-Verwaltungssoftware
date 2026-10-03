@@ -642,6 +642,9 @@ class ContactAccessExportSettingsOut(BaseModel):
     include_tickets: bool = False
     include_communication: bool = False
     include_documents: bool = False
+    include_portal_account: bool = False
+    include_payments: bool = False
+    include_contracts: bool = False
 
 
 class ContactAccessExportSettingsIn(_Strict):
@@ -651,3 +654,7 @@ class ContactAccessExportSettingsIn(_Strict):
     include_tickets: bool | None = None
     include_communication: bool | None = None
     include_documents: bool | None = None
+    # AK06 (GAI-506): portal account, payment and contract data; None keeps the stored value.
+    include_portal_account: bool | None = None
+    include_payments: bool | None = None
+    include_contracts: bool | None = None

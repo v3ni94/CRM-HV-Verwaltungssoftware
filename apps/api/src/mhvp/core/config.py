@@ -164,6 +164,15 @@ class Settings(BaseSettings):
     webauthn_rp_name: str = "MH Verwaltungsplattform"
     webauthn_origins: list[str] = Field(default_factory=list)
 
+    # Request body limits per path group (GAI-315, core/body_limit.py): checked on
+    # Content-Length and while streaming (chunked) before multipart parsing. Defaults lie above
+    # the largest endpoint limits (500 MiB ZIP uploads, 1 MiB inbound mail), so endpoints keep
+    # their own 413 for valid sizes; the operator may lower them (edge proxy alignment).
+    body_limit_enabled: bool = True
+    body_limit_upload_bytes: int = Field(default=600 * 1024 * 1024, gt=0, le=8 * 1024**3)
+    body_limit_webhook_bytes: int = Field(default=2 * 1024 * 1024, gt=0, le=64 * 1024 * 1024)
+    body_limit_default_bytes: int = Field(default=100 * 1024 * 1024, gt=0, le=4 * 1024**3)
+
     rate_limit_enabled: bool = True
     rate_limit_per_minute_user: int = Field(default=600, ge=1)
     rate_limit_per_minute_anonymous: int = Field(default=120, ge=1)
@@ -175,6 +184,9 @@ class Settings(BaseSettings):
     # GAI-312: when Redis is unavailable, anonymous token and code routes are counted by an
     # in-process emergency counter instead of passing unlimited. Default off (fail open).
     rate_limit_token_routes_fail_closed: bool = False
+    # GAI-309/312: anonymous calls per token path (self disclosure, calendar feed) and minute,
+    # counted across all client addresses so a distributed attempt on one token is bounded.
+    rate_limit_per_minute_token_path: int = Field(default=20, ge=1)
     # WebAuthn option endpoints (W01-01): each call stores a challenge in Redis, so they get a
     # tighter limit per client address and per user inside a fixed window.
     webauthn_options_limit_per_ip: int = Field(default=60, ge=1)

@@ -12,9 +12,26 @@ export type AccessExportSettingsData = {
   include_tickets?: boolean;
   include_communication?: boolean;
   include_documents?: boolean;
+  include_portal_account?: boolean;
+  include_payments?: boolean;
+  include_contracts?: boolean;
 };
-type SourceKey = "include_tickets" | "include_communication" | "include_documents";
-const SOURCE_KEYS: SourceKey[] = ["include_tickets", "include_communication", "include_documents"];
+type SourceKey =
+  | "include_tickets"
+  | "include_communication"
+  | "include_documents"
+  | "include_portal_account"
+  | "include_payments"
+  | "include_contracts";
+const SOURCE_KEYS: SourceKey[] = [
+  "include_tickets",
+  "include_communication",
+  "include_documents",
+  // AK06 (GAI-506): portal account, payment and contract data, off by default.
+  "include_portal_account",
+  "include_payments",
+  "include_contracts",
+];
 
 /** Umfang der DSGVO-Auskunft je Mandant (AE33, AC07-01). Standard: andere Personen nur mit
  *  Rolle, interne Vermerke zurückgehalten. Die Rechtsfrage ist offen; der Umfang wird beim
@@ -28,6 +45,9 @@ export function AccessExportSettings({ initial, canEdit }: { initial: AccessExpo
     include_tickets: initial.include_tickets ?? false,
     include_communication: initial.include_communication ?? false,
     include_documents: initial.include_documents ?? false,
+    include_portal_account: initial.include_portal_account ?? false,
+    include_payments: initial.include_payments ?? false,
+    include_contracts: initial.include_contracts ?? false,
   });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

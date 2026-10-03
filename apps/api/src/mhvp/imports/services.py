@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai.imports import Recorder, create_contact, create_party
 from mhvp.ai.models import ImportRun
+from mhvp.billing import calc_settings
 from mhvp.contacts import schemas as cs
 from mhvp.contacts.models import Contact, Party, PartyMember
 from mhvp.contracts import schemas as contract_schemas
@@ -433,7 +434,9 @@ async def _apply_payment(
         )
     net = (gross / (1 + rate / 100)).quantize(CENT)
     try:
-        contract_services.check_amounts(code, net, rate, gross)
+        contract_services.check_amounts(
+            code, net, rate, gross, await calc_settings.check_amounts_tolerance(session)
+        )
         row = ContractPayment(
             tenant_id=principal.tenant_id,
             contract_id=contract.id,

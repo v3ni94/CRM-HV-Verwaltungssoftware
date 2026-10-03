@@ -43,3 +43,13 @@ Unten auf der Detailseite steht das Ereignisprotokoll des Datensatzes: Zeitpunkt
 Wert vorher, Wert nachher und Benutzer. Die Schaltfläche CSV exportieren lädt das Protokoll
 als Datei (Trennzeichen Semikolon, UTF-8). Das Protokoll setzt die Berechtigung
 Änderungsprotokoll lesen (`audit:read`) voraus; ohne sie erscheint ein Hinweis.
+
+## Brotkrümelnavigation
+
+Auf Detail- und Unterseiten zeigt der Seitenkopf oberhalb der Überschrift den Pfad zur aktuellen
+Seite, getrennt durch Schrägstriche, zum Beispiel "Einstellungen / Textbausteine". Die
+Bestandteile mit Link führen eine Ebene zurück, der letzte Eintrag (aktuelle Seite) ist kein
+Link. Die Leiste ist für Screenreader als Navigation "Brotkrümelnavigation" ausgewiesen und
+bricht auf schmalen Bildschirmen in mehrere Zeilen um. Seiten ohne übergeordnete Ebene zeigen
+keine Leiste. Der Pfad ersetzt weder die Befehlspalette noch die globale Suche; er dient der
+Orientierung und dem schnellen Rückweg (Komponente `PageHeader`).

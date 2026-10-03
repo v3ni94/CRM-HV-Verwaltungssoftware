@@ -1177,6 +1177,37 @@
     {
      "t": "p",
      "text": "In der Eigentümerabrechnung steht Abrechnung als PDF, im Abschnitt Anschreiben Anschreiben zustellen. Beide zeigen den Stand der Freigabestufe G3 und bleiben gesperrt, solange G3 geschlossen ist; das PDF zusätzlich bis zur internen Freigabe der Abrechnung. Die Zustellung lehnt die Plattform auch bei offener Freigabestufe ab, bis der Zustellweg freigegeben ist."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Rechenschalter (Welle 22, AK01)",
+     "id": "rechenschalter-welle-22-ak01"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Fachliche Regeln stehen drei Rechenschalter, die nur mit Freigaberecht geändert werden können und ausschließlich Rechenentwürfe betreffen (G3 und G4 bleiben geschlossen):"
+    },
+    {
+     "t": "ul",
+     "items": [
+      {
+       "depth": 0,
+       "text": "Negative Heizkostenanteile verteilen: Standard ist \"Nicht verteilen, Warnhinweis\"; die Alternative verteilt vorzeichengerecht (offene Frage AJ01-01)."
+      },
+      {
+       "depth": 0,
+       "text": "Hausgeld, Restcent der Monatsraten: Standard ist \"Nur ausweisen\"; alternativ wird die Rundungsdifferenz im ersten oder letzten Monat ausgeglichen (AJ01-02)."
+      },
+      {
+       "depth": 0,
+       "text": "Bruttoprüfung, Toleranz in Cent: Standard 1 Cent, alternativ 0 Cent, für Zahlungen im Vertrag und beim Import (AJ02-01)."
+      }
+     ]
+    },
+    {
+     "t": "p",
+     "text": "Jede Änderung wird als Ereignis protokolliert. Die Entscheidung über die Variante trifft die Geschäftsführung."
     }
    ]
   },
@@ -6632,6 +6663,16 @@
        "text": "Auszahlung ohne Rechnung: Unter Bank, Zahllauf legt die Maske Auszahlung ohne Rechnung einen Zahlungsauftrag als Entwurf an. Eine Begründung aus der Liste ist Pflicht; ohne Begründung bleibt Entwurf anlegen gesperrt. Die Maske ist gesperrt, solange die Freigabestufe G2 geschlossen ist, und der Entwurf braucht danach die Freigabe einer zweiten Person."
       }
      ]
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Bankrückmeldung: Ausgeführt und Zurückgegeben (GAI-404, Welle 22)",
+     "id": "bankrueckmeldung-ausgefuehrt-und-zurueckgegeben-gai-404-welle-22"
+    },
+    {
+     "t": "p",
+     "text": "Unter Bank, Zahlungen bietet Bankrückmeldung erfassen zusätzlich die Status Ausgeführt und Zurückgegeben. Beide haben Buchungswirkung: Ausgeführt gleicht die Verbindlichkeit in Höhe der Belastung aus und verlangt die ID des Bankumsatzes als Nachweis, Zurückgegeben storniert diesen Ausgleich (Grund ist Pflicht) und öffnet die Verbindlichkeit wieder. Gebuchte Werte werden nie überschrieben. Die Maske zeigt den Stand der Freigabestufe G2; solange G2 für den Mandanten nicht offen ist oder der Stand nicht geladen werden kann, ist Erfassen gesperrt. Erfassen Sie Ausführung oder Rückgabe nur mit dem Bankbeleg und lassen Sie die Buchung von einer zweiten Person prüfen (Vier Augen). Der Import der Bankrückmeldung bleibt der bevorzugte Weg."
     }
    ]
   },
@@ -8160,6 +8201,16 @@
     {
      "t": "p",
      "text": "Im Mahnfall mit Status Vorgeschlagen steht die Schaltfläche Mahnschreiben versenden mit dem Stand der Freigabestufe G1. Solange G1 geschlossen ist, bleibt sie gesperrt; auch bei offener Freigabestufe lehnt die Plattform den Versand ab, bis der Versandweg freigegeben ist. Bis dahin wird das Schreiben außerhalb der Plattform versendet und mit Als versendet markieren dokumentiert."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Filter in Offenen Posten, Mahnläufen und WEG Liste",
+     "id": "filter-in-offenen-posten-mahnlaeufen-und-weg-liste"
+    },
+    {
+     "t": "p",
+     "text": "Die Liste der Offenen Posten lässt sich je Sachkonto eingrenzen, die Mahnläufe nach Status und Laufdatum, die WEG Liste nach Verwaltungsart (WEG oder WEG mit SEV). Die Auswahl steht in der Adresszeile des Browsers, die Ansicht lässt sich daher als Lesezeichen speichern oder weitergeben. Über \"Filter speichern\" legt jeder Benutzer eigene Ansichten ab, die nur für ihn sichtbar sind."
     }
    ]
   },
@@ -8300,6 +8351,16 @@
     {
      "t": "p",
      "text": "Im Abschnitt Umfang der DSGVO-Auskunft lassen sich Vorgänge, Nachrichten und Dokumentbezüge des Kontakts zuschalten. Ausgeschaltet erscheinen sie in der Auskunft nur als Anzahl."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Auskunftsanträge erfassen und überwachen",
+     "id": "auskunftsantraege-erfassen-und-ueberwachen"
+    },
+    {
+     "t": "p",
+     "text": "Unter Einstellungen, Datenschutz, Auskunftsanträge erfassen Sie den Eingang eines Auskunftsantrags: Kontakt suchen, Eingangsdatum und Eingangsweg wählen, Antrag erfassen. Über die Schaltflächen der Zeile setzen Sie den Status (In Bearbeitung, Beantwortet, Abgelehnt, Zurückgenommen). Eine Frist wird nur angezeigt, wenn unter Fristen für Datenschutzanträge eine Auskunftsfrist hinterlegt ist; dann erscheint der Antrag auch in der Fristenliste. Die Daten sind eine Orientierung und zu prüfen. Die Auskunft selbst bereiten Sie am Kontakt über den Auskunftsexport vor. Unter Umfang der DSGVO-Auskunft können Portalkonto mit Anmeldungen, Zahlungsdaten und Vertragsdaten zugeschaltet werden (Standard aus, Rechtsfrage AC07-01)."
     }
    ]
   },
@@ -14115,6 +14176,16 @@
     {
      "t": "p",
      "text": "In der Mailansicht startet \"Als Rechnung vorschlagen (KI)\" neben einem PDF Anhang einen Extraktionslauf (Recht Buchhaltung anlegen, nur bei freigegebener KI). Das Ergebnis ist ein Vorschlag, die Rechnung entsteht erst nach Prüfung und Freigabe durch eine Person."
+    },
+    {
+     "t": "h",
+     "level": 3,
+     "text": "Filter in der Adresszeile",
+     "id": "filter-in-der-adresszeile"
+    },
+    {
+     "t": "p",
+     "text": "Status, Suche, Postfach und Abgleichstand der Nachrichtenliste stehen in der Adresszeile (zusätzlich zu Reiter, Seite und \"Erledigte anzeigen\"). Eine so aufgerufene Ansicht lässt sich als Lesezeichen speichern oder weitergeben; ungültige Werte werden ignoriert."
     }
    ]
   },
@@ -17259,6 +17330,16 @@
     {
      "t": "p",
      "text": "Unten auf der Detailseite steht das Ereignisprotokoll des Datensatzes: Zeitpunkt, Feld, Wert vorher, Wert nachher und Benutzer. Die Schaltfläche CSV exportieren lädt das Protokoll als Datei (Trennzeichen Semikolon, UTF-8). Das Protokoll setzt die Berechtigung Änderungsprotokoll lesen (`audit:read`) voraus; ohne sie erscheint ein Hinweis."
+    },
+    {
+     "t": "h",
+     "level": 2,
+     "text": "Brotkrümelnavigation",
+     "id": "brotkruemelnavigation"
+    },
+    {
+     "t": "p",
+     "text": "Auf Detail- und Unterseiten zeigt der Seitenkopf oberhalb der Überschrift den Pfad zur aktuellen Seite, getrennt durch Schrägstriche, zum Beispiel \"Einstellungen / Textbausteine\". Die Bestandteile mit Link führen eine Ebene zurück, der letzte Eintrag (aktuelle Seite) ist kein Link. Die Leiste ist für Screenreader als Navigation \"Brotkrümelnavigation\" ausgewiesen und bricht auf schmalen Bildschirmen in mehrere Zeilen um. Seiten ohne übergeordnete Ebene zeigen keine Leiste. Der Pfad ersetzt weder die Befehlspalette noch die globale Suche; er dient der Orientierung und dem schnellen Rückweg (Komponente `PageHeader`)."
     }
    ]
   },

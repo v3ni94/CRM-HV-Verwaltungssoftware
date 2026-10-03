@@ -63,6 +63,11 @@ services:
     volumes:
       - ../apps/api/src:/app/src:ro
 
+  worker-heavy:
+    <<: *api-build
+    volumes:
+      - ../apps/api/src:/app/src:ro
+
   beat:
     <<: *api-build
     volumes:

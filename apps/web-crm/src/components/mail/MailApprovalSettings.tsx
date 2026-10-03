@@ -29,11 +29,13 @@ function DeputiesSection({
   members,
   currentUserId,
   canUpdate,
+  canManageDeputies,
 }: {
   initial: MailApprovalDeputy[];
   members: DeputyMember[];
   currentUserId: string | null;
   canUpdate: boolean;
+  canManageDeputies: boolean;
 }) {
   const t = useTranslations("MailApprovalSettings.deputy");
   const [rows, setRows] = useState(initial);
@@ -103,7 +105,7 @@ function DeputiesSection({
               })}
               {row.note ? ` (${row.note})` : ""}
             </span>
-            {canUpdate || row.absent_user_id === currentUserId ? (
+            {canManageDeputies && (canUpdate || row.absent_user_id === currentUserId) ? (
               <button type="button" className={ui.secondary} disabled={busy} onClick={() => void remove(row.id)}>
                 {t("revoke")}
               </button>
@@ -111,61 +113,63 @@ function DeputiesSection({
           </li>
         ))}
       </ul>
-      <form onSubmit={create} className="flex flex-col gap-2">
-        {canUpdate ? (
+      {canManageDeputies ? (
+        <form onSubmit={create} className="flex flex-col gap-2">
+          {canUpdate ? (
+            <label className={ui.label}>
+              {t("absentUser")}
+              <select className={ui.input} required value={absentUserId} onChange={(e) => setAbsentUserId(e.target.value)}>
+                <option value="" disabled>
+                  {t("selectMember")}
+                </option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className={ui.label}>
-            {t("absentUser")}
-            <select className={ui.input} required value={absentUserId} onChange={(e) => setAbsentUserId(e.target.value)}>
+            {t("deputyUser")}
+            <select className={ui.input} required value={deputyUserId} onChange={(e) => setDeputyUserId(e.target.value)}>
               <option value="" disabled>
                 {t("selectMember")}
               </option>
-              {members.map((m) => (
-                <option key={m.user_id} value={m.user_id}>
-                  {m.display_name}
-                </option>
-              ))}
+              {members
+                .filter((m) => m.user_id !== (canUpdate ? absentUserId : currentUserId))
+                .map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name}
+                  </option>
+                ))}
             </select>
           </label>
-        ) : null}
-        <label className={ui.label}>
-          {t("deputyUser")}
-          <select className={ui.input} required value={deputyUserId} onChange={(e) => setDeputyUserId(e.target.value)}>
-            <option value="" disabled>
-              {t("selectMember")}
-            </option>
-            {members
-              .filter((m) => m.user_id !== (canUpdate ? absentUserId : currentUserId))
-              .map((m) => (
-                <option key={m.user_id} value={m.user_id}>
-                  {m.display_name}
-                </option>
-              ))}
-          </select>
-        </label>
-        <label className={ui.label}>
-          {t("startsAt")}
-          <input
-            className={ui.input}
-            type="datetime-local"
-            required
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-          />
-        </label>
-        <label className={ui.label}>
-          {t("endsAt")}
-          <input className={ui.input} type="datetime-local" required value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
-        </label>
-        <label className={ui.label}>
-          {t("note")}
-          <input className={ui.input} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-        </label>
-        <div className={ui.formActions}>
-          <button type="submit" className={ui.primary} disabled={busy}>
-            {t("create")}
-          </button>
-        </div>
-      </form>
+          <label className={ui.label}>
+            {t("startsAt")}
+            <input
+              className={ui.input}
+              type="datetime-local"
+              required
+              value={startsAt}
+              onChange={(e) => setStartsAt(e.target.value)}
+            />
+          </label>
+          <label className={ui.label}>
+            {t("endsAt")}
+            <input className={ui.input} type="datetime-local" required value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+          </label>
+          <label className={ui.label}>
+            {t("note")}
+            <input className={ui.input} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
+          </label>
+          <div className={ui.formActions}>
+            <button type="submit" className={ui.primary} disabled={busy}>
+              {t("create")}
+            </button>
+          </div>
+        </form>
+      ) : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
@@ -181,12 +185,16 @@ export function MailApprovalSettings({
   deputies,
   members,
   currentUserId,
+  canManageDeputies = false,
 }: {
   initial: MailApprovalMode;
   canUpdate: boolean;
   deputies: MailApprovalDeputy[];
   members: DeputyMember[];
   currentUserId: string | null;
+  /** GAI-301: creating and revoking deputies needs communication:update (API answers 403
+   *  otherwise); without it the list stays read only. */
+  canManageDeputies?: boolean;
 }) {
   const t = useTranslations("MailApprovalSettings");
   const [mode, setMode] = useState<MailApprovalMode>(initial);
@@ -239,7 +247,7 @@ export function MailApprovalSettings({
             {error}
           </p>
         ) : null}
-        <DeputiesSection initial={deputies} members={members} currentUserId={currentUserId} canUpdate={canUpdate} />
+        <DeputiesSection initial={deputies} members={members} currentUserId={currentUserId} canUpdate={canUpdate} canManageDeputies={canManageDeputies} />
       </div>
     </section>
   );

@@ -319,17 +319,18 @@ def test_preview_bulk_orders_limits_and_separation(
         if i["kind"] == "payable"
     )
     contact = _ok(client.get(f"/api/v1/contacts/{provider}", headers=h))
-    refused = client.post(
-        f"{P}/payout-orders",
-        json={
-            "open_item_id": item["id"],
-            "contact_bank_account_id": contact["bank_accounts"][0]["id"],
-            "property_bank_account_id": bank,
-            "execution_date": today.isoformat(),
-            "reason": "owner_payout",
-        },
-        headers=h,
-    )
+    payout = {
+        "open_item_id": item["id"],
+        "contact_bank_account_id": contact["bank_accounts"][0]["id"],
+        "property_bank_account_id": bank,
+        "execution_date": today.isoformat(),
+        "reason": "owner_payout",
+    }
+    # AK14 (GAI-402): payout orders are payment instructions behind G2.
+    locked = client.post(f"{P}/payout-orders", json=payout, headers=h)
+    assert locked.status_code == 403, locked.text
+    assert (locked.json()["code"], locked.json()["gate"]) == ("MHVP-GATE-0001", "G2")
+    refused = gated.post(f"{P}/payout-orders", json=payout, headers=gh)
     assert refused.status_code == 409, refused.text
     bad_reason = client.post(
         f"{P}/payout-orders",
@@ -468,7 +469,7 @@ def test_direct_debit_feedback_lead_days_and_report(
 def test_payout_without_invoice_and_weekly_preview(
     clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
 ) -> None:
-    client, _ = clients
+    closed, client = clients  # AK14 (GAI-402): payout orders need G2 open.
     ctx = _dd_setup(client, world, "863")
     h, bank, ledger = ctx["h"], ctx["bank"], ctx["ledger"]
     reader = bearer(login(client, world, "prreader"))
@@ -519,6 +520,9 @@ def test_payout_without_invoice_and_weekly_preview(
         "reason": "statement_credit",
     }
     assert client.post(f"{P}/payout-orders", json=body, headers=reader).status_code == 403
+    closed_h = bearer(login(closed, world, "pracc"))
+    locked = closed.post(f"{P}/payout-orders", json=body, headers=closed_h)
+    assert (locked.status_code, locked.json()["gate"]) == (403, "G2")
     deposit = client.post(
         f"{P}/payout-orders", json={**body, "reason": "deposit_refund"}, headers=h
     )

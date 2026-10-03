@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting.audit_events import record_change
+from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.accounting.models import AccountCategory, ChartTemplate, LedgerAccount
 from mhvp.billing import betrkv
 from mhvp.billing.models import Statement, StatementCostItem
@@ -114,9 +116,20 @@ async def map_account(
                 ErrorCodes.VALIDATION,
                 detail=f"Unbekannte Katalogposition {body.operating_cost_type}.",
             )
+        before = audit_snap(account, ("operating_cost_type",))
         account.operating_cost_type = body.operating_cost_type
         account.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="ledger_account.operating_cost_type_changed",
+            entity_type="ledger_account",
+            entity_id=account.id,
+            before=before,
+            after=audit_snap(account, ("operating_cost_type",)),
+        )
         return _account_out(account, None)
 
 

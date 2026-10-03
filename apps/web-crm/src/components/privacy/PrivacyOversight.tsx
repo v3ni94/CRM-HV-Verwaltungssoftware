@@ -23,7 +23,7 @@ type Deadlines = {
   configured: boolean;
 };
 type DeadlineItem = {
-  kind: "erasure";
+  kind: "erasure" | "access";
   request_id: string;
   contact_id: string;
   status: string;
@@ -176,7 +176,7 @@ export function PrivacyOversight({ canApprove }: { canApprove: boolean }) {
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {items.map((i) => (
               <li key={i.request_id}>
-                {t("deadlines.item", {
+                {t(i.kind === "access" ? "deadlines.itemAccess" : "deadlines.item", {
                   received: formatDate(i.received_on),
                   warn: formatDate(i.warn_on),
                   due: formatDate(i.due_on),

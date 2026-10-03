@@ -310,6 +310,14 @@ services:
       <<: [*s3-env, *scan-env]
       MHVP_ENV: ${MHVP_ENV:-prod}
 
+  # Profile "worker-heavy" from compose.yaml (GAI-319): second worker for ai, ocr and bank.
+  # In production the finer profile "split-workers" above is preferred; never run both.
+  worker-heavy:
+    <<: [*prod, *api-image]
+    environment:
+      <<: [*s3-env, *scan-env]
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
   beat:
     <<: [*prod, *api-image]
     environment:

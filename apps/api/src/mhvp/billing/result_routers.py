@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting.audit_events import record_change
+from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import letters as tenant_letters
 from mhvp.billing import results
 from mhvp.billing.models import (
@@ -198,6 +200,16 @@ async def _item(
     return st, item
 
 
+_COST_ITEM_AUDIT_FIELDS = (
+    "statement_id",
+    "label",
+    "account_id",
+    "amount",
+    "allocation_key_id",
+    "external_amounts",
+)
+
+
 @router.put("/{statement_id}/cost-items/{item_id}", summary="Kostenposition im Entwurf ändern")
 async def update_item(
     statement_id: uuid.UUID,
@@ -208,11 +220,22 @@ async def update_item(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         _, item = await _item(session, statement_id, item_id)
+        before = audit_snap(item, _COST_ITEM_AUDIT_FIELDS)
         for field, value in body.model_dump(exclude={"external_amounts"}).items():
             setattr(item, field, value)
         item.external_amounts = {k: str(v) for k, v in body.external_amounts.items()}
         item.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement_cost_item.updated",
+            entity_type="statement_cost_item",
+            entity_id=item.id,
+            before=before,
+            after=audit_snap(item, _COST_ITEM_AUDIT_FIELDS),
+        )
         return {"id": item.id}
 
 
@@ -229,8 +252,19 @@ async def delete_item(
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         _, item = await _item(session, statement_id, item_id)
+        before = audit_snap(item, _COST_ITEM_AUDIT_FIELDS)
         await session.delete(item)
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement_cost_item.deleted",
+            entity_type="statement_cost_item",
+            entity_id=item_id,
+            before=before,
+            after={},
+        )
     return Response(status_code=204)
 
 
@@ -427,6 +461,20 @@ async def list_inspections(
         return [_inspection_out(r) for r in rows]
 
 
+_INSPECTION_AUDIT_FIELDS = (
+    "statement_id",
+    "contract_id",
+    "status",
+    "provision",
+    "provided_at",
+    "document_ids",
+    "redaction_note",
+    "objection_received_at",
+    "objection_text",
+    "note",
+)
+
+
 @router.post(
     "/{statement_id}/inspections", status_code=201, summary="Belegeinsicht: Anfrage erfassen"
 )
@@ -451,6 +499,16 @@ async def create_inspection(
         )
         session.add(row)
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement_inspection.created",
+            entity_type="statement_inspection",
+            entity_id=row.id,
+            before={},
+            after=audit_snap(row, _INSPECTION_AUDIT_FIELDS),
+        )
         return _inspection_out(row)
 
 
@@ -472,6 +530,7 @@ async def patch_inspection(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if row.status == "closed":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Die Anfrage ist abgeschlossen.")
+        before = audit_snap(row, _INSPECTION_AUDIT_FIELDS)
         if body.provision is not None or body.provided_at is not None:
             if body.provision is None or body.provided_at is None:
                 raise ProblemError(
@@ -505,4 +564,14 @@ async def patch_inspection(
             row.status = "closed"
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement_inspection.updated",
+            entity_type="statement_inspection",
+            entity_id=row.id,
+            before=before,
+            after=audit_snap(row, _INSPECTION_AUDIT_FIELDS),
+        )
         return _inspection_out(row)

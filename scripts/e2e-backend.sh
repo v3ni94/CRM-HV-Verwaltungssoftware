@@ -100,7 +100,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for _ in $(seq 1 60); do
+# Startup takes longer on a loaded machine; MHVP_E2E_API_WAIT (seconds, default 60) widens it.
+for _ in $(seq 1 "${MHVP_E2E_API_WAIT:-60}"); do
   if curl -fsS "http://127.0.0.1:${API_PORT}/api/v1/health/live" >/dev/null 2>&1; then break; fi
   if ! kill -0 "$API_PID" 2>/dev/null; then echo "API exited, see $LOG" >&2; cat "$LOG" >&2; exit 1; fi
   sleep 1

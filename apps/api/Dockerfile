@@ -30,6 +30,9 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 mhvp \
     && useradd --system --uid 10001 --gid mhvp --no-create-home --home-dir /app mhvp
+# Beat schedule directory (GAI-319): compose mounts the named volume beat-schedule here; a
+# fresh named volume takes over owner and mode of this directory, so beat (uid 10001) can write.
+RUN mkdir -p /var/lib/mhvp/beat && chown mhvp:mhvp /var/lib/mhvp/beat
 WORKDIR /app
 # The project is installed editable into the venv, so /app/src is the import location
 # (compose.dev.yaml bind mounts it for --reload).

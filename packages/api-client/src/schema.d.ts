@@ -7313,6 +7313,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/calculation-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rechenschalter: negative Heizkosten, Restcent Hausgeld, Bruttotoleranz */
+        get: operations["get_calc_settings_api_v1_billing_calculation_settings_get"];
+        /** Rechenschalter setzen (Freigaberecht, nur Rechenentwurf) */
+        put: operations["put_calc_settings_api_v1_billing_calculation_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/deadline-settings": {
         parameters: {
             query?: never;
@@ -24052,6 +24070,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/privacy/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auskunftsanträge (Art. 15) mit Eingang, Status und Frist */
+        get: operations["list_access_requests_api_v1_privacy_access_requests_get"];
+        put?: never;
+        /** Auskunftsantrag erfassen (Eingang) */
+        post: operations["create_access_request_api_v1_privacy_access_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/privacy/access-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auskunftsantrag */
+        get: operations["get_access_request_api_v1_privacy_access_requests__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/privacy/access-requests/{request_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Status eines Auskunftsantrags setzen (in Bearbeitung, beantwortet, abgelehnt) */
+        post: operations["set_access_request_status_api_v1_privacy_access_requests__request_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/privacy/consent-overview": {
         parameters: {
             query?: never;
@@ -24380,9 +24450,9 @@ export interface paths {
         };
         /**
          * Fristenüberwachung offener Datenschutzanträge (Eingang, Vorfrist, Frist)
-         * @description Open erasure requests with warn and due date computed from the tenant setting. Access
-         *     requests have no intake record yet (schema need, AJ13 open point), so they are not listed.
-         *     Dates are an orientation to be verified, never a legal calculation.
+         * @description Open erasure and access requests with warn and due date computed from the tenant
+         *     setting (access requests since migration 0448, AK06). Dates are an orientation to be
+         *     verified, never a legal calculation.
          */
         get: operations["monitor_deadlines_api_v1_privacy_request_deadlines_monitor_get"];
         put?: never;
@@ -29930,6 +30000,40 @@ export interface components {
             /** Linked */
             linked: number;
         };
+        /**
+         * AccountingDunningBlockOut
+         * @description AK11 (GAI-304): typed response of a dunning block per open item.
+         */
+        AccountingDunningBlockOut: {
+            /** Active */
+            active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Open Item Id
+             * Format: uuid
+             */
+            open_item_id: string;
+            /** Reason Code */
+            reason_code: string;
+            /** Reason Label */
+            reason_label?: string | null;
+            /** Released At */
+            released_at?: string | null;
+            /** Released By */
+            released_by?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AccountingEntryNoteIn */
         AccountingEntryNoteIn: {
             /** Body */
@@ -30141,6 +30245,50 @@ export interface components {
              * Format: date
              */
             valid_from: string;
+        };
+        /**
+         * AccountingLockOut
+         * @description AK11 (GAI-304): typed response of the period lock.
+         */
+        AccountingLockOut: {
+            /** Drafts In Locked Period */
+            drafts_in_locked_period: number;
+            /**
+             * Locked Until
+             * Format: date
+             */
+            locked_until: string;
+            /** Unclarified Bank Movements */
+            unclarified_bank_movements: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * AccountingOpenItemNoticeOut
+         * @description AK11 (GAI-304): typed response of the notice receipt (no amounts).
+         */
+        AccountingOpenItemNoticeOut: {
+            /** Due Date */
+            due_date?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notice Received On */
+            notice_received_on?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * AccountingSyncDebtorsOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        AccountingSyncDebtorsOut: {
+            /** Created */
+            created: number;
+        } & {
+            [key: string]: unknown;
         };
         /** AccountsIn */
         AccountsIn: {
@@ -32432,6 +32580,33 @@ export interface components {
         BatchIn: {
             /** Order Ids */
             order_ids: string[];
+        };
+        /** BillingCalcSettingsIn */
+        BillingCalcSettingsIn: {
+            /** Check Amounts Tolerance Cents */
+            check_amounts_tolerance_cents?: (0 | 1) | null;
+            /** Heating Negative Costs Mode */
+            heating_negative_costs_mode?: ("legacy_warn" | "distribute") | null;
+            /** Hoa Remainder Mode */
+            hoa_remainder_mode?: ("report_only" | "first_month" | "last_month") | null;
+        };
+        /** BillingCalcSettingsOut */
+        BillingCalcSettingsOut: {
+            /**
+             * Check Amounts Tolerance Cents
+             * @enum {integer}
+             */
+            check_amounts_tolerance_cents: 0 | 1;
+            /**
+             * Heating Negative Costs Mode
+             * @enum {string}
+             */
+            heating_negative_costs_mode: "legacy_warn" | "distribute";
+            /**
+             * Hoa Remainder Mode
+             * @enum {string}
+             */
+            hoa_remainder_mode: "report_only" | "first_month" | "last_month";
         };
         /** BillingDeadlineSettingIn */
         BillingDeadlineSettingIn: {
@@ -34863,6 +35038,8 @@ export interface components {
         ContactAccessExportSettingsIn: {
             /** Include Communication */
             include_communication?: boolean | null;
+            /** Include Contracts */
+            include_contracts?: boolean | null;
             /** Include Documents */
             include_documents?: boolean | null;
             /**
@@ -34870,6 +35047,10 @@ export interface components {
              * @default false
              */
             include_internal_notes: boolean;
+            /** Include Payments */
+            include_payments?: boolean | null;
+            /** Include Portal Account */
+            include_portal_account?: boolean | null;
             /** Include Tickets */
             include_tickets?: boolean | null;
             /**
@@ -34890,12 +35071,27 @@ export interface components {
              */
             include_communication: boolean;
             /**
+             * Include Contracts
+             * @default false
+             */
+            include_contracts: boolean;
+            /**
              * Include Documents
              * @default false
              */
             include_documents: boolean;
             /** Include Internal Notes */
             include_internal_notes: boolean;
+            /**
+             * Include Payments
+             * @default false
+             */
+            include_payments: boolean;
+            /**
+             * Include Portal Account
+             * @default false
+             */
+            include_portal_account: boolean;
             /**
              * Include Tickets
              * @default false
@@ -40798,10 +40994,32 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * HoaCircularSwitchOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        HoaCircularSwitchOut: {
+            /** Enabled */
+            enabled: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** HoaCorrectionReportSettingIn */
         HoaCorrectionReportSettingIn: {
             /** Enabled */
             enabled: boolean;
+        };
+        /**
+         * HoaCorrectionReportSettingOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        HoaCorrectionReportSettingOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Note */
+            note: string;
+        } & {
+            [key: string]: unknown;
         };
         /** HoaCostIn */
         HoaCostIn: {
@@ -40863,12 +41081,40 @@ export interface components {
             /** Resolution Id */
             resolution_id?: string | null;
         };
+        /**
+         * HoaOnlineModeOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        HoaOnlineModeOut: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** HoaOnlineSettingIn */
         HoaOnlineSettingIn: {
             /** Enabled */
             enabled: boolean;
             /** Proxy Conflict Mode */
             proxy_conflict_mode?: string | null;
+        };
+        /**
+         * HoaOnlineSettingOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        HoaOnlineSettingOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Note */
+            note: string;
+            /** Proxy Conflict Mode */
+            proxy_conflict_mode: string;
+            /** Proxy Conflict Modes */
+            proxy_conflict_modes: components["schemas"]["HoaOnlineModeOut"][];
+        } & {
+            [key: string]: unknown;
         };
         /** HoaPlanChangeSettingIn */
         HoaPlanChangeSettingIn: {
@@ -40877,6 +41123,20 @@ export interface components {
              * @enum {string}
              */
             mode: "notice" | "due_now" | "next_instalment";
+        };
+        /**
+         * HoaPlanChangeSettingOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        HoaPlanChangeSettingOut: {
+            /** Mode */
+            mode: string;
+            /** Modes */
+            modes: string[];
+            /** Note */
+            note: string;
+        } & {
+            [key: string]: unknown;
         };
         /** HoaPlanIn */
         HoaPlanIn: {
@@ -40940,6 +41200,18 @@ export interface components {
         HoaPortalCircularSettingIn: {
             /** Enabled */
             enabled: boolean;
+        };
+        /**
+         * HoaPortalCircularSettingOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        HoaPortalCircularSettingOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Note */
+            note: string;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * HoaReserveIn
@@ -48744,6 +49016,26 @@ export interface components {
             /** Value */
             value: number | string;
         };
+        /**
+         * PortalNoticeReadOut
+         * @description AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields.
+         */
+        PortalNoticeReadOut: {
+            /**
+             * Notice Id
+             * Format: uuid
+             */
+            notice_id: string;
+            /** Read */
+            read: boolean;
+            /**
+             * Read At
+             * Format: date-time
+             */
+            read_at: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** PortalProposalIn */
         PortalProposalIn: {
             /** Note */
@@ -49122,6 +49414,79 @@ export interface components {
          * @enum {string}
          */
         Priority: "low" | "normal" | "high" | "urgent" | "immediate";
+        /** PrivacyAccessRequestIn */
+        PrivacyAccessRequestIn: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "letter" | "portal" | "phone" | "in_person" | "other";
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Received On
+             * Format: date
+             */
+            received_on: string;
+        };
+        /** PrivacyAccessRequestOut */
+        PrivacyAccessRequestOut: {
+            /** Channel */
+            channel: string;
+            /** Close Note */
+            close_note: string | null;
+            /** Closed On */
+            closed_on: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contact Name */
+            contact_name: string | null;
+            /** Due On */
+            due_on: string | null;
+            /** Export Id */
+            export_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Received On
+             * Format: date
+             */
+            received_on: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "unconfigured" | "ok" | "warn" | "overdue" | "closed";
+            /** Status */
+            status: string;
+            /** Warn On */
+            warn_on: string | null;
+        };
+        /** PrivacyAccessRequestStatusIn */
+        PrivacyAccessRequestStatusIn: {
+            /** Export Id */
+            export_id?: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "in_progress" | "answered" | "rejected" | "withdrawn";
+        };
         /** PrivacyConfigSourceOut */
         PrivacyConfigSourceOut: {
             /** Active */
@@ -49197,9 +49562,9 @@ export interface components {
             due_on: string | null;
             /**
              * Kind
-             * @constant
+             * @enum {string}
              */
-            kind: "erasure";
+            kind: "erasure" | "access";
             /**
              * Received On
              * Format: date
@@ -59209,9 +59574,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDunningBlockOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -62349,9 +62712,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingLockOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -63388,9 +63749,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: number;
-                    };
+                    "application/json": components["schemas"]["AccountingSyncDebtorsOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -63547,9 +63906,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingDunningBlockOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -63589,9 +63946,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AccountingOpenItemNoticeOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -73790,6 +74145,66 @@ export interface operations {
                     "application/json": {
                         [key: string]: boolean;
                     };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    get_calc_settings_api_v1_billing_calculation_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingCalcSettingsOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    put_calc_settings_api_v1_billing_calculation_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCalcSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingCalcSettingsOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -85555,9 +85970,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: boolean;
-                    };
+                    "application/json": components["schemas"]["HoaCircularSwitchOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -85658,9 +86071,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HoaCorrectionReportSettingOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -87982,9 +88393,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HoaOnlineSettingOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -88046,9 +88455,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HoaPlanChangeSettingOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -88612,9 +89019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HoaPortalCircularSettingOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -111418,9 +111823,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["PortalNoticeReadOut"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -113667,6 +114070,153 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    list_access_requests_api_v1_privacy_access_requests_get: {
+        parameters: {
+            query?: {
+                status?: ("received" | "in_progress" | "answered" | "rejected" | "withdrawn") | null;
+                open_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyAccessRequestOut"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    create_access_request_api_v1_privacy_access_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyAccessRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyAccessRequestOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    get_access_request_api_v1_privacy_access_requests__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyAccessRequestOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    set_access_request_status_api_v1_privacy_access_requests__request_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyAccessRequestStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyAccessRequestOut"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
         };
     };

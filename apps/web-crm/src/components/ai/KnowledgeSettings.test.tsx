@@ -69,4 +69,14 @@ describe("KnowledgeSettings", () => {
     await act(async () => {});
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("shows feedback buttons on approved entries only with ai:create (GAI-301)", () => {
+    const approved = { ...entry, status: "approved" } as unknown as KnowledgeEntry;
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse([approved])));
+    const { unmount } = renderIntl(<KnowledgeSettings initial={[approved]} properties={[]} canFeedback />);
+    expect(screen.getAllByRole("button", { name: "Hilfreich" }).length).toBeGreaterThan(0);
+    unmount();
+    renderIntl(<KnowledgeSettings initial={[approved]} properties={[]} canFeedback={false} />);
+    expect(screen.queryByRole("button", { name: "Hilfreich" })).not.toBeInTheDocument();
+  });
 });

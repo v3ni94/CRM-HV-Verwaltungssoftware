@@ -16,8 +16,16 @@ token and code routes (``TOKEN_ROUTE_PREFIXES``) are counted by an in-process em
 counter while Redis is unavailable, so a Redis outage does not lift the limit for routes that
 check secrets. The counter is per worker process (with n workers the effective limit is up to
 n times the configured one); it is a fallback, not a replacement of the Redis counter.
+
+GAI-309/312 (AK04): anonymous requests to routes with the token in the path
+(``TOKEN_PATH_PREFIXES``: self disclosure, calendar feed) are additionally counted per route
+and token (key ``rl:tok:<sha256 of the path>``, the token itself never reaches Redis or the
+log) with ``rate_limit_per_minute_token_path``, independent of the client address. The
+emergency counter covers this key as well. A self disclosure link accepts one submission only
+(``submitted_at``); this limit bounds the attempts per token.
 """
 
+import hashlib
 import time
 
 from redis.asyncio import Redis
@@ -42,6 +50,12 @@ TOKEN_ROUTE_PREFIXES = (
     "/api/v1/letting/self-disclosure/",
     "/api/v1/workspace/calendar-feed/",
 )
+# AK04: routes whose path carries the token; counted per route and token as well.
+TOKEN_PATH_PREFIXES = (
+    "/api/v1/letting/self-disclosure/",
+    "/api/v1/workspace/calendar-feed/",
+)
+_TOKEN_PATH_EXCLUDED = ("/api/v1/workspace/calendar-feed/token",)
 _LOCAL_MAX_KEYS = 10_000
 _local_window = [0]
 _local_counts: dict[str, int] = {}
@@ -101,12 +115,27 @@ class RateLimitMiddleware:
         now = int(time.time())
         window = now - now % WINDOW_SECONDS
         reset = window + WINDOW_SECONDS - now
+        token_key: str | None = None
+        token_limit = int(getattr(settings, "rate_limit_per_minute_token_path", 20))
+        if (
+            identity is None
+            and path.startswith(TOKEN_PATH_PREFIXES)
+            and path not in _TOKEN_PATH_EXCLUDED
+        ):
+            token_key = "tok:" + hashlib.sha256(path.encode()).hexdigest()[:32]
         redis: Redis = app.state.resources.redis
+        token_count = 0
         try:
             async with redis.pipeline(transaction=True) as pipe:
                 pipe.incr(f"rl:{subject}:{window}")
                 pipe.expire(f"rl:{subject}:{window}", WINDOW_SECONDS * 2)
-                count = int((await pipe.execute())[0])
+                if token_key is not None:
+                    pipe.incr(f"rl:{token_key}:{window}")
+                    pipe.expire(f"rl:{token_key}:{window}", WINDOW_SECONDS * 2)
+                results = await pipe.execute()
+                count = int(results[0])
+                if token_key is not None:
+                    token_count = int(results[2])
         except (RedisError, OSError):
             _log.warning("ratelimit_unavailable", path=path)
             if not (
@@ -117,8 +146,12 @@ class RateLimitMiddleware:
                 await self.app(scope, receive, send)
                 return
             count = _local_incr(f"rl:{subject}:{window}", window)
+            if token_key is not None:
+                token_count = _local_incr(f"rl:{token_key}:{window}", window)
 
         headers = _headers(limit, limit - count, reset)
+        if token_key is not None and token_count > token_limit:
+            count = max(count, limit + 1)
         if count > limit:
             headers["Retry-After"] = str(reset)
             response = problem_response(

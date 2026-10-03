@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting.audit_events import record_change
+from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import calc, results, services
 from mhvp.billing.models import (
     Statement,
@@ -215,6 +217,17 @@ async def add_item(
         )
         session.add(item)
         await session.flush()
+        # AK02 (GAI-307): new cost positions of a statement draft stay traceable.
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="statement_cost_item.created",
+            entity_type="statement_cost_item",
+            entity_id=item.id,
+            before={},
+            after=audit_snap(item, ("statement_id", "label", "account_id", "amount")),
+        )
         return {"id": item.id}
 
 

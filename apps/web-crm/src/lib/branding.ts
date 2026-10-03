@@ -4,8 +4,8 @@
  * The layout loads `GET /api/v1/tenant/branding` (BFF allow list: tenant/branding) and sets the
  * colours as CSS variables, but only when the tenant switch `branding.crm_apply` is on (default
  * off, so the neutral product look stays unless the tenant decides otherwise). Colours count only
- * as valid #RRGGBB values; everything else is ignored, nothing is invented. The logo is not
- * applied yet (open point AJ31: logo route needs a binary BFF path).
+ * as valid #RRGGBB values; everything else is ignored, nothing is invented. The logo comes through the binary BFF
+ * path tenant/branding/logo/{variant} under the same switch (AK15).
  */
 
 export type CrmBranding = {
@@ -71,4 +71,10 @@ export function crmBrandingCssVars(branding: CrmBranding): Record<string, string
     vars["--mhvp-color-accent-fg"] = readableOn(branding.accentColor);
   }
   return vars;
+}
+
+/** Logo of the shell: the tenant logo through the BFF only while the switch is on and a light
+ *  logo exists (GAI-109, AK15), otherwise the given neutral product logo. */
+export function crmBrandingLogoSrc(branding: CrmBranding, fallback: string): string {
+  return branding.apply && branding.hasLogoLight ? "/api/bff/tenant/branding/logo/light" : fallback;
 }

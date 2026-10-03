@@ -20,9 +20,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import numbering, receivables
+from mhvp.accounting.audit_events import record_change, snap
 from mhvp.accounting.models import AdminFeeInvoice, AdminFeeInvoiceStatus, AdminFeeSetting
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.listparams import strict_query
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -361,6 +362,7 @@ async def patch_fee(
         for key in ("interval", "vat_percent", "amounts_per_unit_type"):
             if key in data and data[key] is None:
                 del data[key]  # not nullable
+        before = snap(row, sorted(data))  # AK02 (GAI-307): old values for the audit row
         for key, value in data.items():
             setattr(row, key, value)
         if (
@@ -381,6 +383,7 @@ async def patch_fee(
             entity_id=row.id,
             actor_user_id=principal.user_id,
             payload={"fields": sorted(data)},
+            changes=diff(before, snap(row, sorted(data))),
         )
         return _fee_out(row, await _count(session, row.id))
 
@@ -397,8 +400,19 @@ async def delete_fee(
                 ErrorCodes.CONFLICT,
                 detail="Es sind Rechnungen ausgestellt; das Honorar wird über das Ende beendet.",
             )
+        before = _fee_out(row, 0).model_dump(mode="json")
         await session.delete(row)
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="admin_fee.deleted",
+            entity_type="admin_fee_setting",
+            entity_id=fee_id,
+            before=before,
+            after={},
+        )
     return Response(status_code=204)
 
 

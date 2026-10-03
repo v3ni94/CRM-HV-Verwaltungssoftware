@@ -105,7 +105,19 @@ async def get_setting(
         return {"enabled": await circular_enabled(session), "note": NOTE}
 
 
-@crm_router.put("/portal-circular-settings", summary="Umlaufbeschluss im Eigentümerportal setzen")
+class HoaPortalCircularSettingOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    enabled: bool
+    note: str
+
+
+@crm_router.put(
+    "/portal-circular-settings",
+    summary="Umlaufbeschluss im Eigentümerportal setzen",
+    response_model=HoaPortalCircularSettingOut,
+)
 async def put_setting(
     body: HoaPortalCircularSettingIn,
     request: Request,

@@ -16,21 +16,23 @@ import { UserMenu } from "@/components/shell/UserMenu";
 import { NotificationBell } from "@/components/workspace/NotificationBell";
 import { ThemeController } from "@/components/workspace/ThemeToggle";
 import { redirectIfUnauthenticated, serverFetch, sessionContext } from "@/lib/api-server";
-import { crmBrandingCssVars, NEUTRAL_CRM_BRANDING, parseCrmBranding } from "@/lib/branding";
+import { crmBrandingCssVars, crmBrandingLogoSrc, NEUTRAL_CRM_BRANDING, parseCrmBranding } from "@/lib/branding";
 import { getMe } from "@/lib/me";
 import { NONCE_HEADER } from "@/lib/csp";
 import { serverThemeScript } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
-/** Branding variables of the tenant; empty on every failure or while the switch is off. */
-async function loadBrandingVars(): Promise<Record<string, string>> {
+/** Branding of the tenant (CSS variables, logo); neutral on every failure or while the switch is off. */
+async function loadBranding(): Promise<{ vars: Record<string, string>; logoSrc: string }> {
+  const neutral = { vars: {}, logoSrc: "/logo-mhag.png" };
   try {
     const response = await serverFetch("/api/v1/tenant/branding");
-    if (!response.ok) return {};
-    return crmBrandingCssVars(parseCrmBranding(await response.json()));
+    if (!response.ok) return neutral;
+    const branding = parseCrmBranding(await response.json());
+    return { vars: crmBrandingCssVars(branding), logoSrc: crmBrandingLogoSrc(branding, neutral.logoSrc) };
   } catch {
-    return crmBrandingCssVars(NEUTRAL_CRM_BRANDING);
+    return { vars: crmBrandingCssVars(NEUTRAL_CRM_BRANDING), logoSrc: neutral.logoSrc };
   }
 }
 
@@ -43,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: me, response } = await getMe();
   redirectIfUnauthenticated(response);
   // GAI-109: tenant colours as CSS variables, only behind the tenant switch branding.crm_apply.
-  const brandingVars = await loadBrandingVars();
+  const { vars: brandingVars, logoSrc: shellLogoSrc } = await loadBranding();
   const can = (p: string) => me?.permissions.includes(p) ?? false;
   const isAdmin = can("tickets:delete") || Boolean(me?.is_platform_admin);
   const groups: NavGroup[] = [
@@ -135,7 +137,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SideNav
           groups={groups}
           label={t("nav")}
-          logoSrc="/logo-mhag.png"
+          logoSrc={shellLogoSrc}
           productName={tHome("productName")}
           area={tHome("area")}
           collapseLabel={t("navCollapse")}

@@ -215,7 +215,7 @@ services:
 
   worker:
     <<: *python-app
-    command: ["celery", "-A", "mhvp.worker", "worker", "--loglevel", "INFO", "-Q", "default,io,ocr,ai,bank,mail,beat"]
+    command: ["celery", "-A", "mhvp.worker", "worker", "--loglevel", "INFO", "-Q", "${MHVP_WORKER_QUEUES:-default,io,ocr,ai,bank,mail,beat}"]
     healthcheck:
       test: ["CMD-SHELL", "celery -A mhvp.worker inspect ping -d celery@$$HOSTNAME --timeout 5"]
       interval: 30s
@@ -225,11 +225,31 @@ services:
 
   beat:
     <<: *python-app
-    command: ["celery", "-A", "mhvp.worker", "beat", "--loglevel", "INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    # The schedule file (last run per entry) lives on a named volume (GAI-319), so a container
+    # restart does not lose it and catch-up of crontab entries works after a redeploy.
+    command: ["celery", "-A", "mhvp.worker", "beat", "--loglevel", "INFO", "--schedule", "/var/lib/mhvp/beat/celerybeat-schedule"]
+    volumes:
+      - beat-schedule:/var/lib/mhvp/beat
     # The image healthcheck probes the API port; beat serves no HTTP. Job health is visible in
     # /api/v1/platform/ops/metrics (last run per job), so the inherited probe is disabled.
     healthcheck:
       disable: true
+
+  # Optional second worker for the heavy queues ai, ocr and bank (GAI-319, profile
+  # "worker-heavy", docs/runbooks/ressourcen.md). The standard worker keeps consuming all
+  # queues; with the profile active, restrict it with MHVP_WORKER_QUEUES=default,io,mail,beat
+  # so that no queue is consumed by both workers unintentionally (double consumption is safe
+  # for Redis, but defeats the separation).
+  worker-heavy:
+    <<: *python-app
+    profiles: ["worker-heavy"]
+    command: ["celery", "-A", "mhvp.worker", "worker", "--loglevel", "INFO", "-Q", "ai,ocr,bank", "-n", "worker-heavy@%h", "--concurrency", "${MHVP_WORKER_HEAVY_CONCURRENCY:-2}"]
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A mhvp.worker inspect ping -d worker-heavy@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
 
   web-crm:
     <<: *hardening
@@ -268,3 +288,4 @@ volumes:
   redis-data:
   objectstore-data:
   clamav-data:
+  beat-schedule:

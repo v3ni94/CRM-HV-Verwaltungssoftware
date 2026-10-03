@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { apiBaseUrl, COOKIE, cookieOptions, writeTokens, type TokenResponse } from "@/lib/session";
 
 import { guardedJson, relayProblem, secureOf, str, unreachable } from "../../_shared";
+import { forwardedForHeaders } from "@/lib/forwarded-for";
 
 /** Passkey sign in, step "verify" (S16-01): relays the assertion; sets the session cookies. */
 export async function POST(request: Request): Promise<Response> {
@@ -17,6 +18,7 @@ export async function POST(request: Request): Promise<Response> {
       headers: {
         "content-type": "application/json",
         "user-agent": request.headers.get("user-agent") ?? "",
+        ...forwardedForHeaders(request.headers),
       },
       body: JSON.stringify({
         challenge_id: str(parsed.body.challenge_id),

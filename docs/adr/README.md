@@ -27,6 +27,20 @@ flag until decided. Copy `0000-template.md` for a new record.
 
 | [0020](0020-formatversionen.md) | Pinned format versions (pain.001, pain.008, camt, XRechnung, ZUGFeRD, HeiWaKo) and compatibility tests | Accepted |
 | [0021](0021-skalierung-phase-4-jahrespartitionierung.md) | Scaling phase 4: yearly partitioning of journal_entry and bank_transaction (analysis, measurements at 100,000 rows, triggers, measurement plan; supplements ADR 0018, GA12-08) | Proposed, operator decision AC09-01 pending |
+| [0022](0022-api-verschachtelung.md) | Nesting of API paths (deviation from section 12) | Proposed, operator decision AD10-01 pending |
 | [0023](0023-objektspalte-buchungszeile.md) | Object column `journal_line.property_id` (explicit, unit, contract), database rule for lines with unit, one time fill of posted lines in migration 0377 with the guard disabled only inside the migration, drift report (Q15-01, AE21) | Accepted for implementation, acceptance pending |
+| [0024](0024-observability-otel-uptime-kuma.md) | Observability with OTel collector and Uptime Kuma instead of Grafana, Prometheus, Loki (GAD-02) | Accepted as documentation of the actual state, extension decision open |
+| [0025](0025-ki-anbieter-responses-und-batches.md) | OpenAI Responses API with strict Structured Outputs, Anthropic Message Batches for deferred runs | Accepted |
+| [0026](0026-stackabweichungen.md) | Documented stack deviations from section 4 (reportlab, own SEPA XML) | Proposed, operator release GAI-108-01 pending |
+| [0027](0027-csp-nonce.md) | Content Security Policy with a nonce per request | Accepted |
+| [0028](0028-webhook-signaturhelfer.md) | Shared webhook signature helper with time window | Accepted |
+| [0029](0029-split-worker.md) | Split worker profile with queue groups | Accepted |
+| [0030](0030-mandantenbranding.md) | Tenant branding and portal white label | Accepted |
+| [0031](0031-mandantenschalter-muster.md) | Tenant switch as pattern for open legal decisions (default off, nothing posts, sends or deletes; GAI-516) | Accepted |
+| [0032](0032-zwei-personen-reset-zweiter-faktor.md) | Four eyes reset of the second factor (`mfa_admin_reset_enabled`, AI09-01) | Accepted, behind tenant switch |
+| [0033](0033-tenant-index-waechter.md) | Leading `tenant_id` index per tenant table with guard test (GAH-308) | Accepted |
+| [0034](0034-kettenpruefung-kontoauszuege.md) | Chain check of bank statements (balances and periods, B09) | Accepted |
+| [0035](0035-snapshot-trigger.md) | Immutable `statement_snapshot` by database trigger (B03, migration 0439) | Accepted |
+| [0036](0036-abhaengigkeitsaudit-ci.md) | Dependency audit in CI with allowlist (GAH-310) | Accepted |
 
 Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0017 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration; the CRM shell ADR was written as 0016 in parallel to the handover offline ADR and renumbered to 0017.

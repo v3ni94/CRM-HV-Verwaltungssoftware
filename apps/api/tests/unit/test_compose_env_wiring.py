@@ -33,3 +33,25 @@ def test_fints_product_id_reaches_the_app_environment() -> None:
     compose = (ROOT / "infra" / "compose.yaml").read_text(encoding="utf-8")
     app_env = compose.split("x-app-env:", 1)[1].split("\nx-", 1)[0]
     assert "MHVP_FINTS_PRODUCT_ID: ${MHVP_FINTS_PRODUCT_ID:-}" in app_env
+
+
+def test_beat_schedule_on_volume_and_heavy_worker_profile() -> None:
+    """GAI-319 (AK05): beat keeps its schedule file on a named volume, the optional profile
+    worker-heavy consumes exactly ai, ocr and bank, every overlay gives it an image."""
+    import yaml
+
+    base = yaml.safe_load((ROOT / "infra" / "compose.yaml").read_text(encoding="utf-8"))
+    services = base["services"]
+    beat = services["beat"]
+    schedule = beat["command"][beat["command"].index("--schedule") + 1]
+    assert schedule.startswith("/var/lib/mhvp/beat/")
+    assert "beat-schedule:/var/lib/mhvp/beat" in beat["volumes"]
+    assert "beat-schedule" in base["volumes"]
+    heavy = services["worker-heavy"]
+    assert heavy["profiles"] == ["worker-heavy"]
+    assert heavy["command"][heavy["command"].index("-Q") + 1] == "ai,ocr,bank"
+    for overlay in ("compose.dev.yaml", "compose.prod.yaml"):
+        text = (ROOT / "infra" / overlay).read_text(encoding="utf-8")
+        assert "\n  worker-heavy:\n" in text, overlay
+    dockerfile = (ROOT / "apps" / "api" / "Dockerfile").read_text(encoding="utf-8")
+    assert "chown mhvp:mhvp /var/lib/mhvp/beat" in dockerfile

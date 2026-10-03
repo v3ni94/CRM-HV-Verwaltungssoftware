@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 export type OccupancyRow = {
   unit_id: string;
@@ -31,6 +32,7 @@ export function OccupancyList({ propertyId }: { propertyId: string }) {
   const [shownFor, setShownFor] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [onlyVacant, setOnlyVacant] = useState(false);
+  const { busy, guard } = useBusy();
 
   const load = useCallback(
     async (date: string) => {
@@ -64,14 +66,14 @@ export function OccupancyList({ propertyId }: { propertyId: string }) {
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          void load(asOf);
+          void guard(load)(asOf);
         }}
       >
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("asOf")}</span>
           <input type="date" className={ui.input} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
         </label>
-        <button type="submit" className={ui.secondary}>
+        <button type="submit" className={ui.secondary} disabled={busy}>
           {t("show")}
         </button>
         <label className="flex min-h-11 items-center gap-2 text-sm">

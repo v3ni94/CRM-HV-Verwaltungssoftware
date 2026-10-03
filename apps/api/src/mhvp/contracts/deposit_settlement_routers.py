@@ -478,6 +478,12 @@ async def release_settlement(
         await _deposit(session, row.deposit_id)  # M2-02/S16-02
         if row.status is not ds.DepositSettlementStatus.DRAFT:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Der Entwurf ist bereits freigegeben.")
+        if row.created_by is not None and row.created_by == principal.user_id:
+            # AK14 (GAI-410): product protection, same rule as payment release (four eyes).
+            raise ProblemError(
+                ErrorCodes.CONTRACT_DEPOSIT_RELEASE_SAME_USER,
+                detail="Die Kautionsabrechnung muss von einer anderen Person freigegeben werden.",
+            )
         row.status = ds.DepositSettlementStatus.RELEASED
         row.updated_by = principal.user_id
         await session.flush()

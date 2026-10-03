@@ -22,6 +22,7 @@ export const API_USAGE_CATEGORIES = [
 export type ApiUsageCategory = (typeof API_USAGE_CATEGORIES)[number];
 
 export const API_USAGE_ALLOWLIST: { path: string; category: ApiUsageCategory }[] = [
+  { path: "/api/v1/privacy/access-requests/{request_id}", category: "offen" },
   { path: "/api/v1/privacy/deletion-proposals", category: "offen" },
   { path: "/api/v1/privacy/deletion-proposals/run", category: "offen" },
   { path: "/api/v1/privacy/erasure-requests/{request_id}/accept", category: "dynamisch" },
@@ -182,6 +183,7 @@ export const API_USAGE_ALLOWLIST: { path: string; category: ApiUsageCategory }[]
   { path: "/api/v1/banking/transactions/{tx_id}/accept", category: "offen" },
   { path: "/api/v1/banking/transactions/{tx_id}/reject", category: "offen" },
   { path: "/api/v1/billing/allocation-basis-setting", category: "dynamisch" },
+  { path: "/api/v1/billing/calculation-settings", category: "dynamisch" },
   { path: "/api/v1/billing/heating-cost-imports", category: "dynamisch" },
   { path: "/api/v1/billing/heating-cost-imports/{import_id}", category: "dynamisch" },
   { path: "/api/v1/billing/heating-cost-imports/{import_id}/apply", category: "offen" },

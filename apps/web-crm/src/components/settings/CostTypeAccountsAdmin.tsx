@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 type Ledger = { id: string; name: string };
 type CatalogueEntry = { code: string; label: string };
@@ -26,6 +27,7 @@ export function CostTypeAccountsAdmin({ canManage }: { canManage: boolean }) {
   const [catalogue, setCatalogue] = useState<CatalogueEntry[]>([]);
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { busy, guard } = useBusy();
   useEffect(() => {
     void bff<Ledger[]>("/api/bff/accounting/ledgers").then((r) => {
       if (r.ok) setLedgers(r.data ?? []);
@@ -43,7 +45,7 @@ export function CostTypeAccountsAdmin({ canManage }: { canManage: boolean }) {
     if (res.ok) setAccounts(res.data ?? []);
     else setError(res.message);
   }
-  async function map(accountId: string, code: string) {
+  const map = guard(async (accountId: string, code: string) => {
     setError(null);
     const res = await bff<Account>(`/api/bff/billing/operating-cost-types/accounts/${accountId}`, {
       method: "PUT",
@@ -51,7 +53,7 @@ export function CostTypeAccountsAdmin({ canManage }: { canManage: boolean }) {
     });
     if (!res.ok) return setError(res.message);
     await load(ledger);
-  }
+  });
   return (
     <section className="flex flex-col gap-3" data-testid="cost-type-accounts">
       <h2 className={ui.h2}>{t("title")}</h2>
@@ -95,7 +97,7 @@ export function CostTypeAccountsAdmin({ canManage }: { canManage: boolean }) {
                       className={ui.input}
                       aria-label={`${t("type")} ${a.number}`}
                       value={a.operating_cost_type ?? ""}
-                      disabled={!canManage}
+                      disabled={!canManage || busy}
                       onChange={(e) => void map(a.account_id, e.target.value)}
                     >
                       <option value="">{t("none")}</option>

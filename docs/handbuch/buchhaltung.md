@@ -428,3 +428,10 @@ Neue Konten mit Nummer 001200 bis 001999 sind nur als Bank, Kasse, technisches K
 ## Mahnschreiben versenden (gesperrt)
 
 Im Mahnfall mit Status Vorgeschlagen steht die Schaltfläche Mahnschreiben versenden mit dem Stand der Freigabestufe G1. Solange G1 geschlossen ist, bleibt sie gesperrt; auch bei offener Freigabestufe lehnt die Plattform den Versand ab, bis der Versandweg freigegeben ist. Bis dahin wird das Schreiben außerhalb der Plattform versendet und mit Als versendet markieren dokumentiert.
+
+### Filter in Offenen Posten, Mahnläufen und WEG Liste
+
+Die Liste der Offenen Posten lässt sich je Sachkonto eingrenzen, die Mahnläufe nach Status und
+Laufdatum, die WEG Liste nach Verwaltungsart (WEG oder WEG mit SEV). Die Auswahl steht in der
+Adresszeile des Browsers, die Ansicht lässt sich daher als Lesezeichen speichern oder weitergeben.
+Über "Filter speichern" legt jeder Benutzer eigene Ansichten ab, die nur für ihn sichtbar sind.

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { rejectForeignOrigin } from "@/lib/csrf";
 import { problemJson } from "@/lib/problem";
 import { apiBaseUrl, isSecureHost } from "@/lib/session";
+import { forwardedForHeaders } from "@/lib/forwarded-for";
 
 export function publicApi() {
   return createApiClient(apiBaseUrl());
@@ -66,9 +67,11 @@ export async function postJson(
   path: string,
   body: Record<string, unknown>,
   userAgent?: string,
+  forwardedFor?: Headers,
 ): Promise<{ status: number; data: Record<string, unknown> | null }> {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (userAgent) headers["user-agent"] = userAgent;
+  if (forwardedFor) Object.assign(headers, forwardedForHeaders(forwardedFor));
   const res = await fetch(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers,

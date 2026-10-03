@@ -165,6 +165,10 @@ def test_settings_default_permissions_validation_and_tenant_separation(
         "include_tickets": False,
         "include_communication": False,
         "include_documents": False,
+        # GAI-506 (AK06): portal account, payments and contracts, off by default.
+        "include_portal_account": False,
+        "include_payments": False,
+        "include_contracts": False,
     }
     wide = {"third_party_scope": "names", "include_internal_notes": True}
     wide_out = {
@@ -172,6 +176,9 @@ def test_settings_default_permissions_validation_and_tenant_separation(
         "include_tickets": False,
         "include_communication": False,
         "include_documents": False,
+        "include_portal_account": False,
+        "include_payments": False,
+        "include_contracts": False,
     }
     assert client.put(SETTINGS, json=wide, headers=viewer).status_code == 403
     assert client.put(SETTINGS, json={"third_party_scope": "all"}, headers=prep).status_code == 422

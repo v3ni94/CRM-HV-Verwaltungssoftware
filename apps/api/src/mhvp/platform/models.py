@@ -528,6 +528,18 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
             name="ticket_reopen_window_days_range",
         ),
         CheckConstraint(
+            "heating_negative_costs_mode IN ('legacy_warn', 'distribute')",
+            name="heating_negative_costs_mode_values",
+        ),
+        CheckConstraint(
+            "hoa_remainder_mode IN ('report_only', 'first_month', 'last_month')",
+            name="hoa_remainder_mode_values",
+        ),
+        CheckConstraint(
+            "check_amounts_tolerance_cents IN (0, 1)",
+            name="check_amounts_tolerance_cents_values",
+        ),
+        CheckConstraint(
             "webhook_auto_disable_after IS NULL OR webhook_auto_disable_after BETWEEN 1 AND 100",
             name="webhook_auto_disable_after_range",
         ),
@@ -673,6 +685,17 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # output of a rental statement (default on, no row means on).
     allocation_basis_block: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    # AK01 (GAI-202, GAI-214, GAI-204), migration 0447: calculation switches, conservative
+    # defaults (see mhvp.billing.calc_settings).
+    heating_negative_costs_mode: Mapped[str] = mapped_column(
+        Text, nullable=False, default="legacy_warn", server_default=text("'legacy_warn'")
+    )
+    hoa_remainder_mode: Mapped[str] = mapped_column(
+        Text, nullable=False, default="report_only", server_default=text("'report_only'")
+    )
+    check_amounts_tolerance_cents: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default=text("1")
     )
     # Lernbeispiele aus Ticketabschlüssen (ADR 0010, M7-04, Regel M19-07, Migration 0134):
     # bei false wird beim Abschluss kein ``AiExample`` (Aufgabe ``ticket_resolution``)

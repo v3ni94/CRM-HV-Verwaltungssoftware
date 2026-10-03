@@ -54,6 +54,8 @@ GATED_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("POST", "/api/v1/billing/owner-statements/{statement_id}/outputs", "G3"),
     ("POST", "/api/v1/hoa/asset-reports/{report_id}/dispatch", "G4"),
     # AG07 (GAF-32): circular resolution vote in the owner portal.
+    # AK14 (GAI-402, AJ28-02): payout order without invoice.
+    ("POST", "/api/v1/accounting/payment-runs/payout-orders", "G2"),
 )
 
 # AC03: routes that belong to the gate procedure itself (request, decision on a request).
@@ -109,7 +111,6 @@ REVIEWED_UNGATED: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/accounting/ledgers/{ledger_id}/open-items/settlement-proposal"),
         ("POST", "/api/v1/accounting/payment-runs/bank-status-reports"),
         ("POST", "/api/v1/accounting/payment-runs/orders"),
-        ("POST", "/api/v1/accounting/payment-runs/payout-orders"),
         ("POST", "/api/v1/accounting/payment-runs/previews"),
         ("POST", "/api/v1/accounting/receivable-runs/{run_id}/reverse"),
         ("POST", "/api/v1/accounting/templates/{template_id}/release"),

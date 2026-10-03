@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.billing import calc, heating_calc, services
+from mhvp.billing import calc, calc_settings, heating_calc, services
 from mhvp.billing.models import (
     HeatingRuleTable,
     HeatingRuleTableKind,
@@ -204,7 +204,9 @@ async def build_occupants(
     return out
 
 
-def _settings(row: StatementHeating, tables: dict[str, Any]) -> heating_calc.HeatingSettings:
+def _settings(
+    row: StatementHeating, tables: dict[str, Any], negative_costs_mode: str = "legacy_warn"
+) -> heating_calc.HeatingSettings:
     s = row.settings
     return heating_calc.HeatingSettings(
         consumption_share_percent=int(
@@ -221,6 +223,8 @@ def _settings(row: StatementHeating, tables: dict[str, Any]) -> heating_calc.Hea
         hot_water_energy_kwh=_dec(s.get("hot_water_energy_kwh"), "hot_water_energy_kwh"),
         degree_days=degree_days_from_rows(tables["degree_days"]["rows"]),
         degree_days_source=tables["degree_days"]["source"],
+        # AK01 (GAI-202): tenant switch, default legacy_warn.
+        negative_costs_mode=negative_costs_mode,
     )
 
 
@@ -260,7 +264,9 @@ async def calculate(
             period_from=statement.period_from,
             period_to=statement.period_to,
             total_costs=Decimal(row.total_costs),
-            settings=_settings(row, tables),
+            settings=_settings(
+                row, tables, (await calc_settings.load(session)).heating_negative_costs_mode
+            ),
             co2=_co2(row, tables),
             occupants=occupants,
             unit_totals=_unit_totals(row),

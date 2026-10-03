@@ -145,3 +145,32 @@ describe("SlaSettings rules approval (M19-01)", () => {
     expect(screen.queryByRole("button", { name: "Freigeben" })).toBeNull();
   });
 });
+
+describe("SlaSettings alerts acknowledgement (GAI-301)", () => {
+  const alert = {
+    id: "al-1",
+    level: 1,
+    sent_at: "2026-10-01T08:00:00Z",
+    sent_to: "+49 0000",
+    channel: "sms",
+    delivered_at: null,
+    delivery_error: null,
+    acknowledged_by: null,
+    acknowledged_at: null,
+  };
+
+  it("shows Quittieren with sla:update", async () => {
+    renderIntl(<SlaSettings {...baseProps} alerts={[alert] as never} whatsappConfig={EMPTY_WHATSAPP_CONFIG} />);
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Alarme" }));
+    expect(screen.getByRole("button", { name: "Quittieren" })).toBeInTheDocument();
+  });
+
+  it("hides Quittieren without sla:update", async () => {
+    renderIntl(
+      <SlaSettings {...baseProps} canManage={false} alerts={[alert] as never} whatsappConfig={EMPTY_WHATSAPP_CONFIG} />,
+    );
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Alarme" }));
+    expect(screen.getByText("Stufe 1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Quittieren" })).not.toBeInTheDocument();
+  });
+});

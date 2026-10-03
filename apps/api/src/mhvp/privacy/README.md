@@ -53,3 +53,15 @@ Auftragsverarbeiter bleibt Pflegefeld.
 `GET /privacy/register/readiness` (pre G1 list of services without settled entry; informative,
 opens no gate, AJ13-02). `config_sources` additionally detects OIDC relying parties, ClamAV,
 `BACKUP_REMOTE` and `ALERT_WEBHOOK_URL`. Rule: docs/rules/AJ13-datenschutzaufsicht.md.
+
+## Access requests (AK06, GAI-506, GAI-507, migration 0448)
+
+`access_requests.py`: `GET|POST /privacy/access-requests`, `GET /privacy/access-requests/{id}`,
+`POST /privacy/access-requests/{id}/status` (intake record with receipt date, channel and status;
+closed requests stay). Due date only from `privacy_request_deadlines.access_days` (no default,
+AJ13-01); with a period the open request is mirrored into `compliance_deadline` (kind
+`privacy_access_request`, source reader in `workspace.jobs.calendar_sources`) and shown in
+`/privacy/request-deadlines/monitor`. The access export (`contacts.access_export`) adds portal
+account with login events and sessions, payment data and contract data behind the tenant
+switches `include_portal_account`, `include_payments`, `include_contracts` (default off, counts
+only). Rule: docs/rules/AK06-auskunftsantraege.md.

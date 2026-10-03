@@ -146,6 +146,11 @@ class ExportOptions:
     include_tickets: bool = False
     include_communication: bool = False
     include_documents: bool = False
+    # AK06 (GAI-506): portal account with login events and sessions, payment data (open items
+    # of the contracts) and contract data; tenant switches, off by default (AC07-01).
+    include_portal_account: bool = False
+    include_payments: bool = False
+    include_contracts: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -154,6 +159,9 @@ class ExportOptions:
             "include_tickets": self.include_tickets,
             "include_communication": self.include_communication,
             "include_documents": self.include_documents,
+            "include_portal_account": self.include_portal_account,
+            "include_payments": self.include_payments,
+            "include_contracts": self.include_contracts,
         }
 
     @classmethod
@@ -167,11 +175,21 @@ class ExportOptions:
             include_tickets=bool(raw.get("include_tickets", False)),
             include_communication=bool(raw.get("include_communication", False)),
             include_documents=bool(raw.get("include_documents", False)),
+            include_portal_account=bool(raw.get("include_portal_account", False)),
+            include_payments=bool(raw.get("include_payments", False)),
+            include_contracts=bool(raw.get("include_contracts", False)),
         )
 
 
 SCOPE_SOURCES_KEY = "access_export_sources"
-SOURCE_SWITCHES = ("include_tickets", "include_communication", "include_documents")
+SOURCE_SWITCHES = (
+    "include_tickets",
+    "include_communication",
+    "include_documents",
+    "include_portal_account",
+    "include_payments",
+    "include_contracts",
+)
 
 
 async def source_switches(session: AsyncSession) -> dict[str, bool]:
@@ -227,10 +245,50 @@ WITHHELD_SOURCES = {
         "Dem Kontakt zugeordnete Dokumente werden nur gezählt, nicht ausgegeben "
         "(Mandantenschalter, AC07-01).",
     ),
+    "include_portal_account": (
+        "portal_account",
+        "Portalkonto, Anmeldeereignisse und Sitzungen werden nur gezählt, nicht ausgegeben "
+        "(Mandantenschalter, AC07-01).",
+    ),
+    "include_payments": (
+        "payments",
+        "Zahlungsdaten (Forderungen und Zahlungseingänge der Verträge) werden nur gezählt, "
+        "nicht ausgegeben (Mandantenschalter, AC07-01).",
+    ),
+    "include_contracts": (
+        "contracts",
+        "Vertragsdaten (Miet- und Eigentumsverhältnisse) werden nur gezählt, nicht ausgegeben "
+        "(Mandantenschalter, AC07-01).",
+    ),
 }
 TICKET_FIELDS = ("number", "title", "public_description", "status", "created_at")
 MESSAGE_FIELDS = ("channel", "direction", "subject", "body", "received_at", "sent_at")
 DOCUMENT_FIELDS = ("title", "filename", "created_at")
+PORTAL_ACCOUNT_FIELDS = (
+    "status",
+    "roles",
+    "invited_at",
+    "activated_at",
+    "magic_link_2fa",
+    "locale",
+    "created_at",
+)
+CONTRACT_FIELDS = (
+    "kind",
+    "number",
+    "start_date",
+    "end_date",
+    "termination_date",
+    "direct_debit",
+)
+# Security events of the portal user that describe its own logins and sessions (AK06).
+PORTAL_LOGIN_EVENTS = (
+    "auth.login_succeeded",
+    "auth.login_failed",
+    "auth.account_locked",
+    "auth.session_revoked",
+)
+OPEN_ITEM_FIELDS = ("kind", "component", "booking_date", "due_date", "written_off")
 
 
 def withheld_for(options: ExportOptions) -> dict[str, str]:
@@ -432,6 +490,7 @@ async def build(
     else:
         content["withheld"]["internal_notes_count"] = len(notes) + (1 if contact.notes else 0)
     await _add_sources(session, contact_id, options, content)
+    await _add_account_and_contracts(session, contact_id, generated_at, options, content)
     result: dict[str, Any] = strip_secrets(content)
     return result
 
@@ -494,6 +553,129 @@ async def _add_sources(
                 select(func.count(func.distinct(DocumentLink.document_id))).where(doc_where)
             )
             or 0
+        )
+
+
+async def _add_account_and_contracts(
+    session: AsyncSession,
+    contact_id: uuid.UUID,
+    generated_at: datetime,
+    options: ExportOptions,
+    content: dict[str, Any],
+) -> None:
+    """Portal account with login events and sessions, contracts and payment data of the
+    contact (AK06, GAI-506). Only values fixed at ``generated_at`` are used (login events up
+    to that time, session start and end before it) so the release and every download
+    reproduce the reviewed hash. Token hashes, codes and other secrets are never read."""
+    from sqlalchemy import func
+
+    from mhvp.accounting.models import OpenItem, OpenItemSettlement
+    from mhvp.contracts.models import Contract
+    from mhvp.platform.models import RefreshToken
+    from mhvp.portal.models import PortalAccount
+
+    counts = content["withheld"]
+    account = await session.scalar(
+        select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+    )
+    if not options.include_portal_account:
+        counts["portal_account_count"] = 1 if account is not None else 0
+    elif account is None:
+        content["portal_account"] = None
+    else:
+        events = (
+            await session.scalars(
+                select(DomainEvent)
+                .where(
+                    DomainEvent.entity_type == "user",
+                    DomainEvent.entity_id == account.user_id,
+                    DomainEvent.type.in_(PORTAL_LOGIN_EVENTS),
+                    DomainEvent.occurred_at <= generated_at,
+                )
+                .order_by(DomainEvent.occurred_at, DomainEvent.id)
+            )
+        ).all()
+        tokens = (
+            await session.scalars(
+                select(RefreshToken)
+                .where(
+                    RefreshToken.user_id == account.user_id,
+                    RefreshToken.tenant_id == account.tenant_id,
+                    RefreshToken.issued_at <= generated_at,
+                )
+                .order_by(RefreshToken.issued_at, RefreshToken.id)
+            )
+        ).all()
+        families: dict[uuid.UUID, dict[str, Any]] = {}
+        for t in tokens:
+            fam = families.setdefault(
+                t.family_id,
+                {
+                    "started_at": t.issued_at.isoformat(),
+                    "user_agent": t.user_agent,
+                    "ended_at": None,
+                },
+            )
+            if t.revoked_at is not None and t.revoked_at <= generated_at:
+                fam["ended_at"] = t.revoked_at.isoformat()
+        content["portal_account"] = {
+            **pick(account, PORTAL_ACCOUNT_FIELDS),
+            "login_events": [
+                {"type": e.type, "occurred_at": e.occurred_at.isoformat()} for e in events
+            ],
+            "sessions": list(families.values()),
+        }
+    party_ids = select(PartyMember.party_id).where(PartyMember.contact_id == contact_id)
+    contract_where = Contract.party_id.in_(party_ids)
+    if options.include_contracts:
+        content["contracts"] = [
+            pick(c, CONTRACT_FIELDS)
+            for c in await session.scalars(
+                select(Contract).where(contract_where).order_by(Contract.start_date, Contract.id)
+            )
+        ]
+    else:
+        counts["contracts_count"] = int(
+            await session.scalar(select(func.count()).select_from(Contract).where(contract_where))
+            or 0
+        )
+    item_where = OpenItem.contract_id.in_(select(Contract.id).where(contract_where))
+    if options.include_payments:
+        items = (
+            await session.scalars(
+                select(OpenItem)
+                .where(item_where, OpenItem.created_at <= generated_at)
+                .order_by(OpenItem.booking_date, OpenItem.id)
+            )
+        ).all()
+        numbers: dict[uuid.UUID, str] = {
+            cid: str(num)
+            for cid, num in (
+                await session.execute(select(Contract.id, Contract.number).where(contract_where))
+            ).all()
+        }
+        payments = []
+        for item in items:
+            settled = await session.scalar(
+                select(func.coalesce(func.sum(OpenItemSettlement.amount), 0)).where(
+                    OpenItemSettlement.open_item_id == item.id,
+                    OpenItemSettlement.created_at <= generated_at,
+                )
+            )
+            payments.append(
+                {
+                    **pick(item, OPEN_ITEM_FIELDS),
+                    "contract_number": (
+                        numbers.get(item.contract_id) if item.contract_id else None
+                    ),
+                    "amount": f"{item.amount:.2f}",
+                    "settled": f"{settled:.2f}",
+                }
+            )
+        content["payments"] = payments
+    else:
+        counts["payments_count"] = int(
+            await session.scalar(select(func.count()).select_from(OpenItem).where(item_where)) or 0
         )
 
 

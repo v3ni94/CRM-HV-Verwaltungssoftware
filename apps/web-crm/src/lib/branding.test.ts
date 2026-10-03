@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { crmBrandingCssVars, NEUTRAL_CRM_BRANDING, parseCrmBranding, readableOn } from "./branding";
+import { crmBrandingCssVars, crmBrandingLogoSrc, NEUTRAL_CRM_BRANDING, parseCrmBranding, readableOn } from "./branding";
 
 const answer = (extra: Record<string, unknown>) => ({
   branding: { primary_color: "#1a2b3c", accent_color: "#ffcc00", ...extra },
@@ -27,5 +27,14 @@ describe("CRM tenant branding (GAI-109)", () => {
     expect(parseCrmBranding(null)).toEqual(NEUTRAL_CRM_BRANDING);
     expect(parseCrmBranding("x")).toEqual(NEUTRAL_CRM_BRANDING);
     expect(readableOn("#FFFFFF")).toBe("#1A1A1A");
+  });
+});
+
+describe("CRM shell logo (AK15)", () => {
+  const on = { ...NEUTRAL_CRM_BRANDING, apply: true, hasLogoLight: true };
+  it("uses the BFF logo only with switch and logo", () => {
+    expect(crmBrandingLogoSrc(on, "/x.png")).toBe("/api/bff/tenant/branding/logo/light");
+    expect(crmBrandingLogoSrc({ ...on, apply: false }, "/x.png")).toBe("/x.png");
+    expect(crmBrandingLogoSrc({ ...on, hasLogoLight: false }, "/x.png")).toBe("/x.png");
   });
 });

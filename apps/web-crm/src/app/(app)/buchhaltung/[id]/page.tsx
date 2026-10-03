@@ -8,6 +8,7 @@ import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { JournalPropertyFilter } from "@/components/accounting/JournalPropertyFilter";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
+import { OpenItemsFilter, parseAccountFilter } from "@/components/accounting/OpenItemsFilter";
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
 import { YearCarryoverPanel } from "@/components/accounting/YearCarryoverPanel";
 import { SettlementProposalPanel } from "@/components/accounting/SettlementProposalPanel";
@@ -33,7 +34,7 @@ export default async function LedgerPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string; property?: string }>;
+  searchParams: Promise<{ page?: string; property?: string; op_account?: string }>;
 }) {
   const [t, tr, tb, { id }, sp] = await Promise.all([
     getTranslations("Accounting"),
@@ -44,6 +45,7 @@ export default async function LedgerPage({
   ]);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const propertyFilter = /^[0-9a-f-]{36}$/i.test(sp.property ?? "") ? (sp.property as string) : "";
+  const accountFilter = parseAccountFilter(sp.op_account);
   const today = businessToday();
   const api = serverApi();
   const me = await getMe();
@@ -54,7 +56,7 @@ export default async function LedgerPage({
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100, ...(propertyFilter ? { property_id: propertyFilter } : {}) } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/trial-balance", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
-    api.GET("/api/v1/accounting/ledgers/{ledger_id}/open-items", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/open-items", { params: { path: { ledger_id: id }, query: { as_of: today, ...(accountFilter ? { account_id: accountFilter } : {}) } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/properties", { params: { query: { page_size: 200 } } }),
   ]);
@@ -135,6 +137,12 @@ export default async function LedgerPage({
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{tr("openItems", { date: formatDate(today) })}</h2>
+        <OpenItemsFilter
+          basePath={`/buchhaltung/${id}`}
+          current={accountFilter}
+          accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name }))}
+          keep={propertyFilter ? { property: propertyFilter } : {}}
+        />
         <OpenItemsTable rows={openRows} canEdit={canEditOpenItems} />
         <SettlementProposalPanel ledgerId={id} debtors={debtors} bankAccounts={bankAccounts} today={today} />
       </section>

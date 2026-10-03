@@ -1677,6 +1677,108 @@
         "title": "AccountingCreditorSyncOut",
         "type": "object"
       },
+      "AccountingDunningBlockOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response of a dunning block per open item.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "open_item_id": {
+            "format": "uuid",
+            "title": "Open Item Id",
+            "type": "string"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Label"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "released_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released By"
+          }
+        },
+        "required": [
+          "id",
+          "open_item_id",
+          "reason_code",
+          "active"
+        ],
+        "title": "AccountingDunningBlockOut",
+        "type": "object"
+      },
       "AccountingEntryNoteIn": {
         "additionalProperties": false,
         "properties": {
@@ -2314,6 +2416,87 @@
           "decision_comment"
         ],
         "title": "AccountingLeadingSwitchOut",
+        "type": "object"
+      },
+      "AccountingLockOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response of the period lock.",
+        "properties": {
+          "drafts_in_locked_period": {
+            "title": "Drafts In Locked Period",
+            "type": "integer"
+          },
+          "locked_until": {
+            "format": "date",
+            "title": "Locked Until",
+            "type": "string"
+          },
+          "unclarified_bank_movements": {
+            "title": "Unclarified Bank Movements",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "locked_until",
+          "drafts_in_locked_period",
+          "unclarified_bank_movements"
+        ],
+        "title": "AccountingLockOut",
+        "type": "object"
+      },
+      "AccountingOpenItemNoticeOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response of the notice receipt (no amounts).",
+        "properties": {
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notice_received_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Received On"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AccountingOpenItemNoticeOut",
+        "type": "object"
+      },
+      "AccountingSyncDebtorsOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created"
+        ],
+        "title": "AccountingSyncDebtorsOut",
         "type": "object"
       },
       "AccountsIn": {
@@ -9328,6 +9511,95 @@
           "order_ids"
         ],
         "title": "BatchIn",
+        "type": "object"
+      },
+      "BillingCalcSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "check_amounts_tolerance_cents": {
+            "anyOf": [
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Amounts Tolerance Cents"
+          },
+          "heating_negative_costs_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "legacy_warn",
+                  "distribute"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Negative Costs Mode"
+          },
+          "hoa_remainder_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "report_only",
+                  "first_month",
+                  "last_month"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hoa Remainder Mode"
+          }
+        },
+        "title": "BillingCalcSettingsIn",
+        "type": "object"
+      },
+      "BillingCalcSettingsOut": {
+        "properties": {
+          "check_amounts_tolerance_cents": {
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Check Amounts Tolerance Cents",
+            "type": "integer"
+          },
+          "heating_negative_costs_mode": {
+            "enum": [
+              "legacy_warn",
+              "distribute"
+            ],
+            "title": "Heating Negative Costs Mode",
+            "type": "string"
+          },
+          "hoa_remainder_mode": {
+            "enum": [
+              "report_only",
+              "first_month",
+              "last_month"
+            ],
+            "title": "Hoa Remainder Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heating_negative_costs_mode",
+          "hoa_remainder_mode",
+          "check_amounts_tolerance_cents"
+        ],
+        "title": "BillingCalcSettingsOut",
         "type": "object"
       },
       "BillingDeadlineSettingIn": {
@@ -17174,6 +17446,17 @@
             ],
             "title": "Include Communication"
           },
+          "include_contracts": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Contracts"
+          },
           "include_documents": {
             "anyOf": [
               {
@@ -17189,6 +17472,28 @@
             "default": false,
             "title": "Include Internal Notes",
             "type": "boolean"
+          },
+          "include_payments": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Payments"
+          },
+          "include_portal_account": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Portal Account"
           },
           "include_tickets": {
             "anyOf": [
@@ -17222,6 +17527,11 @@
             "title": "Include Communication",
             "type": "boolean"
           },
+          "include_contracts": {
+            "default": false,
+            "title": "Include Contracts",
+            "type": "boolean"
+          },
           "include_documents": {
             "default": false,
             "title": "Include Documents",
@@ -17229,6 +17539,16 @@
           },
           "include_internal_notes": {
             "title": "Include Internal Notes",
+            "type": "boolean"
+          },
+          "include_payments": {
+            "default": false,
+            "title": "Include Payments",
+            "type": "boolean"
+          },
+          "include_portal_account": {
+            "default": false,
+            "title": "Include Portal Account",
             "type": "boolean"
           },
           "include_tickets": {
@@ -35550,6 +35870,21 @@
         "title": "HoaAllocationProposalSettingOut",
         "type": "object"
       },
+      "HoaCircularSwitchOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaCircularSwitchOut",
+        "type": "object"
+      },
       "HoaCorrectionReportSettingIn": {
         "additionalProperties": false,
         "properties": {
@@ -35562,6 +35897,26 @@
           "enabled"
         ],
         "title": "HoaCorrectionReportSettingIn",
+        "type": "object"
+      },
+      "HoaCorrectionReportSettingOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "note"
+        ],
+        "title": "HoaCorrectionReportSettingOut",
         "type": "object"
       },
       "HoaCostIn": {
@@ -35779,6 +36134,26 @@
         "title": "HoaNewVersionIn",
         "type": "object"
       },
+      "HoaOnlineModeOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "HoaOnlineModeOut",
+        "type": "object"
+      },
       "HoaOnlineSettingIn": {
         "additionalProperties": false,
         "properties": {
@@ -35805,6 +36180,39 @@
         "title": "HoaOnlineSettingIn",
         "type": "object"
       },
+      "HoaOnlineSettingOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "proxy_conflict_mode": {
+            "title": "Proxy Conflict Mode",
+            "type": "string"
+          },
+          "proxy_conflict_modes": {
+            "items": {
+              "$ref": "#/components/schemas/HoaOnlineModeOut"
+            },
+            "title": "Proxy Conflict Modes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "proxy_conflict_mode",
+          "proxy_conflict_modes",
+          "note"
+        ],
+        "title": "HoaOnlineSettingOut",
+        "type": "object"
+      },
       "HoaPlanChangeSettingIn": {
         "additionalProperties": false,
         "properties": {
@@ -35822,6 +36230,34 @@
           "mode"
         ],
         "title": "HoaPlanChangeSettingIn",
+        "type": "object"
+      },
+      "HoaPlanChangeSettingOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Modes",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "modes",
+          "note"
+        ],
+        "title": "HoaPlanChangeSettingOut",
         "type": "object"
       },
       "HoaPlanIn": {
@@ -36012,6 +36448,26 @@
           "enabled"
         ],
         "title": "HoaPortalCircularSettingIn",
+        "type": "object"
+      },
+      "HoaPortalCircularSettingOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "note"
+        ],
+        "title": "HoaPortalCircularSettingOut",
         "type": "object"
       },
       "HoaReserveIn": {
@@ -59706,6 +60162,33 @@
         "title": "PortalMeterIn",
         "type": "object"
       },
+      "PortalNoticeReadOut": {
+        "additionalProperties": true,
+        "description": "AK11 (GAI-304): typed response, ``extra=\"allow\"`` keeps later fields.",
+        "properties": {
+          "notice_id": {
+            "format": "uuid",
+            "title": "Notice Id",
+            "type": "string"
+          },
+          "read": {
+            "title": "Read",
+            "type": "boolean"
+          },
+          "read_at": {
+            "format": "date-time",
+            "title": "Read At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notice_id",
+          "read",
+          "read_at"
+        ],
+        "title": "PortalNoticeReadOut",
+        "type": "object"
+      },
       "PortalProposalIn": {
         "additionalProperties": false,
         "properties": {
@@ -60929,6 +61412,232 @@
         "title": "Priority",
         "type": "string"
       },
+      "PrivacyAccessRequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "enum": [
+              "email",
+              "letter",
+              "portal",
+              "phone",
+              "in_person",
+              "other"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "received_on": {
+            "format": "date",
+            "title": "Received On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "received_on",
+          "channel"
+        ],
+        "title": "PrivacyAccessRequestIn",
+        "type": "object"
+      },
+      "PrivacyAccessRequestOut": {
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "close_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Note"
+          },
+          "closed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed On"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
+          },
+          "export_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "received_on": {
+            "format": "date",
+            "title": "Received On",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "unconfigured",
+              "ok",
+              "warn",
+              "overdue",
+              "closed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warn_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn On"
+          }
+        },
+        "required": [
+          "id",
+          "contact_id",
+          "contact_name",
+          "received_on",
+          "channel",
+          "status",
+          "note",
+          "export_id",
+          "closed_on",
+          "close_note",
+          "due_on",
+          "warn_on",
+          "state"
+        ],
+        "title": "PrivacyAccessRequestOut",
+        "type": "object"
+      },
+      "PrivacyAccessRequestStatusIn": {
+        "additionalProperties": false,
+        "properties": {
+          "export_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "in_progress",
+              "answered",
+              "rejected",
+              "withdrawn"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PrivacyAccessRequestStatusIn",
+        "type": "object"
+      },
       "PrivacyConfigSourceOut": {
         "properties": {
           "active": {
@@ -61135,7 +61844,10 @@
             "title": "Due On"
           },
           "kind": {
-            "const": "erasure",
+            "enum": [
+              "erasure",
+              "access"
+            ],
             "title": "Kind",
             "type": "string"
           },
@@ -89268,9 +89980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Dunning Block Release Api V1 Accounting Dunning Blocks  Block Id  Release Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDunningBlockOut"
                 }
               }
             },
@@ -95454,9 +96164,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Lock Api V1 Accounting Ledgers  Ledger Id  Lock Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingLockOut"
                 }
               }
             },
@@ -97801,11 +98509,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "integer"
-                  },
-                  "title": "Response Sync Debtors Api V1 Accounting Ledgers  Ledger Id  Sync Debtors Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingSyncDebtorsOut"
                 }
               }
             },
@@ -98130,9 +98834,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Dunning Block Create Api V1 Accounting Open Items  Open Item Id  Dunning Blocks Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingDunningBlockOut"
                 }
               }
             },
@@ -98208,9 +98910,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Open Item Notice Received Api V1 Accounting Open Items  Open Item Id  Notice Received Patch",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AccountingOpenItemNoticeOut"
                 }
               }
             },
@@ -117434,6 +118134,103 @@
           }
         ],
         "summary": "Schalter: Prüfbericht blockiert die Ausgabe setzen",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/calculation-settings": {
+      "get": {
+        "operationId": "get_calc_settings_api_v1_billing_calculation_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCalcSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Rechenschalter: negative Heizkosten, Restcent Hausgeld, Bruttotoleranz",
+        "tags": [
+          "Abrechnung"
+        ]
+      },
+      "put": {
+        "operationId": "put_calc_settings_api_v1_billing_calculation_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCalcSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCalcSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Rechenschalter setzen (Freigaberecht, nur Rechenentwurf)",
         "tags": [
           "Abrechnung"
         ]
@@ -140697,11 +141494,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Put Circular Switch Api V1 Hoa Circular Lower Majority Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HoaCircularSwitchOut"
                 }
               }
             },
@@ -140864,9 +141657,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Correction Report Setting Api V1 Hoa Correction Report Settings Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HoaCorrectionReportSettingOut"
                 }
               }
             },
@@ -145078,9 +145869,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Online Setting Api V1 Hoa Online Meeting Settings Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HoaOnlineSettingOut"
                 }
               }
             },
@@ -145180,9 +145969,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Plan Change Setting Api V1 Hoa Plan Change Settings Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HoaPlanChangeSettingOut"
                 }
               }
             },
@@ -146191,9 +146978,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Setting Api V1 Hoa Portal Circular Settings Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HoaPortalCircularSettingOut"
                 }
               }
             },
@@ -189121,9 +189906,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Portal Notice Read Api V1 Portal Notices  Notice Id  Read Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PortalNoticeReadOut"
                 }
               }
             },
@@ -193169,6 +193952,291 @@
         ]
       }
     },
+    "/api/v1/privacy/access-requests": {
+      "get": {
+        "operationId": "list_access_requests_api_v1_privacy_access_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "received",
+                    "in_progress",
+                    "answered",
+                    "rejected",
+                    "withdrawn"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "open_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Open Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrivacyAccessRequestOut"
+                  },
+                  "title": "Response List Access Requests Api V1 Privacy Access Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Auskunftsanträge (Art. 15) mit Eingang, Status und Frist",
+        "tags": [
+          "Datenschutz"
+        ]
+      },
+      "post": {
+        "operationId": "create_access_request_api_v1_privacy_access_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyAccessRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyAccessRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Auskunftsantrag erfassen (Eingang)",
+        "tags": [
+          "Datenschutz"
+        ]
+      }
+    },
+    "/api/v1/privacy/access-requests/{request_id}": {
+      "get": {
+        "operationId": "get_access_request_api_v1_privacy_access_requests__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyAccessRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Auskunftsantrag",
+        "tags": [
+          "Datenschutz"
+        ]
+      }
+    },
+    "/api/v1/privacy/access-requests/{request_id}/status": {
+      "post": {
+        "operationId": "set_access_request_status_api_v1_privacy_access_requests__request_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyAccessRequestStatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyAccessRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Status eines Auskunftsantrags setzen (in Bearbeitung, beantwortet, abgelehnt)",
+        "tags": [
+          "Datenschutz"
+        ]
+      }
+    },
     "/api/v1/privacy/consent-overview": {
       "get": {
         "description": "Counts per purpose. ``without_proof``: active consent without linked document (the\nsource text alone is recorded); whether that suffices as proof is not judged here.",
@@ -194338,7 +195406,7 @@
     },
     "/api/v1/privacy/request-deadlines/monitor": {
       "get": {
-        "description": "Open erasure requests with warn and due date computed from the tenant setting. Access\nrequests have no intake record yet (schema need, AJ13 open point), so they are not listed.\nDates are an orientation to be verified, never a legal calculation.",
+        "description": "Open erasure and access requests with warn and due date computed from the tenant\nsetting (access requests since migration 0448, AK06). Dates are an orientation to be\nverified, never a legal calculation.",
         "operationId": "monitor_deadlines_api_v1_privacy_request_deadlines_monitor_get",
         "responses": {
           "200": {
@@ -218463,7 +219531,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due|work_order_appointment|custom_deadline|appointment)$",
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due|work_order_appointment|custom_deadline|privacy_access_request|appointment)$",
                   "type": "string"
                 },
                 {

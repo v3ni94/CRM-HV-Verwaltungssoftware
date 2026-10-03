@@ -28,6 +28,7 @@ export async function POST(request: Request): Promise<Response> {
         remember_device: parsed.body.remember_device === true,
       },
       request.headers.get("user-agent") ?? "",
+      request.headers,
     );
     if (status >= 400 || !data) return relayProblem(status, data);
     const tokens = data as unknown as TokenResponse;

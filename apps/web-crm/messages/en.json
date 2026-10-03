@@ -1959,6 +1959,8 @@
     }
   },
   "Hoa": {
+    "filterType": "Management type",
+    "filterTypeAll": "All HOA types",
     "title": "HOA management",
     "gateNotice": "Issuing and posting HOA statements stay locked until release gate G4.",
     "objectsHint": "HOA properties and HOA management belong together: here the ongoing management, in the property list the master data of the communities.",
@@ -2226,6 +2228,9 @@
     "handover": "Handover protocols"
   },
   "Receivables": {
+    "filterAccount": "Account",
+    "filterAllAccounts": "All accounts",
+    "filterApply": "Apply filter",
     "earlierRuns": "Load earlier runs",
     "noRuns": "No earlier runs for this month.",
     "open": "Open",
@@ -2801,7 +2806,7 @@
   },
   "BankActions": {
     "config": {"title": "Payment format per bank account", "intro": "Agreed version of pain.001 (credit transfer) and pain.008 (direct debit) and submission channel per account. Only versions the platform can generate and validate are offered. Saving creates no payment file and triggers no payment; creating and submitting stay locked until release stage G2.", "account": "Bank account", "choose": "Choose account", "pain001": "Version pain.001", "pain008": "Version pain.008", "channel": "Submission channel", "channel_file": "File (manual upload)", "channel_fints": "FinTS", "channel_ebics": "EBICS", "confirmedOn": "Agreed with the bank on", "notes": "Note", "save": "Save", "saved": "Payment format saved.", "readOnly": "Changing needs the bank approval right."},
-    "batchStatus": {"open": "Record bank feedback", "status": "Bank feedback", "status_submitted": "Submitted", "status_accepted_by_bank": "Accepted by the bank", "status_rejected": "Rejected", "reason": "Reason (required on rejection)", "hint": "Execution and returns are not recorded here but via the bank feedback import. A rejection leaves the payable fully open.", "record": "Record", "cancel": "Cancel", "recorded": "Feedback recorded, orders affected: {count}."},
+    "batchStatus": {"open": "Record bank feedback", "status": "Bank feedback", "status_submitted": "Submitted", "status_accepted_by_bank": "Accepted by the bank", "status_rejected": "Rejected", "status_executed": "Executed (posts)", "status_returned": "Returned (reverses)", "reason": "Reason (required on rejection and return)", "hint": "A rejection leaves the payable fully open. Execution and returns can also be recorded via the bank feedback import.", "bankTransaction": "Bank transaction (ID, required for execution)", "bookingEffect": "Caution, posting effect: Executed settles the payable in the amount debited, Returned reverses that settlement and reopens the payable. Posted values are never overwritten.", "fourEyes": "Four eyes: the payment orders were approved by two people. Record execution or return only with the bank document and have a second person check the posting.", "bookingLocked": "Execution and return are locked until release gate G2 is open for this tenant.", "record": "Record", "cancel": "Cancel", "recorded": "Feedback recorded, orders affected: {count}."},
     "candidates": {"show": "Suggestions", "hide": "Hide suggestions", "loading": "Loading suggestions.", "none": "No matching open item found.", "remaining": "Open: {amount}", "score": "Match score {score}", "unambiguous": "unambiguous", "note": "Suggestion, not a posting. The IBAN alone does not prove a debtor."},
     "clarification": {"open": "Report as unsupported", "reason": "Reason", "submit": "Report", "cancel": "Cancel", "opened": "Clarification opened"},
     "digest": {"buildWeek": "Week starting (Monday)", "build": "Build digest", "buildHint": "Builds or updates the digest of the week, books nothing.", "built": "Digests built or updated: {count}."},
@@ -2846,6 +2851,10 @@
     "fileLocked": "Payment file only with release gate G2. Until then the order stays prepared; nothing is transmitted to the bank."
   },
   "Dunning": {
+    "filterStatus": "Status",
+    "filterAll": "All",
+    "filterRunDate": "Dunning run date",
+    "filterApply": "Apply filter",
     "title": "Dunning",
     "notice": "Dunning runs start as preview. A second person must approve. Only the leading system may dun; while Immoware24 leads, all cases are excluded.",
     "runDate": "Cut-off date",
@@ -12930,8 +12939,9 @@
       "save": "Save deadlines",
       "saved": "Deadlines saved.",
       "unconfigured": "No deadlines configured: open requests are shown without due date.",
-      "empty": "No open erasure requests.",
-      "item": "Erasure request, received {received}, warning {warn}, due {due}:"
+      "empty": "No open erasure or access requests.",
+      "item": "Erasure request, received {received}, warning {warn}, due {due}:",
+      "itemAccess": "Access request, received {received}, warning {warn}, due {due}:"
     },
     "states": {
       "unconfigured": "no deadline configured",
@@ -12956,6 +12966,30 @@
     "save": "Save",
     "saved": "Consent rules saved."
   },
+  "PrivacyAccessRequests": {
+    "title": "Access requests",
+    "hint": "Record the receipt of an access request with date and channel and track it until it is closed. The due date only follows from the stored tenant setting (no default) and is an orientation to be verified. With a configured period the request appears in the deadline register. The answer itself is prepared at the contact through the reviewed access export.",
+    "contact": "Requester (search contact)",
+    "picked": "Selected: {name}",
+    "received": "Received on",
+    "channel": "Channel",
+    "note": "Note",
+    "create": "Record request",
+    "created": "Access request recorded.",
+    "updated": "Status saved.",
+    "loading": "Loading …",
+    "empty": "No entries.",
+    "colContact": "Contact",
+    "colReceived": "Received",
+    "colChannel": "Channel",
+    "colStatus": "Status",
+    "colDue": "Due",
+    "colActions": "Actions",
+    "channels": {"email": "Email", "letter": "Letter", "portal": "Portal", "phone": "Phone", "in_person": "In person", "other": "Other"},
+    "statuses": {"received": "received", "in_progress": "in progress", "answered": "answered", "rejected": "rejected", "withdrawn": "withdrawn"},
+    "states": {"unconfigured": "no period configured", "ok": "within period", "warn": "warning reached", "overdue": "overdue", "closed": "closed"},
+    "actions": {"in_progress": "In progress", "answered": "Answered", "rejected": "Rejected", "withdrawn": "Withdrawn"}
+  },
   "AccessExportSettings": {
     "title": "Scope of the GDPR disclosure",
     "hint": "Default: other persons by role only, internal notes withheld. Which scope is lawful is a legal question. The scope is fixed when a disclosure is prepared and stays unchanged until release. Addresses, contact data, identifiers and bank data of other persons are never disclosed in any variant.",
@@ -12967,7 +13001,10 @@
     "sources": {
       "include_tickets": "Include the contact's tickets, without internal description",
       "include_communication": "Include the contact's messages (subject and text, without recipient lists)",
-      "include_documents": "List documents linked to the contact (title and date, without content)"
+      "include_documents": "List documents linked to the contact (title and date, without content)",
+      "include_portal_account": "Include the portal account with login events and sessions (without tokens and codes)",
+      "include_payments": "Include payment data (receivables and payment status of the contracts)",
+      "include_contracts": "Include contract data (type, number, term, direct debit)"
     },
     "saved": "Setting saved."
   },
@@ -17076,6 +17113,18 @@
         "title": "Allocation basis report blocks the output",
         "description": "If the allocation agreement of a cost item is missing, the report blocks the status change and the information sheet."
       },
+      "heating-negative-costs": {
+        "title": "Distribute negative heating cost parts",
+        "description": "If a part of the heating cost statement has a negative total, by default it is not distributed and a warning is shown. Only calculation drafts behind G3 are affected."
+      },
+      "hoa-remainder-mode": {
+        "title": "House money, remainder cents of the monthly rates",
+        "description": "Handling of the rounding difference when the annual house money is split into twelve monthly rates. By default the difference is only reported."
+      },
+      "check-amounts-tolerance": {
+        "title": "Gross check, tolerance in cents",
+        "description": "Allowed difference between the gross amount and net plus VAT for contract payments and imports (0 or 1 cent)."
+      },
       "deadline-policy": {
         "title": "Behaviour after the statement deadline",
         "description": "What happens after the displayed end of the deadline. The end is only an orientation, the grounds for exceptions are professionally open."
@@ -17269,6 +17318,18 @@
         "title": "Access export: communication",
         "description": "Whether the contact's messages (subject and text, without recipient lists) are part of the access export. Off means: counted only."
       },
+      "access-export-portal-account": {
+        "title": "Access export: portal account and logins",
+        "description": "Whether the portal account, login events and sessions of the contact are included in the access export (without tokens and codes). Off means: counted only."
+      },
+      "access-export-payments": {
+        "title": "Access export: payment data",
+        "description": "Whether receivables and payment status of the contact's contracts are included in the access export. Off means: counted only."
+      },
+      "access-export-contracts": {
+        "title": "Access export: contract data",
+        "description": "Whether the contact's contracts (type, number, term, direct debit) are included in the access export. Off means: counted only."
+      },
       "access-export-documents": {
         "title": "Access export: document references",
         "description": "Whether documents linked to the contact (title and date) are listed in the access export. Off means: counted only."
@@ -17324,6 +17385,15 @@
       "dunning-day-count": {
         "act_365_fixed": "Days by 365 (fixed)",
         "act_act": "Days by actual days of the year"
+      },
+      "heating-negative-costs": {
+        "legacy_warn": "Do not distribute, warning",
+        "distribute": "Distribute with sign"
+      },
+      "hoa-remainder-mode": {
+        "report_only": "Report only",
+        "first_month": "Settle in the first month",
+        "last_month": "Settle in the last month"
       },
       "deadline-policy": {
         "block_claims": "Block additional claims",
@@ -17768,7 +17838,7 @@
     },
     "depositRelease": {
       "action": "Release deposit settlement",
-      "fourEyes": "Four eyes principle: the release is given by a person other than the author of the draft.",
+      "fourEyes": "Four eyes principle: the release is given by a person other than the author of the draft; the system refuses a release by the author.",
       "confirm": "I did not create the draft myself and have reviewed it.",
       "notDraft": "Only a draft can be released.",
       "locked": "Locked while release gate G3 (rental statements) is closed. Approval by the management required."

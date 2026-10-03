@@ -1253,7 +1253,18 @@ async def get_circular_switch(
         return {"enabled": await circular_lower_majority_enabled(session, principal.tenant_id)}
 
 
-@router.put("/circular-lower-majority", summary="Umlaufbeschluss mit einfacher Mehrheit setzen")
+class HoaCircularSwitchOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    enabled: bool
+
+
+@router.put(
+    "/circular-lower-majority",
+    summary="Umlaufbeschluss mit einfacher Mehrheit setzen",
+    response_model=HoaCircularSwitchOut,
+)
 async def put_circular_switch(
     body: CircularSwitchIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS_UPDATE)
 ) -> dict[str, bool]:

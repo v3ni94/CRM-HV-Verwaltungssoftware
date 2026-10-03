@@ -81,9 +81,13 @@ export function TicketReplyPanel({
   category,
   processCode,
   propertyId,
+  canUsePlaybooks,
 }: {
   ticketId: string;
   canSend: boolean;
+  /** GAI-301: use and feedback on playbooks need communication:update; defaults to canSend,
+   *  which already requires that right on the ticket page. */
+  canUsePlaybooks?: boolean;
   target?: ReplyTarget | null;
   onSent?: (message: SentMessage) => void;
   category?: string | null;
@@ -91,6 +95,7 @@ export function TicketReplyPanel({
   propertyId?: string | null;
 }) {
   const t = useTranslations("Tickets.reply");
+  const playbookActions = canUsePlaybooks ?? canSend;
   const [templates, setTemplates] = useState<ReplyTemplate[] | null>(null);
   const [playbooks, setPlaybooks] = useState<ReplyPlaybook[]>([]);
   const [playbookFeedback, setPlaybookFeedback] = useState<Record<string, boolean>>({});
@@ -324,15 +329,19 @@ export function TicketReplyPanel({
                 <SafeLine className="font-medium">{p.title}</SafeLine>
                 {p.category ? <span className={ui.badge}>{p.category}</span> : null}
                 <span className="text-xs text-muted">{t("playbookUsage", { count: p.usage_count })}</span>
-                <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => insertPlaybook(p)}>
-                  {t("insertPlaybook")}
-                </button>
-                <button type="button" className={ui.buttonSm} aria-pressed={playbookFeedback[p.id] === true} onClick={() => void ratePlaybook(p, true)}>
-                  {t("playbookFits")}
-                </button>
-                <button type="button" className={ui.buttonSm} aria-pressed={playbookFeedback[p.id] === false} onClick={() => void ratePlaybook(p, false)}>
-                  {t("playbookFitsNot")}
-                </button>
+                {playbookActions ? (
+                  <>
+                    <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => insertPlaybook(p)}>
+                      {t("insertPlaybook")}
+                    </button>
+                    <button type="button" className={ui.buttonSm} aria-pressed={playbookFeedback[p.id] === true} onClick={() => void ratePlaybook(p, true)}>
+                      {t("playbookFits")}
+                    </button>
+                    <button type="button" className={ui.buttonSm} aria-pressed={playbookFeedback[p.id] === false} onClick={() => void ratePlaybook(p, false)}>
+                      {t("playbookFitsNot")}
+                    </button>
+                  </>
+                ) : null}
                 {p.id in playbookFeedback ? <span className="text-xs text-muted">{t("playbookFeedbackSaved")}</span> : null}
               </li>
             ))}

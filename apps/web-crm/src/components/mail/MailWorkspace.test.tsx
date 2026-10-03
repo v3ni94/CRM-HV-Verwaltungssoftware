@@ -220,3 +220,21 @@ describe("MailWorkspace Antwortentwurf beim Wechsel der Mail (Review 1.36.0)", (
   });
 });
 
+
+describe("MailWorkspace Filter per URL (GAI-110)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("preselects status, search and sync filter from the URL and rejects invalid values", async () => {
+    window.history.replaceState(null, "", "/mail?status=assigned&q=Heizung&abgleich=bogus&postfach=nicht-uuid");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse([]));
+    renderIntl(<MailWorkspace canApprove={false} canReadMembers={false} />);
+    await waitFor(() => expect(fetchMock.mock.calls.some((c: unknown[]) => String(c[0]).includes("/mail/messages?"))).toBe(true));
+    const url = fetchMock.mock.calls.map((c: unknown[]) => String(c[0])).find((u: string) => u.includes("/mail/messages?"))!;
+    expect(url).toContain("status=assigned");
+    expect(url).toContain("q=Heizung");
+    expect(url).not.toContain("sync_state");
+    expect(url).not.toContain("mailbox_id");
+    await waitFor(() => expect(window.location.search).not.toContain("abgleich"));
+    expect(window.location.search).toContain("status=assigned");
+  });
+});

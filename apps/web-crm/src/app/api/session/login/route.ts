@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { COOKIE, MFA_MAX_AGE, MFA_SETUP_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
 
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
+import { forwardedForHeaders } from "@/lib/forwarded-for";
 
 /**
  * Login step 1: e-mail and password. Users without a self enabled second factor already get a
@@ -22,7 +23,10 @@ export async function POST(request: Request): Promise<Response> {
         password: str(parsed.body.password),
         ...(deviceToken ? { device_token: deviceToken } : {}),
       },
-      headers: { "user-agent": request.headers.get("user-agent") ?? "" },
+      headers: {
+        "user-agent": request.headers.get("user-agent") ?? "",
+        ...forwardedForHeaders(request.headers),
+      },
     });
     if (!data) return relayProblem(response.status, error);
     const secure = secureOf(request);

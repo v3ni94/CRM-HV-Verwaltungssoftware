@@ -770,6 +770,9 @@ async def get_access_export_settings(
             include_tickets=options.include_tickets,
             include_communication=options.include_communication,
             include_documents=options.include_documents,
+            include_portal_account=options.include_portal_account,
+            include_payments=options.include_payments,
+            include_contracts=options.include_contracts,
         )
 
 

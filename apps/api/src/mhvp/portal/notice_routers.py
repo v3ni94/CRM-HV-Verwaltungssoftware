@@ -522,8 +522,19 @@ async def portal_notices(
         ]
 
 
+class PortalNoticeReadOut(BaseModel):
+    """AK11 (GAI-304): typed response, ``extra="allow"`` keeps later fields."""
+
+    model_config = ConfigDict(extra="allow")
+    notice_id: uuid.UUID
+    read: bool
+    read_at: datetime
+
+
 @portal_router.post(
-    "/notices/{notice_id}/read", summary="Aushang als gelesen bestätigen (Lesebestätigung)"
+    "/notices/{notice_id}/read",
+    summary="Aushang als gelesen bestätigen (Lesebestätigung)",
+    response_model=PortalNoticeReadOut,
 )
 async def portal_notice_read(
     notice_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)

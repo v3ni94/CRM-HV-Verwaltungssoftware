@@ -65,6 +65,7 @@ export default async function MailboxSettingsPage({
           display_name: m.display_name,
         })) as DeputyMember[]}
         currentUserId={me.data?.user_id ?? null}
+        canManageDeputies={me.data?.permissions.includes("communication:update") ?? false}
       />
       <InvoiceForwardingSettings
         initial={

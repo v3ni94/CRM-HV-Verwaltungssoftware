@@ -20,13 +20,14 @@ export default defineConfig({
     // hide hangs); override per test with it(name, fn, ms) only with a reason.
     testTimeout: 15_000,
     hookTimeout: 15_000,
-    // GAI-605: run with `pnpm vitest run --coverage` once @vitest/coverage-v8 is installed. The
-    // threshold is set only after a measured baseline (open point AJ31), never guessed.
+    // GAI-605: `pnpm vitest run --coverage`. Baseline 03.10.2026 (AK15): statements 75,8 %,
+    // branches 68,0 %, functions 80,2 %, lines 77,7 %. Thresholds sit just below the baseline.
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/**/*.test.{ts,tsx}", "src/**/*.d.ts"],
       reporter: ["text-summary", "json-summary"],
+      thresholds: { statements: 74, branches: 66, functions: 78, lines: 76 },
     },
   },
 });

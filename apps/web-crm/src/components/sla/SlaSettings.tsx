@@ -900,7 +900,9 @@ function CalendarTab({ initial, canManage }: { initial: WorkCalendar; canManage:
   );
 }
 
-function AlertsTab({ initial }: { initial: EmergencyAlert[] }) {
+/** GAI-301: acknowledging needs sla:update (API answers 403 otherwise), so the button is
+ *  only shown with that right. */
+function AlertsTab({ initial, canManage }: { initial: EmergencyAlert[]; canManage: boolean }) {
   const t = useTranslations("Sla");
   const [alerts, setAlerts] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
@@ -942,11 +944,11 @@ function AlertsTab({ initial }: { initial: EmergencyAlert[] }) {
               ) : null}
               {a.acknowledged_at ? (
                 <span className={ui.badgeSuccess}>{t("alerts.acked")}</span>
-              ) : (
+              ) : canManage ? (
                 <button type="button" className={ui.buttonSm} disabled={busy === a.id} onClick={() => void ack(a.id)}>
                   {t("alerts.ack")}
                 </button>
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
@@ -1353,7 +1355,7 @@ export function SlaSettings({
       {tab === "calendar" ? <CalendarTab initial={calendar} canManage={canManage} /> : null}
       {tab === "sms" ? <SmsGatewayTab initial={smsGateway} canManage={canManage} /> : null}
       {tab === "whatsapp" ? <WhatsAppTab initial={whatsappConfig} canManage={canManage} /> : null}
-      {tab === "alerts" ? <AlertsTab initial={alerts} /> : null}
+      {tab === "alerts" ? <AlertsTab initial={alerts} canManage={canManage} /> : null}
     </div>
   );
 }

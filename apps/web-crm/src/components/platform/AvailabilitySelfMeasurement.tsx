@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 import { formatPercent } from "./AvailabilityAdmin";
 
@@ -57,6 +58,7 @@ export function AvailabilitySelfMeasurement() {
   const [live, setLive] = useState<Live | null>(null);
   const [data, setData] = useState<Availability | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { busy, guard } = useBusy();
 
   const load = useCallback(async () => {
     const [l, a] = await Promise.all([
@@ -71,14 +73,14 @@ export function AvailabilitySelfMeasurement() {
     void load();
   }, [load]);
 
-  async function toggle(next: boolean) {
+  const toggle = guard(async (next: boolean) => {
     const res = await bff("/api/bff/platform/availability/settings", {
       method: "PUT",
       body: JSON.stringify({ maintenance_counts_as_downtime: next }),
     });
     if (res.ok) await load();
     else setError(res.message);
-  }
+  });
 
   const verdict = (v: boolean | null) => (v === null ? t("noVerdict") : v ? t("met") : t("missed"));
   const errorText = (code: string | null) => (code === null ? "-" : ERROR_CLASSES.includes(code) ? t(`errors.${code}`) : code);
@@ -151,7 +153,7 @@ export function AvailabilitySelfMeasurement() {
 
       <div className={`${ui.card} space-y-2`}>
         <label className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1" checked={counts} onChange={(e) => void toggle(e.target.checked)} />
+          <input type="checkbox" className="mt-1" checked={counts} disabled={busy} onChange={(e) => void toggle(e.target.checked)} />
           <span>
             <span className={ui.label}>{t("switchLabel")}</span>
             <span className={`${ui.help} block`}>{t("switchHelp")}</span>

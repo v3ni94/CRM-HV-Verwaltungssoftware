@@ -26,9 +26,9 @@ _NAME_TOKEN = re.compile(r"(?:^|_)d(\d\d)(?=_|$)")
 # independent test names the case; adding an entry is not allowed.
 SINGLE_TEST_CASES = frozenset(
     {
-        "D01", "D02", "D03", "D05", "D06", "D07", "D10", "D12", "D13", "D15",
-        "D18", "D19", "D20", "D21", "D22", "D23", "D26", "D28", "D29", "D32",
-        "D33", "D35", "D36", "D37", "D38", "D39", "D40", "D48", "D49",
+        "D05", "D06", "D15",
+        "D18", "D20", "D29", "D32",
+        "D33", "D35", "D36", "D37", "D38",
     }
 )  # fmt: skip
 

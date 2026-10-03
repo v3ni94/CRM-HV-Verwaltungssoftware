@@ -1,6 +1,6 @@
 [project]
 name = "mhvp"
-version = "1.66.0"
+version = "1.67.0"
 description = "MH Verwaltungsplattform API, worker and domain logic"
 requires-python = ">=3.12,<3.13"
 # Exact versions are pinned in uv.lock (ADR 0001, E16). Ranges here only bound majors.

@@ -7,7 +7,7 @@ from mhvp.automation.event_catalog import ALL_EVENT_TYPES, DYNAMIC_VARIANTS, EVE
 from mhvp.automation.routers import KNOWN_EVENT_TYPES
 
 _EMIT = re.compile(
-    r'\bemit\(\s*(?:[^()"]|"[^"]*"|\((?:[^()]|\([^()]*\))*\))*?\btype=\s*"([a-z_0-9]+\.[a-z_0-9.]+)"',
+    r'\b(?:emit|record_change)\(\s*(?:[^()"]|"[^"]*"|\((?:[^()]|\([^()]*\))*\))*?\btype=\s*"([a-z_0-9]+\.[a-z_0-9.]+)"',
     re.S,
 )
 _ROOT = pathlib.Path(__file__).resolve().parents[2] / "src" / "mhvp"

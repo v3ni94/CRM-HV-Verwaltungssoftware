@@ -24,6 +24,7 @@ def test_calendar_sources_complete() -> None:
         "_read_ticket_due",
         "_read_work_order_appointments",
         "_read_deadline_entries",
+        "_read_privacy_access_requests",
     ]
 
 

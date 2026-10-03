@@ -59,9 +59,12 @@ function lineDiff(before: string, after: string): { text: string; kind: "same" |
 export function KnowledgeSettings({
   initial,
   properties,
+  canFeedback = true,
 }: {
   initial: KnowledgeEntry[];
   properties: PropertyOption[];
+  /** GAI-301: feedback needs ai:create (API answers 403 otherwise). */
+  canFeedback?: boolean;
 }) {
   const t = useTranslations("AiSettings");
   const [entries, setEntries] = useState(initial);
@@ -333,7 +336,7 @@ export function KnowledgeSettings({
                   {t("knowledge.withdraw")}
                 </button>
               ) : null}
-              {entry.status === "approved" ? (
+              {entry.status === "approved" && canFeedback ? (
                 <>
                   <button type="button" className={ui.buttonSm} onClick={() => void sendFeedback(entry.id, true)} aria-label={t("knowledge.feedbackHelpful")}>
                     {t("knowledge.feedbackHelpful")}

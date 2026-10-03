@@ -2195,6 +2195,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Rechenschalter (Welle 22, AK01)",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Fachliche Regeln stehen drei Rechenschalter, die nur mit Freigaberecht geändert werden können und ausschließlich Rechenentwürfe betreffen (G3 und G4 bleiben geschlossen): Negative Heizkostenanteile verteilen: Standard ist \"Nicht verteilen, Warnhinweis\"; die A",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Periodensperren in der Abrechnungswerkbank",
   "source": "Handbuch: abrechnung",
   "href": null,
@@ -3925,6 +3935,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Bankrückmeldung: Ausgeführt und Zurückgegeben (GAI-404, Welle 22)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, Zahlungen bietet Bankrückmeldung erfassen zusätzlich die Status Ausgeführt und Zurückgegeben. Beide haben Buchungswirkung: Ausgeführt gleicht die Verbindlichkeit in Höhe der Belastung aus und verlangt die ID des Bankumsatzes als Nachweis, Zurückgegeben storniert diese",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4721,6 +4741,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, Datenschutz zeigt die Datenschutzübersicht die Einwilligungen aller Kontakte je Zweck (aktiv, widerrufen, Widersprüche, ohne Nachweisdokument). Im Bereich Fristen tragen Personen mit Freigaberecht die Antwortfristen für Auskunft und Löschung sowie eine Vorfri",
+  "file": "docs/handbuch/datenschutz.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Auskunftsanträge erfassen und überwachen",
+  "source": "Handbuch: Datenschutz im CRM",
+  "href": "/einstellungen/datenschutz",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Datenschutz, Auskunftsanträge erfassen Sie den Eingang eines Auskunftsantrags: Kontakt suchen, Eingangsdatum und Eingangsweg wählen, Antrag erfassen. Über die Schaltflächen der Zeile setzen Sie den Status (In Bearbeitung, Beantwortet, Abgelehnt, Zurückgenomme",
   "file": "docs/handbuch/datenschutz.md"
  },
  {
@@ -6910,7 +6940,7 @@
   "href": "/mail",
   "keywords": [],
   "permission": null,
-  "excerpt": "In der Mailansicht startet \"Als Rechnung vorschlagen (KI)\" neben einem PDF Anhang einen Extraktionslauf (Recht Buchhaltung anlegen, nur bei freigegebener KI). Das Ergebnis ist ein Vorschlag, die Rechnung entsteht erst nach Prüfung und Freigabe durch eine Person.",
+  "excerpt": "In der Mailansicht startet \"Als Rechnung vorschlagen (KI)\" neben einem PDF Anhang einen Extraktionslauf (Recht Buchhaltung anlegen, nur bei freigegebener KI). Das Ergebnis ist ein Vorschlag, die Rechnung entsteht erst nach Prüfung und Freigabe durch eine Person. Filter in der Adr",
   "file": "docs/handbuch/mail.md"
  },
  {
@@ -8271,6 +8301,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unten auf der Detailseite steht das Ereignisprotokoll des Datensatzes: Zeitpunkt, Feld, Wert vorher, Wert nachher und Benutzer. Die Schaltfläche CSV exportieren lädt das Protokoll als Datei (Trennzeichen Semikolon, UTF-8). Das Protokoll setzt die Berechtigung Änderungsprotokoll l",
+  "file": "docs/handbuch/suche.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Brotkrümelnavigation",
+  "source": "Handbuch: Globale Suche und Verknüpfungen",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf Detail- und Unterseiten zeigt der Seitenkopf oberhalb der Überschrift den Pfad zur aktuellen Seite, getrennt durch Schrägstriche, zum Beispiel \"Einstellungen / Textbausteine\". Die Bestandteile mit Link führen eine Ebene zurück, der letzte Eintrag (aktuelle Seite) ist kein Lin",
   "file": "docs/handbuch/suche.md"
  },
  {

@@ -49,6 +49,9 @@ DEADLINE_KINDS: tuple[str, ...] = (
     # Rule WS-01: user created deadlines from the tenant's deadline type catalogue
     # (``mhvp.workspace.deadlines``), mirrored from ``deadline_entry``.
     "custom_deadline",
+    # AK06 (GAI-507): open data subject access requests with a due date from the tenant
+    # setting ``privacy_request_deadlines.access_days`` (no default, AJ13-01).
+    "privacy_access_request",
 )
 # Fixed lead time per kind; overrides the tenant setting (M9-06: 14 days for the notice date
 # of service provider contracts).
@@ -78,6 +81,7 @@ DEADLINE_PERMISSIONS: dict[str, tuple[str, str]] = {
     "work_order_appointment": ("tickets:read", "tickets:update"),
     # The responsible person of the entry is notified instead when one is set (WS-01).
     "custom_deadline": ("tickets:read", "tickets:update"),
+    "privacy_access_request": ("privacy:read", "privacy:manage"),
 }
 DEADLINE_NOTIFICATION_KIND = "compliance_deadline"
 DIGEST_NOTIFICATION_KIND = "daily_digest"
@@ -158,6 +162,7 @@ CALENDAR_REMINDERS: dict[str, list[str]] = {
     "bank_consent": ["14d"],
     "document_retention_end": ["1m"],
     "custom_deadline": ["14d", "1d"],
+    "privacy_access_request": ["7d", "1d"],
 }
 DEFAULT_REMINDERS = ["1d"]
 
@@ -527,7 +532,17 @@ def calendar_sources() -> list[SourceReader]:
     readers.append(_read_ticket_due)
     readers.append(_read_work_order_appointments)
     readers.append(_read_deadline_entries)
+    readers.append(_read_privacy_access_requests)
     return readers
+
+
+async def _read_privacy_access_requests(
+    session: AsyncSession, since: date, today: date
+) -> list[Candidate]:
+    """Open access requests with a configured response period (AK06, GAI-507)."""
+    from mhvp.privacy.access_requests import read_candidates
+
+    return await read_candidates(session, since, today)
 
 
 async def _read_deadline_entries(

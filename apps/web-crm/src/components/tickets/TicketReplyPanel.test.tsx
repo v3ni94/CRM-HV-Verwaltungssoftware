@@ -200,4 +200,14 @@ describe("TicketReplyPanel playbooks", () => {
     expect(screen.queryByTestId("ticket-reply-playbooks")).not.toBeInTheDocument();
     expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("/mail/playbooks"))).toBe(false);
   });
+
+  it("hides playbook insert and feedback without communication:update (GAI-301)", async () => {
+    mockWithPlaybooks();
+    renderIntl(<TicketReplyPanel ticketId={TICKET} canSend canUsePlaybooks={false} category="schaden" />);
+    await waitFor(() => expect(screen.getByTestId("ticket-reply-playbooks")).toBeInTheDocument());
+    const row = screen.getByTestId("ticket-reply-playbook");
+    expect(row).toHaveTextContent("Wasserschaden melden");
+    expect(within(row).queryByRole("button", { name: "Einfügen" })).not.toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "passt" })).not.toBeInTheDocument();
+  });
 });

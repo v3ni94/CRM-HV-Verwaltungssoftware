@@ -11,6 +11,8 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from mhvp.accounting.audit_events import record_change
+from mhvp.accounting.audit_events import snap as audit_snap
 from mhvp.billing import heating_calc, heating_services
 from mhvp.billing.models import HeatingRuleTable, HeatingRuleTableKind, Statement
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -350,6 +352,7 @@ async def put_rule_table(
                 HeatingRuleTable.valid_from == body.valid_from,
             )
         )
+        before = audit_snap(row, ("kind", "valid_from", "rows", "source", "review_status", "note"))
         if row is None:
             row = HeatingRuleTable(
                 tenant_id=principal.tenant_id,
@@ -369,6 +372,18 @@ async def put_rule_table(
             row.note = body.note
             row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="heating_rule_table.saved",
+            entity_type="heating_rule_table",
+            entity_id=row.id,
+            before=before,
+            after=audit_snap(
+                row, ("kind", "valid_from", "rows", "source", "review_status", "note")
+            ),
+        )
         return {"id": row.id, "kind": row.kind, "valid_from": row.valid_from}
 
 

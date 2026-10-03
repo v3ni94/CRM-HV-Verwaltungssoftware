@@ -7,6 +7,7 @@ import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
 import type { CalendarNotice } from "@/components/workspace/CalendarView";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
+import { useBusy } from "@/lib/use-busy";
 
 function todayIso(): string {
   const d = new Date();
@@ -47,6 +48,7 @@ export function AppointmentButton({
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
   const [notices, setNotices] = useState<CalendarNotice[]>([]);
+  const { guard } = useBusy();
 
   useEffect(() => {
     if (!open) return;
@@ -95,7 +97,14 @@ export function AppointmentButton({
           defaultTarget={hasOwnMailbox ? "own" : "default"}
           hasOwnMailbox={hasOwnMailbox}
           hasDefaultMailbox={hasDefaultMailbox}
-          onCreate={create}
+          onCreate={async (input) => {
+            // guard() drops the return value, but the dialog needs the error message of create().
+            let message: string | null = null;
+            await guard(async () => {
+              message = await create(input);
+            })();
+            return message;
+          }}
           onClose={() => setOpen(false)}
           prefill={{
             title,

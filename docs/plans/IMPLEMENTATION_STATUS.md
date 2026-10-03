@@ -223,6 +223,52 @@ Befunde der Lückenanalyse GAA bis GAF und Rückstände aus Welle 17, Pakete AG0
 | GAE-11 | AG20 | done | Positiver Fall des Zuordnungsvorschlags nur über 409-Zweige getestet (G4) |
 | GAE-12 | AG20 | done | AG20-01 offen; Übernahme und Ergebnisbuchung unverändert |
 
+## Welle 22 (Stand 1.67.0, 03.10.2026)
+
+Reste der Welle 21 (41 Teilbefunde der Lückenanalyse GAI) in 19 Paketen AK01 bis AK19, darunter die Gegenprüfung AK19 (docs/reviews/REVIEW-W21-2026-10-03.md, Befunde AK19-01 bis AK19-09, keine Regression, ein Zeitzonenfehler bei naiven Zeitstempeln behoben). Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.67.0 in `CHANGELOG.md`. Die Freigabestufen G1 bis G5 bleiben geschlossen.
+
+- Migrationen 0447 (tenant_settings: heating_negative_costs_mode, hoa_remainder_mode, check_amounts_tolerance_cents mit konservativen Standardwerten) und 0448 (privacy_access_request), beide mit Rundlauf getestet.
+- Produktschutz aus Welle 22: Kautionsfreigabe verlangt in der API eine andere Person als den Ersteller (409 MHVP-CONTR-0002); Auszahlungen ohne Rechnung stehen in der API hinter Gate G2; sechs Schaltflächen erscheinen nur mit Schreibrecht; ASGI-Körperlimit je Pfadgruppe vor dem Multipart-Parsing.
+- Tests: 84 Mandantentrennungstests mit echten Objekten (AK03, keine Lücke), 17 Anhang-D-Fälle mit zweitem unabhängigem Test (AK09, AK10; 12 Fälle offen), 19 weitere Komponententests (AK08), Wächter gegen neue untypisierte Routen (AK11, Liste mit 966 Routen), Coverage-Schwellen knapp unter dem Basiswert (CRM 71/62/67/73, Portal 74/66/78/76 Prozent).
+- Neue offene Punkte: AJ01-01, AJ01-02, AJ02-01, AJ07-01, AJ07-02, AJ13-01, AK19-02, AK19-03, AK19-04, AK19-05, AK19-09; AK19-02 bis AK19-05 und AK19-09 im Review.
+- Teilweise erledigt (Rest für Welle 23): GAI-215 (AK01), GAI-307 (AK02), GAI-612 (AK09), GAI-612 (AK10), GAI-304 (AK11), GAI-110 (AK12).
+- Vom Koordinator bei der Integration erledigt: Importreihenfolge in main.py, Typcast in forwarded-for-Test, ungenutzter Import, Allowlist-Eintrag für GET /privacy/access-requests/{request_id}, ADR-Index 0022 und 0024 bis 0030 ergänzt, OpenAPI-Export und api-client, Hilfeindex und Handbuch, Migrationsrundlauf 0448 nach 0446 und zurück, Wächtertests (45), Gesamtsuiten API, CRM und Portal, Builds, Playwright (Ergebnis siehe Versionsverlauf und Ergebnisbericht).
+- Deploy-Hinweise 1.67.0: zwei Migrationen (0447, 0448); neue Settings MHVP_BODY_LIMIT_* (Standardwerte oberhalb der Endpunktlimits), MHVP_RATE_LIMIT_TRUSTED_PROXIES auch im CRM-Container, falls freigegeben (AJ07-01); Compose-Profil für den zweiten Worker (AK05) optional; Coverage-Jobs noch nicht in CI.
+
+| Befund-ID | Paket | Status | Hinweis |
+| --- | --- | --- | --- |
+| GAI-202 | AK01 | done |  |
+| GAI-204 | AK01 | done |  |
+| GAI-214 | AK01 | done |  |
+| GAI-215 | AK01 | partial | Summentests fuer heating _component (beide Modi, negativ), Monatsraten aller Restcentmodi, Zeitanteile bei Mieterwechsel, Kautionszins (Historie gleich Referenz |
+| GAI-307 | AK02 | partial | noch ohne emit: heating-cost-imports (anlegen, csv, mapping, rows, apply), statements heating PUT/consumptions/apply/import, owner-statements anlegen/options/ap |
+| GAI-303 | AK03 | done |  |
+| GAI-309 | AK04 | done |  |
+| GAI-311 | AK04 | done |  |
+| GAI-312 | AK04 | done |  |
+| GAI-317 | AK05 | done |  |
+| GAI-319 | AK05 | done |  |
+| GAI-506 | AK06 | done |  |
+| GAI-507 | AK06 | done |  |
+| GAI-513 | AK07 | done |  |
+| GAI-515 | AK07 | done |  |
+| GAI-516 | AK07 | done |  |
+| GAI-615 | AK08 | done |  |
+| GAI-612 | AK09 | partial | Teil 1: D05, D06, D15, D18, D20 weiterhin nur mit einem Test (Bankimport-, Zahlungsdatei-, Eigentümerwechsel-, Untergemeinschafts- und Sonderumlagenwelten nicht |
+| GAI-612 | AK10 | partial |  |
+| GAI-304 | AK11 | partial | rund 955 Routen weiter untypisiert, darunter alle mit Decimal-Antworten (nur gezaehlt ueber die Allowlist, nicht getrennt ausgewiesen) |
+| GAI-110 | AK12 | partial | Zahlläufe: Vorschau-Liste nur mit limit, SavedFilters für Postfach fehlen |
+| GAI-512 | AK13 | done |  |
+| GAI-621 | AK13 | done |  |
+| GAI-402 | AK14 | done |  |
+| GAI-410 | AK14 | done |  |
+| GAI-109 | AK15 | done |  |
+| GAI-422 | AK15 | done |  |
+| GAI-605 | AK15 | done |  |
+| GAI-404 | AK16 | done |  |
+| GAI-315 | AK17 | done |  |
+| GAI-301 | AK18 | done |  |
+
 ## Welle 21 (Stand 1.66.0, 02.10.2026)
 
 Befunde der Lückenanalyse GAI (Gesamtdurchlauf des Master-Prompts in sechs Teilen: Regeln und Konventionen, Geld und Rundung, Sicherheit und Berechtigungen, Oberfläche und Handbuch, Datenschutz und Betrieb, Modulreste; 126 Befunde GAI-101 bis GAI-623), Pakete AJ01 bis AJ32 in zwei Reihen. Die Welle wurde nach einem Umgebungsreset am 02.10.2026 vollständig neu erarbeitet, der erste Durchlauf ging vor dem Commit verloren. Quellen: Ergebnisdateien der Pakete (Feld findings), Versionsverlauf 1.66.0 in `CHANGELOG.md`, Befunddateien GAI-1 bis GAI-6 der Analyse. Die Freigabestufen G1 bis G5 bleiben geschlossen. Status wie in den Ergebnisdateien: done, partial, not_done.

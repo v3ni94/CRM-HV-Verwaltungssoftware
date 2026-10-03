@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import procedure_doc, report_views, report_xlsx, reports
 from mhvp.accounting import services as acc
+from mhvp.accounting.audit_events import record_change, snap
 from mhvp.accounting.models import (
     AccountCategory,
     ExportRun,
@@ -802,6 +803,9 @@ async def create_rule_checkpoint(
         return _ae19_out(row, local_today(), 30)
 
 
+_CHECKPOINT_AUDIT_FIELDS = ("title", "effective_from", "source_status", "change_reason")
+
+
 @router.patch("/rule-versions/checkpoints/{version_id}", summary="Prüfpunkt ändern")
 async def patch_rule_checkpoint(
     version_id: uuid.UUID,
@@ -819,6 +823,7 @@ async def patch_rule_checkpoint(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur ein offener Prüfpunkt ist änderbar."
             )
+        before = snap(row, _CHECKPOINT_AUDIT_FIELDS)
         if body.title is not None:
             row.title = body.title
         if body.effective_from is not None:
@@ -829,4 +834,14 @@ async def patch_rule_checkpoint(
             row.change_reason = body.note
         row.updated_by = principal.user_id
         await session.flush()
+        await record_change(
+            session,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            type="rule_version.checkpoint_updated",
+            entity_type="rule_version",
+            entity_id=row.id,
+            before=before,
+            after=snap(row, _CHECKPOINT_AUDIT_FIELDS),
+        )
         return _ae19_out(row, local_today(), 30)

@@ -20,6 +20,7 @@ describe("AccessExportSettings (AE33, AC07-01)", () => {
     await userEvent.selectOptions(screen.getByLabelText("Angaben zu anderen Personen"), "names");
     await userEvent.click(notes);
     await userEvent.click(screen.getByLabelText(/Vorgänge \(Tickets\)/));
+    await userEvent.click(screen.getByLabelText(/Portalkonto mit Anmeldeereignissen/));
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -30,6 +31,9 @@ describe("AccessExportSettings (AE33, AC07-01)", () => {
       include_tickets: true,
       include_communication: false,
       include_documents: false,
+      include_portal_account: true,
+      include_payments: false,
+      include_contracts: false,
     });
     expect(await screen.findByText("Einstellung gespeichert.")).toBeInTheDocument();
   });

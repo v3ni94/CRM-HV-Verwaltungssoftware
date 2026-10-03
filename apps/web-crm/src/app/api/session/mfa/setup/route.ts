@@ -26,6 +26,7 @@ export async function POST(request: Request): Promise<Response> {
       "/api/v1/auth/mfa/setup/start",
       { mfa_setup_token: setupToken },
       request.headers.get("user-agent") ?? "",
+      request.headers,
     );
     if (status >= 400 || !data) return relayProblem(status, data);
     const uri = String(data.otpauth_uri ?? "");

@@ -13,6 +13,7 @@ from mhvp.core.task_policy import (
     IMPORT_TASKS,
     LONG_TASKS,
     NETWORK_RETRY_TASKS,
+    NO_RETRY_REVIEWED,
     TaskPolicyAnnotation,
     limits_from_settings,
     task_class,
@@ -53,6 +54,7 @@ def test_every_task_gets_limits_and_classified_names_exist(settings: Settings) -
     names = {name for name in app.tasks if name.startswith("mhvp.")}
     for group in (FAST_BEAT_TASKS, LONG_TASKS, IMPORT_TASKS, NETWORK_RETRY_TASKS):
         assert group <= names, group - names
+    assert set(NO_RETRY_REVIEWED) <= names, set(NO_RETRY_REVIEWED) - names
     limits = limits_from_settings(settings)
     for name in names:
         task = app.tasks[name]
@@ -60,7 +62,9 @@ def test_every_task_gets_limits_and_classified_names_exist(settings: Settings) -
         assert task.time_limit == expected.hard, name
         assert task.soft_time_limit == expected.soft, name
         wrapped = getattr(type(task).__call__, "__wrapped__", None) is not None
-        assert wrapped == (name in FAST_BEAT_TASKS or name in NETWORK_RETRY_TASKS), name
+        assert wrapped == (
+            name in FAST_BEAT_TASKS or name in NETWORK_RETRY_TASKS or name in NO_RETRY_REVIEWED
+        ), name
 
 
 def test_beat_entries_have_known_queue_and_registered_task(settings: Settings) -> None:
@@ -188,3 +192,42 @@ def test_money_runs_are_not_retried_or_locked(settings: Settings) -> None:
 def test_backoff_is_capped() -> None:
     for retries in range(10):
         assert 1 <= task_policy.retry_countdown(retries) <= task_policy.RETRY_CAP_SECONDS
+
+
+def test_reviewed_tasks_are_never_retried_and_failures_are_noted(
+    settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """AK05 (GAI-317): the eight reviewed event tasks get no generic retry; a failure is
+    logged with the verdict and re-raised, an own ``self.retry`` passes unchanged."""
+    assert not set(NO_RETRY_REVIEWED) & NETWORK_RETRY_TASKS
+    assert NO_RETRY_REVIEWED["mhvp.banking.compute_proposals"] == "money"
+    assert NO_RETRY_REVIEWED["mhvp.banking.fints_step"] == "bank_dialog"
+
+    class Fints(_Task):
+        name = "mhvp.banking.fints_step"
+
+    around = TaskPolicyAnnotation(settings).annotate(Fints())
+    assert around is not None
+
+    def flaky(_t: Any) -> None:
+        raise ConnectionError("reset")
+
+    with caplog.at_level("ERROR", logger="mhvp.core.task_policy"), pytest.raises(ConnectionError):
+        around["@__call__"](flaky)(Fints())
+    notes = [r for r in caplog.records if r.getMessage() == "task.failed_no_retry"]
+    assert len(notes) == 1
+    assert notes[0].__dict__["verdict"] == "bank_dialog"
+
+    class Archive(_Task):
+        name = "mhvp.communication.archive_message"
+
+    own = TaskPolicyAnnotation(settings).annotate(Archive())
+    assert own is not None
+
+    def own_retry(_t: Any) -> None:
+        raise Retry(exc=ConnectionError("x"), when=60)
+
+    caplog.clear()
+    with pytest.raises(Retry):
+        own["@__call__"](own_retry)(Archive())
+    assert not [r for r in caplog.records if r.getMessage() == "task.failed_no_retry"]

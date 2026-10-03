@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
 from mhvp.accounting.models import ItemStatus, ReceivableItem
+from mhvp.billing import calc_settings
 from mhvp.contracts import schemas as s
 from mhvp.contracts import services as svc
 from mhvp.contracts.models import (
@@ -136,7 +137,13 @@ async def patch_payment(
         start = data.get("valid_from", row.valid_from)
         end = data.get("valid_to", row.valid_to)
         if financial & {"net", "vat_percent", "gross"}:
-            svc.check_amounts(row.payment_type_code, net, vat, gross)
+            svc.check_amounts(
+                row.payment_type_code,
+                net,
+                vat,
+                gross,
+                await calc_settings.check_amounts_tolerance(session),
+            )
         if end is not None and end < start:
             raise svc.invalid("valid_to liegt vor valid_from.")
         if start < contract.start_date or (

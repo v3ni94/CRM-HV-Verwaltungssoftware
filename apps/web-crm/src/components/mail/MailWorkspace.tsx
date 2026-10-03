@@ -143,6 +143,17 @@ const TABS: Tab[] = ["inbox", "drafts", "pending", "sent"];
 
 const INBOX_STATUSES = ["new", "assigned", "done"] as const;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** One validated query parameter of the page URL; empty on the server or when invalid. */
+function urlParam(name: string, allowed?: readonly string[], pattern?: RegExp): string {
+  if (typeof window === "undefined") return "";
+  const value = new URLSearchParams(window.location.search).get(name) ?? "";
+  if (allowed && !allowed.includes(value)) return "";
+  if (pattern && !pattern.test(value)) return "";
+  return value.slice(0, 200);
+}
+
 function queryFor(
   tab: Tab,
   status: string,
@@ -192,11 +203,12 @@ export function MailWorkspace({
     const fromUrl = new URLSearchParams(window.location.search).get("tab");
     return fromUrl && TABS.includes(fromUrl as Tab) ? (fromUrl as Tab) : "inbox";
   });
-  const [status, setStatus] = useState("");
-  const [q, setQ] = useState("");
-  const [queryText, setQueryText] = useState("");
-  const [mailboxId, setMailboxId] = useState("");
-  const [syncState, setSyncState] = useState("");
+  // List filters in the URL (GAI-110): ?status=, ?postfach=, ?q=, ?abgleich=; read once on mount.
+  const [status, setStatus] = useState(() => urlParam("status", INBOX_STATUSES));
+  const [q, setQ] = useState(() => urlParam("q"));
+  const [queryText, setQueryText] = useState(() => urlParam("q"));
+  const [mailboxId, setMailboxId] = useState(() => urlParam("postfach", undefined, UUID_RE));
+  const [syncState, setSyncState] = useState(() => urlParam("abgleich", SYNC_FILTERS));
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [messages, setMessages] = useState<Message[] | null>(null);
   // Deep link from the ticket mail thread (operator 26.09.2026): /mail?message=<id>.
@@ -288,6 +300,18 @@ export function MailWorkspace({
       window.history.replaceState(null, "", url.toString());
     }
   }, [tab, status, mailboxId, q, showClosed]);
+
+  // Mirror the list filters into the URL so a view can be bookmarked or shared (GAI-110).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const set = (key: string, value: string) => (value ? url.searchParams.set(key, value) : url.searchParams.delete(key));
+    set("status", status);
+    set("postfach", mailboxId);
+    set("q", q.trim());
+    set("abgleich", syncState);
+    window.history.replaceState(null, "", url.toString());
+  }, [status, mailboxId, q, syncState]);
 
   const changePage = (next: number) => {
     setPage(next);

@@ -158,7 +158,7 @@ def test_deadlines_have_no_default_and_monitor(client: TestClient, world: World)
     assert mine
     assert mine[0]["state"] == "unconfigured"
     assert mine[0]["due_on"] is None
-    assert mon["access_requests_tracked"] is False
+    assert mon["access_requests_tracked"] is True
     assert (
         client.put(f"{P}/request-deadlines", json={"erasure_days": 30}, headers=reader).status_code
         == 403

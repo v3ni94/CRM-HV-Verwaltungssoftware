@@ -1959,6 +1959,8 @@
     }
   },
   "Hoa": {
+    "filterType": "Art der Verwaltung",
+    "filterTypeAll": "Alle WEG-Arten",
     "title": "WEG-Verwaltung",
     "gateNotice": "Ausgabe und Buchung von WEG-Abrechnungen sind bis zur Freigabestufe G4 gesperrt.",
     "objectsHint": "WEG-Objekte und WEG-Verwaltung gehören zusammen: hier die laufende Verwaltung, in der Objektliste die Stammdaten der Gemeinschaften.",
@@ -2226,6 +2228,9 @@
     "handover": "Übergabeprotokolle"
   },
   "Receivables": {
+    "filterAccount": "Konto",
+    "filterAllAccounts": "Alle Konten",
+    "filterApply": "Filter anwenden",
     "earlierRuns": "Frühere Läufe laden",
     "noRuns": "Keine früheren Läufe für diesen Monat.",
     "open": "Öffnen",
@@ -2801,7 +2806,7 @@
   },
   "BankActions": {
     "config": {"title": "Zahlungsformat je Bankkonto", "intro": "Vereinbarte Version von pain.001 (Überweisung) und pain.008 (Lastschrift) sowie Einreichungsweg je Konto. Angeboten werden nur Versionen, die die Plattform erzeugen und prüfen kann. Speichern erzeugt keine Zahlungsdatei und löst keine Zahlung aus; Erzeugen und Einreichen bleiben bis zur Freigabestufe G2 gesperrt.", "account": "Bankkonto", "choose": "Konto wählen", "pain001": "Version pain.001", "pain008": "Version pain.008", "channel": "Einreichungsweg", "channel_file": "Datei (manueller Upload)", "channel_fints": "FinTS", "channel_ebics": "EBICS", "confirmedOn": "Mit der Bank abgestimmt am", "notes": "Notiz", "save": "Speichern", "saved": "Zahlungsformat gespeichert.", "readOnly": "Ändern braucht das Freigaberecht Bank."},
-    "batchStatus": {"open": "Bankrückmeldung erfassen", "status": "Rückmeldung der Bank", "status_submitted": "Eingereicht", "status_accepted_by_bank": "Von der Bank angenommen", "status_rejected": "Abgelehnt", "reason": "Grund (bei Ablehnung Pflicht)", "hint": "Ausführung und Rückgabe werden nicht hier, sondern über den Import der Bankrückmeldung erfasst. Eine Ablehnung lässt die Verbindlichkeit voll offen.", "record": "Erfassen", "cancel": "Abbrechen", "recorded": "Rückmeldung erfasst, betroffene Aufträge: {count}."},
+    "batchStatus": {"open": "Bankrückmeldung erfassen", "status": "Rückmeldung der Bank", "status_submitted": "Eingereicht", "status_accepted_by_bank": "Von der Bank angenommen", "status_rejected": "Abgelehnt", "status_executed": "Ausgeführt (bucht)", "status_returned": "Zurückgegeben (storniert)", "reason": "Grund (bei Ablehnung und Rückgabe Pflicht)", "hint": "Eine Ablehnung lässt die Verbindlichkeit voll offen. Ausführung und Rückgabe können auch über den Import der Bankrückmeldung erfasst werden.", "bankTransaction": "Bankumsatz (ID, bei Ausführung Pflicht)", "bookingEffect": "Achtung, Buchungswirkung: Ausgeführt gleicht die Verbindlichkeit in Höhe der Belastung aus, Zurückgegeben storniert diesen Ausgleich und öffnet die Verbindlichkeit wieder. Gebuchte Werte werden nie überschrieben.", "fourEyes": "Vier Augen: Die Zahlungsaufträge wurden von zwei Personen freigegeben. Erfassen Sie Ausführung oder Rückgabe nur mit dem Bankbeleg und lassen Sie die Buchung von einer zweiten Person prüfen.", "bookingLocked": "Ausführung und Rückgabe sind gesperrt, bis die Freigabestufe G2 für diesen Mandanten offen ist.", "record": "Erfassen", "cancel": "Abbrechen", "recorded": "Rückmeldung erfasst, betroffene Aufträge: {count}."},
     "candidates": {"show": "Vorschläge", "hide": "Vorschläge ausblenden", "loading": "Vorschläge werden geladen.", "none": "Kein passender offener Posten gefunden.", "remaining": "Offen: {amount}", "score": "Treffergüte {score}", "unambiguous": "eindeutig", "note": "Vorschlag, keine Buchung. Die IBAN allein beweist keinen Schuldner."},
     "clarification": {"open": "Als unbelegt melden", "reason": "Begründung", "submit": "Melden", "cancel": "Abbrechen", "opened": "Klärung eröffnet"},
     "digest": {"buildWeek": "Woche ab (Montag)", "build": "Digest erzeugen", "buildHint": "Erzeugt oder aktualisiert den Digest der Woche, bucht nichts.", "built": "Digest erzeugt oder aktualisiert: {count}."},
@@ -2846,6 +2851,10 @@
     "fileLocked": "Zahlungsdatei erst mit Freigabestufe G2. Bis dahin bleibt der Auftrag vorbereitet, nichts wird an die Bank übermittelt."
   },
   "Dunning": {
+    "filterStatus": "Status",
+    "filterAll": "Alle",
+    "filterRunDate": "Mahnlauf vom",
+    "filterApply": "Filter anwenden",
     "title": "Mahnwesen",
     "notice": "Mahnläufe sind zunächst Vorschau. Freigeben muss eine zweite Person. Gemahnt wird nur im führenden System; solange Immoware24 führend ist, sind alle Fälle ausgeschlossen.",
     "runDate": "Stichtag",
@@ -12930,8 +12939,9 @@
       "save": "Fristen speichern",
       "saved": "Fristen gespeichert.",
       "unconfigured": "Keine Fristen hinterlegt: offene Anträge werden ohne Fälligkeit angezeigt.",
-      "empty": "Keine offenen Löschanträge.",
-      "item": "Löschantrag, Eingang {received}, Vorfrist {warn}, Frist {due}:"
+      "empty": "Keine offenen Lösch- oder Auskunftsanträge.",
+      "item": "Löschantrag, Eingang {received}, Vorfrist {warn}, Frist {due}:",
+      "itemAccess": "Auskunftsantrag, Eingang {received}, Vorfrist {warn}, Frist {due}:"
     },
     "states": {
       "unconfigured": "keine Frist hinterlegt",
@@ -12956,6 +12966,30 @@
     "save": "Speichern",
     "saved": "Einwilligungsregeln gespeichert."
   },
+  "PrivacyAccessRequests": {
+    "title": "Auskunftsanträge",
+    "hint": "Eingang eines Auskunftsantrags mit Datum und Weg erfassen und bis zur Erledigung führen. Die Frist ergibt sich nur aus der hinterlegten Mandanteneinstellung (kein Standardwert) und ist eine Orientierung, die zu prüfen ist. Mit hinterlegter Frist erscheint der Antrag im Fristenregister. Die Auskunft selbst wird am Kontakt über den geprüften Auskunftsexport vorbereitet.",
+    "contact": "Antragsteller (Kontakt suchen)",
+    "picked": "Ausgewählt: {name}",
+    "received": "Eingang am",
+    "channel": "Eingangsweg",
+    "note": "Notiz",
+    "create": "Antrag erfassen",
+    "created": "Auskunftsantrag erfasst.",
+    "updated": "Status gespeichert.",
+    "loading": "Wird geladen …",
+    "empty": "Keine Einträge vorhanden.",
+    "colContact": "Kontakt",
+    "colReceived": "Eingang",
+    "colChannel": "Weg",
+    "colStatus": "Status",
+    "colDue": "Frist",
+    "colActions": "Aktionen",
+    "channels": {"email": "E-Mail", "letter": "Brief", "portal": "Portal", "phone": "Telefon", "in_person": "Persönlich", "other": "Sonstiges"},
+    "statuses": {"received": "eingegangen", "in_progress": "in Bearbeitung", "answered": "beantwortet", "rejected": "abgelehnt", "withdrawn": "zurückgenommen"},
+    "states": {"unconfigured": "keine Frist hinterlegt", "ok": "im Rahmen", "warn": "Vorfrist erreicht", "overdue": "Frist überschritten", "closed": "erledigt"},
+    "actions": {"in_progress": "In Bearbeitung", "answered": "Beantwortet", "rejected": "Abgelehnt", "withdrawn": "Zurückgenommen"}
+  },
   "AccessExportSettings": {
     "title": "Umfang der DSGVO-Auskunft",
     "hint": "Standard: andere Personen nur mit Rolle, interne Vermerke zurückgehalten. Welcher Umfang zulässig ist, ist eine Rechtsfrage. Der Umfang wird beim Vorbereiten einer Auskunft festgehalten und gilt dann unverändert bis zur Freigabe. Anschriften, Kontaktdaten, Kennungen und Bankdaten anderer Personen werden in keiner Variante ausgegeben.",
@@ -12967,7 +13001,10 @@
     "sources": {
       "include_tickets": "Vorgänge (Tickets) des Kontakts ausgeben, ohne interne Beschreibung",
       "include_communication": "Nachrichten des Kontakts ausgeben (Betreff und Text, ohne Empfängerlisten)",
-      "include_documents": "Dem Kontakt zugeordnete Dokumente auflisten (Titel und Datum, ohne Inhalt)"
+      "include_documents": "Dem Kontakt zugeordnete Dokumente auflisten (Titel und Datum, ohne Inhalt)",
+      "include_portal_account": "Portalkonto mit Anmeldeereignissen und Sitzungen ausgeben (ohne Token und Codes)",
+      "include_payments": "Zahlungsdaten ausgeben (Forderungen und Zahlungsstand der Verträge)",
+      "include_contracts": "Vertragsdaten ausgeben (Art, Nummer, Laufzeit, Lastschrift)"
     },
     "saved": "Einstellung gespeichert."
   },
@@ -17076,6 +17113,18 @@
         "title": "Prüfbericht der Umlagegrundlagen blockiert die Ausgabe",
         "description": "Fehlt für eine Kostenposition die Umlagevereinbarung, sperrt der Prüfbericht den Statuswechsel und das Informationsblatt."
       },
+      "heating-negative-costs": {
+        "title": "Negative Heizkostenanteile verteilen",
+        "description": "Ergibt ein Kostenanteil der Heizkostenabrechnung eine negative Summe, wird er im Standard nicht verteilt und ein Warnhinweis gezeigt. Die Wirkung betrifft nur Rechenentwürfe hinter G3."
+      },
+      "hoa-remainder-mode": {
+        "title": "Hausgeld, Restcent der Monatsraten",
+        "description": "Behandlung der Rundungsdifferenz bei der Aufteilung des Jahreshausgelds auf zwölf Monatsraten. Im Standard wird die Differenz nur ausgewiesen."
+      },
+      "check-amounts-tolerance": {
+        "title": "Bruttoprüfung, Toleranz in Cent",
+        "description": "Zulässige Abweichung zwischen erfasstem Brutto und Netto zuzüglich Umsatzsteuer bei Zahlungen im Vertrag und beim Import (0 oder 1 Cent)."
+      },
       "deadline-policy": {
         "title": "Verhalten nach Ablauf der Abrechnungsfrist",
         "description": "Was nach dem angezeigten Fristende geschieht. Das Fristende ist nur eine Orientierung, die Ausnahmegründe sind fachlich offen."
@@ -17269,6 +17318,18 @@
         "title": "Auskunftsexport: Kommunikation",
         "description": "Ob die Nachrichten des Kontakts (Betreff und Text, ohne Empfängerlisten) im Auskunftsexport enthalten sind. Aus bedeutet: nur gezählt."
       },
+      "access-export-portal-account": {
+        "title": "Auskunftsexport: Portalkonto und Anmeldungen",
+        "description": "Ob Portalkonto, Anmeldeereignisse und Sitzungen des Kontakts im Auskunftsexport ausgegeben werden (ohne Token und Codes). Aus bedeutet: nur gezählt."
+      },
+      "access-export-payments": {
+        "title": "Auskunftsexport: Zahlungsdaten",
+        "description": "Ob Forderungen und Zahlungsstand der Verträge des Kontakts im Auskunftsexport ausgegeben werden. Aus bedeutet: nur gezählt."
+      },
+      "access-export-contracts": {
+        "title": "Auskunftsexport: Vertragsdaten",
+        "description": "Ob die Verträge des Kontakts (Art, Nummer, Laufzeit, Lastschrift) im Auskunftsexport ausgegeben werden. Aus bedeutet: nur gezählt."
+      },
       "access-export-documents": {
         "title": "Auskunftsexport: Dokumentbezüge",
         "description": "Ob die dem Kontakt zugeordneten Dokumente (Titel und Datum) im Auskunftsexport aufgelistet sind. Aus bedeutet: nur gezählt."
@@ -17324,6 +17385,15 @@
       "dunning-day-count": {
         "act_365_fixed": "Tage durch 365 (fest)",
         "act_act": "Tage durch tatsächliche Jahrestage"
+      },
+      "heating-negative-costs": {
+        "legacy_warn": "Nicht verteilen, Warnhinweis",
+        "distribute": "Vorzeichengerecht verteilen"
+      },
+      "hoa-remainder-mode": {
+        "report_only": "Nur ausweisen",
+        "first_month": "Im ersten Monat ausgleichen",
+        "last_month": "Im letzten Monat ausgleichen"
       },
       "deadline-policy": {
         "block_claims": "Nachforderungen sperren",
@@ -17768,7 +17838,7 @@
     },
     "depositRelease": {
       "action": "Kautionsabrechnung freigeben",
-      "fourEyes": "Vier-Augen-Prinzip: Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat.",
+      "fourEyes": "Vier-Augen-Prinzip: Die Freigabe erteilt eine andere Person als die, die den Entwurf erstellt hat; das System lehnt eine Freigabe durch den Ersteller ab.",
       "confirm": "Ich habe den Entwurf nicht selbst erstellt und ihn geprüft.",
       "notDraft": "Nur ein Entwurf kann freigegeben werden.",
       "locked": "Gesperrt, solange die Freigabestufe G3 (Mietabrechnungen) geschlossen ist. Freigabe durch die Geschäftsführung erforderlich."

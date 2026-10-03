@@ -46,6 +46,7 @@ from mhvp.billing.allocability_routers import router as operating_cost_type_rout
 from mhvp.billing.allocability_routers import statement_router as allocability_router
 from mhvp.billing.allocation_basis_routers import router as allocation_basis_setting_router
 from mhvp.billing.allocation_basis_routers import statement_router as allocation_basis_router
+from mhvp.billing.calc_settings_routers import router as calc_settings_router
 from mhvp.billing.consumption_info_routers import router as consumption_info_router
 from mhvp.billing.deadline_routers import router as deadline_settings_router
 from mhvp.billing.deadline_routers import statement_router as deadline_overview_router
@@ -75,6 +76,7 @@ from mhvp.core import crypto, health
 from mhvp.core.auth import oidc
 from mhvp.core.auth.mfa_reset import router as auth_mfa_reset_router
 from mhvp.core.auth.routers import router as auth_router
+from mhvp.core.body_limit import BodyLimitMiddleware
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.health import ReadinessCheck
@@ -189,6 +191,7 @@ from mhvp.portal.provider_info import router as portal_provider_info_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.portal.tenant_statements import router as portal_tenant_statements_router
+from mhvp.privacy.access_requests import router as privacy_access_router
 from mhvp.privacy.routers import router as privacy_router
 from mhvp.privacy.routers_oversight import router as privacy_oversight_router
 from mhvp.properties.routers import router as properties_router
@@ -327,6 +330,7 @@ def create_app(
     app.include_router(allocation_agreements_router, prefix=API_PREFIX)
     app.include_router(allocation_basis_router, prefix=API_PREFIX)
     app.include_router(allocation_basis_setting_router, prefix=API_PREFIX)
+    app.include_router(calc_settings_router, prefix=API_PREFIX)
     app.include_router(service_contracts_router, prefix=API_PREFIX)
     app.include_router(deposit_settlements_router, prefix=API_PREFIX)
     # Static intake paths must be registered before /documents/{document_id} (A42).
@@ -334,6 +338,7 @@ def create_app(
     app.include_router(text_block_router, prefix=API_PREFIX)
     app.include_router(privacy_router, prefix=API_PREFIX)
     app.include_router(privacy_oversight_router, prefix=API_PREFIX)
+    app.include_router(privacy_access_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
     app.include_router(paperless_webhook_router, prefix=API_PREFIX)
     app.include_router(handover_router, prefix=API_PREFIX)
@@ -490,6 +495,9 @@ def create_app(
     # API-Version and deprecation headers (ADR 0009, A50), inside the correlation id.
     app.add_middleware(ApiVersionMiddleware, version=settings.app_version)
     app.add_middleware(IdempotencyMiddleware)
+    # GAI-315: body limit per path group outside idempotency (which buffers the body) and
+    # inside rate limit and security headers, so a 413 is counted and carries the headers.
+    app.add_middleware(BodyLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     # AE36: P95 samples of the journal and bank lists for the scale monitoring (ADR 0021).

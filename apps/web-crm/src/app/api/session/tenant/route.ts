@@ -5,6 +5,7 @@ import { serverApi } from "@/lib/api-server";
 import { COOKIE, writeTokens } from "@/lib/session";
 
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
+import { forwardedForHeaders } from "@/lib/forwarded-for";
 
 /** Switches the tenant: new session for the chosen tenant, the previous one is revoked. */
 export async function POST(request: Request): Promise<Response> {
@@ -13,7 +14,10 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const { data, error, response } = await serverApi().POST("/api/v1/auth/switch-tenant", {
       body: { tenant_id: str(parsed.body.tenant_id) },
-      headers: { "user-agent": request.headers.get("user-agent") ?? "" },
+      headers: {
+        "user-agent": request.headers.get("user-agent") ?? "",
+        ...forwardedForHeaders(request.headers),
+      },
     });
     if (!data) return relayProblem(response.status, error);
     // Read after serverApi(): a refresh during the call may have rotated the cookie. The same

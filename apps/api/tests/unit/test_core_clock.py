@@ -4,6 +4,8 @@ import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import pytest
+
 from mhvp.core.clock import local_date, local_today
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "mhvp"
@@ -34,3 +36,26 @@ def test_no_utc_day_in_business_code() -> None:
         if FORBIDDEN.search(p.read_text(encoding="utf-8"))
     ]
     assert offenders == []
+
+
+def test_ak19_naive_timestamp_is_read_as_utc_regardless_of_host_tz(
+    monkeypatch: "pytest.MonkeyPatch",
+) -> None:
+    """AK19-01: a naive value counts as UTC; 22:30 UTC in summer is the next Berlin day."""
+    import os
+    import time
+
+    monkeypatch.setenv("TZ", "America/New_York")
+    if hasattr(time, "tzset"):
+        time.tzset()
+    try:
+        assert local_date(datetime(2026, 10, 2, 22, 30)) == date(2026, 10, 3)  # noqa: DTZ001
+        assert local_today(datetime(2026, 12, 31, 23, 30)) == date(2027, 1, 1)  # noqa: DTZ001
+        # DST end 25.10.2026: 22:30 UTC on 24.10. is 00:30 CEST on 25.10.
+        assert local_date(datetime(2026, 10, 24, 22, 30)) == date(2026, 10, 25)  # noqa: DTZ001
+        # 23:30 UTC on 25.10. (after the switch, CET) is 00:30 on 26.10.
+        assert local_date(datetime(2026, 10, 25, 23, 30)) == date(2026, 10, 26)  # noqa: DTZ001
+    finally:
+        os.environ.pop("TZ", None)
+        if hasattr(time, "tzset"):
+            time.tzset()
